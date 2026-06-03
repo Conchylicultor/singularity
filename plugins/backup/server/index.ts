@@ -19,8 +19,9 @@ export default {
   },
   contributions: [ConfigV2.Register({ descriptor: backupConfig })],
   // backupRunJob declares `schedule` (driven by backupConfig.periodicCron) —
-  // the jobs worker seeds its cron item at startup. No onReady enqueue, and no
-  // isMain() guard: graphile's cron dedups fleet-wide, so the backup runs once
-  // per tick regardless of how many worktrees are up.
+  // the jobs worker seeds its cron item at startup. No onReady enqueue needed.
+  // The schedule is main-only by default (it isn't `perWorktree`), so the
+  // backup runs once per tick on the main runtime regardless of how many
+  // worktrees are up — the cron is never installed in worktree workers.
   register: [backupRunJob],
 } satisfies ServerPluginDefinition;

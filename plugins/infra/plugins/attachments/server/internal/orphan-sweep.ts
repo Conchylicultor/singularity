@@ -11,8 +11,10 @@ const TTL_MS = 60 * 60 * 1000; // 1 hour orphan age before delete
 const log = Log.channel("attachments");
 
 // Reclaims attachment rows that no registered link table references, past a
-// TTL grace period. Runs hourly via the jobs cron primitive (fleet-wide
-// dedup, so a single sweep runs regardless of how many worktrees are up).
+// TTL grace period. Runs hourly via the jobs cron primitive. The schedule is
+// main-only by default (not `perWorktree`), so a single sweep runs on the main
+// runtime — attachments live on the shared ~/.singularity filesystem, so
+// running this per-worktree would race N sweeps over the same global dir.
 export const orphanSweepJob = defineJob({
   name: "attachments.orphan-sweep",
   input: z.object({}),

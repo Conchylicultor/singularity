@@ -9,6 +9,7 @@ import {
 } from "graphile-worker";
 import { db } from "@plugins/database/server";
 import { connectionString } from "@plugins/database/plugins/admin/server";
+import { isMain } from "@plugins/infra/plugins/paths/core";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { JOB_TASK } from "./constants";
 import {
@@ -56,9 +57,15 @@ export function installScheduledCronItems(): void {
 // its default input, and graphile injects `_cron`.
 function buildCronItems(): ParsedCronItem[] {
   const items: ParsedCronItem[] = [];
+  const main = isMain();
   for (const job of getScheduledJobs()) {
     const { schedule } = job;
     if (!schedule) continue;
+    // graphile's known_crontabs dedup is per-database, and every worktree
+    // backend runs its own worker against its own DB — so a schedule left to
+    // run everywhere fires once per live worktree. Default to main-only;
+    // perWorktree jobs opt back in to running in every worktree.
+    if (!main && !schedule.perWorktree) continue;
     const cron =
       typeof schedule.cron === "function" ? schedule.cron() : schedule.cron;
     if (!cron || !cron.trim()) continue;

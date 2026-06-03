@@ -133,13 +133,30 @@ export interface ScheduleSpec {
    * job runs — or a resolver evaluated once at worker startup that may read
    * config and return `null`/`""` to disable scheduling (e.g. a user setting).
    *
-   * Backed by graphile-worker's native cron: each tick is scheduled exactly
-   * once across all worktree runners (DB-level dedup via `known_crontabs`),
-   * and a failed tick never breaks the schedule — the next tick is
-   * independent. No boot backfill. Manual `enqueue()` is unaffected and still
-   * works for on-demand runs.
+   * Backed by graphile-worker's native cron. graphile's `known_crontabs`
+   * dedup is **per-database** only — and every worktree backend runs its own
+   * worker against its own per-worktree DB, so there is NO fleet-wide dedup.
+   * To avoid a cron firing once per live worktree, schedules are installed on
+   * the main runtime only by default (see {@link perWorktree}). A failed tick
+   * never breaks the schedule — the next tick is independent. No boot
+   * backfill. Manual `enqueue()` is unaffected and still works on every
+   * runtime for on-demand runs.
    */
   cron: string | (() => string | null);
+  /**
+   * Run this schedule in EVERY worktree backend, not just main. Default
+   * `false` — schedules are main-only.
+   *
+   * Leave this off (the default) for any job that touches shared/global state
+   * — external uploads, the shared `~/.singularity` filesystem, secrets — or
+   * canonical data that lives in the main DB. Running such a job per-worktree
+   * duplicates the work once per live worktree (e.g. N backup uploads) or
+   * races on the shared resource.
+   *
+   * Set `true` ONLY when the job acts solely on its own worktree's state AND
+   * that work is genuinely wanted for every ephemeral worktree — a rare case.
+   */
+  perWorktree?: boolean;
 }
 
 export interface DefineJobSpec<
