@@ -65,21 +65,19 @@ export function CategoryChipToolbar() {
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <button
+        <Badge
+          as="button"
           className="hover:opacity-80"
+          colorClass={colorClass}
           aria-label={`Conversation category: ${label}`}
+          icon={
+            busy === "classify" ? (
+              <MdAutoAwesome className="size-3 animate-pulse" />
+            ) : undefined
+          }
         >
-          <Badge
-            colorClass={colorClass}
-            icon={
-              busy === "classify" ? (
-                <MdAutoAwesome className="size-3 animate-pulse" />
-              ) : undefined
-            }
-          >
-            {label}
-          </Badge>
-        </button>
+          {label}
+        </Badge>
       }
       contentClassName="w-56 p-1"
     >
