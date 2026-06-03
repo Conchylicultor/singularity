@@ -13,6 +13,7 @@
   "include": [
     "core",
     "plugins/*/core",
-    "plugins/*/bin"
+    "plugins/*/bin",
+    "plugins/*/core/scripts"
   ]
 }

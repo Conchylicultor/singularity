@@ -68,7 +68,7 @@ interface CommitInfo {
 async function getMainWorktree(): Promise<string> {
   const out = await git(["worktree", "list", "--porcelain"]);
   const match = out.match(/^worktree (.+)$/m);
-  if (!match) throw new Error("Cannot find main worktree");
+  if (!match?.[1]) throw new Error("Cannot find main worktree");
   return match[1];
 }
 
@@ -111,7 +111,7 @@ async function buildWorktreeMap(cwd: string): Promise<Map<string, WorktreeEntry[
   for (const stanza of stanzas) {
     const headMatch = stanza.match(/^HEAD ([0-9a-f]+)$/m);
     const branchMatch = stanza.match(/^branch refs\/heads\/claude-web\/(claude-(\d+)[^)]*?)$/m);
-    if (!headMatch || !branchMatch) continue;
+    if (!headMatch?.[1] || !branchMatch?.[1] || !branchMatch[2]) continue;
     const sha = headMatch[1];
     const conversationId = branchMatch[1];
     const ts = parseInt(branchMatch[2], 10);

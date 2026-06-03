@@ -13,6 +13,7 @@
   "include": [
     "bin",
     "core",
+    "scripts",
     "../../../../**/plugins/*/server",
     "../../../../**/plugins/*/core",
     "../../../../**/plugins/*/shared",

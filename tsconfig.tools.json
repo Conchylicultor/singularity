@@ -1,0 +1,24 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023"],
+    "types": ["node", "@types/bun"],
+    "paths": {
+      "@plugins/*": ["./plugins/*"],
+      "@/*": ["./plugins/framework/plugins/web-core/web/*"]
+    }
+  },
+  "exclude": [
+    "**/node_modules",
+    "plugins/framework/plugins/web-core/vite.config.ts",
+    "plugins/framework/plugins/web-core/vitest.config.ts",
+    "plugins/framework/plugins/server-core/scripts",
+    "plugins/framework/plugins/tooling/plugins/checks/core/scripts"
+  ],
+  "include": [
+    "*.config.ts",
+    "plugins/**/lint/*.ts",
+    "plugins/**/scripts/*.ts",
+    "plugins/**/*.config.ts"
+  ]
+}

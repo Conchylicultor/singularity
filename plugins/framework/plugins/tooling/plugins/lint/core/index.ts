@@ -2,7 +2,4 @@ export { lintCollectedDir } from "./collected-dir";
 export { iconSafetyRules } from "./icon-safety/index";
 export { promiseSafetyRules } from "./promise-safety/index";
 export { reactiveServerIoRules } from "./reactive-server-io/index";
-export {
-  discoverAllowDefaultProject,
-  findPluginDirs,
-} from "./allow-default-project";
+export { findPluginDirs } from "./plugin-dirs";

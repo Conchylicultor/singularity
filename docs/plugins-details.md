@@ -1146,7 +1146,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `discoverTscTargets`, `listAllChecks`, `runChecks`
           - Plugins:
-            - **`allow-default-project`**
             - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
@@ -1178,7 +1177,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`; Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
-            - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
+            - Exports: Values: `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
         - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`

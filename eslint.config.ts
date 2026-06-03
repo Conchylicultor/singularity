@@ -20,10 +20,9 @@ import { dirname, join } from "path";
 import { fileURLToPath, pathToFileURL } from "url";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
-import type { Linter } from "eslint";
+import type { ESLint, Linter } from "eslint";
 import reactHooks from "eslint-plugin-react-hooks";
 import {
-  discoverAllowDefaultProject,
   iconSafetyRules,
   promiseSafetyRules,
   reactiveServerIoRules,
@@ -31,16 +30,6 @@ import {
 import { lintEntries } from "./plugins/framework/plugins/tooling/plugins/lint/core/lint.generated";
 
 const here = dirname(fileURLToPath(import.meta.url));
-
-// Files with no owning tsconfig (lint barrels, scripts, root *.config.ts) fall
-// back to the typescript-eslint "default project". That service caps the number
-// of files it will absorb (default 8) and hard-errors past it. The allowlist
-// grows organically as plugins add lint/, scripts/, and *.config.ts entries —
-// each plugin-contributed lint barrel adds two .ts files here — so a fixed cap
-// would silently break the next contributor. Derive the cap from the discovered
-// allowlist length (with headroom) so it always tracks the real count.
-const allowDefaultProject = discoverAllowDefaultProject(here);
-const defaultProjectFileCap = allowDefaultProject.length + 8;
 
 interface PluginContribution {
   /** Relative path under plugins/, e.g. "welcome" or "conversations/plugins/conversation-view". */
@@ -99,21 +88,21 @@ const baseConfigs: Linter.Config[] = [
       parserOptions: {
         ecmaVersion: "latest",
         sourceType: "module",
-        projectService: {
-          allowDefaultProject,
-          defaultProject: "plugins/framework/plugins/web-core/tsconfig.app.json",
-          maximumDefaultProjectFileMatchCount_THIS_WILL_SLOW_DOWN_LINTING:
-            defaultProjectFileCap,
-        },
+        // Every .ts/.tsx must resolve to a real tsconfig project. Build-time
+        // files (lint barrels, scripts, *.config.ts) are owned by the root
+        // tsconfig.tools.json (or their plugin's tsconfig); a file that resolves
+        // to nothing now errors loudly instead of silently using the slow
+        // default-project fallback.
+        projectService: true,
         tsconfigRootDir: here,
       },
     },
     plugins: {
-      "@typescript-eslint": tsPlugin as unknown as Linter.Plugin,
-      "icon-safety": { rules: iconSafetyRules } as unknown as Linter.Plugin,
-      "promise-safety": { rules: promiseSafetyRules } as unknown as Linter.Plugin,
-      "reactive-server-io": { rules: reactiveServerIoRules } as unknown as Linter.Plugin,
-      "react-hooks": reactHooks as unknown as Linter.Plugin,
+      "@typescript-eslint": tsPlugin as unknown as ESLint.Plugin,
+      "icon-safety": { rules: iconSafetyRules } as unknown as ESLint.Plugin,
+      "promise-safety": { rules: promiseSafetyRules } as unknown as ESLint.Plugin,
+      "reactive-server-io": { rules: reactiveServerIoRules } as unknown as ESLint.Plugin,
+      "react-hooks": reactHooks as unknown as ESLint.Plugin,
     },
     rules: {
       "@typescript-eslint/no-floating-promises": "off",

@@ -24,5 +24,19 @@ export function discoverTscTargets(root: string): TscTarget[] {
       hasEntrypoint: existsSync(join(dir, "bin", "index.ts")),
     });
   }
+
+  // Root-level tools project: owns the build-time files (lint barrels, plugin
+  // scripts, root/plugin *.config.ts) that no runtime tsconfig includes. Not a
+  // runtime entrypoint, so the build's per-entrypoint tsc loop skips it; the
+  // `typescript` check runs every target, so it gets type-checked there.
+  if (existsSync(join(root, "tsconfig.tools.json"))) {
+    targets.push({
+      name: "tools",
+      dir: root,
+      args: ["-p", "tsconfig.tools.json"],
+      hasEntrypoint: false,
+    });
+  }
+
   return targets.sort((a, b) => a.name.localeCompare(b.name));
 }

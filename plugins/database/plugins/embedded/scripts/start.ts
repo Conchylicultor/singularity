@@ -21,7 +21,7 @@ import {
   PG_LOG_FILE,
   PG_PID_FILE,
   MAX_CONNECTIONS,
-} from "../core";
+} from "../shared";
 
 const READY_TIMEOUT_SEC = 30;
 

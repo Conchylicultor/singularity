@@ -8,7 +8,6 @@
 - Core:
   - Exports: Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `discoverTscTargets`, `listAllChecks`, `runChecks`
 - Sub-plugins:
-  - **`allow-default-project`**
   - **`barrel-stubs-in-sync`**
   - **`config-origins-in-sync`**
   - **`conversation-trailer`**
