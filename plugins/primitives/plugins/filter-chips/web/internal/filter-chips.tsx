@@ -1,5 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 
 export interface FilterChipProps {
   active: boolean;
@@ -9,18 +9,9 @@ export interface FilterChipProps {
 
 export function FilterChip({ active, onClick, children }: FilterChipProps) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 rounded px-2.5 py-1 text-xs font-medium transition-colors",
-        active
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-      )}
-    >
+    <ToggleChip variant="ghost" active={active} onClick={onClick}>
       {children}
-    </button>
+    </ToggleChip>
   );
 }
 

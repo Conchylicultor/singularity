@@ -1,4 +1,5 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { cn } from "@/lib/utils";
 import { commitsConfig } from "../../shared/config";
 
@@ -28,9 +29,9 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
     >
       {excludedPaths.map((item, index) => {
         return (
-          <button
+          <ToggleChip
             key={item.path}
-            type="button"
+            active={item.enabled}
             onClick={() => {
               const updated = excludedPaths.map((p, i) =>
                 i === index ? { ...p, enabled: !p.enabled } : p,
@@ -42,15 +43,10 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
                 ? `Excluding ${item.path} — click to include`
                 : `Including ${item.path} — click to exclude`
             }
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors",
-              item.enabled
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground line-through",
-            )}
+            className={cn(!item.enabled && "line-through")}
           >
             {item.path}
-          </button>
+          </ToggleChip>
         );
       })}
     </div>

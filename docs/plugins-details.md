@@ -1654,6 +1654,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
           - Core:
             - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
+    - **`toggle-chip`** — Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.
+      - Web:
+        - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipSize`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
     - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
       - Web:
         - Exports: Types: `KbdProps`, `WithTooltipProps`; Values: `Kbd`, `TooltipProvider`, `WithTooltip`

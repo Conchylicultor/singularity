@@ -51,6 +51,7 @@
   - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
   - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
   - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
+  - **`toggle-chip`** — Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.
   - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
   - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 

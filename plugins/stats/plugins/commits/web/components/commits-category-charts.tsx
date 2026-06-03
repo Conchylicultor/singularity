@@ -11,7 +11,7 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import {
   autoColorKey,
@@ -279,23 +279,7 @@ export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
           </ResponsiveContainer>
         </ChartState>
       </div>
-      <div className="flex flex-wrap gap-1.5">
-        {BUCKETS.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => setBucket(b.id)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors",
-              bucket === b.id
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            {b.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
     </div>
   );
 }

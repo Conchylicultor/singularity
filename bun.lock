@@ -1447,6 +1447,10 @@
       "name": "@singularity/plugin-primitives-text-editor-paste-images",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/toggle-chip": {
+      "name": "@singularity/plugin-primitives-toggle-chip",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/tooltip": {
       "name": "@singularity/plugin-primitives-tooltip",
       "version": "0.0.1",
@@ -2924,6 +2928,8 @@
     "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
 
     "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
+
+    "@singularity/plugin-primitives-toggle-chip": ["@singularity/plugin-primitives-toggle-chip@workspace:plugins/primitives/plugins/toggle-chip"],
 
     "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 

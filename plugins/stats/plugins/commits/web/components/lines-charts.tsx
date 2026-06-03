@@ -16,7 +16,10 @@ import {
   XAxis,
   YAxis,
 } from "recharts";
-import { cn } from "@/lib/utils";
+import {
+  SegmentedControl,
+  ToggleChip,
+} from "@plugins/primitives/plugins/toggle-chip/web";
 import {
   ChartState,
   axisProps,
@@ -473,18 +476,13 @@ export function LinesChartsSection() {
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
         <ExcludedPathToggles dense />
-        <button
-          type="button"
+        <ToggleChip
+          active={byType}
           onClick={() => setByType((v) => !v)}
-          className={cn(
-            "rounded-full border px-3 py-1 text-xs transition-colors shrink-0",
-            byType
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-          )}
+          className="shrink-0"
         >
           By type
-        </button>
+        </ToggleChip>
       </div>
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>
@@ -493,23 +491,12 @@ export function LinesChartsSection() {
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Per period</h3>
         {byType ? <LinesRateBreakdownChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} />}
-        <div className="flex flex-wrap gap-1.5 mt-3">
-          {BUCKETS.map((b) => (
-            <button
-              key={b.id}
-              type="button"
-              onClick={() => setBucket(b.id)}
-              className={cn(
-                "rounded-full border px-3 py-1 text-xs transition-colors",
-                bucket === b.id
-                  ? "bg-primary text-primary-foreground border-primary"
-                  : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-              )}
-            >
-              {b.label}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          options={BUCKETS}
+          value={bucket}
+          onChange={setBucket}
+          className="mt-3"
+        />
       </div>
     </div>
   );

@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { cn } from "@/lib/utils";
+import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { WaitTimeChart } from "./wait-time-chart";
 import { ThroughputChart } from "./throughput-chart";
 import { StepBreakdownChart } from "./step-breakdown-chart";
@@ -16,23 +16,7 @@ export function PushesSection() {
 
   return (
     <div className="flex flex-col gap-6">
-      <div className="flex flex-wrap gap-1.5">
-        {BUCKETS.map((b) => (
-          <button
-            key={b.id}
-            type="button"
-            onClick={() => setBucket(b.id)}
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors",
-              bucket === b.id
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
-          >
-            {b.label}
-          </button>
-        ))}
-      </div>
+      <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
       <ThroughputChart bucket={bucket} />
       <WaitTimeChart bucket={bucket} />
       <StepBreakdownChart bucket={bucket} />

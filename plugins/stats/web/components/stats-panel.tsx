@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Stats } from "../slots";
 import { StatsProvider, useShowEmptyDays } from "./stats-context";
 
@@ -18,29 +18,20 @@ function StatsContent() {
     <div className="p-6">
       <div className="mx-auto flex max-w-4xl flex-col gap-6">
         <div className="flex justify-end gap-2">
-          <a
-            href="/debug/profiling"
-            className="rounded-full border bg-background px-3 py-1 text-xs text-muted-foreground transition-colors hover:bg-muted hover:text-foreground"
-          >
+          <ToggleChip as="a" href="/debug/profiling" active={false}>
             Profiling
-          </a>
-          <button
-            type="button"
+          </ToggleChip>
+          <ToggleChip
+            active={showEmptyDays}
             onClick={() => setShowEmptyDays(!showEmptyDays)}
             title={
               showEmptyDays
                 ? "Showing all days — click to skip empty days"
                 : "Skipping empty days — click to show all days"
             }
-            className={cn(
-              "rounded-full border px-3 py-1 text-xs transition-colors",
-              showEmptyDays
-                ? "bg-primary text-primary-foreground border-primary"
-                : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-            )}
           >
             Show empty days
-          </button>
+          </ToggleChip>
         </div>
         {charts.length === 0 ? (
           <div className="text-muted-foreground text-sm">No stats available.</div>

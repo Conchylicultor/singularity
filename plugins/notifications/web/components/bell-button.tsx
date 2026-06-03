@@ -4,6 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import type { Notification } from "../../shared/schema";
@@ -171,17 +172,16 @@ export function BellButton() {
         {list.length > 0 && (
           <div className="flex gap-1 px-3 py-1.5 overflow-x-auto border-b">
             {(["all", ...(hasErrors ? ["errors"] : []), ...uniqueTypes] as string[]).map((chip) => (
-              <button
+              <ToggleChip
                 key={chip}
-                className={`shrink-0 text-xs px-2 py-0.5 rounded-full ${
-                  typeFilter === chip
-                    ? "bg-accent text-accent-foreground"
-                    : "text-muted-foreground hover:text-foreground"
-                }`}
+                variant="ghost"
+                size="sm"
+                active={typeFilter === chip}
                 onClick={() => { setTypeFilter(chip); }}
+                className="shrink-0"
               >
                 {chip === "all" ? "All" : chip.charAt(0).toUpperCase() + chip.slice(1)}
-              </button>
+              </ToggleChip>
             ))}
           </div>
         )}

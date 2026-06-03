@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
 import { CommitsRateChart } from "./rate-chart";
@@ -17,20 +17,16 @@ export function CommitsSection() {
   return (
     <div className="flex flex-col gap-6">
       <div className="flex justify-end gap-2">
-        <button
-          type="button"
+        <ToggleChip
+          active={byCategory}
           onClick={() => setByCategory((v) => !v)}
-          className={cn(
-            "rounded-full border px-3 py-1 text-xs transition-colors shrink-0",
-            byCategory
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-          )}
+          className="shrink-0"
         >
           By category
-        </button>
-        <button
-          type="button"
+        </ToggleChip>
+        <ToggleChip
+          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+          active={filterRebases}
           onClick={toggle}
           title={
             // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
@@ -38,16 +34,9 @@ export function CommitsSection() {
               ? "Deduplication on: multi-commit pushes counted once — click to disable"
               : "Deduplication off: every commit counted — click to filter rebases"
           }
-          className={cn(
-            "rounded-full border px-3 py-1 text-xs transition-colors",
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-            filterRebases
-              ? "bg-primary text-primary-foreground border-primary"
-              : "bg-background text-muted-foreground hover:bg-muted hover:text-foreground",
-          )}
         >
           Filter rebases
-        </button>
+        </ToggleChip>
       </div>
       <div>
         <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>

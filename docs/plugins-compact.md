@@ -199,6 +199,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Plugins:
         - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
+    - **`toggle-chip`** — Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.
     - **`tooltip`** — WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
     - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-toggle-chip",
+  "description": "Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.",
+  "private": true,
+  "version": "0.0.1"
+}
