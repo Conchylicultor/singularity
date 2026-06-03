@@ -3,7 +3,6 @@ import {
   useCollapsible,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Timestamp } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type UnknownEvent = Extract<JsonlEvent, { kind: "unknown" }>;
 
@@ -19,7 +18,6 @@ export function UnknownRow({ event }: { event: JsonlEvent }) {
       >
         <CollapsibleChevron open={open} className="size-3" />
         <span className="font-mono">{e.type}</span>
-        <Timestamp at={e.at} className="ml-auto tabular-nums text-muted-foreground" />
       </button>
       {open && (
         <div id={contentId} className="mt-2 border-l-2 border-muted-foreground/20 pl-3">

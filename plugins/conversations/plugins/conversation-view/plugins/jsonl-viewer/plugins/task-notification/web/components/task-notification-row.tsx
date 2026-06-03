@@ -1,5 +1,4 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Timestamp } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
@@ -15,7 +14,6 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   return (
     <div className="flex flex-col gap-0.5 px-1 py-0.5 text-xs text-muted-foreground">
       <div className="flex items-center gap-2">
-        <Timestamp at={e.at} className="tabular-nums" />
         <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
           {e.taskId}
         </span>
