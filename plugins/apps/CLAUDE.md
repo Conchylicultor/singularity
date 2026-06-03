@@ -8,9 +8,9 @@
 - Load-bearing: yes
 - Web:
   - Contributes: `Core.Root` → `AppsLayout`
-  - Exports: Values: `Apps`
+  - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`
 - Cross-plugin:
-  - Imported by: `shell`
+  - Imported by: `floating-bar`, `shell`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
   - **`debug`** — Debug app.

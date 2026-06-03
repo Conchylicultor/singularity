@@ -15,6 +15,7 @@ export default {
       tooltip: "Agent Manager",
       component: AgentManagerLayout,
       path: "/",
+      hostsToolbar: true,
     }),
   ],
 } satisfies PluginDefinition;

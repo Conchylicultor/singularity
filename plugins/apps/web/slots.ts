@@ -8,6 +8,10 @@ export const Apps = {
     component: ComponentType;
     path: string;
     onClick?: () => void;
+    /** True for the app that renders the global `Shell.Toolbar` (the agent
+     * manager). Surfaces that already show the toolbar set opt out of the
+     * floating action bar to avoid double-mounting its buttons. */
+    hostsToolbar?: boolean;
   }>("apps.app", {
     docLabel: (p) => p.tooltip,
   }),

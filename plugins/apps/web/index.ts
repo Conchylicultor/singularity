@@ -2,6 +2,7 @@ import { Core, type PluginDefinition } from "@plugins/framework/plugins/web-sdk/
 import { AppsLayout } from "./components/apps-layout";
 
 export { Apps } from "./slots";
+export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
 
 export default {
   id: "apps",

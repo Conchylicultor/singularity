@@ -6,8 +6,8 @@
 
 - Description: Trigger `./singularity build` from the toolbar.
 - Web:
-  - Contributes: `Shell.Toolbar` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `notifications.toast`, `shell.Shell`
+  - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
+  - Uses: `config_v2.ConfigV2`, `notifications.toast`
   - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `notifications.recordNotification`

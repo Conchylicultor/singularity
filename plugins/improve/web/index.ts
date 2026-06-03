@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Shell } from "@plugins/shell/web";
+import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { ImproveButton } from "./components/improve-button";
 
 export { Improve as ImproveCommands } from "./commands";
@@ -11,10 +11,9 @@ export default {
   description:
     'Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot.',
   contributions: [
-    Shell.Toolbar({
+    ActionBar.Item({
       id: "improve",
       component: ImproveButton,
-      group: "actions",
     }),
   ],
 } satisfies PluginDefinition;

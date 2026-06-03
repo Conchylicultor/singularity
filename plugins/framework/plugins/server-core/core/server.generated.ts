@@ -82,6 +82,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/profiling/plugins/stats", hierarchyPath: "debug/profiling/stats", loader: () => import("@plugins/debug/plugins/profiling/plugins/stats/server"), dependsOn: ["infra/plugins/endpoints"] },
   { pluginPath: "debug/plugins/worktree-cleanup", hierarchyPath: "debug/worktree-cleanup", loader: () => import("@plugins/debug/plugins/worktree-cleanup/server"), dependsOn: ["database/plugins/admin", "infra/plugins/endpoints", "infra/plugins/paths", "infra/plugins/worktree", "tasks-core"] },
   { pluginPath: "events-test", hierarchyPath: "events-test", loader: () => import("@plugins/events-test/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/events", "infra/plugins/jobs"] },
+  { pluginPath: "floating-bar", hierarchyPath: "floating-bar", loader: () => import("@plugins/floating-bar/server"), dependsOn: ["config_v2"] },
   { pluginPath: "health", hierarchyPath: "health", loader: () => import("@plugins/health/server"), dependsOn: ["infra/plugins/endpoints"] },
   { pluginPath: "improve", hierarchyPath: "improve", loader: () => import("@plugins/improve/server"), dependsOn: ["conversations", "conversations/plugins/conversations-view/plugins/grouped", "database", "infra/plugins/events", "infra/plugins/jobs", "tasks-core"] },
   { pluginPath: "infra/plugins/attachments", hierarchyPath: "infra/attachments", loader: () => import("@plugins/infra/plugins/attachments/server"), dependsOn: ["database", "infra/plugins/paths"] },

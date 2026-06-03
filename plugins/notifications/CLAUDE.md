@@ -6,9 +6,9 @@
 
 - Description: Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
 - Web:
-  - Contributes: `Shell.Toolbar` → `BellButton`
-  - Uses: `shell.Shell`, `shell.ShellCommands`
-  - Exports: Types: `ToastArgs`; Values: `toast`
+  - Contributes: `ActionBar.Item` → `BellButton`
+  - Uses: `shell.ShellCommands`
+  - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/notifications/server/internal/tables.ts`
@@ -16,7 +16,7 @@
   - Register: `defineJob('notifications.ttl-cleanup')`
   - Resources: `notifications` (push)
 - Cross-plugin:
-  - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+  - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
 - Shared:
   - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 

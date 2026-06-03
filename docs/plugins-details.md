@@ -63,9 +63,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
     - Contributes: `Core.Root` → `AppsLayout`
-    - Exports: Values: `Apps`
+    - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`
   - Cross-plugin:
-    - Imported by: `shell`
+    - Imported by: `floating-bar`, `shell`
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
@@ -81,7 +81,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`
             - Exports: Values: `DebugApp`
           - Cross-plugin:
-            - Imported by: `agents`, `auth`, `build`, `code-explorer`, `conversations-view`, `draw-on-app`, `edit-mode`, `health`, `improve`, `notifications`, `screenshot`, `settings`, `stats`, `task-detail`, `theme`, `theme-customizer`, `toaster`, `worktree-switcher`
+            - Imported by: `action-bar`, `agents`, `auth`, `code-explorer`, `conversations-view`, `health`, `notifications`, `settings`, `stats`, `task-detail`, `theme-customizer`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -336,8 +336,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Web:
-    - Contributes: `Shell.Toolbar` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
-    - Uses: `config_v2.ConfigV2`, `notifications.toast`, `shell.Shell`
+    - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
+    - Uses: `config_v2.ConfigV2`, `notifications.toast`
     - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
   - Server:
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `notifications.recordNotification`
@@ -415,7 +415,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
@@ -1113,6 +1113,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Shared:
     - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
 
+- **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
+  - Web:
+    - Contributes: `Core.Root` → `FloatingBar`, `ConfigV2.WebRegister`
+    - Uses: `apps.useActiveApp`, `config_v2.ConfigV2`, `config_v2.useConfig`, `notifications.notificationsResource`
+  - Server:
+    - Uses: `config_v2.ConfigV2`
+
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
     - **`central-core`**
@@ -1180,8 +1187,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`improve`**
   - Web:
     - Commands: `Improve.OpenWithText`
-    - Contributes: `Shell.Toolbar` → `ImproveButton`
-    - Uses: `shell.Shell`
+    - Contributes: `ActionBar.Item` → `ImproveButton`
     - Exports: Types: `OpenWithTextArgs`; Values: `ImproveCommands`
   - Server:
     - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
@@ -1285,9 +1291,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - Web:
-    - Contributes: `Shell.Toolbar` → `BellButton`
-    - Uses: `shell.Shell`, `shell.ShellCommands`
-    - Exports: Types: `ToastArgs`; Values: `toast`
+    - Contributes: `ActionBar.Item` → `BellButton`
+    - Uses: `shell.ShellCommands`
+    - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
   - Server:
     - Uses: `database.db`
     - DB schema: `plugins/notifications/server/internal/tables.ts`
@@ -1295,7 +1301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Resources: `notifications` (push)
   - Cross-plugin:
-    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
   - Shared:
     - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 
@@ -1607,8 +1613,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
       - Web:
-        - Contributes: `Shell.Toolbar` → `PenButton`, `Shortcuts.Shortcut` "reorder.exit-edit-mode (escape)"
-        - Uses: `reorder.getEditMode`, `reorder.setEditMode`, `reorder.useEditMode`, `shell.Shell`
+        - Contributes: `ActionBar.Item` → `PenButton`, `Shortcuts.Shortcut` "reorder.exit-edit-mode (escape)"
+        - Uses: `reorder.getEditMode`, `reorder.setEditMode`, `reorder.useEditMode`
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
       - Server:
         - Uses: `database.db`
@@ -1658,8 +1664,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Web:
-    - Contributes: `Pane.Register` "screenshot", `Shell.Toolbar` → `ScreenshotButton`
-    - Uses: `notifications.toast`, `shell.Shell`
+    - Contributes: `Pane.Register` "screenshot", `ActionBar.Item` → `ScreenshotButton`
+    - Uses: `notifications.toast`
     - Exports: Values: `captureApp`, `screenshotPane`
   - Cross-plugin:
     - Imported by: `draw-on-app`
@@ -1671,14 +1677,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DrawCanvasProps`, `Stroke`; Values: `applyStrokes`, `DrawCanvas`
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
       - Web:
-        - Contributes: `Shell.Toolbar` → `DrawOnAppButton`
-        - Uses: `improve.ImproveCommands`, `notifications.toast`, `screenshot.captureApp`, `shell.Shell`
+        - Contributes: `ActionBar.Item` → `DrawOnAppButton`
+        - Uses: `improve.ImproveCommands`, `notifications.toast`, `screenshot.captureApp`
 
 - **`shell`** — Foundational app layout; defines the slots and commands most other plugins extend.
   - Web:
     - Commands: `Shell.Toast`
     - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
   - Plugins:
+    - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.
+      - Web:
+        - Contributes: `Shell.Toolbar` → `ActionBarStrip`
+        - Uses: `shell.Shell`
+        - Exports: Values: `ActionBar`
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
       - Web:
         - Contributes: `Core.Root` → `ToasterRoot`
@@ -1826,8 +1837,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`theme`** — Toolbar toggle for light/dark mode.
   - Web:
-    - Contributes: `Shell.Toolbar` → `ThemeToggle`
-    - Uses: `shell.Shell`
+    - Contributes: `ActionBar.Item` → `ThemeToggle`
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:

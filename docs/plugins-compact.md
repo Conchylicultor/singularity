@@ -193,6 +193,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 
+- **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
+
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
     - **`central-core`**
@@ -338,6 +340,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
   - Plugins:
+    - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
 
 - **`stats`** [4 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.

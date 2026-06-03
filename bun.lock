@@ -819,6 +819,10 @@
       "name": "@singularity/plugin-events-test",
       "version": "0.0.1",
     },
+    "plugins/floating-bar": {
+      "name": "@singularity/plugin-floating-bar",
+      "version": "0.0.1",
+    },
     "plugins/framework": {
       "name": "@singularity/plugin-framework",
       "version": "0.0.1",
@@ -1450,6 +1454,10 @@
       "dependencies": {
         "sonner": "^2.0.7",
       },
+    },
+    "plugins/shell/plugins/action-bar": {
+      "name": "@singularity/plugin-shell-action-bar",
+      "version": "0.0.1",
     },
     "plugins/shell/plugins/toaster": {
       "name": "@singularity/plugin-shell-toaster",
@@ -2580,6 +2588,8 @@
 
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
 
+    "@singularity/plugin-floating-bar": ["@singularity/plugin-floating-bar@workspace:plugins/floating-bar"],
+
     "@singularity/plugin-framework": ["@singularity/plugin-framework@workspace:plugins/framework"],
 
     "@singularity/plugin-framework-central-core": ["@singularity/plugin-framework-central-core@workspace:plugins/framework/plugins/central-core"],
@@ -2857,6 +2867,8 @@
     "@singularity/plugin-screenshot-draw-on-app": ["@singularity/plugin-screenshot-draw-on-app@workspace:plugins/screenshot/plugins/draw-on-app"],
 
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
+
+    "@singularity/plugin-shell-action-bar": ["@singularity/plugin-shell-action-bar@workspace:plugins/shell/plugins/action-bar"],
 
     "@singularity/plugin-shell-toaster": ["@singularity/plugin-shell-toaster@workspace:plugins/shell/plugins/toaster"],
 

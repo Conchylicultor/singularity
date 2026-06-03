@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Shell } from "@plugins/shell/web";
+import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { DrawOnAppButton } from "./components/draw-on-app-button";
 
 export default {
@@ -8,6 +8,6 @@ export default {
   description:
     "Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.",
   contributions: [
-    Shell.Toolbar({ id: "draw-on-app", component: DrawOnAppButton, group: "actions" }),
+    ActionBar.Item({ id: "draw-on-app", component: DrawOnAppButton }),
   ],
 } satisfies PluginDefinition;

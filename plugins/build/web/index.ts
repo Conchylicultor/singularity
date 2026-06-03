@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Shell } from "@plugins/shell/web";
+import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { buildConfig } from "../shared/config";
@@ -14,10 +14,9 @@ export default {
   name: "Build",
   description: "Trigger `./singularity build` from the toolbar.",
   contributions: [
-    Shell.Toolbar({
+    ActionBar.Item({
       id: "build",
       component: BuildButton,
-      group: "actions",
     }),
     Pane.Register({ pane: buildPane }),
     Pane.Register({ pane: buildDetailPane }),

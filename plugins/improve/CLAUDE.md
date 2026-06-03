@@ -6,8 +6,7 @@
 
 - Web:
   - Commands: `Improve.OpenWithText`
-  - Contributes: `Shell.Toolbar` → `ImproveButton`
-  - Uses: `shell.Shell`
+  - Contributes: `ActionBar.Item` → `ImproveButton`
   - Exports: Types: `OpenWithTextArgs`; Values: `ImproveCommands`
 - Server:
   - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core.ensureMetaTask`
