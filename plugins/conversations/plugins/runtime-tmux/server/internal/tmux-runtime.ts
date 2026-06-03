@@ -29,17 +29,36 @@ const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*
 // signal the AskUserQuestion web form gates on. Throttled to one capture-pane
 // per pane every PROBE_INTERVAL_MS to keep the cost bounded.
 const PROBE_INTERVAL_MS = 5_000;
-const WAITING_PATTERN_RE = /Enter to select/;
+// The AskUserQuestion menu's footer — its presence is the only reliable signal
+// that the CLI is blocked on a question (the title/session file can read as a
+// plain idle/permission state, see the PROBE_INTERVAL_MS comment above).
+const QUESTION_FOOTER_RE = /Enter to select/;
+// Claude's *rewind* menu (opened by Esc-Esc at the idle prompt). It does NOT
+// share the question footer — verified against CLI v2.1.161 it renders
+// "Enter to continue · Esc to cancel" plus a "Restore the code…" header. We
+// detect it so escapeUntilPromptCleared() can treat it as a menu to dismiss
+// rather than mistaking it for the idle prompt (which would strand the menu).
+const REWIND_FOOTER_RE = /Enter to continue|Restore the code and\/or conversation/;
 const probeCache = new Map<string, { at: number; waiting: boolean }>();
 
-async function probeWaiting(id: string): Promise<boolean> {
+type PaneMenu = "question" | "rewind" | "idle";
+
+// Single fresh capture-pane → which interactive menu (if any) is on screen.
+// Both menu footers live in the bottom few lines, so a shallow capture suffices.
+async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   const proc = Bun.spawn(
-    [TMUX, "capture-pane", "-p", "-S", "-10", "-t", id],
+    [TMUX, "capture-pane", "-p", "-S", "-15", "-t", id],
     { stdout: "pipe", stderr: "pipe" },
   );
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
-  return WAITING_PATTERN_RE.test(stdout);
+  if (QUESTION_FOOTER_RE.test(stdout)) return "question";
+  if (REWIND_FOOTER_RE.test(stdout)) return "rewind";
+  return "idle";
+}
+
+async function probeWaiting(id: string): Promise<boolean> {
+  return (await classifyPaneMenu(id)) === "question";
 }
 
 async function isProbeWaiting(id: string): Promise<boolean> {
@@ -51,28 +70,33 @@ async function isProbeWaiting(id: string): Promise<boolean> {
   return waiting;
 }
 
-// answerPrompt() form-dismissal poll. After Escape the TUI takes ~210ms to
-// re-render from the prompt menu back to the idle input. Sending into a live
-// menu makes it auto-select a wrong option and fabricate an answer, so we
-// poll the pane with a FRESH capture each iteration (never the throttled
-// isProbeWaiting cache) until "Enter to select" is gone — never send into a
-// live form.
+// escapeUntilPromptCleared() form-dismissal poll. After an Escape the TUI takes
+// ~210ms to re-render from the prompt menu back to the idle input; under heavy
+// concurrent load capture-pane can lag further behind the real CLI state. We
+// poll a FRESH capture each iteration (never the throttled isProbeWaiting
+// cache) until no menu remains.
 //
-// Crucially, a SINGLE Escape is not reliable: send-keys to a freshly-rendered
-// Claude TUI occasionally drops the keystroke, and some menu states need a
-// second Escape ("Press Escape again to cancel"). So we RE-SEND Escape every
-// FORM_CLEAR_ESCAPE_RETRY_MS until the form clears, instead of firing once and
-// throwing — dismissal is self-healing. But re-sending is only safe while a
-// menu footer is STILL visible: at the idle prompt an Esc-Esc opens Claude's
-// rewind menu (which shares the "Enter to select" footer and would trap this
-// loop), so escapeUntilPromptCleared() re-checks clearance before each Escape
-// and never presses it at idle. The clearance poll runs faster
-// (FORM_CLEAR_POLL_INTERVAL_MS) so a working Escape's slow re-render is observed
-// without spamming Escape. The timeout is generous because many concurrent
-// agents can slow tmux/Ink.
-const FORM_CLEAR_POLL_INTERVAL_MS = 75;
-const FORM_CLEAR_ESCAPE_RETRY_MS = 500;
-const FORM_CLEAR_TIMEOUT_MS = 5_000;
+// The cadence is the whole ballgame. A single Escape DOES reliably dismiss the
+// AskUserQuestion menu (verified, CLI v2.1.161) — the danger is sending a SECOND
+// one too soon. The prior implementation re-fired Escape every 500ms while the
+// footer was still on screen, but capture-pane lags the real CLI: once Escape
+// dismissed the menu, the CLI sat at idle while the capture still showed the
+// stale footer, so the next cadence Escape (and the one after) landed at idle —
+// an Esc-Esc that opens Claude's *rewind* menu. That is the crash this fixes.
+//
+// So we space Escapes by ESCAPE_MIN_GAP_MS — comfortably longer than the
+// re-render lag — and re-check state before each one. In the common case the
+// menu clears after the first Escape and we observe idle before the gap
+// elapses, sending exactly one keystroke. A second Escape only fires if the
+// menu is STILL present a full gap later (a genuinely dropped keystroke, not
+// lag), where re-pressing is safe because the menu really is up. And because
+// classifyPaneMenu() recognises the rewind menu as a menu (not idle), any
+// rewind opened by a queued/overshot keystroke is just escaped away on a later
+// tick instead of being mistaken for the cleared prompt — rewind is recoverable,
+// never an absorbing trap.
+const FORM_CLEAR_POLL_INTERVAL_MS = 100;
+const ESCAPE_MIN_GAP_MS = 1_500;
+const FORM_CLEAR_TIMEOUT_MS = 6_000;
 
 interface ResolvedPaneStatus {
   title: string;
@@ -306,38 +330,39 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
 }
 
 /**
- * Dismiss the active prompt form, RE-SENDING Escape until it actually clears.
- * A single Escape is unreliable (dropped keystroke / "press again" menu
- * states), so we retry on FORM_CLEAR_ESCAPE_RETRY_MS while polling the pane for
- * clearance on the faster FORM_CLEAR_POLL_INTERVAL_MS. Each clearance check is a
- * FRESH capture via probeWaiting() — NOT the throttled isProbeWaiting cache,
- * whose 5s window would not reflect the form clearing within this budget. Exit
- * copy mode before each Escape so the key reaches Claude rather than tmux's vi
- * bindings (see send()).
+ * Dismiss the active prompt menu (AskUserQuestion), pressing Escape until the
+ * pane returns to the idle input — but spacing Escapes by ESCAPE_MIN_GAP_MS so
+ * we never stack two into an Esc-Esc that opens Claude's rewind menu. Each
+ * iteration re-classifies the pane from a FRESH capture (never the throttled
+ * isProbeWaiting cache, whose 5s window would not reflect clearance within this
+ * budget):
+ *   - idle     → cleared, return.
+ *   - question → press Escape, but at most once per ESCAPE_MIN_GAP_MS. The
+ *                common case clears on the first press and reaches idle before
+ *                the gap elapses (one keystroke total); a second press only
+ *                fires if the menu is genuinely still up a full gap later.
+ *   - rewind   → an overshot/queued Escape already dismissed the question and
+ *                opened rewind; it is just another menu, so the same gated
+ *                Escape closes it back to idle. Recognising it (instead of
+ *                reading it as idle) is what keeps it from being left stranded.
  *
- * Throws if the form never clears within FORM_CLEAR_TIMEOUT_MS rather than
- * leaving the caller to send into a live form.
+ * Exit copy mode before each Escape so the key reaches Claude rather than
+ * tmux's vi bindings (see send()). Throws if the pane never reaches idle within
+ * FORM_CLEAR_TIMEOUT_MS rather than letting the caller send into a live menu
+ * (which would auto-select a wrong option and fabricate an answer).
  *
- * Shared verbatim by answerPrompt() (which then C-c + pastes the answer) and
+ * Shared by answerPrompt() (which then C-c + pastes the answer) and
  * flushInteractivePrompt() (which stops here, sending no answer).
  */
 async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
   const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
-  let nextEscapeAt = 0;
+  let lastEscapeAt = -Infinity;
   for (;;) {
-    // Re-check clearance BEFORE every Escape and press Escape ONLY while a menu
-    // footer ("Enter to select") is still visible — NEVER at the idle prompt.
-    // This ordering is load-bearing: at the idle input a second Escape (Esc-Esc)
-    // opens Claude's *rewind* menu, which renders the SAME "Enter to select"
-    // footer probeWaiting keys on. The old unconditional 500ms Escape cadence
-    // therefore re-opened rewind the instant the question cleared — keeping
-    // probeWaiting true forever, timing out, and leaving a rewind menu over the
-    // idle prompt so the answer paste never ran (the crash this fixes). Gating
-    // on a still-visible menu means we never initiate an Esc-Esc from idle; and
-    // if queued Escapes under load ever do open rewind, the next tick still sees
-    // its footer and one more Escape closes it back to the prompt.
-    if (!(await probeWaiting(conversationId))) return;
-    if (Date.now() >= nextEscapeAt) {
+    if ((await classifyPaneMenu(conversationId)) === "idle") return;
+    // A menu (question or rewind) is up. Press Escape only if we haven't pressed
+    // within the last gap — long enough for a prior Escape's re-render to land,
+    // so we never Esc-Esc a pane that has already reached idle under render lag.
+    if (Date.now() - lastEscapeAt >= ESCAPE_MIN_GAP_MS) {
       await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
         stdout: "pipe",
         stderr: "pipe",
@@ -346,14 +371,14 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
         stdout: "pipe",
         stderr: "pipe",
       }).exited;
-      nextEscapeAt = Date.now() + FORM_CLEAR_ESCAPE_RETRY_MS;
+      lastEscapeAt = Date.now();
     }
     if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) break;
     await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
   }
-  // Never send into a live form — that fabricates a wrong answer.
+  // Never send into a live menu — that fabricates a wrong answer.
   throw new Error(
-    `tmux escapeUntilPromptCleared for ${conversationId}: prompt form did not clear ` +
+    `tmux escapeUntilPromptCleared for ${conversationId}: prompt menu did not clear ` +
       `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
   );
 }
