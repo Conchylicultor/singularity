@@ -32,7 +32,11 @@ function useResolvePage({ pageId }: { pageId: string }) {
 
 export const pageDetailPane = Pane.define({
   id: "page-detail",
-  defaultAncestors: [pagesRootPane],
+  // No `defaultAncestors`: the page tree lives in the sidebar slot, so the
+  // `pages-root` empty-state pane should only appear as the index for bare
+  // `/pages` — never stacked as an extra Miller column to the left of an open
+  // page. Opening a page therefore yields a single-entry chain that replaces
+  // the empty state rather than sitting beside it.
   segment: "page/:pageId",
   component: PageDetailBody,
   width: 720,
@@ -65,7 +69,7 @@ function PageDetailBody(): ReactElement {
         <PageHeader pageId={pageId} />
         <BlockEditor
           documentId={pageId}
-          onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "push" })}
+          onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
         />
         <PageDetail.Section.Render>
           {(s) => <s.component documentId={pageId} />}
