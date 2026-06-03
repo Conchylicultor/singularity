@@ -9,6 +9,7 @@ export type {
 } from "./resources";
 export type {
   CentralPluginDefinition,
+  LoadedCentralPlugin,
   HttpHandler,
   Registration,
   ResourceLike,

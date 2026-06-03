@@ -13,7 +13,6 @@ export {
 } from "./internal/color-picker-popover";
 
 export default {
-  id: "primitives/color-picker",
   name: "ColorPicker",
   description:
     "Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.",

@@ -32,7 +32,6 @@ export type { DurableHooks } from "./internal/step-ctx";
 export { jobsListResource } from "./internal/resources";
 
 export default {
-  id: "jobs",
   name: "Jobs",
   description:
     "Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.",

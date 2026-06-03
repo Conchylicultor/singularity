@@ -3,7 +3,6 @@ import { BuildDetailSlots } from "@plugins/build/web";
 import { BuildLogSection } from "./components/build-log-section";
 
 export default {
-  id: "build-logs",
   name: "Build: Logs",
   description: "Live log stream section in the build detail pane.",
   contributions: [

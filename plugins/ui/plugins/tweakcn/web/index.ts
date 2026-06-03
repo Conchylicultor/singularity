@@ -7,7 +7,6 @@ import { listTweakcnThemes } from "../core";
 import { TweakcnSection } from "./components/tweakcn-section";
 
 export default {
-  id: "ui-tweakcn",
   name: "UI: Tweakcn",
   description:
     "Imports tweakcn themes as dynamic presets across all token groups.",

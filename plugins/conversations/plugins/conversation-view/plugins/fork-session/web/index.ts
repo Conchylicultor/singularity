@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { ForkSessionAction } from "./components/fork-session-action";
 
 export default {
-  id: "conversation-fork-session",
   name: "Conversation: Fork session",
   description:
     "Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.",

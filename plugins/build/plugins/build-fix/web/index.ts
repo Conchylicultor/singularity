@@ -3,7 +3,6 @@ import { BuildDetailSlots } from "@plugins/build/web";
 import { BuildFixSection } from "./components/build-fix-section";
 
 export default {
-  id: "build-fix",
   name: "Build: Fix",
   description:
     "Launch-agent button in the build detail pane for failed builds.",

@@ -3,7 +3,6 @@ import { Publish } from "@plugins/apps/plugins/forge/plugins/publish/web";
 import { ExpandCollapseButton } from "./components/expand-collapse-button";
 
 export default {
-  id: "publish-expand-collapse",
   name: "Publish: Expand/Collapse",
   description:
     "Expand/collapse all descendants button in the publish plugin tree row.",

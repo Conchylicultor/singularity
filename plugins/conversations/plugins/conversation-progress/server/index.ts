@@ -13,7 +13,6 @@ export { classifyProgressJob } from "./internal/heuristic-job";
 export { markProgressPushedJob } from "./internal/push-job";
 
 export default {
-  id: "conversation-progress",
   name: "Conversation: Progress",
   description:
     "Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.",

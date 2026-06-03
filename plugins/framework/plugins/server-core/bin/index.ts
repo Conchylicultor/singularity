@@ -5,7 +5,7 @@ import {
   collectContributions,
   reportServerError,
 } from "@plugins/framework/plugins/server-core/core";
-import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import type { WsData, HttpHandler, WsHandler, ServerPluginDefinition, LoadedServerPlugin } from "@plugins/framework/plugins/server-core/core";
 import { serverEntries } from "../core/server.generated";
 import { topoSortPlugins } from "./topo";
 
@@ -13,7 +13,8 @@ import { topoSortPlugins } from "./topo";
 const loadResults = await Promise.allSettled(
   serverEntries.map((e) => e.loader() as Promise<{ default: ServerPluginDefinition }>),
 );
-const byPath = new Map<string, ServerPluginDefinition>();
+const byPath = new Map<string, LoadedServerPlugin>();
+const seenIds = new Set<string>();
 for (let i = 0; i < loadResults.length; i++) {
   const r = loadResults[i]!;
   const e = serverEntries[i]!;
@@ -21,7 +22,17 @@ for (let i = 0; i < loadResults.length; i++) {
     console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
     continue;
   }
-  const plugin = r.value.default;
+  // `id` is derived from the unique hierarchy path, never authored. The guard
+  // is structurally unreachable but fails loud if codegen ever produces a
+  // collision, rather than letting topo sort silently drop a plugin.
+  if (seenIds.has(e.hierarchyPath)) {
+    throw new Error(
+      `[plugin] duplicate derived plugin id "${e.hierarchyPath}" (${e.pluginPath})`,
+    );
+  }
+  seenIds.add(e.hierarchyPath);
+  const plugin = r.value.default as LoadedServerPlugin;
+  plugin.id = e.hierarchyPath;
   plugin._hierarchyPath = e.hierarchyPath;
   byPath.set(e.pluginPath, plugin);
 }
@@ -30,7 +41,7 @@ for (const e of serverEntries) {
   if (!plugin) continue;
   plugin.dependsOn = e.dependsOn
     .map((p) => byPath.get(p))
-    .filter((d): d is ServerPluginDefinition => d !== undefined);
+    .filter((d): d is LoadedServerPlugin => d !== undefined);
 }
 const ordered = topoSortPlugins([...byPath.values()]);
 

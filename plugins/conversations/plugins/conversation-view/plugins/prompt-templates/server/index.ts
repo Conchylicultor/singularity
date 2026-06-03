@@ -3,7 +3,6 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import { promptTemplatesConfig } from "../shared/config";
 
 export default {
-  id: "prompt-templates",
   name: "Prompt Templates",
   description:
     "Named template chips that prepend text to the conversation prompt editor for editing before sending.",

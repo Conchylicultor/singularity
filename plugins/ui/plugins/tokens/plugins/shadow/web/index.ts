@@ -15,7 +15,6 @@ export { Shadow } from "./slots";
 export type { ShadowPresetContribution } from "./slots";
 
 export default {
-  id: "ui-tokens-shadow",
   name: "UI: Shadow",
   description: "Shadow token group with switchable presets.",
   contributions: [

@@ -8,7 +8,6 @@ import { claudeCliCallsPane } from "./panes";
 export { claudeCliCallsPane } from "./panes";
 
 export default {
-  id: "debug-claude-cli-calls",
   name: "Claude CLI Calls",
   description:
     "Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.",

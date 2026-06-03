@@ -5,7 +5,6 @@ import { PushProfilingButton } from "./components/push-profiling-button";
 import { convPushProfilingPane } from "./panes";
 
 export default {
-  id: "conversation-push-profiling",
   name: "Conversation: Push Profiling",
   description:
     "Toolbar button showing push/build Gantt scoped to the last hour.",

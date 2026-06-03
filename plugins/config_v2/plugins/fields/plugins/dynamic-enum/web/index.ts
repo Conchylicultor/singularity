@@ -9,7 +9,6 @@ export type {
 } from "./internal/slots";
 
 export default {
-  id: "config-v2-fields-dynamic-enum",
   name: "Config v2: Dynamic Enum Field",
   description:
     "Dynamic enum field type: options resolved at render time from slot contributions.",

@@ -6,7 +6,6 @@ import { CONV_ID_RE } from "./internal/pattern";
 export { ConvChip };
 
 export default {
-  id: "active-data-conv",
   name: "Active Data: conv chip",
   description:
     "Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.",

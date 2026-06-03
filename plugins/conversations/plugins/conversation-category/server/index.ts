@@ -23,7 +23,6 @@ export { conversationCategoriesResource } from "./internal/resource";
 export { classifyConversationJob } from "./internal/classify-job";
 
 export default {
-  id: "conversation-category",
   name: "Conversation: Category",
   description:
     "Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.",

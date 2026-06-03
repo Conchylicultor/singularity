@@ -3,7 +3,6 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { ThemeToggle } from "./components/theme-toggle";
 
 export default {
-  id: "theme",
   name: "Theme",
   description: "Toolbar toggle for light/dark mode.",
   contributions: [

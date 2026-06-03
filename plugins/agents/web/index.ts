@@ -31,7 +31,6 @@ export type { SystemAgentDescriptor } from "./system-agents";
 export { patchAgent } from "./components/agents-list";
 
 export default {
-  id: "agents",
   name: "Agents",
   description: "Named agent definitions that launch conversations.",
   contributions: [

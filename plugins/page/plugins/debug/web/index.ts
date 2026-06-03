@@ -8,7 +8,6 @@ import { pageDebugPane } from "./panes";
 export { pageDebugPane } from "./panes";
 
 export default {
-  id: "page-debug",
   name: "Page Editor",
   description: "Debug harness for the block-based page editor.",
   contributions: [

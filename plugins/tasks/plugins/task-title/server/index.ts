@@ -17,7 +17,6 @@ export {
 } from "./internal/generate-title";
 
 export default {
-  id: "tasks-task-title",
   name: "Tasks: Task Title",
   description:
     "Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.",

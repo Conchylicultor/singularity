@@ -6,7 +6,6 @@ export {
 } from "../shared";
 
 export default {
-  id: "database-pgbouncer",
   name: "Database PgBouncer",
   description:
     "PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.",

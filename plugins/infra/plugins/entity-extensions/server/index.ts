@@ -5,7 +5,6 @@ export type { EntityExtension } from "./internal/define-extension";
 export { EntityExtensions } from "./internal/entity-extensions";
 
 export default {
-  id: "entity-extensions",
   name: "Entity Extensions",
   description:
     "Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.",

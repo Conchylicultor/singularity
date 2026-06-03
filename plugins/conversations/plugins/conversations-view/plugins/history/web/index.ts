@@ -4,7 +4,6 @@ import { ConversationsView } from "@plugins/conversations/plugins/conversations-
 import { HistoryView } from "./components/history-view";
 
 export default {
-  id: "conversations-history",
   name: "Conversations History",
   description: "All conversations in historical order of creation.",
   contributions: [

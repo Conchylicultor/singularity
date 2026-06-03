@@ -5,7 +5,6 @@ export { Apps } from "./slots";
 export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
 
 export default {
-  id: "apps",
   name: "Apps",
   description:
     "App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.",

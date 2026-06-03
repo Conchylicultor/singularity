@@ -14,7 +14,6 @@ export { Shape } from "./slots";
 export type { ShapePresetContribution } from "./slots";
 
 export default {
-  id: "ui-tokens-shape",
   name: "UI: Shape",
   description: "Shape token group (border-radius) with switchable presets.",
   contributions: [

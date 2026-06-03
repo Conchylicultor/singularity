@@ -9,7 +9,6 @@ export { SidebarNavItem, sidebarNavItem } from "./components/sidebar-nav-item";
 export { SidebarPaneSection } from "./components/sidebar-pane-section";
 
 export default {
-  id: "app-shell",
   name: "App Shell",
   description:
     "Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.",

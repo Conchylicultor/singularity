@@ -5,7 +5,6 @@ import { welcomePane } from "./panes";
 export { welcomePane } from "./panes";
 
 export default {
-  id: "welcome",
   name: "Welcome",
   description: "Landing pane shown at `/`.",
   contributions: [Pane.Register({ pane: welcomePane })],

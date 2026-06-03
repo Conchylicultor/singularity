@@ -6,7 +6,6 @@ import { ATTEMPT_ID_RE } from "./internal/pattern";
 export { AttemptChip };
 
 export default {
-  id: "active-data-attempt",
   name: "Active Data: attempt chip",
   description:
     "Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.",

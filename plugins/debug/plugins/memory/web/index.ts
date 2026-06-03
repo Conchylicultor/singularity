@@ -8,7 +8,6 @@ import { memoryPane } from "./panes";
 export { memoryPane } from "./panes";
 
 export default {
-  id: "debug-memory",
   name: "Memory",
   description: "Browse Claude Code auto-memory files for the current project.",
   contributions: [

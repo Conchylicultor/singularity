@@ -27,7 +27,6 @@ export type { CatalogFacetTable, FacetTableEntry } from "./facet-table";
 export { defineFacetTable } from "./facet-table";
 
 export default {
-  id: "forge-catalog",
   name: "Forge: Catalog",
   description:
     "Central view of all plugin contributions aggregated by type.",

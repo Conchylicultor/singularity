@@ -4,7 +4,6 @@ import { handleAnswer } from "./internal/handle-answer";
 import { handleFlush } from "./internal/handle-flush";
 
 export default {
-  id: "conversation-jsonl-viewer-tool-call-ask-user-question",
   name: "AskUserQuestion answer",
   httpRoutes: {
     [answerAskUserQuestion.route]: handleAnswer,

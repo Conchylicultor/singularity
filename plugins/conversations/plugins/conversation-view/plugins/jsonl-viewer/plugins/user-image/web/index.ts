@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { UserImageRow } from "./components/user-image-row";
 
 export default {
-  id: "conversation-jsonl-viewer-user-image",
   name: "JSONL Viewer: User image renderer",
   description: "Renders inline image thumbnails for user-image events.",
   contributions: [

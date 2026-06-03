@@ -3,7 +3,6 @@ import { handleBuildRunLogs } from "./internal/handle-build-run-logs";
 import { getBuildRunLogs } from "../shared/endpoints";
 
 export default {
-  id: "build-build-logs",
   name: "Build: Logs",
   description: "Per-run build log data endpoint.",
   httpRoutes: {

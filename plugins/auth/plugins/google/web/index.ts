@@ -7,7 +7,6 @@ import { googleAuthConfig } from "../shared";
 import { googleSetupPane } from "@plugins/auth/plugins/google/plugins/setup-wizard/web";
 
 export default {
-  id: "auth-google",
   name: "Auth: Google",
   description:
     "Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings.",

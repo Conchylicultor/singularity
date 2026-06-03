@@ -3,7 +3,6 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import { typographyConfig } from "../shared";
 
 export default {
-  id: "ui-tokens-typography",
   name: "UI: Typography",
   contributions: [ConfigV2.Register({ descriptor: typographyConfig })],
 } satisfies ServerPluginDefinition;

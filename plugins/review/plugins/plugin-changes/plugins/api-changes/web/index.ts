@@ -4,7 +4,6 @@ import { ApiChangesSection, hasDiffs } from "./components/api-changes-section";
 import { ApiChangesSummary } from "./components/api-changes-summary";
 
 export default {
-  id: "review-plugin-changes-api",
   name: "Review: API Changes",
   description:
     "API surface diff section for per-plugin review cards.",

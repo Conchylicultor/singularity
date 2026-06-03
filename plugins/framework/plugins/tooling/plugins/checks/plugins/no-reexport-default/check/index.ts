@@ -59,7 +59,7 @@ const check: Check = {
     return {
       ok: false,
       message: `${problems.length} barrel(s) violate inline default export rule:\n${problems.join("\n")}`,
-      hint: "Add `export default { id, name } satisfies ServerPluginDefinition` (or PluginDefinition / CentralPluginDefinition) inline in the barrel.",
+      hint: "Add `export default { name } satisfies ServerPluginDefinition` (or PluginDefinition / CentralPluginDefinition) inline in the barrel. (`id` is derived from the plugin path — never authored.)",
     };
   },
 };

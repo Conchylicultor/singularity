@@ -13,7 +13,6 @@ export { publishWsStatus, subscribeWsStatus } from "./ws-status-bus";
 export type { WsStatus, WsStatusEvent } from "./ws-status-bus";
 
 export default {
-  id: "networking",
   name: "Networking",
   description:
     "WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.",

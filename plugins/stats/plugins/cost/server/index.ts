@@ -24,7 +24,6 @@ import {
 } from "../shared/endpoints";
 
 export default {
-  id: "stats-cost",
   name: "Stats: Cost & tokens",
   description:
     "Token usage and dollar cost across Claude Code sessions, sourced from ccusage.",

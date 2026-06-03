@@ -9,7 +9,6 @@ export { TableDetail } from "./slots";
 export { tableDetailPane } from "./panes";
 
 export default {
-  id: "catalog-tables",
   name: "Forge: Catalog / Tables",
   description:
     "DB tables catalog tab with an extensible per-table detail slot.",

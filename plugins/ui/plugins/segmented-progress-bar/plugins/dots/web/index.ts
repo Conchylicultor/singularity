@@ -3,7 +3,6 @@ import { SegmentedProgressBarSlots } from "@plugins/ui/plugins/segmented-progres
 import { DotsRenderer } from "./components/dots-renderer";
 
 export default {
-  id: "ui-segmented-progress-bar-dots",
   name: "UI: Segmented Progress Bar — Dots",
   description:
     "Classic dot indicators with connectors. Compact and non-compact modes.",

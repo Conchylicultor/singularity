@@ -6,7 +6,6 @@ export { toast, type ToastArgs } from "./internal/toast";
 export { notificationsResource } from "../shared/resources";
 
 export default {
-  id: "notifications",
   name: "Notifications",
   description: "Persistent bell-button notifications backed by the DB.",
   contributions: [

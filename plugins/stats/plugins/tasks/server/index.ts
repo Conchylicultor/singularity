@@ -4,7 +4,6 @@ import { handleDaily } from "./internal/handle-daily";
 import { getTasksCumulative, getTasksDaily } from "../shared/endpoints";
 
 export default {
-  id: "stats-tasks",
   name: "Stats: Tasks",
   httpRoutes: {
     [getTasksCumulative.route]: handleCumulative,

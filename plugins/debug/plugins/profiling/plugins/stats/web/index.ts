@@ -3,7 +3,6 @@ import { Profiling } from "@plugins/debug/plugins/profiling/web";
 import { StatsSection } from "./components/stats-section";
 
 export default {
-  id: "debug-profiling-stats",
   name: "Stats Profiling",
   description: "Stats endpoint profiling for the Gantt debug pane.",
   contributions: [

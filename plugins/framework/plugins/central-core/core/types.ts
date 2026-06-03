@@ -25,8 +25,12 @@ export interface Registration {
   register(): void | Promise<void>;
 }
 
+/**
+ * Authored central-plugin shape. `id` is deliberately absent — it is derived
+ * from the plugin's unique hierarchy path and injected by the loader (see
+ * {@link LoadedCentralPlugin}), never hand-authored.
+ */
 export interface CentralPluginDefinition {
-  id: string;
   name: string;
   description?: string;
   /** Auto-set by codegen from the plugin's position in the hierarchy tree. */
@@ -53,3 +57,13 @@ export interface CentralPluginDefinition {
   onReady?: () => void | Promise<void>;
   onShutdown?: () => void | Promise<void>;
 }
+
+/**
+ * A central plugin at runtime: the authored shape plus the loader-injected
+ * identity. `id` equals the unique hierarchy path; `dependsOn` is narrowed to
+ * other loaded plugins. Framework readers operate on this type.
+ */
+export type LoadedCentralPlugin = Omit<CentralPluginDefinition, "dependsOn"> & {
+  id: string;
+  dependsOn?: LoadedCentralPlugin[];
+};

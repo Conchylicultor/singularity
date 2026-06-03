@@ -7,7 +7,6 @@ export { formatShortcutLabel } from "./internal/format-keys";
 export type { ShortcutDescriptor } from "./internal/types";
 
 export default {
-  id: "shortcuts",
   name: "Shortcuts",
   description:
     "Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.",

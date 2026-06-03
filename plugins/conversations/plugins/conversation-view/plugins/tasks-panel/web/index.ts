@@ -7,7 +7,6 @@ import { ExpandToTasksAction } from "./components/expand-to-tasks-action";
 import { convTasksPane } from "./panes";
 
 export default {
-  id: "conversation-tasks-panel",
   name: "Conversation: Tasks panel",
   description:
     "Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.",

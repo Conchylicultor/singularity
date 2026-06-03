@@ -5,7 +5,6 @@ import { AttachmentRow } from "./components/attachment-row";
 export { JsonlViewerAttachment } from "./slots";
 
 export default {
-  id: "conversation-jsonl-viewer-attachment",
   name: "JSONL Viewer: Attachment event renderer",
   collapsed: true,
   description:

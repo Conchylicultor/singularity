@@ -5,7 +5,6 @@ import { WorkflowToolView } from "./components/workflow-tool-view";
 import { workflowNodePane } from "./panes";
 
 export default {
-  id: "conversation-jsonl-viewer-tool-call-workflow",
   name: "JSONL Viewer: Workflow tool renderer",
   description:
     "Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.",

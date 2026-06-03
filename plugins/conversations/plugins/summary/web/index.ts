@@ -3,7 +3,6 @@ import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { convSummaryPane } from "./panes";
 
 export default {
-  id: "conversation-summary",
   name: "Conversation: Summary",
   description:
     "Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action).",

@@ -3,7 +3,6 @@ import { Fields } from "@plugins/config_v2/plugins/fields/web";
 import { MultilineTextRenderer } from "./components/multiline-text-renderer";
 
 export default {
-  id: "config-v2-fields-multiline-text",
   name: "Config v2: Multi-line Text Field",
   description: "Multi-line text field type.",
   contributions: [Fields.Renderer(MultilineTextRenderer)],

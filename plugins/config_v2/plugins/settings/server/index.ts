@@ -4,7 +4,6 @@ import { resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile
 import { handleSetField, handleResetField, handleAcknowledgeConflict, handleDeleteOverride, handleGetRawFile } from "./internal/handlers";
 
 export default {
-  id: "config-v2-settings",
   name: "Config v2: Settings",
   description: "HTTP endpoints for setting and resetting config_v2 field values.",
   httpRoutes: {

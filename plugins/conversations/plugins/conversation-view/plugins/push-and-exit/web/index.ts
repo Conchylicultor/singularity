@@ -3,7 +3,6 @@ import { PromptEditorSlots } from "@plugins/primitives/plugins/prompt-editor/web
 import { PushAndExitButton } from "./components/push-and-exit-button";
 
 export default {
-  id: "conversation-push-and-exit",
   name: "Conversation: Push & Exit",
   description:
     "Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.",

@@ -12,7 +12,6 @@ export { turnSummariesResource } from "./internal/resource";
 export { generateTurnSummaryJob } from "./internal/job";
 
 export default {
-  id: "turn-summary",
   name: "Conversation View: Turn Summary",
   description:
     "After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.",

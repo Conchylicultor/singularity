@@ -7,7 +7,6 @@ export { PG_DATA_DIR, PG_DIR, PG_LOG_FILE, PG_PORT, PG_SOCKET_DIR, PG_USER } fro
 // import paths from `@plugins/database/plugins/embedded/server` (the standard
 // cross-plugin grammar).
 export default {
-  id: "database-embedded",
   name: "Database",
   description:
     "Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.",

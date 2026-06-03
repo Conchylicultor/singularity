@@ -14,7 +14,6 @@ export { Categorical } from "./slots";
 export type { CategoricalPresetContribution } from "./slots";
 
 export default {
-  id: "ui-tokens-categorical",
   name: "UI: Categorical",
   description: "Categorical color palette token group with switchable presets.",
   contributions: [

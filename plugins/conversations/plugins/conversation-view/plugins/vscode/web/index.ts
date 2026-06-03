@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { VscodeButton } from "./components/vscode-button";
 
 export default {
-  id: "conversation-vscode",
   name: "Conversation: VSCode",
   description: "Opens the conversation's worktree in VSCode.",
   contributions: [Conversation.ActionBar({ id: "vscode", component: VscodeButton })],

@@ -38,7 +38,6 @@ export { DocumentSchema, BlockSchema } from "../core/schemas";
 export type { Document, Block } from "../core/schemas";
 
 export default {
-  id: "page-editor",
   name: "Page Editor",
   description: "Block-based document editor — tables, routes, and live state.",
   httpRoutes: {

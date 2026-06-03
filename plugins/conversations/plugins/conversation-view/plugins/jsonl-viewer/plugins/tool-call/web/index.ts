@@ -8,7 +8,6 @@ export type { ToolRendererContribution } from "./slots";
 export { ToolCallCard } from "./components/tool-call-card";
 
 export default {
-  id: "conversation-jsonl-viewer-tool-call",
   name: "JSONL Viewer: Tool call renderer",
   collapsed: true,
   description:

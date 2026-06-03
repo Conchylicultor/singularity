@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/w
 import { DropDependentsButton } from "./components/drop-dependents-button";
 
 export default {
-  id: "conversation-drop-dependents",
   name: "Conversation: Drop Dependents",
   description:
     "Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.",

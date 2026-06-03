@@ -9,7 +9,6 @@ export type {
 } from "./internal/sortable-item";
 
 export default {
-  id: "sortable-list",
   name: "Sortable List",
   description:
     "Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.",

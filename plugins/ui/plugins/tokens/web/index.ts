@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 
 export default {
-  id: "ui-tokens",
   name: "UI: Token Groups",
   collapsed: true,
   description:

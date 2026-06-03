@@ -4,7 +4,6 @@ import { readMemoryFile } from "./internal/read-file";
 import { listMemoryFiles, readMemoryFile as readMemoryFileEndpoint } from "../shared/endpoints";
 
 export default {
-  id: "debug-memory",
   name: "Memory",
   description: "Browse Claude Code auto-memory files for the current project.",
   httpRoutes: {

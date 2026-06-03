@@ -11,7 +11,6 @@ export { RUNTIME_COLORS } from "./runtime-colors";
 export type { ExportRuntime } from "./runtime-colors";
 
 export default {
-  id: "plugin-view",
   name: "Plugin View",
   description:
     "Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.",

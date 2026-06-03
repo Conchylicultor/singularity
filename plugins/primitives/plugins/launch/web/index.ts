@@ -3,7 +3,6 @@ export { LaunchControl, useLaunchConversation, type LaunchControlProps, type Lau
 export { LaunchAgentPopover, type LaunchAgentPopoverProps } from "./components/launch-agent-popover";
 
 export default {
-  id: "launch",
   name: "Launch",
   description: "Reusable split [model dropdown | launch] control for creating conversations.",
   contributions: [],

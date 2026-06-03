@@ -8,7 +8,6 @@ export {
 export { registerNodeExtension, type NodeExtension } from "./internal/node-extensions";
 
 export default {
-  id: "text-editor",
   name: "Text Editor",
   description:
     "Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.",

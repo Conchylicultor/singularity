@@ -4,7 +4,6 @@ import { ConversationsView } from "@plugins/conversations/plugins/conversations-
 import { GroupedView } from "./components/grouped-view";
 
 export default {
-  id: "conversation-groups",
   name: "Conversation Groups",
   description:
     "User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.",

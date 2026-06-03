@@ -7,7 +7,6 @@ export type { RankExecutor } from "./internal/helpers";
 export { rankText } from "@plugins/primitives/plugins/rank/core";
 
 export default {
-  id: "rank",
   name: "Rank",
   description:
     "Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.",

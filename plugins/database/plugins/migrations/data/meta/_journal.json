@@ -792,6 +792,13 @@
       "tag": "20260602_125116_23c28b54__rename_task_parent_to_folder",
       "hash": "23c28b54",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780499327000,
+      "tag": "20260603_150847_65e742f4__reorder_plugin_id_path_rename",
+      "hash": "65e742f4",
+      "breakpoints": true
     }
   ]
 }

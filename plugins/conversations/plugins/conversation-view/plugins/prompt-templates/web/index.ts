@@ -5,7 +5,6 @@ import { FloatingTemplateChips } from "./components/prompt-template-chips";
 import { promptTemplatesConfig } from "../shared/config";
 
 export default {
-  id: "conversation-prompt-templates",
   name: "Conversation: Prompt Templates",
   description:
     "Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates.",

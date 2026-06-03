@@ -6,7 +6,6 @@ import { PluginChangesSummary } from "./components/plugin-changes-summary";
 export { PluginChanges as PluginChangesSlots } from "./slots";
 
 export default {
-  id: "review-plugin-changes",
   name: "Review: Plugin Changes",
   description:
     "Shows which plugins were added/modified and their public API diff.",

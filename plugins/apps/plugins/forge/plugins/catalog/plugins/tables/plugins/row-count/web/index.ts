@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/forge/plugins/catalog/plugins
 import { RowCountSection } from "./components/row-count-section";
 
 export default {
-  id: "catalog-tables-row-count",
   name: "Forge: Catalog / Tables / Row Count",
   description:
     "Live row count section (estimated from pg_stat_user_tables) in the table detail view.",

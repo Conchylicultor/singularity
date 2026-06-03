@@ -1,4 +1,4 @@
-import type { WsData, HttpHandler, WsHandler, CentralPluginDefinition } from "@plugins/framework/plugins/central-core/core";
+import type { WsData, HttpHandler, WsHandler, CentralPluginDefinition, LoadedCentralPlugin } from "@plugins/framework/plugins/central-core/core";
 import { notificationsWsHandler, handleResourceHttp } from "@plugins/framework/plugins/central-core/core";
 import { centralEntries } from "../core/central.generated";
 import { topoSortPlugins } from "./topo";
@@ -7,7 +7,8 @@ import { topoSortPlugins } from "./topo";
 const loadResults = await Promise.allSettled(
   centralEntries.map((e) => e.loader() as Promise<{ default: CentralPluginDefinition }>),
 );
-const byPath = new Map<string, CentralPluginDefinition>();
+const byPath = new Map<string, LoadedCentralPlugin>();
+const seenIds = new Set<string>();
 for (let i = 0; i < loadResults.length; i++) {
   const r = loadResults[i]!;
   const e = centralEntries[i]!;
@@ -15,7 +16,17 @@ for (let i = 0; i < loadResults.length; i++) {
     console.error(`[plugin.${e.pluginPath}] load failed`, r.reason);
     continue;
   }
-  const plugin = r.value.default;
+  // `id` is derived from the unique hierarchy path, never authored. The guard
+  // is structurally unreachable but fails loud if codegen ever produces a
+  // collision, rather than letting topo sort silently drop a plugin.
+  if (seenIds.has(e.hierarchyPath)) {
+    throw new Error(
+      `[plugin] duplicate derived plugin id "${e.hierarchyPath}" (${e.pluginPath})`,
+    );
+  }
+  seenIds.add(e.hierarchyPath);
+  const plugin = r.value.default as LoadedCentralPlugin;
+  plugin.id = e.hierarchyPath;
   plugin._hierarchyPath = e.hierarchyPath;
   byPath.set(e.pluginPath, plugin);
 }
@@ -24,7 +35,7 @@ for (const e of centralEntries) {
   if (!plugin) continue;
   plugin.dependsOn = e.dependsOn
     .map((p) => byPath.get(p))
-    .filter((d): d is CentralPluginDefinition => d !== undefined);
+    .filter((d): d is LoadedCentralPlugin => d !== undefined);
 }
 const ordered = topoSortPlugins([...byPath.values()]);
 

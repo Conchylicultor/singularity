@@ -19,7 +19,6 @@ export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding
 import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
 
 export default {
-  id: "active-data",
   name: "Active Data",
   collapsed: true,
   description:

@@ -7,7 +7,6 @@ import { attemptPane } from "./panes";
 export { attemptPane } from "./panes";
 
 export default {
-  id: "attempt-view",
   name: "Attempt View",
   description:
     "Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.",

@@ -8,7 +8,6 @@ export { resourceDescriptor, centralResourceDescriptor } from "../core/resource"
 export type { ResourceDescriptor, ResourceOrigin } from "../core/resource";
 
 export default {
-  id: "live-state",
   name: "Live State",
   description:
     "Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.",

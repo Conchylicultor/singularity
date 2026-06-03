@@ -18,7 +18,6 @@ export { _deployServers } from "./internal/tables";
 export { serversResource } from "./internal/resources";
 
 export default {
-  id: "deploy-servers",
   name: "Deploy: Servers",
   description: "Server registry for the deployment platform.",
   httpRoutes: {

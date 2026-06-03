@@ -1,7 +1,7 @@
 import { it, expect } from "vitest";
 import { render } from "@testing-library/react";
 import { PluginProvider, loadPlugins } from "@plugins/framework/plugins/web-sdk/core";
-import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import type { LoadedPlugin } from "@plugins/framework/plugins/web-sdk/core";
 import { SidebarProvider } from "@/components/ui/sidebar";
 import { TooltipProvider } from "@/components/ui/tooltip";
 import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generated";
@@ -16,7 +16,7 @@ function Wrapper({
 }: {
   slotId: string;
   children: React.ReactNode;
-  plugins: PluginDefinition[];
+  plugins: LoadedPlugin[];
 }) {
   let content = <>{children}</>;
   if (SIDEBAR_SLOTS.has(slotId)) {

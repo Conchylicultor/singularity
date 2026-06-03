@@ -4,7 +4,6 @@ import { FileChangesSection, hasFiles } from "./components/file-changes-section"
 import { FileChangesSummary } from "./components/file-changes-summary";
 
 export default {
-  id: "review-plugin-changes-file-changes",
   name: "Review: File Changes",
   description: "File-level diff section for per-plugin review cards.",
   contributions: [

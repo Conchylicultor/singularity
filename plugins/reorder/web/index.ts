@@ -14,7 +14,6 @@ export {
 } from "./internal/edit-mode-store";
 
 export default {
-  id: "reorder",
   name: "Reorder",
   description:
     "Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware.",

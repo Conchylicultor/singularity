@@ -3,7 +3,6 @@ import { Workflows } from "@plugins/apps/plugins/workflows/plugins/engine/web";
 import { MdAltRoute } from "react-icons/md";
 
 export default {
-  id: "workflows-steps-branch",
   name: "Workflows Steps: Branch",
   description:
     "Branch step type for workflows. Routes execution based on a field value from the previous step's output.",

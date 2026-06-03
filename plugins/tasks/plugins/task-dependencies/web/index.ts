@@ -4,7 +4,6 @@ import { TaskDependencies } from "./components/task-dependencies";
 import { TaskDependents } from "./components/task-dependents";
 
 export default {
-  id: "task-dependencies",
   name: "Task: Dependencies",
   description:
     "Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.",

@@ -26,6 +26,7 @@ export type {
   Registration,
   ResourceLike,
   ServerPluginDefinition,
+  LoadedServerPlugin,
   WsData,
   WsHandler,
 } from "./types";

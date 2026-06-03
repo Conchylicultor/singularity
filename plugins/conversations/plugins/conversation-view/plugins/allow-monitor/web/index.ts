@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { AllowMonitorChip } from "./components/allow-monitor-chip";
 
 export default {
-  id: "conversation-allow-monitor",
   name: "Conversation: Allow Monitor",
   description:
     "Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.",

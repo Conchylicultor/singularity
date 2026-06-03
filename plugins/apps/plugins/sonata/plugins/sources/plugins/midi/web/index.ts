@@ -5,7 +5,6 @@ import { MidiLoader } from "./loader";
 import { compile } from "./compile";
 
 export default {
-  id: "sonata-sources-midi",
   name: "Sonata: MIDI Source",
   description:
     "MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.",

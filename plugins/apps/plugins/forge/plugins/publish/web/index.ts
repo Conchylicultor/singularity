@@ -10,7 +10,6 @@ export type { TreeRowBadgeContribution } from "./slots";
 export { usePluginTree } from "./context";
 
 export default {
-  id: "forge-publish",
   name: "Forge: Publish",
   description:
     "Sidebar entry and filterable tree pane for pre-publish plugin review.",

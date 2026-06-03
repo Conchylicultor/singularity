@@ -13,7 +13,6 @@ export { CRASHES_META_TASK_ID } from "./internal/meta-crashes";
 export { recordCrash } from "./internal/record-crash";
 
 export default {
-  id: "crashes",
   name: "Crashes",
   description: "Records server/frontend crashes and files deduped tasks.",
   httpRoutes: {

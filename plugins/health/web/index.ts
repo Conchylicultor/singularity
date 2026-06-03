@@ -7,7 +7,6 @@ import { ReconnectWatcher } from "./components/reconnect-watcher";
 export { getHealth, waitForRestart } from "./internal/client";
 
 export default {
-  id: "health",
   name: "Health",
   description: "Surfaces server restarts as a toast; exposes /api/health helpers.",
   contributions: [

@@ -9,7 +9,6 @@ export {
   GonePageSchema,
 } from "./use-conversations";
 export default {
-  id: "conversations",
   name: "Conversations",
   description: "Conversation domain: shared hooks and client-side API.",
   loadBearing: true,

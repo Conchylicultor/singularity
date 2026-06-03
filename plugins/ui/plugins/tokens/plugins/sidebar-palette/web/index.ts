@@ -15,7 +15,6 @@ export { SidebarPalette } from "./slots";
 export type { SidebarPalettePresetContribution } from "./slots";
 
 export default {
-  id: "ui-tokens-sidebar-palette",
   name: "UI: Sidebar Palette",
   description: "Sidebar palette token group with switchable presets.",
   contributions: [

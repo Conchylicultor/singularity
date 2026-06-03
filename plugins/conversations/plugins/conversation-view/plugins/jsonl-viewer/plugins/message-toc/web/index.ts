@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { MessageToc } from "./components/message-toc";
 
 export default {
-  id: "conversation-jsonl-viewer-message-toc",
   name: "Conversation: Message TOC",
   description:
     "Floating table of contents listing user messages for quick navigation.",

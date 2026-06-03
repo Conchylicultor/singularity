@@ -15,7 +15,6 @@ export { ColorPalette } from "./slots";
 export type { ColorPalettePresetContribution } from "./slots";
 
 export default {
-  id: "ui-tokens-color-palette",
   name: "UI: Color Palette",
   description: "Color palette token group with switchable presets.",
   contributions: [

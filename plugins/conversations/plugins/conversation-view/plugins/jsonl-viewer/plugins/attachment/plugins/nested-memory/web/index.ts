@@ -3,7 +3,6 @@ import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversati
 import { NestedMemoryAttachmentView } from "./components/nested-memory-attachment-view";
 
 export default {
-  id: "conversation-jsonl-viewer-attachment-nested-memory",
   name: "JSONL Viewer: nested-memory attachment renderer",
   collapsed: true,
   description:

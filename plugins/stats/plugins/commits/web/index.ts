@@ -20,7 +20,6 @@ export {
 } from "./components/chart-primitives";
 
 export default {
-  id: "stats-commits",
   name: "Stats: Commits",
   description: "Commit-based stats: commits and lines of change over time.",
   contributions: [

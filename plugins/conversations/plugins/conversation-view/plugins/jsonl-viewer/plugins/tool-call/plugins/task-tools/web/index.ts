@@ -10,7 +10,6 @@ import { TaskStopToolView } from "./components/task-stop-tool-view";
 import { TaskProgressOverlay } from "./components/task-progress-overlay";
 
 export default {
-  id: "conversation-jsonl-viewer-tool-call-task-tools",
   name: "JSONL Viewer: Claude Code task tool renderers",
   description:
     "Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.",

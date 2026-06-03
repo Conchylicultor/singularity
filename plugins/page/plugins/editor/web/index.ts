@@ -7,7 +7,6 @@ export { BlockEditor } from "./components/block-editor";
 export { useBlockEditor } from "./block-editor-context";
 
 export default {
-  id: "page-editor",
   name: "Page Editor",
   description: "Block-based document editor component and slot system.",
   contributions: [],

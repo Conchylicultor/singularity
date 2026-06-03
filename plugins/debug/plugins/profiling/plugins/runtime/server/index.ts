@@ -10,7 +10,6 @@ import {
 } from "../shared/endpoints";
 
 export default {
-  id: "debug-profiling-runtime",
   name: "Runtime Profiling",
   description: "Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.",
   httpRoutes: {

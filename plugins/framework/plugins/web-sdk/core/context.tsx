@@ -1,9 +1,9 @@
 import { createContext, useMemo, type ReactNode } from "react";
 import { topoSortPlugins } from "./topo";
-import type { Contribution, PluginDefinition } from "./types";
+import type { Contribution, LoadedPlugin } from "./types";
 
 export interface PluginRuntime {
-  plugins: PluginDefinition[];
+  plugins: LoadedPlugin[];
   contributions: Contribution[];
   bySlot: Map<string, Contribution[]>;
 }
@@ -13,9 +13,9 @@ export const PluginRuntimeContext = createContext<PluginRuntime | null>(null);
 // Tracks plugins whose `register` array has been applied so a remount of
 // PluginProvider (or a useMemo recompute) doesn't double-invoke registry
 // writes.
-const registered = new WeakSet<PluginDefinition>();
+const registered = new WeakSet<LoadedPlugin>();
 
-function runRegisterPhase(plugins: PluginDefinition[]): PluginDefinition[] {
+function runRegisterPhase(plugins: LoadedPlugin[]): LoadedPlugin[] {
   const ordered = topoSortPlugins(plugins);
   for (const p of ordered) {
     if (registered.has(p)) continue;
@@ -45,7 +45,7 @@ export function PluginProvider({
   plugins,
   children,
 }: {
-  plugins: PluginDefinition[];
+  plugins: LoadedPlugin[];
   children: ReactNode;
 }) {
   const runtime = useMemo(() => {

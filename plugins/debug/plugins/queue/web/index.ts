@@ -8,7 +8,6 @@ import { queuePane } from "./panes";
 export { queuePane } from "./panes";
 
 export default {
-  id: "debug-queue",
   name: "Queue",
   description:
     "Inspect and debug the jobs queue, events emission log, and active triggers.",

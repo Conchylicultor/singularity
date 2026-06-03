@@ -3,7 +3,6 @@ import { Stats } from "@plugins/stats/web";
 import { TasksSection } from "./components/tasks-section";
 
 export default {
-  id: "stats-tasks",
   name: "Stats: Tasks",
   description: "Task-based stats: active (open) tasks over time.",
   contributions: [

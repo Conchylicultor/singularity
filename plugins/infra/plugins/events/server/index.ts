@@ -47,7 +47,6 @@ export { Trigger } from "./internal/trigger-contributions";
 export { eventEmissionsResource, eventTriggersResource } from "./internal/resources";
 
 export default {
-  id: "events",
   name: "Events",
   description:
     "Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().",

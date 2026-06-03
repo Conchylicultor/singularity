@@ -12,7 +12,6 @@ export { draftToPlainText, isDraftEmpty } from "./prompt-draft-utils";
 export { PromptInsertProvider, usePromptInsert } from "./prompt-insert-context";
 
 export default {
-  id: "conversation",
   name: "Conversation",
   description: "Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.",
   contributions: [

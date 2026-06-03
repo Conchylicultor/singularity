@@ -47,7 +47,6 @@ export { PaneResolveGuard } from "./components/pane-resolve-guard";
 export { PaneLayoutContext } from "./maximize-context";
 
 export default {
-  id: "pane",
   name: "Pane",
   description:
     "Unified pane primitive: Pane.define and chrome components.",

@@ -19,7 +19,6 @@ export { filePeekPane } from "./file-peek-pane";
 export { useFileContent, type FileContentState } from "./use-file-content";
 
 export default {
-  id: "conversation-code-file-pane",
   name: "Conversation: Code — File pane",
   description:
     "Hosts the file-peek pane and the FilePane.Renderer slot.",

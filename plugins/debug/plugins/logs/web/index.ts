@@ -8,7 +8,6 @@ import { logsPane, logChannelPane } from "./panes";
 export { logsPane, logChannelPane } from "./panes";
 
 export default {
-  id: "logs",
   name: "Logs",
   description: "System logs pane, opened from the Debug sidebar.",
   contributions: [

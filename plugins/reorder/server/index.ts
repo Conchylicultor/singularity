@@ -12,7 +12,6 @@ export { _reorderPrefs } from "./internal/tables";
 export { reorderPrefsResource } from "./internal/resource";
 
 export default {
-  id: "reorder",
   name: "Reorder",
   description:
     "Generic reorder primitive: per-worktree storage of slot contribution ranks.",

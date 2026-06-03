@@ -20,7 +20,6 @@ export { ColorAdjustContext } from "./components/theme-injector";
 export { transformValues } from "./internal/transform";
 
 export default {
-  id: "ui-theme-engine",
   name: "UI: Theme Engine",
   description:
     "Central settings pane for switching visual variants of pluggable UI components.",

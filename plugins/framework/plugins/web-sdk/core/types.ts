@@ -41,8 +41,13 @@ export interface Registration {
   _doc?: DocMeta;
 }
 
+/**
+ * Authored plugin shape — exactly what a barrel default-exports. `id` is
+ * deliberately absent: it is NOT hand-authored. The loader derives it from the
+ * plugin's unique directory/hierarchy path (see {@link LoadedPlugin}), which
+ * makes duplicate ids impossible by construction.
+ */
 export interface PluginDefinition {
-  id: PluginId;
   name: string;
   description: string;
   /**
@@ -69,3 +74,17 @@ export interface PluginDefinition {
    */
   register?: Registration[];
 }
+
+/**
+ * A plugin as it exists at runtime: the authored shape plus the loader-injected
+ * identity. `id` equals the plugin's `_hierarchyPath` (slash-form hierarchy
+ * path, e.g. `conversations/conversation-view/jsonl-viewer`), guaranteed unique
+ * because directory paths cannot collide. All framework readers (topo sort,
+ * register/contribution tagging) operate on this type, so `p.id` is always a
+ * defined string with no optionality. `dependsOn` is narrowed to other loaded
+ * plugins (it is resolved by the loader, never hand-authored).
+ */
+export type LoadedPlugin = Omit<PluginDefinition, "dependsOn"> & {
+  id: PluginId;
+  dependsOn?: LoadedPlugin[];
+};

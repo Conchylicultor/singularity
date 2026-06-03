@@ -6,7 +6,6 @@ export { CommitRowSchema } from "../core";
 export type { CommitRow } from "../core";
 
 export default {
-  id: "commit-list",
   name: "Commit List",
   description: "Reusable commit row rendering and git log types.",
   contributions: [],

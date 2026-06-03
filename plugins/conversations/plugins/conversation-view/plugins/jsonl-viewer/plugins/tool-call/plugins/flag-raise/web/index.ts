@@ -3,7 +3,6 @@ import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-vie
 import { FlagRaiseToolView } from "./components/flag-raise-tool-view";
 
 export default {
-  id: "conversation-jsonl-viewer-tool-call-flag-raise",
   name: "JSONL Viewer: flag_raise tool renderer",
   description:
     "Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.",

@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { SummaryRow } from "./components/summary-row";
 
 export default {
-  id: "conversation-jsonl-viewer-summary",
   name: "JSONL Viewer: Summary renderer",
   description: "Renders summary separator events in the JSONL viewer.",
   contributions: [

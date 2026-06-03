@@ -33,7 +33,6 @@ export {
 } from "@plugins/infra/plugins/secrets/core";
 
 export default {
-  id: "secrets",
   name: "Secrets",
   description:
     "Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.",

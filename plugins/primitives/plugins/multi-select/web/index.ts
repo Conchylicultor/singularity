@@ -12,7 +12,6 @@ export { SelectionCheckbox } from "./internal/selection-checkbox";
 export type { SelectionCheckboxProps } from "./internal/selection-checkbox";
 
 export default {
-  id: "multi-select",
   name: "Multi-Select",
   description:
     "Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.",

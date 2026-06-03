@@ -3,7 +3,6 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import { reviewConfig } from "../shared/config";
 
 export default {
-  id: "review-code-review",
   name: "Review: Code Review",
   description:
     "File-by-file code review section for the review pane.",

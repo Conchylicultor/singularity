@@ -3,7 +3,6 @@ import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-
 import { CommunityBrowserSection } from "./components/community-browser-section";
 
 export default {
-  id: "ui-tweakcn-community-browser",
   name: "UI: Tweakcn Community Browser",
   description:
     "Browse and apply themes from the tweakcn community catalog.",

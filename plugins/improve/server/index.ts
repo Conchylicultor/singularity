@@ -8,7 +8,6 @@ export { _improve_config, _improvePendingGroups } from "./internal/tables";
 export { IMPROVEMENTS_META_TASK_ID } from "../shared/constants";
 
 export default {
-  id: "improve",
   name: "Improve",
   description:
     'Toolbar button and meta-task for app-improvement feedback. Files tasks under "Improvements" via the shared task-draft-form primitive.',

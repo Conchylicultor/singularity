@@ -1,4 +1,4 @@
-import type { PluginDefinition } from "./types";
+import type { LoadedPlugin, PluginDefinition } from "./types";
 
 export interface PluginEntry {
   pluginPath: string;
@@ -13,18 +13,31 @@ export interface PluginLoadError {
 
 export async function loadPlugins(
   entries: PluginEntry[],
-): Promise<{ plugins: PluginDefinition[]; errors: PluginLoadError[] }> {
+): Promise<{ plugins: LoadedPlugin[]; errors: PluginLoadError[] }> {
   const results = await Promise.allSettled(
     entries.map((e) => e.loader()),
   );
-  const plugins: PluginDefinition[] = [];
+  const plugins: LoadedPlugin[] = [];
   const errors: PluginLoadError[] = [];
+  const seenIds = new Set<string>();
   for (let i = 0; i < results.length; i++) {
     const result = results[i]!;
     const entry = entries[i]!;
     if (result.status === "fulfilled") {
-      const plugin = result.value.default as PluginDefinition;
-      if (entry.hierarchyPath) plugin._hierarchyPath = entry.hierarchyPath;
+      // `id` is derived from the unique hierarchy path, never authored. The
+      // duplicate guard is structurally unreachable (directory paths can't
+      // collide) but fails loud if codegen ever regresses, rather than letting
+      // one plugin silently drop the other during topo sort.
+      const id = entry.hierarchyPath ?? entry.pluginPath;
+      if (seenIds.has(id)) {
+        throw new Error(
+          `[plugin] duplicate derived plugin id "${id}" (${entry.pluginPath}) — two plugins resolve to the same hierarchy path`,
+        );
+      }
+      seenIds.add(id);
+      const plugin = result.value.default as PluginDefinition as LoadedPlugin;
+      plugin.id = id;
+      plugin._hierarchyPath = entry.hierarchyPath;
       plugins.push(plugin);
     } else {
       console.error(`[plugin.${entry.pluginPath}] failed to load`, result.reason);

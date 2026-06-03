@@ -4,7 +4,6 @@ import { ConversationsView } from "@plugins/conversations/plugins/conversations-
 import { QueueView } from "./components/queue-view";
 
 export default {
-  id: "conversations-queue",
   name: "Conversations Queue",
   description:
     "Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus.",

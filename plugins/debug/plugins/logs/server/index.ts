@@ -7,7 +7,6 @@ export { Log } from "./internal/log";
 export type { LogChannel, LogStream } from "./internal/log";
 
 export default {
-  id: "logs",
   name: "Logs",
   httpRoutes: {
     [getLogChannels.route]: handleChannels,

@@ -15,7 +15,6 @@ export {
 } from "./internal/markdown";
 
 export default {
-  id: "paste-images",
   name: "Paste Images",
   description:
     "Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.",

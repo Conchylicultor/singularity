@@ -11,7 +11,6 @@ export type {
 } from "./internal/responsive-overflow";
 
 export default {
-  id: "responsive-overflow",
   name: "Responsive Overflow",
   description:
     "Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.",

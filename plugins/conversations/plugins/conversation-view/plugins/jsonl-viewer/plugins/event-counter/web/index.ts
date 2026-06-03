@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { EventCounter } from "./components/event-counter";
 
 export default {
-  id: "conversation-jsonl-viewer-event-counter",
   name: "JSONL Viewer: Event Counter",
   description:
     "Displays the total event count in the conversation toolbar.",

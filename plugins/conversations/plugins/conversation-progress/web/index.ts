@@ -5,7 +5,6 @@ import { ProgressBarToolbar } from "./components/progress-bar-toolbar";
 import { ProgressBarRow } from "./components/progress-bar-row";
 
 export default {
-  id: "conversation-progress",
   name: "Conversation: Progress",
   description:
     "4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip.",

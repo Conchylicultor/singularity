@@ -6,7 +6,6 @@ export { readJsonlEvents } from "./internal/parse-jsonl";
 export { findTranscriptPath } from "./internal/find-transcript-path";
 
 export default {
-  id: "conversation-transcript-watcher",
   name: "Conversation: Transcript Watcher",
   description:
     "Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.",

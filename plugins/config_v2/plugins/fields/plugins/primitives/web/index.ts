@@ -6,7 +6,6 @@ import { IntRenderer } from "./components/int-renderer";
 import { FloatRenderer } from "./components/float-renderer";
 
 export default {
-  id: "config-v2-fields-primitives",
   name: "Config v2: Primitive Fields",
   description: "Basic field types: bool, text, int, float.",
   contributions: [

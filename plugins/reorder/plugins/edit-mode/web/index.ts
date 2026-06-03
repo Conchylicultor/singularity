@@ -5,7 +5,6 @@ import { getEditMode, setEditMode } from "@plugins/reorder/web";
 import { PenButton } from "./internal/pen-button";
 
 export default {
-  id: "reorder-edit-mode",
   name: "Reorder: Edit Mode",
   description:
     "Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.",

@@ -9,7 +9,6 @@ export {
 export type { TaskPatch, AutoStartModel } from "./client";
 
 export default {
-  id: "tasks",
   name: "Tasks",
   description: "Nested tasks with attempts linking to conversations.",
 } satisfies PluginDefinition;

@@ -4,7 +4,6 @@ import { NotesArea } from "./components/notes-area";
 import { NotesToggleButton } from "./components/notes-toggle-button";
 
 export default {
-  id: "conversation-notes",
   name: "Conversation: Notes",
   description:
     "Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button.",

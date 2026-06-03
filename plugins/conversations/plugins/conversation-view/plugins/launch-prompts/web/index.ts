@@ -5,7 +5,6 @@ import { launchPromptsConfig } from "../shared/config";
 import { LaunchPromptsButton } from "./components/launch-prompts-button";
 
 export default {
-  id: "conversation-launch-prompts",
   name: "Conversation: Launch Prompts",
   description:
     "Pre-configured prompts that launch a new background conversation in the same worktree.",

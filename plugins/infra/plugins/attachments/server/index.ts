@@ -16,7 +16,6 @@ export { Attachments } from "./internal/attachments";
 export type { AttachmentLink } from "./internal/define-link";
 
 export default {
-  id: "attachments",
   name: "Attachments",
   description:
     "Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.",

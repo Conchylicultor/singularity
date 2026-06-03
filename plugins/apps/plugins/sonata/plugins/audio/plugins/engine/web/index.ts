@@ -4,7 +4,6 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { AudioPanel } from "./components/audio-panel";
 
 export default {
-  id: "sonata-audio-engine",
   name: "Sonata: Audio Engine",
   description:
     "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, with an instrument picker, master volume, and load status.",

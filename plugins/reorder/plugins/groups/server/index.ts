@@ -20,7 +20,6 @@ export { _reorderGroups, _reorderGroupMembers } from "./internal/tables";
 export { reorderGroupsResource } from "./internal/resource";
 
 export default {
-  id: "reorder-groups",
   name: "Reorder Groups",
   description:
     "User-created groups within reorderable areas. Drag items onto each other to form groups.",

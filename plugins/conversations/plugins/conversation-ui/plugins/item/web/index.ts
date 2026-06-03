@@ -14,7 +14,6 @@ export {
 export { Item } from "./slots";
 
 export default {
-  id: "conversation-ui-item",
   name: "Conversation UI: Item",
   description:
     "Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.",

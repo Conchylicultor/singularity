@@ -7,7 +7,6 @@ export { serversResource } from "../shared";
 export type { Server } from "../shared";
 
 export default {
-  id: "deploy-servers",
   name: "Deploy: Servers",
   description: "Server registry for the deployment platform.",
   contributions: [

@@ -8,7 +8,6 @@ import { handleCancel } from "./internal/handle-cancel";
 import { startPushAndExit, cancelPushAndExit } from "../shared/endpoints";
 
 export default {
-  id: "push-and-exit",
   name: "Push and Exit",
   contributions: [Resource.Declare(pushAndExitResource)],
   httpRoutes: {

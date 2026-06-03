@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/forge/plugins/catalog/plugins
 import { SampleRowsSection } from "./components/sample-rows-section";
 
 export default {
-  id: "catalog-tables-sample-rows",
   name: "Forge: Catalog / Tables / Sample Rows",
   description: "Sample rows section (first 10 rows) in the table detail view.",
   contributions: [

@@ -6,7 +6,6 @@ import { MarkdownToggleAction } from "./components/markdown-toggle-action";
 import { StopReasonAction } from "./components/stop-reason-action";
 
 export default {
-  id: "conversation-jsonl-viewer-assistant-text",
   name: "JSONL Viewer: Assistant text renderer",
   description: "Renders assistant text events in the JSONL viewer, with optional markdown rendering.",
   contributions: [

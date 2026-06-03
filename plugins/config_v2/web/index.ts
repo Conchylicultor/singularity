@@ -7,7 +7,6 @@ export type { ConfigRegistration } from "./internal/use-config-registrations";
 export { ConfigV2 } from "./internal/slots";
 
 export default {
-  id: "config-v2",
   name: "Config v2",
   description: "Reactive useConfig hook for reading typed JSONC config in the browser.",
   contributions: [],

@@ -11,7 +11,6 @@ export type { ColorKey } from "./internal/colors";
 export { useCategoryAvatars } from "./internal/use-category-avatars";
 
 export default {
-  id: "conversation-category",
   name: "Conversation: Category",
   description:
     "Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover.",

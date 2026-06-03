@@ -8,7 +8,6 @@ import { recoveryPane } from "./pane";
 export { recoveryPane } from "./pane";
 
 export default {
-  id: "conversations-recover",
   name: "Conversations Recover",
   description:
     "Sidebar entry + pane listing recently-closed conversations with restore buttons.",

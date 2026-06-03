@@ -12,7 +12,6 @@ export type { SegmentedProgressBarVariantContribution } from "./slots";
 export type { SegmentedProgressBarProps, Step } from "../core";
 
 export default {
-  id: "ui-segmented-progress-bar",
   name: "UI: Segmented Progress Bar",
   description:
     "Pluggable segmented progress bar with switchable visual variants.",

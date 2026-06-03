@@ -3,7 +3,6 @@ import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversati
 import { SkillListingView } from "./components/skill-listing-view";
 
 export default {
-  id: "conversation-jsonl-viewer-attachment-skill-listing",
   name: "JSONL Viewer: skill-listing attachment renderer",
   collapsed: true,
   description:

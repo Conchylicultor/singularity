@@ -50,7 +50,6 @@ export {
 } from "@plugins/auth/core";
 
 export default {
-  id: "auth",
   name: "Auth",
   description:
     "Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.",

@@ -6,7 +6,6 @@ import { ExpandTaskButton } from "./components/expand-task-button";
 export { taskSidePane } from "./panes";
 
 export default {
-  id: "conversation-side-task",
   name: "Conversation: Side Task",
   description:
     "Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).",

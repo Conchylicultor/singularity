@@ -1124,10 +1124,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`central-core`**
       - Core:
-        - Exports: Types: `CentralPluginDefinition`, `DependsOnEntry`, `HttpHandler`, `Registration`, `Resource`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `WsData`, `WsHandler`; Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
+        - Exports: Types: `CentralPluginDefinition`, `DependsOnEntry`, `HttpHandler`, `LoadedCentralPlugin`, `Registration`, `Resource`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `WsData`, `WsHandler`; Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
     - **`server-core`**
       - Core:
-        - Exports: Types: `DependsOnEntry`, `HttpHandler`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`; Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
+        - Exports: Types: `DependsOnEntry`, `HttpHandler`, `LoadedServerPlugin`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`; Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
         - Exports: Types: `Check`, `CheckResult`
@@ -1174,7 +1174,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `discoverAllowDefaultProject`, `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
-        - Exports: Types: `Contribution`, `DocMeta`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
+        - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Web:

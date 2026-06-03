@@ -153,7 +153,6 @@ export { adoptOrphanConversation } from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
 
 export default {
-  id: "tasks-core",
   name: "Tasks Core",
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",

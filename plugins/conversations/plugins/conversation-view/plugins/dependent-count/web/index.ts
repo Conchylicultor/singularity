@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { DependentCountChip } from "./components/dependent-count-chip";
 
 export default {
-  id: "conversation-dependent-count",
   name: "Conversation: Dependent Count",
   description:
     "Shows the count of tasks transitively blocked by the current conversation's task.",

@@ -4,7 +4,6 @@ import { EditView } from "./components/edit-view";
 import { MultiEditView } from "./components/multi-edit-view";
 
 export default {
-  id: "conversation-jsonl-viewer-tool-edit",
   name: "JSONL Viewer: Edit tool renderer",
   description: "Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.",
   contributions: [

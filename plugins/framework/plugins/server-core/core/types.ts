@@ -46,8 +46,12 @@ export interface Registration {
 
 export type { ServerContribution, ServerContributionToken } from "./contributions";
 
+/**
+ * Authored server-plugin shape. `id` is deliberately absent — it is derived
+ * from the plugin's unique hierarchy path and injected by the loader (see
+ * {@link LoadedServerPlugin}), never hand-authored.
+ */
 export interface ServerPluginDefinition {
-  id: string;
   name: string;
   description?: string;
   /** Auto-set by codegen from the plugin's position in the hierarchy tree. */
@@ -93,3 +97,14 @@ export interface ServerPluginDefinition {
   onShutdown?: () => void | Promise<void>;
   contributions?: import("./contributions").ServerContribution[];
 }
+
+/**
+ * A server plugin at runtime: the authored shape plus the loader-injected
+ * identity. `id` equals the unique hierarchy path; `dependsOn` is narrowed to
+ * other loaded plugins (resolved by the loader, never authored). Framework
+ * readers operate on this type so `p.id` is always a defined string.
+ */
+export type LoadedServerPlugin = Omit<ServerPluginDefinition, "dependsOn"> & {
+  id: string;
+  dependsOn?: LoadedServerPlugin[];
+};
