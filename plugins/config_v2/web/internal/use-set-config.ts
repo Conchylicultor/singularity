@@ -12,11 +12,11 @@ export function useSetConfig<F extends FieldsRecord>(
 
   const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
-  const storePath = reg?._hierarchyPath
-    ? `${reg._hierarchyPath}/${descriptor.name}.jsonc`
+  const storePath = reg?._pluginId
+    ? `${reg._pluginId}/${descriptor.name}.jsonc`
     : null;
 
-  if (!reg?._hierarchyPath) {
+  if (!reg?._pluginId) {
     throw new Error(
       `[config-v2] useSetConfig: descriptor "${descriptor.name}" has no web registration. ` +
         `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,

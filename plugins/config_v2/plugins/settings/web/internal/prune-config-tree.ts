@@ -19,7 +19,7 @@ export interface ConfigTreeNode {
  * any descendant does.
  *
  * `byHierarchyId` maps a node's dotted `hierarchyId` to the registrations it
- * declares — the caller builds it from `reg.hierarchyPath.replaceAll("/", ".")`,
+ * declares — the caller builds it from `reg.pluginId.replaceAll("/", ".")`,
  * which equals `PluginNode.hierarchyId` since both derive from the same plugin
  * hierarchy. A plugin may declare more than one config, hence an array.
  *

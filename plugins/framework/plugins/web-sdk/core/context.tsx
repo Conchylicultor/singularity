@@ -56,7 +56,6 @@ export function PluginProvider({
         _pluginId: p.id,
         _pluginName: p.name,
         _pluginDescription: p.description,
-        _hierarchyPath: p._hierarchyPath,
       })),
     );
     const bySlot = new Map<string, Contribution[]>();

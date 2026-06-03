@@ -27,7 +27,6 @@ for (let i = 0; i < loadResults.length; i++) {
   seenIds.add(e.hierarchyPath);
   const plugin = r.value.default as LoadedCentralPlugin;
   plugin.id = e.hierarchyPath;
-  plugin._hierarchyPath = e.hierarchyPath;
   byPath.set(e.pluginPath, plugin);
 }
 for (const e of centralEntries) {

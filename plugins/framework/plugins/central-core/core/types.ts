@@ -33,8 +33,6 @@ export interface Registration {
 export interface CentralPluginDefinition {
   name: string;
   description?: string;
-  /** Auto-set by codegen from the plugin's position in the hierarchy tree. */
-  _hierarchyPath?: string;
   /**
    * Marks the plugin as critical core infrastructure. See
    * `PluginDefinition.loadBearing` in `plugin-core/types.ts` for semantics.

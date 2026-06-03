@@ -37,7 +37,6 @@ export async function loadPlugins(
       seenIds.add(id);
       const plugin = result.value.default as PluginDefinition as LoadedPlugin;
       plugin.id = id;
-      plugin._hierarchyPath = entry.hierarchyPath;
       plugins.push(plugin);
     } else {
       console.error(`[plugin.${entry.pluginPath}] failed to load`, result.reason);

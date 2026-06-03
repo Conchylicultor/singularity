@@ -14,11 +14,13 @@ export interface DocMeta {
 
 export type Contribution = {
   _slotId: string;
-  /** Injected by PluginProvider from the enclosing PluginDefinition. */
+  /**
+   * Injected by PluginProvider from the enclosing plugin's `id` — the
+   * slash-form hierarchy path (e.g. `conversations/conversation-view`).
+   */
   _pluginId?: PluginId;
   _pluginName?: string;
   _pluginDescription?: string;
-  _hierarchyPath?: string;
   _doc?: DocMeta;
   [key: string]: unknown;
 };
@@ -57,8 +59,6 @@ export interface PluginDefinition {
    */
   loadBearing?: boolean;
   collapsed?: boolean;
-  /** Stamped by the loader from the generated registry entry. */
-  _hierarchyPath?: string;
   contributions?: Contribution[];
   /**
    * Plugins this plugin's `register` array must run after. Mirror of the
@@ -77,9 +77,9 @@ export interface PluginDefinition {
 
 /**
  * A plugin as it exists at runtime: the authored shape plus the loader-injected
- * identity. `id` equals the plugin's `_hierarchyPath` (slash-form hierarchy
- * path, e.g. `conversations/conversation-view/jsonl-viewer`), guaranteed unique
- * because directory paths cannot collide. All framework readers (topo sort,
+ * identity. `id` is the plugin's slash-form hierarchy path (e.g.
+ * `conversations/conversation-view/jsonl-viewer`), guaranteed unique because
+ * directory paths cannot collide. All framework readers (topo sort,
  * register/contribution tagging) operate on this type, so `p.id` is always a
  * defined string with no optionality. `dependsOn` is narrowed to other loaded
  * plugins (it is resolved by the loader, never hand-authored).

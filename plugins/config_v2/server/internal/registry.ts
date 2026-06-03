@@ -70,19 +70,19 @@ export async function initRegistry(): Promise<void> {
 
   for (const contribution of contributions) {
     const { descriptor } = contribution;
-    const hierarchyPath = contribution._hierarchyPath;
-    if (!hierarchyPath) {
+    const pluginId = contribution._pluginId;
+    if (!pluginId) {
       console.warn(
-        `[config-v2] contribution from plugin "${contribution._pluginId}" has no _hierarchyPath — skipping`,
+        `[config-v2] contribution for descriptor "${descriptor.name}" has no _pluginId — skipping`,
       );
       continue;
     }
 
-    const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+    const storePath = `${pluginId}/${descriptor.name}.jsonc`;
     registerDescriptorPath(storePath, descriptor);
 
-    const userOriginPath = join(CONFIG_DIR, hierarchyPath, `${descriptor.name}.origin.jsonc`);
-    const userOverwritesPath = join(CONFIG_DIR, hierarchyPath, `${descriptor.name}.jsonc`);
+    const userOriginPath = join(CONFIG_DIR, pluginId, `${descriptor.name}.origin.jsonc`);
+    const userOverwritesPath = join(CONFIG_DIR, pluginId, `${descriptor.name}.jsonc`);
 
     const reloadValues = (): ConfigValues<FieldsRecord> => {
       const freshUserOrigin = jsoncConfigProxy(userOriginPath);

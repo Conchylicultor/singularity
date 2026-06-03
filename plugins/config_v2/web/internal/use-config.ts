@@ -12,13 +12,13 @@ export function useConfig<F extends FieldsRecord>(
 
   const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
-  const path = reg?._hierarchyPath
-    ? `${reg._hierarchyPath}/${descriptor.name}.jsonc`
+  const path = reg?._pluginId
+    ? `${reg._pluginId}/${descriptor.name}.jsonc`
     : descriptor.name + ".jsonc";
 
   const result = useResource(configV2Resource, { path });
 
-  if (!reg?._hierarchyPath) {
+  if (!reg?._pluginId) {
     throw new Error(
       `[config-v2] useConfig: descriptor "${descriptor.name}" has no web registration. ` +
         `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,

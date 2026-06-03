@@ -3,7 +3,6 @@ export type ServerContribution = {
   _pluginId?: string;
   _pluginName?: string;
   _pluginDescription?: string;
-  _hierarchyPath?: string;
   [key: string]: unknown;
 };
 
@@ -13,7 +12,6 @@ export interface ServerContributionToken<P> {
     _pluginId?: string;
     _pluginName?: string;
     _pluginDescription?: string;
-    _hierarchyPath?: string;
   })[];
 }
 
@@ -55,7 +53,6 @@ export function collectContributions(
       c._pluginId = p.id;
       c._pluginName = p.name;
       c._pluginDescription = p.description;
-      c._hierarchyPath = (p as { _hierarchyPath?: string })._hierarchyPath;
       let list = byKind.get(c._kind);
       if (!list) {
         list = [];

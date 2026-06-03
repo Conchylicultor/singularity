@@ -6,7 +6,6 @@ export interface ConfigRegistration {
   descriptor: ConfigDescriptor;
   pluginId: string;
   pluginName: string;
-  hierarchyPath: string;
   storePath: string;
 }
 
@@ -18,13 +17,12 @@ export function useConfigRegistrations(): ConfigRegistration[] {
   return useMemo(
     () =>
       (raw ?? [])
-        .filter((c) => c._pluginId && c._pluginName && c._hierarchyPath)
+        .filter((c) => c._pluginId && c._pluginName)
         .map((c) => ({
           descriptor: c.descriptor as ConfigDescriptor,
           pluginId: c._pluginId as string,
           pluginName: c._pluginName as string,
-          hierarchyPath: c._hierarchyPath as string,
-          storePath: `${c._hierarchyPath}/${(c.descriptor as ConfigDescriptor).name}.jsonc`,
+          storePath: `${c._pluginId}/${(c.descriptor as ConfigDescriptor).name}.jsonc`,
         })),
     [raw],
   );

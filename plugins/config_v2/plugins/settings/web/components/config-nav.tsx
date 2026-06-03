@@ -15,7 +15,7 @@ import { ConfigTreeNode } from "./config-tree-node";
 import { ConfigNavRow } from "./config-nav-row";
 
 const hierarchyIdOf = (reg: ConfigRegistration) =>
-  reg.hierarchyPath.split("/").join(".");
+  reg.pluginId.split("/").join(".");
 
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
@@ -61,7 +61,7 @@ export function ConfigNav() {
     if (orphans.length > 0) {
       console.warn(
         "[config] registrations missing from plugin tree:",
-        orphans.map((r) => r.hierarchyPath),
+        orphans.map((r) => r.pluginId),
       );
       const byOrphanId = new Map<string, ConfigRegistration[]>();
       for (const reg of orphans) {
@@ -74,7 +74,7 @@ export function ConfigNav() {
         const [reg] = orphanRegs;
         if (!reg) continue;
         const node: PluginNode = {
-          path: reg.hierarchyPath,
+          path: reg.pluginId,
           name: reg.pluginName,
           hierarchyId: hierarchyIdOf(reg),
           loadBearing: false,
