@@ -62,11 +62,14 @@ async function isProbeWaiting(id: string): Promise<boolean> {
 // Claude TUI occasionally drops the keystroke, and some menu states need a
 // second Escape ("Press Escape again to cancel"). So we RE-SEND Escape every
 // FORM_CLEAR_ESCAPE_RETRY_MS until the form clears, instead of firing once and
-// throwing — dismissal is self-healing. Re-sending is safe: extra Escapes only
-// fire while the menu is still up, and the C-c before paste resets any stray
-// idle-input state. The clearance poll runs faster (FORM_CLEAR_POLL_INTERVAL_MS)
-// so a working Escape's slow re-render is observed without spamming Escape. The
-// timeout is generous because many concurrent agents can slow tmux/Ink.
+// throwing — dismissal is self-healing. But re-sending is only safe while a
+// menu footer is STILL visible: at the idle prompt an Esc-Esc opens Claude's
+// rewind menu (which shares the "Enter to select" footer and would trap this
+// loop), so escapeUntilPromptCleared() re-checks clearance before each Escape
+// and never presses it at idle. The clearance poll runs faster
+// (FORM_CLEAR_POLL_INTERVAL_MS) so a working Escape's slow re-render is observed
+// without spamming Escape. The timeout is generous because many concurrent
+// agents can slow tmux/Ink.
 const FORM_CLEAR_POLL_INTERVAL_MS = 75;
 const FORM_CLEAR_ESCAPE_RETRY_MS = 500;
 const FORM_CLEAR_TIMEOUT_MS = 5_000;
@@ -320,9 +323,20 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
  */
 async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
   const deadline = Date.now() + FORM_CLEAR_TIMEOUT_MS;
-  let cleared = false;
   let nextEscapeAt = 0;
   for (;;) {
+    // Re-check clearance BEFORE every Escape and press Escape ONLY while a menu
+    // footer ("Enter to select") is still visible — NEVER at the idle prompt.
+    // This ordering is load-bearing: at the idle input a second Escape (Esc-Esc)
+    // opens Claude's *rewind* menu, which renders the SAME "Enter to select"
+    // footer probeWaiting keys on. The old unconditional 500ms Escape cadence
+    // therefore re-opened rewind the instant the question cleared — keeping
+    // probeWaiting true forever, timing out, and leaving a rewind menu over the
+    // idle prompt so the answer paste never ran (the crash this fixes). Gating
+    // on a still-visible menu means we never initiate an Esc-Esc from idle; and
+    // if queued Escapes under load ever do open rewind, the next tick still sees
+    // its footer and one more Escape closes it back to the prompt.
+    if (!(await probeWaiting(conversationId))) return;
     if (Date.now() >= nextEscapeAt) {
       await Bun.spawn([TMUX, "copy-mode", "-q", "-t", conversationId], {
         stdout: "pipe",
@@ -334,20 +348,14 @@ async function escapeUntilPromptCleared(conversationId: string): Promise<void> {
       }).exited;
       nextEscapeAt = Date.now() + FORM_CLEAR_ESCAPE_RETRY_MS;
     }
-    if (!(await probeWaiting(conversationId))) {
-      cleared = true;
-      break;
-    }
     if (Date.now() + FORM_CLEAR_POLL_INTERVAL_MS >= deadline) break;
     await Bun.sleep(FORM_CLEAR_POLL_INTERVAL_MS);
   }
-  if (!cleared) {
-    // Never send into a live form — that fabricates a wrong answer.
-    throw new Error(
-      `tmux escapeUntilPromptCleared for ${conversationId}: prompt form did not clear ` +
-        `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
-    );
-  }
+  // Never send into a live form — that fabricates a wrong answer.
+  throw new Error(
+    `tmux escapeUntilPromptCleared for ${conversationId}: prompt form did not clear ` +
+      `within ${FORM_CLEAR_TIMEOUT_MS}ms despite repeated Escape; refusing to send`,
+  );
 }
 
 async function listPanes(): Promise<
