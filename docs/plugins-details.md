@@ -1272,7 +1272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
     - **`worktree`**
       - Server:
-        - Exports: Values: `ensureMainWorktreeRoot`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
+        - Exports: Types: `WorktreeOp`; Values: `clearWorktreeOp`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `markWorktreeOpStart`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:

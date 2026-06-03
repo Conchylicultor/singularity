@@ -20,6 +20,7 @@ import {
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { appendBuildLog } from "../build-log-writer-global";
+import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 const NAME_REGEX = /^[a-z0-9][a-z0-9-]{0,62}$/;
 const CENTRAL_ROUTES_FILE = join(SINGULARITY_DIR, "central-routes.json");
@@ -555,6 +556,12 @@ export function registerBuild(program: Command) {
         success: false,
       });
 
+      // Mark this worktree as having a build in flight so the conversation
+      // status poller keeps the agent's pane reading as "working" while the
+      // CLI "shell" status persists (see worktree-op.ts). Cleared in
+      // finalizeBuildLog below, which runs on every graceful exit.
+      markWorktreeOpStart(name, "build");
+
       // Guarantee a terminal "completed" record on every *graceful* exit
       // path — a thrown build step, process.exit(1), or SIGINT/SIGTERM.
       // Without this, any failure before the explicit success/failure writes
@@ -568,6 +575,7 @@ export function registerBuild(program: Command) {
       const finalizeBuildLog = (success: boolean): void => {
         if (buildLogFinalized) return;
         buildLogFinalized = true;
+        clearWorktreeOp(name, "build");
         appendBuildLog({
           phase: "completed",
           worktree: name,

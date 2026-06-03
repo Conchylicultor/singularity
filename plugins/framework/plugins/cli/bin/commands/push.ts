@@ -1,10 +1,11 @@
 import type { Command } from "commander";
 import { dlopen } from "bun:ffi";
 import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, rmSync, statSync } from "fs";
-import { join } from "path";
+import { basename, join } from "path";
 import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
 import { createPushProfiler } from "../push-profiler";
+import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 async function run(
   cmd: string[],
@@ -269,6 +270,19 @@ export function registerPush(program: Command) {
 
       const profiler = createPushProfiler(pushId, branch, opts.fromMain ? "from-main" : "worktree");
 
+      // Mark this worktree as having a push in flight (once the lock is held, so
+      // the push is actually proceeding) so the conversation status poller keeps
+      // the agent's pane reading as "working" for the push duration despite the
+      // CLI "shell" status. Cleared on every graceful exit — normal completion,
+      // every process.exit(1) failure path, and thrown errors — via the on-exit
+      // handler; a SIGKILLed push self-heals via the marker's pid-liveness check.
+      const opSlug = basename(root0);
+      const onLockAcquired = (): void => {
+        profiler.markLockAcquired();
+        markWorktreeOpStart(opSlug, "push");
+        process.on("exit", () => clearWorktreeOp(opSlug, "push"));
+      };
+
       // 1. Commit if -m provided, otherwise require clean tree
       const { stdout: status } = await run(["git", "status", "--porcelain"]);
       if (opts.message) {
@@ -342,7 +356,7 @@ export function registerPush(program: Command) {
             console.log("Pushing main...");
             await exec(["git", "push"]);
             profiler.stepEnd("push-main");
-          }, profiler.markLockRequested, profiler.markLockAcquired);
+          }, profiler.markLockRequested, onLockAcquired);
         } catch (err) {
           profiler.complete("error");
           profiler.write();
@@ -468,7 +482,7 @@ export function registerPush(program: Command) {
           console.log("Pushing main...");
           await exec(["git", "push"], mainWorktree);
           profiler.stepEnd("push-main");
-        }, profiler.markLockRequested, profiler.markLockAcquired);
+        }, profiler.markLockRequested, onLockAcquired);
       } catch (err) {
         profiler.complete("error");
         profiler.write();

@@ -5,7 +5,9 @@ import type {
 import { resolveCliFlag } from "@plugins/conversations/plugins/model-provider/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
+import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { recordCrash } from "@plugins/crashes/server";
+import { basename } from "node:path";
 import { resolveSessionState, type SessionState } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
 // legacy prefix kept so zombie sessions still get picked up by the poller.
@@ -124,6 +126,7 @@ interface ResolvedPaneStatus {
 function resolvePaneStatus(
   rawTitle: string,
   session: SessionState,
+  opActive: boolean,
 ): ResolvedPaneStatus {
   const trimmed = rawTitle.replace(/^_ /, "").trim();
 
@@ -137,14 +140,17 @@ function resolvePaneStatus(
 
   // Resolve working status.
   let working: boolean;
-  if (session.status === "shell") {
-    // Claude is blocked on a subprocess it spawned (a Bash tool call such as
-    // `./singularity build`). This is active work, NOT a wait on the user —
-    // and crucially the TUI keeps rendering the ✳ ready mark in the pane title
-    // while the subprocess runs, so the title is misleading here. The session
-    // file is authoritative for this state, so it must override the title;
-    // otherwise the worktree surfaces as "waiting" and lands in the
-    // needs-input queue for the entire duration of the build.
+  if (session.status === "shell" && opActive) {
+    // A background subprocess is attached (the CLI reports "shell" while any
+    // background task runs) AND Singularity knows a build or push is in flight
+    // for this worktree. That operation will finish and resume the agent, so
+    // this is real work — but the TUI keeps rendering the ✳ ready mark in the
+    // title throughout, so we must override the title here. Without opActive we
+    // deliberately do NOT special-case "shell": a never-ending background shell
+    // (a dev server, `tail -f`, or a build whose completion marker never
+    // matched) falls through to the title's ready mark below and reads as
+    // waiting, so a stalled agent surfaces in the needs-input queue instead of
+    // looking busy forever.
     working = true;
   } else if (SPINNER_RE.test(trimmed)) {
     working = true;
@@ -464,7 +470,13 @@ export const tmuxRuntime: ConversationRuntime = {
     ids.forEach((id, i) => {
       const { rawTitle, dead, worktreePath } = panes.get(id)!;
       const state = states[i]!;
-      const resolved = resolvePaneStatus(rawTitle, state);
+      // Only the ambiguous "shell" state needs the build/push-in-flight signal,
+      // so we skip the filesystem read for every other pane.
+      const opActive =
+        state.status === "shell" && worktreePath
+          ? isWorktreeOpActive(basename(worktreePath))
+          : false;
+      const resolved = resolvePaneStatus(rawTitle, state, opActive);
       out.set(id, {
         title: resolved.title,
         working: resolved.working && !dead,

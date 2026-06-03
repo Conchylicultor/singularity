@@ -6,6 +6,12 @@ export {
   setupWorktree,
   removeWorktree,
 } from "./internal/worktree";
+export {
+  type WorktreeOp,
+  markWorktreeOpStart,
+  clearWorktreeOp,
+  isWorktreeOpActive,
+} from "./internal/worktree-op";
 
 export default {
   id: "worktree",
