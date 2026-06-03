@@ -236,6 +236,25 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
         }
       }
 
+      if (isMeta) {
+        // Harness-injected prompt (loop/queue wakeup, resume, local-command
+        // caveat) with no originating tool call. Surface it as its own kind so
+        // it never renders as a human-authored user message.
+        const text = extractText(msg.content);
+        if (text) {
+          events.push({
+            kind: "meta-prompt",
+            at: ts,
+            source:
+              typeof obj.promptSource === "string"
+                ? obj.promptSource
+                : undefined,
+            text,
+          });
+        }
+        continue;
+      }
+
       const content = msg.content;
       if (typeof content === "string") {
         const remaining = extractTaskNotifications(content, ts, events);

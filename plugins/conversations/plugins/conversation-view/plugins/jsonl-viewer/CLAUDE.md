@@ -10,7 +10,7 @@
   - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
   - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
 - Cross-plugin:
-  - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+  - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
 - Server:
   - Uses: `tasks-core.getConversationClaudeSessionId`
   - Resources: `jsonl-events` (push)
@@ -23,6 +23,7 @@
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
   - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
   - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
+  - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
   - **`system`** — Renders system events in the JSONL viewer.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.

@@ -66,6 +66,16 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     text: z.string(),
   }),
   z.object({
+    // Harness-injected prompt turns (loop/queue wakeups, "Continue from where
+    // you left off.", local-command caveats). These are `type:"user"` lines
+    // with `isMeta:true` — never authored by the human — so they must not
+    // render as user messages.
+    kind: z.literal("meta-prompt"),
+    at: z.string(),
+    source: z.string().optional(),
+    text: z.string(),
+  }),
+  z.object({
     kind: z.literal("summary"),
     at: z.string(),
     text: z.string(),
