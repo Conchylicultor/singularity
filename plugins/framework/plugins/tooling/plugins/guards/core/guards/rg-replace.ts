@@ -1,5 +1,5 @@
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 // Matches combined short flags containing -r, like -rn, -rnl, -rni, etc.
@@ -13,11 +13,14 @@ export const rgReplaceGuard = defineGuard<BashInput>({
   check(input) {
     const cmd = input.command;
     if (!cmd) return null;
-    const { calls } = parseShell(cmd);
-    const rg = calls.find((c) => c.name === "rg" || c.name === "ripgrep");
-    if (!rg) return null;
-    const bad = rg.args.find((a) => COMBINED_R_FLAG.test(a));
-    if (!bad) return null;
+    const offending = findCall(
+      cmd,
+      (c) =>
+        (c.name === "rg" || c.name === "ripgrep") &&
+        c.args.some((a) => COMBINED_R_FLAG.test(a)),
+    );
+    if (!offending) return null;
+    const bad = offending.args.find((a) => COMBINED_R_FLAG.test(a))!;
     return {
       blocked: `\`rg ${bad}\` — in ripgrep \`-r\` means \`--replace\`, not recursive (rg is recursive by default).`,
       why: `grep muscle memory: \`grep -rn\` is recursive + line numbers, but \`rg -rn\` silently replaces every match with "n" in the output.`,

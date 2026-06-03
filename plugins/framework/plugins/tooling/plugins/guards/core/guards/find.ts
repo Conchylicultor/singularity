@@ -1,5 +1,5 @@
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 export const findGuard = defineGuard<BashInput>({
@@ -8,10 +8,14 @@ export const findGuard = defineGuard<BashInput>({
   check(input) {
     const cmd = input.command;
     if (!cmd) return null;
-    const { calls } = parseShell(cmd);
-    const find = calls.find((c) => c.name === "find");
-    if (!find) return null;
-    if (find.args.includes("-prune") || find.args.includes("-maxdepth")) return null;
+    const unscoped = findCall(
+      cmd,
+      (c) =>
+        c.name === "find" &&
+        !c.args.includes("-prune") &&
+        !c.args.includes("-maxdepth"),
+    );
+    if (!unscoped) return null;
     return {
       blocked:
         "On this machine `find` is rerouted by Claude Code's shell shim to a bundled bfs that holds an unbounded directory FD frontier.",

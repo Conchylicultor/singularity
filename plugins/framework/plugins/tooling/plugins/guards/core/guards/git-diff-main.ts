@@ -1,8 +1,19 @@
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
+
+function diffsAgainstMain(arg: string): boolean {
+  return (
+    arg === "main" ||
+    arg === "origin/main" ||
+    arg.startsWith("main...") ||
+    arg.startsWith("main..") ||
+    arg.startsWith("origin/main...") ||
+    arg.startsWith("origin/main..")
+  );
+}
 
 const MARKER = ".git-diff-main-reminded";
 
@@ -19,23 +30,11 @@ export const gitDiffMainGuard = defineGuard<BashInput>({
     const cmd = input.command;
     if (!cmd) return null;
 
-    const { calls } = parseShell(cmd);
-    const gitCall = calls.find((c) => c.name === "git");
-    if (!gitCall) return null;
-
-    const args = gitCall.args;
-    if (args[0] !== "diff") return null;
-
-    const hasMainRef = args.some(
-      (a) =>
-        a === "main" ||
-        a === "origin/main" ||
-        a.startsWith("main...") ||
-        a.startsWith("main..") ||
-        a.startsWith("origin/main...") ||
-        a.startsWith("origin/main.."),
+    const gitDiffMain = findCall(
+      cmd,
+      (c) => c.name === "git" && c.args[0] === "diff" && c.args.some(diffsAgainstMain),
     );
-    if (!hasMainRef) return null;
+    if (!gitDiffMain) return null;
 
     const marker = join(ctx.cwd, MARKER);
     if (existsSync(marker)) return null;

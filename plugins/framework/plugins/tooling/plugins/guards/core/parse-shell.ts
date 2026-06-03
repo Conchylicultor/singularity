@@ -16,6 +16,25 @@ export interface ShellParseResult {
 
 type Mode = "none" | "single" | "double";
 
+/**
+ * Finds the first shell call in a (possibly compound) command that satisfies
+ * `predicate`, scanning EVERY call — not just the first invocation of a binary.
+ *
+ * The predicate MUST encode the full danger condition (the command name AND its
+ * offending args together). Never match by name here and re-check the args back
+ * at the call site: a benign earlier call (`rg -n …; rg -rn …`, or
+ * `find . -maxdepth 1 …; find /huge …`) would mask a dangerous later one because
+ * the first name-match short-circuits. Folding the whole condition into a single
+ * predicate makes that class of bug structurally impossible — which is why every
+ * Bash guard routes call selection through here.
+ */
+export function findCall(
+  cmd: string,
+  predicate: (call: ShellCall) => boolean,
+): ShellCall | undefined {
+  return parseShell(cmd).calls.find(predicate);
+}
+
 export function parseShell(cmd: string): ShellParseResult {
   const subs = splitOnOperators(cmd);
   const calls: ShellCall[] = [];

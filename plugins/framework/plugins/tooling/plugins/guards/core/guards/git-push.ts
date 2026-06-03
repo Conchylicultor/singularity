@@ -1,5 +1,5 @@
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 export const gitPushGuard = defineGuard<BashInput>({
@@ -9,10 +9,7 @@ export const gitPushGuard = defineGuard<BashInput>({
     const cmd = input.command;
     if (!cmd) return null;
 
-    const { calls } = parseShell(cmd);
-    const gitPush = calls.find(
-      (c) => c.name === "git" && c.args[0] === "push",
-    );
+    const gitPush = findCall(cmd, (c) => c.name === "git" && c.args[0] === "push");
     if (!gitPush) return null;
 
     return {

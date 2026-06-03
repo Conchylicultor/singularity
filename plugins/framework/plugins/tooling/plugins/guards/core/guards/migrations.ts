@@ -1,5 +1,5 @@
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 export const migrationsGuard = defineGuard<BashInput>({
@@ -9,19 +9,22 @@ export const migrationsGuard = defineGuard<BashInput>({
   check(input) {
     const cmd = input.command;
     if (!cmd) return null;
-    const { calls } = parseShell(cmd);
-    for (const call of calls) {
-      if (call.name !== "rm") continue;
-      if (call.args.some((a) => a.includes("migrations/data/"))) {
-        return {
-          blocked: "Refusing to delete migration files directly.",
-          why: "Migration SQL files and snapshots are managed exclusively by `./singularity build` — never by hand. Deleting them manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state.",
-          hint: "To remove a table or plugin that has a DB migration:\n  1. Remove the table(s) from the plugin's schema.ts.\n  2. Run: ./singularity build --migration-name remove_<plugin_name>\n     Drizzle will generate a DROP TABLE migration automatically and keep the snapshot chain intact.\n\nIf you hit a snapshot-chain Y-fork after rebasing onto main, run:\n  ./singularity build --reset-migration --migration-name <slug>\nThat drops this branch's migration files (anything absent from origin/main) and regenerates them against the new tip.",
-        };
-      }
+    const rmMigration = findCall(
+      cmd,
+      (c) => c.name === "rm" && c.args.some((a) => a.includes("migrations/data/")),
+    );
+    if (rmMigration) {
+      return {
+        blocked: "Refusing to delete migration files directly.",
+        why: "Migration SQL files and snapshots are managed exclusively by `./singularity build` — never by hand. Deleting them manually breaks the snapshot chain for every downstream agent and leaves the DB schema in an inconsistent state.",
+        hint: "To remove a table or plugin that has a DB migration:\n  1. Remove the table(s) from the plugin's schema.ts.\n  2. Run: ./singularity build --migration-name remove_<plugin_name>\n     Drizzle will generate a DROP TABLE migration automatically and keep the snapshot chain intact.\n\nIf you hit a snapshot-chain Y-fork after rebasing onto main, run:\n  ./singularity build --reset-migration --migration-name <slug>\nThat drops this branch's migration files (anything absent from origin/main) and regenerates them against the new tip.",
+      };
     }
 
-    if (/--custom-migration/.test(cmd)) {
+    const customMigration = findCall(cmd, (c) =>
+      c.args.some((a) => a.includes("--custom-migration")),
+    );
+    if (customMigration) {
       return {
         blocked: "Refusing to use --custom-migration without explicit approval.",
         why: "--custom-migration creates a migration file outside drizzle-kit's normal generation flow. It is for DATA BACKFILLS ONLY (UPDATE/INSERT/DELETE) — these carry no drizzle snapshot, are re-hashed on every build to keep the runner's filename-hash identity honest, and are enforced DML-only by the `data-migration-dml-only` check (no schema changes). Agents that hit generation failures for a real schema change should stop and report, not reach for --custom.",

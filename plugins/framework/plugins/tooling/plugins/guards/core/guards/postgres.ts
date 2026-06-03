@@ -1,5 +1,5 @@
 import { defineGuard } from "../define-guard";
-import { parseShell } from "../parse-shell";
+import { findCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 const POSTGRES_COMMANDS = new Set([
@@ -28,8 +28,7 @@ export const postgresGuard = defineGuard<BashInput>({
   check(input) {
     const cmd = input.command;
     if (!cmd) return null;
-    const { calls } = parseShell(cmd);
-    const blocked = calls.find((c) => POSTGRES_COMMANDS.has(c.name));
+    const blocked = findCall(cmd, (c) => POSTGRES_COMMANDS.has(c.name));
     if (!blocked) return null;
     return {
       blocked: `Direct PostgreSQL CLI command blocked: ${blocked.name}.`,
