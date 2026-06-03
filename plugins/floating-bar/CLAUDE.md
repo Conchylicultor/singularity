@@ -7,7 +7,7 @@
 - Description: Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
 - Web:
   - Contributes: `Core.Root` → `FloatingBar`, `ConfigV2.WebRegister`
-  - Uses: `apps.useActiveApp`, `config_v2.ConfigV2`, `config_v2.useConfig`, `notifications.notificationsResource`
+  - Uses: `apps.useActiveApp`, `config_v2.ConfigV2`, `config_v2.useConfig`
 - Server:
   - Uses: `config_v2.ConfigV2`
 
