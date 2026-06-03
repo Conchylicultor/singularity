@@ -13,5 +13,7 @@ export const handleDeleteDocument = implement(deleteDocument, async ({ params })
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
   documentsLiveResource.notify();
-  blocksLiveResource.notify();
+  // The deleted doc's blocks are FK-cascade-removed; notify that document's
+  // (now-empty) per-document blocks resource so any open subscriber reloads.
+  blocksLiveResource.notify({ documentId: params.id });
 });

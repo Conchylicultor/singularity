@@ -9,7 +9,7 @@ export const documentsResource = resourceDescriptor<Document[]>(
   [],
 );
 
-export const blocksResource = resourceDescriptor<Block[]>(
+export const blocksResource = resourceDescriptor<Block[], { documentId: string }>(
   "page-blocks",
   z.array(BlockSchema),
   [],

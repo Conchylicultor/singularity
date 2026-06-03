@@ -6,6 +6,7 @@ import { splitBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
+import { blocksChanged } from "./tables-events";
 
 export const handleSplitBlock = implement(splitBlock, async ({ params, body }) => {
   const [block] = await db
@@ -59,7 +60,8 @@ export const handleSplitBlock = implement(splitBlock, async ({ params, body }) =
     rank: newRank.toJSON(),
   });
 
-  blocksLiveResource.notify();
+  blocksLiveResource.notify({ documentId: block.documentId });
+  await blocksChanged.emit({ documentId: block.documentId });
 
   const [origRow] = await db
     .select()

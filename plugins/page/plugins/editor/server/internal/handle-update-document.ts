@@ -7,8 +7,15 @@ import { _documents } from "./tables";
 import { documentsLiveResource } from "./resources";
 
 export const handleUpdateDocument = implement(updateDocument, async ({ params, body }) => {
+  if (body.parentId === params.id) {
+    throw new HttpError(400, "Cannot parent a document to itself");
+  }
   const patch: Record<string, unknown> = { updatedAt: new Date() };
   if (typeof body.title === "string") patch.title = body.title;
+  if (body.parentId !== undefined) patch.parentId = body.parentId;
+  if (body.rank !== undefined) patch.rank = body.rank.toJSON();
+  if (typeof body.expanded === "boolean") patch.expanded = body.expanded;
+  if (body.icon !== undefined) patch.icon = body.icon;
   const [updated] = await db
     .update(_documents)
     .set(patch)

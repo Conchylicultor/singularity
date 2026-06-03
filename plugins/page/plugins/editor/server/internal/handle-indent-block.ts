@@ -6,6 +6,7 @@ import { indentBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
+import { blocksChanged } from "./tables-events";
 
 export const handleIndentBlock = implement(indentBlock, async ({ params }) => {
   const [block] = await db
@@ -45,7 +46,8 @@ export const handleIndentBlock = implement(indentBlock, async ({ params }) => {
     .set({ expanded: true, updatedAt: new Date() })
     .where(eq(_blocks.id, prevSibling.id));
 
-  blocksLiveResource.notify();
+  blocksLiveResource.notify({ documentId: block.documentId });
+  await blocksChanged.emit({ documentId: block.documentId });
 
   const [row] = await db
     .select()

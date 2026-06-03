@@ -178,6 +178,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Forge" → `ForgeLayout`
             - Uses: `apps.Apps`
             - Exports: Values: `Forge`
+    - **`pages`** — Notion-like pages app.
+      - Plugins:
+        - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
+          - Web:
+            - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`
+            - Exports: Values: `PageDetail`
+        - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
+          - Web:
+            - Contributes: `Apps.App` "Pages" → `PagesLayout`
+            - Uses: `apps.Apps`
+            - Exports: Values: `Pages`
     - **`sonata`** — Sonata — extensible piano and music app.
       - Plugins:
         - **`audio`** — Audio playback umbrella for Sonata: engine + instruments.
@@ -1019,7 +1030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `debug`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `debug`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1357,14 +1368,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Editor.Block`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `Editor`, `useBlockEditor`
       - Cross-plugin:
-        - Slot contributors: `text`
+        - Slot contributors: `page-link`, `text`
       - Server:
         - Uses: `database.db`
-        - DB schema: `plugins/page/plugins/editor/server/internal/tables.ts`
-        - Exports: Types: `Block`, `Document`; Values: `_blocks`, `_documents`, `BlockSchema`, `blocksLiveResource`, `DocumentSchema`, `documentsLiveResource`
+        - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
+        - Exports: Types: `Block`, `BlocksChangedPayload`, `Document`; Values: `_blocks`, `_documents`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `DocumentSchema`, `documentsLiveResource`
+        - Register: `defineTriggerEvent('page.blocksChanged')`
         - Routes: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `PATCH /api/documents/:id`, `DELETE /api/documents/:id`, `GET /api/documents/:documentId/blocks`, `POST /api/documents/:documentId/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`
       - Core:
         - Exports: Types: `Block`, `BlockHandle`, `CreateBlockBody`, `CreateDocumentBody`, `Document`, `MoveBlockBody`, `SplitBlockBody`, `UpdateBlockBody`, `UpdateDocumentBody`; Values: `BlockSchema`, `blocksResource`, `createBlock`, `CreateBlockBodySchema`, `createDocument`, `CreateDocumentBodySchema`, `defineBlock`, `deleteBlock`, `deleteDocument`, `DocumentSchema`, `documentsResource`, `getDocument`, `indentBlock`, `listBlocks`, `listDocuments`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `splitBlock`, `SplitBlockBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `updateDocument`, `UpdateDocumentBodySchema`
+    - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
+      - Server:
+        - Uses: `database.db`
+        - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
+        - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexDocument`
+        - Register: `defineJob('page.links.reindex')`
+      - Core:
+        - Exports: Types: `BacklinkRow`; Values: `BacklinkRowSchema`, `backlinksResource`
+      - Web:
+        - Exports: Types: `BacklinksProps`; Values: `Backlinks`
+    - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
+      - Web:
+        - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
+        - Exports: Values: `pageLinkBlock`
+      - Core:
+        - Exports: Values: `pageLinkBlock`
     - **`text`** — Plain-text block type for the page editor.
       - Web:
         - Contributes: `Editor.Block` "text" → `TextBlock`
@@ -1553,7 +1581,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Pane.Register`
         - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `debug`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
+        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `debug`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Web:
         - Exports: Values: `useDraft`

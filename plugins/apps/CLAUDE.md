@@ -17,6 +17,7 @@
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - **`file-explorer`** — File explorer app.
   - **`forge`** — Forge app — plugin graph inspection and publish workflows.
+  - **`pages`** — Notion-like pages app.
   - **`sonata`** — Sonata — extensible piano and music app.
   - **`workflows`** — Workflows app.
 

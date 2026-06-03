@@ -118,6 +118,14 @@ export interface PaneInternal {
   defaultAncestors: Array<{ id: string }>;
   /** Own URL segment (no leading slash). Used by the chain URL parser/builder. */
   segment: string;
+  /**
+   * Marks this pane as the index/landing pane for the app whose `Apps.App`
+   * `path` equals this value (e.g. "/pages"). Only meaningful for root-segment
+   * panes ("" / "/"). The app-root URL fallback in `parseUrl` prefers the
+   * index pane whose `appPath` matches the active app's basePath, so each app
+   * gets its own bare-root surface instead of inheriting the global welcome.
+   */
+  appPath?: string;
   component: ComponentType;
   chrome: NormalizedChrome;
   /** Default column width in pixels. Read by layout renderers (e.g. Miller). */
@@ -282,14 +290,34 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
     cursor += bestMatch.consumed;
   }
 
-  // Root URL ("/") — find any pane with an empty/root segment.
+  // App-root URL (basePath-stripped pathname is "/") — pick the index pane.
+  //
+  // The pane registry is global (shared across every app), so multiple panes
+  // may declare an empty/root segment — one per app that wants an index/empty
+  // landing surface. Selecting "the first root-segment pane" would let one
+  // app's index (e.g. the agent-manager welcome) bleed into every other app's
+  // bare root. Disambiguate by the active app's basePath: a pane that declares
+  // `appPath` is the index for exactly that app, so prefer the one whose
+  // `appPath` matches the current basePath. Fall back to an unscoped
+  // root-segment pane (the agent-manager welcome, basePath "") only when no
+  // app-scoped index matches.
   if (chain.length === 0) {
+    const basePath = currentBasePath;
+    let scopedIndex: PaneInternal | undefined;
+    let unscopedIndex: PaneInternal | undefined;
     for (const pane of registry.values()) {
-      if (!pane.segment || pane.segment === "/" || pane.segment === "") {
-        chain.push(createSlot(pane.id, {}));
-        break;
+      if (pane.segment && pane.segment !== "/" && pane.segment !== "") continue;
+      if (pane.appPath !== undefined) {
+        if (normalizeAppPath(pane.appPath) === basePath) {
+          scopedIndex = pane;
+          break;
+        }
+      } else if (!unscopedIndex) {
+        unscopedIndex = pane;
       }
     }
+    const index = scopedIndex ?? unscopedIndex;
+    if (index) chain.push(createSlot(index.id, {}));
   }
 
   return chain.length > 0 ? chain : null;
@@ -495,7 +523,12 @@ export const PaneBasePathContext = createContext<string>("");
 let currentBasePath = "";
 
 export function setBasePath(basePath: string): void {
-  currentBasePath = basePath === "/" ? "" : basePath.replace(/\/+$/, "");
+  currentBasePath = normalizeAppPath(basePath);
+}
+
+/** Normalize an app path to the same shape as `currentBasePath` ("/" → ""). */
+function normalizeAppPath(path: string): string {
+  return path === "/" ? "" : path.replace(/\/+$/, "");
 }
 
 export function getBasePath(): string {
@@ -824,6 +857,12 @@ type DefineArgs<Path extends string, ParentParams, Input> = {
   defaultAncestors?: Array<PaneObject<any, any, any>>;
   /** Own URL segment (no leading slash). */
   segment?: Path;
+  /**
+   * Marks this pane as the index/landing pane for the app whose `Apps.App`
+   * `path` equals this value. Only meaningful for root-segment panes; lets the
+   * bare app-root URL resolve to this pane instead of the global welcome.
+   */
+  appPath?: string;
   component: ComponentType;
   /** Declares the typed shape of caller-provided input data (runtime no-op, type-level only). */
   input?: TypeMarker<Input>;
@@ -870,6 +909,7 @@ function define<
     id: args.id,
     defaultAncestors,
     segment,
+    appPath: args.appPath,
     component: args.component,
     chrome: normalizeChrome(args.chrome),
     width: args.width,

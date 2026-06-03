@@ -4,6 +4,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteBlock } from "../../core/endpoints";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
+import { blocksChanged } from "./tables-events";
 
 export const handleDeleteBlock = implement(deleteBlock, async ({ params }) => {
   const [row] = await db
@@ -12,5 +13,6 @@ export const handleDeleteBlock = implement(deleteBlock, async ({ params }) => {
     .returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) throw new HttpError(404, "Not found");
-  blocksLiveResource.notify();
+  blocksLiveResource.notify({ documentId: row.documentId });
+  await blocksChanged.emit({ documentId: row.documentId });
 });

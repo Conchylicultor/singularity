@@ -4,6 +4,10 @@ import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 export const DocumentSchema = z.object({
   id: z.string(),
   title: z.string(),
+  parentId: z.string().nullable(),
+  rank: RankSchema,
+  expanded: z.boolean(),
+  icon: z.string().nullable(),
   createdAt: z.coerce.date(),
   updatedAt: z.coerce.date(),
 });

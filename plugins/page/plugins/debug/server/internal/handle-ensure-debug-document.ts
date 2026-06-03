@@ -17,10 +17,12 @@ const DEBUG_SEED_BLOCK_ID = "block-doc-debug-seed";
 
 export const handleEnsureDebugDocument = implement(ensureDebugDocument, async () => {
   // Ensure the document exists. Fixed id + ON CONFLICT DO NOTHING makes this
-  // idempotent across concurrent calls and multiple browser tabs.
+  // idempotent across concurrent calls and multiple browser tabs. `rank` is
+  // notNull on page_documents; the debug doc is a root with a fixed first rank.
+  const docRank = await nextRankUnder(_documents, _documents.parentId, null);
   await db
     .insert(_documents)
-    .values({ id: DEBUG_DOC_ID, title: "Debug Document" })
+    .values({ id: DEBUG_DOC_ID, title: "Debug Document", rank: docRank.toJSON() })
     .onConflictDoNothing();
   documentsLiveResource.notify();
 
@@ -46,7 +48,7 @@ export const handleEnsureDebugDocument = implement(ensureDebugDocument, async ()
         rank: rank.toJSON(),
       })
       .onConflictDoNothing();
-    blocksLiveResource.notify();
+    blocksLiveResource.notify({ documentId: DEBUG_DOC_ID });
   }
 
   const [row] = await db

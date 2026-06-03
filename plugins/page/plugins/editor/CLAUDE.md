@@ -9,11 +9,12 @@
   - Slots: `Editor.Block`
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `Editor`, `useBlockEditor`
 - Cross-plugin:
-  - Slot contributors: `text`
+  - Slot contributors: `page-link`, `text`
 - Server:
   - Uses: `database.db`
-  - DB schema: `plugins/page/plugins/editor/server/internal/tables.ts`
-  - Exports: Types: `Block`, `Document`; Values: `_blocks`, `_documents`, `BlockSchema`, `blocksLiveResource`, `DocumentSchema`, `documentsLiveResource`
+  - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
+  - Exports: Types: `Block`, `BlocksChangedPayload`, `Document`; Values: `_blocks`, `_documents`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `DocumentSchema`, `documentsLiveResource`
+  - Register: `defineTriggerEvent('page.blocksChanged')`
   - Routes: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `PATCH /api/documents/:id`, `DELETE /api/documents/:id`, `GET /api/documents/:documentId/blocks`, `POST /api/documents/:documentId/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`
 - Core:
   - Exports: Types: `Block`, `BlockHandle`, `CreateBlockBody`, `CreateDocumentBody`, `Document`, `MoveBlockBody`, `SplitBlockBody`, `UpdateBlockBody`, `UpdateDocumentBody`; Values: `BlockSchema`, `blocksResource`, `createBlock`, `CreateBlockBodySchema`, `createDocument`, `CreateDocumentBodySchema`, `defineBlock`, `deleteBlock`, `deleteDocument`, `DocumentSchema`, `documentsResource`, `getDocument`, `indentBlock`, `listBlocks`, `listDocuments`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `splitBlock`, `SplitBlockBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `updateDocument`, `UpdateDocumentBodySchema`

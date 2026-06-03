@@ -34,6 +34,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
+    - **`pages`** — Notion-like pages app.
+      - Plugins:
+        - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
+        - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
     - **`sonata`** [19 sub-plugins] — Sonata — extensible piano and music app.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 
@@ -133,7 +137,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`retry`**
 
-- **`page`** [3 sub-plugins] — Block-based page editor.
+- **`page`** [5 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

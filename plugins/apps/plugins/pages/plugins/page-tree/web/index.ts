@@ -1,0 +1,27 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { MdDescription } from "react-icons/md";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
+import { pagesRootPane, pageDetailPane } from "./panes";
+import { PagesSidebar } from "./components/pages-sidebar";
+import { BacklinksSection } from "./components/backlinks-section";
+import { PageDetail } from "./slots";
+
+export { PageDetail } from "./slots";
+
+export default {
+  name: "Pages: Tree",
+  description:
+    "Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.",
+  contributions: [
+    Pane.Register({ pane: pagesRootPane }),
+    Pane.Register({ pane: pageDetailPane }),
+    Pages.Sidebar({
+      id: "pages",
+      title: "Pages",
+      icon: MdDescription,
+      component: PagesSidebar,
+    }),
+    PageDetail.Section({ id: "backlinks", component: BacklinksSection }),
+  ],
+} satisfies PluginDefinition;

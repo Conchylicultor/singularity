@@ -21,6 +21,7 @@ import {
 } from "@plugins/primitives/plugins/tree/core";
 import { blocksResource, type Block } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
+import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow } from "./block-row";
 
 type FlatBlock = { block: Block; depth: number };
@@ -60,30 +61,39 @@ function rowAtPointer(y: number): { id: string; zone: DropZone } | null {
   return nearest;
 }
 
-export function BlockEditor({ documentId }: { documentId: string }) {
+export function BlockEditor({
+  documentId,
+  onOpenPage,
+}: {
+  documentId: string;
+  /**
+   * Optional navigation callback for link/mention block renderers. Decoupled
+   * from any host app's pane (mirrors file-links' `onFileOpen`); the host wires
+   * it when mounting `<BlockEditor>`.
+   */
+  onOpenPage?: (pageId: string) => void;
+}) {
   return (
-    <BlockEditorProvider documentId={documentId}>
+    <BlockEditorProvider documentId={documentId} onOpenPage={onOpenPage}>
       <BlockEditorInner documentId={documentId} />
     </BlockEditorProvider>
   );
 }
 
 function BlockEditorInner({ documentId }: { documentId: string }) {
-  const result = useResource(blocksResource);
+  const result = useResource(blocksResource, { documentId });
   const { setFlatOrder, move } = useBlockEditor();
 
   const { rows, flat } = useMemo(() => {
     if (result.pending) {
       return { rows: [] as Block[], flat: [] as FlatBlock[] };
     }
-    const filtered = result.data
-      .filter((b) => b.documentId === documentId)
-      .sort((a, b) => Rank.compare(a.rank, b.rank));
-    const tree = buildTree(filtered);
+    const sorted = [...result.data].sort((a, b) => Rank.compare(a.rank, b.rank));
+    const tree = buildTree(sorted);
     const out: FlatBlock[] = [];
     flattenTree(tree, 0, out);
-    return { rows: filtered, flat: out };
-  }, [result, documentId]);
+    return { rows: sorted, flat: out };
+  }, [result]);
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
@@ -176,6 +186,9 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
             dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
           />
         ))}
+        <div className="mt-1">
+          <AddBlockMenu />
+        </div>
       </div>
       <DragOverlay dropAnimation={null}>
         {activeId ? (

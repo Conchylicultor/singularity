@@ -6,6 +6,7 @@ import { createBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _documents, _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
+import { blocksChanged } from "./tables-events";
 
 export const handleCreateBlock = implement(createBlock, async ({ params, body }) => {
   const [doc] = await db
@@ -34,7 +35,8 @@ export const handleCreateBlock = implement(createBlock, async ({ params, body })
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_blocks.id, parentId));
   }
-  blocksLiveResource.notify();
+  blocksLiveResource.notify({ documentId: params.documentId });
+  await blocksChanged.emit({ documentId: params.documentId });
   const [row] = await db
     .select()
     .from(_blocks)

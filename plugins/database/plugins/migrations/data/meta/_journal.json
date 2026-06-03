@@ -799,6 +799,27 @@
       "tag": "20260603_150847_c72bb218__reorder_plugin_id_path_rename",
       "hash": "c72bb218",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780506526000,
+      "tag": "20260603_170846_1c26dd87__pages_tree",
+      "hash": "1c26dd87",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780509413000,
+      "tag": "20260603_175653_7dc2a0b8__page_links",
+      "hash": "7dc2a0b8",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780509734000,
+      "tag": "20260603_180214_afc6a809__page_blocks_changed_trigger",
+      "hash": "afc6a809",
+      "breakpoints": true
     }
   ]
 }

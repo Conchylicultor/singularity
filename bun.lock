@@ -171,6 +171,18 @@
       "name": "@singularity/plugin-apps-forge-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages": {
+      "name": "@singularity/plugin-apps-pages",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/pages/plugins/page-tree": {
+      "name": "@singularity/plugin-apps-pages-page-tree",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/pages/plugins/shell": {
+      "name": "@singularity/plugin-apps-pages-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata": {
       "name": "@singularity/plugin-apps-sonata",
       "version": "0.0.1",
@@ -1137,6 +1149,14 @@
     },
     "plugins/page/plugins/editor": {
       "name": "@singularity/plugin-page-editor",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/links": {
+      "name": "@singularity/plugin-page-links",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/page-link": {
+      "name": "@singularity/plugin-page-page-link",
       "version": "0.0.1",
     },
     "plugins/page/plugins/text": {
@@ -2305,6 +2325,12 @@
 
     "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
 
+    "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
+
+    "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
+
+    "@singularity/plugin-apps-pages-shell": ["@singularity/plugin-apps-pages-shell@workspace:plugins/apps/plugins/pages/plugins/shell"],
+
     "@singularity/plugin-apps-sonata": ["@singularity/plugin-apps-sonata@workspace:plugins/apps/plugins/sonata"],
 
     "@singularity/plugin-apps-sonata-audio": ["@singularity/plugin-apps-sonata-audio@workspace:plugins/apps/plugins/sonata/plugins/audio"],
@@ -2756,6 +2782,10 @@
     "@singularity/plugin-page-debug": ["@singularity/plugin-page-debug@workspace:plugins/page/plugins/debug"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
+
+    "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
+
+    "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
 
     "@singularity/plugin-page-text": ["@singularity/plugin-page-text@workspace:plugins/page/plugins/text"],
 

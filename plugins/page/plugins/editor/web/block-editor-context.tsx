@@ -2,6 +2,7 @@ import { createContext, useCallback, useContext, useRef, useState, type ReactNod
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
+  createBlock,
   updateBlock,
   splitBlock,
   mergeBlocks,
@@ -21,6 +22,17 @@ interface BlockEditorContextValue {
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
   setFlatOrder: (blocks: Block[]) => void;
   move: (id: string, dest: { parentId: string | null; rank: Rank }) => void;
+  /**
+   * Create a block of the given type at the end of the document and focus it
+   * once the live resource re-renders the list.
+   */
+  insert: (type: string, data: unknown) => void;
+  /**
+   * Optional navigation callback so link/mention block renderers can open a
+   * page without hardcoding any host app's pane. Undefined when the host did
+   * not provide one.
+   */
+  onOpenPage?: (pageId: string) => void;
 }
 
 const BlockEditorContext = createContext<BlockEditorContextValue | null>(null);
@@ -33,9 +45,11 @@ export function useBlockEditor(): BlockEditorContextValue {
 
 export function BlockEditorProvider({
   documentId,
+  onOpenPage,
   children,
 }: {
   documentId: string;
+  onOpenPage?: (pageId: string) => void;
   children: ReactNode;
 }) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
@@ -70,6 +84,28 @@ export function BlockEditorProvider({
       );
     },
     [],
+  );
+
+  // Insert a new block at the end of the document. Omitting `rank` lets the
+  // server append it after the last existing block. Once the live resource
+  // re-renders and the new block registers its focus handle, focus it.
+  const insert = useCallback(
+    (type: string, data: unknown) => {
+      void (async () => {
+        const created = await fetchEndpoint(
+          createBlock,
+          { documentId },
+          { body: { type, data } },
+        );
+        pendingFocusRef.current = created.id;
+        const handle = focusHandlesRef.current.get(created.id);
+        if (handle) {
+          pendingFocusRef.current = null;
+          handle.focus();
+        }
+      })();
+    },
+    [documentId],
   );
 
   const makeBlockAPI = useCallback(
@@ -157,6 +193,8 @@ export function BlockEditorProvider({
         makeBlockAPI,
         setFlatOrder,
         move,
+        insert,
+        onOpenPage,
       }}
     >
       {children}

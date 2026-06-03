@@ -15,6 +15,7 @@ import { handleMergeBlocks } from "./internal/handle-merge-blocks";
 import { handleIndentBlock } from "./internal/handle-indent-block";
 import { handleOutdentBlock } from "./internal/handle-outdent-block";
 import { documentsLiveResource, blocksLiveResource } from "./internal/resources";
+import { blocksChanged } from "./internal/tables-events";
 import {
   listDocuments,
   createDocument,
@@ -34,6 +35,8 @@ import {
 
 export { _documents, _blocks } from "./internal/tables";
 export { documentsLiveResource, blocksLiveResource } from "./internal/resources";
+export { blocksChanged } from "./internal/tables-events";
+export type { BlocksChangedPayload } from "./internal/tables-events";
 export { DocumentSchema, BlockSchema } from "../core/schemas";
 export type { Document, Block } from "../core/schemas";
 
@@ -56,6 +59,7 @@ export default {
     [indentBlock.route]: handleIndentBlock,
     [outdentBlock.route]: handleOutdentBlock,
   },
+  register: [blocksChanged],
   contributions: [
     Resource.Declare(documentsLiveResource),
     Resource.Declare(blocksLiveResource),

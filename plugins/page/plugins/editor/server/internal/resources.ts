@@ -1,4 +1,4 @@
-import { asc } from "drizzle-orm";
+import { asc, eq } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
@@ -15,16 +15,17 @@ export const documentsLiveResource = defineResource<Document[]>({
     db
       .select()
       .from(_documents)
-      .orderBy(asc(_documents.createdAt)) as unknown as Promise<Document[]>,
+      .orderBy(asc(_documents.rank), asc(_documents.createdAt)) as unknown as Promise<Document[]>,
 });
 
-export const blocksLiveResource = defineResource<Block[]>({
+export const blocksLiveResource = defineResource<Block[], { documentId: string }>({
   key: blocksResource.key,
   mode: "push",
   schema: z.array(BlockSchema),
-  loader: async () =>
+  loader: async ({ documentId }) =>
     db
       .select()
       .from(_blocks)
+      .where(eq(_blocks.documentId, documentId))
       .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });

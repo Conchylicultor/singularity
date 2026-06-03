@@ -6,6 +6,7 @@ import { outdentBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
+import { blocksChanged } from "./tables-events";
 
 export const handleOutdentBlock = implement(outdentBlock, async ({ params }) => {
   const [block] = await db
@@ -55,7 +56,8 @@ export const handleOutdentBlock = implement(outdentBlock, async ({ params }) => 
     .set({ parentId: parent.parentId, rank: newRank.toJSON(), updatedAt: new Date() })
     .where(eq(_blocks.id, params.id));
 
-  blocksLiveResource.notify();
+  blocksLiveResource.notify({ documentId: block.documentId });
+  await blocksChanged.emit({ documentId: block.documentId });
 
   const [row] = await db
     .select()

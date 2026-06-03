@@ -6,6 +6,7 @@ import { mergeBlocks } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
+import { blocksChanged } from "./tables-events";
 
 export const handleMergeBlocks = implement(mergeBlocks, async ({ params }) => {
   const [block] = await db
@@ -66,7 +67,8 @@ export const handleMergeBlocks = implement(mergeBlocks, async ({ params }) => {
 
   await db.delete(_blocks).where(eq(_blocks.id, block.id));
 
-  blocksLiveResource.notify();
+  blocksLiveResource.notify({ documentId: block.documentId });
+  await blocksChanged.emit({ documentId: block.documentId });
 
   const [row] = await db
     .select()

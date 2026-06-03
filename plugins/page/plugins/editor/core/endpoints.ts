@@ -5,11 +5,18 @@ import { DocumentSchema, BlockSchema } from "./schemas";
 
 export const CreateDocumentBodySchema = z.object({
   title: z.string().optional(),
+  parentId: z.string().nullable().optional(),
+  rank: RankSchema.optional(),
+  icon: z.string().nullable().optional(),
 });
 export type CreateDocumentBody = z.infer<typeof CreateDocumentBodySchema>;
 
 export const UpdateDocumentBodySchema = z.object({
   title: z.string().optional(),
+  parentId: z.string().nullable().optional(),
+  rank: RankSchema.optional(),
+  expanded: z.boolean().optional(),
+  icon: z.string().nullable().optional(),
 });
 export type UpdateDocumentBody = z.infer<typeof UpdateDocumentBodySchema>;
 
