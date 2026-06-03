@@ -26,6 +26,18 @@ export function scaleTempo(score: Score, factor: number): Score {
   };
 }
 
+/**
+ * The largest beat the score references — the transport stops here and the
+ * progression bar spans `[0, scoreEndBeat]`. The max over every note's end
+ * (`start + duration`) and every annotation's `end`. Pure; never mutates.
+ */
+export function scoreEndBeat(score: Score): number {
+  let end = 0;
+  for (const n of score.notes) end = Math.max(end, n.start + n.duration);
+  for (const a of score.annotations) end = Math.max(end, a.end);
+  return end;
+}
+
 /** An empty Score — the shell's default before any source loads. */
 export function emptyScore(): Score {
   return {

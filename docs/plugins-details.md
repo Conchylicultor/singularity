@@ -197,6 +197,24 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
           - Web:
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`
+        - **`progress`** — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
+          - Plugins:
+            - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
+              - Web:
+                - Contributes: `SonataProgress.Marker` "bars" → `BarTicks`
+            - **`keys`** — Sonata progress marker: key-signature flags along the progression bar (starting key + 'key' annotation changes).
+              - Web:
+                - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
+            - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
+              - Web:
+                - Slots: `SonataProgress.Marker`
+                - Contributes: `Sonata.Transport` "progress-bar" → `ProgressBar`
+                - Exports: Values: `SonataProgress`
+              - Cross-plugin:
+                - Slot contributors: `bars`, `keys`, `sections`
+            - **`sections`** — Sonata progress marker: labeled section-region bands along the progression bar, drawn from 'section' annotations.
+              - Web:
+                - Contributes: `SonataProgress.Marker` "sections" → `SectionBands`
         - **`rich`** — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
           - Plugins:
             - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
@@ -210,15 +228,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
         - **`score`**
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`, `scaleTempo`
-        - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Section} slots.
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`
+        - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
             - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`
+            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `scrubber`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.

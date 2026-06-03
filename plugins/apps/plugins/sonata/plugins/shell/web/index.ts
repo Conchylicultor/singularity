@@ -20,7 +20,7 @@ export {
 export default {
   name: "Sonata: Shell",
   description:
-    "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Section} slots.",
+    "App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.",
   contributions: [
     Apps.App({
       id: "sonata",

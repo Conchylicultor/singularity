@@ -40,6 +40,7 @@ export interface InstrumentVoices {
  *  - Analyzer (rich data)  — pure `(Score) => Annotation[]`; all run, merged in.
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
  *  - Instrument            — audio voice manager bound to a Web Audio context.
+ *  - Transport             — full-width horizontal strip below the toolbar (progress bar, …).
  *  - Section               — pre-existing free-floating panels (current-chord readout, …).
  */
 export const Sonata = {
@@ -104,6 +105,12 @@ export const Sonata = {
     /** Create a voice manager bound to `ctx`, routed into `destination`. */
     createVoices: (ctx: AudioContext, destination: AudioNode) => InstrumentVoices;
   }>("sonata.instrument", { docLabel: (p) => p.label }),
+
+  // TRANSPORT — full-width horizontal strip below the toolbar (progress bar, …).
+  Transport: defineRenderSlot<{ component: ComponentType }>("sonata.transport", {
+    reorder: false,
+    docLabel: (p) => p.id,
+  }),
 
   // EXISTING — free-floating panels (current-chord readout, controls) that read
   // shared Score + cursor context.

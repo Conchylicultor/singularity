@@ -13,6 +13,7 @@ import {
   emptyScore,
   mergeAnnotations,
   scaleTempo,
+  scoreEndBeat,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Sonata } from "./slots";
@@ -67,6 +68,8 @@ export interface SonataContextValue {
   setCursorBeat: (beat: number) => void;
   /** Nudge the playhead by `deltaBeat` beats, clamped to [0, end]; re-anchors playback. */
   seekBy: (deltaBeat: number) => void;
+  /** Seek the playhead to an absolute `beat`, clamped to [0, end]; re-anchors playback. */
+  seekTo: (beat: number) => void;
   /** Set the playback tempo multiplier (clamped to [0.25, 4]). */
   setTempoScale: (scale: number) => void;
 
@@ -94,14 +97,6 @@ export function useSonata(): SonataContextValue {
 
 /** The default time source: the browser wall clock, in seconds. */
 const wallClock: TransportClock = { now: () => performance.now() / 1000 };
-
-/** Largest beat referenced by the score — the transport stops here. */
-function scoreEndBeat(score: Score): number {
-  let end = 0;
-  for (const n of score.notes) end = Math.max(end, n.start + n.duration);
-  for (const a of score.annotations) end = Math.max(end, a.end);
-  return end;
-}
 
 export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
@@ -207,17 +202,23 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setIsPlaying(true);
   }, []);
 
-  const seekBy = useCallback(
-    (deltaBeat: number) => {
+  // Absolute seek — the primitive the progression bar drives. Clamps to the
+  // score span and re-anchors so the audio/cursor stay glued while playing.
+  // Stable (reads refs internally), so pointer handlers stay correct mid-drag.
+  const seekTo = useCallback(
+    (beat: number) => {
       const end = scoreEndBeat(scoreRef.current);
-      const next = Math.max(
-        0,
-        Math.min(end, cursorBeatRef.current + deltaBeat),
-      );
+      const next = Math.max(0, Math.min(end, beat));
       setCursorBeat(next);
       reanchor(next);
     },
     [reanchor],
+  );
+
+  // Relative seek (keyboard arrows) delegates to the absolute primitive.
+  const seekBy = useCallback(
+    (deltaBeat: number) => seekTo(cursorBeatRef.current + deltaBeat),
+    [seekTo],
   );
 
   const setTempoScale = useCallback((scale: number) => {
@@ -315,6 +316,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setRaw,
       setCursorBeat,
       seekBy,
+      seekTo,
       setTempoScale,
       play,
       stop,
@@ -328,6 +330,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeSourceId,
       activeDisplayId,
       seekBy,
+      seekTo,
       setTempoScale,
       play,
       stop,

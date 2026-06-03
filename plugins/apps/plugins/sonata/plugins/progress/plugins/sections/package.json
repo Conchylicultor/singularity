@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-progress-sections",
+  "description": "Sonata progress marker: labeled section-region bands (intro, verse, chorus…) drawn along the progression bar from 'section' annotations.",
+  "private": true,
+  "version": "0.0.1"
+}

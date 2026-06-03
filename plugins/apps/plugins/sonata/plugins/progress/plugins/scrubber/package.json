@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-progress-scrubber",
+  "description": "Sonata Transport: draggable progression bar + open SonataProgress.Marker slot for timeline markers.",
+  "private": true,
+  "version": "0.0.1"
+}

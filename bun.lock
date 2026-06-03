@@ -202,6 +202,26 @@
       "name": "@singularity/plugin-apps-sonata-piano-roll",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/progress": {
+      "name": "@singularity/plugin-apps-sonata-progress",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/progress/plugins/bars": {
+      "name": "@singularity/plugin-apps-sonata-progress-bars",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/progress/plugins/keys": {
+      "name": "@singularity/plugin-apps-sonata-progress-keys",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber": {
+      "name": "@singularity/plugin-apps-sonata-progress-scrubber",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/progress/plugins/sections": {
+      "name": "@singularity/plugin-apps-sonata-progress-sections",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/rich": {
       "name": "@singularity/plugin-apps-sonata-rich",
       "version": "0.0.1",
@@ -2298,6 +2318,16 @@
     "@singularity/plugin-apps-sonata-piano-keyboard": ["@singularity/plugin-apps-sonata-piano-keyboard@workspace:plugins/apps/plugins/sonata/plugins/piano-keyboard"],
 
     "@singularity/plugin-apps-sonata-piano-roll": ["@singularity/plugin-apps-sonata-piano-roll@workspace:plugins/apps/plugins/sonata/plugins/piano-roll"],
+
+    "@singularity/plugin-apps-sonata-progress": ["@singularity/plugin-apps-sonata-progress@workspace:plugins/apps/plugins/sonata/plugins/progress"],
+
+    "@singularity/plugin-apps-sonata-progress-bars": ["@singularity/plugin-apps-sonata-progress-bars@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/bars"],
+
+    "@singularity/plugin-apps-sonata-progress-keys": ["@singularity/plugin-apps-sonata-progress-keys@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/keys"],
+
+    "@singularity/plugin-apps-sonata-progress-scrubber": ["@singularity/plugin-apps-sonata-progress-scrubber@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber"],
+
+    "@singularity/plugin-apps-sonata-progress-sections": ["@singularity/plugin-apps-sonata-progress-sections@workspace:plugins/apps/plugins/sonata/plugins/progress/plugins/sections"],
 
     "@singularity/plugin-apps-sonata-rich": ["@singularity/plugin-apps-sonata-rich@workspace:plugins/apps/plugins/sonata/plugins/rich"],
 

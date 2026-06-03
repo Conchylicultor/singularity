@@ -133,6 +133,12 @@ function SonataLayoutInner() {
         </div>
       </div>
 
+      {/* Transport strip: full-width progression bar (and future transport
+          widgets). Renders nothing when no contributor is present. */}
+      <Sonata.Transport.Render>
+        {(t) => <t.component key={t.id} />}
+      </Sonata.Transport.Render>
+
       {/* Active source loader (UI to provide input). */}
       {LoaderComponent ? (
         <div className="border-b border-border px-6 py-3">
