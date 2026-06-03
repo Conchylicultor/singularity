@@ -9,7 +9,7 @@ import type {
  * children of the note grid — can read the exact geometry the roll draws with.
  *
  * The piano roll offers BOTH capabilities (`"time-axis"` + `"pitch-plane"`), so
- * the published projection carries real `beatToX` / `pitchToY` / `noteToRect`.
+ * the published projection carries real `beatToY` / `pitchToX` / `noteToRect`.
  */
 const ProjectionContext = createContext<Projection | null>(null);
 

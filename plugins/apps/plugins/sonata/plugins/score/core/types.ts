@@ -138,18 +138,41 @@ export interface Score {
 export type Capability = "time-axis" | "pitch-plane";
 
 /**
+ * One piano key on the pitch axis, in screen pixels. The piano roll is vertical
+ * (pitch runs horizontally across the full keyboard), so `center`/`width` are X
+ * coordinates. Both the falling-note rectangles and the keyboard renderer derive
+ * their geometry from this single layout, so a note lands exactly on its key.
+ */
+export interface KeyLane {
+  /** MIDI note number. */
+  pitch: number;
+  /** True for the five accidental pitch classes (drawn as narrow black keys). */
+  isBlack: boolean;
+  /** Pixel center along the pitch (X) axis. */
+  center: number;
+  /** Pixel column width (white-key vs. narrower black-key). */
+  width: number;
+}
+
+/**
  * Geometry a Display publishes (via React context) so capability-compatible
- * overlays can anchor themselves to display coordinates without knowing which
- * display they're on. Optional accessors are present iff the matching
- * capability is offered.
+ * overlays and pitch-axis decorations can anchor themselves to display
+ * coordinates without knowing which display they're on. Optional accessors are
+ * present iff the matching capability is offered.
+ *
+ * The piano roll is VERTICAL: time grows downward (Y) and pitch spans the full
+ * 88-key keyboard horizontally (X). The accessor names reflect that screen
+ * mapping; the capability names (`"time-axis"`, `"pitch-plane"`) stay semantic.
  */
 export interface Projection {
   capabilities: ReadonlySet<Capability>;
   viewport: { width: number; height: number; scrollBeat: number };
-  /** Present iff "time-axis". */
-  beatToX?: (beat: number) => number;
-  /** Present iff "pitch-plane". */
-  pitchToY?: (pitch: number) => number;
+  /** Present iff "time-axis": beat → screen Y (px from the top of the lane). */
+  beatToY?: (beat: number) => number;
+  /** Present iff "pitch-plane": pitch → screen X (px, key center). */
+  pitchToX?: (pitch: number) => number;
   /** Present iff both axes. */
   noteToRect?: (note: Note) => { x: number; y: number; w: number; h: number };
+  /** Present iff "pitch-plane": the full key layout the pitch axis renders. */
+  keys?: readonly KeyLane[];
 }

@@ -24,6 +24,7 @@ export type {
   SectionData,
   Capability,
   Projection,
+  KeyLane,
 } from "./types";
 
 export {

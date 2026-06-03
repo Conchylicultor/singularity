@@ -77,6 +77,16 @@ export const Sonata = {
     }>;
   }>("sonata.overlay", { docLabel: (p) => p.id }),
 
+  // PITCH AXIS — decorations rendered in a display's pitch-axis gutter (the
+  // piano keyboard, future fretboards / pitch rulers). Capability-filtered like
+  // Overlay: the host renders one only when `requires ⊆ display.capabilities`.
+  // Anchors via the published projection (`keys` / `pitchToX`).
+  PitchAxis: defineSlot<{
+    id: string;
+    requires: Capability[];
+    component: ComponentType<{ projection: Projection }>;
+  }>("sonata.pitch-axis", { docLabel: (p) => p.id }),
+
   // INSTRUMENTS — carried over; contribute synth params (not the focus here).
   Instrument: defineSlot<{
     id: string;

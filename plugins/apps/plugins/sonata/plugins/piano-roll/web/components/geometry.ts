@@ -1,96 +1,118 @@
 import type {
+  KeyLane,
   Note,
   Projection,
-  Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /**
  * The piano roll's coordinate model — pure, framework-free, so the renderer and
- * the published `Projection` share ONE source of truth. Both axes are linear:
+ * the published `Projection` share ONE source of truth. The roll is VERTICAL,
+ * Synthesia-style:
  *
- *  - X (time):  x = (beat - scrollBeat) * PX_PER_BEAT.  Beats increase rightward.
- *               `scrollBeat` is the leftmost visible beat; subtracting it lets the
- *               grid scroll horizontally while overlays anchor against the same
- *               viewport-relative origin.
- *  - Y (pitch): higher MIDI pitch sits HIGHER on screen (screen-y grows downward),
- *               so y = (PITCH_TOP - pitch) * PX_PER_SEMITONE. The vertical span is
- *               clamped to the score's pitch range (padded), so an 88-key file and
- *               a 3-note file both fill the plane sensibly.
+ *  - X (pitch): the FULL 88-key piano (A0–C8) laid across the container width.
+ *               52 white keys tile edge-to-edge; the 36 black keys sit on the
+ *               white/white boundaries, narrower. `keyLayout` is the single
+ *               source both the falling notes and the keyboard renderer consume,
+ *               so every note lands exactly on its key.
+ *  - Y (time):  y = height - (beat - cursorBeat) * PX_PER_BEAT. The cursor beat
+ *               maps to the lane bottom (the keyboard); future beats sit higher
+ *               and descend as the transport advances. Layout is a pure function
+ *               of `cursorBeat` + lane height — no per-frame React state.
  *
- * A note rectangle is `{ x: beatToX(start), y: pitchToY(pitch), w: duration*PX_PER_BEAT,
- * h: PX_PER_SEMITONE }`. `noteToRect` is the canonical note geometry both the
- * renderer and overlays consume.
+ * A note rectangle spans from its end (top, further in the future) to its onset
+ * (bottom), and is as wide as its key. `noteToRect` is the canonical note
+ * geometry both the renderer and overlays consume.
  */
 
-/** Horizontal pixels per quarter-note beat. */
-export const PX_PER_BEAT = 80;
-/** Vertical pixels per semitone (one MIDI step = one row). */
-export const PX_PER_SEMITONE = 12;
-/** Padding (in semitones) above/below the score's pitch range. */
-const PITCH_PAD = 2;
-/** Fallback pitch window when the score has no notes (one octave around C4). */
-const DEFAULT_PITCH_LOW = 60;
-const DEFAULT_PITCH_HIGH = 72;
+/** Vertical pixels per quarter-note beat. */
+export const PX_PER_BEAT = 90;
 
-export interface PitchRange {
-  /** Lowest visible MIDI pitch (bottom row). */
-  low: number;
-  /** Highest visible MIDI pitch (top row). */
-  high: number;
+/** Full 88-key piano range: A0 (21) … C8 (108). */
+export const KEYBOARD_LOW = 21;
+export const KEYBOARD_HIGH = 108;
+/** Number of white keys in the full 88-key range. */
+const WHITE_KEY_COUNT = 52;
+/** Black keys are this fraction of a white key's width. */
+const BLACK_WIDTH_RATIO = 0.62;
+/** White pitch classes (C D E F G A B). */
+const WHITE_PCS = new Set([0, 2, 4, 5, 7, 9, 11]);
+
+/** True for the five accidental pitch classes (black keys). */
+export function isBlackPitch(pitch: number): boolean {
+  return !WHITE_PCS.has(((pitch % 12) + 12) % 12);
 }
 
-/** Derive the visible pitch window from the score's notes (padded, clamped 0–127). */
-export function pitchRange(score: Score): PitchRange {
-  if (score.notes.length === 0) {
-    return { low: DEFAULT_PITCH_LOW, high: DEFAULT_PITCH_HIGH };
-  }
-  let min = Infinity;
-  let max = -Infinity;
-  for (const n of score.notes) {
-    if (n.pitch < min) min = n.pitch;
-    if (n.pitch > max) max = n.pitch;
-  }
-  return {
-    low: Math.max(0, min - PITCH_PAD),
-    high: Math.min(127, max + PITCH_PAD),
-  };
-}
+/**
+ * Build the full 88-key layout for a given pixel width. White keys tile
+ * edge-to-edge (`whiteW = width / 52`); each black key centers on the boundary
+ * just above its lower white neighbour, drawn narrower. Pure.
+ */
+export function keyLayout(width: number): KeyLane[] {
+  const whiteW = width / WHITE_KEY_COUNT;
+  const blackW = whiteW * BLACK_WIDTH_RATIO;
 
-/** Total content height in pixels for a given pitch range. */
-export function planeHeight(range: PitchRange): number {
-  // +1 because both endpoints are inclusive rows.
-  return (range.high - range.low + 1) * PX_PER_SEMITONE;
+  const lanes: KeyLane[] = [];
+  let whiteIndex = 0;
+  for (let pitch = KEYBOARD_LOW; pitch <= KEYBOARD_HIGH; pitch++) {
+    if (!isBlackPitch(pitch)) {
+      lanes.push({
+        pitch,
+        isBlack: false,
+        center: whiteIndex * whiteW + whiteW / 2,
+        width: whiteW,
+      });
+      whiteIndex++;
+    } else {
+      // The boundary between the white key just below and the next one — i.e.
+      // the right edge of the white key already counted (whiteIndex - 1).
+      lanes.push({
+        pitch,
+        isBlack: true,
+        center: whiteIndex * whiteW,
+        width: blackW,
+      });
+    }
+  }
+  return lanes;
 }
 
 /**
  * Build the `Projection` the piano roll publishes. The closures here ARE the
- * geometry the renderer draws with — overlays consuming this projection land
- * pixel-exact on the notes. `scrollBeat` is the leftmost visible beat.
+ * geometry the renderer draws with — overlays and the keyboard consuming this
+ * projection land pixel-exact on the notes. `cursorBeat` anchors the time axis
+ * at the lane bottom.
  */
-export function buildProjection(
-  range: PitchRange,
-  viewport: { width: number; height: number; scrollBeat: number },
-): Projection {
-  const { scrollBeat } = viewport;
-  // Top row is `range.high`; y grows downward as pitch decreases.
-  const top = range.high;
+export function buildProjection(viewport: {
+  width: number;
+  height: number;
+  cursorBeat: number;
+}): Projection {
+  const { width, height, cursorBeat } = viewport;
+  const keys = keyLayout(width);
+  const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
 
-  const beatToX = (beat: number): number =>
-    (beat - scrollBeat) * PX_PER_BEAT;
-  const pitchToY = (pitch: number): number =>
-    (top - pitch) * PX_PER_SEMITONE;
-  const noteToRect = (note: Note) => ({
-    x: beatToX(note.start),
-    y: pitchToY(note.pitch),
-    w: note.duration * PX_PER_BEAT,
-    h: PX_PER_SEMITONE,
-  });
+  const beatToY = (beat: number): number =>
+    height - (beat - cursorBeat) * PX_PER_BEAT;
+  const pitchToX = (pitch: number): number => byPitch.get(pitch)?.center ?? 0;
+  const noteToRect = (note: Note) => {
+    const k = byPitch.get(note.pitch);
+    const w = k?.width ?? width / WHITE_KEY_COUNT;
+    const center = k?.center ?? 0;
+    return {
+      x: center - w / 2,
+      // Top = note end (further in the future, higher up); height = duration.
+      y: beatToY(note.start + note.duration),
+      w,
+      h: note.duration * PX_PER_BEAT,
+    };
+  };
 
   return {
     capabilities: new Set(["time-axis", "pitch-plane"]),
-    viewport,
-    beatToX,
-    pitchToY,
+    viewport: { width, height, scrollBeat: cursorBeat },
+    beatToY,
+    pitchToX,
     noteToRect,
+    keys,
   };
 }

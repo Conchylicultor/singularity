@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-piano-keyboard",
+  "description": "Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll (requires the pitch-plane capability).",
+  "private": true,
+  "version": "0.0.1"
+}

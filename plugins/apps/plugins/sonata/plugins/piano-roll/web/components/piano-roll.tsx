@@ -4,15 +4,10 @@ import {
   bars,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import {
-  buildProjection,
-  pitchRange,
-  planeHeight,
-  PX_PER_BEAT,
-  type PitchRange,
-} from "./geometry";
+import { buildProjection } from "./geometry";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
+import { PitchAxisHost } from "./pitch-axis-host";
 
 /** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. */
 export interface PianoRollProps {
@@ -20,6 +15,9 @@ export interface PianoRollProps {
   cursorBeat: number;
   activeDisplayId: string;
 }
+
+/** Height of the pitch-axis gutter (the piano keyboard) at the bottom. */
+const KEYBOARD_HEIGHT = 112;
 
 /** Observe an element's pixel size via ResizeObserver (no polling). */
 function useElementSize(): [
@@ -49,86 +47,60 @@ function useElementSize(): [
   return [ref, size];
 }
 
-/**
- * Keep the playback cursor in view by scrolling the time axis. The cursor is
- * pinned to a fixed fraction of the viewport width (`CURSOR_ANCHOR_FRAC`); the
- * leftmost visible beat is derived purely from `cursorBeat`, so layout is a pure
- * function of props — no per-frame React state, no animation thrash.
- */
-const CURSOR_ANCHOR_FRAC = 0.35;
-function scrollBeatFor(cursorBeat: number, viewportWidth: number): number {
-  if (viewportWidth <= 0) return 0;
-  const anchorPx = viewportWidth * CURSOR_ANCHOR_FRAC;
-  const anchorBeats = anchorPx / PX_PER_BEAT;
-  // Never scroll past the origin (no negative beats on screen at the start).
-  return Math.max(0, cursorBeat - anchorBeats);
-}
-
-/** Bar lines + cursor, drawn as absolutely-positioned elements over the grid. */
+/** Bar lines + now-line, drawn as absolutely-positioned elements over the lane. */
 function GridLines({
   score,
-  range,
-  scrollBeat,
-  viewportWidth,
-  cursorBeat,
+  beatToY,
+  laneWidth,
+  laneHeight,
 }: {
   score: Score;
-  range: PitchRange;
-  scrollBeat: number;
-  viewportWidth: number;
-  cursorBeat: number;
+  beatToY: (beat: number) => number;
+  laneWidth: number;
+  laneHeight: number;
 }) {
-  const height = planeHeight(range);
-  const beatToX = (beat: number) => (beat - scrollBeat) * PX_PER_BEAT;
-
   const barList = useMemo(() => bars(score), [score]);
   // Only render bar lines that fall within the visible window (+margin).
   const visibleBars = barList.filter((b) => {
-    const x = beatToX(b.startBeat);
-    return x >= -PX_PER_BEAT && x <= viewportWidth + PX_PER_BEAT;
+    const y = beatToY(b.startBeat);
+    return y >= -40 && y <= laneHeight + 40;
   });
-
-  const cursorX = beatToX(cursorBeat);
 
   return (
     <>
       {visibleBars.map((b) => (
         <div
           key={b.index}
-          className="absolute top-0 border-l border-border/60"
-          style={{ left: beatToX(b.startBeat), height }}
+          className="absolute left-0 border-t border-border/60"
+          style={{ top: beatToY(b.startBeat), width: laneWidth }}
         >
-          <span className="absolute left-1 top-0 select-none text-[10px] tabular-nums text-muted-foreground/70">
+          <span className="absolute left-1 top-0.5 select-none text-[10px] tabular-nums text-muted-foreground/70">
             {b.index + 1}
           </span>
         </div>
       ))}
-      {/* Playback cursor. */}
+      {/* Playback now-line: where falling notes land on the keyboard. */}
       <div
-        className="pointer-events-none absolute top-0 z-20 w-0.5 bg-primary"
-        style={{ left: cursorX, height }}
+        className="pointer-events-none absolute left-0 z-20 h-0.5 bg-primary"
+        style={{ top: laneHeight, width: laneWidth }}
       />
     </>
   );
 }
 
 function PianoRollInner({ score, cursorBeat }: PianoRollProps) {
-  const [containerRef, size] = useElementSize();
-
-  const range = useMemo(() => pitchRange(score), [score]);
-  const scrollBeat = scrollBeatFor(cursorBeat, size.width);
-
-  const viewport = useMemo(
-    () => ({ width: size.width, height: size.height, scrollBeat }),
-    [size.width, size.height, scrollBeat],
-  );
+  // We measure the LANE (above the keyboard); its height drives the time axis.
+  const [laneRef, lane] = useElementSize();
 
   const projection = useMemo(
-    () => buildProjection(range, viewport),
-    [range, viewport],
+    () =>
+      buildProjection({
+        width: lane.width,
+        height: lane.height,
+        cursorBeat,
+      }),
+    [lane.width, lane.height, cursorBeat],
   );
-
-  const height = planeHeight(range);
 
   // Note rectangles, derived from the projection (single geometry source).
   const noteRects = useMemo(() => {
@@ -137,26 +109,21 @@ function PianoRollInner({ score, cursorBeat }: PianoRollProps) {
   }, [projection, score.notes]);
 
   return (
-    <div
-      ref={containerRef}
-      className="relative h-full w-full overflow-x-hidden overflow-y-auto bg-background"
-    >
-      {/* The plane. Its height is the full pitch span (vertical scroll for tall
-          files); horizontal scroll is VIRTUAL — we translate via `scrollBeat`,
-          so only visible notes paint and overlays share the same origin. The
-          projection's pixel coordinates are relative to THIS plane's top-left. */}
-      <div className="relative w-full" style={{ height }}>
+    <div className="flex h-full w-full flex-col bg-background">
+      {/* The note lane. Time scrolls vertically (virtual — derived from
+          `cursorBeat`); pitch is the fixed full keyboard across the width, so
+          notes align column-for-key with the keyboard below. */}
+      <div ref={laneRef} className="relative min-h-0 flex-1 overflow-hidden">
         <GridLines
           score={score}
-          range={range}
-          scrollBeat={scrollBeat}
-          viewportWidth={size.width}
-          cursorBeat={cursorBeat}
+          beatToY={projection.beatToY!}
+          laneWidth={lane.width}
+          laneHeight={lane.height}
         />
 
         {noteRects.map(({ note, rect }) => {
-          // Cull notes fully outside the horizontal viewport.
-          if (rect.x + rect.w < 0 || rect.x > size.width) return null;
+          // Cull notes fully outside the vertical viewport.
+          if (rect.y + rect.h < 0 || rect.y > lane.height) return null;
           return (
             <div
               key={note.id}
@@ -179,25 +146,34 @@ function PianoRollInner({ score, cursorBeat }: PianoRollProps) {
         <ProjectionProvider projection={projection}>
           <OverlayHost score={score} />
         </ProjectionProvider>
+
+        {/* Empty-score affordance. */}
+        {score.notes.length === 0 ? (
+          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
+            <span className="text-sm text-muted-foreground">
+              No notes to display. Load a source to see the piano roll.
+            </span>
+          </div>
+        ) : null}
       </div>
 
-      {/* Empty-score affordance. */}
-      {score.notes.length === 0 ? (
-        <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-          <span className="text-sm text-muted-foreground">
-            No notes to display. Load a source to see the piano roll.
-          </span>
-        </div>
-      ) : null}
+      {/* Pitch-axis gutter: the piano keyboard (and any future pitch-axis
+          decorations) contributed via `Sonata.PitchAxis`. */}
+      <div
+        className="relative shrink-0 border-t border-border"
+        style={{ height: KEYBOARD_HEIGHT }}
+      >
+        <PitchAxisHost projection={projection} />
+      </div>
     </div>
   );
 }
 
 /**
- * The piano-roll Display. Renders notes on a pitch (vertical) × time (horizontal)
- * grid, Synthesia-like, and auto-scrolls the time axis to keep the cursor in
- * view. Publishes a `Projection` (both capabilities) and hosts capability-
- * compatible overlays.
+ * The piano-roll Display. Renders notes Synthesia-style on a time (vertical) ×
+ * pitch (horizontal full-keyboard) grid that falls toward a piano keyboard at
+ * the bottom. Publishes a `Projection` (both capabilities) and hosts capability-
+ * compatible overlays (over the lane) and pitch-axis decorations (in the gutter).
  */
 export function PianoRoll(props: PianoRollProps) {
   return <PianoRollInner {...props} />;

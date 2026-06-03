@@ -34,7 +34,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
-    - **`sonata`** [9 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [10 sub-plugins] — Sonata — extensible piano and music app.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.

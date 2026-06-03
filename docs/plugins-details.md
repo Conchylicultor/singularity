@@ -180,6 +180,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `Forge`
     - **`sonata`** — Sonata — extensible piano and music app.
       - Plugins:
+        - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys.
+          - Web:
+            - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
           - Web:
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`
@@ -196,15 +199,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
         - **`score`**
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Section} slots.
           - Web:
-            - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.Instrument`, `Sonata.Display`
+            - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`
             - Exports: Types: `SonataContextValue`; Values: `Sonata`, `SonataProvider`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `midi`, `piano-roll`
+            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `midi`, `piano-keyboard`, `piano-roll`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.
