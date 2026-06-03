@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-audio-engine",
+  "description": "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, with an instrument picker, master volume, and load status.",
+  "private": true,
+  "version": "0.0.1"
+}

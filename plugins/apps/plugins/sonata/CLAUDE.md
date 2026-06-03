@@ -6,7 +6,11 @@
 
 - Description: Sonata — extensible piano and music app.
 - Sub-plugins:
+<<<<<<< .merge_file_5MB8xJ
   - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys.
+=======
+  - **`audio`** [2 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
+>>>>>>> .merge_file_Kfj6oB
   - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
   - **`rich`** [3 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
   - **`score`**

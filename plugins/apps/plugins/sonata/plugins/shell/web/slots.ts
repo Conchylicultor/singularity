@@ -15,12 +15,21 @@ import { NoDisplay } from "./components/no-display";
 /** Icon component convention used across the platform (react-icons/md style). */
 type IconType = ComponentType<{ className?: string }>;
 
-/**
- * Minimal placeholder for an instrument's synthesis parameters. Instruments are
- * carried over from the prior design and not the focus here — kept intentionally
- * loose until the audio engine lands.
- */
-export type SynthSpec = Record<string, unknown>;
+/** One note to sound, timed against the AudioContext clock (absolute seconds). */
+export interface ScheduledNote {
+  pitch: number;     // MIDI 0-127
+  velocity: number;  // MIDI 0-127
+  when: number;      // absolute AudioContext.currentTime-based start
+  duration: number;  // seconds
+}
+
+/** A live, audio-context-bound voice manager produced by an Instrument. */
+export interface InstrumentVoices {
+  loaded: Promise<void>;          // resolves when samples are ready to sound
+  schedule(note: ScheduledNote): void;
+  allOff(): void;                 // cancel everything scheduled/sounding (stop/seek)
+  dispose(): void;                // release audio resources
+}
 
 /**
  * The Sonata extension axes. Three axes, four contribution slots, plus the
@@ -30,7 +39,7 @@ export type SynthSpec = Record<string, unknown>;
  *  - Display  (display)    — single-active selector; a display *is* one component.
  *  - Analyzer (rich data)  — pure `(Score) => Annotation[]`; all run, merged in.
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
- *  - Instrument            — carried over synth params (placeholder).
+ *  - Instrument            — audio voice manager bound to a Web Audio context.
  *  - Section               — pre-existing free-floating panels (current-chord readout, …).
  */
 export const Sonata = {
@@ -87,11 +96,13 @@ export const Sonata = {
     component: ComponentType<{ projection: Projection }>;
   }>("sonata.pitch-axis", { docLabel: (p) => p.id }),
 
-  // INSTRUMENTS — carried over; contribute synth params (not the focus here).
+  // INSTRUMENTS — contribute a voice manager bound to a Web Audio AudioContext.
   Instrument: defineSlot<{
     id: string;
     label: string;
-    synth: SynthSpec;
+    icon?: IconType;
+    /** Create a voice manager bound to `ctx`, routed into `destination`. */
+    createVoices: (ctx: AudioContext, destination: AudioNode) => InstrumentVoices;
   }>("sonata.instrument", { docLabel: (p) => p.label }),
 
   // EXISTING — free-floating panels (current-chord readout, controls) that read

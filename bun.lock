@@ -174,6 +174,21 @@
       "name": "@singularity/plugin-apps-sonata",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/audio": {
+      "name": "@singularity/plugin-apps-sonata-audio",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/audio/plugins/engine": {
+      "name": "@singularity/plugin-apps-sonata-audio-engine",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/sonata/plugins/audio/plugins/piano": {
+      "name": "@singularity/plugin-apps-sonata-audio-piano",
+      "version": "0.0.1",
+      "dependencies": {
+        "smplr": "^0.26.0",
+      },
+    },
     "plugins/apps/plugins/sonata/plugins/piano-keyboard": {
       "name": "@singularity/plugin-apps-sonata-piano-keyboard",
       "version": "0.0.1",
@@ -2239,6 +2254,12 @@
 
     "@singularity/plugin-apps-sonata": ["@singularity/plugin-apps-sonata@workspace:plugins/apps/plugins/sonata"],
 
+    "@singularity/plugin-apps-sonata-audio": ["@singularity/plugin-apps-sonata-audio@workspace:plugins/apps/plugins/sonata/plugins/audio"],
+
+    "@singularity/plugin-apps-sonata-audio-engine": ["@singularity/plugin-apps-sonata-audio-engine@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/engine"],
+
+    "@singularity/plugin-apps-sonata-audio-piano": ["@singularity/plugin-apps-sonata-audio-piano@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/piano"],
+
     "@singularity/plugin-apps-sonata-piano-keyboard": ["@singularity/plugin-apps-sonata-piano-keyboard@workspace:plugins/apps/plugins/sonata/plugins/piano-keyboard"],
 
     "@singularity/plugin-apps-sonata-piano-roll": ["@singularity/plugin-apps-sonata-piano-roll@workspace:plugins/apps/plugins/sonata/plugins/piano-roll"],
@@ -4176,6 +4197,8 @@
     "signal-exit": ["signal-exit@4.1.0", "", {}, "sha512-bzyZ1e88w9O1iNJbKnOlvYTrWPDl46O1bG0D3XInv+9tkPrxrN8jUUTiFlDkkmKWgn1M6CfIA13SuGqOa9Korw=="],
 
     "sisteransi": ["sisteransi@1.0.5", "", {}, "sha512-bLGGlR1QxBcynn2d5YmDX4MGjlZvy2MRBDRNHLJ8VI6l6+9FUiyTFNJ0IveOSP0bcXgVDPRcfGqA0pjaqUpfVg=="],
+
+    "smplr": ["smplr@0.26.0", "", {}, "sha512-01OLo4+RzHvE52aGx1Gh1uEbarIiLWYOQU+t+nYm3iUT4sADTv+M3SbClo4sjE2Q8Im/eKpxWKZRBD8RR8tAEw=="],
 
     "sonner": ["sonner@2.0.7", "", { "peerDependencies": { "react": "^18.0.0 || ^19.0.0 || ^19.0.0-rc", "react-dom": "^18.0.0 || ^19.0.0 || ^19.0.0-rc" } }, "sha512-W6ZN4p58k8aDKA4XPcx2hpIQXBRAgyiWVkYhT7CvK6D3iAu7xjvVyhQHg2/iaKJZ1XVJ4r7XuwGL+WGEK37i9w=="],
 

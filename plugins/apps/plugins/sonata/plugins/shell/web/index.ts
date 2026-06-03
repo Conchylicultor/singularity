@@ -4,6 +4,7 @@ import { MdPiano } from "react-icons/md";
 import { SonataLayout } from "./components/sonata-layout";
 
 export { Sonata } from "./slots";
+export type { InstrumentVoices, ScheduledNote } from "./slots";
 export { useSonata, SonataProvider, type SonataContextValue } from "./context";
 
 export default {
