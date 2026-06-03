@@ -1372,7 +1372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
-        - Exports: Types: `Block`, `BlocksChangedPayload`, `Document`; Values: `_blocks`, `_documents`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `DocumentSchema`, `documentsLiveResource`
+        - Exports: Types: `Block`, `BlocksChangedPayload`, `Document`, `DocumentDeleteHook`; Values: `_blocks`, `_documents`, `blocksChanged`, `BlockSchema`, `blocksLiveResource`, `DocumentLifecycle`, `DocumentSchema`, `documentsLiveResource`
         - Register: `defineTriggerEvent('page.blocksChanged')`
         - Routes: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `PATCH /api/documents/:id`, `DELETE /api/documents/:id`, `GET /api/documents/:documentId/blocks`, `POST /api/documents/:documentId/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`
       - Core:

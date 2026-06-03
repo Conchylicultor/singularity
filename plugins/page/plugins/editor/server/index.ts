@@ -37,6 +37,8 @@ export { _documents, _blocks } from "./internal/tables";
 export { documentsLiveResource, blocksLiveResource } from "./internal/resources";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
+export { DocumentLifecycle } from "./internal/document-hooks";
+export type { DocumentDeleteHook } from "./internal/document-hooks";
 export { DocumentSchema, BlockSchema } from "../core/schemas";
 export type { Document, Block } from "../core/schemas";
 
