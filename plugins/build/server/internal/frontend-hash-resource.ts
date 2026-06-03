@@ -1,7 +1,8 @@
 import { createHash } from "node:crypto";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
 import { FrontendHashSchema } from "../../shared";
+import { buildLog } from "./build-log";
 
 export const frontendHashResource = defineResource({
   key: "build.frontendHash",
@@ -12,9 +13,18 @@ export const frontendHashResource = defineResource({
 
 async function getFrontendHash(): Promise<string> {
   try {
-    const content = await Bun.file(`${REPO_ROOT}/web/dist/index.html`).text();
+    const content = await Bun.file(`${WEB_DIST_DIR}/index.html`).text();
     return createHash("md5").update(content).digest("hex").slice(0, 8);
-  } catch {
+  } catch (err) {
+    // A running app is always serving this file, so a read failure means the
+    // built frontend is missing or the path drifted — surface it instead of
+    // silently returning "" (the empty hash that hid the stale-tab bug for so
+    // long). Return "" so a transient error can't break the live-state sub; the
+    // web side ignores an empty hash and simply won't arm the reload dot.
+    buildLog.publish(
+      `frontendHash: failed to read ${WEB_DIST_DIR}/index.html: ${(err as Error)?.message ?? err}`,
+      "stderr",
+    );
     return "";
   }
 }

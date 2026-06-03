@@ -2,6 +2,7 @@ import type { Command } from "commander";
 import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
+import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
 import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
@@ -591,7 +592,7 @@ export function registerBuild(program: Command) {
       endSpan();
 
       endSpan = buildProfilerStart("acquireBuildLock", "build:setup", "acquire build lock");
-      const webDir = resolve(root, "plugins/framework/plugins/web-core");
+      const webDir = resolve(root, WEB_CORE_RELATIVE);
       await acquireBuildLock(resolve(webDir, ".build.lock"));
       endSpan();
 

@@ -2,14 +2,12 @@ import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
 import { eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { Log } from "@plugins/debug/plugins/logs/server";
 import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/notifications/server";
 import { _buildRuns } from "./tables";
 import { buildHistoryResource } from "./build-history-resource";
 import { frontendHashResource } from "./frontend-hash-resource";
-
-const buildLog = Log.channel("build");
+import { buildLog } from "./build-log";
 
 // In-process re-entry guard only. The authoritative, restart-durable lock lives
 // in the DB (see isAnyBuildAlive) — `./singularity build` restarts this very

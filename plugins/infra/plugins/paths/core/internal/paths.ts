@@ -4,6 +4,14 @@ import { join, resolve } from "node:path";
 export const REPO_ROOT           = resolve(import.meta.dir, "..", "..", "..", "..", "..", "..");
 export const PLUGINS_DIR         = join(REPO_ROOT, "plugins");
 
+// Canonical location of the built frontend. `./singularity build` publishes the
+// Vite output here and the gateway serves it. This is the ONE source of truth:
+// the build CLI, the frontend-hash stale-tab signal, and the git-status
+// build-commit marker all derive from these constants so the path can never
+// silently diverge again (it previously pointed at a dead `web/dist`).
+export const WEB_CORE_RELATIVE   = "plugins/framework/plugins/web-core";
+export const WEB_DIST_DIR        = join(REPO_ROOT, WEB_CORE_RELATIVE, "dist");
+
 export const MAIN_WORKTREE_NAME  = "singularity";
 
 export function isMain(): boolean {
