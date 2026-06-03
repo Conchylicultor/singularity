@@ -39,25 +39,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
-- **`auth`** [load-bearing] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
-  - Plugins:
-    - **`google`** — Google OAuth provider — adds the Google row to the Accounts pane and a credentials section to Settings. Google OAuth 2.0 provider. Use with Drive, Gmail, Calendar consumer plugins via incremental scopes.
-      - Plugins:
-        - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
-    - **`notion`** — Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings. Notion OAuth provider (scaffold). Surfaces in Accounts pane; end-to-end smoke not yet validated.
+- **`auth`** [load-bearing] [3 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 
-- **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
-  - Plugins:
-    - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
-    - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.
+- **`backup`** [2 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
 
-- **`build`** — Trigger `./singularity build` from the toolbar.
-  - Plugins:
-    - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
-    - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.
-    - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
-    - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
-    - **`build-profiling`** — Per-run build profiling Gantt section in the build detail pane. Per-run build profiling data endpoint.
+- **`build`** [5 sub-plugins] — Trigger `./singularity build` from the toolbar.
 
 - **`code-explorer`** — Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
   - Plugins:
@@ -65,106 +51,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`collections`** — Typed collection primitive: defineCollection for managed user-editable lists.
 
-- **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
-  - Plugins:
-    - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
-      - Plugins:
-        - **`avatar`** — Avatar field type (icon + color picker).
-        - **`color`** — Color field type: hex color string with a popover color picker.
-        - **`dynamic-enum`** — Dynamic enum field type: options resolved at render time from slot contributions.
-        - **`enum`** — Enum field type: single-choice from a fixed set of options.
-        - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
-        - **`multiline-text`** — Multi-line text field type.
-        - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
-        - **`primitives`** — Basic field types: bool, text, int, float.
-        - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
-    - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
+- **`config_v2`** [11 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
-  - Plugins:
-    - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
-    - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
-    - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
-      - Plugins:
-        - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
-    - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
-      - Plugins:
-        - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
-        - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
-        - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
-        - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
-          - Plugins:
-            - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
-            - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
-              - Plugins:
-                - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
-                - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
-                - **`markdown`** — Rendered markdown preview for .md and .mdx files.
-                - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
-        - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
-        - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
-        - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
-        - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
-        - **`drop-dependents`** — Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.
-        - **`exit`** — Toolbar button that closes the conversation without changing any task state.
-        - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
-        - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
-        - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
-        - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
-        - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
-          - Plugins:
-            - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
-            - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
-            - **`attachment`** [5 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
-            - **`event-counter`** — Displays the total event count in the conversation toolbar.
-            - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
-            - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
-            - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
-            - **`summary`** — Renders summary separator events in the JSONL viewer.
-            - **`system`** — Renders system events in the JSONL viewer.
-            - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
-            - **`tool-call`** [11 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
-            - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
-            - **`user-image`** — Renders inline image thumbnails for user-image events.
-            - **`user-text`** — Renders user text events in the JSONL viewer.
-        - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
-        - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
-        - **`model`** — Displays the conversation model as a colored chip in the toolbar.
-        - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
-        - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
-        - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
-        - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
-        - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
-        - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
-        - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
-        - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
-        - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
-        - **`status`** — Displays the conversation status as a colored badge in the toolbar.
-        - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
-        - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
-        - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
-        - **`vscode`** — Opens the conversation's worktree in VSCode.
-    - **`conversations-view`** — Sidebar list of all conversations.
-      - Plugins:
-        - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
-        - **`history`** — All conversations in historical order of creation.
-        - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
-    - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
-    - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
-    - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
-    - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.
-    - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
-    - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.
-    - **`transcript-retention`** — Keeps active conversations' Claude session JSONL alive by refreshing their mtime daily, so Claude Code's cleanupPeriodDays sweep never deletes a live transcript.
-    - **`transcript-watcher`** — Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
+- **`conversations`** [load-bearing] [85 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 
-- **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
-  - Plugins:
-    - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
-    - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
-    - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
+- **`crashes`** [3 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 
 - **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
@@ -239,35 +132,16 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`retry`**
 
-- **`page`** — Block-based page editor.
-  - Plugins:
-    - **`debug`** — Debug harness for the block-based page editor. Debug harness for the block-based page editor.
-    - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
-    - **`text`** — Plain-text block type for the page editor.
+- **`page`** [3 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
-    - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
-      - Plugins:
-        - **`commands`**
-        - **`contributions`**
-        - **`cross-refs`**
-        - **`db-schema`**
-        - **`exports`**
-        - **`registrations`**
-        - **`resources`**
-        - **`routes`**
-        - **`slots`**
+    - **`facets`** [9 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**
-    - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
-      - Plugins:
-        - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
-        - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
-        - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
-        - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
+    - **`plugin-view`** [4 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:

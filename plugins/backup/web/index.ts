@@ -11,6 +11,7 @@ export { backupPane } from "./panes";
 
 export default {
   name: "Backup",
+  collapsed: true,
   description:
     "Backup orchestrator UI: run backups, view history, configure targets.",
   contributions: [

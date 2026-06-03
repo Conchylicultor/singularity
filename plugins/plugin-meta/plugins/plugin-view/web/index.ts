@@ -12,6 +12,7 @@ export type { ExportRuntime } from "./runtime-colors";
 
 export default {
   name: "Plugin View",
+  collapsed: true,
   description:
     "Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections.",
   contributions: [Pane.Register({ pane: pluginViewPane })],

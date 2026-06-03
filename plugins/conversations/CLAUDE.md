@@ -26,8 +26,70 @@
   - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
   - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
   - **`conversation-ui`** — Umbrella for visual primitives that render a Conversation. Sub-plugins ship the actual components (item rows/chips, future cards/mentions/etc.).
+    - Plugins:
+      - **`item`** — Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
   - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
+    - Plugins:
+      - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
+      - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
+      - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
+      - **`code`** — Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
+        - Plugins:
+          - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
+          - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
+            - Plugins:
+              - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
+              - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
+              - **`markdown`** — Rendered markdown preview for .md and .mdx files.
+              - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
+      - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
+      - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
+      - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
+      - **`drop-and-exit`** — Toolbar button that marks the top task as dropped and closes the conversation.
+      - **`drop-dependents`** — Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.
+      - **`exit`** — Toolbar button that closes the conversation without changing any task state.
+      - **`fork-conversation`** — Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.
+      - **`fork-session`** — Toolbar buttons (+Sonnet / +Opus) that fork the current conversation via `claude --resume <id> --fork-session`.
+      - **`header`** — Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
+      - **`hold-and-exit`** — Toolbar button that marks the task as held and closes the conversation.
+      - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
+        - Plugins:
+          - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
+          - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
+          - **`attachment`** [5 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
+          - **`event-counter`** — Displays the total event count in the conversation toolbar.
+          - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
+          - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
+          - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
+          - **`summary`** — Renders summary separator events in the JSONL viewer.
+          - **`system`** — Renders system events in the JSONL viewer.
+          - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.
+          - **`tool-call`** [11 sub-plugins] — Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.
+          - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
+          - **`user-image`** — Renders inline image thumbnails for user-image events.
+          - **`user-text`** — Renders user text events in the JSONL viewer.
+      - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
+      - **`markdown-extensions`** — Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.
+      - **`model`** — Displays the conversation model as a colored chip in the toolbar.
+      - **`new-child-task`** — Deprecated — functionality merged into the Improve button via ambient relate context.
+      - **`notes`** — Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
+      - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
+      - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
+      - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
+      - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
+      - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
+      - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
+      - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
+      - **`status`** — Displays the conversation status as a colored badge in the toolbar.
+      - **`tasks-panel`** — Toolbar button that opens a right pane showing the task tree (active task + children) and the task detail.
+      - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
+      - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
+      - **`vscode`** — Opens the conversation's worktree in VSCode.
   - **`conversations-view`** — Sidebar list of all conversations.
+    - Plugins:
+      - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
+      - **`history`** — All conversations in historical order of creation.
+      - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
   - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
   - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).

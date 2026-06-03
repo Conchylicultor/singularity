@@ -19,6 +19,7 @@ export type { ConnectArgs, ConnectResult } from "./connect";
 
 export default {
   name: "Auth",
+  collapsed: true,
   description:
     "Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot.",
   loadBearing: true,

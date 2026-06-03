@@ -8,6 +8,7 @@ export { ConfigV2 } from "./internal/slots";
 
 export default {
   name: "Config v2",
+  collapsed: true,
   description: "Reactive useConfig hook for reading typed JSONC config in the browser.",
   contributions: [],
 } satisfies PluginDefinition;

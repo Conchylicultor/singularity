@@ -7,6 +7,7 @@ export type { CrashContext } from "./report";
 
 export default {
   name: "Crashes",
+  collapsed: true,
   description: "Reports uncaught browser errors to the server.",
   contributions: [Core.Root({ component: CrashReporter })],
 } satisfies PluginDefinition;
