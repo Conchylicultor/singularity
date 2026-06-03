@@ -39,8 +39,13 @@ export function ConfigNav() {
   });
 
   const byHierarchyId = useMemo(() => {
-    const m = new Map<string, ConfigRegistration>();
-    for (const reg of registrations) m.set(hierarchyIdOf(reg), reg);
+    const m = new Map<string, ConfigRegistration[]>();
+    for (const reg of registrations) {
+      const id = hierarchyIdOf(reg);
+      const list = m.get(id);
+      if (list) list.push(reg);
+      else m.set(id, [reg]);
+    }
     return m;
   }, [registrations]);
 
@@ -58,7 +63,16 @@ export function ConfigNav() {
         "[config] registrations missing from plugin tree:",
         orphans.map((r) => r.hierarchyPath),
       );
+      const byOrphanId = new Map<string, ConfigRegistration[]>();
       for (const reg of orphans) {
+        const id = hierarchyIdOf(reg);
+        const list = byOrphanId.get(id);
+        if (list) list.push(reg);
+        else byOrphanId.set(id, [reg]);
+      }
+      for (const orphanRegs of byOrphanId.values()) {
+        const [reg] = orphanRegs;
+        if (!reg) continue;
         const node: PluginNode = {
           path: reg.hierarchyPath,
           name: reg.pluginName,
@@ -68,7 +82,7 @@ export function ConfigNav() {
           runtimes: { web: true, server: false, central: false },
           children: [],
         };
-        pruned.push({ node, registration: reg, children: [] });
+        pruned.push({ node, registrations: orphanRegs, children: [] });
       }
     }
     return pruned;

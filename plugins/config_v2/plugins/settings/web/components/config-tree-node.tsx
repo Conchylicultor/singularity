@@ -20,13 +20,15 @@ interface ConfigTreeNodeProps {
   onSelect: (reg: ConfigRegistration) => void;
 }
 
-/** Clickable settings row for a config-bearing node (label + state badge). */
+/** Clickable settings row for a config (label + state badge). */
 function ConfigSelectableRow({
   registration,
+  label,
   selected,
   onClick,
 }: {
   registration: ConfigRegistration;
+  label: string;
   selected: boolean;
   onClick: () => void;
 }) {
@@ -40,15 +42,52 @@ function ConfigSelectableRow({
         selected && "bg-accent",
       )}
     >
-      <span className="truncate">{registration.pluginName}</span>
+      <span className="truncate">{label}</span>
       <ConfigRowBadge modifiedCount={modifiedCount} hasConflict={hasConflict} />
     </button>
   );
 }
 
+/** Indented config row with a chevron-aligned spacer (no expander of its own). */
+function ConfigLeafRow({
+  registration,
+  label,
+  depth,
+  selectedPath,
+  onSelect,
+}: {
+  registration: ConfigRegistration;
+  label: string;
+  depth: number;
+  selectedPath: string | undefined;
+  onSelect: (reg: ConfigRegistration) => void;
+}) {
+  const selected = selectedPath === encodeURIComponent(registration.storePath);
+  return (
+    <div
+      className="flex items-center gap-1"
+      style={{ paddingLeft: depth * 12 + 8 }}
+    >
+      <span className="size-3 shrink-0" />
+      <ConfigSelectableRow
+        registration={registration}
+        label={label}
+        selected={selected}
+        onClick={() => onSelect(registration)}
+      />
+    </div>
+  );
+}
+
 /**
- * Recursive nav row for the canonical plugin tree. A node may be selectable
- * (declares config), expandable (has config-bearing descendants), or both.
+ * Recursive nav row for the canonical plugin tree. A node may carry zero, one,
+ * or many config registrations and may have config-bearing descendant plugins:
+ *
+ * - 0 configs + children → pure group (expandable).
+ * - 1 config, no children → leaf; the plugin name itself opens the config.
+ * - 1 config + children → selectable plugin row that also expands to descendants.
+ * - >1 configs → expandable group; each config is a child row, alongside any
+ *   descendant plugins. The plugin name is not directly selectable.
  */
 export function ConfigTreeNode({
   item,
@@ -58,12 +97,9 @@ export function ConfigTreeNode({
   selectedPath,
   onSelect,
 }: ConfigTreeNodeProps) {
-  const { node, registration, children } = item;
+  const { node, registrations, children } = item;
   const hasChildren = children.length > 0;
   const isOpen = !collapsed.has(node.hierarchyId);
-  const selected =
-    registration != null &&
-    selectedPath === encodeURIComponent(registration.storePath);
 
   const childRows = children.map((child) => (
     <ConfigTreeNode
@@ -76,6 +112,40 @@ export function ConfigTreeNode({
       onSelect={onSelect}
     />
   ));
+
+  // Multiple configs: the plugin name is a group; each config is its own row,
+  // shown above any descendant plugins.
+  if (registrations.length > 1) {
+    return (
+      <Collapsible
+        open={isOpen}
+        onOpenChange={(open) => onToggle(node.hierarchyId, open)}
+      >
+        <CollapsibleTrigger
+          className="flex w-full items-center gap-1 rounded-md py-1 text-xs font-medium text-muted-foreground hover:bg-accent"
+          style={{ paddingLeft: depth * 12 + 8 }}
+        >
+          <CollapsibleChevron className="size-3" />
+          <span className="truncate">{node.name}</span>
+        </CollapsibleTrigger>
+        <CollapsibleContent>
+          {registrations.map((reg) => (
+            <ConfigLeafRow
+              key={reg.storePath}
+              registration={reg}
+              label={reg.descriptor.name}
+              depth={depth + 1}
+              selectedPath={selectedPath}
+              onSelect={onSelect}
+            />
+          ))}
+          {childRows}
+        </CollapsibleContent>
+      </Collapsible>
+    );
+  }
+
+  const registration = registrations[0];
 
   // Pure group: no config of its own, only config-bearing descendants.
   if (hasChildren && !registration) {
@@ -96,8 +166,9 @@ export function ConfigTreeNode({
     );
   }
 
-  // Combined: selectable row that also expands to its descendants.
+  // Combined: selectable plugin row that also expands to its descendants.
   if (hasChildren && registration) {
+    const selected = selectedPath === encodeURIComponent(registration.storePath);
     return (
       <Collapsible
         open={isOpen}
@@ -112,6 +183,7 @@ export function ConfigTreeNode({
           </CollapsibleTrigger>
           <ConfigSelectableRow
             registration={registration}
+            label={node.name}
             selected={selected}
             onClick={() => onSelect(registration)}
           />
@@ -121,21 +193,17 @@ export function ConfigTreeNode({
     );
   }
 
-  // Leaf: config-bearing node with no config-bearing descendants. The spacer
-  // keeps the label aligned with rows that show a chevron.
+  // Leaf: single config, no config-bearing descendants. The plugin name itself
+  // opens the config. The spacer keeps the label aligned with chevron rows.
   if (registration) {
     return (
-      <div
-        className="flex items-center gap-1"
-        style={{ paddingLeft: depth * 12 + 8 }}
-      >
-        <span className="size-3 shrink-0" />
-        <ConfigSelectableRow
-          registration={registration}
-          selected={selected}
-          onClick={() => onSelect(registration)}
-        />
-      </div>
+      <ConfigLeafRow
+        registration={registration}
+        label={node.name}
+        depth={depth}
+        selectedPath={selectedPath}
+        onSelect={onSelect}
+      />
     );
   }
 
