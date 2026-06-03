@@ -89,6 +89,9 @@ export interface RegisteredJob {
     ctx: JobCtx;
   }) => Promise<void> | void;
   maxAttempts: number;
+  /** Recurring schedule, if the job declared one. Read by the worker at
+   * startup to build graphile-worker cron items. */
+  schedule?: ScheduleSpec;
   /**
    * Enqueue by the registered job's public factory. Exposed here so the
    * builtin `jobs.resume` can re-enqueue a target by name without holding
@@ -124,6 +127,21 @@ export type Dedup<S extends z.ZodType> =
   | "none"
   | { key: (input: z.infer<S>) => string };
 
+export interface ScheduleSpec {
+  /**
+   * Standard 5-field crontab (`m h dom mon dow`, UTC) describing when this
+   * job runs — or a resolver evaluated once at worker startup that may read
+   * config and return `null`/`""` to disable scheduling (e.g. a user setting).
+   *
+   * Backed by graphile-worker's native cron: each tick is scheduled exactly
+   * once across all worktree runners (DB-level dedup via `known_crontabs`),
+   * and a failed tick never breaks the schedule — the next tick is
+   * independent. No boot backfill. Manual `enqueue()` is unaffected and still
+   * works for on-demand runs.
+   */
+  cron: string | (() => string | null);
+}
+
 export interface DefineJobSpec<
   N extends string,
   S extends z.ZodType,
@@ -147,6 +165,16 @@ export interface DefineJobSpec<
    */
   event: E;
   dedup: Dedup<S>;
+  /**
+   * Run this job on a recurring schedule (see {@link ScheduleSpec}). The jobs
+   * worker builds a graphile-worker cron item from this at startup.
+   *
+   * Scheduled jobs MUST have an `input` schema that parses `{}` (all fields
+   * optional or defaulted) — the cron payload is built from `input.parse({})`.
+   * If that throws, the worker fails loud at startup (it's a defineJob misuse,
+   * not a runtime condition).
+   */
+  schedule?: ScheduleSpec;
   /**
    * Handler body. Receives `{ input, event, ctx }` as a single object.
    *
@@ -183,12 +211,19 @@ export interface JobFactory<
 export const jobRegistry = new Map<string, RegisteredJob>();
 
 // Internal payload shape the worker sees. `workflowRunId` is derived from
-// the dedup strategy at enqueue time.
+// the dedup strategy at enqueue time — absent for cron ticks, where the
+// worker derives it from the injected `_cron.ts` instead.
 export interface JobTaskPayload {
   jobName: string;
-  workflowRunId: string;
+  workflowRunId?: string;
   input: unknown;
   event?: unknown;
+  /**
+   * Injected by graphile-worker's cron scheduler on each tick (absent for
+   * direct enqueues). `ts` is the per-minute UTC tick timestamp; the worker
+   * derives a stable per-tick `workflowRunId` from it.
+   */
+  _cron?: { ts: string; backfilled?: boolean };
 }
 
 export function defineJob<
@@ -292,6 +327,7 @@ export function defineJob<
               : "keyed",
         run: spec.run as RegisteredJob["run"],
         maxAttempts: spec.maxAttempts ?? DEFAULT_MAX_ATTEMPTS,
+        schedule: spec.schedule,
         enqueue,
       });
     },
@@ -312,4 +348,10 @@ export function UNSAFE_getRegisteredJob(
 
 export function getAllRegisteredJobNames(): Set<string> {
   return new Set(jobRegistry.keys());
+}
+
+// Every registered job that declared a recurring `schedule`. The worker reads
+// this at startup to build graphile-worker cron items.
+export function getScheduledJobs(): RegisteredJob[] {
+  return [...jobRegistry.values()].filter((job) => job.schedule);
 }

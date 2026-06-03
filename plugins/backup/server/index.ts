@@ -1,6 +1,5 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { ConfigV2, getConfig } from "@plugins/config_v2/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
 import { backupConfig } from "../shared/config";
 import { runBackup, listBackupRuns } from "../shared/endpoints";
 import { backupRunJob } from "./internal/backup-job";
@@ -19,13 +18,9 @@ export default {
     [listBackupRuns.route]: handleList,
   },
   contributions: [ConfigV2.Register({ descriptor: backupConfig })],
+  // backupRunJob declares `schedule` (driven by backupConfig.periodicCron) —
+  // the jobs worker seeds its cron item at startup. No onReady enqueue, and no
+  // isMain() guard: graphile's cron dedups fleet-wide, so the backup runs once
+  // per tick regardless of how many worktrees are up.
   register: [backupRunJob],
-  onReady: async () => {
-    if (!isMain()) return;
-
-    const { periodicIntervalHours } = getConfig(backupConfig);
-    if (periodicIntervalHours > 0) {
-      await backupRunJob.enqueue({ trigger: "periodic" });
-    }
-  },
 } satisfies ServerPluginDefinition;

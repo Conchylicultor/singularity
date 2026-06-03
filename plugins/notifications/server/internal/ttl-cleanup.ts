@@ -7,13 +7,13 @@ import { notificationsResource } from "./resources";
 
 const DISMISSED_TTL_MS = 7 * 24 * 3_600_000;
 const AUTO_DISMISS_TTL_MS = 24 * 3_600_000;
-const NEXT_RUN_MS = 3_600_000;
 
 export const ttlCleanupJob = defineJob({
   name: "notifications.ttl-cleanup",
   input: z.object({}),
   event: z.never(),
   dedup: "singleton",
+  schedule: { cron: "0 * * * *" }, // hourly
   async run() {
     const dismissedCutoff = new Date(Date.now() - DISMISSED_TTL_MS);
     await db
@@ -33,10 +33,5 @@ export const ttlCleanupJob = defineJob({
       );
 
     notificationsResource.notify();
-
-    await ttlCleanupJob.enqueue(
-      {},
-      { runAt: new Date(Date.now() + NEXT_RUN_MS) },
-    );
   },
 });

@@ -955,6 +955,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.getConversationClaudeSessionId`
       - Shared:
         - Exports: Values: `getConversationTranscript`
+    - **`transcript-retention`** — Keeps active conversations' Claude session JSONL alive by refreshing their mtime daily, so Claude Code's cleanupPeriodDays sweep never deletes a live transcript.
+      - Server:
+        - Uses: `tasks-core.listActiveConversations`
+        - Register: `defineJob('conversations.transcript-touch')`
     - **`transcript-watcher`** — Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
       - Server:
         - Uses: `tasks-core.getConversationClaudeSessionId`
@@ -1207,6 +1211,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database.db`
         - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`, `plugins/infra/plugins/attachments/server/internal/tables.ts`
         - Exports: Types: `AttachmentLink`; Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
+        - Register: `defineJob('attachments.orphan-sweep')`
       - Web:
         - Exports: Types: `Attachment`, `UploadedAttachment`; Values: `listAttachments`, `uploadAttachment`
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
@@ -1253,7 +1258,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-        - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`; Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+        - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`, `ScheduleSpec`; Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
         - Register: `defineJob('jobs.resume')`
         - Resources: `jobs-list` (invalidate)
         - Routes: `GET /api/jobs`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
@@ -1825,7 +1830,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Resources: `attempts` (push), `pushes` (push)
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
     - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`)
   - Core:
     - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`

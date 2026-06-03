@@ -253,6 +253,26 @@ console.log(`Server listening on ${socketPath}`);
   await Promise.all(resolved.values());
 }
 
+// ── onAllReady ──────────────────────────────────────────────────
+// Phase 3 — full barrier: every plugin's `onReady` has resolved. Plugins whose
+// initialization must observe another plugin's onReady-produced state (without
+// a dependsOn edge — e.g. a schedule whose definition reads config) run here.
+// Parallel; a load-bearing plugin's rejection aborts boot.
+await Promise.all(
+  ordered.map(async (p) => {
+    if (!p.onAllReady) return;
+    const end = profilerStart(`onAllReady:${p.id}`, "onAllReady", p.id, p.id);
+    try {
+      await p.onAllReady();
+    } catch (err) {
+      console.error(`[plugin.${p.id}] onAllReady failed`, err);
+      if (p.loadBearing) throw err;
+    } finally {
+      end();
+    }
+  }),
+);
+
 // Graceful shutdown: drain workers, flush state, release DB connections.
 // Guarded against double-entry so both SIGTERM and a follow-up SIGINT can't
 // run shutdown twice while the first pass is still draining.

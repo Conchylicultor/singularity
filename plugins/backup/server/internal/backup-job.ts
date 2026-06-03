@@ -11,11 +11,17 @@ import { _backupRuns } from "./tables";
 export const backupRunJob = defineJob({
   name: "backup.run",
   input: z.object({
-    trigger: z.enum(["manual", "periodic"]),
+    // Defaulted so cron ticks (which carry no caller input) run as "periodic".
+    trigger: z.enum(["manual", "periodic"]).default("periodic"),
   }),
   event: z.never(),
   dedup: "singleton",
   maxAttempts: 2,
+  schedule: {
+    // Recur on the user-configured cron; empty disables. Read once at worker
+    // startup (a change takes effect on the next restart).
+    cron: () => getConfig(backupConfig).periodicCron.trim() || null,
+  },
   run: async ({ input }) => {
     const runId = crypto.randomUUID();
     await db
@@ -68,18 +74,5 @@ export const backupRunJob = defineJob({
         targetResults: results,
       })
       .where(eq(_backupRuns.id, runId));
-
-    if (input.trigger === "periodic") {
-      const { periodicIntervalHours } = getConfig(backupConfig);
-      if (periodicIntervalHours > 0) {
-        const runAt = new Date(
-          Date.now() + periodicIntervalHours * 3_600_000,
-        );
-        await backupRunJob.enqueue(
-          { trigger: "periodic" },
-          { runAt },
-        );
-      }
-    }
   },
 });

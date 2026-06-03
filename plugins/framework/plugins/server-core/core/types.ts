@@ -89,6 +89,15 @@ export interface ServerPluginDefinition {
    */
   onReady?: () => void | Promise<void>;
   /**
+   * Called once after EVERY plugin's `onReady` has resolved (a full barrier,
+   * not dependency-scoped). Use this for initialization that must observe
+   * state another plugin only produces in its `onReady` and that you can't
+   * express as a `dependsOn` edge — e.g. building schedules whose definitions
+   * read config the config plugin populates in its own `onReady`. Runs in
+   * parallel across plugins; a load-bearing plugin's rejection aborts boot.
+   */
+  onAllReady?: () => void | Promise<void>;
+  /**
    * Called once on SIGTERM/SIGINT before the process exits. Use this to drain
    * background workers, flush buffered state, and release DB connections.
    * Run in parallel across plugins (same contract as `onReady`); rejections

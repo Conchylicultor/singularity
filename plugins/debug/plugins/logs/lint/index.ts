@@ -53,7 +53,6 @@ export default {
       "plugins/framework/plugins/cli/bin/migrations.ts",
       "plugins/framework/plugins/server-core/bin/index.ts",
       "plugins/framework/plugins/tooling/plugins/checks/core/runner.ts",
-      "plugins/infra/plugins/attachments/server/internal/orphan-sweep.ts",
       "plugins/infra/plugins/secrets/central/internal/boot.ts",
       "plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts",
     ],

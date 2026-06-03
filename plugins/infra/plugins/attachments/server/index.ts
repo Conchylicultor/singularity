@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { handleUpload } from "./internal/handle-upload";
 import { handleGet } from "./internal/handle-get";
 import { handleDelete } from "./internal/handle-delete";
-import { startOrphanSweep } from "./internal/orphan-sweep";
+import { orphanSweepJob } from "./internal/orphan-sweep";
 import { ensureAttachmentsRoot } from "./internal/paths";
 import {
   uploadAttachment,
@@ -25,8 +25,9 @@ export default {
     [getAttachmentFile.route]: handleGet,
     [deleteAttachmentEndpoint.route]: handleDelete,
   },
+  // orphanSweepJob declares `schedule` — the jobs worker runs it hourly.
+  register: [orphanSweepJob],
   onReady: async () => {
     await ensureAttachmentsRoot();
-    startOrphanSweep();
   },
 } satisfies ServerPluginDefinition;

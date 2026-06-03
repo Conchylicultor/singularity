@@ -4,7 +4,8 @@ export type PhaseId =
   | "runMigrations"
   | "routePopulation"
   | "socketBind"
-  | "onReady";
+  | "onReady"
+  | "onAllReady";
 
 export interface Span {
   id: string;

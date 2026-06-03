@@ -11,7 +11,11 @@ import {
   startStuckLockSweeper,
   stopStuckLockSweeper,
 } from "./internal/stuck-lock-sweeper";
-import { startWorker, stopWorker } from "./internal/worker";
+import {
+  installScheduledCronItems,
+  startWorker,
+  stopWorker,
+} from "./internal/worker";
 import { listJobs, retryJob, cancelJob } from "../core/endpoints";
 
 export { defineJob, UNSAFE_getRegisteredJob, getAllRegisteredJobNames, DEFAULT_MAX_ATTEMPTS } from "./internal/registry";
@@ -23,6 +27,7 @@ export type {
   JobCtx,
   JobFactory,
   RegisteredJob,
+  ScheduleSpec,
 } from "./internal/registry";
 export {
   isSuspendSignal,
@@ -46,6 +51,11 @@ export default {
   onReady: async () => {
     await startWorker();
     startStuckLockSweeper();
+  },
+  // Cron schedules are installed only after every plugin's onReady has run, so
+  // resolver-form schedules (e.g. backup's, which reads config) see ready state.
+  onAllReady: () => {
+    installScheduledCronItems();
   },
   onShutdown: async () => {
     stopStuckLockSweeper();

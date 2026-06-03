@@ -21,6 +21,12 @@ import { db } from "@plugins/database/server";
 // job stolen and double-runs. 5 min is well above realistic handler
 // durations; if we ever want sub-minute recovery, we'd also need to wire
 // graphile's heartbeat (currently implicit) into the threshold check.
+//
+// Why this stays a raw setInterval and NOT a scheduled `defineJob`: it is the
+// recovery mechanism FOR the job system. Routing it through graphile's own
+// queue would mean a wedged worker (the exact failure this clears) couldn't
+// run its own recovery — a deadlock. Infra that recovers the job system must
+// not depend on the job system.
 const STUCK_LOCK_THRESHOLD = "5 minutes";
 const SWEEP_INTERVAL_MS = 60_000;
 

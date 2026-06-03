@@ -22,17 +22,13 @@ export default {
   name: "Notifications",
   description: "Persistent bell-button notifications backed by the DB.",
   contributions: [Resource.Declare(notificationsResource)],
+  // ttlCleanupJob declares `schedule` — the jobs worker seeds its cron item at
+  // startup, so no onReady enqueue is needed.
   register: [ttlCleanupJob],
   httpRoutes: {
     [createNotification.route]: handleCreate,
     [dismissAllNotifications.route]: handleDismissAll,
     [markAllNotificationsRead.route]: handleMarkAllRead,
     [dismissNotification.route]: handleDismiss,
-  },
-  async onReady() {
-    await ttlCleanupJob.enqueue(
-      {},
-      { runAt: new Date(Date.now() + 3_600_000) },
-    );
   },
 } satisfies ServerPluginDefinition;

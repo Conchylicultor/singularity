@@ -1,7 +1,9 @@
 import { eq } from "drizzle-orm";
 import {
   makeWorkerUtils,
+  parseCronItem,
   run,
+  type ParsedCronItem,
   type Runner,
   type WorkerUtils,
 } from "graphile-worker";
@@ -10,6 +12,7 @@ import { connectionString } from "@plugins/database/plugins/admin/server";
 import { reportServerError } from "@plugins/framework/plugins/server-core/core";
 import { JOB_TASK } from "./constants";
 import {
+  getScheduledJobs,
   UNSAFE_getRegisteredJob,
   type JobTaskPayload,
 } from "./registry";
@@ -33,6 +36,49 @@ export function getWorkerUtils(): Promise<WorkerUtils> {
   return workerUtilsPromise;
 }
 
+// Live, mutable cron-item array handed to graphile-worker's run(). Graphile
+// re-reads this reference on every tick (its docs declare it mutable), so we
+// hand it over empty at worker start and populate it later in
+// `installScheduledCronItems()` — once every plugin is ready, since a schedule
+// resolver may read another plugin's config (populated in its onReady).
+const scheduledCronItems: ParsedCronItem[] = [];
+
+// (Re)build cron items from the registry into the live array. Call once after
+// the onAllReady barrier; safe to call again to refresh.
+export function installScheduledCronItems(): void {
+  scheduledCronItems.splice(0, scheduledCronItems.length, ...buildCronItems());
+}
+
+// Build graphile-worker cron items from every job that declared a `schedule`.
+// Resolver-form schedules are evaluated here so a job can derive its crontab
+// from config or disable itself by returning null. All scheduled jobs route
+// through the single JOB_TASK; the per-tick payload carries the job name and
+// its default input, and graphile injects `_cron`.
+function buildCronItems(): ParsedCronItem[] {
+  const items: ParsedCronItem[] = [];
+  for (const job of getScheduledJobs()) {
+    const { schedule } = job;
+    if (!schedule) continue;
+    const cron =
+      typeof schedule.cron === "function" ? schedule.cron() : schedule.cron;
+    if (!cron || !cron.trim()) continue;
+    // Scheduled jobs take no caller input; the tick payload is the schema's
+    // default shape. Fail loud at startup if the input isn't defaultable.
+    const input = job.inputSchema.parse({});
+    items.push(
+      parseCronItem({
+        task: JOB_TASK,
+        match: cron.trim(),
+        identifier: `cron:${job.name}`,
+        payload: { jobName: job.name, input } satisfies JobTaskPayload,
+        // backfillPeriod 0 ⇒ no catch-up flood on boot.
+        options: { backfillPeriod: 0, maxAttempts: job.maxAttempts },
+      }),
+    );
+  }
+  return items;
+}
+
 export async function startWorker(): Promise<Runner> {
   if (runner) return runner;
   runner = await run(
@@ -50,10 +96,12 @@ export async function startWorker(): Promise<Runner> {
         },
       },
     },
-    // Pass parsedCronItems=[] so Graphile skips crontab-file discovery (we
-    // don't use file-based cron; a future plugin may contribute one on top).
+    // Hand graphile the live (initially empty) cron-item array; it re-reads
+    // this reference each tick. Items are installed after the onAllReady
+    // barrier via installScheduledCronItems(). Passing an explicit array also
+    // skips graphile's crontab-file discovery.
     undefined,
-    [],
+    scheduledCronItems,
   );
   return runner;
 }
@@ -101,13 +149,15 @@ async function dispatch(
     throw err;
   }
 
+  // Direct enqueues bake in `workflowRunId`. Cron ticks don't — graphile
+  // injects `_cron.ts` (the per-minute UTC tick), so derive a stable per-tick
+  // id from it. The `legacy:` fallback covers any pre-workflowRunId rows still
+  // queued during a rolling upgrade.
   const workflowRunId =
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- back-compat guard; pre-workflowRunId rows may still be in the queue
     payload.workflowRunId ??
-    // Back-compat for any pre-workflowRunId rows that may still sit in the
-    // queue during a rolling upgrade: synthesise a stable id from jobId so
-    // the step log keys are consistent across retries of THIS graphile job.
-    `legacy:${meta.jobId}`;
+    (payload._cron
+      ? `${payload.jobName}:${payload._cron.ts}`
+      : `legacy:${meta.jobId}`);
 
   const ctx = makeDurableCtx({
     jobId: meta.jobId,

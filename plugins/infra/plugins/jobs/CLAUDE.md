@@ -9,7 +9,7 @@
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/infra/plugins/jobs/server/internal/tables.ts`
-  - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`; Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
+  - Exports: Types: `DefineJobSpec`, `DurableHooks`, `EnqueueOpts`, `EnqueueTx`, `JobCtx`, `JobFactory`, `RegisteredJob`, `ScheduleSpec`; Values: `DEFAULT_MAX_ATTEMPTS`, `defineJob`, `getAllRegisteredJobNames`, `isSuspendSignal`, `jobsListResource`, `UNSAFE_getRegisteredJob`, `UNSAFE_installDurableHooks`, `UNSAFE_sweepStuckLocks`
   - Register: `defineJob('jobs.resume')`
   - Resources: `jobs-list` (invalidate)
   - Routes: `GET /api/jobs`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
