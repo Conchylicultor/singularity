@@ -5,7 +5,7 @@ import {
   useSonata,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { scheduleNotes } from "../scheduler";
+import { startScheduling, type ScheduleHandle } from "../scheduler";
 
 const DEFAULT_VOLUME = 0.8;
 
@@ -13,10 +13,12 @@ const DEFAULT_VOLUME = 0.8;
  * The cohesive "Audio" panel — a `Sonata.Section` (`area: "player"`) that owns
  * the Web Audio graph and the scheduling effect. On each `isPlaying → true`
  * transition it captures one anchor (`ctx.currentTime` + the cursor beat) and
- * schedules every upcoming note up front against the Web Audio clock; Web Audio
- * fires them sample-accurately (no JS timer / polling). Because both the visual
- * rAF cursor and this schedule anchor at the same play instant and derive time
- * from `beatToSeconds`, sound stays locked to the cursor through tempo changes.
+ * hands it to `startScheduling`, which schedules notes against the Web Audio
+ * clock in a bounded look-ahead window (re-arming itself via audio-clock events,
+ * never a JS timer / polling) so playback start stays cheap regardless of Score
+ * size. Because both the visual rAF cursor and this schedule anchor at the same
+ * play instant and derive time from `beatToSeconds`, sound stays locked to the
+ * cursor through tempo changes.
  */
 export function AudioPanel() {
   const { score, isPlaying, cursorBeat } = useSonata();
@@ -118,15 +120,17 @@ export function AudioPanel() {
     const audioAnchor = ctx.currentTime;
     const fromBeat = cursorBeatRef.current;
 
+    let handle: ScheduleHandle | null = null;
     let cancelled = false;
     void (async () => {
       await voices.loaded;
       if (cancelled) return;
-      scheduleNotes(score, fromBeat, audioAnchor, voices);
+      handle = startScheduling(score, fromBeat, audioAnchor, voices, ctx);
     })();
 
     return () => {
       cancelled = true;
+      handle?.cancel();
       voices.allOff();
     };
   }, [isPlaying, score, activeInstrumentId, voices]);
