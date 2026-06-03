@@ -6,7 +6,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { setConfigField } from "@plugins/config_v2/core";
-import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import {
   listTweakcnThemes,
   importTweakcnTheme,
@@ -26,6 +26,7 @@ function parseThemeId(input: string): string {
 }
 
 export function TweakcnSection({ search }: { search: string }) {
+  const scopeId = useThemeScopeId();
   const [input, setInput] = useState("");
   const { data: themes, isLoading } = useEndpoint(listTweakcnThemes, {});
   const tokenGroups = ThemeEngine.TokenGroup.useContributions();
@@ -71,7 +72,9 @@ export function TweakcnSection({ search }: { search: string }) {
         );
         if (reg) {
           void fetchEndpoint(setConfigField, {}, {
-            body: { storePath: reg.storePath, key: "preset", value: presetId },
+            body: scopeId
+              ? { storePath: reg.storePath, key: "preset", value: presetId, scopeId }
+              : { storePath: reg.storePath, key: "preset", value: presetId },
           });
         }
       }

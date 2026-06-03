@@ -21,8 +21,10 @@ export {
   configV2ConflictsResource,
   configV2TiersSchema,
   configV2TiersResource,
+  configV2ScopeForkedSchema,
+  configV2ScopeForkedResource,
 } from "./internal/resource";
-export type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers } from "./internal/resource";
+export type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,
@@ -39,4 +41,4 @@ export {
   propagate,
   readTypedConfig,
 } from "./internal/tier-logic";
-export { setConfigField } from "./internal/endpoints";
+export { setConfigField, forkScope, deleteScope } from "./internal/endpoints";

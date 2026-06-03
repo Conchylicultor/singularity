@@ -9,6 +9,7 @@ import {
 import {
   ColorAdjustContext,
   transformValues,
+  useThemeScopeId,
 } from "@plugins/ui/plugins/theme-engine/web";
 import {
   TokenRow,
@@ -31,11 +32,12 @@ const GROUPS: GroupDef[] = [
 ];
 
 export function SidebarPaletteSection({ search }: { search: string }) {
-  const config = useConfig(sidebarPaletteConfig) as {
+  const scopeId = useThemeScopeId();
+  const config = useConfig(sidebarPaletteConfig, { scopeId }) as {
     preset: string;
     overrides: { light: Record<string, string>; dark: Record<string, string> };
   };
-  const setConfig = useSetConfig(sidebarPaletteConfig);
+  const setConfig = useSetConfig(sidebarPaletteConfig, { scopeId });
   const presets = SidebarPalette.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
   const tokenMode = useContext(TokenModeContext);

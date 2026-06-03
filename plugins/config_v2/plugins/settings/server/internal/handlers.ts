@@ -5,7 +5,7 @@ import { resetConfigField, acknowledgeConflict, deleteOverride, getConfigRawFile
 
 export const handleSetField = implement(setConfigField, async ({ body }) => {
   try {
-    await setConfigByPath(body.storePath, body.key, body.value);
+    await setConfigByPath(body.storePath, body.key, body.value, body.scopeId);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
@@ -13,7 +13,7 @@ export const handleSetField = implement(setConfigField, async ({ body }) => {
 
 export const handleResetField = implement(resetConfigField, async ({ body }) => {
   try {
-    await resetConfigByPath(body.storePath, body.key);
+    await resetConfigByPath(body.storePath, body.key, body.scopeId);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
@@ -21,7 +21,7 @@ export const handleResetField = implement(resetConfigField, async ({ body }) => 
 
 export const handleAcknowledgeConflict = implement(acknowledgeConflict, async ({ body }) => {
   try {
-    acknowledgeConflictByPath(body.storePath);
+    acknowledgeConflictByPath(body.storePath, body.scopeId);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
@@ -29,7 +29,7 @@ export const handleAcknowledgeConflict = implement(acknowledgeConflict, async ({
 
 export const handleDeleteOverride = implement(deleteOverride, async ({ body }) => {
   try {
-    deleteOverrideByPath(body.storePath);
+    deleteOverrideByPath(body.storePath, body.scopeId);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }
@@ -37,7 +37,7 @@ export const handleDeleteOverride = implement(deleteOverride, async ({ body }) =
 
 export const handleGetRawFile = implement(getConfigRawFile, async ({ query }) => {
   try {
-    return getRawFileContent(query.storePath);
+    return getRawFileContent(query.storePath, query.scopeId);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }

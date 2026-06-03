@@ -11,6 +11,7 @@ const tokenSubFields = Object.fromEntries(
 );
 
 export const colorPaletteConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Color Palette preset" }),
     overrides: objectField({

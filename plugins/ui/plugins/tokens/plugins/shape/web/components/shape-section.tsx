@@ -10,16 +10,18 @@ import {
   TokenRow,
   TokenModeContext,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { shapeGroup } from "../../shared";
 import { shapeConfig } from "../internal/config";
 import { Shape } from "../slots";
 
 export function ShapeSection({ search }: { search: string }) {
-  const config = useConfig(shapeConfig) as {
+  const scopeId = useThemeScopeId();
+  const config = useConfig(shapeConfig, { scopeId }) as {
     preset: string;
     overrides: { light: Record<string, string>; dark: Record<string, string> };
   };
-  const setConfig = useSetConfig(shapeConfig);
+  const setConfig = useSetConfig(shapeConfig, { scopeId });
   const presets = Shape.Preset.useContributions();
   const tokenMode = useContext(TokenModeContext);
 

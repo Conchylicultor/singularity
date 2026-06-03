@@ -50,4 +50,7 @@ export interface ConfigDescriptor<F extends FieldsRecord = FieldsRecord> {
   readonly schema: z.ZodObject<Record<string, z.ZodTypeAny>>;
   readonly fields: F;
   readonly defaults: ConfigValues<F>;
+  // Optional scope axis. When set, this descriptor can be forked per scope of
+  // the given kind (e.g. "app" → per-app). Omitted = global-only (base scope).
+  readonly scope?: "app";
 }

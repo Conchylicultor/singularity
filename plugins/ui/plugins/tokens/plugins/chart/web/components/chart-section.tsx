@@ -3,6 +3,7 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   ColorAdjustContext,
   transformValues,
+  useThemeScopeId,
 } from "@plugins/ui/plugins/theme-engine/web";
 import {
   TokenRow,
@@ -13,11 +14,12 @@ import { chartConfig } from "../internal/config";
 import { Chart } from "../slots";
 
 export function ChartSection({ search }: { search: string }) {
-  const config = useConfig(chartConfig) as {
+  const scopeId = useThemeScopeId();
+  const config = useConfig(chartConfig, { scopeId }) as {
     preset: string;
     overrides: { light: Record<string, string>; dark: Record<string, string> };
   };
-  const setConfig = useSetConfig(chartConfig);
+  const setConfig = useSetConfig(chartConfig, { scopeId });
   const presets = Chart.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
   const tokenMode = useContext(TokenModeContext);

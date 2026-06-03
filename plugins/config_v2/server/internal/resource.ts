@@ -1,25 +1,31 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, hasConflict } from "../../core";
-import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict } from "../../core";
+import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
 import { CONFIG_DIR } from "./config-dir";
+import { userScopedDir } from "./scope-paths";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 
-type ConfigGetter = <F extends FieldsRecord>(d: ConfigDescriptor<F>) => ConfigValues<F>;
+type ConfigGetter = <F extends FieldsRecord>(d: ConfigDescriptor<F>, scopeId?: string) => ConfigValues<F>;
+type ScopeForkedChecker = (scopeId: string) => boolean;
 
 const descriptorByPath = new Map<string, ConfigDescriptor>();
+// hierarchyPath per descriptor (storePath minus the trailing `/<name>.jsonc`),
+// captured at registration so scope helpers can rebuild scoped dirs.
+const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
 let configGetter: ConfigGetter | null = null;
+let scopeForkedChecker: ScopeForkedChecker | null = null;
 
-export const configV2ServerResource = defineResource<ConfigV2Values, { path: string }>({
+export const configV2ServerResource = defineResource<ConfigV2Values, { path: string; scopeId?: string }>({
   key: "config-v2.values",
   mode: "push",
   schema: configV2ValuesSchema,
-  loader: ({ path }) => {
+  loader: ({ path, scopeId }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) return {};
-    const values = configGetter(descriptor) as ConfigV2Values;
+    const values = configGetter(descriptor, scopeId) as ConfigV2Values;
     const redacted = { ...values };
     for (const [key, field] of Object.entries(descriptor.fields)) {
       if (hasFieldStorageProvider(field.type.id)) {
@@ -65,17 +71,48 @@ export const configV2ConflictsServerResource = defineResource<ConfigV2Conflicts>
   loader: () => computeAllConflicts(),
 });
 
-export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor): void {
+export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {
   descriptorByPath.set(path, descriptor);
+  hierarchyByDescriptor.set(descriptor, hierarchyPath);
 }
 
 export function getDescriptorByStorePath(path: string): ConfigDescriptor | undefined {
   return descriptorByPath.get(path);
 }
 
+export function getHierarchyPath(descriptor: ConfigDescriptor): string | undefined {
+  return hierarchyByDescriptor.get(descriptor);
+}
+
+// All registered descriptors tagged with the given scope kind, plus their
+// hierarchyPath and storePath. Used by fork/unfork to act on the whole scoped set.
+export function getScopedDescriptors(
+  scope: "app",
+): { descriptor: ConfigDescriptor; hierarchyPath: string; storePath: string }[] {
+  const out: { descriptor: ConfigDescriptor; hierarchyPath: string; storePath: string }[] = [];
+  for (const [storePath, descriptor] of descriptorByPath) {
+    if (descriptor.scope !== scope) continue;
+    const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+    if (!hierarchyPath) continue;
+    out.push({ descriptor, hierarchyPath, storePath });
+  }
+  return out;
+}
+
 export function setConfigGetter(getter: ConfigGetter): void {
   configGetter = getter;
 }
+
+export function setScopeForkedChecker(checker: ScopeForkedChecker): void {
+  scopeForkedChecker = checker;
+}
+
+export const configV2ScopeForkedServerResource = defineResource<ConfigV2ScopeForked, { scopeId: string }>({
+  key: "config-v2.scope-forked",
+  mode: "push",
+  schema: configV2ScopeForkedSchema,
+  loader: ({ scopeId }) => ({ forked: scopeForkedChecker ? scopeForkedChecker(scopeId) : false }),
+});
 
 function fieldValueJson(content: JsonValue | null, key: string): string {
   if (content && typeof content === "object" && !Array.isArray(content)) {
@@ -84,7 +121,7 @@ function fieldValueJson(content: JsonValue | null, key: string): string {
   return "undefined";
 }
 
-function computeTiers(path: string): ConfigV2Tiers {
+function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
   const descriptor = descriptorByPath.get(path);
   if (!descriptor) return {};
 
@@ -92,8 +129,9 @@ function computeTiers(path: string): ConfigV2Tiers {
   const dir = parts.slice(0, -1).join("/");
   const name = parts[parts.length - 1]!;
 
-  const originPath = join(CONFIG_DIR, dir, `${name}.origin.jsonc`);
-  const overridePath = join(CONFIG_DIR, dir, `${name}.jsonc`);
+  const scopedDir = userScopedDir(dir, scopeId);
+  const originPath = join(scopedDir, `${name}.origin.jsonc`);
+  const overridePath = join(scopedDir, `${name}.jsonc`);
 
   const origin = jsoncConfigProxy(originPath);
   const override = jsoncConfigProxy(overridePath);
@@ -130,11 +168,11 @@ function computeTiers(path: string): ConfigV2Tiers {
   return tiers;
 }
 
-export const configV2TiersServerResource = defineResource<ConfigV2Tiers, { path: string }>({
+export const configV2TiersServerResource = defineResource<ConfigV2Tiers, { path: string; scopeId?: string }>({
   key: "config-v2.tiers",
   mode: "push",
   schema: configV2TiersSchema,
-  loader: ({ path }) => computeTiers(path),
+  loader: ({ path, scopeId }) => computeTiers(path, scopeId),
 });
 
 export function getAllDescriptors(): [string, ConfigDescriptor][] {

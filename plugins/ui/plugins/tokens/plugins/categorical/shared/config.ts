@@ -11,6 +11,7 @@ const tokenSubFields = Object.fromEntries(
 );
 
 export const categoricalConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Categorical preset" }),
     overrides: objectField({

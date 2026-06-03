@@ -8,8 +8,8 @@
 - Web:
   - Slots: `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
   - Contributes: `Core.Root` → `ThemeInjector`, `ConfigV2.WebRegister`, `DynamicEnum.Options` "Theme"
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
-  - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`, `useTokenGroupPresets`
+  - Uses: `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`
+  - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useThemeScopeId`, `useTokenGroupPresets`
 - Cross-plugin:
   - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
 - Server:

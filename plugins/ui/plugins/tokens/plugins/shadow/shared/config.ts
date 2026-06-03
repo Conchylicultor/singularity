@@ -4,6 +4,7 @@ import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/co
 import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 
 export const shadowConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Shadow preset" }),
     overrides: objectField({

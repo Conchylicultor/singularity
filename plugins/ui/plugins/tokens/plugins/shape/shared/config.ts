@@ -11,6 +11,7 @@ const tokenSubFields = Object.fromEntries(
 );
 
 export const shapeConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Shape preset" }),
     overrides: objectField({

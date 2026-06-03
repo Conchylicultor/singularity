@@ -11,6 +11,7 @@ const tokenSubFields = Object.fromEntries(
 );
 
 export const typographyConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Typography preset" }),
     overrides: objectField({

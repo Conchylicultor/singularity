@@ -9,6 +9,7 @@ import {
 import {
   ColorAdjustContext,
   transformValues,
+  useThemeScopeId,
 } from "@plugins/ui/plugins/theme-engine/web";
 import {
   TokenRow,
@@ -40,8 +41,9 @@ const GROUPS: GroupDef[] = [
 ];
 
 export function ColorPaletteSection({ search }: { search: string }) {
-  const config = useConfig(colorPaletteConfig);
-  const setConfig = useSetConfig(colorPaletteConfig);
+  const scopeId = useThemeScopeId();
+  const config = useConfig(colorPaletteConfig, { scopeId });
+  const setConfig = useSetConfig(colorPaletteConfig, { scopeId });
   const presets = ColorPalette.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
   const tokenMode = useContext(TokenModeContext);

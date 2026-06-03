@@ -6,7 +6,7 @@ import {
 } from "@plugins/infra/plugins/endpoints/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { setConfigField } from "@plugins/config_v2/core";
-import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
@@ -14,6 +14,7 @@ import { getCatalog, applyCatalogTheme } from "../../core";
 import { CommunityThemeCard } from "./community-theme-card";
 
 export function CommunityBrowserSection({ search }: { search: string }) {
+  const scopeId = useThemeScopeId();
   const [activeTag, setActiveTag] = useState("all");
   const [themeQuery, setThemeQuery] = useState("");
   const [applyingId, setApplyingId] = useState<string | null>(null);
@@ -83,7 +84,9 @@ export function CommunityBrowserSection({ search }: { search: string }) {
         );
         if (reg) {
           void fetchEndpoint(setConfigField, {}, {
-            body: { storePath: reg.storePath, key: "preset", value: presetId },
+            body: scopeId
+              ? { storePath: reg.storePath, key: "preset", value: presetId, scopeId }
+              : { storePath: reg.storePath, key: "preset", value: presetId },
           });
         }
       }

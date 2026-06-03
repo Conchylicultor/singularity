@@ -16,6 +16,7 @@ export type {
   PresetSourceContribution,
 } from "./slots";
 export { ThemeScope } from "./components/theme-scope";
+export { ThemeScopeProvider, useThemeScopeId } from "./components/theme-scope-context";
 export { ColorAdjustContext } from "./components/theme-injector";
 export { transformValues } from "./internal/transform";
 

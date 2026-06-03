@@ -6,6 +6,7 @@ import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/conf
 
 export function useConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
+  opts?: { scopeId?: string },
 ): ConfigValues<F> {
   const ctx = useContext(PluginRuntimeContext);
   if (!ctx) throw new Error("useConfig must be inside PluginProvider");
@@ -16,7 +17,12 @@ export function useConfig<F extends FieldsRecord>(
     ? `${reg._pluginId}/${descriptor.name}.jsonc`
     : descriptor.name + ".jsonc";
 
-  const result = useResource(configV2Resource, { path });
+  // Omit scopeId entirely when absent — `{ path, scopeId: undefined }` serializes
+  // to a different live-state cache key than `{ path }` and would split the cache.
+  const result = useResource(
+    configV2Resource,
+    opts?.scopeId ? { path, scopeId: opts.scopeId } : { path },
+  );
 
   if (!reg?._pluginId) {
     throw new Error(

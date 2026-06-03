@@ -6,6 +6,7 @@ import type { ConfigDescriptor, FieldsRecord } from "../../core";
 
 export function useSetConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
+  opts?: { scopeId?: string },
 ): (key: keyof F & string, value: unknown) => void {
   const ctx = useContext(PluginRuntimeContext);
   if (!ctx) throw new Error("useSetConfig must be inside PluginProvider");
@@ -23,10 +24,16 @@ export function useSetConfig<F extends FieldsRecord>(
     );
   }
 
+  const scopeId = opts?.scopeId;
+
   return useCallback(
     (key: keyof F & string, value: unknown) => {
-      void fetchEndpoint(setConfigField, {}, { body: { storePath: storePath!, key, value } });
+      void fetchEndpoint(
+        setConfigField,
+        {},
+        { body: scopeId ? { storePath: storePath!, key, value, scopeId } : { storePath: storePath!, key, value } },
+      );
     },
-    [storePath],
+    [storePath, scopeId],
   );
 }

@@ -13,6 +13,7 @@ import {
 } from "@plugins/primitives/plugins/color-picker/web";
 import type { ShadowParams } from "../../shared";
 import { buildShadowTiers, shadowGroup, DEFAULT_SHADOW_PARAMS } from "../../shared";
+import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { shadowConfig } from "../internal/config";
 import { Shadow } from "../slots";
 
@@ -136,11 +137,12 @@ function ParamInput({
 }
 
 export function ShadowSection({ search }: { search: string }) {
-  const config = useConfig(shadowConfig) as {
+  const scopeId = useThemeScopeId();
+  const config = useConfig(shadowConfig, { scopeId }) as {
     preset: string;
     overrides: ShadowOverrides;
   };
-  const setConfig = useSetConfig(shadowConfig);
+  const setConfig = useSetConfig(shadowConfig, { scopeId });
   const presets = Shadow.Preset.useContributions();
 
   const active = presets.find((p) => p.id === config.preset) ?? presets[0];

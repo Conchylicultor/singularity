@@ -4,7 +4,7 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core"
 export const configV2ValuesSchema = z.record(z.unknown());
 export type ConfigV2Values = z.infer<typeof configV2ValuesSchema>;
 
-export const configV2Resource = resourceDescriptor<ConfigV2Values, { path: string }>(
+export const configV2Resource = resourceDescriptor<ConfigV2Values, { path: string; scopeId?: string }>(
   "config-v2.values",
   configV2ValuesSchema,
   {},
@@ -31,8 +31,19 @@ export const configV2ConflictsResource = resourceDescriptor<ConfigV2Conflicts>(
 export const configV2TiersSchema = z.record(z.enum(["default", "git", "user"]));
 export type ConfigV2Tiers = z.infer<typeof configV2TiersSchema>;
 
-export const configV2TiersResource = resourceDescriptor<ConfigV2Tiers, { path: string }>(
+export const configV2TiersResource = resourceDescriptor<ConfigV2Tiers, { path: string; scopeId?: string }>(
   "config-v2.tiers",
   configV2TiersSchema,
   {},
+);
+
+export const configV2ScopeForkedSchema = z.object({ forked: z.boolean() });
+export type ConfigV2ScopeForked = z.infer<typeof configV2ScopeForkedSchema>;
+
+// Read-only: is the given scope forked (any @app/<id> override file exists for a
+// `scope: "app"` descriptor)? Keyed by scopeId only — scope-level, not per-path.
+export const configV2ScopeForkedResource = resourceDescriptor<ConfigV2ScopeForked, { scopeId: string }>(
+  "config-v2.scope-forked",
+  configV2ScopeForkedSchema,
+  { forked: false },
 );

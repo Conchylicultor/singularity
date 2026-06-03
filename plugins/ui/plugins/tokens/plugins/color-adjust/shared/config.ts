@@ -3,6 +3,7 @@ import { intField, floatField } from "@plugins/config_v2/plugins/fields/plugins/
 import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 
 export const colorAdjustConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Color adjust preset" }),
     hueShift: intField({ default: 0, label: "Hue shift" }),

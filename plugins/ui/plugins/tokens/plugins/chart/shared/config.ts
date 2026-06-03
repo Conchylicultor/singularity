@@ -11,6 +11,7 @@ const tokenSubFields = Object.fromEntries(
 );
 
 export const chartConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Chart preset" }),
     overrides: objectField({

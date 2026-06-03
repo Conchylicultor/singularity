@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { useConfig, ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
@@ -22,7 +22,8 @@ export default {
     ...builtInPresets.map((p) => ColorAdjust.Preset(p)),
     ThemeEngine.ColorTransform({
       useAdjustment: () => {
-        const vals = useConfig(colorAdjustConfig);
+        const scopeId = useThemeScopeId();
+        const vals = useConfig(colorAdjustConfig, { scopeId });
         return {
           hueShift: vals.hueShift,
           saturationScale: vals.saturationScale,

@@ -10,16 +10,18 @@ import {
   TokenRow,
   TokenModeContext,
 } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
+import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { typographyGroup } from "../../shared";
 import { typographyConfig } from "../internal/config";
 import { Typography } from "../slots";
 
 export function TypographySection({ search }: { search: string }) {
-  const config = useConfig(typographyConfig) as {
+  const scopeId = useThemeScopeId();
+  const config = useConfig(typographyConfig, { scopeId }) as {
     preset: string;
     overrides: { light: Record<string, string>; dark: Record<string, string> };
   };
-  const setConfig = useSetConfig(typographyConfig);
+  const setConfig = useSetConfig(typographyConfig, { scopeId });
   const presets = Typography.Preset.useContributions();
   const tokenMode = useContext(TokenModeContext);
 

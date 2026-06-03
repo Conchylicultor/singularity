@@ -11,6 +11,7 @@ const tokenSubFields = Object.fromEntries(
 );
 
 export const sidebarPaletteConfig = defineConfig({
+  scope: "app",
   fields: {
     preset: dynamicEnumField({ default: "default", label: "Sidebar Palette preset" }),
     overrides: objectField({

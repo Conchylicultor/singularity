@@ -1,11 +1,13 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { colorAdjustConfig } from "../internal/config";
 import { ColorAdjust } from "../slots";
 
 export function ColorAdjustPicker() {
+  const scopeId = useThemeScopeId();
   const presets = ColorAdjust.Preset.useContributions();
-  const config = useConfig(colorAdjustConfig);
-  const setConfig = useSetConfig(colorAdjustConfig);
+  const config = useConfig(colorAdjustConfig, { scopeId });
+  const setConfig = useSetConfig(colorAdjustConfig, { scopeId });
   const activeId = config.preset;
   const hueShift = config.hueShift;
   const saturationScale = config.saturationScale;

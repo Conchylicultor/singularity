@@ -3,6 +3,7 @@ import { AppsLayout } from "./components/apps-layout";
 
 export { Apps } from "./slots";
 export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
+export { useCurrentAppId } from "./use-current-app-id";
 
 export default {
   name: "Apps",

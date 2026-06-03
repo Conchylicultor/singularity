@@ -1,5 +1,8 @@
 import { createContext, useContext, useLayoutEffect, useMemo } from "react";
 import { useConfig } from "@plugins/config_v2/web";
+import { useCurrentAppId } from "@plugins/apps/web";
+import { themeEngineConfig } from "../../core";
+import { ThemeScopeProvider } from "./theme-scope-context";
 import { ThemeEngine, useTokenGroupPresets } from "../slots";
 import type {
   TokenGroupContribution,
@@ -45,10 +48,10 @@ function WithAdjustment({
   );
 }
 
-function GroupStyle({ group }: { group: TokenGroupContribution }) {
+function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId?: string }) {
   const adjustment = useContext(ColorAdjustContext);
   const presets = useTokenGroupPresets(group.id);
-  const config = useConfig(group.configDescriptor) as {
+  const config = useConfig(group.configDescriptor, { scopeId }) as {
     preset: string;
     overrides: Record<string, unknown>;
   };
@@ -102,18 +105,56 @@ function GroupStyle({ group }: { group: TokenGroupContribution }) {
   return null;
 }
 
+// Reads the active app's colorMode and toggles the single global `.dark` class.
+// Only one app is mounted at a time (AppsLayout), so a global class is correct —
+// no per-app DOM scoping. Switching apps re-runs useCurrentAppId (pathname store)
+// and re-resolves the colorMode automatically.
+function ColorModeApplier({ scopeId }: { scopeId?: string }) {
+  const { colorMode } = useConfig(themeEngineConfig, { scopeId }) as {
+    colorMode: "light" | "dark" | "system";
+  };
+
+  useLayoutEffect(() => {
+    const apply = () => {
+      const resolved =
+        colorMode === "dark" ||
+        (colorMode === "system" &&
+          window.matchMedia("(prefers-color-scheme: dark)").matches);
+      document.documentElement.classList.toggle("dark", resolved);
+    };
+    apply();
+    if (colorMode !== "system") return;
+    const mq = window.matchMedia("(prefers-color-scheme: dark)");
+    mq.addEventListener("change", apply);
+    return () => mq.removeEventListener("change", apply);
+  }, [colorMode]);
+
+  return null;
+}
+
 export function ThemeInjector() {
+  const appId = useCurrentAppId();
+  const scopeId = appId ? `app:${appId}` : undefined;
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
   const groupStyles = groups.map((g) => (
-    <GroupStyle key={g.id} group={g} />
+    <GroupStyle key={g.id} group={g} scopeId={scopeId} />
   ));
 
   const firstTransform = colorTransforms[0];
-  if (!firstTransform) {
-    return <>{groupStyles}</>;
-  }
-  return (
+  const content = firstTransform ? (
     <WithAdjustment contrib={firstTransform}>{groupStyles}</WithAdjustment>
+  ) : (
+    <>{groupStyles}</>
+  );
+
+  // Provide the active app's scopeId so slot-contributed reads that resolve via
+  // useThemeScopeId() (e.g. the color-adjust ColorTransform's useAdjustment) pick
+  // up the per-app value. GroupStyle gets scopeId directly as a prop.
+  return (
+    <ThemeScopeProvider scopeId={scopeId}>
+      <ColorModeApplier scopeId={scopeId} />
+      {content}
+    </ThemeScopeProvider>
   );
 }

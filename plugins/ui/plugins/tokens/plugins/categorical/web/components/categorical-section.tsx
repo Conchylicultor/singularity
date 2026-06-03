@@ -3,6 +3,7 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   ColorAdjustContext,
   transformValues,
+  useThemeScopeId,
 } from "@plugins/ui/plugins/theme-engine/web";
 import {
   TokenRow,
@@ -13,11 +14,12 @@ import { categoricalConfig } from "../internal/config";
 import { Categorical } from "../slots";
 
 export function CategoricalSection({ search }: { search: string }) {
-  const config = useConfig(categoricalConfig) as {
+  const scopeId = useThemeScopeId();
+  const config = useConfig(categoricalConfig, { scopeId }) as {
     preset: string;
     overrides: { light: Record<string, string>; dark: Record<string, string> };
   };
-  const setConfig = useSetConfig(categoricalConfig);
+  const setConfig = useSetConfig(categoricalConfig, { scopeId });
   const presets = Categorical.Preset.useContributions();
   const adjustment = useContext(ColorAdjustContext);
   const tokenMode = useContext(TokenModeContext);
