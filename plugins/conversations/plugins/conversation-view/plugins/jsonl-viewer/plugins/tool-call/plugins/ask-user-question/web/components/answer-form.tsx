@@ -11,7 +11,10 @@ interface QuestionAnswer {
   otherText: string;
 }
 
-function isAnswered(answer: QuestionAnswer): boolean {
+function isAnswered(answer: QuestionAnswer, question: Question): boolean {
+  // Multi-select (checkbox) questions accept zero selections as a valid
+  // answer ("none of these"); only single-select requires a choice.
+  if (question.multiSelect) return true;
   return answer.selected.size > 0 || answer.otherText.trim().length > 0;
 }
 
@@ -77,7 +80,8 @@ export function AnswerForm({
       }),
   });
 
-  const canSubmit = answers.every(isAnswered) && !m.isPending;
+  const canSubmit =
+    answers.every((a, qi) => isAnswered(a, questions[qi]!)) && !m.isPending;
 
   const handleSubmit = () => {
     const text = serializeAnswers(questions, answers);
