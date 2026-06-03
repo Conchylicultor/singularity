@@ -26,7 +26,7 @@ export function DataTable<TRow>({
 
   return (
     <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background px-3 py-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {columns.map((col) => {
           const sortable = !!col.value;
           const active = sortState?.columnId === col.id;
@@ -47,7 +47,7 @@ export function DataTable<TRow>({
       {rows.map((row, i) => (
         <div
           key={rowKey(row, i)}
-          className="flex items-center gap-2 border-b border-border/30 px-3 py-1.5 text-xs hover:bg-accent/30"
+          className="flex items-center gap-2 border-b border-border/30 p-control text-xs hover:bg-accent/30"
         >
           {columns.map((col) => (
             <div key={col.id} className={cn(col.width, "truncate")}>

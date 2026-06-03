@@ -11,7 +11,7 @@
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
   - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`, `useTokenGroupPresets`
 - Cross-plugin:
-  - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
+  - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Core:

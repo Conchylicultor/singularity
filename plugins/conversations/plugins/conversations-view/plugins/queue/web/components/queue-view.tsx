@@ -91,7 +91,7 @@ function SectionHeader({
         {title}
       </div>
       {count > 0 && (
-        <span className="shrink-0 rounded px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
+        <span className="shrink-0 rounded px-1 py-0.5 text-3xs tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
           {count}
         </span>
       )}
@@ -343,7 +343,7 @@ export function QueueView({
       {/* Queue */}
       <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
       {queueExpanded && waitingGroups.length === 0 && (
-        <div className="px-2 py-1 pl-2 text-[11px] italic text-muted-foreground">
+        <div className="px-2 py-1 pl-2 text-2xs italic text-muted-foreground">
           No conversations waiting
         </div>
       )}
@@ -416,7 +416,7 @@ export function QueueView({
       {workingExpanded && (
         <div className="mt-0.5 pl-1">
           {workingGroups.length === 0 ? (
-            <div className="px-2 py-1 text-[11px] italic text-muted-foreground">
+            <div className="px-2 py-1 text-2xs italic text-muted-foreground">
               No agents working
             </div>
           ) : (
@@ -430,7 +430,7 @@ export function QueueView({
                   >
                     <ConversationItem conv={group.selected} />
                     {group.count > 1 && (
-                      <span className="ml-auto shrink-0 rounded-full bg-destructive/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-destructive">
+                      <span className="ml-auto shrink-0 rounded-full bg-destructive/20 p-chip text-3xs font-semibold tabular-nums text-destructive">
                         {group.count}
                       </span>
                     )}
@@ -622,7 +622,7 @@ function QueueRow({
         >
           <ConversationItem conv={conv} />
           {clusterSize > 1 && (
-            <span className="ml-auto shrink-0 rounded-full bg-destructive/20 px-1.5 py-0.5 text-[10px] font-semibold tabular-nums text-destructive">
+            <span className="ml-auto shrink-0 rounded-full bg-destructive/20 p-chip text-3xs font-semibold tabular-nums text-destructive">
               {clusterSize}
             </span>
           )}

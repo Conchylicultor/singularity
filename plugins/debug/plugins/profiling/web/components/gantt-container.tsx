@@ -55,13 +55,13 @@ export function TimeAxis({
       <div className="flex w-40 shrink-0 items-center gap-1.5">
         <SectionLabel
           as="span"
-          className="text-[10px] font-medium tracking-wider"
+          className="text-3xs font-medium tracking-wider"
         >
           {title}
         </SectionLabel>
         {zoomWindow ? (
           <>
-            <span className="text-[10px] font-medium tabular-nums text-info">
+            <span className="text-3xs font-medium tabular-nums text-info">
               {formatTickMs(zoomWindow.startMs)}–
               {formatTickMs(zoomWindow.endMs)}
             </span>
@@ -77,7 +77,7 @@ export function TimeAxis({
             </button>
           </>
         ) : (
-          <span className="text-[10px] font-medium tabular-nums text-foreground">
+          <span className="text-3xs font-medium tabular-nums text-foreground">
             {formatDuration(totalMs)}
           </span>
         )}
@@ -95,7 +95,7 @@ export function TimeAxis({
             }}
           >
             <div className="h-2 w-px bg-border" />
-            <span className="text-[9px] tabular-nums text-muted-foreground">
+            <span className="text-3xs tabular-nums text-muted-foreground">
               {formatTickMs(ms)}
             </span>
           </div>

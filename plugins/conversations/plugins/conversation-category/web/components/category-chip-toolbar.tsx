@@ -65,7 +65,7 @@ export function CategoryChipToolbar() {
       onOpenChange={setOpen}
       trigger={
         <button
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium hover:opacity-80 ${colorClass}`}
+          className={`inline-flex items-center rounded-full p-chip text-xs font-medium hover:opacity-80 ${colorClass}`}
           aria-label={`Conversation category: ${label}`}
         >
           {busy === "classify" ? (
@@ -76,7 +76,7 @@ export function CategoryChipToolbar() {
       }
       contentClassName="w-56 p-1"
     >
-        <SectionLabel className="px-2 py-1 text-[10px]">
+        <SectionLabel className="px-2 py-1 text-3xs">
           Set category
         </SectionLabel>
         <ul className="space-y-px">
@@ -96,7 +96,7 @@ export function CategoryChipToolbar() {
                     <MdCheck className="size-3" />
                   </span>
                   <span
-                    className={`inline-flex items-center rounded px-1.5 py-px text-[10px] font-medium ${colorClassFor(c)}`}
+                    className={`inline-flex items-center rounded p-chip text-3xs font-medium ${colorClassFor(c)}`}
                   >
                     {c}
                   </span>

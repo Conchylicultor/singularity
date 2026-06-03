@@ -19,6 +19,14 @@ export const defaultPreset: Preset = {
     fontSerif: 'ui-serif, Georgia, Cambria, "Times New Roman", Times, serif',
     fontMono: "'Cascadia Code Variable', monospace",
     letterSpacing: "0em",
+    fontSize2xs: "0.6875rem",
+    fontSize3xs: "0.625rem",
+    lineHeight2xs: "1rem",
+    lineHeight3xs: "0.875rem",
+    fontWeightNormal: "400",
+    fontWeightMedium: "500",
+    fontWeightSemibold: "600",
+    fontWeightBold: "700",
   }),
 };
 

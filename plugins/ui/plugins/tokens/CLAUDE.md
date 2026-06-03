@@ -12,6 +12,7 @@
   - **`chart`** — Chart color token group with switchable presets.
   - **`color-adjust`** — Cross-cutting color adjustment transform for all color token groups.
   - **`color-palette`** — Color palette token group with switchable presets.
+  - **`density`** — Density token group (padding intents) with switchable presets.
   - **`shadow`** — Shadow token group with switchable presets.
   - **`shape`** — Shape token group (border-radius) with switchable presets.
   - **`sidebar-palette`** — Sidebar palette token group with switchable presets.

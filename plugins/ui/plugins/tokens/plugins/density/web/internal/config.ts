@@ -1,0 +1,1 @@
+export { densityConfig } from "../../shared";

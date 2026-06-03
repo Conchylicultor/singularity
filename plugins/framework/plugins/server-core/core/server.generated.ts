@@ -124,6 +124,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tokens/plugins/chart", hierarchyPath: "ui/tokens/chart", loader: () => import("@plugins/ui/plugins/tokens/plugins/chart/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/color-adjust", hierarchyPath: "ui/tokens/color-adjust", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-adjust/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/color-palette", hierarchyPath: "ui/tokens/color-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/color-palette/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "ui/plugins/tokens/plugins/density", hierarchyPath: "ui/tokens/density", loader: () => import("@plugins/ui/plugins/tokens/plugins/density/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/shadow", hierarchyPath: "ui/tokens/shadow", loader: () => import("@plugins/ui/plugins/tokens/plugins/shadow/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/shape", hierarchyPath: "ui/tokens/shape", loader: () => import("@plugins/ui/plugins/tokens/plugins/shape/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/sidebar-palette", hierarchyPath: "ui/tokens/sidebar-palette", loader: () => import("@plugins/ui/plugins/tokens/plugins/sidebar-palette/server"), dependsOn: ["config_v2"] },

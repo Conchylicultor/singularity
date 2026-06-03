@@ -1,4 +1,4 @@
-// @hash e43907a206da
+// @hash 0339733b1b62
 {
   "preset": "default",
   "overrides": {
@@ -6,13 +6,29 @@
       "fontSans": "",
       "fontSerif": "",
       "fontMono": "",
-      "letterSpacing": ""
+      "letterSpacing": "",
+      "fontSize2xs": "",
+      "fontSize3xs": "",
+      "lineHeight2xs": "",
+      "lineHeight3xs": "",
+      "fontWeightNormal": "",
+      "fontWeightMedium": "",
+      "fontWeightSemibold": "",
+      "fontWeightBold": ""
     },
     "dark": {
       "fontSans": "",
       "fontSerif": "",
       "fontMono": "",
-      "letterSpacing": ""
+      "letterSpacing": "",
+      "fontSize2xs": "",
+      "fontSize3xs": "",
+      "lineHeight2xs": "",
+      "lineHeight3xs": "",
+      "fontWeightNormal": "",
+      "fontWeightMedium": "",
+      "fontWeightSemibold": "",
+      "fontWeightBold": ""
     }
   }
 }

@@ -1,0 +1,22 @@
+// @hash 522271aebe36
+{
+  "preset": "comfortable",
+  "overrides": {
+    "light": {
+      "padChipX": "",
+      "padChipY": "",
+      "padControlX": "",
+      "padControlY": "",
+      "padRowX": "",
+      "padRowY": ""
+    },
+    "dark": {
+      "padChipX": "",
+      "padChipY": "",
+      "padControlX": "",
+      "padControlY": "",
+      "padRowX": "",
+      "padRowY": ""
+    }
+  }
+}

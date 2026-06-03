@@ -1602,6 +1602,10 @@
       "name": "@singularity/plugin-ui-tokens-color-palette",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/density": {
+      "name": "@singularity/plugin-ui-tokens-density",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/shadow": {
       "name": "@singularity/plugin-ui-tokens-shadow",
       "version": "0.0.1",
@@ -2917,6 +2921,8 @@
     "@singularity/plugin-ui-tokens-color-adjust": ["@singularity/plugin-ui-tokens-color-adjust@workspace:plugins/ui/plugins/tokens/plugins/color-adjust"],
 
     "@singularity/plugin-ui-tokens-color-palette": ["@singularity/plugin-ui-tokens-color-palette@workspace:plugins/ui/plugins/tokens/plugins/color-palette"],
+
+    "@singularity/plugin-ui-tokens-density": ["@singularity/plugin-ui-tokens-density@workspace:plugins/ui/plugins/tokens/plugins/density"],
 
     "@singularity/plugin-ui-tokens-shadow": ["@singularity/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
 

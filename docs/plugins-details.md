@@ -415,7 +415,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `dynamic-enum`, `enum`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `effective`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
@@ -1853,7 +1853,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
         - Exports: Types: `ColorAdjustment`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `transformValues`, `useTokenGroupPresets`
       - Cross-plugin:
-        - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
+        - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Core:
@@ -1909,6 +1909,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config_v2.ConfigV2`
           - Shared:
             - Exports: Types: `ColorPaletteTokenValues`; Values: `colorPaletteConfig`, `colorPaletteGroup`
+        - **`density`** — Density token group (padding intents) with switchable presets.
+          - Web:
+            - Slots: `Density.Preset`
+            - Contributes: `Density.Preset` "Comfortable", `Density.Preset` "Cozy", `Density.Preset` "Compact", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Density preset", `ThemeEngine.TokenGroup` "Density", `ThemeEngine.VariantGroup` "Density" → `DensityPicker`, `ThemeCustomizer.Section` "density" → `DensitySection`
+            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
+            - Exports: Types: `DensityPresetContribution`; Values: `Density`
+          - Server:
+            - Uses: `config_v2.ConfigV2`
+          - Shared:
+            - Exports: Types: `DensityTokenValues`; Values: `densityConfig`, `densityGroup`
         - **`shadow`** — Shadow token group with switchable presets.
           - Web:
             - Slots: `Shadow.Preset`

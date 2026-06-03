@@ -150,7 +150,7 @@ export function SpanRow({
       onMouseEnter={() => setHovered(span)}
       onMouseLeave={() => setHovered(null)}
     >
-      <div className="w-40 shrink-0 truncate font-mono text-[11px] text-muted-foreground">
+      <div className="w-40 shrink-0 truncate font-mono text-2xs text-muted-foreground">
         {span.label}
       </div>
       <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
@@ -166,7 +166,7 @@ export function SpanRow({
           }}
         />
       </div>
-      <div className="w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+      <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
         {formatDuration(span.durationMs)}
       </div>
     </div>

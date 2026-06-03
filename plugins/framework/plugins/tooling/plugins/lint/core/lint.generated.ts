@@ -14,4 +14,5 @@ export interface CollectedEntry {
 
 export const lintEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/logs", hierarchyPath: "debug/logs", loader: () => import("@plugins/debug/plugins/logs/lint"), dependsOn: [] },
+  { pluginPath: "ui/plugins/tokens/plugins/typography", hierarchyPath: "ui/tokens/typography", loader: () => import("@plugins/ui/plugins/tokens/plugins/typography/lint"), dependsOn: [] },
 ];

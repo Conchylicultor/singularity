@@ -8,7 +8,7 @@ export function CategoryChipRow({ conv }: { conv: ConversationItemConv }) {
   if (!category) return null;
   return (
     <span
-      className={`shrink-0 truncate rounded-sm px-1 py-px text-[9px] font-medium uppercase tracking-wide ${colorClassFor(category)}`}
+      className={`shrink-0 truncate rounded-sm p-chip text-3xs font-medium uppercase tracking-wide ${colorClassFor(category)}`}
       title={category}
     >
       {category}

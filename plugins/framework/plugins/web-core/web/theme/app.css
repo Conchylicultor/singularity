@@ -12,6 +12,10 @@
     --font-serif: ui-serif, Georgia, Cambria, "Times New Roman", Times, serif;
     --font-mono: 'Cascadia Code Variable', monospace;
     --max-width-reading: 75ch;
+    --text-2xs: 0.6875rem;
+    --text-2xs--line-height: 1rem;
+    --text-3xs: 0.625rem;
+    --text-3xs--line-height: 0.875rem;
 }
 
 @theme inline {
@@ -65,6 +69,14 @@
     --color-categorical-9: var(--categorical-9);
     --color-categorical-10: var(--categorical-10);
     --tracking-normal: var(--letter-spacing);
+    --text-2xs: var(--font-size-2xs);
+    --text-2xs--line-height: var(--line-height-2xs);
+    --text-3xs: var(--font-size-3xs);
+    --text-3xs--line-height: var(--line-height-3xs);
+    --font-weight-normal: var(--font-weight-normal);
+    --font-weight-medium: var(--font-weight-medium);
+    --font-weight-semibold: var(--font-weight-semibold);
+    --font-weight-bold: var(--font-weight-bold);
     --radius-sm: calc(var(--radius) * 0.6);
     --radius-md: calc(var(--radius) * 0.8);
     --radius-lg: var(--radius);
@@ -135,6 +147,20 @@
     --categorical-9: oklch(0.70 0.17 50);
     --categorical-10: oklch(0.55 0.03 250);
     --letter-spacing: 0em;
+    --font-size-2xs: 0.6875rem;
+    --font-size-3xs: 0.625rem;
+    --line-height-2xs: 1rem;
+    --line-height-3xs: 0.875rem;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --pad-chip-x: 0.375rem;
+    --pad-chip-y: 0.125rem;
+    --pad-control-x: 0.75rem;
+    --pad-control-y: 0.375rem;
+    --pad-row-x: 0.5rem;
+    --pad-row-y: 0.375rem;
     --shadow-2xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0px oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
@@ -196,6 +222,20 @@
     --categorical-9: oklch(0.80 0.15 50);
     --categorical-10: oklch(0.70 0.03 250);
     --letter-spacing: 0em;
+    --font-size-2xs: 0.6875rem;
+    --font-size-3xs: 0.625rem;
+    --line-height-2xs: 1rem;
+    --line-height-3xs: 0.875rem;
+    --font-weight-normal: 400;
+    --font-weight-medium: 500;
+    --font-weight-semibold: 600;
+    --font-weight-bold: 700;
+    --pad-chip-x: 0.375rem;
+    --pad-chip-y: 0.125rem;
+    --pad-control-x: 0.75rem;
+    --pad-control-y: 0.375rem;
+    --pad-row-x: 0.5rem;
+    --pad-row-y: 0.375rem;
     --shadow-2xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0px oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
@@ -233,6 +273,13 @@
     @apply ring-3 ring-ring/50;
   }
 }
+
+/* Density padding utilities — the only bridge for runtime-themeable padding,
+ * since padding utilities can't read theme vars. Values come from the density
+ * token group (--pad-* runtime vars, overridden by ThemeInjector). */
+@utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }
+@utility p-control { padding: var(--pad-control-y) var(--pad-control-x); }
+@utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }
 
 @layer base {
   * {
