@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-controls",
+  "description": "Sonata keyboard transport controls: Space play/pause, ←/→ seek, ↑/↓ tempo.",
+  "private": true,
+  "version": "0.0.1"
+}

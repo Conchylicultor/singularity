@@ -58,6 +58,7 @@ function SonataLayoutInner() {
     score,
     cursorBeat,
     isPlaying,
+    tempoScale,
     activeSourceId,
     activeDisplayId,
     setActiveSource,
@@ -125,6 +126,9 @@ function SonataLayoutInner() {
           </button>
           <span className="tabular-nums text-xs text-muted-foreground">
             beat {cursorBeat.toFixed(2)}
+          </span>
+          <span className="tabular-nums text-xs text-muted-foreground">
+            {tempoScale.toFixed(2)}×
           </span>
         </div>
       </div>

@@ -11,6 +11,11 @@ export {
   type SonataContextValue,
   type TransportClock,
 } from "./context";
+export {
+  getSonataTransport,
+  publishSonataTransport,
+  type SonataTransportActions,
+} from "./transport-store";
 
 export default {
   name: "Sonata: Shell",

@@ -30,6 +30,7 @@ export type {
 export {
   emptyScore,
   beatToSeconds,
+  scaleTempo,
   bars,
   mergeScores,
   mergeAnnotations,

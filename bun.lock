@@ -189,6 +189,10 @@
         "smplr": "^0.26.0",
       },
     },
+    "plugins/apps/plugins/sonata/plugins/controls": {
+      "name": "@singularity/plugin-apps-sonata-controls",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/piano-keyboard": {
       "name": "@singularity/plugin-apps-sonata-piano-keyboard",
       "version": "0.0.1",
@@ -2275,6 +2279,8 @@
     "@singularity/plugin-apps-sonata-audio-engine": ["@singularity/plugin-apps-sonata-audio-engine@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/engine"],
 
     "@singularity/plugin-apps-sonata-audio-piano": ["@singularity/plugin-apps-sonata-audio-piano@workspace:plugins/apps/plugins/sonata/plugins/audio/plugins/piano"],
+
+    "@singularity/plugin-apps-sonata-controls": ["@singularity/plugin-apps-sonata-controls@workspace:plugins/apps/plugins/sonata/plugins/controls"],
 
     "@singularity/plugin-apps-sonata-piano-keyboard": ["@singularity/plugin-apps-sonata-piano-keyboard@workspace:plugins/apps/plugins/sonata/plugins/piano-keyboard"],
 

@@ -188,6 +188,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback.
               - Web:
                 - Contributes: `Sonata.Instrument` "Acoustic Piano"
+        - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
+          - Web:
+            - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.seek-back (arrowleft)", `Shortcuts.Shortcut` "sonata.seek-forward (arrowright)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)"
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys.
           - Web:
             - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
@@ -207,13 +210,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
         - **`score`**
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`, `scaleTempo`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Section} slots.
           - Web:
             - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`
-            - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `TransportClock`; Values: `Sonata`, `SonataProvider`, `useSonata`
+            - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `useSonata`
           - Cross-plugin:
             - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).

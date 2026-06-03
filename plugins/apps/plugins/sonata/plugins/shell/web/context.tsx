@@ -12,9 +12,15 @@ import {
   beatToSeconds,
   emptyScore,
   mergeAnnotations,
+  scaleTempo,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Sonata } from "./slots";
+import { publishSonataTransport } from "./transport-store";
+
+/** Tempo scale clamp — slowest 0.25× (quarter speed) to fastest 4× (quadruple). */
+const MIN_TEMPO_SCALE = 0.25;
+const MAX_TEMPO_SCALE = 4;
 
 /**
  * Shared Sonata state + transport.
@@ -39,11 +45,17 @@ export interface TransportClock {
 }
 
 export interface SonataContextValue {
-  /** The derived canonical model (empty before a source loads). */
+  /**
+   * The derived canonical model (empty before a source loads), with the current
+   * `tempoScale` already folded into its tempo map — so displays, audio, and the
+   * transport cursor all share one consistent timeline.
+   */
   score: Score;
   /** Playhead position in quarter-note beats. */
   cursorBeat: number;
   isPlaying: boolean;
+  /** Playback tempo multiplier (1 = authored tempo). */
+  tempoScale: number;
   activeSourceId: string | null;
   activeDisplayId: string | null;
 
@@ -53,6 +65,10 @@ export interface SonataContextValue {
   setRaw: (raw: unknown) => void;
   /** Move the playhead (e.g. scrub / seek). */
   setCursorBeat: (beat: number) => void;
+  /** Nudge the playhead by `deltaBeat` beats, clamped to [0, end]; re-anchors playback. */
+  seekBy: (deltaBeat: number) => void;
+  /** Set the playback tempo multiplier (clamped to [0.25, 4]). */
+  setTempoScale: (scale: number) => void;
 
   play: () => void;
   stop: () => void;
@@ -96,6 +112,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const [raw, setRaw] = useState<unknown>(undefined);
   const [cursorBeat, setCursorBeat] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
+  const [tempoScale, setTempoScaleState] = useState(1);
 
   // Default the active source/display to the first contributed one.
   useEffect(() => {
@@ -105,13 +122,22 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   }, [activeSourceId, sources]);
 
   // The active source's compiled Score, then analyzers merged in.
-  const score = useMemo<Score>(() => {
+  const baseScore = useMemo<Score>(() => {
     const source = sources.find((s) => s.id === activeSourceId);
     if (!source || raw === undefined) return emptyScore();
     const compiled = source.compile(raw);
     const derived = analyzers.flatMap((a) => a.analyze(compiled));
     return mergeAnnotations(compiled, derived);
   }, [sources, analyzers, activeSourceId, raw]);
+
+  // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
+  // transport loop below, the audio scheduler, and the displays — reads a single
+  // consistent timeline. Beats are untouched (analyzers already ran on the
+  // unscaled score), only the beat→seconds mapping speeds up or slows down.
+  const score = useMemo<Score>(
+    () => scaleTempo(baseScore, tempoScale),
+    [baseScore, tempoScale],
+  );
 
   // Reset the cursor whenever the underlying source/raw changes.
   useEffect(() => {
@@ -137,30 +163,35 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const clockRef = useRef<TransportClock>(wallClock);
   const scoreRef = useRef(score);
   scoreRef.current = score;
-  // Live mirrors so stable callbacks read current values without re-anchoring.
+  // Live mirrors so stable callbacks (seek, re-anchor, clock swaps, store
+  // actions) read current values WITHOUT depending on them and re-anchoring.
   const cursorBeatRef = useRef(cursorBeat);
   cursorBeatRef.current = cursorBeat;
   const isPlayingRef = useRef(isPlaying);
   isPlayingRef.current = isPlaying;
+  const tempoScaleRef = useRef(tempoScale);
+  tempoScaleRef.current = tempoScale;
 
-  // Anchor the transport against the current cursor + the given clock's `now()`.
-  // Used at play and on every clock swap so play/pause/seek/clock-change compose.
-  const reanchor = useCallback((clock: TransportClock) => {
+  // Anchor the transport at `beat` against the active clock's `now()`. Used at
+  // play, on every clock swap, and on seek / tempo change so they all compose.
+  // The audio scheduler re-anchors in lock-step via its own score-dep effect, so
+  // sound stays glued to the cursor.
+  const reanchor = useCallback((beat: number) => {
     anchorRef.current = {
-      startClockSec: clock.now(),
-      startBeat: cursorBeatRef.current,
-      startScoreSec: beatToSeconds(scoreRef.current, cursorBeatRef.current),
+      startClockSec: clockRef.current.now(),
+      startBeat: beat,
+      startScoreSec: beatToSeconds(scoreRef.current, beat),
     };
   }, []);
 
   const registerClock = useCallback(
     (clock: TransportClock) => {
       clockRef.current = clock;
-      if (isPlayingRef.current) reanchor(clock);
+      if (isPlayingRef.current) reanchor(cursorBeatRef.current);
       return () => {
         if (clockRef.current === clock) {
           clockRef.current = wallClock;
-          if (isPlayingRef.current) reanchor(wallClock);
+          if (isPlayingRef.current) reanchor(cursorBeatRef.current);
         }
       };
     },
@@ -176,6 +207,34 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setIsPlaying(true);
   }, []);
 
+  const seekBy = useCallback(
+    (deltaBeat: number) => {
+      const end = scoreEndBeat(scoreRef.current);
+      const next = Math.max(
+        0,
+        Math.min(end, cursorBeatRef.current + deltaBeat),
+      );
+      setCursorBeat(next);
+      reanchor(next);
+    },
+    [reanchor],
+  );
+
+  const setTempoScale = useCallback((scale: number) => {
+    const clamped = Math.max(
+      MIN_TEMPO_SCALE,
+      Math.min(MAX_TEMPO_SCALE, scale),
+    );
+    // Round to a tidy 0.05 grid so repeated nudges don't accrue float drift.
+    setTempoScaleState(Math.round(clamped * 20) / 20);
+  }, []);
+
+  // A tempo change rescales `score` mid-flight; re-anchor at the current cursor so
+  // the visual transport doesn't jump (audio re-anchors via its score-dep effect).
+  useEffect(() => {
+    reanchor(cursorBeatRef.current);
+  }, [score, reanchor]);
+
   useEffect(() => {
     if (!isPlaying) {
       anchorRef.current = null;
@@ -186,18 +245,20 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    const endBeat = scoreEndBeat(scoreRef.current);
     // Anchor against the current cursor + active clock so play/pause/seek compose.
-    reanchor(clockRef.current);
+    reanchor(cursorBeatRef.current);
 
     const tick = () => {
       const anchor = anchorRef.current;
       if (!anchor) return;
+      // Recompute origin seconds + end from the anchor each frame so seeks and
+      // tempo changes (which rewrite the anchor / score) take effect seamlessly.
+      const score = scoreRef.current;
+      const endBeat = scoreEndBeat(score);
       const elapsedSeconds =
         clockRef.current.now() - anchor.startClockSec + anchor.startScoreSec;
 
       // Invert beatToSeconds: advance beats until seconds(beat) >= elapsed.
-      const score = scoreRef.current;
       let beat = anchor.startBeat;
       const STEP = 0.01; // beats; fine enough for a smooth cursor at 60fps.
       let guard = 0;
@@ -229,17 +290,32 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // while playing. `reanchor` is stable.
   }, [isPlaying, reanchor]);
 
+  // Publish the transport to the module-level bus so global keyboard shortcuts
+  // (which run outside React) can drive the active Sonata. Stable callbacks +
+  // refs mean we publish once on mount and clear on unmount.
+  useEffect(() => {
+    publishSonataTransport({
+      togglePlay: () => (isPlayingRef.current ? stop() : play()),
+      seekBy,
+      nudgeTempo: (delta) => setTempoScale(tempoScaleRef.current + delta),
+    });
+    return () => publishSonataTransport(null);
+  }, [play, stop, seekBy, setTempoScale]);
+
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
       cursorBeat,
       isPlaying,
+      tempoScale,
       activeSourceId,
       activeDisplayId,
       setActiveSource: setActiveSourceId,
       setActiveDisplay: setActiveDisplayId,
       setRaw,
       setCursorBeat,
+      seekBy,
+      setTempoScale,
       play,
       stop,
       registerClock,
@@ -248,8 +324,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       score,
       cursorBeat,
       isPlaying,
+      tempoScale,
       activeSourceId,
       activeDisplayId,
+      seekBy,
+      setTempoScale,
       play,
       stop,
       registerClock,

@@ -4,6 +4,28 @@
  */
 import type { Annotation, Score } from "./types";
 
+/** The bpm assumed when a Score declares no tempo map (mirrors `beatToSeconds`). */
+const DEFAULT_BPM = 120;
+
+/**
+ * Scale playback tempo by `factor` (1 = unchanged, 2 = twice as fast, 0.5 = half
+ * speed). Multiplies every tempo segment's bpm, so only the beat↔seconds mapping
+ * changes — note onsets/durations and every annotation stay put in beat space.
+ * An empty tempoMap materializes the default-bpm segment so scaling still bites.
+ * Pure: returns a new Score, never mutates the input.
+ */
+export function scaleTempo(score: Score, factor: number): Score {
+  if (factor === 1) return score;
+  const base =
+    score.tempoMap.length > 0
+      ? score.tempoMap
+      : [{ beat: 0, bpm: DEFAULT_BPM }];
+  return {
+    ...score,
+    tempoMap: base.map((e) => ({ ...e, bpm: e.bpm * factor })),
+  };
+}
+
 /** An empty Score — the shell's default before any source loads. */
 export function emptyScore(): Score {
   return {
@@ -25,7 +47,6 @@ export function emptyScore(): Score {
  * seconds(beat) = Σ over segments of (Δbeats in segment) × (60 / bpm).
  */
 export function beatToSeconds(score: Score, beat: number): number {
-  const DEFAULT_BPM = 120;
   const map = score.tempoMap;
   if (map.length === 0) {
     return (beat * 60) / DEFAULT_BPM;
