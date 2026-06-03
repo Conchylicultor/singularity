@@ -8,7 +8,7 @@ export type { ViewProps } from "./slots";
 export { useGoneConversationsPagination } from "./internal/use-gone-conversations-pagination";
 
 export default {
-  id: "conversations",
+  id: "conversations-view",
   name: "Conversations",
   description: "Sidebar list of all conversations.",
   contributions: [

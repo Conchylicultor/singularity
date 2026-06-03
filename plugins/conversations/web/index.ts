@@ -1,4 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { autoAnswerConfig } from "../shared/config";
 
 export {
   useConversations,
@@ -11,4 +13,5 @@ export default {
   name: "Conversations",
   description: "Conversation domain: shared hooks and client-side API.",
   loadBearing: true,
+  contributions: [ConfigV2.WebRegister({ descriptor: autoAnswerConfig })],
 } satisfies PluginDefinition;

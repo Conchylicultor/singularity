@@ -32,6 +32,8 @@ import { conversationTurnCompleted } from "./internal/tables-turn-completed-even
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
 import { taskStatusChanged } from "@plugins/tasks-core/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
+import { ConfigV2 } from "@plugins/config_v2/server";
+import { autoAnswerConfig } from "../shared/config";
 
 export { maybeLaunchTaskJob } from "./internal/auto-start-jobs";
 
@@ -77,6 +79,7 @@ export default {
   },
   // conversationsLiveResource is mounted on tasks-core.
   contributions: [
+    ConfigV2.Register({ descriptor: autoAnswerConfig }),
     Trigger({ on: taskStatusChanged, do: maybeLaunchDependentsJob, with: {}, oneShot: false }),
     Trigger({ on: conversationCreated, do: notifyConversationCreatedJob, with: {}, oneShot: false }),
   ],

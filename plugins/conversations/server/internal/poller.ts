@@ -10,7 +10,9 @@ import {
 import { recordCrash } from "@plugins/crashes/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";
-import { Runtime, type RuntimeInfo } from "./runtime";
+import { getConfig } from "@plugins/config_v2/server";
+import { Runtime, flushInteractivePrompt, type RuntimeInfo } from "./runtime";
+import { autoAnswerConfig } from "../../shared/config";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { ConversationStatus } from "../../core";
 
@@ -183,6 +185,29 @@ async function tick(): Promise<void> {
       await updateTaskTitle(dbRow.taskId, desiredTitle, UNINFORMATIVE_TITLES);
     }
     changed = true;
+
+    // Auto-open question prompts: the moment a conversation enters the
+    // interactive-question wait, optionally dismiss the terminal menu for the
+    // user — exactly what clicking "Answer here" does, just done on detection.
+    // Gated on the transition (waitingForChanged) so it fires once per question:
+    // the flush clears the menu, the probe stops matching, and waitingFor goes
+    // null next tick. Fire-and-forget — the 5s self-healing Escape loop must not
+    // block the 1s poll. On failure the row stays at "question" and the manual
+    // "Answer here" button remains as the fallback.
+    if (
+      waitingForChanged &&
+      desiredWaitingFor === "question" &&
+      getConfig(autoAnswerConfig).enabled
+    ) {
+      void flushInteractivePrompt(id).catch((err) => {
+        void recordCrash({
+          source: "server-caught",
+          errorType: "AutoAnswerFlushError",
+          message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
+          label: "conversations.poller.autoAnswerFlush",
+        });
+      });
+    }
   }
 
   const now = Date.now();
