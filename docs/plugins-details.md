@@ -180,6 +180,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `Forge`
     - **`sonata`** — Sonata — extensible piano and music app.
       - Plugins:
+        - **`audio`** — Audio playback umbrella for Sonata: engine + instruments.
+          - Plugins:
+            - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, with an instrument picker, master volume, and load status.
+              - Web:
+                - Contributes: `Sonata.Section` "Audio" → `AudioPanel`
+            - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback.
+              - Web:
+                - Contributes: `Sonata.Instrument` "Acoustic Piano"
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys.
           - Web:
             - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
@@ -205,9 +213,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`
-            - Exports: Types: `SonataContextValue`; Values: `Sonata`, `SonataProvider`, `useSonata`
+            - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`; Values: `Sonata`, `SonataProvider`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `midi`, `piano-keyboard`, `piano-roll`
+            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.
