@@ -2,7 +2,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { transcriptTouchJob } from "./internal/touch-job";
 
 export default {
-  id: "transcript-retention",
   name: "Transcript Retention",
   description:
     "Keeps active conversations' Claude session JSONL alive by refreshing their mtime daily, so Claude Code's cleanupPeriodDays sweep never deletes a live transcript.",
