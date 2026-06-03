@@ -1,6 +1,7 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import type { ConversationStatus } from "@plugins/conversations/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 const STATUS_CLASSES: Record<ConversationStatus, string> = {
   starting: "bg-muted text-muted-foreground",
@@ -23,10 +24,8 @@ export function StatusBadge() {
   const conversation = useConversationById(convId);
   if (!conversation) return null;
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${STATUS_CLASSES[conversation.status]}`}
-    >
+    <Badge colorClass={STATUS_CLASSES[conversation.status]}>
       {prettify(conversation.status)}
-    </span>
+    </Badge>
   );
 }

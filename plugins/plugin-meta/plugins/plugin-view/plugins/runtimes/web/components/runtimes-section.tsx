@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   Section,
   RUNTIME_COLORS,
@@ -19,13 +19,8 @@ export function RuntimesSection({ node }: { node: PluginNode }) {
 
 function RuntimePill({ kind }: { kind: "web" | "server" | "central" }) {
   return (
-    <span
-      className={cn(
-        "rounded-md px-2 py-0.5 font-mono text-[11px] font-medium uppercase tracking-wide",
-        RUNTIME_COLORS[kind],
-      )}
-    >
+    <Badge size="sm" colorClass={RUNTIME_COLORS[kind]}>
       {kind}
-    </span>
+    </Badge>
   );
 }

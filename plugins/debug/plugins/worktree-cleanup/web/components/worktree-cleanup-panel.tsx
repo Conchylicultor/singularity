@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
@@ -50,11 +51,9 @@ function StatusBadge({ status }: { status: string }) {
     attempted: "bg-muted text-muted-foreground",
   };
   return (
-    <span
-      className={`inline-block px-1.5 py-0.5 rounded text-[10px] font-medium ${color[status] ?? "bg-muted text-muted-foreground"}`}
-    >
+    <Badge size="sm" colorClass={color[status]} className="inline-block">
       {status}
-    </span>
+    </Badge>
   );
 }
 

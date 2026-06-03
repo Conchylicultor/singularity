@@ -2,6 +2,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 export function ModelBadge() {
   const { convId } = conversationPane.useParams();
@@ -10,10 +11,8 @@ export function ModelBadge() {
   const model = normalizeModel(conversation.model);
   const meta = MODEL_REGISTRY[model];
   return (
-    <span
-      className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${familyClass(meta.family)}`}
-    >
+    <Badge colorClass={familyClass(meta.family)}>
       {meta.label}
-    </span>
+    </Badge>
   );
 }

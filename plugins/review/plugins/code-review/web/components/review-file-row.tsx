@@ -1,12 +1,18 @@
 import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getFileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
+
+/** Strip border-* utilities from a gitStatusBadge string (keep only bg/text). */
+function statusBadgeColor(status: EditedFileStatus): string {
+  return gitStatusBadge(status).split(" ").filter((c) => !c.startsWith("border-")).join(" ");
+}
 
 const STATUS_LABEL: Record<EditedFileStatus, string> = {
   modified: "modified",
@@ -69,11 +75,9 @@ export function ReviewFileRow({
         title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
       >
         <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
-        <span
-          className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${gitStatusBadge(file.status)}`}
-        >
+        <Badge size="sm" colorClass={statusBadgeColor(file.status)} className="shrink-0">
           {STATUS_LABEL[file.status]}
-        </span>
+        </Badge>
         <span className="group/path min-w-0 flex-1 truncate">
           {from && (
             <>

@@ -1,6 +1,7 @@
 import { useCallback } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { FieldDef } from "@plugins/config_v2/core";
@@ -85,14 +86,9 @@ export function ConfigFieldRow({
           </ConfigFieldContext.Provider>
         </div>
         {tier && tier !== "default" && (
-          <span
-            className={cn(
-              "shrink-0 rounded-full px-1.5 py-px text-[10px] font-medium",
-              TIER_BADGE[tier].className,
-            )}
-          >
+          <Badge size="sm" colorClass={TIER_BADGE[tier].className} className="shrink-0">
             {TIER_BADGE[tier].label}
-          </span>
+          </Badge>
         )}
         <button
           type="button"

@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Button } from "@/components/ui/button";
 import { toast } from "@plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -176,29 +177,13 @@ function StatusPill({
   credentialsMissing: boolean;
 }) {
   if (credentialsMissing) {
-    return (
-      <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-        Setup required
-      </span>
-    );
+    return <Badge variant="muted">Setup required</Badge>;
   }
   if (needsReconsent) {
-    return (
-      <span className="rounded bg-warning/15 px-1.5 py-0.5 text-xs text-warning">
-        Needs reconsent
-      </span>
-    );
+    return <Badge variant="warning">Needs reconsent</Badge>;
   }
   if (connected) {
-    return (
-      <span className="rounded bg-success/15 px-1.5 py-0.5 text-xs text-success">
-        Connected
-      </span>
-    );
+    return <Badge variant="success">Connected</Badge>;
   }
-  return (
-    <span className="rounded bg-muted px-1.5 py-0.5 text-xs text-muted-foreground">
-      Disconnected
-    </span>
-  );
+  return <Badge variant="muted">Disconnected</Badge>;
 }

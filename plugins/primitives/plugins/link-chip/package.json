@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-link-chip",
+  "description": "Inline, clickable navigational chip: bg-muted + text-primary with hover underline, baseline-aligned for inline-in-text use.",
+  "private": true,
+  "version": "0.0.1"
+}

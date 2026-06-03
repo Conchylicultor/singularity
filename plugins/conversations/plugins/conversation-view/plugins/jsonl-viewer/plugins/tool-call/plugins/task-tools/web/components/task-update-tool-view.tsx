@@ -1,5 +1,6 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 type TaskUpdateInput = {
   taskId?: string;
@@ -28,11 +29,9 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
         <span className="shrink-0 font-mono text-[11px]">{input.taskId ?? input.id}</span>
       )}
       {input.status && (
-        <span
-          className={`shrink-0 rounded px-1.5 py-0.5 text-[10px] uppercase tracking-wider ${statusBadgeClass(input.status)}`}
-        >
+        <Badge size="sm" colorClass={statusBadgeClass(input.status)} className="shrink-0">
           {input.status}
-        </span>
+        </Badge>
       )}
     </span>
   );

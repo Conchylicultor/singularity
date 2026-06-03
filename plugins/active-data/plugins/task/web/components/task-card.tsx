@@ -15,6 +15,7 @@ import {
   type Attempt,
 } from "@plugins/tasks/core";
 import { TaskSchema, type Task } from "@plugins/tasks-core/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -193,14 +194,9 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
       {attempts.map((attempt) => (
         <div key={attempt.id} className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <span
-              className={cn(
-                "rounded px-1.5 py-0.5 text-xs font-medium",
-                ATTEMPT_STATUS_CLASSES[attempt.status],
-              )}
-            >
+            <Badge colorClass={ATTEMPT_STATUS_CLASSES[attempt.status]}>
               {ATTEMPT_STATUS_LABELS[attempt.status]}
-            </span>
+            </Badge>
             <span className="text-muted-foreground truncate font-mono text-xs">
               {attempt.worktreePath.split("/").pop()}
             </span>

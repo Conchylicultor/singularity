@@ -8,6 +8,7 @@ import {
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
@@ -57,9 +58,9 @@ function AttemptSection({
         >
           {worktreeName}
         </span>
-        <span className="shrink-0 rounded-full bg-muted px-1.5 text-[10px] tabular-nums text-muted-foreground">
+        <Badge size="sm" className="shrink-0">
           {attempt.conversations.length}
-        </span>
+        </Badge>
       </div>
       {attempt.conversations.length === 0 ? (
         <p className="text-muted-foreground px-2 py-0.5 text-xs italic">
@@ -137,9 +138,9 @@ export function AttemptPane() {
     <span className="flex items-center gap-1.5">
       Attempts
       {totalConversations > 0 && (
-        <span className="shrink-0 rounded-full bg-muted px-1.5 py-0.5 text-[10px] tabular-nums text-muted-foreground">
+        <Badge size="sm" className="shrink-0">
           {totalConversations}
-        </span>
+        </Badge>
       )}
     </span>
   );

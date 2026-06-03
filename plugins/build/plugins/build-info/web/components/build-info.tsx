@@ -1,7 +1,8 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { buildHistoryResource } from "@plugins/build/core";
-import { cn } from "@/lib/utils";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
@@ -14,33 +15,29 @@ function formatDuration(start: Date, end: Date | null): string {
 function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished: boolean }) {
   if (!finished) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-warning/10 px-2.5 py-0.5 text-xs font-medium text-warning">
-        <span className="block size-2 rounded-full bg-warning animate-pulse" />
+      <Badge variant="warning" icon={<StatusDot size="md" colorClass="bg-warning animate-pulse" />}>
         Running
-      </span>
+      </Badge>
     );
   }
   if (exitCode === 0) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-success/10 px-2.5 py-0.5 text-xs font-medium text-success">
-        <span className="block size-2 rounded-full bg-success" />
+      <Badge variant="success" icon={<StatusDot size="md" colorClass="bg-success" />}>
         Success
-      </span>
+      </Badge>
     );
   }
   if (exitCode === -1) {
     return (
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-        <span className="block size-2 rounded-full bg-muted-foreground/60" />
+      <Badge variant="muted" icon={<StatusDot size="md" colorClass="bg-muted-foreground/60" />}>
         Superseded
-      </span>
+      </Badge>
     );
   }
   return (
-    <span className="inline-flex items-center gap-1.5 rounded-full bg-destructive/10 px-2.5 py-0.5 text-xs font-medium text-destructive">
-      <span className="block size-2 rounded-full bg-destructive" />
+    <Badge variant="destructive" icon={<StatusDot size="md" colorClass="bg-destructive" />}>
       Failed (exit {exitCode})
-    </span>
+    </Badge>
   );
 }
 
@@ -65,16 +62,9 @@ export function BuildInfo({ runId }: { runId: string }) {
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-2">
         <StatusBadge exitCode={run.exitCode} finished={run.finishedAt !== null} />
-        <span
-          className={cn(
-            "rounded px-1.5 py-0.5 text-xs font-medium",
-            run.trigger === "auto"
-              ? "bg-info/15 text-info"
-              : "bg-muted text-muted-foreground",
-          )}
-        >
+        <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
           {run.trigger}
-        </span>
+        </Badge>
       </div>
 
       <div className="flex flex-col gap-2">

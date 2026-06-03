@@ -9,6 +9,7 @@ import {
 } from "react-icons/md";
 import type { IconType } from "react-icons";
 import type { TaskStatus } from "@plugins/tasks-core/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 
 export const STATUS_META: Record<
@@ -82,8 +83,8 @@ export function StatusIcon({ status }: { status: TaskStatus }) {
 export function StatusBadge({ status }: { status: TaskStatus }) {
   const meta = STATUS_META[status];
   return (
-    <span className={cn("rounded px-2 py-0.5 text-xs font-medium", meta.badgeClassName)}>
+    <Badge colorClass={meta.badgeClassName}>
       {meta.label}
-    </span>
+    </Badge>
   );
 }

@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 export function GroupContainer({
   droppableId,
@@ -62,9 +63,9 @@ export function GroupContainer({
         {leadingIcon}
         {title}
         {count !== undefined && count > 0 && (
-          <span className="shrink-0 rounded px-1 py-0.5 text-[10px] tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
+          <Badge size="sm" className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100">
             {count}
-          </span>
+          </Badge>
         )}
         {trailingAction}
       </div>

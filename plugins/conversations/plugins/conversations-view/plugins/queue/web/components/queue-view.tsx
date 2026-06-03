@@ -13,6 +13,7 @@ import {
 } from "@dnd-kit/core";
 import { MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -91,9 +92,9 @@ function SectionHeader({
         {title}
       </div>
       {count > 0 && (
-        <span className="shrink-0 rounded px-1 py-0.5 text-3xs tabular-nums text-muted-foreground opacity-0 transition-opacity group-hover/header:opacity-100">
+        <Badge size="sm" className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100">
           {count}
-        </span>
+        </Badge>
       )}
     </div>
   );
@@ -430,9 +431,9 @@ export function QueueView({
                   >
                     <ConversationItem conv={group.selected} />
                     {group.count > 1 && (
-                      <span className="ml-auto shrink-0 rounded-full bg-destructive/20 p-chip text-3xs font-semibold tabular-nums text-destructive">
+                      <Badge variant="destructive" size="sm" className="ml-auto shrink-0">
                         {group.count}
-                      </span>
+                      </Badge>
                     )}
                   </SidebarMenuButton>
                   <SidebarMenuAction
@@ -622,9 +623,9 @@ function QueueRow({
         >
           <ConversationItem conv={conv} />
           {clusterSize > 1 && (
-            <span className="ml-auto shrink-0 rounded-full bg-destructive/20 p-chip text-3xs font-semibold tabular-nums text-destructive">
+            <Badge variant="destructive" size="sm" className="ml-auto shrink-0">
               {clusterSize}
-            </span>
+            </Badge>
           )}
         </SidebarMenuButton>
         <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">

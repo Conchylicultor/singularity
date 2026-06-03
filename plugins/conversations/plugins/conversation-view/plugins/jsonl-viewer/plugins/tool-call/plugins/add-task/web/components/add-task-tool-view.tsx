@@ -8,6 +8,8 @@ import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 
 type AddTaskInput = {
   title: string;
@@ -57,13 +59,13 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
     <span className="flex min-w-0 items-center gap-2">
       <span className="min-w-0 truncate">{input.title}</span>
       {autostart ? (
-        <span className="shrink-0 rounded bg-success/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-success">
+        <Badge variant="success" size="sm" className="shrink-0">
           auto-launch {MODEL_REGISTRY[normalizeModel(autostart)].label}
-        </span>
+        </Badge>
       ) : (
-        <span className="shrink-0 rounded bg-warning/15 px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-warning">
+        <Badge variant="warning" size="sm" className="shrink-0">
           no auto-launch
-        </span>
+        </Badge>
       )}
     </span>
   );
@@ -77,17 +79,13 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
           </p>
         )}
         {taskId && (
-          <button
-            type="button"
+          <LinkChip
             onClick={openTask}
-            className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-2 py-1 text-xs text-primary hover:bg-muted/80 hover:underline"
+            leading={task ? <StatusIcon status={task.status} /> : undefined}
             title={task ? `${task.title} · ${taskId}` : taskId}
           >
-            {task && <StatusIcon status={task.status} />}
-            <span className="truncate">
-              {task?.title ?? <span className="font-mono">{taskId}</span>}
-            </span>
-          </button>
+            {task?.title ?? <span className="font-mono">{taskId}</span>}
+          </LinkChip>
         )}
         {event.result?.isError && (
           <p className="text-xs text-destructive">{event.result.content}</p>

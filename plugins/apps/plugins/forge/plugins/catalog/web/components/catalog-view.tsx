@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
-import { cn } from "@/lib/utils";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import type {
   PluginNode,
@@ -82,16 +82,12 @@ export function CatalogView() {
             >
               <cat.icon size={14} />
               <span className="font-medium">{cat.label}</span>
-              <span
-                className={cn(
-                  "rounded-full px-1.5 py-px text-[10px] tabular-nums",
-                  active
-                    ? "bg-foreground/10 text-foreground"
-                    : "bg-muted text-muted-foreground",
-                )}
+              <Badge
+                size="sm"
+                colorClass={active ? "bg-foreground/10 text-foreground" : undefined}
               >
                 {count}
-              </span>
+              </Badge>
             </FilterChip>
           );
         })}

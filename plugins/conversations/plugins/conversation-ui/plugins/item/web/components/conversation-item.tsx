@@ -2,6 +2,7 @@ import type { ConversationKind } from "@plugins/tasks-core/core";
 import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 import { Item } from "../slots";
 
@@ -59,9 +60,9 @@ export function ConvStatusDot({ conv }: { conv: ConversationItemConv }) {
 export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
   if (conv.kind !== "system") return null;
   return (
-    <span className="shrink-0 rounded-sm bg-muted px-1 text-[9px] uppercase tracking-wide text-muted-foreground/80">
+    <Badge size="sm" className="shrink-0 text-muted-foreground/80">
       sys
-    </span>
+    </Badge>
   );
 }
 

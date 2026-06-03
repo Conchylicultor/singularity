@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
@@ -34,8 +35,7 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
   const statusClass = task ? TASK_STATUS_DOT[task.status] : "bg-muted-foreground/40";
 
   return (
-    <button
-      type="button"
+    <LinkChip
       onClick={(e) => {
         e.stopPropagation();
         if (convId) {
@@ -44,11 +44,10 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
           openPane(taskDetailPane, { taskId }, { mode: "push" });
         }
       }}
-      className="inline-flex max-w-full items-center gap-1.5 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"
       title={task ? `${task.title} · ${taskId}` : taskId}
+      leading={<StatusDot colorClass={statusClass} />}
     >
-      <StatusDot colorClass={statusClass} />
-      <span className="truncate">{task?.title ?? <span className="font-mono">{taskId}</span>}</span>
-    </button>
+      {task?.title ?? <span className="font-mono">{taskId}</span>}
+    </LinkChip>
   );
 }

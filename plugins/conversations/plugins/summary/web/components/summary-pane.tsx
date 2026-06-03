@@ -4,6 +4,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -113,11 +114,9 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
   return (
     <div className="space-y-3 rounded-md border p-3">
       <div className="flex items-center justify-between gap-2">
-        <span
-          className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PHASE_CLASSES[summary.phase]}`}
-        >
+        <Badge colorClass={PHASE_CLASSES[summary.phase]}>
           {PHASE_LABEL[summary.phase]}
-        </span>
+        </Badge>
         <span
           className="text-xs text-muted-foreground"
           title={generated.toISOString()}

@@ -2,6 +2,7 @@ import { MdWarning } from "react-icons/md";
 import { useQuery } from "@tanstack/react-query";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 export function AllowMonitorChip() {
   const { convId } = conversationPane.useParams();
@@ -31,13 +32,15 @@ export function AllowMonitorChip() {
         </>
       }
     >
-      <button
-        className="inline-flex animate-pulse cursor-default items-center gap-1.5 rounded-md bg-destructive/90 px-2 py-1 text-xs font-semibold text-white hover:bg-destructive"
+      <Badge
+        as="button"
+        colorClass="bg-destructive/90 text-white hover:bg-destructive"
+        icon={<MdWarning className="size-3.5" />}
+        className="animate-pulse cursor-default"
         aria-label="Security bypass active"
       >
-        <MdWarning className="size-3.5" />
         BYPASS ACTIVE
-      </button>
+      </Badge>
     </WithTooltip>
   );
 }

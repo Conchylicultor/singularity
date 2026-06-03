@@ -10,6 +10,7 @@ import {
   pushesResource,
   type Attempt,
 } from "@plugins/tasks/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 
 type RepoInfo = { githubBase: string | null };
@@ -160,14 +161,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                   className="flex flex-col gap-2 rounded border px-3 py-2"
                 >
                   <div className="flex items-center gap-3">
-                    <span
-                      className={cn(
-                        "rounded px-2 py-0.5 text-xs font-medium",
-                        ATTEMPT_STATUS_CLASSES[attempt.status],
-                      )}
-                    >
+                    <Badge colorClass={ATTEMPT_STATUS_CLASSES[attempt.status]}>
                       {ATTEMPT_STATUS_LABELS[attempt.status]}
-                    </span>
+                    </Badge>
                     <span className="text-muted-foreground flex-1 truncate font-mono text-xs">
                       {attempt.worktreePath.split("/").pop()}
                     </span>

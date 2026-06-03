@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
@@ -65,13 +66,19 @@ export function CategoryChipToolbar() {
       onOpenChange={setOpen}
       trigger={
         <button
-          className={`inline-flex items-center rounded-full p-chip text-xs font-medium hover:opacity-80 ${colorClass}`}
+          className="hover:opacity-80"
           aria-label={`Conversation category: ${label}`}
         >
-          {busy === "classify" ? (
-            <MdAutoAwesome className="size-3 animate-pulse" />
-          ) : null}
-          <span className={busy === "classify" ? "ml-1" : ""}>{label}</span>
+          <Badge
+            colorClass={colorClass}
+            icon={
+              busy === "classify" ? (
+                <MdAutoAwesome className="size-3 animate-pulse" />
+              ) : undefined
+            }
+          >
+            {label}
+          </Badge>
         </button>
       }
       contentClassName="w-56 p-1"
@@ -95,11 +102,9 @@ export function CategoryChipToolbar() {
                   >
                     <MdCheck className="size-3" />
                   </span>
-                  <span
-                    className={`inline-flex items-center rounded p-chip text-3xs font-medium ${colorClassFor(c)}`}
-                  >
+                  <Badge size="sm" colorClass={colorClassFor(c)}>
                     {c}
-                  </span>
+                  </Badge>
                 </button>
               </li>
             );

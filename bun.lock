@@ -1219,6 +1219,10 @@
       "name": "@singularity/plugin-primitives-avatar",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/badge": {
+      "name": "@singularity/plugin-primitives-badge",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/breadcrumb": {
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
@@ -1285,6 +1289,10 @@
     },
     "plugins/primitives/plugins/launch": {
       "name": "@singularity/plugin-primitives-launch",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/link-chip": {
+      "name": "@singularity/plugin-primitives-link-chip",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/live-state": {
@@ -2763,6 +2771,8 @@
 
     "@singularity/plugin-primitives-avatar": ["@singularity/plugin-primitives-avatar@workspace:plugins/primitives/plugins/avatar"],
 
+    "@singularity/plugin-primitives-badge": ["@singularity/plugin-primitives-badge@workspace:plugins/primitives/plugins/badge"],
+
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
@@ -2796,6 +2806,8 @@
     "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
+
+    "@singularity/plugin-primitives-link-chip": ["@singularity/plugin-primitives-link-chip@workspace:plugins/primitives/plugins/link-chip"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
 

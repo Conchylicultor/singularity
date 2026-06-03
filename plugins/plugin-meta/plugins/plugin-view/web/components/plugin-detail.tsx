@@ -1,5 +1,6 @@
 import { MdBolt } from "react-icons/md";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { PluginNode } from "../../core/types";
 import { PluginView } from "../slots";
 
@@ -32,10 +33,9 @@ export function PluginDetail({ node }: PluginDetailProps) {
               }))}
               actions={
                 node.loadBearing ? (
-                  <span className="ml-1 inline-flex items-center gap-1 rounded-full bg-warning/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-warning">
-                    <MdBolt className="size-3" />
+                  <Badge variant="warning" size="sm" icon={<MdBolt className="size-3" />} className="ml-1">
                     Load-bearing
-                  </span>
+                  </Badge>
                 ) : undefined
               }
             />

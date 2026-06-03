@@ -1,10 +1,16 @@
 import { useState } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PluginChangedFile, PluginChangeDiff, PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
+
+/** Strip border-* utilities from a gitStatusBadge string (keep only bg/text). */
+function statusBadgeColor(status: string): string {
+  return gitStatusBadge(status).split(" ").filter((c) => !c.startsWith("border-")).join(" ");
+}
 
 const STATUS_LABEL: Record<string, string> = {
   modified: "modified",
@@ -28,7 +34,6 @@ function FileRow({
   const dir = slash >= 0 ? file.path.slice(0, slash + 1) : "";
   const basename = slash >= 0 ? file.path.slice(slash + 1) : file.path;
   const from = file.from && file.from !== file.path ? file.from : null;
-  const badge = gitStatusBadge(file.status);
   const label = STATUS_LABEL[file.status] ?? file.status;
 
   return (
@@ -40,9 +45,9 @@ function FileRow({
         aria-expanded={expanded}
       >
         <CollapsibleChevron open={expanded} className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className={`shrink-0 rounded border px-1.5 py-0.5 text-[10px] font-medium uppercase tracking-wide ${badge}`}>
+        <Badge size="sm" colorClass={statusBadgeColor(file.status)} className="shrink-0">
           {label}
-        </span>
+        </Badge>
         <span className="group/path min-w-0 flex-1 truncate text-xs">
           {from && (
             <>

@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MdWidgets } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import type { PluginNode, PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -69,8 +70,7 @@ export function PluginLinkChip({
   const resolvedId = node.hierarchyId;
 
   return (
-    <button
-      type="button"
+    <LinkChip
       onClick={(e) => {
         e.stopPropagation();
         if (convId) {
@@ -79,11 +79,11 @@ export function PluginLinkChip({
           openPane(pluginViewPane, { pluginId: resolvedId }, { mode: "push" });
         }
       }}
-      className="inline-flex max-w-full items-center gap-1 rounded bg-muted px-1.5 py-0.5 align-baseline text-xs text-primary hover:bg-muted/80 hover:underline"
       title={node.description ?? resolvedId}
+      leading={<MdWidgets className="size-3 shrink-0 text-muted-foreground" />}
+      mono
     >
-      <MdWidgets className="size-3 shrink-0 text-muted-foreground" />
-      <span className="truncate font-mono">{resolvedId}</span>
-    </button>
+      {resolvedId}
+    </LinkChip>
   );
 }

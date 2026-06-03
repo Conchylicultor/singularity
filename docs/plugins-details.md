@@ -1441,6 +1441,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`, `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `SvgNode`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `extractSvgNodes`, `loadFullIconSet`
       - Server:
         - Exports: Values: `resolveIconSvgNodesJson`
+    - **`badge`** — Semantic badge primitive: size × variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.
+      - Web:
+        - Exports: Types: `BadgeProps`, `BadgeSize`, `BadgeVariant`; Values: `Badge`
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
       - Web:
         - Exports: Types: `BreadcrumbProps`, `BreadcrumbSegment`; Values: `Breadcrumb`
@@ -1504,6 +1507,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
       - Web:
         - Exports: Types: `LaunchAgentPopoverProps`, `LaunchControlProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchControl`, `useLaunchConversation`
+    - **`link-chip`** — Inline, clickable navigational chip: bg-muted + text-primary with hover underline, baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
+      - Web:
+        - Exports: Types: `LinkChipProps`; Values: `LinkChip`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Core:
         - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`, `tolerantEnum`

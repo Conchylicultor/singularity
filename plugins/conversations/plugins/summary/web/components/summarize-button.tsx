@@ -2,6 +2,7 @@ import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -44,11 +45,9 @@ export function SummarizeButton() {
       aria-label={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-pressed={isOpen}
     >
-      <span
-        className={`inline-flex items-center rounded-full px-2 py-0.5 text-xs font-medium ${PHASE_CLASSES[latest.phase]}`}
-      >
+      <Badge colorClass={PHASE_CLASSES[latest.phase]}>
         {PHASE_LABEL[latest.phase]}
-      </span>
+      </Badge>
     </button>
   );
 }

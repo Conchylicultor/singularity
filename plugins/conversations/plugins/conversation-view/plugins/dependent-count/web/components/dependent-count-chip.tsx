@@ -3,6 +3,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, countTransitiveDependents } from "@plugins/tasks/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 export function DependentCountChip() {
   const { convId } = conversationPane.useParams();
@@ -21,11 +22,8 @@ export function DependentCountChip() {
   if (!conversation || count === 0) return null;
 
   return (
-    <span
-      className="inline-flex items-center rounded-full bg-muted px-2 py-0.5 text-xs font-medium text-muted-foreground"
-      title={`${count} task${count === 1 ? "" : "s"} blocked on this task`}
-    >
+    <Badge title={`${count} task${count === 1 ? "" : "s"} blocked on this task`}>
       {count} blocked
-    </span>
+    </Badge>
   );
 }
