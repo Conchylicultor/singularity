@@ -98,8 +98,9 @@ function PianoRollInner({ score, cursorBeat }: PianoRollProps) {
         width: lane.width,
         height: lane.height,
         cursorBeat,
+        score,
       }),
-    [lane.width, lane.height, cursorBeat],
+    [lane.width, lane.height, cursorBeat, score],
   );
 
   // Note rectangles, derived from the projection (single geometry source).

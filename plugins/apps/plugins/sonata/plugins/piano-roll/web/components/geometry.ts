@@ -1,7 +1,9 @@
-import type {
-  KeyLane,
-  Note,
-  Projection,
+import {
+  beatToSeconds,
+  type KeyLane,
+  type Note,
+  type Projection,
+  type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /**
@@ -14,18 +16,28 @@ import type {
  *               white/white boundaries, narrower. `keyLayout` is the single
  *               source both the falling notes and the keyboard renderer consume,
  *               so every note lands exactly on its key.
- *  - Y (time):  y = height - (beat - cursorBeat) * PX_PER_BEAT. The cursor beat
- *               maps to the lane bottom (the keyboard); future beats sit higher
- *               and descend as the transport advances. Layout is a pure function
- *               of `cursorBeat` + lane height — no per-frame React state.
+ *  - Y (time):  the time axis is measured in WALL-CLOCK SECONDS, not beats:
+ *               y = height - (seconds(beat) - seconds(cursorBeat)) * PX_PER_SECOND.
+ *               Because the transport advances the cursor at one second of
+ *               wall-clock per second, the roll scrolls at a CONSTANT pixel
+ *               rate regardless of tempo. Tempo instead changes how a note's
+ *               beat-duration maps to seconds, so faster passages compress and
+ *               slower passages elongate. The cursor maps to the lane bottom
+ *               (the keyboard); future beats sit higher and descend as the
+ *               transport advances. Layout is a pure function of `cursorBeat` +
+ *               lane height — no per-frame React state.
  *
  * A note rectangle spans from its end (top, further in the future) to its onset
  * (bottom), and is as wide as its key. `noteToRect` is the canonical note
  * geometry both the renderer and overlays consume.
  */
 
-/** Vertical pixels per quarter-note beat. */
-export const PX_PER_BEAT = 90;
+/**
+ * Vertical pixels per wall-clock second. Anchored so that a 120 bpm passage
+ * (the default tempo, 2 beats/sec) scrolls at the same pixel rate the old
+ * beat-based model used (`PX_PER_BEAT` of 90 → 180 px/sec).
+ */
+export const PX_PER_SECOND = 180;
 
 /** Full 88-key piano range: A0 (21) … C8 (108). */
 export const KEYBOARD_LOW = 21;
@@ -86,24 +98,31 @@ export function buildProjection(viewport: {
   width: number;
   height: number;
   cursorBeat: number;
+  /** Score whose tempo map converts beats → wall-clock seconds for the Y axis. */
+  score: Score;
 }): Projection {
-  const { width, height, cursorBeat } = viewport;
+  const { width, height, cursorBeat, score } = viewport;
   const keys = keyLayout(width);
   const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
 
+  // Anchor the time axis at the cursor's wall-clock position so scroll speed is
+  // a constant pixels/second; tempo only changes the beat→seconds mapping.
+  const cursorSeconds = beatToSeconds(score, cursorBeat);
   const beatToY = (beat: number): number =>
-    height - (beat - cursorBeat) * PX_PER_BEAT;
+    height - (beatToSeconds(score, beat) - cursorSeconds) * PX_PER_SECOND;
   const pitchToX = (pitch: number): number => byPitch.get(pitch)?.center ?? 0;
   const noteToRect = (note: Note) => {
     const k = byPitch.get(note.pitch);
     const w = k?.width ?? width / WHITE_KEY_COUNT;
     const center = k?.center ?? 0;
+    const endY = beatToY(note.start + note.duration);
     return {
       x: center - w / 2,
-      // Top = note end (further in the future, higher up); height = duration.
-      y: beatToY(note.start + note.duration),
+      // Top = note end (further in the future, higher up); height spans the
+      // note's wall-clock duration, so faster tempo compresses it.
+      y: endY,
       w,
-      h: note.duration * PX_PER_BEAT,
+      h: beatToY(note.start) - endY,
     };
   };
 
