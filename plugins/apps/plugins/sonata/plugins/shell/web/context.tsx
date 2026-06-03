@@ -26,6 +26,18 @@ import { Sonata } from "./slots";
  *    that advances `cursorBeat` by mapping elapsed wall-clock seconds back
  *    through the tempo map. Displays read the cursor.
  */
+/**
+ * A monotonic time source in seconds. The default is the wall clock
+ * (`performance.now`); the audio engine registers an `AudioContext.currentTime`
+ * clock so the visual cursor reads the *same* clock the audio is scheduled
+ * against — eliminating drift and keeping the playhead correct across tab
+ * backgrounding.
+ */
+export interface TransportClock {
+  /** Current time in seconds (same units/origin the audio scheduler uses). */
+  now(): number;
+}
+
 export interface SonataContextValue {
   /** The derived canonical model (empty before a source loads). */
   score: Score;
@@ -44,6 +56,13 @@ export interface SonataContextValue {
 
   play: () => void;
   stop: () => void;
+
+  /**
+   * Register the authoritative playback clock (e.g. the audio engine's
+   * `AudioContext`). Returns an unregister that restores the wall-clock default.
+   * Swapping the clock mid-playback re-anchors so the cursor stays continuous.
+   */
+  registerClock: (clock: TransportClock) => () => void;
 }
 
 const SonataContext = createContext<SonataContextValue | null>(null);
@@ -56,6 +75,9 @@ export function useSonata(): SonataContextValue {
   }
   return ctx;
 }
+
+/** The default time source: the browser wall clock, in seconds. */
+const wallClock: TransportClock = { now: () => performance.now() / 1000 };
 
 /** Largest beat referenced by the score — the transport stops here. */
 function scoreEndBeat(score: Score): number {
@@ -98,13 +120,52 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   }, [activeSourceId, raw]);
 
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
-  // We anchor at the wall-clock time + beat where playback started, then each
-  // frame invert the tempo map: find the beat whose `beatToSeconds` equals the
-  // elapsed seconds. Monotone search keeps it O(beats advanced) per frame.
+  // We anchor at the playback clock's time + beat where playback started, then
+  // each frame invert the tempo map: find the beat whose `beatToSeconds` equals
+  // the elapsed seconds. The time source is the pluggable `clockRef` — the audio
+  // engine registers its `AudioContext.currentTime`, so the cursor and the audio
+  // share one clock and never drift. rAF only sets the *render cadence*; it no
+  // longer supplies the time value (so a backgrounded-then-resumed tab reads the
+  // live clock and lands the cursor exactly where the sound is).
+  // Monotone search keeps it O(beats advanced) per frame.
   const rafRef = useRef<number | null>(null);
-  const anchorRef = useRef<{ startMs: number; startBeat: number } | null>(null);
+  const anchorRef = useRef<{
+    startClockSec: number;
+    startBeat: number;
+    startScoreSec: number;
+  } | null>(null);
+  const clockRef = useRef<TransportClock>(wallClock);
   const scoreRef = useRef(score);
   scoreRef.current = score;
+  // Live mirrors so stable callbacks read current values without re-anchoring.
+  const cursorBeatRef = useRef(cursorBeat);
+  cursorBeatRef.current = cursorBeat;
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
+
+  // Anchor the transport against the current cursor + the given clock's `now()`.
+  // Used at play and on every clock swap so play/pause/seek/clock-change compose.
+  const reanchor = useCallback((clock: TransportClock) => {
+    anchorRef.current = {
+      startClockSec: clock.now(),
+      startBeat: cursorBeatRef.current,
+      startScoreSec: beatToSeconds(scoreRef.current, cursorBeatRef.current),
+    };
+  }, []);
+
+  const registerClock = useCallback(
+    (clock: TransportClock) => {
+      clockRef.current = clock;
+      if (isPlayingRef.current) reanchor(clock);
+      return () => {
+        if (clockRef.current === clock) {
+          clockRef.current = wallClock;
+          if (isPlayingRef.current) reanchor(wallClock);
+        }
+      };
+    },
+    [reanchor],
+  );
 
   const stop = useCallback(() => {
     setIsPlaying(false);
@@ -126,18 +187,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }
 
     const endBeat = scoreEndBeat(scoreRef.current);
-    // Anchor against the current cursor so play/pause/seek compose.
-    anchorRef.current = {
-      startMs: performance.now(),
-      startBeat: cursorBeat,
-    };
-    const startSeconds = beatToSeconds(scoreRef.current, cursorBeat);
+    // Anchor against the current cursor + active clock so play/pause/seek compose.
+    reanchor(clockRef.current);
 
     const tick = () => {
       const anchor = anchorRef.current;
       if (!anchor) return;
       const elapsedSeconds =
-        (performance.now() - anchor.startMs) / 1000 + startSeconds;
+        clockRef.current.now() - anchor.startClockSec + anchor.startScoreSec;
 
       // Invert beatToSeconds: advance beats until seconds(beat) >= elapsed.
       const score = scoreRef.current;
@@ -167,10 +224,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
         rafRef.current = null;
       }
     };
-    // We intentionally re-anchor only on play/stop transitions, not on every
-    // cursor change (the loop owns cursorBeat while playing).
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isPlaying]);
+    // Re-anchor only on play/stop transitions (and clock swaps, handled in
+    // registerClock) — not on every cursor change; the loop owns cursorBeat
+    // while playing. `reanchor` is stable.
+  }, [isPlaying, reanchor]);
 
   const value = useMemo<SonataContextValue>(
     () => ({
@@ -185,6 +242,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setCursorBeat,
       play,
       stop,
+      registerClock,
     }),
     [
       score,
@@ -194,6 +252,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeDisplayId,
       play,
       stop,
+      registerClock,
     ],
   );
 

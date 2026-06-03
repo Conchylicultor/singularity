@@ -21,7 +21,7 @@ const DEFAULT_VOLUME = 0.8;
  * cursor through tempo changes.
  */
 export function AudioPanel() {
-  const { score, isPlaying, cursorBeat } = useSonata();
+  const { score, isPlaying, cursorBeat, registerClock } = useSonata();
 
   // Keep the latest cursor in a ref so the scheduling effect reads it WITHOUT
   // depending on it (re-anchor only on play/stop, like the transport).
@@ -57,6 +57,13 @@ export function AudioPanel() {
     ctxRef.current = ctx;
     masterRef.current = master;
 
+    // Register the AudioContext clock as the transport's authoritative time
+    // source, so the visual cursor reads the *same* clock the audio is
+    // scheduled against (no drift, correct across tab backgrounding). Stable for
+    // the whole session: `ctx.currentTime` is frozen while suspended and only
+    // advances after `ctx.resume()` on play — exactly when the cursor reads it.
+    const unregisterClock = registerClock({ now: () => ctx.currentTime });
+
     // Belt-and-suspenders autoplay-gate unlock: the play button is itself a
     // gesture, but a one-time pointerdown resume covers any other entry point.
     const unlock = () => {
@@ -65,6 +72,7 @@ export function AudioPanel() {
     document.addEventListener("pointerdown", unlock, { once: true });
 
     return () => {
+      unregisterClock();
       document.removeEventListener("pointerdown", unlock);
       // Guard against React StrictMode's double invoke: only close once.
       if (ctx.state !== "closed") {
@@ -73,7 +81,9 @@ export function AudioPanel() {
       ctxRef.current = null;
       masterRef.current = null;
     };
-  }, []);
+    // `registerClock` is stable (memoized in the provider), so this effect still
+    // runs once: create the AudioContext + register its clock on mount.
+  }, [registerClock]);
 
   // Master gain follows the volume slider live.
   useEffect(() => {

@@ -9,7 +9,7 @@
   - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
   - Uses: `apps.Apps`
-  - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`; Values: `Sonata`, `SonataProvider`, `useSonata`
+  - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `TransportClock`; Values: `Sonata`, `SonataProvider`, `useSonata`
 - Cross-plugin:
   - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`
 

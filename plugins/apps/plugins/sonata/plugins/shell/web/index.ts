@@ -5,7 +5,12 @@ import { SonataLayout } from "./components/sonata-layout";
 
 export { Sonata } from "./slots";
 export type { InstrumentVoices, ScheduledNote } from "./slots";
-export { useSonata, SonataProvider, type SonataContextValue } from "./context";
+export {
+  useSonata,
+  SonataProvider,
+  type SonataContextValue,
+  type TransportClock,
+} from "./context";
 
 export default {
   id: "sonata-shell",
