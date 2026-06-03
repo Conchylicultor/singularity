@@ -591,7 +591,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                   - Web:
                     - Contributes: `FilePane.Renderer` "Diff" → `DiffOrImageView`
-                    - Exports: Types: `DiffTokens`, `ShikiTokenNode`; Values: `buildSideTokenMap`, `DiffOrImageView`, `DiffRenderer`, `DiffView`
+                    - Exports: Types: `DiffTokens`, `ShikiTokenNode`; Values: `buildSideTokenMap`, `DiffOrImageView`, `DiffRenderer`, `DiffView`, `TextDiff`
                 - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.
                   - Web:
                     - Contributes: `FilePane.Renderer` "Image" → `ImageView`

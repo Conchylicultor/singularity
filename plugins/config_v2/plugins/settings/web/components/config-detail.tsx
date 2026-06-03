@@ -1,5 +1,5 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { MdWarning, MdCode, MdTune, MdUndo } from "react-icons/md";
+import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
@@ -9,6 +9,7 @@ import { configDetailPane } from "../internal/panes";
 import { useConflicts } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
 import { ConfigFieldRow } from "./config-field-row";
+import { ConflictDiff } from "./conflict-diff";
 
 export function ConfigDetail() {
   const configPath = configDetailPane.useChainEntry()?.params.configPath;
@@ -31,6 +32,7 @@ function ConfigDetailInner({
   registration: ReturnType<typeof useConfigRegistrations>[number];
 }) {
   const [showRaw, setShowRaw] = useState(false);
+  const [showDiff, setShowDiff] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const values = useConfig(registration.descriptor);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
@@ -40,6 +42,7 @@ function ConfigDetailInner({
 
   useEffect(() => {
     setConfirmReset(false);
+    setShowDiff(false);
   }, [registration.storePath]);
 
   // During a conflict the app resolves config to the origin (origin takes
@@ -149,26 +152,37 @@ function ConfigDetailInner({
                 </button>
               </div>
             ) : (
-              <div className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
-                <MdWarning className="size-4 shrink-0" />
-                <span className="flex-1">Upstream defaults changed</span>
-                <div className="flex shrink-0 gap-1.5">
-                  <button
-                    type="button"
-                    onClick={handleAcceptAll}
-                    className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
-                  >
-                    Accept all new defaults
-                  </button>
-                  <button
-                    type="button"
-                    onClick={handleDismiss}
-                    className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
-                  >
-                    Keep my values
-                  </button>
+              <>
+                <div className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+                  <MdWarning className="size-4 shrink-0" />
+                  <span className="flex-1">Upstream defaults changed</span>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowDiff((v) => !v)}
+                      className="flex items-center gap-1 rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                    >
+                      <MdDifference className="size-3.5" />
+                      {showDiff ? "Hide diff" : "View diff"}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAcceptAll}
+                      className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                    >
+                      Accept all new defaults
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleDismiss}
+                      className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                    >
+                      Keep my values
+                    </button>
+                  </div>
                 </div>
-              </div>
+                {showDiff && <ConflictDiff storePath={registration.storePath} />}
+              </>
             )
           )}
           {Object.entries(registration.descriptor.fields).map(([key, field]) => (

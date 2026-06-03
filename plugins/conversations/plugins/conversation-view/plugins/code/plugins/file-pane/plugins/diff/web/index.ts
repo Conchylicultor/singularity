@@ -4,6 +4,7 @@ import { supportsDiff } from "./internal/supports";
 import { DiffOrImageView } from "./internal/diff-or-image-view";
 
 export { DiffView, DiffRenderer } from "./components/diff-view";
+export { TextDiff } from "./components/text-diff";
 export { DiffOrImageView } from "./internal/diff-or-image-view";
 export type { DiffTokens, ShikiTokenNode } from "./use-diff-tokens";
 export { buildSideTokenMap } from "./use-diff-tokens";
