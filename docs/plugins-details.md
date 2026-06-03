@@ -1152,7 +1152,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
   - Web:
     - Contributes: `Core.Root` → `FloatingBar`, `ConfigV2.WebRegister`
-    - Uses: `apps.useActiveApp`, `config_v2.ConfigV2`, `config_v2.useConfig`
+    - Uses: `apps.useActiveApp`, `config_v2.ConfigV2`, `config_v2.useConfig`, `notifications.notificationsResource`
   - Server:
     - Uses: `config_v2.ConfigV2`
 
@@ -1342,7 +1342,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Resources: `notifications` (push)
   - Cross-plugin:
-    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
   - Shared:
     - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 
