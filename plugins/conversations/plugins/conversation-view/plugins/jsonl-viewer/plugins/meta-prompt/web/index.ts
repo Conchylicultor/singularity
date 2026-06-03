@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { MetaPromptRow } from "./components/meta-prompt-row";
 
 export default {
-  id: "conversation-jsonl-viewer-meta-prompt",
   name: "JSONL Viewer: Meta-prompt event renderer",
   description:
     "Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.",

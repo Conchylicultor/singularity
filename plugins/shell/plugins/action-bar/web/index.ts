@@ -5,7 +5,6 @@ import { ActionBarStrip } from "./components/action-bar-strip";
 export { ActionBar } from "./slots";
 
 export default {
-  id: "action-bar",
   name: "Action Bar",
   description:
     "Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.",
