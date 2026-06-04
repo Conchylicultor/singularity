@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { MdAdd, MdDragIndicator } from "react-icons/md";
+import { MdAdd, MdChevronRight, MdDragIndicator } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import { cn } from "@/lib/utils";
@@ -14,11 +14,14 @@ export const INDENT = 24;
 export function BlockRow({
   block,
   depth,
+  hasChildren,
   isDragging,
   dropZone,
 }: {
   block: Block;
   depth: number;
+  /** Whether this block has children (drives the collapse chevron). */
+  hasChildren: boolean;
   isDragging: boolean;
   /** Where the dragged block would land relative to this row, or null. */
   dropZone: DropZone | null;
@@ -26,6 +29,13 @@ export function BlockRow({
   const { focusedBlockId, makeBlockAPI } = useBlockEditor();
   const api = useMemo(() => makeBlockAPI(block.id), [makeBlockAPI, block.id]);
   const isFocused = focusedBlockId === block.id;
+
+  // Show a collapse chevron when the block has children, or always for block
+  // types that opt in (e.g. the toggle block). Read generically from the handle.
+  const contributions = Editor.Block.useContributions();
+  const handle = contributions.find((c) => c.block.type === block.type)?.block;
+  const showChevron = hasChildren || handle?.collapsible === "always";
+  const collapsed = !block.expanded;
 
   const { attributes, listeners, setNodeRef: setDragRef } = useDraggable({
     id: `drag:${block.id}`,
@@ -45,6 +55,25 @@ export function BlockRow({
       className="group/row relative"
       style={{ paddingLeft: depth * INDENT }}
     >
+      {/* Chevron — collapses/expands this block's children. Closest to the
+          content; pinned visible while collapsed so hidden content is
+          discoverable, otherwise hover-only like the +/drag cluster. */}
+      {showChevron && (
+        <button
+          type="button"
+          aria-label={collapsed ? "Expand" : "Collapse"}
+          aria-expanded={!collapsed}
+          onClick={() => api.setExpanded(collapsed)}
+          className={cn(
+            "absolute top-1 z-10 flex size-5 items-center justify-center rounded",
+            "text-muted-foreground hover:bg-accent cursor-pointer",
+            collapsed ? "opacity-60" : "opacity-0 group-hover/row:opacity-60",
+          )}
+          style={{ left: depth * INDENT - 20 }}
+        >
+          <MdChevronRight className={cn("size-4 transition-transform", !collapsed && "rotate-90")} />
+        </button>
+      )}
       {/* Gutter "+" — inserts a new block immediately below this one. */}
       <BlockTypeMenu
         align="start"
@@ -59,7 +88,7 @@ export function BlockRow({
               "text-muted-foreground hover:bg-accent cursor-pointer",
               "opacity-0 group-hover/row:opacity-60",
             )}
-            style={{ left: depth * INDENT - 40 }}
+            style={{ left: depth * INDENT - 60 }}
           >
             <MdAdd className="size-4" />
           </button>
@@ -83,7 +112,7 @@ export function BlockRow({
               "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
               "opacity-0 group-hover/row:opacity-60",
             )}
-            style={{ left: depth * INDENT - 20 }}
+            style={{ left: depth * INDENT - 40 }}
           >
             <MdDragIndicator className="size-4" />
           </button>

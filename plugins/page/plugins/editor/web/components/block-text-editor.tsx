@@ -41,6 +41,7 @@ export function BlockTextEditor({
   marker,
   placeholder,
   contentClassName,
+  splitOptions,
 }: {
   block: Block;
   isFocused: boolean;
@@ -51,6 +52,8 @@ export function BlockTextEditor({
   placeholder?: ReactNode;
   /** Extra classes for the editable content (e.g. strikethrough when done). */
   contentClassName?: string;
+  /** Enter-split options (e.g. nest the split-off content as a child). */
+  splitOptions?: { asChild?: boolean; childType?: string };
 }) {
   const data = textDataSchema.parse(block.data);
   const isEmpty = data.text.length === 0;
@@ -108,7 +111,7 @@ export function BlockTextEditor({
           />
           <HistoryPlugin />
           <ValueSyncPlugin value={field.value} onChange={field.onChange} />
-          <KeyboardPlugin editor={editor} />
+          <KeyboardPlugin editor={editor} splitOptions={splitOptions} />
           <SlashMenuPlugin block={block} editor={editor} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
           <EditorRefPlugin editorRef={lexicalEditorRef} />

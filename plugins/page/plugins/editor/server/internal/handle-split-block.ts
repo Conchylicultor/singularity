@@ -28,34 +28,60 @@ export const handleSplitBlock = implement(splitBlock, async ({ params, body }) =
     .set({ data: { ...data, text: beforeText }, updatedAt: new Date() })
     .where(eq(_blocks.id, params.id));
 
-  const parentFilter = block.parentId === null
-    ? isNull(_blocks.parentId)
-    : eq(_blocks.parentId, block.parentId!);
-  const [nextSibling] = await db
-    .select()
-    .from(_blocks)
-    .where(
-      and(
-        eq(_blocks.documentId, block.documentId),
-        parentFilter,
-        gt(_blocks.rank, block.rank),
-      ),
-    )
-    .orderBy(asc(_blocks.rank))
-    .limit(1);
+  let newParentId: string | null;
+  let newType: string;
+  let newRank: Rank;
+  if (body.asChild) {
+    // Nest the split-off content as the original's FIRST child, before any
+    // existing child, and force the original open so the new child is visible.
+    const [firstChild] = await db
+      .select()
+      .from(_blocks)
+      .where(eq(_blocks.parentId, block.id))
+      .orderBy(asc(_blocks.rank))
+      .limit(1);
+    const firstChildRank = firstChild
+      ? Rank.from(firstChild.rank as unknown as string)
+      : null;
+    newParentId = block.id;
+    newType = body.childType ?? block.type;
+    newRank = Rank.between(null, firstChildRank);
+    await db
+      .update(_blocks)
+      .set({ expanded: true, updatedAt: new Date() })
+      .where(eq(_blocks.id, params.id));
+  } else {
+    const parentFilter = block.parentId === null
+      ? isNull(_blocks.parentId)
+      : eq(_blocks.parentId, block.parentId!);
+    const [nextSibling] = await db
+      .select()
+      .from(_blocks)
+      .where(
+        and(
+          eq(_blocks.documentId, block.documentId),
+          parentFilter,
+          gt(_blocks.rank, block.rank),
+        ),
+      )
+      .orderBy(asc(_blocks.rank))
+      .limit(1);
 
-  const currentRank = Rank.from(block.rank as unknown as string);
-  const nextRank = nextSibling
-    ? Rank.from(nextSibling.rank as unknown as string)
-    : null;
-  const newRank = Rank.between(currentRank, nextRank);
+    const currentRank = Rank.from(block.rank as unknown as string);
+    const nextRank = nextSibling
+      ? Rank.from(nextSibling.rank as unknown as string)
+      : null;
+    newParentId = block.parentId;
+    newType = block.type;
+    newRank = Rank.between(currentRank, nextRank);
+  }
 
   const newId = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   await db.insert(_blocks).values({
     id: newId,
     documentId: block.documentId,
-    parentId: block.parentId,
-    type: block.type,
+    parentId: newParentId,
+    type: newType,
     data: { ...data, text: afterText },
     rank: newRank.toJSON(),
   });

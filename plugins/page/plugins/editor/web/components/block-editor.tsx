@@ -24,7 +24,7 @@ import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow } from "./block-row";
 
-type FlatBlock = { block: Block; depth: number };
+type FlatBlock = { block: Block; depth: number; hasChildren: boolean };
 type DropTarget = { id: string; zone: DropZone };
 
 // Depth-first flatten that carries each block's depth. Rendering the tree as a
@@ -33,8 +33,10 @@ type DropTarget = { id: string; zone: DropZone };
 // reorder keyed elements — the Lexical editor instance (and its focus) survives.
 function flattenTree(nodes: TreeNode<Block>[], depth: number, out: FlatBlock[]): void {
   for (const node of nodes) {
-    out.push({ block: node, depth });
-    flattenTree(node.children, depth + 1, out);
+    out.push({ block: node, depth, hasChildren: node.children.length > 0 });
+    // Skip a collapsed node's subtree so its children stay hidden. `expanded`
+    // defaults true for every existing row, so current documents are unchanged.
+    if (node.expanded) flattenTree(node.children, depth + 1, out);
   }
 }
 
@@ -176,15 +178,16 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
-      {/* pl-12 leaves room for the two-button gutter cluster (+ and drag
-          handle, at -40 and -20 left of the content) without it colliding
+      {/* pl-16 leaves room for the three-button gutter cluster (chevron, drag
+          handle, and +, at -20/-40/-60 left of the content) without it colliding
           with the pane/sidebar edge. */}
-      <div className="py-2 pl-12 pr-2">
+      <div className="py-2 pl-16 pr-2">
         {flat.map((f) => (
           <BlockRow
             key={f.block.id}
             block={f.block}
             depth={f.depth}
+            hasChildren={f.hasChildren}
             isDragging={activeId === f.block.id}
             dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
           />

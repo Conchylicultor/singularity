@@ -35,10 +35,20 @@ export function MarkdownShortcutPlugin({
   // Flatten every registered block's prefixes into {prefix, type} pairs, longest
   // prefix first so a more specific marker wins over a shorter one.
   const rules = useMemo(() => {
-    const out: { prefix: string; type: string; empty?: () => unknown }[] = [];
+    const out: {
+      prefix: string;
+      type: string;
+      empty?: () => unknown;
+      collapsible?: "always";
+    }[] = [];
     for (const c of contributions) {
       for (const prefix of c.block.markdownPrefixes ?? []) {
-        out.push({ prefix, type: c.block.type, empty: c.block.empty });
+        out.push({
+          prefix,
+          type: c.block.type,
+          empty: c.block.empty,
+          collapsible: c.block.collapsible,
+        });
       }
     }
     return out.sort((a, b) => b.prefix.length - a.prefix.length);
@@ -66,7 +76,7 @@ export function MarkdownShortcutPlugin({
         prevText = text;
         if (pending || text === before) return;
 
-        for (const { prefix, type, empty } of rulesRef.current) {
+        for (const { prefix, type, empty, collapsible } of rulesRef.current) {
           if (type === blockTypeRef.current) continue;
           // Only on the transition into the prefixed state.
           if (text.startsWith(prefix) && !before.startsWith(prefix)) {
@@ -93,8 +103,13 @@ export function MarkdownShortcutPlugin({
               });
               prevText = remaining;
               // Seed the target type's default payload (e.g. a to-do's
-              // `checked`) before overlaying the preserved text.
-              editorRef.current.convertTo(type, { ...(empty?.() ?? {}), text: remaining });
+              // `checked`) before overlaying the preserved text. An "always"
+              // collapsible target (e.g. a toggle) opens by default.
+              editorRef.current.convertTo(
+                type,
+                { ...(empty?.() ?? {}), text: remaining },
+                collapsible === "always" ? { expanded: true } : undefined,
+              );
             });
             return;
           }

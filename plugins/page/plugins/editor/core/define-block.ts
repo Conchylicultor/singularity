@@ -37,6 +37,20 @@ export interface BlockHandle<T> {
    * field is truthy. Generic — the renderer never names a specific block type.
    */
   toggle?: { field: string; doneClassName?: string };
+  /**
+   * When "always", the editor shows the collapse chevron for this block type even
+   * when it has no children yet (used by the toggle block). Omitted = the chevron
+   * appears only when the block actually has children.
+   */
+  collapsible?: "always";
+  /**
+   * Enter-split behavior. By default a block splits into a sibling of the same
+   * type. A block with this set instead nests the split-off content as its FIRST
+   * CHILD *when it is currently expanded* (a collapsed block still splits into a
+   * sibling). `childType` is the type created for that child. Generic — used by
+   * the toggle block; the editor core never names a block type.
+   */
+  splitChildWhenExpanded?: { childType: string };
 }
 
 export function defineBlock<S extends ZodTypeAny>(opts: {
@@ -49,6 +63,8 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   marker?: string;
   placeholder?: string;
   toggle?: { field: string; doneClassName?: string };
+  collapsible?: "always";
+  splitChildWhenExpanded?: { childType: string };
 }): BlockHandle<z.infer<S>> {
   return {
     type: opts.type,
@@ -61,5 +77,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     marker: opts.marker,
     placeholder: opts.placeholder,
     toggle: opts.toggle,
+    collapsible: opts.collapsible,
+    splitChildWhenExpanded: opts.splitChildWhenExpanded,
   };
 }

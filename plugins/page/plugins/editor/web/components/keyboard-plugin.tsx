@@ -69,10 +69,18 @@ function isAtEnd(): boolean {
   return anchor.offset === lastChild.getTextContent().length;
 }
 
-export function KeyboardPlugin({ editor }: { editor: BlockEditorAPI }) {
+export function KeyboardPlugin({
+  editor,
+  splitOptions,
+}: {
+  editor: BlockEditorAPI;
+  splitOptions?: { asChild?: boolean; childType?: string };
+}) {
   const [lexicalEditor] = useLexicalComposerContext();
   const editorRef = useRef(editor);
   editorRef.current = editor;
+  const splitOptionsRef = useRef(splitOptions);
+  splitOptionsRef.current = splitOptions;
 
   useEffect(() => {
     const unregisterEnter = lexicalEditor.registerCommand<KeyboardEvent | null>(
@@ -86,7 +94,7 @@ export function KeyboardPlugin({ editor }: { editor: BlockEditorAPI }) {
         lexicalEditor.getEditorState().read(() => {
           const offset = getAbsoluteOffset();
           if (offset !== null) {
-            editorRef.current.split(offset);
+            editorRef.current.split(offset, splitOptionsRef.current);
           }
         });
         return true;

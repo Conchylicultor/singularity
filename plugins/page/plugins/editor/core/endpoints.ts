@@ -48,6 +48,8 @@ export type MoveBlockBody = z.infer<typeof MoveBlockBodySchema>;
 
 export const SplitBlockBodySchema = z.object({
   position: z.number().int().nonnegative(),
+  asChild: z.boolean().optional(),
+  childType: z.string().optional(),
 });
 export type SplitBlockBody = z.infer<typeof SplitBlockBodySchema>;
 

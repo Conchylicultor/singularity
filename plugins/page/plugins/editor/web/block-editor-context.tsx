@@ -113,8 +113,11 @@ export function BlockEditorProvider({
       update(data: unknown) {
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { data } });
       },
-      convertTo(type: string, data: unknown) {
-        void fetchEndpoint(updateBlock, { id: blockId }, { body: { type, data } });
+      setExpanded(expanded: boolean) {
+        void fetchEndpoint(updateBlock, { id: blockId }, { body: { expanded } });
+      },
+      convertTo(type: string, data: unknown, opts?: { expanded?: boolean }) {
+        void fetchEndpoint(updateBlock, { id: blockId }, { body: { type, data, ...(opts ?? {}) } });
       },
       insertAfter(type: string, data: unknown) {
         void (async () => {
@@ -131,9 +134,13 @@ export function BlockEditorProvider({
           }
         })();
       },
-      split(position: number) {
+      split(position: number, opts?: { asChild?: boolean; childType?: string }) {
         void (async () => {
-          const result = await fetchEndpoint(splitBlock, { id: blockId }, { body: { position } });
+          const result = await fetchEndpoint(
+            splitBlock,
+            { id: blockId },
+            { body: { position, ...(opts ?? {}) } },
+          );
           pendingFocusRef.current = result.created.id;
           const handle = focusHandlesRef.current.get(result.created.id);
           if (handle) {
