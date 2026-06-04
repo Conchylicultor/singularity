@@ -82,6 +82,11 @@ const BUILD_COLOR = "bg-info";
 const BUILD_FAILED_COLOR = "bg-info/70";
 const BUILD_INTERRUPTED_COLOR = "bg-destructive";
 
+// Hard-killed builds have no known end, so there is no duration to scale a bar
+// from. Render them as a fixed-width marker at their start instead — a visible
+// trace that the build began and never finished, without a fake bar.
+const INTERRUPTED_MARKER_PX = 4;
+
 export function PushGantt({
   groups,
   totalMs,
@@ -203,7 +208,9 @@ function PushAttemptRow({
               )}
               style={{
                 left: toLeftPct(build.startMs, totalMs),
-                width: toWidthPct(build.durationMs, totalMs),
+                width: build.interrupted
+                  ? `${INTERRUPTED_MARKER_PX}px`
+                  : toWidthPct(build.durationMs, totalMs),
               }}
               onMouseEnter={() => setHovered(buildSpan)}
               onMouseLeave={() => setHovered(null)}
