@@ -696,7 +696,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
             - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
-            - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+            - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -748,6 +748,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
+            - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "queue-operation" → `QueueOperationRow`
             - **`summary`** — Renders summary separator events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "summary" → `SummaryRow`

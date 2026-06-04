@@ -97,6 +97,17 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
     attachment: z.unknown(),
   }),
   z.object({
+    // Claude Code prompt-queue events: items enqueued, dequeued (sent to the
+    // agent on its next turn), or removed without being sent. `type:
+    // "queue-operation"` lines carry an `operation` discriminator and optional
+    // `content` (a queued prompt, or a `<task-notification>` block from a
+    // background task completion).
+    kind: z.literal("queue-operation"),
+    at: z.string(),
+    operation: z.string(),
+    content: z.string().optional(),
+  }),
+  z.object({
     kind: z.literal("unknown"),
     at: z.string(),
     type: z.string(),

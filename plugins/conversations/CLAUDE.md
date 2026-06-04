@@ -61,6 +61,7 @@
           - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
           - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
           - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
+          - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
           - **`summary`** — Renders summary separator events in the JSONL viewer.
           - **`system`** — Renders system events in the JSONL viewer.
           - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.

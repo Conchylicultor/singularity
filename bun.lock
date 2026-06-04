@@ -553,6 +553,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-meta-prompt",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queue-operation": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary",
       "version": "0.0.1",
@@ -2520,6 +2524,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-message-toc@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/message-toc"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-meta-prompt": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-meta-prompt@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/meta-prompt"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queue-operation"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 

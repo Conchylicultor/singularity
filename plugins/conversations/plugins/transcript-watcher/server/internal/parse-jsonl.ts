@@ -414,6 +414,17 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
       continue;
     }
 
+    if (type === "queue-operation") {
+      const operation =
+        typeof obj.operation === "string" ? (obj.operation as string) : "";
+      const content =
+        typeof obj.content === "string" ? (obj.content as string) : undefined;
+      if (operation) {
+        events.push({ kind: "queue-operation", at: ts, operation, content });
+      }
+      continue;
+    }
+
     events.push({
       kind: "unknown",
       at: ts,
