@@ -36,6 +36,15 @@ function matchesWorktree(wt: string, target: string): boolean {
   return wt === target || wt === `claude-web/${target}` || wt.endsWith(`/${target}`);
 }
 
+// Pushes and builds for the same worktree carry different identifiers: builds
+// log the basename (`att-x`), while pushes fall back to the branch
+// (`claude-web/att-x`) whenever SINGULARITY_WORKTREE is unset for the push CLI.
+// Canonicalize both to the bare worktree basename so a worktree's push and build
+// bars group onto a single Gantt row instead of two separate ones.
+function canonicalWorktree(wt: string): string {
+  return wt.split("/").pop() || wt;
+}
+
 function computeWorktreeWindow(
   allPushRecords: ReturnType<typeof readContentionRecords>,
   allBuildRecords: ReturnType<typeof readBuildLogRecords>,
@@ -138,7 +147,7 @@ export const handlePushProfiling = implement(
     };
 
     for (const record of recentPushes) {
-      const wt = record.worktree ?? record.branch;
+      const wt = canonicalWorktree(record.worktree ?? record.branch);
       const pushOffset =
         new Date(record.lockRequestedAt).getTime() - originMs;
 
@@ -156,7 +165,7 @@ export const handlePushProfiling = implement(
     }
 
     for (const record of recentBuilds) {
-      const wt = record.worktree;
+      const wt = canonicalWorktree(record.worktree);
       const buildOffset = new Date(record.startedAt).getTime() - originMs;
 
       getGroup(wt).builds.push({
