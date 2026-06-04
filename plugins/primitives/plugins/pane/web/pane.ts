@@ -120,10 +120,12 @@ export interface PaneInternal {
   segment: string;
   /**
    * Marks this pane as the index/landing pane for the app whose `Apps.App`
-   * `path` equals this value (e.g. "/pages"). Only meaningful for root-segment
-   * panes ("" / "/"). The app-root URL fallback in `parseUrl` prefers the
-   * index pane whose `appPath` matches the active app's basePath, so each app
-   * gets its own bare-root surface instead of inheriting the global welcome.
+   * `path` equals this value (e.g. "/pages", or "/" for the agent-manager).
+   * Only meaningful for root-segment panes ("" / "/"). At a bare app root the
+   * chain is empty; `useIndexMatch` resolves the index pane whose `appPath`
+   * matches the active app's basePath and MillerColumns renders it. There is
+   * no global fallback — an app without an `appPath`-scoped index shows an
+   * empty main area at its bare root.
    */
   appPath?: string;
   component: ComponentType;
@@ -290,36 +292,12 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
     cursor += bestMatch.consumed;
   }
 
-  // App-root URL (basePath-stripped pathname is "/") — pick the index pane.
-  //
-  // The pane registry is global (shared across every app), so multiple panes
-  // may declare an empty/root segment — one per app that wants an index/empty
-  // landing surface. Selecting "the first root-segment pane" would let one
-  // app's index (e.g. the agent-manager welcome) bleed into every other app's
-  // bare root. Disambiguate by the active app's basePath: a pane that declares
-  // `appPath` is the index for exactly that app, so prefer the one whose
-  // `appPath` matches the current basePath. Fall back to an unscoped
-  // root-segment pane (the agent-manager welcome, basePath "") only when no
-  // app-scoped index matches.
-  if (chain.length === 0) {
-    const basePath = currentBasePath;
-    let scopedIndex: PaneInternal | undefined;
-    let unscopedIndex: PaneInternal | undefined;
-    for (const pane of registry.values()) {
-      if (pane.segment && pane.segment !== "/" && pane.segment !== "") continue;
-      if (pane.appPath !== undefined) {
-        if (normalizeAppPath(pane.appPath) === basePath) {
-          scopedIndex = pane;
-          break;
-        }
-      } else if (!unscopedIndex) {
-        unscopedIndex = pane;
-      }
-    }
-    const index = scopedIndex ?? unscopedIndex;
-    if (index) chain.push(createSlot(index.id, {}));
-  }
-
+  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY chain.
+  // The index/landing pane is NOT injected here: it is a main-area-renderer
+  // concern, resolved by `useIndexMatch` (see below) and rendered only by
+  // MillerColumns. Keeping it out of the chain store means an overlay host
+  // (e.g. Sonata's PaneOverlayHost) sees "nothing opened" at a bare root and
+  // renders no overlay, instead of inheriting another app's index pane.
   return chain.length > 0 ? chain : null;
 }
 
@@ -966,6 +944,54 @@ export function useMatchForChain(): PaneMatch | null {
 
 /** @deprecated Use useMatchForChain */
 export const useMatchForPath = (_pathname: string) => useMatchForChain();
+
+// ---------------------------------------------------------------------------
+// Index/landing pane resolution. Separate from the opened chain: the chain is
+// purely URL-derived (empty at a bare app root), while the index pane is a
+// main-area concern resolved here and rendered only by the main-area renderer
+// (MillerColumns). Overlay hosts ignore it, so a bare root means "no overlay".
+// ---------------------------------------------------------------------------
+
+// Stable instanceId per index pane id, so the index pane keeps the same React
+// key/identity across renders (no remount). Distinct from chain slot ids.
+const indexInstanceIds = new Map<string, number>();
+function indexInstanceIdFor(paneId: string): number {
+  let id = indexInstanceIds.get(paneId);
+  if (id === undefined) {
+    id = nextInstanceId++;
+    indexInstanceIds.set(paneId, id);
+  }
+  return id;
+}
+
+/**
+ * Resolve the index/landing pane for the given app basePath into a stable
+ * single-entry match, or null when the app declares no `appPath`-scoped index.
+ * Recomputes only when the basePath or the registered pane set changes, so the
+ * returned match identity is stable and the index pane never remounts.
+ */
+export function useIndexMatch(basePath: string): PaneMatch | null {
+  const contributions = PaneSlots.Register.useContributions();
+  return useMemo(() => {
+    const bp = normalizeAppPath(basePath);
+    for (const pane of registry.values()) {
+      if (pane.segment && pane.segment !== "/" && pane.segment !== "") continue;
+      if (pane.appPath === undefined) continue;
+      if (normalizeAppPath(pane.appPath) !== bp) continue;
+      const entry: MatchEntry = {
+        instanceId: indexInstanceIdFor(pane.id),
+        uuid: `index:${pane.id}`,
+        pane,
+        params: {},
+        fullParams: {},
+        input: {},
+      };
+      return { chain: [entry] };
+    }
+    return null;
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the registry; registry itself is a module-level mutable Map read inside.
+  }, [basePath, contributions]);
+}
 
 // ---------------------------------------------------------------------------
 // openPaneImpl — non-positional open logic (shared by useOpenPane fallbacks).

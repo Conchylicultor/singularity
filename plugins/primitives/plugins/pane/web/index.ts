@@ -12,6 +12,7 @@ export {
   getBasePath,
   stripBasePath,
   useMatchForChain,
+  useIndexMatch,
   useMatchForPath,
   usePathname,
   useSyncPaneRegistry,

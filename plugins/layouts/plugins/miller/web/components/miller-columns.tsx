@@ -7,6 +7,7 @@ import {
   PaneMatchContext,
   reorderChain,
   setBasePath,
+  useIndexMatch,
   useMatchForChain,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
@@ -26,7 +27,12 @@ export function MillerColumns() {
   // the chain store sees the correct base path on initial load.
   useSyncPaneRegistry();
 
-  const match = useMatchForChain();
+  // The opened chain is purely URL-derived (empty at a bare app root). When it
+  // is empty, fall back to the active app's index/landing pane. Apps with no
+  // `appPath`-scoped index render nothing (empty main area).
+  const chainMatch = useMatchForChain();
+  const indexMatch = useIndexMatch(basePath);
+  const match = chainMatch ?? indexMatch;
 
   const ref = useRef<HTMLDivElement>(null);
   const lastLength = useRef(0);
