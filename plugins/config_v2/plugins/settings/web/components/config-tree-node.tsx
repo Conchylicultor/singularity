@@ -50,6 +50,7 @@ function ConfigLeafRow({
     <TreeRowChrome
       depth={depth}
       hasChildren={false}
+      leafChevron={false}
       isOpen={false}
       selected={selected}
       onSelect={() => onSelect(registration)}

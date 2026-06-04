@@ -22,6 +22,7 @@ export function ConfigNavRow({
     <TreeRowChrome
       depth={0}
       hasChildren={false}
+      leafChevron={false}
       isOpen={false}
       selected={selected}
       onSelect={onClick}
