@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
+import { PaneOverlayHost } from "@plugins/layouts/plugins/miller/web";
 import { Sonata } from "../slots";
 import { SonataProvider, useSonata } from "../context";
 
@@ -179,7 +180,13 @@ function SonataLayoutInner() {
 export function SonataLayout() {
   return (
     <SonataProvider>
-      <SonataLayoutInner />
+      {/* Sonata owns a bespoke full-viewport layout (no MillerColumns), so it
+          mounts a PaneOverlayHost to host global pane actions (e.g. the theme
+          customizer) as an overlay above its own UI. */}
+      <div className="relative h-full min-h-0">
+        <SonataLayoutInner />
+        <PaneOverlayHost />
+      </div>
     </SonataProvider>
   );
 }

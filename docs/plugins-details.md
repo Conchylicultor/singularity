@@ -81,7 +81,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`
             - Exports: Values: `DebugApp`
           - Cross-plugin:
-            - Imported by: `action-bar`, `agents`, `auth`, `code-explorer`, `conversations-view`, `health`, `notifications`, `settings`, `stats`, `task-detail`, `theme-customizer`, `toaster`, `worktree-switcher`
+            - Imported by: `action-bar`, `agents`, `auth`, `code-explorer`, `conversations-view`, `health`, `notifications`, `settings`, `stats`, `task-detail`, `toaster`, `worktree-switcher`
     - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
@@ -1328,7 +1328,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Exports: Values: `MillerColumns`
+        - Exports: Values: `MillerColumns`, `PaneOverlayHost`
 
 - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - Web:
@@ -1943,8 +1943,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
           - Web:
-            - Contributes: `Pane.Register` "theme-customizer", `Shell.Sidebar` "Theme" → `component`
-            - Uses: `apps.useCurrentAppId`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useScopeForked`, `config_v2.useSetConfig`, `shell.Shell`
+            - Contributes: `Pane.Register` "theme-customizer", `ActionBar.Item` → `ThemeCustomizerButton`
+            - Uses: `apps.useActiveApp`, `apps.useCurrentAppId`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useScopeForked`, `config_v2.useSetConfig`
             - Exports: Types: `TokenMode`, `TokenRowProps`; Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenModeContext`, `TokenRow`
     - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
       - Web:

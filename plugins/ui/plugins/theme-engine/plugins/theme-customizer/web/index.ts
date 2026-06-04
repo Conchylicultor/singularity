@@ -1,9 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdPalette } from "react-icons/md";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
-import { Shell } from "@plugins/shell/web";
+import { Pane } from "@plugins/primitives/plugins/pane/web";
+import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { themeCustomizerPane } from "./panes";
+import { ThemeCustomizerButton } from "./components/theme-customizer-button";
 
 export { ThemeCustomizer } from "./slots";
 export { themeCustomizerPane } from "./panes";
@@ -19,13 +18,10 @@ export default {
     "Extensible theme customization pane with global preset picker, search, and contributed sections.",
   contributions: [
     Pane.Register({ pane: themeCustomizerPane }),
-    Shell.Sidebar({
+    ActionBar.Item({
       id: "theme-customizer",
-      ...sidebarNavItem({
-        title: "Theme",
-        icon: MdPalette,
-        onClick: () => openPane(themeCustomizerPane, {}, { mode: "root" }),
-      }),
+      excludeFromReorder: true,
+      component: ThemeCustomizerButton,
     }),
   ],
 } satisfies PluginDefinition;

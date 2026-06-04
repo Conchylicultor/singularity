@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { MillerColumns } from "./components/miller-columns";
+export { PaneOverlayHost } from "./components/pane-overlay-host";
 
 export default {
   name: "Miller Columns",
