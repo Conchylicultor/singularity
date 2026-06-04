@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
+import { useConversations } from "@plugins/conversations/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 
@@ -11,6 +12,24 @@ import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 function slugOf(worktreePath: string): string {
   const parts = worktreePath.split("/").filter(Boolean);
   return parts[parts.length - 1] ?? worktreePath;
+}
+
+// Map each worktree slug → a human-friendly conversation title, so the op queue
+// reads as task names rather than opaque attempt ids. Built from the live
+// conversations resource (in the agent-manager that's the full main-DB set);
+// rows with no match (e.g. the main `singularity` build, or a push from a
+// conversation outside the recent window) fall back to the slug.
+function useTitleBySlug(): Record<string, string> {
+  const { active, recentGone, system } = useConversations();
+  return useMemo(() => {
+    const map: Record<string, string> = {};
+    // Lowest-priority first so a live `active` title wins over a stale one.
+    for (const c of [...system, ...recentGone, ...active]) {
+      const title = c.title?.trim();
+      if (title) map[slugOf(c.worktreePath)] = title;
+    }
+    return map;
+  }, [active, recentGone, system]);
 }
 
 // Presentational 1s ticker: the op STATE is push-driven via the resource; this
@@ -72,7 +91,7 @@ function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
   return [...pushRows, ...buildRows];
 }
 
-function OpRowView({ row, now }: { row: OpRow; now: number }) {
+function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: number }) {
   const { op, queuePos, isSelf } = row;
   const waiting = op.op === "push" && op.phase === "waiting-for-lock";
   const elapsed = formatElapsed(now - new Date(op.startedAt).getTime());
@@ -97,8 +116,9 @@ function OpRowView({ row, now }: { row: OpRow; now: number }) {
       ) : (
         <Spinner className="size-3.5 shrink-0" />
       )}
-      <span className="min-w-0 flex-1 truncate font-mono">
-        {op.slug}
+      <span className="min-w-0 flex-1 truncate">
+        {title ? <span className="truncate">{title}</span> : <span className="font-mono">{op.slug}</span>}
+        {title && <span className="ml-1.5 font-mono text-2xs text-muted-foreground">{op.slug}</span>}
         {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
       </span>
       <span className="shrink-0 text-muted-foreground">{phaseText}</span>
@@ -109,6 +129,7 @@ function OpRowView({ row, now }: { row: OpRow; now: number }) {
 
 export function OpStatusBanner({ conversation }: { conversation: ConversationRecord }) {
   const result = useResource(worktreeOpsResource);
+  const titleBySlug = useTitleBySlug();
   const now = useNow(1000);
   const [expanded, setExpanded] = useState(false);
 
@@ -161,7 +182,12 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
       {expanded && (
         <div className="border-t border-border/60 bg-background/40 py-1 text-foreground">
           {rows.map((row) => (
-            <OpRowView key={`${row.op.op}:${row.op.slug}`} row={row} now={now} />
+            <OpRowView
+              key={`${row.op.op}:${row.op.slug}`}
+              row={row}
+              title={titleBySlug[row.op.slug]}
+              now={now}
+            />
           ))}
         </div>
       )}

@@ -28,7 +28,11 @@ was indistinguishable from the agent merely "working".
   holds the lock is `#1`, the `waiting-for-lock` pushes follow in request order
   (`startedAt`) — then lists builds, which serialize per-worktree and don't
   contend on the global lock so they carry no queue position. The current
-  worktree's row is highlighted.
+  worktree's row is highlighted. Each row resolves its worktree slug (the
+  attempt id) to a human conversation title via the live `conversations`
+  resource — in the agent-manager that's the full main-DB set, so this stays a
+  pure client-side lookup with no cross-worktree query; rows with no match fall
+  back to the slug.
 
 ## Boundary notes
 
@@ -46,6 +50,7 @@ was indistinguishable from the agent merely "working".
 - Description: Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
 - Web:
   - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`
+  - Uses: `conversations.useConversations`
 - Server:
   - Exports: Values: `worktreeOpsResource`
 - Shared:
