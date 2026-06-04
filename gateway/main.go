@@ -23,6 +23,7 @@ type Config struct {
 	LogLevel          string
 	LogFormat         string
 	LogBufferLines    int
+	LogDir            string
 	RegistryDir       string
 	SocketsDir        string
 	CentralRoutesFile string
@@ -41,6 +42,8 @@ func parseFlags() Config {
 	flag.IntVar(&cfg.LogBufferLines, "log-buffer-lines", 1000, "per-worktree backend log ring capacity")
 
 	home, _ := os.UserHomeDir()
+	defaultLogDir := filepath.Join(home, ".singularity", "logs")
+	flag.StringVar(&cfg.LogDir, "log-dir", defaultLogDir, "directory for the gateway and per-worktree log files")
 	defaultRegistry := filepath.Join(home, ".singularity", "worktrees")
 	flag.StringVar(&cfg.RegistryDir, "registry-dir", defaultRegistry, "directory of worktree JSON files")
 	defaultSockets := filepath.Join(home, ".singularity", "sockets")
@@ -65,11 +68,15 @@ func setupLogging(cfg Config) {
 		level = slog.LevelInfo
 	}
 	opts := &slog.HandlerOptions{Level: level}
+	// The gateway's own logs are their own channel: a rotating gateway.log,
+	// separate from each worktree backend's <name>.log. Per-process stdout/stderr
+	// (Go panics, pre-logging crashes) is captured separately by the launcher.
+	out := newRotatingWriter(filepath.Join(cfg.LogDir, "gateway.log"), maxLogBytes, maxLogBackups)
 	var h slog.Handler
 	if cfg.LogFormat == "json" {
-		h = slog.NewJSONHandler(os.Stderr, opts)
+		h = slog.NewJSONHandler(out, opts)
 	} else {
-		h = slog.NewTextHandler(os.Stderr, opts)
+		h = slog.NewTextHandler(out, opts)
 	}
 	slog.SetDefault(slog.New(h))
 }

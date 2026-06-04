@@ -281,7 +281,10 @@ func (r *Registry) remove(name string) {
 	delete(r.byName, name)
 	r.mu.Unlock()
 	slog.Info("worktree unregistered", "name", name)
-	go func() { _ = wt.Stop(context.Background()) }()
+	go func() {
+		_ = wt.Stop(context.Background())
+		wt.CloseLog()
+	}()
 }
 
 func loadSpec(path string) (*Spec, error) {

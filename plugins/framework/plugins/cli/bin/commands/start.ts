@@ -4,7 +4,11 @@ import { join } from "path";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { SINGULARITY_DIR, DATABASE_CONFIG_PATH, PG_DIR } from "../paths";
 const LOGS_DIR = join(SINGULARITY_DIR, "logs");
-const GATEWAY_LOG = join(LOGS_DIR, "gateway.log");
+// The gateway owns the rotating per-channel logs under LOGS_DIR (gateway.log,
+// <worktree>.log). This file only captures the daemon's raw stdout/stderr — Go
+// panics and any crash before slog is wired up. Truncated on each start so it
+// can't grow unbounded; the last crash survives until the next launch.
+const GATEWAY_STDIO_LOG = join(LOGS_DIR, "gateway-stdio.log");
 const PID_FILE = join(SINGULARITY_DIR, "gateway.pid");
 
 // Embedded PG defaults (mirrors plugins/database/plugins/embedded/shared).
@@ -159,14 +163,14 @@ export function registerStart(program: Command) {
       if (!pidAlive && (await isGatewayListening())) {
         console.log("Gateway is already running on port 9000 (started externally).");
         console.log("  Gateway: http://singularity.localhost:9000");
-        console.log(`  Logs:    ${GATEWAY_LOG}`);
+        console.log(`  Logs:    ${LOGS_DIR}/`);
         return;
       }
 
       if (pidAlive) {
         if (!opts.force) {
           console.log(`Gateway is already running (PID ${existingPid})`);
-          console.log(`  Logs:    ${GATEWAY_LOG}`);
+          console.log(`  Logs:    ${LOGS_DIR}/`);
           console.log(`  Gateway: http://singularity.localhost:9000`);
           return;
         }
@@ -196,10 +200,12 @@ export function registerStart(program: Command) {
       ensureDatabaseConfig(repoRoot);
 
       mkdirSync(LOGS_DIR, { recursive: true });
-      const logFd = openSync(GATEWAY_LOG, "a");
+      // Truncate ("w"): only holds raw stdout/stderr until slog takes over, plus
+      // any panic. The gateway writes its own rotating logs under -log-dir.
+      const logFd = openSync(GATEWAY_STDIO_LOG, "w");
 
       const gw = Bun.spawn(
-        [gatewayBin, "-log-level", opts.logLevel],
+        [gatewayBin, "-log-level", opts.logLevel, "-log-dir", LOGS_DIR],
         {
           cwd: gatewayDir,
           stdout: logFd,
@@ -213,7 +219,7 @@ export function registerStart(program: Command) {
       gw.unref();
 
       console.log(`Gateway started (PID ${gw.pid})`);
-      console.log(`  Logs:    ${GATEWAY_LOG}`);
+      console.log(`  Logs:    ${LOGS_DIR}/`);
       console.log(`  Gateway: http://singularity.localhost:9000`);
     });
 }

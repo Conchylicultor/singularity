@@ -140,6 +140,11 @@ type Worktree struct {
 	// persists across respawns so crash output remains visible after the
 	// process exits. Its own mutex; not guarded by w.mu.
 	logBuf *logRing
+
+	// logFile is this worktree's own on-disk log channel (<name>.log). It is
+	// the durable counterpart to logBuf, opened lazily on first write and
+	// rotated by size. Its own mutex; not guarded by w.mu.
+	logFile *rotatingWriter
 }
 
 func NewWorktree(name string, spec *Spec, cfg *Config) (*Worktree, error) {
@@ -149,12 +154,19 @@ func NewWorktree(name string, spec *Spec, cfg *Config) (*Worktree, error) {
 		return nil, fmt.Errorf("socket path %q is %d bytes; exceeds %d-byte limit (rename worktree)", longest, len(longest), maxSocketPath)
 	}
 	w := &Worktree{
-		Name:   name,
-		cfg:    cfg,
-		logBuf: newLogRing(cfg.LogBufferLines),
+		Name:    name,
+		cfg:     cfg,
+		logBuf:  newLogRing(cfg.LogBufferLines),
+		logFile: newRotatingWriter(filepath.Join(cfg.LogDir, name+".log"), maxLogBytes, maxLogBackups),
 	}
 	w.spec.Store(spec)
 	return w, nil
+}
+
+// CloseLog closes the worktree's on-disk log channel. Called when the worktree
+// is unregistered; the writer reopens lazily if the worktree is ever used again.
+func (w *Worktree) CloseLog() {
+	_ = w.logFile.Close()
 }
 
 // Spec returns the current spec snapshot. Lock-free.
@@ -539,8 +551,10 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	if err != nil {
 		return nil, err
 	}
-	slog.Info(fmt.Sprintf("--- starting %s ---", w.Name))
-	w.logBuf.Append("gateway", fmt.Sprintf("--- starting %s ---", w.Name), time.Now().UnixMilli())
+	now := time.Now()
+	marker := fmt.Sprintf("--- starting %s ---", w.Name)
+	fmt.Fprintf(w.logFile, "%s [gateway] %s\n", now.Format(time.RFC3339), marker)
+	w.logBuf.Append("gateway", marker, now.UnixMilli())
 	if err := cmd.Start(); err != nil {
 		return nil, err
 	}
@@ -551,8 +565,8 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 		socketPath: socketPath,
 	}
 	log := slog.With("worktree", w.Name, "pid", cmd.Process.Pid, "socket", socketPath)
-	go pumpLog(stdout, log, "stdout", w.logBuf)
-	go pumpLog(stderr, log, "stderr", w.logBuf)
+	go pumpLog(stdout, "stdout", w.logBuf, w.logFile)
+	go pumpLog(stderr, "stderr", w.logBuf, w.logFile)
 	go func() {
 		err := cmd.Wait()
 		w.onBackendExit(bk, err)
@@ -645,15 +659,20 @@ func newReverseProxy(socketPath string) *httputil.ReverseProxy {
 	return rp
 }
 
-func pumpLog(r io.ReadCloser, log *slog.Logger, stream string, ring *logRing) {
+// pumpLog forwards one of a backend's output streams to the worktree's own log
+// channel: the durable per-worktree file plus the in-memory ring that feeds the
+// live UI. Backend output stays out of the gateway's own log — each is its own
+// channel.
+func pumpLog(r io.ReadCloser, stream string, ring *logRing, file io.Writer) {
 	defer r.Close()
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 4096), 1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
-		log.Info(line, "stream", stream)
+		now := time.Now()
+		fmt.Fprintf(file, "%s [%s] %s\n", now.Format(time.RFC3339), stream, line)
 		if ring != nil {
-			ring.Append(stream, line, time.Now().UnixMilli())
+			ring.Append(stream, line, now.UnixMilli())
 		}
 	}
 }

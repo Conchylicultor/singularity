@@ -99,6 +99,16 @@ Each service's watchdog dials its readiness probe every N seconds (default 2). O
 
 If `database.json` is missing or has an empty `services` array, the supervisor does nothing (equivalent to using an externally managed database).
 
+## Logging
+
+Each channel gets its own size-rotated file under `-log-dir` (default `~/.singularity/logs/`), so one channel's volume can't bury another:
+
+- `gateway.log` — the gateway's own `slog` output (lifecycle, routing, supervisor). Written directly by the Go process via a rotating writer.
+- `<name>.log` — one file per worktree, holding that backend's stdout/stderr (`central.log`, `<worktree>.log`, …). Each line is `<RFC3339> [stdout|stderr] <line>`. Backend output never lands in `gateway.log`. This is the durable counterpart to the in-memory `logRing` that feeds the live UI.
+- `gateway-stdio.log` — the daemon's raw stdout/stderr (Go panics, any crash before `slog` is wired up). Owned by the launcher (`./singularity start`), truncated on each start.
+
+Rotation (`logwriter.go`, `rotatingWriter`) is size-based: at `maxLogBytes` (50 MB) the active file becomes `<file>.1`, older backups shift up, and the oldest past `maxLogBackups` (5) is dropped — so each channel is capped at ~300 MB with no external dependency. The per-worktree writer opens lazily and is closed when the worktree is unregistered.
+
 ## Build & Run
 
 ```sh
