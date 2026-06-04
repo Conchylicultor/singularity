@@ -7,24 +7,38 @@ import {
   resetRuntimeProfile,
 } from "../../shared/endpoints";
 
+interface ParentRow {
+  kind: "http" | "db" | "loader";
+  label: string;
+  count: number;
+}
+
 interface AggRow {
   label: string;
   count: number;
   avgMs: number;
   maxMs: number;
   lastMs: number;
+  byParent: ParentRow[];
 }
 
-// Shared column definitions for all three tables.
+// How many distinct callers to render inline before collapsing into "+N more".
+const MAX_PARENTS_SHOWN = 3;
+
+// Shared column definitions for all three tables. The label cell also renders
+// the per-caller attribution breakdown (empty for HTTP, which has no parent).
 const AGG_COLUMNS: ColumnDef<AggRow>[] = [
   {
     id: "label",
     header: "Label",
     width: "flex-1 min-w-0",
     cell: (row) => (
-      <span className="truncate font-mono text-xs" title={row.label}>
-        {row.label}
-      </span>
+      <div className="flex min-w-0 flex-col gap-0.5">
+        <span className="truncate font-mono text-xs" title={row.label}>
+          {row.label}
+        </span>
+        {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
+      </div>
     ),
   },
   {
@@ -53,6 +67,35 @@ const AGG_COLUMNS: ColumnDef<AggRow>[] = [
   },
 ];
 
+function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
+  const shown = parents.slice(0, MAX_PARENTS_SHOWN);
+  const rest = parents.slice(MAX_PARENTS_SHOWN);
+  const restTitle = rest
+    .map((p) => `${p.kind}:${p.label} ×${p.count}`)
+    .join("\n");
+  return (
+    <div className="flex flex-col gap-0.5 pl-3">
+      {shown.map((p) => (
+        <span
+          key={`${p.kind}:${p.label}`}
+          className="truncate font-mono text-3xs text-muted-foreground"
+          title={`${p.kind}:${p.label}`}
+        >
+          ↳ {p.kind}:{p.label} ×{p.count}
+        </span>
+      ))}
+      {rest.length > 0 && (
+        <span
+          className="font-mono text-3xs text-muted-foreground"
+          title={restTitle}
+        >
+          +{rest.length} more caller{rest.length === 1 ? "" : "s"}
+        </span>
+      )}
+    </div>
+  );
+}
+
 function toAggRows(
   aggregates: {
     label: string;
@@ -60,6 +103,7 @@ function toAggRows(
     totalMs: number;
     maxMs: number;
     lastMs: number;
+    byParent: { parent: { kind: "http" | "db" | "loader"; label: string }; count: number }[];
   }[],
 ): AggRow[] {
   return aggregates
@@ -69,6 +113,11 @@ function toAggRows(
       avgMs: Math.round(agg.totalMs / agg.count),
       maxMs: agg.maxMs,
       lastMs: agg.lastMs,
+      byParent: agg.byParent.map((pb) => ({
+        kind: pb.parent.kind,
+        label: pb.parent.label,
+        count: pb.count,
+      })),
     }))
     .sort((a, b) => b.maxMs - a.maxMs);
 }

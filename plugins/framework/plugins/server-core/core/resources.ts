@@ -1,6 +1,6 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
-import { recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import { defineServerContribution } from "./contributions";
 import { reportServerError } from "./error-reporter";
 import type { WsData, WsHandler } from "./types";
@@ -100,13 +100,10 @@ let dagDirty = true;
 let topoOrder: RegistryEntry[] = [];
 
 // Time a resource loader call and record a `loader` span keyed by entry.key.
-async function timedLoad(entry: RegistryEntry, params: ResourceParams): Promise<unknown> {
-  const t0 = performance.now();
-  try {
-    return await entry.loader(params);
-  } finally {
-    recordSpan("loader", entry.key, performance.now() - t0);
-  }
+// recordEntrySpan also establishes the ambient parent context so DB queries
+// issued inside the loader attribute to it.
+function timedLoad(entry: RegistryEntry, params: ResourceParams): Promise<unknown> {
+  return recordEntrySpan("loader", entry.key, () => entry.loader(params));
 }
 
 function paramsKey(params: ResourceParams): string {

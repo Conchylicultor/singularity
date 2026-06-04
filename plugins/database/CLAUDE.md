@@ -11,7 +11,9 @@ Owns all database infrastructure for the Singularity server:
 
 `pool.query` is wrapped (in `server/internal/client.ts`) to record per-query
 timing into the runtime-profiler recorder (`db` spans). This captures all
-drizzle ORM queries and the `awaitDbReady` `SELECT 1`. **Direct
+drizzle ORM queries and the `awaitDbReady` `SELECT 1`. Each `db` span is
+attributed to the innermost enclosing request/loader (its `parent`) via the
+recorder's ambient context, so N+1 patterns point straight at the caller. **Direct
 `pool.connect()` → `client.query` paths bypass this timing** — they go through a
 checked-out client, not `pool.query`, so their durations are not recorded.
 

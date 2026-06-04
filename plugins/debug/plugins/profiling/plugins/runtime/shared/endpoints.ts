@@ -5,12 +5,25 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 // (@plugins/infra/plugins/runtime-profiler/core). A response schema is required
 // for useEndpoint/fetchEndpoint to actually return parsed data on the client —
 // the server ignores it, so it is client-safe.
+const spanRefSchema = z.object({
+  kind: z.enum(["http", "db", "loader"]),
+  label: z.string(),
+});
+
+const parentBreakdownSchema = z.object({
+  parent: spanRefSchema,
+  count: z.number(),
+  totalMs: z.number(),
+  maxMs: z.number(),
+});
+
 const aggregateSchema = z.object({
   label: z.string(),
   count: z.number(),
   totalMs: z.number(),
   maxMs: z.number(),
   lastMs: z.number(),
+  byParent: z.array(parentBreakdownSchema),
 });
 
 const slowSpanSchema = z.object({
@@ -18,6 +31,7 @@ const slowSpanSchema = z.object({
   label: z.string(),
   durationMs: z.number(),
   atMs: z.number(),
+  parent: spanRefSchema.nullable(),
 });
 
 const byKind = <T extends z.ZodTypeAny>(item: T) =>
