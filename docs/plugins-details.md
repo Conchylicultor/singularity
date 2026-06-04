@@ -247,12 +247,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `scrubber`
+            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `scrubber`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
+            - **`chord-grid`** — Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy.
+              - Web:
+                - Contributes: `Sonata.Source` "Chord Grid"
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.
               - Web:
                 - Contributes: `Sonata.Source` "MIDI File"
+        - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
+          - Core:
+            - Exports: Types: `ChordTemplate`; Values: `CHORD_TEMPLATES`, `formatChordSymbol`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
