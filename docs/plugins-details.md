@@ -976,7 +976,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`
         - Exports: Values: `resolveCliFlag`
       - Core:
-        - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`, `SELECTABLE_MODELS`, `StoredModelSchema`
+        - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `modelDisplayLabel`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`, `SELECTABLE_MODELS`, `StoredModelSchema`
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Web:
         - Exports: Values: `loadChainForConversation`
@@ -1526,7 +1526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `resolveIconSvgNodesJson`
     - **`badge`** — Semantic badge primitive: size × variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.
       - Web:
-        - Exports: Types: `BadgeProps`, `BadgeSize`, `BadgeVariant`; Values: `Badge`
+        - Exports: Types: `BadgeProps`, `BadgeSize`, `BadgeVariant`; Values: `Badge`, `formatStatusLabel`
     - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
       - Web:
         - Exports: Types: `BreadcrumbProps`, `BreadcrumbSegment`; Values: `Breadcrumb`
@@ -1849,6 +1849,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Endpoint callers: `dependencies`, `endpoints`, `task`, `task-dependencies`, `task-events`, `task-graph`, `task-list`, `tree`
   - Plugins:
+    - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
+      - Web:
+        - Exports: Values: `ATTEMPT_STATUS_META`, `AttemptStatusBadge`
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
       - Web:
         - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`

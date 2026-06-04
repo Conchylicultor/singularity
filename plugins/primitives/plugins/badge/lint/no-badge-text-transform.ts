@@ -8,7 +8,8 @@ const createRule = ESLintUtils.RuleCreator(
  * CSS `text-transform` on a `<Badge>` (`capitalize`, `uppercase`, `lowercase`)
  * decides label casing in the stylesheet instead of in the content. That is the
  * exact mechanism behind the badge-casing inconsistency: `capitalize` on a raw
- * CLI string `"claude-opus-4-8"` mangles it to `"Claude-opus-4-8"`, and an
+ * Claude model flag (a `claude-<family>-<ver>` string) mangles it instead of
+ * showing the registry label, and an
  * `uppercase` "eyebrow" treatment copy-pasted across call sites fragments the
  * one house rule (sentence case for derived labels, verbatim for proper nouns).
  *
