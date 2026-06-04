@@ -59,6 +59,14 @@ export interface SonataContextValue {
   tempoScale: number;
   activeSourceId: string | null;
   activeDisplayId: string | null;
+  /**
+   * Monotonic counter bumped on every seek (absolute or relative). Re-anchoring
+   * the transport moves the playback origin without changing `score`, so anchored
+   * consumers that can't read the live anchor ref reactively — notably the audio
+   * scheduler — depend on this to restart from the new cursor. The visual rAF
+   * cursor doesn't need it (it reads the anchor ref every frame).
+   */
+  seekEpoch: number;
 
   setActiveSource: (id: string | null) => void;
   setActiveDisplay: (id: string | null) => void;
@@ -108,6 +116,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const [cursorBeat, setCursorBeat] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [tempoScale, setTempoScaleState] = useState(1);
+  // Bumped on every seek so the audio scheduler can restart from the new cursor.
+  const [seekEpoch, setSeekEpoch] = useState(0);
 
   // Default the active source/display to the first contributed one.
   useEffect(() => {
@@ -211,6 +221,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       const next = Math.max(0, Math.min(end, beat));
       setCursorBeat(next);
       reanchor(next);
+      // Signal anchored consumers (the audio scheduler) to restart from `next`.
+      // The score is unchanged, so without this the audio would keep playing
+      // from the pre-seek position while only the visual cursor jumps.
+      setSeekEpoch((n) => n + 1);
     },
     [reanchor],
   );
@@ -311,6 +325,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       tempoScale,
       activeSourceId,
       activeDisplayId,
+      seekEpoch,
       setActiveSource: setActiveSourceId,
       setActiveDisplay: setActiveDisplayId,
       setRaw,
@@ -329,6 +344,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       tempoScale,
       activeSourceId,
       activeDisplayId,
+      seekEpoch,
       seekBy,
       seekTo,
       setTempoScale,

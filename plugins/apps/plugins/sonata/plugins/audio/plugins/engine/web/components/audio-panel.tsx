@@ -21,7 +21,7 @@ const DEFAULT_VOLUME = 0.8;
  * cursor through tempo changes.
  */
 export function AudioPanel() {
-  const { score, isPlaying, cursorBeat, registerClock } = useSonata();
+  const { score, isPlaying, cursorBeat, seekEpoch, registerClock } = useSonata();
 
   // Keep the latest cursor in a ref so the scheduling effect reads it WITHOUT
   // depending on it (re-anchor only on play/stop, like the transport).
@@ -127,6 +127,9 @@ export function AudioPanel() {
   }, [activeInstrument]);
 
   // --- Scheduling effect: anchor on play, schedule upfront, allOff on stop. --
+  // Re-runs on `seekEpoch` too: a seek repositions the playback origin without
+  // changing `score`, so we must cancel the in-flight schedule and re-anchor
+  // from the new cursor — otherwise audio keeps playing from the pre-seek spot.
   useEffect(() => {
     if (!voices) return;
 
@@ -156,7 +159,7 @@ export function AudioPanel() {
       handle?.cancel();
       voices.allOff();
     };
-  }, [isPlaying, score, activeInstrumentId, voices]);
+  }, [isPlaying, score, activeInstrumentId, voices, seekEpoch]);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
