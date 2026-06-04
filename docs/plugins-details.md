@@ -845,6 +845,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
           - Shared:
             - Exports: Types: `ConversationNote`, `ConversationNotesPayload`; Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`, `deleteNote`, `upsertNote`
+        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
+          - Web:
+            - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`
+          - Server:
+            - Exports: Values: `worktreeOpsResource`
+          - Shared:
+            - Exports: Types: `WorktreeOp`, `WorktreeOpsPayload`; Values: `WorktreeOpSchema`, `WorktreeOpsPayloadSchema`, `worktreeOpsResource`
         - **`open-app`** — Opens the conversation's namespace at `http://<id>.localhost:9000/`.
           - Web:
             - Contributes: `Conversation.ActionBar` → `OpenAppButton`
@@ -1322,7 +1329,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
     - **`worktree`**
       - Server:
-        - Exports: Types: `WorktreeOp`; Values: `clearWorktreeOp`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `markWorktreeOpStart`, `removeWorktree`, `setupWorktree`, `worktreePathFor`
+        - Exports: Types: `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`; Values: `clearWorktreeOp`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `removeWorktree`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:

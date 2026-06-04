@@ -19,6 +19,26 @@ import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 // and the reader (runtime-tmux, via `basename(worktreePath)`) all agree on.
 export type WorktreeOp = "build" | "push";
 
+// A push is written up-front in the "waiting-for-lock" phase (before it requests
+// the global push lock) and flipped to "running" the moment the lock is granted,
+// so a push queued behind another reads as genuinely-queued rather than running.
+// Builds only ever write "running" (the default); the field is generic so a
+// build-lock-wait phase can be added later with no schema change.
+export type WorktreeOpPhase = "waiting-for-lock" | "running";
+
+export interface WorktreeOpInfo {
+  slug: string;
+  op: WorktreeOp;
+  startedAt: string;
+  phase: WorktreeOpPhase;
+}
+
+// The root holding every worktree's per-worktree singularity state (the `ops/`
+// markers live under `<root>/<slug>/ops/`). Exposed so consumers can watch it.
+export function worktreesDir(): string {
+  return join(SINGULARITY_DIR, "worktrees");
+}
+
 function opsDir(slug: string): string {
   return join(SINGULARITY_DIR, "worktrees", slug, "ops");
 }
@@ -39,21 +59,69 @@ function isPidAlive(pid: number): boolean {
   }
 }
 
-export function markWorktreeOpStart(slug: string, op: WorktreeOp): void {
+export function markWorktreeOpStart(
+  slug: string,
+  op: WorktreeOp,
+  phase: WorktreeOpPhase = "running",
+): void {
   mkdirSync(opsDir(slug), { recursive: true });
   writeFileSync(
     opFile(slug, op),
-    JSON.stringify({ op, pid: process.pid, startedAt: new Date().toISOString() }),
+    JSON.stringify({ op, pid: process.pid, startedAt: new Date().toISOString(), phase }),
   );
+}
+
+// Rewrite an existing marker's phase, preserving pid/startedAt. No-op if the
+// marker is gone (op already finished and cleared).
+export function setWorktreeOpPhase(slug: string, op: WorktreeOp, phase: WorktreeOpPhase): void {
+  const path = opFile(slug, op);
+  let raw: string;
+  try {
+    raw = readFileSync(path, "utf8");
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return;
+    throw err;
+  }
+  let parsed: Record<string, unknown>;
+  try {
+    parsed = JSON.parse(raw) as Record<string, unknown>;
+  } catch {
+    return;
+  }
+  writeFileSync(path, JSON.stringify({ ...parsed, phase }));
 }
 
 export function clearWorktreeOp(slug: string, op: WorktreeOp): void {
   rmSync(opFile(slug, op), { force: true });
 }
 
+// Parse one marker file, reaping it if dead or unparseable, so a SIGKILLed
+// build/push (which can't run its own cleanup) self-heals on the next read.
+// Returns the live marker's data, or null if the marker was reclaimed.
+function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
+  let parsed: { op?: unknown; pid?: unknown; startedAt?: unknown; phase?: unknown };
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as typeof parsed;
+  } catch {
+    // Unreadable/garbage marker — reclaim it.
+    rmSync(path, { force: true });
+    return null;
+  }
+  if (typeof parsed.pid !== "number" || !isPidAlive(parsed.pid)) {
+    rmSync(path, { force: true });
+    return null;
+  }
+  return {
+    slug,
+    op: parsed.op === "push" ? "push" : "build",
+    startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : new Date(0).toISOString(),
+    // Back-compat: markers written before the phase field default to "running".
+    phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",
+  };
+}
+
 // True iff any op marker for this worktree names a live pid. Reaps dead or
-// unparseable markers as it scans, so a SIGKILLed build/push (which can't run
-// its own cleanup) self-heals on the next read.
+// unparseable markers as it scans.
 export function isWorktreeOpActive(slug: string): boolean {
   let files: string[];
   try {
@@ -64,17 +132,33 @@ export function isWorktreeOpActive(slug: string): boolean {
   }
   let active = false;
   for (const f of files) {
-    const path = join(opsDir(slug), f);
-    let pid: unknown;
-    try {
-      pid = (JSON.parse(readFileSync(path, "utf8")) as { pid?: unknown }).pid;
-    } catch {
-      // Unreadable/garbage marker — reclaim it.
-      rmSync(path, { force: true });
-      continue;
-    }
-    if (typeof pid === "number" && isPidAlive(pid)) active = true;
-    else rmSync(path, { force: true });
+    if (readLiveMarker(slug, join(opsDir(slug), f))) active = true;
   }
   return active;
+}
+
+// Every live op marker across all worktrees, parsed into WorktreeOpInfo. Reaps
+// dead/garbage markers as it scans, like isWorktreeOpActive.
+export function listActiveWorktreeOps(): WorktreeOpInfo[] {
+  let slugs: string[];
+  try {
+    slugs = readdirSync(worktreesDir());
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
+    throw err;
+  }
+  const out: WorktreeOpInfo[] = [];
+  for (const slug of slugs) {
+    let files: string[];
+    try {
+      files = readdirSync(opsDir(slug));
+    } catch {
+      continue; // Not a worktree-with-ops dir; skip.
+    }
+    for (const f of files) {
+      const info = readLiveMarker(slug, join(opsDir(slug), f));
+      if (info) out.push(info);
+    }
+  }
+  return out;
 }

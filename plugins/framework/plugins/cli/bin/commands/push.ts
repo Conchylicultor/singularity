@@ -5,7 +5,7 @@ import { basename, join } from "path";
 import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
 import { createPushProfiler } from "../push-profiler";
-import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 async function run(
   cmd: string[],
@@ -280,9 +280,13 @@ export function registerPush(program: Command) {
       // failure path, and thrown errors — via the on-exit handler; a SIGKILLed
       // push self-heals via the marker's pid-liveness check.
       const opSlug = basename(root0);
-      markWorktreeOpStart(opSlug, "push");
+      markWorktreeOpStart(opSlug, "push", "waiting-for-lock");
       process.on("exit", () => clearWorktreeOp(opSlug, "push"));
       const onLockAcquired = (): void => {
+        // Lock granted — the push is no longer queued. Flip the marker so the
+        // conversation banner switches from "queued / waiting for lock" to
+        // "in progress" (instantaneous when there was no contention).
+        setWorktreeOpPhase(opSlug, "push", "running");
         profiler.markLockAcquired();
       };
 

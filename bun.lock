@@ -645,6 +645,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-notes",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/op-status": {
+      "name": "@singularity/plugin-conversations-conversation-view-op-status",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/open-app": {
       "name": "@singularity/plugin-conversations-conversation-view-open-app",
       "version": "0.0.1",
@@ -2562,6 +2566,8 @@
     "@singularity/plugin-conversations-conversation-view-new-child-task": ["@singularity/plugin-conversations-conversation-view-new-child-task@workspace:plugins/conversations/plugins/conversation-view/plugins/new-child-task"],
 
     "@singularity/plugin-conversations-conversation-view-notes": ["@singularity/plugin-conversations-conversation-view-notes@workspace:plugins/conversations/plugins/conversation-view/plugins/notes"],
+
+    "@singularity/plugin-conversations-conversation-view-op-status": ["@singularity/plugin-conversations-conversation-view-op-status@workspace:plugins/conversations/plugins/conversation-view/plugins/op-status"],
 
     "@singularity/plugin-conversations-conversation-view-open-app": ["@singularity/plugin-conversations-conversation-view-open-app@workspace:plugins/conversations/plugins/conversation-view/plugins/open-app"],
 

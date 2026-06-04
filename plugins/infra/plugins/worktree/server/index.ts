@@ -8,9 +8,14 @@ export {
 } from "./internal/worktree";
 export {
   type WorktreeOp,
+  type WorktreeOpPhase,
+  type WorktreeOpInfo,
   markWorktreeOpStart,
+  setWorktreeOpPhase,
   clearWorktreeOp,
   isWorktreeOpActive,
+  listActiveWorktreeOps,
+  worktreesDir,
 } from "./internal/worktree-op";
 
 export default {
