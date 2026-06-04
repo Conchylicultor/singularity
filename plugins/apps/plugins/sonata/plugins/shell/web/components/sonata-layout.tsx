@@ -154,6 +154,7 @@ function SonataLayoutInner() {
             <Sonata.Display.Dispatch
               score={score}
               cursorBeat={cursorBeat}
+              tempoScale={tempoScale}
               activeDisplayId={effectiveDisplayId}
             />
           ) : (

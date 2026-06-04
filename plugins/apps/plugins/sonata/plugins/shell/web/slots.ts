@@ -59,7 +59,14 @@ export const Sonata = {
   // dispatch key is the active display id, carried in the render props so the
   // shell stays the single owner of `activeDisplayId`.
   Display: defineDispatchSlot<
-    { score: Score; cursorBeat: number; activeDisplayId: string },
+    {
+      score: Score;
+      cursorBeat: number;
+      /** Playback tempo multiplier (1 = authored). Displays scale scroll speed by
+       *  this so slowing down slows the scroll instead of stretching notes. */
+      tempoScale: number;
+      activeDisplayId: string;
+    },
     string,
     { id: string; label: string; icon?: IconType; capabilities: Capability[] }
   >("sonata.display", {

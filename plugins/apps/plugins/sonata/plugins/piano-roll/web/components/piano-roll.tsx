@@ -13,6 +13,9 @@ import { PitchAxisHost } from "./pitch-axis-host";
 export interface PianoRollProps {
   score: Score;
   cursorBeat: number;
+  /** Playback tempo multiplier (1 = authored). Scales the scroll rate so slowing
+   *  the tempo slows the scroll instead of stretching note heights. */
+  tempoScale: number;
   activeDisplayId: string;
 }
 
@@ -88,7 +91,7 @@ function GridLines({
   );
 }
 
-function PianoRollInner({ score, cursorBeat }: PianoRollProps) {
+function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // We measure the LANE (above the keyboard); its height drives the time axis.
   const [laneRef, lane] = useElementSize();
 
@@ -99,8 +102,9 @@ function PianoRollInner({ score, cursorBeat }: PianoRollProps) {
         height: lane.height,
         cursorBeat,
         score,
+        tempoScale,
       }),
-    [lane.width, lane.height, cursorBeat, score],
+    [lane.width, lane.height, cursorBeat, score, tempoScale],
   );
 
   // Note rectangles, derived from the projection (single geometry source).
