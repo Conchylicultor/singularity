@@ -834,6 +834,13 @@
       "tag": "20260604_143531_ac8ba782__tasks_v_precompute_completion",
       "hash": "ac8ba782",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780614221000,
+      "tag": "20260604_230341_fae42ac5__add_page_blocks_attachments",
+      "hash": "fae42ac5",
+      "breakpoints": true
     }
   ]
 }

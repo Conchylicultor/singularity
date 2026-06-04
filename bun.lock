@@ -1171,6 +1171,10 @@
         "lexical": "^0.44.0",
       },
     },
+    "plugins/page/plugins/image": {
+      "name": "@singularity/plugin-page-image",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/links": {
       "name": "@singularity/plugin-page-links",
       "version": "0.0.1",
@@ -2842,6 +2846,8 @@
     "@singularity/plugin-page-bulleted-list": ["@singularity/plugin-page-bulleted-list@workspace:plugins/page/plugins/bulleted-list"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
+
+    "@singularity/plugin-page-image": ["@singularity/plugin-page-image@workspace:plugins/page/plugins/image"],
 
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
 

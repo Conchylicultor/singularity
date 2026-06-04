@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-image",
+  "description": "Image block type: upload (paste/drop/picker), free-width resize, served via attachments.",
+  "private": true,
+  "version": "0.0.1"
+}

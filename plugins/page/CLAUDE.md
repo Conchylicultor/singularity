@@ -8,6 +8,7 @@
 - Sub-plugins:
   - **`bulleted-list`** — Bulleted-list block type for the page editor.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
+  - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
   - **`text`** — Plain-text block type for the page editor.

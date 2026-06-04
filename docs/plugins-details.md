@@ -1050,7 +1050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1385,7 +1385,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Editor.Block`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
       - Cross-plugin:
-        - Slot contributors: `bulleted-list`, `page-link`, `text`, `to-do`, `toggle`
+        - Slot contributors: `bulleted-list`, `image`, `page-link`, `text`, `to-do`, `toggle`
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -1394,6 +1394,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `PATCH /api/documents/:id`, `DELETE /api/documents/:id`, `GET /api/documents/:documentId/blocks`, `POST /api/documents/:documentId/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`
       - Core:
         - Exports: Types: `Block`, `BlockHandle`, `CreateBlockBody`, `CreateDocumentBody`, `Document`, `MoveBlockBody`, `SplitBlockBody`, `TextData`, `UpdateBlockBody`, `UpdateDocumentBody`; Values: `BlockSchema`, `blocksResource`, `createBlock`, `CreateBlockBodySchema`, `createDocument`, `CreateDocumentBodySchema`, `defineBlock`, `deleteBlock`, `deleteDocument`, `DocumentSchema`, `documentsResource`, `getDocument`, `indentBlock`, `listBlocks`, `listDocuments`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `splitBlock`, `SplitBlockBodySchema`, `textDataSchema`, `updateBlock`, `UpdateBlockBodySchema`, `updateDocument`, `UpdateDocumentBodySchema`
+    - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
+      - Web:
+        - Contributes: `Editor.Block` "image" → `ImageBlock`
+        - Exports: Values: `imageBlock`
+      - Server:
+        - Uses: `database.db`
+        - DB schema: `plugins/page/plugins/image/server/internal/tables.ts`
+        - Register: `defineJob('page.image.reconcile')`
+      - Core:
+        - Exports: Values: `imageBlock`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
       - Server:
         - Uses: `database.db`
