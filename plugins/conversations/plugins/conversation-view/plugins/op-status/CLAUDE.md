@@ -22,6 +22,13 @@ was indistinguishable from the agent merely "working".
   (the same key the status poller uses), and renders the matching op. The
   elapsed `mm:ss` is a presentational 1s ticker — the op state itself is
   push-driven.
+- The banner is a toggle: clicking it expands a list of **every** in-flight op
+  across all worktrees (the resource already carries the full `{ slug → op }`
+  map). The list reconstructs the global push-lock queue — the running push that
+  holds the lock is `#1`, the `waiting-for-lock` pushes follow in request order
+  (`startedAt`) — then lists builds, which serialize per-worktree and don't
+  contend on the global lock so they carry no queue position. The current
+  worktree's row is highlighted.
 
 ## Boundary notes
 
