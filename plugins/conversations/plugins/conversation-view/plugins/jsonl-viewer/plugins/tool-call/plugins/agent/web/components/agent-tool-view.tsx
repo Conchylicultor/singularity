@@ -30,7 +30,7 @@ function ModelBadge({ model }: { model: string }) {
 
 function MetaBadge({ children }: { children: React.ReactNode }) {
   return (
-    <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
+    <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
       {children}
     </Badge>
   );

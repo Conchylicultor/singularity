@@ -105,12 +105,12 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
         {name ?? "workflow"}
       </Badge>
       {phases.length > 0 && (
-        <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
+        <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
           {phases.length} {phases.length === 1 ? "phase" : "phases"}
         </Badge>
       )}
       {agentCount > 0 && (
-        <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
+        <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
           {agentCount} {agentCount === 1 ? "agent" : "agents"}
         </Badge>
       )}

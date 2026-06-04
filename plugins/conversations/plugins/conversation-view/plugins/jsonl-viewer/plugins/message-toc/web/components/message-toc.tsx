@@ -64,7 +64,7 @@ export function MessageToc() {
         <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
           {entries.length}
         </span>
-        <span className="ml-auto text-[10px] font-medium uppercase tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-hovered/fa:opacity-100">
+        <span className="ml-auto text-[10px] font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-hovered/fa:opacity-100">
           messages
         </span>
       </div>

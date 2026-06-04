@@ -95,7 +95,7 @@ export function AnswerForm({
         return (
           <div key={qi}>
             {questions.length > 1 && (
-              <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+              <p className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground">
                 {q.header}
               </p>
             )}

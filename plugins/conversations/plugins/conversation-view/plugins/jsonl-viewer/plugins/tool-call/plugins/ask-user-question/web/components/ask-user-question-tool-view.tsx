@@ -365,7 +365,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           return (
             <div key={qi}>
               {questions.length > 1 && (
-                <p className="mb-1 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                <p className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground">
                   {q.header}
                 </p>
               )}
@@ -403,7 +403,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                 )}
                 {notes != null && (
                   <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-1 pl-2">
-                    <p className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+                    <p className="text-[10px] font-medium tracking-wider text-muted-foreground">
                       Note
                     </p>
                     <p className="whitespace-pre-wrap break-words text-xs text-foreground">

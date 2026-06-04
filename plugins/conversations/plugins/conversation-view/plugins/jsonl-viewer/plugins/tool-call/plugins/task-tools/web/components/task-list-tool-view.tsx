@@ -34,7 +34,7 @@ export function TaskListToolView({ event }: ToolRendererProps) {
             >
               {t.id && <span className="shrink-0 font-mono">{t.id}</span>}
               {t.status && (
-                <Badge variant="muted" size="sm" className="shrink-0 uppercase">
+                <Badge variant="muted" size="sm" className="shrink-0">
                   {t.status}
                 </Badge>
               )}

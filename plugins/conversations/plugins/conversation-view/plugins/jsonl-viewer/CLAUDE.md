@@ -2,6 +2,14 @@
 
 ## Rules for `EventRenderer` contributors
 
+**Never use `uppercase` (all-caps) styling on labels.** Eyebrow labels rendered
+all-caps — `THINKING`, `QUEUED`, `SENT TO AGENT`, status badges, section headers —
+create visual distraction across the transcript. Render labels in their natural
+case (`Thinking`, `Queued`). This applies to every row, badge, and section header
+in the jsonl-viewer (and conversation-view) subtree. Note: `capitalize` for
+title-casing a model name (`sonnet` → `Sonnet`) is fine — only `uppercase` is
+banned.
+
 **Never render an event's timestamp inline in your row.** Every event is wrapped
 by `EventRow`, which already contributes the shared `TimestampAction`
 (`JsonlViewer.RowAction` id `"timestamp"`) — a hover-only chip showing the

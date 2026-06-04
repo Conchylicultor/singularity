@@ -57,7 +57,7 @@ export function WorkflowGraph({
           key={group.id}
           className="rounded-md border border-dashed border-border/70 p-2"
         >
-          <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+          <div className="mb-1.5 text-[10px] font-medium tracking-wider text-muted-foreground">
             ⇉ parallel ×{count}
             {graph.dynamic && "?"}
           </div>
@@ -73,7 +73,7 @@ export function WorkflowGraph({
         key={group.id}
         className="rounded-md border border-dashed border-border/70 p-2"
       >
-        <div className="mb-1.5 text-[10px] font-medium uppercase tracking-wider text-muted-foreground">
+        <div className="mb-1.5 text-[10px] font-medium tracking-wider text-muted-foreground">
           → pipeline
         </div>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">

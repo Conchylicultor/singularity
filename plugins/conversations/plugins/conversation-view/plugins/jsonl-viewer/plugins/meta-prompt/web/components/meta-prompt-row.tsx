@@ -7,7 +7,7 @@ export function MetaPromptRow({ event }: { event: JsonlEvent }) {
   const e = event as MetaPromptEvent;
   return (
     <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2">
-      <div className="mb-1 flex items-center gap-1.5 text-2xs font-medium uppercase tracking-wide text-muted-foreground">
+      <div className="mb-1 flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground">
         <MdReplay className="size-3.5" />
         <span>Resumed by harness{e.source ? ` · ${e.source}` : ""}</span>
       </div>

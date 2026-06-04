@@ -7,11 +7,11 @@ type QueueOperationEvent = Extract<JsonlEvent, { kind: "queue-operation" }>;
 
 const OPERATIONS: Record<
   string,
-  { icon: ComponentType<{ className?: string }>; label: string; className: string }
+  { icon: ComponentType<{ className?: string }>; label: string }
 > = {
-  enqueue: { icon: MdPlaylistAdd, label: "Queued", className: "text-info" },
-  dequeue: { icon: MdNorthEast, label: "Sent to agent", className: "text-success" },
-  remove: { icon: MdClose, label: "Removed from queue", className: "text-muted-foreground" },
+  enqueue: { icon: MdPlaylistAdd, label: "Queued" },
+  dequeue: { icon: MdNorthEast, label: "Sent to agent" },
+  remove: { icon: MdClose, label: "Removed from queue" },
 };
 
 function decodeEntities(s: string): string {
@@ -47,7 +47,6 @@ export function QueueOperationRow({ event }: { event: JsonlEvent }) {
   const op = OPERATIONS[e.operation] ?? {
     icon: MdPlaylistAdd,
     label: e.operation,
-    className: "text-muted-foreground",
   };
   const Icon = op.icon;
   const task = e.content ? taskNotificationSummary(e.content) : null;
@@ -55,7 +54,7 @@ export function QueueOperationRow({ event }: { event: JsonlEvent }) {
   return (
     <div className="flex items-center gap-2 px-1 py-0.5 text-xs text-muted-foreground">
       <span
-        className={`flex shrink-0 items-center gap-1 font-medium uppercase tracking-wide text-2xs ${op.className}`}
+        className="flex shrink-0 items-center gap-1 font-medium tracking-wide text-2xs"
       >
         <Icon className="size-3.5" />
         {op.label}

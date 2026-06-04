@@ -173,7 +173,7 @@ export function DependenciesButton({
     <div className="space-y-1.5">
       {hasBlockedBy && (
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-[10px] tracking-wider text-muted-foreground">
             Blocked by
           </div>
           {blockerConvs.map((c) => (
@@ -193,7 +193,7 @@ export function DependenciesButton({
       )}
       {hasBlocking && (
         <div>
-          <div className="text-[10px] uppercase tracking-wider text-muted-foreground">
+          <div className="text-[10px] tracking-wider text-muted-foreground">
             Blocking
           </div>
           {blockedConvs.map((c) => (
