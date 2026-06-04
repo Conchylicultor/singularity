@@ -268,7 +268,10 @@ export function registerPush(program: Command) {
         process.exit(1);
       }
 
-      const profiler = createPushProfiler(pushId, branch, opts.fromMain ? "from-main" : "worktree");
+      // basename(root0) is the op-marker slug (see markWorktreeOpStart below).
+      // The profiler carries it so the orphan reconciler can check push liveness.
+      const opSlug = basename(root0);
+      const profiler = createPushProfiler(pushId, branch, opts.fromMain ? "from-main" : "worktree", opSlug);
 
       // Mark this worktree as having a push in flight so the conversation status
       // poller keeps the agent's pane reading as "working" for the push duration
@@ -279,7 +282,6 @@ export function registerPush(program: Command) {
       // Cleared on every graceful exit — normal completion, every process.exit(1)
       // failure path, and thrown errors — via the on-exit handler; a SIGKILLed
       // push self-heals via the marker's pid-liveness check.
-      const opSlug = basename(root0);
       markWorktreeOpStart(opSlug, "push", "waiting-for-lock");
       process.on("exit", () => clearWorktreeOp(opSlug, "push"));
       const onLockAcquired = (): void => {

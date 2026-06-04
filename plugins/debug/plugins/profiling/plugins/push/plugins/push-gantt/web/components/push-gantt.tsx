@@ -17,6 +17,7 @@ export interface PushEntry {
   waitMs: number;
   holdMs: number;
   conversationId: string | null;
+  interrupted: boolean;
 }
 
 export interface BuildEntry {
@@ -69,6 +70,18 @@ const OUTCOME_STYLES: Record<string, { color: string; bg: string }> = {
   error: {
     color: "bg-muted-foreground",
     bg: "bg-muted/50",
+  },
+  // In-flight, still blocked on the lock. Its hold bar has zero width (holdMs 0),
+  // so only the growing yellow wait bar (WAIT_COLOR) renders for this row.
+  waiting: {
+    color: "bg-warning",
+    bg: "bg-warning/10",
+  },
+  // In-flight, lock acquired and running. The wait bar is now frozen and the
+  // hold bar grows in this color on each refresh until the push completes.
+  running: {
+    color: "bg-info",
+    bg: "bg-info/10",
   },
 };
 
@@ -219,6 +232,35 @@ function PushAttemptRow({
         })}
         {group.pushes.map((push) => {
           const style = OUTCOME_STYLES[push.outcome] ?? DEFAULT_STYLE;
+
+          // Hard-killed mid-flight: no known end, no real duration. Render a
+          // fixed-width marker at the start, like an interrupted build.
+          if (push.interrupted) {
+            const markerSpan: Span = {
+              id: `${push.pushId}:interrupted`,
+              phase: group.worktree,
+              label: "push (interrupted)",
+              startMs: push.startMs,
+              durationMs: 0,
+            };
+            const isMarkerHovered = hovered?.id === markerSpan.id;
+            return (
+              <div
+                key={push.pushId}
+                className={cn(
+                  "absolute top-0 h-full rounded transition-opacity",
+                  BUILD_INTERRUPTED_COLOR,
+                  isMarkerHovered ? "opacity-100" : "opacity-70",
+                )}
+                style={{
+                  left: toLeftPct(push.startMs, totalMs),
+                  width: `${INTERRUPTED_MARKER_PX}px`,
+                }}
+                onMouseEnter={() => setHovered(markerSpan)}
+                onMouseLeave={() => setHovered(null)}
+              />
+            );
+          }
 
           const waitSpan: Span | null =
             push.waitMs > 0
