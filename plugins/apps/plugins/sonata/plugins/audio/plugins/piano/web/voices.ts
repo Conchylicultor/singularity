@@ -30,8 +30,13 @@ import { PIANO_MIRROR_ID } from "../shared/mirror";
  *  - `piano.ready: Promise<void>` resolves when sample loading settles (`.load`
  *    is deprecated).
  *  - `piano.start({ note, velocity, time, duration })` — `note` accepts a MIDI
- *    number; `time`/`duration` are AudioContext seconds.
- *  - `piano.stop()` (no target) stops every sounding/scheduled note.
+ *    number; `time`/`duration` are AudioContext seconds. Internally this routes
+ *    through smplr's own Scheduler: notes whose `time` is beyond smplr's short
+ *    lookahead window sit in a queue and are dispatched to the audio graph later.
+ *  - `piano.stop()` (no target) stops only voices ALREADY dispatched to the
+ *    audio graph. It does NOT clear smplr's internal scheduler queue — notes we
+ *    pre-scheduled but smplr hasn't dispatched yet keep firing. Use
+ *    `piano.scheduler.stop()` to flush that queue (see allOff).
  *  - `piano.dispose()` stops all voices and disposes the output channel.
  */
 export function createVoices(
@@ -52,7 +57,14 @@ export function createVoices(
       piano.start({ note: pitch, velocity, time: when, duration });
     },
     allOff(): void {
+      // Two layers must be silenced: piano.stop() halts voices already on the
+      // audio graph, and piano.scheduler.stop() flushes notes still queued in
+      // smplr's internal lookahead (the engine pre-schedules ~1.5s ahead, so
+      // without this they'd keep firing for up to a second after pause — the
+      // "huge latency"). The next schedule() call re-arms smplr's poll loop, so
+      // resume is unaffected; the scheduler is private to this instrument.
       piano.stop();
+      piano.scheduler.stop();
     },
     dispose(): void {
       piano.dispose();
