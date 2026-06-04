@@ -12,6 +12,7 @@ import {
   beatToSeconds,
   emptyScore,
   mergeAnnotations,
+  mergeScores,
   scaleTempo,
   scoreEndBeat,
   type Score,
@@ -26,9 +27,12 @@ const MAX_TEMPO_SCALE = 4;
 /**
  * Shared Sonata state + transport.
  *
- *  - `score` is *derived*: compile the active source's raw input, then merge in
- *    every `Sonata.Analyzer`'s output (`source:"derived"`, never clobbering
- *    authored truth).
+ *  - `score` is *derived* and *composed*: every source that has raw input is
+ *    compiled, the compiled Scores are merged via `mergeScores` (so a chord grid
+ *    and a MIDI file layer into one Score), then every `Sonata.Analyzer`'s
+ *    output is merged in (`source:"derived"`, never clobbering authored truth).
+ *    `activeSourceId` only chooses which Loader is shown — the Score reflects all
+ *    loaded sources.
  *  - The transport is a `requestAnimationFrame` loop (no polling / setInterval)
  *    that advances `cursorBeat` by mapping elapsed wall-clock seconds back
  *    through the tempo map. Displays read the cursor.
@@ -67,10 +71,14 @@ export interface SonataContextValue {
    * cursor doesn't need it (it reads the anchor ref every frame).
    */
   seekEpoch: number;
+  /** Ids of sources that currently have raw input (so the UI can badge them). */
+  loadedSourceIds: string[];
+  /** The active source's persisted raw input, so its Loader can be controlled. */
+  activeRaw: unknown;
 
   setActiveSource: (id: string | null) => void;
   setActiveDisplay: (id: string | null) => void;
-  /** Feed raw input from the active source's LoaderComponent. */
+  /** Feed raw input from the active source's LoaderComponent (keyed by source). */
   setRaw: (raw: unknown) => void;
   /** Move the playhead (e.g. scrub / seek). */
   setCursorBeat: (beat: number) => void;
@@ -112,12 +120,24 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
   const [activeDisplayId, setActiveDisplayId] = useState<string | null>(null);
-  const [raw, setRaw] = useState<unknown>(undefined);
+  // Raw input keyed by source id — each source keeps its own input so they
+  // accumulate and merge, rather than one active source replacing another.
+  const [rawById, setRawById] = useState<Record<string, unknown>>({});
   const [cursorBeat, setCursorBeat] = useState(0);
   const [isPlaying, setIsPlaying] = useState(false);
   const [tempoScale, setTempoScaleState] = useState(1);
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
   const [seekEpoch, setSeekEpoch] = useState(0);
+
+  // `setRaw` writes the *active* source's slot. Read the active id from a ref so
+  // the callback stays stable (loaders depend on its identity in effects).
+  const activeSourceIdRef = useRef(activeSourceId);
+  activeSourceIdRef.current = activeSourceId;
+  const setRaw = useCallback((raw: unknown) => {
+    const id = activeSourceIdRef.current;
+    if (!id) return;
+    setRawById((prev) => ({ ...prev, [id]: raw }));
+  }, []);
 
   // Default the active source/display to the first contributed one.
   useEffect(() => {
@@ -126,14 +146,20 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }
   }, [activeSourceId, sources]);
 
-  // The active source's compiled Score, then analyzers merged in.
+  // Compose the Score: compile every source with input, merge them (in source
+  // contribution order), then merge analyzer output. A source that authors no
+  // tempo/time-sig (e.g. the chord grid emits empty maps) defers to one that
+  // does via `mergeScores`' first-non-empty rule — so a merged MIDI file owns
+  // the timeline with no special-casing here.
   const baseScore = useMemo<Score>(() => {
-    const source = sources.find((s) => s.id === activeSourceId);
-    if (!source || raw === undefined) return emptyScore();
-    const compiled = source.compile(raw);
-    const derived = analyzers.flatMap((a) => a.analyze(compiled));
-    return mergeAnnotations(compiled, derived);
-  }, [sources, analyzers, activeSourceId, raw]);
+    const compiled = sources
+      .filter((s) => rawById[s.id] !== undefined)
+      .map((s) => s.compile(rawById[s.id]));
+    if (compiled.length === 0) return emptyScore();
+    const merged = mergeScores(compiled);
+    const derived = analyzers.flatMap((a) => a.analyze(merged));
+    return mergeAnnotations(merged, derived);
+  }, [sources, analyzers, rawById]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single
@@ -144,11 +170,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [baseScore, tempoScale],
   );
 
-  // Reset the cursor whenever the underlying source/raw changes.
+  // Reset the cursor whenever the composed Score changes (new/changed input).
+  // `baseScore` is referentially stable across mere source-picker switches
+  // (which don't change `rawById`), so switching the visible Loader does NOT
+  // reset the playhead — only loading or editing input does.
   useEffect(() => {
     setCursorBeat(0);
     setIsPlaying(false);
-  }, [activeSourceId, raw]);
+  }, [baseScore]);
 
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
   // We anchor at the playback clock's time + beat where playback started, then
@@ -317,6 +346,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     return () => publishSonataTransport(null);
   }, [play, stop, seekBy, setTempoScale]);
 
+  const loadedSourceIds = useMemo(
+    () => Object.keys(rawById).filter((id) => rawById[id] !== undefined),
+    [rawById],
+  );
+
+  const activeRaw = activeSourceId ? rawById[activeSourceId] : undefined;
+
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
@@ -326,6 +362,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeSourceId,
       activeDisplayId,
       seekEpoch,
+      loadedSourceIds,
+      activeRaw,
       setActiveSource: setActiveSourceId,
       setActiveDisplay: setActiveDisplayId,
       setRaw,
@@ -345,6 +383,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       activeSourceId,
       activeDisplayId,
       seekEpoch,
+      loadedSourceIds,
+      activeRaw,
+      setRaw,
       seekBy,
       seekTo,
       setTempoScale,

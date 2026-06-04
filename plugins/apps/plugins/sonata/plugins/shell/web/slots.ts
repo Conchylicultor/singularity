@@ -46,11 +46,17 @@ export interface InstrumentVoices {
 export const Sonata = {
   // INPUT — data registry. LoaderComponent is the UI to provide input
   // (dropzone / text editor); compile turns raw input into a Score (pure).
+  // `raw` is the source's currently-loaded input (persisted in the shell across
+  // source switches) so editor loaders can render *controlled* — switching the
+  // visible source never loses what was typed. `onRaw` feeds new input back.
   Source: defineSlot<{
     id: string;
     label: string;
     icon?: IconType;
-    LoaderComponent: ComponentType<{ onRaw: (raw: unknown) => void }>;
+    LoaderComponent: ComponentType<{
+      raw?: unknown;
+      onRaw: (raw: unknown) => void;
+    }>;
     compile: (raw: unknown) => Score;
   }>("sonata.source", { docLabel: (p) => p.label }),
 

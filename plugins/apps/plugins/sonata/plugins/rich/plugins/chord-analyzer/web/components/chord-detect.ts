@@ -18,49 +18,15 @@
  */
 
 import type { ChordData } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  CHORD_TEMPLATES,
+  PC_NAMES,
+} from "@plugins/apps/plugins/sonata/plugins/theory/core";
 
-/** Pitch-class names. Index = MIDI pitch-class (0=C … 11=B). */
-const PC_NAMES = [
-  "C",
-  "C#",
-  "D",
-  "D#",
-  "E",
-  "F",
-  "F#",
-  "G",
-  "G#",
-  "A",
-  "A#",
-  "B",
-] as const;
-
-/**
- * Chord templates: interval sets (semitones above root, root excluded).
- * Sorted from most-specific (7ths) to least-specific (triads) so that when
- * interval counts tie we still prefer the richer chord — but the primary
- * sort is by interval-count match, not template priority.
- */
-const TEMPLATES: ReadonlyArray<{
-  quality: string;
-  symbol: string;
-  intervals: ReadonlyArray<number>;
-}> = [
-  // ── 7th chords ─────────────────────────────────────────────────────────
-  { quality: "maj7",    symbol: "maj7",  intervals: [4, 7, 11] },
-  { quality: "dom7",    symbol: "7",     intervals: [4, 7, 10] },
-  { quality: "min7",    symbol: "m7",    intervals: [3, 7, 10] },
-  { quality: "minmaj7", symbol: "mM7",   intervals: [3, 7, 11] },
-  { quality: "halfdim7",symbol: "ø7",    intervals: [3, 6, 10] },
-  { quality: "dim7",    symbol: "dim7",  intervals: [3, 6,  9] },
-  { quality: "augmaj7", symbol: "+M7",   intervals: [4, 8, 11] },
-  { quality: "aug7",    symbol: "+7",    intervals: [4, 8, 10] },
-  // ── Triads ──────────────────────────────────────────────────────────────
-  { quality: "maj",     symbol: "",      intervals: [4, 7] },
-  { quality: "min",     symbol: "m",     intervals: [3, 7] },
-  { quality: "aug",     symbol: "+",     intervals: [4, 8] },
-  { quality: "dim",     symbol: "dim",   intervals: [3, 6] },
-];
+// The chord vocabulary (templates + pitch-class names) lives in `theory/core`
+// so the analyzer (notes → chord) and chord-authoring sources (chord → notes)
+// share exactly one table. `CHORD_TEMPLATES` is already ordered most-specific
+// (7ths) first, which the detection tie-break below relies on.
 
 /** Result of chord detection, or `null` if no template matches. */
 export interface ChordMatch {
@@ -89,7 +55,7 @@ export function detectChord(pitches: ReadonlyArray<number>): ChordMatch | null {
     // Build a set of intervals relative to this root.
     const intervals = new Set(pcs.map((pc) => ((pc - root + 12) % 12)));
 
-    for (const tmpl of TEMPLATES) {
+    for (const tmpl of CHORD_TEMPLATES) {
       // Count how many template intervals are present in the sounding set.
       // The root (interval 0) is always implicitly required.
       if (!intervals.has(0)) continue; // root must be sounding

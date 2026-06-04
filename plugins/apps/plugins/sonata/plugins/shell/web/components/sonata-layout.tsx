@@ -14,6 +14,7 @@ function Picker({
   activeId,
   onSelect,
   empty,
+  loadedIds,
 }: {
   items: {
     id: string;
@@ -23,6 +24,8 @@ function Picker({
   activeId: string | null;
   onSelect: (id: string) => void;
   empty: string;
+  /** Ids that carry loaded input — rendered with a filled dot (e.g. sources). */
+  loadedIds?: string[];
 }) {
   if (items.length === 0) {
     return <span className="text-xs text-muted-foreground">{empty}</span>;
@@ -32,6 +35,7 @@ function Picker({
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.id === activeId;
+        const loaded = loadedIds?.includes(item.id) ?? false;
         return (
           <button
             key={item.id}
@@ -47,6 +51,12 @@ function Picker({
           >
             {Icon ? <Icon className="size-3.5" /> : null}
             {item.label}
+            {loaded ? (
+              <span
+                aria-label="loaded"
+                className="size-1.5 rounded-full bg-primary"
+              />
+            ) : null}
           </button>
         );
       })}
@@ -62,6 +72,8 @@ function SonataLayoutInner() {
     tempoScale,
     activeSourceId,
     activeDisplayId,
+    loadedSourceIds,
+    activeRaw,
     setActiveSource,
     setActiveDisplay,
     setRaw,
@@ -98,6 +110,7 @@ function SonataLayoutInner() {
             activeId={activeSourceId}
             onSelect={setActiveSource}
             empty="No sources"
+            loadedIds={loadedSourceIds}
           />
         </div>
 
@@ -143,7 +156,7 @@ function SonataLayoutInner() {
       {/* Active source loader (UI to provide input). */}
       {LoaderComponent ? (
         <div className="border-b border-border px-6 py-3">
-          <LoaderComponent onRaw={setRaw} />
+          <LoaderComponent raw={activeRaw} onRaw={setRaw} />
         </div>
       ) : null}
 
