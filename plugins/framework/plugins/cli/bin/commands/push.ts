@@ -270,17 +270,20 @@ export function registerPush(program: Command) {
 
       const profiler = createPushProfiler(pushId, branch, opts.fromMain ? "from-main" : "worktree");
 
-      // Mark this worktree as having a push in flight (once the lock is held, so
-      // the push is actually proceeding) so the conversation status poller keeps
-      // the agent's pane reading as "working" for the push duration despite the
-      // CLI "shell" status. Cleared on every graceful exit — normal completion,
-      // every process.exit(1) failure path, and thrown errors — via the on-exit
-      // handler; a SIGKILLed push self-heals via the marker's pid-liveness check.
+      // Mark this worktree as having a push in flight so the conversation status
+      // poller keeps the agent's pane reading as "working" for the push duration
+      // despite the CLI "shell" status. Written up-front — BEFORE the lock wait —
+      // so a push that queues behind another push reads as "working" while it
+      // waits its turn, not "waiting": a queued push is genuinely in progress.
+      // (The marker pid is this process, which stays alive throughout the wait.)
+      // Cleared on every graceful exit — normal completion, every process.exit(1)
+      // failure path, and thrown errors — via the on-exit handler; a SIGKILLed
+      // push self-heals via the marker's pid-liveness check.
       const opSlug = basename(root0);
+      markWorktreeOpStart(opSlug, "push");
+      process.on("exit", () => clearWorktreeOp(opSlug, "push"));
       const onLockAcquired = (): void => {
         profiler.markLockAcquired();
-        markWorktreeOpStart(opSlug, "push");
-        process.on("exit", () => clearWorktreeOp(opSlug, "push"));
       };
 
       // 1. Commit if -m provided, otherwise require clean tree
