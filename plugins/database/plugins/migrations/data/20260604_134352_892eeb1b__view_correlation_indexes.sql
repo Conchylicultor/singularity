@@ -1,0 +1,2 @@
+CREATE INDEX IF NOT EXISTS "attempts_task_id_idx" ON "attempts" USING btree ("task_id");--> statement-breakpoint
+CREATE INDEX IF NOT EXISTS "conversations_attempt_id_status_idx" ON "conversations" USING btree ("attempt_id","status");

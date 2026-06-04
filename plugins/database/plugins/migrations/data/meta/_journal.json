@@ -820,6 +820,13 @@
       "tag": "20260603_180214_afc6a809__page_blocks_changed_trigger",
       "hash": "afc6a809",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780580632000,
+      "tag": "20260604_134352_892eeb1b__view_correlation_indexes",
+      "hash": "892eeb1b",
+      "breakpoints": true
     }
   ]
 }

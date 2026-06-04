@@ -54,15 +54,23 @@ export const _tasks = pgTable(
   ],
 );
 
-export const _attempts = pgTable("attempts", {
-  id: text("id").primaryKey(),
-  taskId: text("task_id")
-    .notNull()
-    .references(() => _tasks.id, { onDelete: "cascade" }),
-  worktreePath: text("worktree_path").notNull(),
-  createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-  updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-});
+export const _attempts = pgTable(
+  "attempts",
+  {
+    id: text("id").primaryKey(),
+    taskId: text("task_id")
+      .notNull()
+      .references(() => _tasks.id, { onDelete: "cascade" }),
+    worktreePath: text("worktree_path").notNull(),
+    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
+    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
+  },
+  // tasks_v derives task status via per-task correlated subqueries on
+  // attempts.task_id (has_attempt / has_completed / has_active / has_blocking_dep).
+  // Without this index those run as full seq scans / nested-loop anti-joins over
+  // all-history attempts on every notifyConversationsChanged cascade.
+  (t) => [index("attempts_task_id_idx").on(t.taskId)],
+);
 
 export const _taskDependencies = pgTable(
   "task_dependencies",
@@ -131,4 +139,11 @@ export const _conversations = pgTable(
     endedAt: timestamp("ended_at", { withTimezone: true }),
     closeRequested: boolean("close_requested").notNull().default(false),
   },
+  // attempts_v / tasks_v derive status via per-attempt correlated subqueries on
+  // conversations.attempt_id, several of them filtered by status (max_ended_at,
+  // has_live_conv `status NOT IN ('gone','done')`, has_waiting `status='waiting'`).
+  // The composite (attempt_id, status) serves both the bare attempt_id lookups
+  // and the status-filtered ones; without it these are full seq scans of the
+  // conversations table per attempt on every cascade.
+  (t) => [index("conversations_attempt_id_status_idx").on(t.attemptId, t.status)],
 );
