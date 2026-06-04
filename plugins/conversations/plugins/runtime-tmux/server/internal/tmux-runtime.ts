@@ -31,41 +31,55 @@ const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*
 // signal the AskUserQuestion web form gates on. Throttled to one capture-pane
 // per pane every PROBE_INTERVAL_MS to keep the cost bounded.
 //
-// The footer must be matched ONLY against the bottom-most CONTENT line — never
+// The footer must be matched ONLY against the bottom-most CONTENT line(s) — never
 // the whole capture. A live menu is the pane's bottom-most element (it is the
 // active modal UI); the footer a PREVIOUS menu left in scrollback sits ABOVE
 // whatever the CLI rendered next (streaming output, the spinner status line, or
 // the idle `❯` input). Testing the whole 15-line blob matched that stale footer
 // and reported a live question on a pane that was actually mid-turn — tripping
 // the auto-answer Escape onto a working agent and interrupting it. See
-// bottomMenuLine / MENU_CHROME_RE.
+// bottomContentLines / FOOTER_TERMINATOR_RE / MENU_CHROME_RE.
 const PROBE_INTERVAL_MS = 5_000;
+// Every interactive menu footer — question OR rewind — terminates in the segment
+// "Esc to cancel". That terminator is the load-bearing signal that an open menu
+// sits at the very bottom of the pane: a STALE footer left in scrollback always
+// has real content (streamed output, the `❯` idle prompt) below it, so its
+// terminator is never the bottom-most content line. classifyPaneMenu() requires
+// the bottom-most content line to be this terminator before classifying a menu —
+// the same no-false-positive invariant the old single-line match relied on.
+const FOOTER_TERMINATOR_RE = /Esc to cancel\b/i;
+// A long footer HARD-WRAPS across terminal lines: extra control segments
+// ("· n to add notes · Tab to switch questions ·") widen it past the pane and
+// push "Esc to cancel" onto its own bottom line, so the three control anchors no
+// longer share one physical line. The CLI emits the break itself (tmux's `-J`
+// wrap-join does not rejoin it), so we rejoin the bottom-most content lines into
+// one logical footer before matching. Bounded to FOOTER_MAX_WRAP_LINES so the
+// rejoin window can never reach past the wrapped footer into the menu body above.
+const FOOTER_MAX_WRAP_LINES = 3;
 // The AskUserQuestion menu's footer — its presence is the only reliable signal
 // that the CLI is blocked on a question (the title/session file can read as a
 // plain idle/permission state, see the PROBE_INTERVAL_MS comment above).
 //
-// Matched as a WHOLE LINE (anchored, all three control segments required), not a
-// loose substring. A working agent can legitimately STREAM the words "enter to
-// select" in its own prose, and after chrome-stripping that line can land at the
-// bottom — a bare /Enter to select/ then fired Escape into a live turn and
-// killed it (the false positive this guards against). The real footer is a fixed
-// control string the model never reproduces verbatim:
+// All three control segments required, in order, against the rejoined bottom
+// footer (NOT a loose substring). A working agent can legitimately STREAM the
+// words "enter to select" in its own prose, but reproducing the full fixed
+// control string verbatim —
 //   "Enter to select · ↑/↓ to navigate · Esc to cancel"
-// Requiring "Enter to select" at line start AND "to navigate" AND "Esc to
-// cancel" makes a prose collision practically impossible, while `.*` between
+// — is practically impossible, and the FOOTER_TERMINATOR_RE gate further requires
+// the pane's bottom-most line to literally be the menu terminator. `.*` between
 // segments tolerates separator/glyph drift across CLI versions. Case-insensitive
 // only as a cheap hedge; the structure is what carries the weight.
 const QUESTION_FOOTER_RE =
-  /^\s*Enter to select\b.*\bto navigate\b.*\bEsc to cancel\b/i;
+  /Enter to select\b.*\bto navigate\b.*\bEsc to cancel\b/i;
 // Claude's *rewind* menu (opened by Esc-Esc at the idle prompt). It does NOT
 // share the question footer — verified against CLI v2.1.161 it renders
 // "Enter to continue · Esc to cancel" plus a "Restore the code…" header. Same
-// whole-line, two-segment anchoring as the question footer so streamed prose
+// two-segment, ordered anchoring as the question footer so streamed prose
 // containing "enter to continue" cannot trip it. We detect it so
 // escapeUntilPromptCleared() can treat it as a menu to dismiss rather than
 // mistaking it for the idle prompt (which would strand the menu).
 const REWIND_FOOTER_RE =
-  /^\s*Enter to continue\b.*\bEsc to cancel\b/i;
+  /Enter to continue\b.*\bEsc to cancel\b/i;
 const probeCache = new Map<string, { at: number; waiting: boolean }>();
 
 // Trailing CLI chrome the live TUI renders BELOW an open menu's footer, none of
@@ -86,24 +100,28 @@ const MENU_CHROME_RE =
 
 type PaneMenu = "question" | "rewind" | "idle";
 
-// The bottom-most CONTENT line of a pane capture, trailing CLI chrome stripped.
-// A live menu's footer is its LAST rendered line, so once the chrome beneath it
-// is gone the footer sits at the very bottom. A stale footer left in scrollback
-// has real (non-chrome) content below it — streamed output, the `❯` idle prompt
-// — which survives the strip and keeps the stale footer off this line. That is
-// what lets us match the footer here without the false positive a whole-capture
-// match caused (see the PROBE_INTERVAL_MS comment).
-function bottomMenuLine(paneText: string): string {
+// The bottom-most CONTENT lines of a pane capture (trailing CLI chrome stripped),
+// newest last, at most FOOTER_MAX_WRAP_LINES of them. A live menu's footer is its
+// LAST rendered element, so once the chrome beneath it is gone the footer sits at
+// the very bottom — on one line when short, across the last few when it wraps. A
+// stale footer left in scrollback has real (non-chrome) content below it —
+// streamed output, the `❯` idle prompt — which survives the strip and keeps the
+// stale footer out of this window. The cap stops the rejoin window from reaching
+// past a wrapped footer into the menu body above it.
+function bottomContentLines(paneText: string): string[] {
   const lines = paneText.split("\n");
   let end = lines.length;
   while (end > 0 && MENU_CHROME_RE.test(lines[end - 1]!)) end--;
-  return end > 0 ? lines[end - 1]! : "";
+  const start = Math.max(0, end - FOOTER_MAX_WRAP_LINES);
+  return lines.slice(start, end);
 }
 
 // Single fresh capture-pane → which interactive menu (if any) is on screen.
-// Match the footers only against the bottom-most content line: a live menu is
-// anchored to the bottom of the pane, so a footer found above real content is
-// stale scrollback, not an open menu (see the PROBE_INTERVAL_MS comment).
+// A live menu is anchored to the bottom of the pane and its footer terminates in
+// "Esc to cancel": we require the bottom-most content line to be that terminator
+// (a footer found above real content is stale scrollback, not an open menu — see
+// the PROBE_INTERVAL_MS comment), then rejoin the bottom-most content lines so a
+// hard-wrapped footer reads as one logical line before matching the head anchors.
 async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   const proc = Bun.spawn(
     [TMUX, "capture-pane", "-p", "-S", "-15", "-t", id],
@@ -111,7 +129,10 @@ async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   );
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
-  const footer = bottomMenuLine(stdout);
+  const bottom = bottomContentLines(stdout);
+  const last = bottom[bottom.length - 1];
+  if (!last || !FOOTER_TERMINATOR_RE.test(last)) return "idle";
+  const footer = bottom.join(" ").replace(/\s+/g, " ").trim();
   if (QUESTION_FOOTER_RE.test(footer)) return "question";
   if (REWIND_FOOTER_RE.test(footer)) return "rewind";
   return "idle";
