@@ -25,11 +25,20 @@ const STATUS_PREFIX_RE = /^[⠋⠙⠹⠸⠼⠴⠦⠧⠇⠏⠐⠂⠄⠠⠈✳]\s*
 //     session file status:"waiting" / waitingFor:"permission prompt". Nothing
 //     in the title or session file distinguishes it from an ordinary idle/
 //     permission state, so the only reliable signal is the menu's
-//     "Enter to select" footer in the pane content.
+//     "Enter to select" footer at the BOTTOM of the pane content.
 // We therefore probe EVERY non-dead pane (not just working ones) and, on a
 // match, override the verdict to {working:false, waitingFor:"question"} — the
 // signal the AskUserQuestion web form gates on. Throttled to one capture-pane
 // per pane every PROBE_INTERVAL_MS to keep the cost bounded.
+//
+// The footer must be matched ONLY against the bottom-most lines — never the
+// whole capture. A live menu is the pane's bottom-most element (it is the active
+// modal UI); the footer a PREVIOUS menu left in scrollback sits ABOVE whatever
+// the CLI rendered next (streaming output, the spinner status line, or the idle
+// `❯` input). Testing the whole 15-line blob matched that stale footer and
+// reported a live question on a pane that was actually mid-turn — tripping the
+// auto-answer Escape onto a working agent and interrupting it. See
+// MENU_FOOTER_SCAN_LINES.
 const PROBE_INTERVAL_MS = 5_000;
 // The AskUserQuestion menu's footer — its presence is the only reliable signal
 // that the CLI is blocked on a question (the title/session file can read as a
@@ -43,10 +52,31 @@ const QUESTION_FOOTER_RE = /Enter to select/;
 const REWIND_FOOTER_RE = /Enter to continue|Restore the code and\/or conversation/;
 const probeCache = new Map<string, { at: number; waiting: boolean }>();
 
+// How many bottom-most non-empty lines the menu footer may occupy. A live menu's
+// instruction footer is the pane's last content line (or one or two above it,
+// once trailing blanks are stripped); a stale footer left in scrollback is
+// pushed further up the moment the CLI renders anything below it. Kept small on
+// purpose: a false negative just means the user clicks "Answer here" manually
+// (mild, recoverable), whereas a false positive sends Escape into a working
+// agent and kills its turn (the bug this guards against). Bias to small.
+const MENU_FOOTER_SCAN_LINES = 3;
+
 type PaneMenu = "question" | "rewind" | "idle";
 
+// The last `n` non-empty lines of a pane capture, joined — the region a live
+// interactive menu's footer occupies. Trailing blank lines (pane rows below the
+// menu) are stripped first so the count tracks real content, not grid height.
+function bottomNonEmptyLines(paneText: string, n: number): string {
+  const lines = paneText.split("\n");
+  let end = lines.length;
+  while (end > 0 && lines[end - 1]!.trim() === "") end--;
+  return lines.slice(Math.max(0, end - n), end).join("\n");
+}
+
 // Single fresh capture-pane → which interactive menu (if any) is on screen.
-// Both menu footers live in the bottom few lines, so a shallow capture suffices.
+// Match the footers only against the bottom-most lines: a live menu is anchored
+// to the bottom of the pane, so a footer found higher up is stale scrollback,
+// not an open menu (see the PROBE_INTERVAL_MS comment for the bug this avoids).
 async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   const proc = Bun.spawn(
     [TMUX, "capture-pane", "-p", "-S", "-15", "-t", id],
@@ -54,8 +84,9 @@ async function classifyPaneMenu(id: string): Promise<PaneMenu> {
   );
   const stdout = await new Response(proc.stdout).text();
   await proc.exited;
-  if (QUESTION_FOOTER_RE.test(stdout)) return "question";
-  if (REWIND_FOOTER_RE.test(stdout)) return "rewind";
+  const footer = bottomNonEmptyLines(stdout, MENU_FOOTER_SCAN_LINES);
+  if (QUESTION_FOOTER_RE.test(footer)) return "question";
+  if (REWIND_FOOTER_RE.test(footer)) return "rewind";
   return "idle";
 }
 
