@@ -64,8 +64,9 @@ export function beatToSeconds(score: Score, beat: number): number {
     return (beat * 60) / DEFAULT_BPM;
   }
 
-  // Ensure ascending by beat without mutating the source.
-  const events = [...map].sort((a, b) => a.beat - b.beat);
+  // `map` is already ascending by beat (the documented Score.tempoMap
+  // invariant), so iterate it directly — no clone, no sort.
+  const events = map;
 
   const firstBeat = events[0]!.beat;
   const firstBpm = events[0]!.bpm;

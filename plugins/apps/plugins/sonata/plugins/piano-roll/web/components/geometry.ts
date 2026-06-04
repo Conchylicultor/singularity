@@ -1,5 +1,5 @@
 import {
-  beatToSeconds,
+  buildTempoIndex,
   type KeyLane,
   type Note,
   type Projection,
@@ -16,20 +16,25 @@ import {
  *               white/white boundaries, narrower. `keyLayout` is the single
  *               source both the falling notes and the keyboard renderer consume,
  *               so every note lands exactly on its key.
- *  - Y (time):  the time axis is anchored in AUTHORED (base-tempo) seconds:
- *               y = height - (seconds(beat) - seconds(cursorBeat)) * pxPerSecond,
- *               where pxPerSecond = PX_PER_SECOND * tempoScale. The incoming
- *               `score` already has `tempoScale` folded into its tempo map
+ *  - Y (time):  the time axis is anchored in AUTHORED (base-tempo) seconds and
+ *               lives in CONTENT-SPACE (cursor-invariant):
+ *               y = -seconds(beat) * pxPerSecond, where
+ *               pxPerSecond = PX_PER_SECOND * tempoScale. The incoming `score`
+ *               already has `tempoScale` folded into its tempo map
  *               (seconds = authoredSeconds / tempoScale), so multiplying by
- *               tempoScale here cancels it: a note's pixel HEIGHT is its
- *               authored duration and never changes with tempo. What tempo
- *               changes is the SCROLL SPEED — the cursor sweeps wall-clock
- *               seconds at 1×, so the roll scrolls at PX_PER_SECOND * tempoScale
- *               px/sec: slow the tempo and the whole roll scrolls slower instead
- *               of notes stretching. The cursor maps to the lane bottom (the
- *               keyboard); future beats sit higher and descend as the transport
- *               advances. Layout is a pure function of `cursorBeat` + `tempoScale`
- *               + lane height — no per-frame React state.
+ *               tempoScale here cancels it: a note's pixel HEIGHT is its authored
+ *               duration and never changes with tempo. What tempo changes is the
+ *               SCROLL SPEED — the cursor sweeps wall-clock seconds at 1×, so the
+ *               roll scrolls at PX_PER_SECOND * tempoScale px/sec: slow the tempo
+ *               and the whole roll scrolls slower instead of notes stretching.
+ *               The per-frame scroll is NOT baked into the geometry — the display
+ *               applies it as a single `translateY(offset)` on one layer, where
+ *               `offset = height + seconds(cursorBeat) * pxPerSecond` maps the
+ *               cursor to the lane bottom (the keyboard). Because the cursor never
+ *               enters the geometry, the projection (and every note rect) is stable
+ *               while playing; only the layer's transform moves. Layout is a pure
+ *               function of the score + lane width + tempoScale — no per-frame
+ *               React state.
  *
  * A note rectangle spans from its end (top, further in the future) to its onset
  * (bottom), and is as wide as its key. `noteToRect` is the canonical note
@@ -97,32 +102,35 @@ export function keyLayout(width: number): KeyLane[] {
 /**
  * Build the `Projection` the piano roll publishes. The closures here ARE the
  * geometry the renderer draws with — overlays and the keyboard consuming this
- * projection land pixel-exact on the notes. `cursorBeat` anchors the time axis
- * at the lane bottom.
+ * projection land pixel-exact on the notes. The Y axis is CONTENT-SPACE and
+ * cursor-invariant; the display applies the per-frame scroll as a single
+ * `translateY` (see the file header), so this projection is stable while
+ * playing and recomputes only on lane-size / score change.
  */
 export function buildProjection(viewport: {
   width: number;
   height: number;
-  cursorBeat: number;
   /** Score whose tempo map converts beats → wall-clock seconds for the Y axis. */
   score: Score;
   /** Playback tempo multiplier (1 = authored). Scales the scroll rate so slowing
    *  the tempo slows the scroll instead of stretching note heights. */
   tempoScale: number;
 }): Projection {
-  const { width, height, cursorBeat, score, tempoScale } = viewport;
+  const { width, height, score, tempoScale } = viewport;
   const keys = keyLayout(width);
   const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
 
+  // Content-space Y: a note's beat maps to a fixed pixel position independent of
+  // the cursor (the cursor offset is applied downstream as one translateY).
   // `score` already has `tempoScale` folded into its tempo map, so its seconds
-  // are authoredSeconds / tempoScale. Multiplying px/sec by tempoScale cancels
-  // that: note heights become authored-duration (tempo-independent) and the
+  // are authoredSeconds / tempoScale; multiplying px/sec by tempoScale cancels
+  // that, so note heights become authored-duration (tempo-independent) and the
   // cursor's constant wall-clock sweep yields a scroll rate of
   // PX_PER_SECOND * tempoScale — slower tempo, slower scroll.
+  const tempo = buildTempoIndex(score);
   const pxPerSecond = PX_PER_SECOND * tempoScale;
-  const cursorSeconds = beatToSeconds(score, cursorBeat);
   const beatToY = (beat: number): number =>
-    height - (beatToSeconds(score, beat) - cursorSeconds) * pxPerSecond;
+    -tempo.beatToSeconds(beat) * pxPerSecond;
   const pitchToX = (pitch: number): number => byPitch.get(pitch)?.center ?? 0;
   const noteToRect = (note: Note) => {
     const k = byPitch.get(note.pitch);
@@ -141,7 +149,7 @@ export function buildProjection(viewport: {
 
   return {
     capabilities: new Set(["time-axis", "pitch-plane"]),
-    viewport: { width, height, scrollBeat: cursorBeat },
+    viewport: { width, height },
     beatToY,
     pitchToX,
     noteToRect,

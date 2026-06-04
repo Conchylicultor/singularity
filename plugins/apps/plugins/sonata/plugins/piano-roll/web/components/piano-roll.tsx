@@ -2,9 +2,11 @@ import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   bars,
+  buildTempoIndex,
   type Score,
+  type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { buildProjection } from "./geometry";
+import { buildProjection, PX_PER_SECOND } from "./geometry";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
 import { PitchAxisHost } from "./pitch-axis-host";
@@ -50,28 +52,26 @@ function useElementSize(): [
   return [ref, size];
 }
 
-/** Bar lines + now-line, drawn as absolutely-positioned elements over the lane. */
+/**
+ * Bar lines, drawn as absolutely-positioned content-space elements. These live
+ * INSIDE the scroll layer, so their `top` is the cursor-invariant content Y and
+ * the layer's `translateY` scrolls them. All bars mount once — the lane's
+ * `overflow-hidden` paint-culls whatever falls offscreen.
+ */
 function GridLines({
   score,
   beatToY,
   laneWidth,
-  laneHeight,
 }: {
   score: Score;
   beatToY: (beat: number) => number;
   laneWidth: number;
-  laneHeight: number;
 }) {
   const barList = useMemo(() => bars(score), [score]);
-  // Only render bar lines that fall within the visible window (+margin).
-  const visibleBars = barList.filter((b) => {
-    const y = beatToY(b.startBeat);
-    return y >= -40 && y <= laneHeight + 40;
-  });
 
   return (
     <>
-      {visibleBars.map((b) => (
+      {barList.map((b) => (
         <div
           key={b.index}
           className="absolute left-0 border-t border-border/60"
@@ -82,12 +82,50 @@ function GridLines({
           </span>
         </div>
       ))}
-      {/* Playback now-line: where falling notes land on the keyboard. */}
-      <div
-        className="pointer-events-none absolute left-0 z-20 h-0.5 bg-primary"
-        style={{ top: laneHeight, width: laneWidth }}
-      />
     </>
+  );
+}
+
+/**
+ * The ONLY component that reads `cursorBeat` each frame. It maps the cursor to a
+ * single scroll `offset` and applies it as one `translateY` over its children.
+ *
+ * Its `children` are the cursor-INVARIANT content (notes + bar lines + overlays),
+ * created by the parent which does NOT depend on `cursorBeat`. Because those
+ * element identities don't change between frames, React bails out re-rendering
+ * them when only the cursor advances — so the whole notes/overlay subtree stops
+ * reconciling and only this leaf's transform updates. Keeping the parent
+ * cursor-free is load-bearing: if it read `cursorBeat`, the isolation breaks.
+ *
+ * `transform` opens a new stacking context here, so the now-line must remain a
+ * sibling OUTSIDE this layer to render above it.
+ */
+function ScrollLayer({
+  cursorBeat,
+  laneHeight,
+  tempo,
+  tempoScale,
+  children,
+}: {
+  cursorBeat: number;
+  laneHeight: number;
+  tempo: TempoIndex;
+  tempoScale: number;
+  children: React.ReactNode;
+}) {
+  // Map the cursor to the lane bottom: offset = height + seconds(cursor)*pxPerSec.
+  // This is exactly the per-frame term factored out of the old screen-space
+  // beatToY, applied once to the whole content layer. `pxPerSecond` mirrors the
+  // geometry's `PX_PER_SECOND * tempoScale`, so a slower tempo scrolls slower.
+  const offset =
+    laneHeight + tempo.beatToSeconds(cursorBeat) * PX_PER_SECOND * tempoScale;
+  return (
+    <div
+      className="absolute inset-0"
+      style={{ transform: `translateY(${offset}px)` }}
+    >
+      {children}
+    </div>
   );
 }
 
@@ -95,17 +133,22 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // We measure the LANE (above the keyboard); its height drives the time axis.
   const [laneRef, lane] = useElementSize();
 
+  // Cursor-invariant projection: depends only on lane size + score, so it (and
+  // every note rect) stays stable while playing — only the ScrollLayer moves.
   const projection = useMemo(
     () =>
       buildProjection({
         width: lane.width,
         height: lane.height,
-        cursorBeat,
         score,
         tempoScale,
       }),
-    [lane.width, lane.height, cursorBeat, score, tempoScale],
+    [lane.width, lane.height, score, tempoScale],
   );
+
+  // Tempo index, built once per score and reused by the ScrollLayer so it is
+  // not rebuilt every frame (the projection already built its own internally).
+  const tempo = useMemo(() => buildTempoIndex(score), [score]);
 
   // Note rectangles, derived from the projection (single geometry source).
   const noteRects = useMemo(() => {
@@ -113,44 +156,62 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
     return score.notes.map((n) => ({ note: n, rect: toRect(n) }));
   }, [projection, score.notes]);
 
+  // The cursor-invariant content. Built here (cursor-free) so its element
+  // identity is stable across frames; passed as `children` to ScrollLayer.
+  const content = (
+    <>
+      <GridLines
+        score={score}
+        beatToY={projection.beatToY!}
+        laneWidth={lane.width}
+      />
+
+      {noteRects.map(({ note, rect }) => (
+        <div
+          key={note.id}
+          className={cn(
+            "absolute z-10 rounded-sm border border-primary/40 bg-primary/70 shadow-sm",
+          )}
+          style={{
+            left: rect.x,
+            top: rect.y,
+            width: Math.max(2, rect.w - 1),
+            height: Math.max(2, rect.h - 1),
+            opacity: 0.4 + (note.velocity / 127) * 0.6,
+          }}
+          title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
+        />
+      ))}
+
+      {/* Overlays anchor against the published projection. */}
+      <ProjectionProvider projection={projection}>
+        <OverlayHost score={score} />
+      </ProjectionProvider>
+    </>
+  );
+
   return (
     <div className="flex h-full w-full flex-col bg-background">
-      {/* The note lane. Time scrolls vertically (virtual — derived from
-          `cursorBeat`); pitch is the fixed full keyboard across the width, so
-          notes align column-for-key with the keyboard below. */}
+      {/* The note lane. Content lives in cursor-invariant content-space; the
+          ScrollLayer applies the per-frame scroll as one translateY. Pitch is
+          the fixed full keyboard across the width, so notes align
+          column-for-key with the keyboard below. */}
       <div ref={laneRef} className="relative min-h-0 flex-1 overflow-hidden">
-        <GridLines
-          score={score}
-          beatToY={projection.beatToY!}
-          laneWidth={lane.width}
+        <ScrollLayer
+          cursorBeat={cursorBeat}
           laneHeight={lane.height}
+          tempo={tempo}
+          tempoScale={tempoScale}
+        >
+          {content}
+        </ScrollLayer>
+
+        {/* Playback now-line: where falling notes land on the keyboard. Screen-
+            anchored, so it sits OUTSIDE the scroll layer (and above it). */}
+        <div
+          className="pointer-events-none absolute left-0 z-20 h-0.5 bg-primary"
+          style={{ top: lane.height, width: lane.width }}
         />
-
-        {noteRects.map(({ note, rect }) => {
-          // Cull notes fully outside the vertical viewport.
-          if (rect.y + rect.h < 0 || rect.y > lane.height) return null;
-          return (
-            <div
-              key={note.id}
-              className={cn(
-                "absolute z-10 rounded-sm border border-primary/40 bg-primary/70 shadow-sm",
-              )}
-              style={{
-                left: rect.x,
-                top: rect.y,
-                width: Math.max(2, rect.w - 1),
-                height: Math.max(2, rect.h - 1),
-                opacity: 0.4 + (note.velocity / 127) * 0.6,
-              }}
-              title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
-            />
-          );
-        })}
-
-        {/* Overlays anchor against the published projection. */}
-        <ProjectionProvider projection={projection}>
-          <OverlayHost score={score} />
-        </ProjectionProvider>
 
         {/* Empty-score affordance. */}
         {score.notes.length === 0 ? (

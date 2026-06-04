@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import {
-  beatToSeconds,
+  buildTempoIndex,
   emptyScore,
   mergeAnnotations,
   mergeScores,
@@ -170,6 +170,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [baseScore, tempoScale],
   );
 
+  // Precompute the beat↔seconds index once per score. Both directions are
+  // O(log n) closed-form, so the transport loop and reanchor read a single,
+  // allocation-free tempo-time source instead of re-sorting the tempo map.
+  const tempoIndex = useMemo(() => buildTempoIndex(score), [score]);
+
   // Reset the cursor whenever the composed Score changes (new/changed input).
   // `baseScore` is referentially stable across mere source-picker switches
   // (which don't change `rawById`), so switching the visible Loader does NOT
@@ -187,7 +192,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // share one clock and never drift. rAF only sets the *render cadence*; it no
   // longer supplies the time value (so a backgrounded-then-resumed tab reads the
   // live clock and lands the cursor exactly where the sound is).
-  // Monotone search keeps it O(beats advanced) per frame.
+  // The inversion is closed-form via the tempo index, so each frame is O(log n)
+  // in the tempo-map size — constant cost regardless of how long playback runs.
   const rafRef = useRef<number | null>(null);
   const anchorRef = useRef<{
     startClockSec: number;
@@ -197,6 +203,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const clockRef = useRef<TransportClock>(wallClock);
   const scoreRef = useRef(score);
   scoreRef.current = score;
+  const tempoIndexRef = useRef(tempoIndex);
+  tempoIndexRef.current = tempoIndex;
   // Live mirrors so stable callbacks (seek, re-anchor, clock swaps, store
   // actions) read current values WITHOUT depending on them and re-anchoring.
   const cursorBeatRef = useRef(cursorBeat);
@@ -214,7 +222,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     anchorRef.current = {
       startClockSec: clockRef.current.now(),
       startBeat: beat,
-      startScoreSec: beatToSeconds(scoreRef.current, beat),
+      startScoreSec: tempoIndexRef.current.beatToSeconds(beat),
     };
   }, []);
 
@@ -302,17 +310,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       const elapsedSeconds =
         clockRef.current.now() - anchor.startClockSec + anchor.startScoreSec;
 
-      // Invert beatToSeconds: advance beats until seconds(beat) >= elapsed.
-      let beat = anchor.startBeat;
-      const STEP = 0.01; // beats; fine enough for a smooth cursor at 60fps.
-      let guard = 0;
-      while (
-        beatToSeconds(score, beat) < elapsedSeconds &&
-        beat < endBeat &&
-        guard++ < 1_000_000
-      ) {
-        beat += STEP;
-      }
+      // Invert seconds→beats in closed form (O(log n)) and clamp to the song
+      // end. The index isn't clamped to scoreEndBeat, so we clamp here.
+      const beat = Math.min(
+        endBeat,
+        tempoIndexRef.current.secondsToBeat(elapsedSeconds),
+      );
       if (beat >= endBeat) {
         setCursorBeat(endBeat);
         setIsPlaying(false);

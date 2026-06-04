@@ -166,7 +166,10 @@ export interface KeyLane {
  */
 export interface Projection {
   capabilities: ReadonlySet<Capability>;
-  viewport: { width: number; height: number; scrollBeat: number };
+  /** Lane pixel dimensions. Content-space and cursor-invariant — no scroll
+   * position lives here; the playback cursor is applied as a translate by the
+   * display, never baked into the projection. */
+  viewport: { width: number; height: number };
   /** Present iff "time-axis": beat → screen Y (px from the top of the lane). */
   beatToY?: (beat: number) => number;
   /** Present iff "pitch-plane": pitch → screen X (px, key center). */

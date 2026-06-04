@@ -36,3 +36,6 @@ export {
   mergeScores,
   mergeAnnotations,
 } from "./helpers";
+
+export type { TempoIndex } from "./tempo-index";
+export { buildTempoIndex } from "./tempo-index";

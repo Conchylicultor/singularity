@@ -1,4 +1,4 @@
-import { beatToSeconds, type Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { buildTempoIndex, type Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { InstrumentVoices } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 /** A running playback schedule; `cancel()` tears down the look-ahead loop. */
@@ -19,8 +19,8 @@ const REFILL_SEC = 0.75; // wake to refill when ~half the window remains
  *
  * `audioAnchor` is `ctx.currentTime` captured at the play instant; `fromBeat` is
  * the cursor beat at that same instant. Each note's beat-onset is mapped to an
- * absolute audio time (reusing `beatToSeconds`, so audio shares the cursor's
- * tempo map) and Web Audio fires it sample-accurately.
+ * absolute audio time (reusing the same tempo index, so audio shares the
+ * cursor's tempo map) and Web Audio fires it sample-accurately.
  */
 export function startScheduling(
   score: Score,
@@ -29,7 +29,8 @@ export function startScheduling(
   voices: InstrumentVoices,
   ctx: AudioContext,
 ): ScheduleHandle {
-  const t0 = beatToSeconds(score, fromBeat);
+  const tempo = buildTempoIndex(score);
+  const t0 = tempo.beatToSeconds(fromBeat);
   const pending = score.notes
     // Only attack notes whose onset is at/after the resume cursor. A note whose
     // onset is already behind the cursor (e.g. one still sounding when you paused
@@ -38,12 +39,12 @@ export function startScheduling(
     // (`startSec < t0`), firing it immediately. So drop every past-onset note.
     .filter((n) => n.start >= fromBeat)
     .map((n) => {
-      const startSec = beatToSeconds(score, n.start);
+      const startSec = tempo.beatToSeconds(n.start);
       return {
         pitch: n.pitch,
         velocity: n.velocity,
         when: audioAnchor + startSec - t0,
-        duration: beatToSeconds(score, n.start + n.duration) - startSec,
+        duration: tempo.beatToSeconds(n.start + n.duration) - startSec,
       };
     })
     .sort((a, b) => a.when - b.when);

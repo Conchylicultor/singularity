@@ -239,7 +239,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
         - **`score`**
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `emptyScore`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `buildTempoIndex`, `emptyScore`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
             - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`

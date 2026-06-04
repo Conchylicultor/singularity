@@ -11,9 +11,10 @@ import type {
  *
  * For each `chord` annotation we place a small label at the annotation's start
  * beat, mapped to a pixel Y via the display's published `projection.beatToY`,
- * stacked down a thin band along the left edge. Labels that fall outside the
- * viewport are culled. Derived chords are badged subtly so inferred data reads
- * as inferred.
+ * stacked down a thin band along the left edge. The Y axis is content-space and
+ * we render inside the display's translated scroll layer, so every label is
+ * drawn once and the lane's `overflow-hidden` clips whatever scrolls offscreen.
+ * Derived chords are badged subtly so inferred data reads as inferred.
  */
 export function ChordOverlay({
   projection,
@@ -25,14 +26,11 @@ export function ChordOverlay({
   const beatToY = projection.beatToY;
   if (!beatToY) return null; // defensive: host only mounts us with time-axis.
 
-  const { height } = projection.viewport;
-
   return (
     <div className="pointer-events-none absolute inset-y-0 left-0 z-30 w-12">
       {annotations.map((a, i) => {
         const data = a.data as ChordData;
         const y = beatToY(a.start);
-        if (y < -20 || y > height + 20) return null;
         return (
           <div
             key={`${a.start}-${data.symbol}-${i}`}
