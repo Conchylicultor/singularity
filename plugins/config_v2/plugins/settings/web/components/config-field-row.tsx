@@ -104,18 +104,22 @@ export function ConfigFieldRow({
         </button>
       </div>
       {hasConflict && (
+        // eslint-disable-next-line badge/no-adhoc-chip -- warning banner container, not a chip
         <div className="ml-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning">
           <MdWarning className="size-3 shrink-0" />
           <span className="flex-1 truncate">
             Upstream: {formatOriginValue(originValue)}
           </span>
-          <button
+          <Badge
+            as="button"
             type="button"
+            variant="warning"
+            size="sm"
+            className="shrink-0 hover:bg-warning/30"
             onClick={handleAcceptOrigin}
-            className="shrink-0 rounded-sm bg-warning/20 px-1.5 py-0.5 font-medium hover:bg-warning/30"
           >
             Accept
-          </button>
+          </Badge>
         </div>
       )}
     </div>

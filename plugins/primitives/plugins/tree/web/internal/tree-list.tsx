@@ -343,6 +343,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       </TreeListProvider>
       <DragOverlay dropAnimation={null}>
         {activeOverlay !== null ? (
+          // eslint-disable-next-line badge/no-adhoc-chip -- drag overlay container, not a chip
           <div className="bg-background/90 border-accent rounded border px-2 py-1 text-sm shadow">
             {activeOverlay}
           </div>

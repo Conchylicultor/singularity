@@ -1,5 +1,6 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
@@ -14,9 +15,9 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   return (
     <div className="flex flex-col gap-0.5 px-1 py-0.5 text-xs text-muted-foreground">
       <div className="flex items-center gap-2">
-        <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]">
+        <Badge variant="muted" size="sm" className="font-mono">
           {e.taskId}
-        </span>
+        </Badge>
         <span className={statusClass}>{e.status}</span>
         <span className="truncate">{e.summary}</span>
       </div>
@@ -30,12 +31,9 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
           )}
           {e.extra &&
             Object.entries(e.extra).map(([k, v]) => (
-              <span
-                key={k}
-                className="rounded bg-muted px-1 py-0.5 font-mono text-[10px]"
-              >
+              <Badge key={k} variant="muted" size="sm" className="font-mono">
                 {k}: {v}
-              </span>
+              </Badge>
             ))}
         </div>
       )}

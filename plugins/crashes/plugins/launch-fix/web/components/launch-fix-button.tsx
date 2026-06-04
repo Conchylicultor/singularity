@@ -20,6 +20,7 @@ export function LaunchFixButton({
           title={disabled ? "Recording crash…" : "Launch an agent to fix this crash"}
           aria-label="Launch fix agent"
           disabled={disabled}
+          // eslint-disable-next-line badge/no-adhoc-chip -- inline action button
           className="flex items-center gap-1 rounded px-1.5 py-0.5 underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
         >
           <MdAutoFixHigh className="size-3" />

@@ -192,6 +192,7 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
       </div>
       <DragOverlay dropAnimation={null}>
         {activeId ? (
+          // eslint-disable-next-line badge/no-adhoc-chip -- drag overlay container, not a chip
           <div className="bg-background/90 border-accent text-muted-foreground flex items-center gap-1 rounded border px-2 py-1 text-sm shadow">
             <MdDragIndicator className="size-4" />
           </div>

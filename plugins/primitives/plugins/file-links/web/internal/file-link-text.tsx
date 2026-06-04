@@ -1,4 +1,6 @@
 import { Fragment, type ReactNode } from "react";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import { parseFileLinks } from "./parse";
 
 export interface FileLinkTextProps {
@@ -29,26 +31,23 @@ export function FileLinkText({ text, onFileOpen }: FileLinkTextProps): ReactNode
         if (seg.type !== "path") return <Fragment key={i}>{seg.value}</Fragment>;
         if (onFileOpen) {
           return (
-            <button
+            <LinkChip
               key={i}
-              type="button"
+              mono
               onClick={(e) => {
                 e.stopPropagation();
                 onFileOpen(seg.value, seg.line);
               }}
-              className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-info cursor-pointer hover:underline"
+              className="text-info"
             >
               {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}
-            </button>
+            </LinkChip>
           );
         }
         return (
-          <span
-            key={i}
-            className="rounded bg-muted px-1 py-0.5 font-mono text-xs"
-          >
+          <Badge key={i} variant="muted" size="sm" className="font-mono">
             {seg.value}
-          </span>
+          </Badge>
         );
       })}
     </>

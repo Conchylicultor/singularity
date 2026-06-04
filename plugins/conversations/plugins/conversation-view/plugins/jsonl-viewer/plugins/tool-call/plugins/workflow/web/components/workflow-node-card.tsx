@@ -3,14 +3,15 @@ import { cn } from "@/lib/utils";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS } from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <span className="shrink-0 rounded bg-muted px-1 py-0.5 text-[9px] uppercase tracking-wider text-muted-foreground">
+    <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
       {children}
-    </span>
+    </Badge>
   );
 }
 
@@ -53,14 +54,9 @@ export function WorkflowNodeCard({
           {node.label}
         </span>
         {modelColor && (
-          <span
-            className={cn(
-              "shrink-0 rounded px-1.5 py-0.5 font-mono text-[10px] capitalize",
-              modelColor,
-            )}
-          >
+          <Badge size="sm" colorClass={modelColor} className="shrink-0 font-mono capitalize">
             {node.model}
-          </span>
+          </Badge>
         )}
       </span>
       {(node.agentType || node.isolation || node.hasSchema) && (

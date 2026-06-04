@@ -4,6 +4,7 @@ import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/co
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
@@ -25,10 +26,10 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
           <div className="flex flex-wrap items-center gap-2 text-xs">
-            <span className={cn("rounded px-1.5 py-0.5 font-medium", familyClass(modelMeta.family))}>
+            <Badge size="md" colorClass={familyClass(modelMeta.family)}>
               {modelMeta.label}
-            </span>
-            <span className="rounded bg-muted px-1.5 py-0.5 font-mono">{call.sourceName}</span>
+            </Badge>
+            <Badge variant="muted" size="md" className="font-mono">{call.sourceName}</Badge>
             <SourceContextChip context={call.sourceContext} />
             <span className="text-muted-foreground">
               <RelativeTime date={call.createdAt} />
@@ -37,9 +38,9 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
               {call.durationMs}ms
             </span>
             {isError && (
-              <span className="rounded bg-destructive/10 px-1.5 py-0.5 font-medium text-destructive">
+              <Badge variant="destructive" size="md">
                 error
-              </span>
+              </Badge>
             )}
           </div>
           <div
@@ -112,9 +113,9 @@ function SourceContextChip({
     })
     .join(" ");
   return (
-    <span className="truncate rounded bg-muted/50 px-1.5 py-0.5 font-mono text-[11px] text-muted-foreground">
+    <Badge variant="muted" size="sm" className="truncate font-mono">
       {summary}
-    </span>
+    </Badge>
   );
 }
 

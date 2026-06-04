@@ -1,6 +1,7 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { workflowNodePane } from "../panes";
@@ -41,24 +42,24 @@ export function WorkflowNodePaneBody() {
           <>
             <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
               {node.phase && (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                <Badge variant="muted" size="sm">
                   {node.phase}
-                </span>
+                </Badge>
               )}
               {node.model && (
-                <span className="rounded bg-muted px-1.5 py-0.5 font-mono capitalize text-muted-foreground">
+                <Badge variant="muted" size="sm" className="font-mono capitalize">
                   {node.model}
-                </span>
+                </Badge>
               )}
               {node.agentType && (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                <Badge variant="muted" size="sm">
                   {node.agentType}
-                </span>
+                </Badge>
               )}
               {node.hasSchema && (
-                <span className="rounded bg-muted px-1.5 py-0.5 text-muted-foreground">
+                <Badge variant="muted" size="sm">
                   schema
-                </span>
+                </Badge>
               )}
             </div>
             {node.deps.length > 0 && (

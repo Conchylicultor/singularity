@@ -1,5 +1,6 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 type SkillInput = { skill: string; args?: string };
 
@@ -12,9 +13,9 @@ export function SkillToolView({ event }: ToolRendererProps) {
 
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[11px] text-foreground">
+      <Badge size="sm" colorClass="bg-muted text-foreground" className="shrink-0 font-mono">
         {skillName}
-      </span>
+      </Badge>
       {args && (
         <span className="min-w-0 truncate text-muted-foreground">{args}</span>
       )}

@@ -1,3 +1,4 @@
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { CommitRow } from "../../core";
 import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";
 
@@ -48,9 +49,9 @@ export function CommitRowItem({
         {commit.subject}
       </span>
       {pushed && (
-        <span className="shrink-0 rounded px-1.5 py-0.5 text-xs bg-success/10 text-success">
+        <Badge variant="success" size="md" className="shrink-0">
           pushed
-        </span>
+        </Badge>
       )}
       <span className="hidden truncate text-xs text-muted-foreground sm:inline">
         {commit.authorName}

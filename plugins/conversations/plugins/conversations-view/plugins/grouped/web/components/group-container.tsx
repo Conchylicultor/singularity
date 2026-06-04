@@ -46,8 +46,8 @@ export function GroupContainer({
         droppable.isOver && "bg-accent/40 ring-1 ring-primary/60",
       )}
     >
-      <div
-        className={cn(
+      {/* eslint-disable-next-line badge/no-adhoc-chip -- group header row, awaiting Row primitive */}
+      <div className={cn(
           "group/header flex items-center gap-0.5 rounded-md px-1 py-1",
           !effectiveExpanded && hasActiveChild && "bg-sidebar-accent/50",
         )}

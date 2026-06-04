@@ -5,6 +5,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
 import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
 import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -179,11 +180,9 @@ function JobsTab() {
                   onClick={() => setSelected(r)}
                 >
                   <td className="px-3 py-2">
-                    <span
-                      className={cn("inline-block rounded px-1.5 py-0.5 text-[11px] font-medium", STATE_STYLES[r.state])}
-                    >
+                    <Badge size="sm" colorClass={STATE_STYLES[r.state]}>
                       {r.state}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs">{r.jobName}</td>
                   <td className="px-3 py-2 tabular-nums">
@@ -240,9 +239,9 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
             <code className="text-xs">{job.id}</code>
           </Field>
           <Field label="State">
-            <span className={cn("inline-block rounded px-1.5 py-0.5 text-[11px] font-medium", STATE_STYLES[job.state])}>
+            <Badge size="sm" colorClass={STATE_STYLES[job.state]}>
               {job.state}
-            </span>
+            </Badge>
           </Field>
           <Field label="Attempts">{job.attempts} / {job.maxAttempts}</Field>
           <Field label="Run at">{new Date(job.runAt).toLocaleString()} ({relativeTime(job.runAt)})</Field>
@@ -310,16 +309,16 @@ function EventsTab() {
                   <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.emittedAt)}</td>
                   <td className="px-3 py-2 font-mono text-xs">{r.eventName}</td>
                   <td className="px-3 py-2">
-                    <span
-                      className={cn(
-                        "inline-block rounded px-1.5 py-0.5 text-[11px] font-medium tabular-nums",
+                    <Badge
+                      size="sm"
+                      colorClass={
                         r.matchedCount === 0
                           ? "bg-destructive/10 text-destructive"
-                          : "bg-success/10 text-success",
-                      )}
+                          : "bg-success/10 text-success"
+                      }
                     >
                       {r.matchedCount}
-                    </span>
+                    </Badge>
                   </td>
                   <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
                     {truncate(JSON.stringify(r.payload), 80)}
@@ -452,12 +451,14 @@ function TriggersTab() {
                           {Object.keys(t.filters).length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {Object.entries(t.filters).map(([k, v]) => (
-                                <span
+                                <Badge
                                   key={k}
-                                  className="rounded bg-muted px-1.5 py-0.5 font-mono text-[10px]"
+                                  variant="muted"
+                                  size="sm"
+                                  className="font-mono"
                                 >
                                   {k}={v === null ? "*" : JSON.stringify(v)}
-                                </span>
+                                </Badge>
                               ))}
                             </div>
                           )}

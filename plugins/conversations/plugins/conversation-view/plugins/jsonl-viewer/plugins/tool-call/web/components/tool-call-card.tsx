@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import type { ToolCallEvent } from "../../core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 interface ToolCallCardProps {
   event: ToolCallEvent;
@@ -35,15 +36,13 @@ export function ToolCallCard({
         {...triggerProps}
         className="flex w-full items-center gap-2 text-left text-xs text-muted-foreground"
       >
-        <span
-          className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] ${
-            hasError
-              ? "bg-destructive/15 text-destructive"
-              : "bg-primary/10 text-primary"
-          }`}
+        <Badge
+          size="sm"
+          colorClass={hasError ? "bg-destructive/15 text-destructive" : "bg-primary/10 text-primary"}
+          className="shrink-0 font-mono"
         >
           {event.name || "tool_call"}
-        </span>
+        </Badge>
         {summary && (
           <span className="min-w-0 flex-1 truncate opacity-70">{summary}</span>
         )}

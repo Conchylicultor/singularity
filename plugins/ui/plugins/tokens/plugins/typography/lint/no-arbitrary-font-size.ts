@@ -5,11 +5,11 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * Arbitrary sub-12px font sizes (the `text-[<N>px]` arbitrary-value class)
- * bypass the named typography scale and are the root cause of the type-size
- * sprawl the token system exists to close. This rule bans them and redirects to
- * the named steps. The three mapped values auto-fix; everything else reports
- * only.
+ * Arbitrary sub-12px font sizes (the `text-[<N>px]` / `text-[<N>rem]`
+ * arbitrary-value classes) bypass the named typography scale and are the root
+ * cause of the type-size sprawl the token system exists to close. This rule bans
+ * them and redirects to the named steps. The mapped px and rem values auto-fix;
+ * everything else reports only.
  *
  * Classes appear in two shapes:
  *   - bare JSX `className="… <class> …"` → string `Literal`
@@ -20,7 +20,10 @@ const createRule = ESLintUtils.RuleCreator(
  * robust to however the class string is assembled.
  */
 
-const BANNED = /(?:^|\s)(text-\[(\d+)px\])/g;
+// Two unit branches captured separately so the existing px fixer path is
+// untouched: group 1 is the full token, group 2 the px digits (when px), group 3
+// the rem number (when rem). Exactly one of group 2 / group 3 is set per match.
+const BANNED = /(?:^|\s)(text-\[(?:(\d+)px|([\d.]+)rem)\])/g;
 
 /**
  * Pixel size → named replacement for the three auto-fixable steps. Keyed by the
@@ -32,6 +35,18 @@ const FIX_PX: Record<string, string> = {
   "10": "text-3xs",
   "11": "text-2xs",
   "12": "text-xs",
+};
+
+/**
+ * Rem size → named replacement for the on-scale rem steps. Keyed by the numeric
+ * rem value (same self-reference avoidance as FIX_PX). Off-scale rem values
+ * (e.g. 0.8rem, 0.65rem) are absent here and therefore report-only (fix: null),
+ * matching the px off-scale behavior.
+ */
+const FIX_REM: Record<string, string> = {
+  "0.625": "text-3xs",
+  "0.6875": "text-2xs",
+  "0.75": "text-xs",
 };
 
 export default createRule({
@@ -46,8 +61,8 @@ export default createRule({
     schema: [],
     messages: {
       arbitraryFontSize:
-        "text-[Npx] arbitrary font sizes are banned — use text-3xs (10px), " +
-        "text-2xs (11px), or text-xs (12px). Add a token in " +
+        "text-[Npx] / text-[Nrem] arbitrary font sizes are banned — use " +
+        "text-3xs (10px), text-2xs (11px), or text-xs (12px). Add a token in " +
         "plugins/ui/plugins/tokens/plugins/typography/shared/group.ts for a new step.",
     },
   },
@@ -68,14 +83,18 @@ export default createRule({
     function check(node: TSESTree.Node, text: string, rawStart: number) {
       for (const m of text.matchAll(BANNED)) {
         const token = m[1]!; // the matched arbitrary-value class
-        const px = m[2]!; // the digits, e.g. 10
+        const px = m[2]; // the px digits (e.g. 10) when the px branch matched
+        const rem = m[3]; // the rem number (e.g. 0.8) when the rem branch matched
         // m.index points at the (?:^|\s) anchor; the token starts after any
         // leading whitespace the anchor consumed.
         const tokenStart = m.index + m[0].length - token.length;
         const absStart = rawStart + tokenStart;
         const absEnd = absStart + token.length;
 
-        const replacement = FIX_PX[px];
+        // Exactly one of px / rem is set per match. On-scale values in either map
+        // auto-fix; off-scale values report only (replacement === undefined).
+        const replacement =
+          px !== undefined ? FIX_PX[px] : rem !== undefined ? FIX_REM[rem] : undefined;
         context.report({
           node,
           messageId: "arbitraryFontSize",

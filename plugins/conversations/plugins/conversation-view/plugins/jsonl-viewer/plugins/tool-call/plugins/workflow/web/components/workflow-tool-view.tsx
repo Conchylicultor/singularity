@@ -1,6 +1,7 @@
 import { MdAccountTree, MdCode } from "react-icons/md";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -100,19 +101,18 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="flex shrink-0 items-center gap-1 rounded bg-categorical-6/15 px-1.5 py-0.5 font-mono text-[11px] text-categorical-6">
-        <MdAccountTree className="size-3" />
+      <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree className="size-3" />} className="shrink-0 font-mono">
         {name ?? "workflow"}
-      </span>
+      </Badge>
       {phases.length > 0 && (
-        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
           {phases.length} {phases.length === 1 ? "phase" : "phases"}
-        </span>
+        </Badge>
       )}
       {agentCount > 0 && (
-        <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+        <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
           {agentCount} {agentCount === 1 ? "agent" : "agents"}
-        </span>
+        </Badge>
       )}
       {description && (
         <span className="min-w-0 truncate text-muted-foreground">

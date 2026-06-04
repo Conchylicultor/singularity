@@ -3,6 +3,7 @@ import { MdWarningAmber } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import type { Group, TracedGraph, TracedNode } from "../internal/trace-types";
 import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 
 // A renderable block: either a leaf agent/workflow node or a concurrency group.
 type Block =
@@ -100,15 +101,14 @@ export function WorkflowGraph({
       {(graph.truncated || graph.dynamic) && (
         <div className="flex flex-col gap-1">
           {graph.truncated && (
-            <div className="flex items-center gap-1.5 rounded bg-warning/10 px-2 py-1 text-[11px] text-warning">
-              <MdWarningAmber className="size-3.5 shrink-0" />
+            <Badge colorClass="bg-warning/10 text-warning" size="sm" icon={<MdWarningAmber className="size-3.5" />}>
               Graph truncated at the preview cap — see full script below.
-            </div>
+            </Badge>
           )}
           {graph.dynamic && (
-            <div className="rounded bg-muted px-2 py-1 text-[11px] text-muted-foreground">
+            <Badge variant="muted" size="sm">
               Some steps fan out at runtime; counts shown are representative.
-            </div>
+            </Badge>
           )}
         </div>
       )}

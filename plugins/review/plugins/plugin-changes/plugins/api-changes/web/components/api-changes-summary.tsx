@@ -1,3 +1,4 @@
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { PluginChangeDiff, PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
 
 function totalDiffCount(plugin: PluginChangeDiff): number {
@@ -16,8 +17,8 @@ export function ApiChangesSummary({ plugin }: PluginReviewProps) {
   const count = totalDiffCount(plugin);
   if (count === 0) return null;
   return (
-    <span className="shrink-0 text-[10px] font-semibold px-1.5 py-0.5 rounded bg-categorical-5/15 text-categorical-5">
+    <Badge size="sm" colorClass="bg-categorical-5/15 text-categorical-5" className="shrink-0 font-semibold">
       {count} API
-    </span>
+    </Badge>
   );
 }

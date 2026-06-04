@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -234,17 +235,14 @@ function summaryFor(questions: Question[], firstAnswerParts: string[]) {
     <span className="flex min-w-0 items-center gap-1.5">
       {questions.length > 0 ? (
         questions.map((q, i) => (
-          <span
-            key={i}
-            className="shrink-0 rounded bg-info/15 px-1.5 py-0.5 font-mono text-[11px] text-info"
-          >
+          <Badge key={i} size="sm" colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
             {q.header}
-          </span>
+          </Badge>
         ))
       ) : (
-        <span className="shrink-0 rounded bg-info/15 px-1.5 py-0.5 font-mono text-[11px] text-info">
+        <Badge size="sm" colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
           question
-        </span>
+        </Badge>
       )}
       {questions[0]?.question && (
         <span className="min-w-0 truncate text-muted-foreground">

@@ -534,6 +534,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
         </GroupContainer>
         {(recentGone.length > 0 || paginatedItems.length > 0) && (
           <div className="rounded-md transition-colors hover:bg-muted/30">
+            {/* eslint-disable-next-line badge/no-adhoc-chip -- group header row, awaiting Row primitive */}
             <div className="flex items-center gap-0.5 rounded-md px-1 py-1">
               <button
                 type="button"

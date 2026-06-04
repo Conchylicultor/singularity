@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import type { FileRenderersHandle } from "./use-file-renderers";
 
 export function FileTabs({
@@ -12,21 +12,18 @@ export function FileTabs({
       {resolved.map(({ contribution: c }) => {
         const isActive = active?.contribution.id === c.id;
         return (
-          <button
+          <ToggleChip
             key={c.id}
-            type="button"
             role="tab"
             aria-selected={isActive}
+            active={isActive}
+            variant="ghost"
+            size="sm"
             onClick={() => setActiveId(c.id)}
-            className={cn(
-              "rounded px-2 py-0.5 text-xs transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
-              isActive
-                ? "bg-muted text-foreground"
-                : "text-muted-foreground hover:text-foreground",
-            )}
+            className={isActive ? "bg-muted text-foreground hover:bg-muted" : undefined}
           >
             {c.label}
-          </button>
+          </ToggleChip>
         );
       })}
     </div>

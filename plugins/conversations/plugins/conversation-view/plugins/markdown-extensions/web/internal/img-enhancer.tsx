@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,
@@ -61,16 +62,15 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
           }
           if (onFileOpen) {
             return (
-              <button
-                type="button"
+              <LinkChip
+                mono
                 onClick={(e) => {
                   e.stopPropagation();
                   onFileOpen(src);
                 }}
-                className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-primary hover:underline"
               >
                 {alt || src}
-              </button>
+              </LinkChip>
             );
           }
           return null;

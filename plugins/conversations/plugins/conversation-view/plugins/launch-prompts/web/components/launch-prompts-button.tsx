@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { MdPlaylistPlay } from "react-icons/md";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/notifications/web";
@@ -70,11 +71,9 @@ export function LaunchPromptsButton({
             {(() => {
               const meta = MODEL_REGISTRY[normalizeModel(item.model)];
               return (
-                <span
-                  className={`shrink-0 rounded px-1.5 py-0.5 text-xs font-medium ${familyClass(meta.family)}`}
-                >
+                <Badge size="md" colorClass={familyClass(meta.family)} className="shrink-0">
                   {meta.label}
-                </span>
+                </Badge>
               );
             })()}
           </DropdownMenuItem>

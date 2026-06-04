@@ -1,6 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
@@ -19,16 +20,15 @@ export function ServersList() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Servers</h2>
-        <button
+        <ToggleChip
+          active={addingServer}
+          variant="ghost"
+          size="sm"
           onClick={() => openPane(addServerPane, {}, { mode: "push" })}
-          className={`rounded px-2 py-1 text-xs font-medium transition-colors ${
-            addingServer
-              ? "bg-accent text-accent-foreground"
-              : "bg-primary text-primary-foreground"
-          }`}
+          className={addingServer ? undefined : "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"}
         >
           + Add
-        </button>
+        </ToggleChip>
       </div>
       <div className="flex-1 overflow-auto">
         {servers.length === 0 ? (

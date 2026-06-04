@@ -1,4 +1,5 @@
-import { cn } from "@/lib/utils";
+import type React from "react";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 type ModeValue = TaskChainRelateMode | "independent";
@@ -50,27 +51,22 @@ export function RelateModeChip({
           const effective = m.value === "independent" ? undefined : m.value;
           const selected = effective === value;
           return (
-            <button
+            <ToggleChip
               key={m.value}
-              type="button"
               role="radio"
               aria-checked={selected}
+              active={selected}
+              variant="solid"
+              size="sm"
               disabled={disabled}
               title={m.title}
-              onClick={(e) => {
+              onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
                 onChange(effective);
               }}
-              className={cn(
-                "rounded px-1.5 py-0.5 transition-colors",
-                selected
-                  ? "bg-primary text-primary-foreground shadow-sm"
-                  : "text-muted-foreground hover:text-foreground",
-                disabled && "pointer-events-none opacity-50",
-              )}
             >
               {m.label}
-            </button>
+            </ToggleChip>
           );
         })}
       </div>

@@ -155,13 +155,19 @@ const pluginConfigs: Linter.Config[] = contributions.map((c) => ({
  * names no rule and no path: the owning plugin holds that knowledge.
  */
 const exemptConfigs: Linter.Config[] = contributions.flatMap((c) =>
-  Object.entries(c.ignores ?? {}).map((entry) => {
-    const [ruleId, globs] = entry;
-    return {
-      files: globs,
-      rules: { [`${c.name}/${ruleId}`]: "off" },
-    } as Linter.Config;
-  }),
+  Object.entries(c.ignores ?? {})
+    // An empty glob array is a valid, intentional state (a rule with no
+    // allowlist — the "no central allowlist" design). ESLint rejects a config
+    // whose `files` is an empty array, so skip those entries entirely: a rule
+    // with no exempted globs simply contributes no exempt block.
+    .filter(([, globs]) => globs.length > 0)
+    .map((entry) => {
+      const [ruleId, globs] = entry;
+      return {
+        files: globs,
+        rules: { [`${c.name}/${ruleId}`]: "off" },
+      } as Linter.Config;
+    }),
 );
 
 export default [...baseConfigs, ...pluginConfigs, ...exemptConfigs];

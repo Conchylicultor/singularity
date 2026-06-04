@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { CodeWithLineNumbers } from "./code-with-line-numbers";
@@ -38,9 +39,9 @@ function LineRangeBadge({
   const end = limit != null ? start + limit - 1 : null;
   const label = end != null ? `L${start}–${end}` : `L${start}+`;
   return (
-    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 font-mono text-[10px] text-muted-foreground">
+    <Badge variant="muted" size="sm" className="shrink-0 font-mono">
       {label}
-    </span>
+    </Badge>
   );
 }
 

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { cn } from "@/lib/utils";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   Collapsible,
   CollapsibleChevron,
@@ -188,14 +189,13 @@ function SymbolRow({ exp }: { exp: BarrelExport }) {
 
   return (
     <div className="group flex items-center gap-2 rounded-sm px-1.5 py-px text-xs hover:bg-accent/50">
-      <span
-        className={cn(
-          "inline-flex w-10 shrink-0 justify-center rounded px-1 py-px font-mono text-[10px] font-medium",
-          style.className,
-        )}
+      <Badge
+        size="sm"
+        colorClass={style.className}
+        className="w-10 shrink-0 justify-center font-mono"
       >
         {style.label}
-      </span>
+      </Badge>
       <code className="min-w-0 truncate font-mono text-foreground">
         {exp.name}
       </code>

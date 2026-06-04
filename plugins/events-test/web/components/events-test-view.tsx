@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -379,9 +380,9 @@ export function EventsTestView() {
                 >
                   <div className="flex min-w-0 flex-1 flex-col gap-0.5">
                     <div className="flex items-center gap-2">
-                      <span className="rounded bg-muted px-1.5 py-0.5 font-mono text-xs">
+                      <Badge variant="muted" size="md" className="font-mono">
                         {t.userId ?? "(any)"}
-                      </span>
+                      </Badge>
                       <span className="text-muted-foreground">→</span>
                       <span className="font-mono text-xs">{t.jobName}</span>
                       <span className="truncate text-xs text-muted-foreground">
@@ -451,9 +452,9 @@ export function EventsTestView() {
                   className="flex flex-col gap-0.5 px-3 py-2 text-sm"
                 >
                   <div className="flex items-center gap-2">
-                    <span className="rounded bg-info/10 px-1.5 py-0.5 font-mono text-xs text-info-foreground">
+                    <Badge size="md" colorClass="bg-info/10 text-info-foreground" className="font-mono">
                       {e.label}
-                    </span>
+                    </Badge>
                     <span className="text-muted-foreground">fired for</span>
                     <span className="font-mono text-xs">
                       userId={e.userId}

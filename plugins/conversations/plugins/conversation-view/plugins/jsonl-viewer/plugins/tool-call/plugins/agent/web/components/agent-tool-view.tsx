@@ -6,6 +6,7 @@ import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS } from "@plugins/conversations/plugins/model-provider/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { agentReportPane } from "../panes";
 
 interface AgentInput {
@@ -21,19 +22,17 @@ function ModelBadge({ model }: { model: string }) {
   const tier = MODEL_TIERS.find((t) => model.includes(t));
   const colors = tier ? familyClass(tier) : "bg-muted text-muted-foreground";
   return (
-    <span
-      className={`shrink-0 rounded px-1.5 py-0.5 font-mono text-[11px] capitalize ${colors}`}
-    >
+    <Badge size="sm" colorClass={colors} className="shrink-0 font-mono capitalize">
       {model}
-    </span>
+    </Badge>
   );
 }
 
 function MetaBadge({ children }: { children: React.ReactNode }) {
   return (
-    <span className="shrink-0 rounded bg-muted px-1.5 py-0.5 text-[10px] uppercase tracking-wider text-muted-foreground">
+    <Badge variant="muted" size="sm" className="shrink-0 uppercase tracking-wider">
       {children}
-    </span>
+    </Badge>
   );
 }
 
@@ -58,9 +57,9 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <span className="shrink-0 rounded bg-categorical-6/15 px-1.5 py-0.5 font-mono text-[11px] text-categorical-6">
+      <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" className="shrink-0 font-mono">
         {agentType}
-      </span>
+      </Badge>
       {input.model && <ModelBadge model={input.model} />}
       {input.run_in_background && <MetaBadge>bg</MetaBadge>}
       {input.isolation === "worktree" && <MetaBadge>worktree</MetaBadge>}

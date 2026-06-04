@@ -1,5 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { parseFileLinks } from "@plugins/primitives/plugins/file-links/web";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,
@@ -46,16 +47,16 @@ export function CodeEnhancer({ children }: { children: ReactNode }) {
       if (segments.length === 1 && segments[0]?.type === "path") {
         const seg = segments[0]!;
         return (
-          <button
-            type="button"
+          <LinkChip
+            mono
             onClick={(e) => {
               e.stopPropagation();
               onFileOpen(seg.value, seg.line);
             }}
-            className="rounded bg-muted px-1 py-0.5 font-mono text-xs text-info cursor-pointer hover:underline"
+            className="text-info"
           >
             {seg.line != null ? `${seg.value}:${seg.line}` : seg.value}
-          </button>
+          </LinkChip>
         );
       }
       return null;

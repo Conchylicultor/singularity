@@ -1,4 +1,5 @@
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
 
@@ -27,15 +28,13 @@ export function PluginChangeCard({
         <span className="text-sm font-medium truncate">
           {plugin.hierarchyId}
         </span>
-        <span
-          className={`ml-auto shrink-0 text-[10px] font-semibold uppercase tracking-wider px-1.5 py-0.5 rounded ${
-            plugin.status === "added"
-              ? "bg-success/15 text-success"
-              : "bg-info/15 text-info"
-          }`}
+        <Badge
+          size="sm"
+          colorClass={plugin.status === "added" ? "bg-success/15 text-success" : "bg-info/15 text-info"}
+          className="ml-auto shrink-0 font-semibold uppercase tracking-wider"
         >
           {plugin.status}
-        </span>
+        </Badge>
         {sections.map((s) => {
           const S = s.summary;
           return S ? (

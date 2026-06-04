@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { MdRefresh } from "react-icons/md";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
@@ -117,14 +118,13 @@ export function MemoryPanel() {
                 >
                   <span className="truncate">{displayName(f.name)}</span>
                   {f.type !== "index" && f.type !== "other" && (
-                    <span
-                      className={cn(
-                        "ml-auto shrink-0 rounded px-1 py-0.5 text-[9px] font-medium",
-                        TYPE_BADGE[f.type].classes,
-                      )}
+                    <Badge
+                      size="sm"
+                      colorClass={TYPE_BADGE[f.type].classes}
+                      className="ml-auto shrink-0"
                     >
                       {TYPE_BADGE[f.type].label}
-                    </span>
+                    </Badge>
                   )}
                 </button>
               ))}

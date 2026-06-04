@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 
@@ -277,14 +278,13 @@ export function BroadcastsPanel() {
           <ul className="divide-y">
             {entries.map((entry, i) => (
               <li key={i} className="flex items-start gap-3 px-4 py-3 hover:bg-muted/30">
-                <span
-                  className={cn(
-                    "mt-0.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium",
-                    SEVERITY_STYLES[entry.severity],
-                  )}
+                <Badge
+                  size="sm"
+                  colorClass={SEVERITY_STYLES[entry.severity]}
+                  className="mt-0.5 shrink-0"
                 >
                   {entry.severity}
-                </span>
+                </Badge>
                 <div className="min-w-0 flex-1">
                   <p className="text-sm">{entry.message}</p>
                   {(entry.since ?? entry.until ?? entry.commands) && (
