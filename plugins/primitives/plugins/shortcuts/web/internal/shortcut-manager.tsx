@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { Shortcuts } from "../slots";
 import { getCachedCombo, matchesEvent } from "./parse-keys";
+import { comboHasModifier, isEditableTarget } from "./editable-target";
 
 export function ShortcutManager() {
   const shortcuts = Shortcuts.Shortcut.useContributions();
@@ -30,6 +31,7 @@ export function ShortcutManager() {
   useEffect(() => {
     function handleKeyDown(e: KeyboardEvent) {
       const active = shortcutsRef.current;
+      const editable = isEditableTarget(e.target);
       let winner: (typeof active)[number] | null = null;
       let winnerPriority = -Infinity;
 
@@ -37,6 +39,15 @@ export function ShortcutManager() {
         const parsed = getCachedCombo(shortcut.keys);
         if (!parsed) continue;
         if (!matchesEvent(parsed, e)) continue;
+        // While typing, plain-key shortcuts yield to the field so the keystroke
+        // is inserted. Modifier combos (Cmd/Ctrl/Alt) are deliberate commands
+        // and still fire; a shortcut may opt in via enableInInputs.
+        if (
+          editable &&
+          !comboHasModifier(parsed) &&
+          !shortcut.enableInInputs
+        )
+          continue;
         if (shortcut.when && !shortcut.when()) continue;
 
         const priority = shortcut.priority ?? 0;
