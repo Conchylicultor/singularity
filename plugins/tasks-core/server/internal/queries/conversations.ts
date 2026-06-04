@@ -49,12 +49,19 @@ function queryConversations(
   return q;
 }
 
-// Infra paths only: poller, turn-emitter. Returns ALL rows including system
-// kinds so tmux death is detected and turn events are emitted for system
-// conversations. UI must never call this.
+// Infra paths only: poller, turn-emitter. Returns active (non-`done`) rows
+// including system kinds so tmux death is detected and turn events are emitted
+// for system conversations.
+//
+// Scoped to `active` (status <> 'done') because both callers only ever act on
+// non-terminal rows: the poller already skips done/gone, and the turn-emitter
+// filters `isActiveStatus` (= status !== 'done'). `gone` rows are retained so
+// the poller's resurrection path still sees them. Without this filter the query
+// scans every conversation ever created (unbounded history growth) once per
+// poller tick. UI must never call this.
 export function listConversationsForInfra(): Promise<Conversation[]> {
   return queryConversations(
-    { includeSystem: true },
+    { includeSystem: true, active: true },
     { col: conversations.createdAt, dir: "desc" },
   );
 }
