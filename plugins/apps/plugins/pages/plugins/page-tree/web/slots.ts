@@ -11,3 +11,15 @@ export const PageDetail = {
     component: ComponentType<{ documentId: string }>;
   }>("pages.detail.section"),
 };
+
+/**
+ * Extensible host for trailing actions on a page-tree row (e.g. delete).
+ * Mirrors the task-list `Tasks.TaskActions` pattern so other plugins can add
+ * row actions without editing the row component. Contributors receive the
+ * page's id and title.
+ */
+export const PageTree = {
+  RowActions: defineRenderSlot<{
+    component: ComponentType<{ pageId: string; title: string }>;
+  }>("pages.tree.row-actions"),
+};

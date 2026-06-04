@@ -84,7 +84,12 @@ export function RenameInput({
       }}
       placeholder={placeholder}
       className={cn(
-        "flex-1 truncate bg-transparent outline-none",
+        // `min-w-0` lets this flex item shrink below its intrinsic input
+        // width; without it the input holds a ~20ch floor and pushes the
+        // row's trailing actions past the container's right edge (where
+        // overflow clips them — invisible even on hover). It also makes the
+        // `truncate` above actually take effect.
+        "min-w-0 flex-1 truncate bg-transparent outline-none",
         className,
       )}
     />

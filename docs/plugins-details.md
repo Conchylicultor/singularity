@@ -182,8 +182,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
           - Web:
-            - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`
-            - Exports: Values: `PageDetail`
+            - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`, `PageTree.RowActions` → `DeletePageAction`
+            - Exports: Values: `PageDetail`, `PageTree`
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
           - Web:
             - Contributes: `Apps.App` "Pages" → `PagesLayout`

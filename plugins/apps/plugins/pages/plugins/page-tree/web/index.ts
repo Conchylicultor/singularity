@@ -5,9 +5,10 @@ import { Pages } from "@plugins/apps/plugins/pages/plugins/shell/web";
 import { pagesRootPane, pageDetailPane } from "./panes";
 import { PagesSidebar } from "./components/pages-sidebar";
 import { BacklinksSection } from "./components/backlinks-section";
-import { PageDetail } from "./slots";
+import { DeletePageAction } from "./components/delete-page-action";
+import { PageDetail, PageTree } from "./slots";
 
-export { PageDetail } from "./slots";
+export { PageDetail, PageTree } from "./slots";
 
 export default {
   name: "Pages: Tree",
@@ -23,5 +24,6 @@ export default {
       component: PagesSidebar,
     }),
     PageDetail.Section({ id: "backlinks", component: BacklinksSection }),
+    PageTree.RowActions({ id: "delete", component: DeletePageAction }),
   ],
 } satisfies PluginDefinition;

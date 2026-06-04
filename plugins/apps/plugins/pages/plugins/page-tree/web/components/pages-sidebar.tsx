@@ -19,7 +19,7 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
-import { DeletePageAction } from "./delete-page-action";
+import { PageTree } from "../slots";
 
 // `Document` already carries the tree-shaped fields (id, parentId, rank,
 // expanded) plus title + icon, so it satisfies TreeItem directly with no
@@ -36,7 +36,11 @@ function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }
         { icon: MdAdd, label: "Add page below", onClick: () => void addBelow() },
         { icon: MdAdd, label: "Add sub-page", onClick: () => void addChild() },
       ]}
-      actions={<DeletePageAction pageId={node.id} title={node.title} />}
+      actions={
+        <PageTree.RowActions.Render>
+          {(a) => <a.component pageId={node.id} title={node.title} />}
+        </PageTree.RowActions.Render>
+      }
     >
       <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center text-sm">
         {node.icon ? node.icon : <MdDescription className="size-4" />}
