@@ -1,10 +1,4 @@
-import { cn } from "@/lib/utils";
-import {
-  Collapsible,
-  CollapsibleTrigger,
-  CollapsibleContent,
-  CollapsibleChevron,
-} from "@plugins/primitives/plugins/collapsible/web";
+import { TreeRowChrome } from "@plugins/primitives/plugins/tree/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
 import type { ConfigTreeNode as ConfigTreeNodeData } from "../internal/prune-config-tree";
 import { useConfigRowState } from "../internal/use-config-row-state";
@@ -20,35 +14,24 @@ interface ConfigTreeNodeProps {
   onSelect: (reg: ConfigRegistration) => void;
 }
 
-/** Clickable settings row for a config (label + state badge). */
-function ConfigSelectableRow({
+/** Label + modified/conflict badge for a selectable config row. */
+function ConfigRowContent({
   registration,
   label,
-  selected,
-  onClick,
 }: {
   registration: ConfigRegistration;
   label: string;
-  selected: boolean;
-  onClick: () => void;
 }) {
   const { modifiedCount, hasConflict } = useConfigRowState(registration);
   return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "flex min-w-0 flex-1 items-center justify-between rounded-md py-1.5 pr-2 text-left text-sm",
-        "hover:bg-accent",
-        selected && "bg-accent",
-      )}
-    >
-      <span className="truncate">{label}</span>
+    <>
+      <span className="flex-1 truncate">{label}</span>
       <ConfigRowBadge modifiedCount={modifiedCount} hasConflict={hasConflict} />
-    </button>
+    </>
   );
 }
 
-/** Indented config row with a chevron-aligned spacer (no expander of its own). */
+/** Selectable config leaf (no expander of its own). */
 function ConfigLeafRow({
   registration,
   label,
@@ -64,18 +47,15 @@ function ConfigLeafRow({
 }) {
   const selected = selectedPath === encodeURIComponent(registration.storePath);
   return (
-    <div
-      className="flex items-center gap-1"
-      style={{ paddingLeft: depth * 12 + 8 }}
+    <TreeRowChrome
+      depth={depth}
+      hasChildren={false}
+      isOpen={false}
+      selected={selected}
+      onSelect={() => onSelect(registration)}
     >
-      <span className="size-3 shrink-0" />
-      <ConfigSelectableRow
-        registration={registration}
-        label={label}
-        selected={selected}
-        onClick={() => onSelect(registration)}
-      />
-    </div>
+      <ConfigRowContent registration={registration} label={label} />
+    </TreeRowChrome>
   );
 }
 
@@ -98,10 +78,11 @@ export function ConfigTreeNode({
   onSelect,
 }: ConfigTreeNodeProps) {
   const { node, registrations, children } = item;
-  const hasChildren = children.length > 0;
+  const hasChildNodes = children.length > 0;
   const isOpen = !collapsed.has(node.hierarchyId);
+  const toggle = () => onToggle(node.hierarchyId, !isOpen);
 
-  const childRows = children.map((child) => (
+  const childNodeRows = children.map((child) => (
     <ConfigTreeNode
       key={child.node.hierarchyId}
       item={child}
@@ -117,84 +98,78 @@ export function ConfigTreeNode({
   // shown above any descendant plugins.
   if (registrations.length > 1) {
     return (
-      <Collapsible
-        open={isOpen}
-        onOpenChange={(open) => onToggle(node.hierarchyId, open)}
-      >
-        <CollapsibleTrigger
-          className="flex w-full items-center gap-1 rounded-md py-1 text-xs font-medium text-muted-foreground hover:bg-accent"
-          style={{ paddingLeft: depth * 12 + 8 }}
+      <>
+        <TreeRowChrome
+          depth={depth}
+          hasChildren
+          isOpen={isOpen}
+          onToggle={toggle}
+          onSelect={toggle}
         >
-          <CollapsibleChevron className="size-3" />
-          <span className="truncate">{node.name}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>
-          {registrations.map((reg) => (
-            <ConfigLeafRow
-              key={reg.storePath}
-              registration={reg}
-              label={reg.descriptor.name}
-              depth={depth + 1}
-              selectedPath={selectedPath}
-              onSelect={onSelect}
-            />
-          ))}
-          {childRows}
-        </CollapsibleContent>
-      </Collapsible>
+          <span className="flex-1 truncate">{node.name}</span>
+        </TreeRowChrome>
+        {isOpen && (
+          <>
+            {registrations.map((reg) => (
+              <ConfigLeafRow
+                key={reg.storePath}
+                registration={reg}
+                label={reg.descriptor.name}
+                depth={depth + 1}
+                selectedPath={selectedPath}
+                onSelect={onSelect}
+              />
+            ))}
+            {childNodeRows}
+          </>
+        )}
+      </>
     );
   }
 
   const registration = registrations[0];
 
   // Pure group: no config of its own, only config-bearing descendants.
-  if (hasChildren && !registration) {
+  if (hasChildNodes && !registration) {
     return (
-      <Collapsible
-        open={isOpen}
-        onOpenChange={(open) => onToggle(node.hierarchyId, open)}
-      >
-        <CollapsibleTrigger
-          className="flex w-full items-center gap-1 rounded-md py-1 text-xs font-medium text-muted-foreground hover:bg-accent"
-          style={{ paddingLeft: depth * 12 + 8 }}
+      <>
+        <TreeRowChrome
+          depth={depth}
+          hasChildren
+          isOpen={isOpen}
+          onToggle={toggle}
+          onSelect={toggle}
         >
-          <CollapsibleChevron className="size-3" />
-          <span className="truncate">{node.name}</span>
-        </CollapsibleTrigger>
-        <CollapsibleContent>{childRows}</CollapsibleContent>
-      </Collapsible>
+          <span className="flex-1 truncate">{node.name}</span>
+        </TreeRowChrome>
+        {isOpen && childNodeRows}
+      </>
     );
   }
 
   // Combined: selectable plugin row that also expands to its descendants.
-  if (hasChildren && registration) {
-    const selected = selectedPath === encodeURIComponent(registration.storePath);
+  if (hasChildNodes && registration) {
+    const selected =
+      selectedPath === encodeURIComponent(registration.storePath);
     return (
-      <Collapsible
-        open={isOpen}
-        onOpenChange={(open) => onToggle(node.hierarchyId, open)}
-      >
-        <div
-          className="flex items-center gap-1"
-          style={{ paddingLeft: depth * 12 + 8 }}
+      <>
+        <TreeRowChrome
+          depth={depth}
+          hasChildren
+          isOpen={isOpen}
+          selected={selected}
+          onToggle={toggle}
+          onSelect={() => onSelect(registration)}
         >
-          <CollapsibleTrigger className="w-auto shrink-0 rounded-md p-0.5 text-muted-foreground hover:bg-accent">
-            <CollapsibleChevron className="size-3" />
-          </CollapsibleTrigger>
-          <ConfigSelectableRow
-            registration={registration}
-            label={node.name}
-            selected={selected}
-            onClick={() => onSelect(registration)}
-          />
-        </div>
-        <CollapsibleContent>{childRows}</CollapsibleContent>
-      </Collapsible>
+          <ConfigRowContent registration={registration} label={node.name} />
+        </TreeRowChrome>
+        {isOpen && childNodeRows}
+      </>
     );
   }
 
   // Leaf: single config, no config-bearing descendants. The plugin name itself
-  // opens the config. The spacer keeps the label aligned with chevron rows.
+  // opens the config.
   if (registration) {
     return (
       <ConfigLeafRow

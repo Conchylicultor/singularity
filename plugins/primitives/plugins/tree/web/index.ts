@@ -8,6 +8,8 @@ export type {
   RowChromeMenuHelpers,
   RowMenuItem,
 } from "./internal/row-chrome";
+export { TreeRowChrome } from "./internal/tree-row-chrome";
+export type { TreeRowChromeProps } from "./internal/tree-row-chrome";
 export { RenameInput } from "./internal/rename-input";
 export type { RenameInputProps } from "./internal/rename-input";
 export {

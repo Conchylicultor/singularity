@@ -1,6 +1,5 @@
 import { type ReactNode } from "react";
 import { MdAdd, MdDragIndicator } from "react-icons/md";
-import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import type { IconType } from "react-icons";
 import {
   DropdownMenu,
@@ -12,6 +11,7 @@ import { cn } from "@/lib/utils";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
+import { TreeRowChrome } from "./tree-row-chrome";
 
 export type RowMenuItem = {
   icon?: IconType;
@@ -88,46 +88,23 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
     <div>
       <div className="group/row relative">
         {dragHandle}
-        <div
-          ref={r.childRef}
-          onClick={r.select}
+        <TreeRowChrome
+          depth={depth}
+          hasChildren={r.hasChildren}
+          isOpen={r.isOpen}
+          selected={r.isSelected}
+          onToggle={r.toggleExpanded}
+          onSelect={r.select}
+          rowRef={r.childRef}
           className={cn(
-            "group flex items-center gap-1 rounded px-1 py-1 text-sm",
-            "hover:bg-accent",
-            r.isSelected && "bg-accent",
             r.isDragging && "opacity-40",
             r.isOverChild && "bg-accent ring-primary/40 ring-1",
             className,
           )}
-          style={{ paddingLeft: depth * 16 + 4 }}
+          actions={actions}
         >
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              r.toggleExpanded();
-            }}
-            aria-label={r.isOpen ? "Collapse" : "Expand"}
-            className={cn(
-              "flex size-5 shrink-0 items-center justify-center rounded",
-              "hover:bg-background/60",
-              r.hasChildren
-                ? "opacity-40 group-hover:opacity-100"
-                : "opacity-0 group-hover:opacity-60",
-            )}
-          >
-            <CollapsibleChevron open={r.isOpen} className="size-4" />
-          </button>
           {children}
-          {actions && (
-            <div
-              onClick={(e) => e.stopPropagation()}
-              className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100"
-            >
-              {actions}
-            </div>
-          )}
-        </div>
+        </TreeRowChrome>
         <div
           ref={r.beforeRef}
           className="pointer-events-none absolute inset-x-0 top-0 h-[6px]"
