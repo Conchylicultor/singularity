@@ -1,7 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Button } from "@/components/ui/button";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
@@ -10,7 +10,6 @@ export function ServersList() {
   const serversResult = useResource(serversResource);
   const openPane = useOpenPane();
   const selectedId = serverDetailPane.useChainEntry()?.params.serverId;
-  const addingServer = addServerPane.useChainEntry() !== null;
 
   if (serversResult.pending) return <Placeholder>Loading…</Placeholder>;
 
@@ -20,15 +19,13 @@ export function ServersList() {
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
         <h2 className="text-sm font-semibold">Servers</h2>
-        <ToggleChip
-          active={addingServer}
-          variant="ghost"
+        <Button
+          variant="default"
           size="sm"
           onClick={() => openPane(addServerPane, {}, { mode: "push" })}
-          className={addingServer ? undefined : "bg-primary text-primary-foreground hover:bg-primary/90 hover:text-primary-foreground"}
         >
           + Add
-        </ToggleChip>
+        </Button>
       </div>
       <div className="flex-1 overflow-auto">
         {servers.length === 0 ? (
