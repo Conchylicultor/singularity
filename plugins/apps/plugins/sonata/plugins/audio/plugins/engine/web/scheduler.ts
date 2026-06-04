@@ -31,7 +31,12 @@ export function startScheduling(
 ): ScheduleHandle {
   const t0 = beatToSeconds(score, fromBeat);
   const pending = score.notes
-    .filter((n) => n.start + n.duration > fromBeat) // drop notes fully in the past
+    // Only attack notes whose onset is at/after the resume cursor. A note whose
+    // onset is already behind the cursor (e.g. one still sounding when you paused
+    // mid-note) must NOT be re-triggered — re-attacking it from its start would
+    // replay the previous note on resume. Its `when` would also land in the past
+    // (`startSec < t0`), firing it immediately. So drop every past-onset note.
+    .filter((n) => n.start >= fromBeat)
     .map((n) => {
       const startSec = beatToSeconds(score, n.start);
       return {
