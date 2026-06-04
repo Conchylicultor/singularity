@@ -7,10 +7,11 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   Section,
-  pluginViewPane,
+  SubHeading,
+  PluginLink,
+  ConsumerList,
   RUNTIME_COLORS,
   type PluginNode,
   type ExportRuntime,
@@ -204,36 +205,6 @@ function SymbolRow({ exp }: { exp: BarrelExport }) {
   );
 }
 
-function ConsumerList({ names }: { names: string[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const threshold = 2;
-  const visible = expanded ? names : names.slice(0, threshold);
-  const remaining = names.length - threshold;
-
-  return (
-    <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-[10px] text-muted-foreground/60">
-      <span>←</span>
-      {visible.map((name, i) => (
-        <span key={name}>
-          <PluginLink name={name} />
-          {i < visible.length - 1 && ","}
-        </span>
-      ))}
-      {!expanded && remaining > 0 && (
-        <button
-          className="hover:text-foreground"
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(true);
-          }}
-        >
-          +{remaining}
-        </button>
-      )}
-    </span>
-  );
-}
-
 // ── Slots group ─────────────────────────────────────────────────────
 
 function SlotsGroup({ slots }: { slots: SlotInfo[] }) {
@@ -309,45 +280,5 @@ function RoutesGroup({ routes }: { routes: RouteInfo[] }) {
         })}
       </div>
     </SubHeading>
-  );
-}
-
-// ── Shared primitives ───────────────────────────────────────────────
-
-function SubHeading({
-  label,
-  count,
-  children,
-}: {
-  label: string;
-  count: number;
-  children: React.ReactNode;
-}) {
-  return (
-    <Collapsible defaultOpen>
-      <CollapsibleTrigger className="gap-1 py-0.5 text-xs">
-        <CollapsibleChevron className="size-3.5 text-muted-foreground" />
-        <span className="font-medium text-muted-foreground">{label}</span>
-        <span className="text-muted-foreground/50">({count})</span>
-      </CollapsibleTrigger>
-      <CollapsibleContent className="ml-1 border-l border-border/50 pl-3 pt-0.5">
-        {children}
-      </CollapsibleContent>
-    </Collapsible>
-  );
-}
-
-function PluginLink({ name }: { name: string }) {
-  const openPane = useOpenPane();
-  return (
-    <button
-      className="font-medium text-muted-foreground hover:text-foreground hover:underline"
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(pluginViewPane, { pluginId: name }, { mode: "swap" });
-      }}
-    >
-      {name}
-    </button>
   );
 }

@@ -1490,7 +1490,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Contributes: `Pane.Register` "plugin-view"
-        - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `PluginDetail`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`
+        - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
       - Core:
         - Exports: Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`; Values: `getPluginTree`
       - Server:

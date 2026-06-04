@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
 import { cn } from "@/lib/utils";
 import {
   Collapsible,
@@ -6,11 +6,10 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   Section,
-  pluginViewPane,
+  ConsumerList,
   RUNTIME_COLORS,
   type PluginNode,
   type ExportRuntime,
@@ -162,52 +161,5 @@ function SymbolRow({ row }: { row: SymbolRow }) {
       </code>
       {consumers.length > 0 && <ConsumerList names={consumers} />}
     </div>
-  );
-}
-
-function ConsumerList({ names }: { names: string[] }) {
-  const [expanded, setExpanded] = useState(false);
-  const threshold = 2;
-  const visible = expanded ? names : names.slice(0, threshold);
-  const remaining = names.length - threshold;
-
-  return (
-    <span className="ml-auto inline-flex shrink-0 items-center gap-1 text-3xs text-muted-foreground/60">
-      <span>←</span>
-      {visible.map((name, i) => (
-        <span key={name}>
-          <PluginLink name={name} />
-          {i < visible.length - 1 && ","}
-        </span>
-      ))}
-      {!expanded && remaining > 0 && (
-        <button
-          className="hover:text-foreground"
-          onClick={(e) => {
-            e.stopPropagation();
-            setExpanded(true);
-          }}
-        >
-          +{remaining}
-        </button>
-      )}
-    </span>
-  );
-}
-
-// ── Shared primitives ───────────────────────────────────────────────
-
-function PluginLink({ name }: { name: string }) {
-  const openPane = useOpenPane();
-  return (
-    <button
-      className="font-medium text-muted-foreground hover:text-foreground hover:underline"
-      onClick={(e) => {
-        e.stopPropagation();
-        openPane(pluginViewPane, { pluginId: name }, { mode: "swap" });
-      }}
-    >
-      {name}
-    </button>
   );
 }
