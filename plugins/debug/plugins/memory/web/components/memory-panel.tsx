@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { MdRefresh } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
@@ -14,17 +14,17 @@ type MemoryFile = {
 type ListResponse = { ok: true; files: MemoryFile[]; dir: string };
 type ContentResponse = { ok: true; content: string } | { ok: false; error: string };
 
-const TYPE_BADGE: Record<MemoryFile["type"], { label: string; classes: string }> = {
-  index: { label: "index", classes: "bg-muted text-muted-foreground" },
-  feedback: { label: "feedback", classes: "bg-warning/10 text-warning" },
-  project: { label: "project", classes: "bg-info/10 text-info" },
-  user: { label: "user", classes: "bg-success/10 text-success" },
-  reference: { label: "ref", classes: "bg-categorical-5/15 text-categorical-5" },
-  other: { label: "other", classes: "bg-muted text-muted-foreground" },
+const TYPE_BADGE_CLASSES: Record<MemoryFile["type"], string> = {
+  index: "bg-muted text-muted-foreground",
+  feedback: "bg-warning/10 text-warning",
+  project: "bg-info/10 text-info",
+  user: "bg-success/10 text-success",
+  reference: "bg-categorical-5/15 text-categorical-5",
+  other: "bg-muted text-muted-foreground",
 };
 
 function displayName(name: string): string {
-  return name.replace(/\.md$/, "").replace(/_/g, " ");
+  return formatStatusLabel(name.replace(/\.md$/, ""));
 }
 
 export function MemoryPanel() {
@@ -120,10 +120,10 @@ export function MemoryPanel() {
                   {f.type !== "index" && f.type !== "other" && (
                     <Badge
                       size="sm"
-                      colorClass={TYPE_BADGE[f.type].classes}
+                      colorClass={TYPE_BADGE_CLASSES[f.type]}
                       className="ml-auto shrink-0"
                     >
-                      {TYPE_BADGE[f.type].label}
+                      {formatStatusLabel(f.type)}
                     </Badge>
                   )}
                 </button>

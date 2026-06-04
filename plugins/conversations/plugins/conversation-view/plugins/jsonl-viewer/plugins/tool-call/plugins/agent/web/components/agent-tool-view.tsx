@@ -5,7 +5,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
-import { MODEL_TIERS } from "@plugins/conversations/plugins/model-provider/core";
+import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { agentReportPane } from "../panes";
 
@@ -22,8 +22,8 @@ function ModelBadge({ model }: { model: string }) {
   const tier = MODEL_TIERS.find((t) => model.includes(t));
   const colors = tier ? familyClass(tier) : "bg-muted text-muted-foreground";
   return (
-    <Badge size="sm" colorClass={colors} className="shrink-0 font-mono capitalize">
-      {model}
+    <Badge size="sm" colorClass={colors} className="shrink-0 font-mono">
+      {modelDisplayLabel(model)}
     </Badge>
   );
 }
@@ -61,8 +61,8 @@ export function AgentToolView({ event }: ToolRendererProps) {
         {agentType}
       </Badge>
       {input.model && <ModelBadge model={input.model} />}
-      {input.run_in_background && <MetaBadge>bg</MetaBadge>}
-      {input.isolation === "worktree" && <MetaBadge>worktree</MetaBadge>}
+      {input.run_in_background && <MetaBadge>Background</MetaBadge>}
+      {input.isolation === "worktree" && <MetaBadge>Worktree</MetaBadge>}
       {description && (
         <span className="min-w-0 truncate text-muted-foreground">
           {description}

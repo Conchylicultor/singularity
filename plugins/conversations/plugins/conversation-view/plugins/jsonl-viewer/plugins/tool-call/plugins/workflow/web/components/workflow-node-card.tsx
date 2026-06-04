@@ -1,9 +1,9 @@
 import { MdAccountTree } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
-import { MODEL_TIERS } from "@plugins/conversations/plugins/model-provider/core";
+import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
@@ -54,16 +54,16 @@ export function WorkflowNodeCard({
           {node.label}
         </span>
         {modelColor && (
-          <Badge size="sm" colorClass={modelColor} className="shrink-0 font-mono capitalize">
-            {node.model}
+          <Badge size="sm" colorClass={modelColor} className="shrink-0 font-mono">
+            {modelDisplayLabel(node.model!)}
           </Badge>
         )}
       </span>
       {(node.agentType || node.isolation || node.hasSchema) && (
         <span className="flex flex-wrap gap-1">
-          {node.agentType && <MetaChip>{node.agentType}</MetaChip>}
-          {node.isolation && <MetaChip>{node.isolation}</MetaChip>}
-          {node.hasSchema && <MetaChip>schema</MetaChip>}
+          {node.agentType && <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>}
+          {node.isolation && <MetaChip>{formatStatusLabel(node.isolation)}</MetaChip>}
+          {node.hasSchema && <MetaChip>Schema</MetaChip>}
         </span>
       )}
       {node.promptPreview && (

@@ -18,6 +18,7 @@
 - Cross-plugin:
   - Endpoint callers: `dependencies`, `endpoints`, `task`, `task-dependencies`, `task-events`, `task-graph`, `task-list`, `tree`
 - Sub-plugins:
+  - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
   - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
   - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.

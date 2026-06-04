@@ -1,4 +1,5 @@
 import noAdhocChip from "./no-adhoc-chip";
+import noBadgeTextTransform from "./no-badge-text-transform";
 
 /**
  * Lint barrel for the `no-adhoc-chip` rule. The root `eslint.config.ts`
@@ -19,8 +20,10 @@ export default {
   name: "badge",
   rules: {
     "no-adhoc-chip": noAdhocChip,
+    "no-badge-text-transform": noBadgeTextTransform,
   },
   ignores: {
     "no-adhoc-chip": [],
+    "no-badge-text-transform": [],
   },
 };

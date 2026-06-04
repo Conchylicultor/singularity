@@ -6,6 +6,7 @@ export {
   type BadgeVariant,
   type BadgeSize,
 } from "./internal/badge";
+export { formatStatusLabel } from "./internal/format-label";
 
 export default {
   name: "Badge",

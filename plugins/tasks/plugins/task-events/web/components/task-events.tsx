@@ -8,9 +8,8 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import {
   attemptsResource,
   pushesResource,
-  type Attempt,
 } from "@plugins/tasks/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { cn } from "@/lib/utils";
 
 type RepoInfo = { githubBase: string | null };
@@ -47,22 +46,6 @@ function formatDate(value: Date | string): string {
     minute: "2-digit",
   });
 }
-
-const ATTEMPT_STATUS_CLASSES: Record<Attempt["status"], string> = {
-  pending: "bg-muted text-muted-foreground",
-  in_progress: "bg-info/15 text-info",
-  pushed: "bg-info/15 text-info",
-  completed: "bg-success/15 text-success",
-  abandoned: "bg-muted text-muted-foreground italic",
-};
-
-const ATTEMPT_STATUS_LABELS: Record<Attempt["status"], string> = {
-  pending: "Pending",
-  in_progress: "In progress",
-  pushed: "Pushed",
-  completed: "Completed",
-  abandoned: "Abandoned",
-};
 
 export function TaskEvents({ taskId }: { taskId: string }) {
   const attemptsQ = useResource(attemptsResource);
@@ -161,9 +144,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                   className="flex flex-col gap-2 rounded border px-3 py-2"
                 >
                   <div className="flex items-center gap-3">
-                    <Badge colorClass={ATTEMPT_STATUS_CLASSES[attempt.status]}>
-                      {ATTEMPT_STATUS_LABELS[attempt.status]}
-                    </Badge>
+                    <AttemptStatusBadge status={attempt.status} />
                     <span className="text-muted-foreground flex-1 truncate font-mono text-xs">
                       {attempt.worktreePath.split("/").pop()}
                     </span>

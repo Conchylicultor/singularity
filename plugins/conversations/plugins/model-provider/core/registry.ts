@@ -134,3 +134,19 @@ export function idForCliName(name: string): ConversationModel | null {
   }
   return null;
 }
+
+/**
+ * Best-effort display label for a raw model string seen in tool-call inputs
+ * (Agent/Workflow), where it may be an exact CLI flag ("claude-opus-4-8"), a
+ * registry id ("opus-4-8"), a coarse tier ("opus"), or an unknown string.
+ * Resolves to the registry label when the exact model is known ("Opus 4.8");
+ * otherwise the capitalized tier ("Opus"); otherwise the raw string verbatim.
+ * The label is content, so it is never CSS text-transformed at the call site.
+ */
+export function modelDisplayLabel(raw: string): string {
+  const id = idForCliName(raw) ?? (raw in MODEL_REGISTRY ? (raw as ConversationModel) : null);
+  if (id) return MODEL_REGISTRY[id].label;
+  const tier = MODEL_TIERS.find((t) => raw.includes(t));
+  if (tier) return tier.charAt(0).toUpperCase() + tier.slice(1);
+  return raw;
+}

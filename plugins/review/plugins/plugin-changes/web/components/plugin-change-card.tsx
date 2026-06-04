@@ -1,5 +1,5 @@
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
 
@@ -31,9 +31,9 @@ export function PluginChangeCard({
         <Badge
           size="sm"
           colorClass={plugin.status === "added" ? "bg-success/15 text-success" : "bg-info/15 text-info"}
-          className="ml-auto shrink-0 font-semibold uppercase tracking-wider"
+          className="ml-auto shrink-0 font-semibold"
         >
-          {plugin.status}
+          {formatStatusLabel(plugin.status)}
         </Badge>
         {sections.map((s) => {
           const S = s.summary;

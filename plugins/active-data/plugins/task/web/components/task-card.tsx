@@ -12,28 +12,11 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import {
   attemptsResource,
   tasksResource,
-  type Attempt,
 } from "@plugins/tasks/core";
 import { TaskSchema, type Task } from "@plugins/tasks-core/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-
-const ATTEMPT_STATUS_CLASSES: Record<Attempt["status"], string> = {
-  pending: "bg-muted text-muted-foreground",
-  in_progress: "bg-info/15 text-info",
-  pushed: "bg-info/15 text-info",
-  completed: "bg-success/15 text-success",
-  abandoned: "bg-muted text-muted-foreground italic",
-};
-
-const ATTEMPT_STATUS_LABELS: Record<Attempt["status"], string> = {
-  pending: "Pending",
-  in_progress: "In progress",
-  pushed: "Pushed",
-  completed: "Completed",
-  abandoned: "Abandoned",
-};
 
 const TaskBindingSchema = z.object({
   taskId: z.string(),
@@ -194,9 +177,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
       {attempts.map((attempt) => (
         <div key={attempt.id} className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
-            <Badge colorClass={ATTEMPT_STATUS_CLASSES[attempt.status]}>
-              {ATTEMPT_STATUS_LABELS[attempt.status]}
-            </Badge>
+            <AttemptStatusBadge status={attempt.status} />
             <span className="text-muted-foreground truncate font-mono text-xs">
               {attempt.worktreePath.split("/").pop()}
             </span>

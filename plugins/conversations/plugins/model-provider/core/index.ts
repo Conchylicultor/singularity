@@ -11,5 +11,6 @@ export {
   cliFlagFor,
   currentModelForTier,
   idForCliName,
+  modelDisplayLabel,
 } from "./registry";
 export type { ConversationModel, ModelMeta, ModelTier } from "./registry";

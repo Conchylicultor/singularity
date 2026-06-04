@@ -1,7 +1,8 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { workflowNodePane } from "../panes";
@@ -47,18 +48,18 @@ export function WorkflowNodePaneBody() {
                 </Badge>
               )}
               {node.model && (
-                <Badge variant="muted" size="sm" className="font-mono capitalize">
-                  {node.model}
+                <Badge variant="muted" size="sm" className="font-mono">
+                  {modelDisplayLabel(node.model)}
                 </Badge>
               )}
               {node.agentType && (
                 <Badge variant="muted" size="sm">
-                  {node.agentType}
+                  {formatStatusLabel(node.agentType)}
                 </Badge>
               )}
               {node.hasSchema && (
                 <Badge variant="muted" size="sm">
-                  schema
+                  Schema
                 </Badge>
               )}
             </div>

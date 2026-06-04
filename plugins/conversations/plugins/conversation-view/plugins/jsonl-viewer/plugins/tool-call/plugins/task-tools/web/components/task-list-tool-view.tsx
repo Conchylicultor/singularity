@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 
 type TaskListResult = Array<{ id?: string; description?: string; status?: string }>;
 
@@ -35,7 +35,7 @@ export function TaskListToolView({ event }: ToolRendererProps) {
               {t.id && <span className="shrink-0 font-mono">{t.id}</span>}
               {t.status && (
                 <Badge variant="muted" size="sm" className="shrink-0">
-                  {t.status}
+                  {formatStatusLabel(t.status)}
                 </Badge>
               )}
               {t.description && (
