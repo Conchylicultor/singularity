@@ -586,7 +586,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Item.Avatar`
             - Exports: Types: `ConversationItemConv`, `ConversationItemProps`; Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
           - Cross-plugin:
-            - Slot contributors: `agents`, `conversation-category`, `conversation-progress`
+            - Slot contributors: `agents`, `conversation-category`, `conversation-progress`, `op-status`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Web:
         - Contributes: `Pane.Register` "conversation", `Conversation.Header` → `ConversationTitle`
@@ -857,10 +857,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
           - Shared:
             - Exports: Types: `ConversationNote`, `ConversationNotesPayload`; Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`, `deleteNote`, `upsertNote`
-        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
+        - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
           - Web:
-            - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`
-            - Uses: `conversations.useConversations`
+            - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`, `Item.Chips` → `OpStatusChip`
+            - Uses: `conversations.useConversation`, `conversations.useConversations`
           - Server:
             - Exports: Values: `worktreeOpsResource`
           - Shared:
