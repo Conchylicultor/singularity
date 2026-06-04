@@ -54,7 +54,10 @@ export function triggerBuild(trigger: "manual" | "auto"): void {
       if (await isAnyBuildAlive()) return;
       await doRunBuild(trigger);
     } catch (err) {
-      buildLog.publish(`Build error: ${(err as Error)?.message ?? err}`, "stderr");
+      buildLog.publish(
+        `Build error: ${err instanceof Error ? err.message : String(err)}`,
+        "stderr",
+      );
     } finally {
       inflight = false;
     }
@@ -114,8 +117,8 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   }
 
   await Promise.all([
-    streamLines(proc.stdout, "stdout").catch(() => {}),
-    streamLines(proc.stderr, "stderr").catch(() => {}),
+    streamLines(proc.stdout, "stdout"),
+    streamLines(proc.stderr, "stderr"),
   ]);
 
   const exitCode = await proc.exited;

@@ -20,7 +20,7 @@ function formatBuildInfo(run: BuildRun): string {
   lines.push(`Build ID: ${run.id}`);
   if (run.commitHash) lines.push(`Commit: ${run.commitHash}`);
   lines.push(`Exit code: ${run.exitCode}`);
-  if (run.startedAt && run.finishedAt) {
+  if (run.finishedAt) {
     const durationMs = new Date(run.finishedAt).getTime() - new Date(run.startedAt).getTime();
     const durationSec = Math.round(durationMs / 1000);
     lines.push(`Duration: ${durationSec}s`);

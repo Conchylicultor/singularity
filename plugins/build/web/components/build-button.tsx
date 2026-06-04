@@ -32,7 +32,7 @@ export function BuildButton() {
 
   // --- Main ahead count ---
   const aheadResult = useResource(mainAheadCountResource);
-  const mainAheadCount = aheadResult.pending ? 0 : (aheadResult.data?.count ?? 0);
+  const mainAheadCount = aheadResult.pending ? 0 : aheadResult.data.count;
 
   // --- Worktree live-state channel status (backend liveness) ---
   // During a build the `./singularity build` process restarts this very backend,

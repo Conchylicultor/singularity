@@ -29,7 +29,7 @@ export function BuildLogSection({ runId }: { runId: string }): ReactElement {
 }
 
 function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
-  const copyAll = useCallback(() => {
+  const copyAll = useCallback(async () => {
     const text = steps
       .map((s) => {
         const header = `── ${s.label} ${s.success ? "✓" : "✗"} (${(s.durationMs / 1000).toFixed(1)}s)`;
@@ -37,9 +37,8 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
         return body ? `${header}\n${body}` : header;
       })
       .join("\n\n");
-    navigator.clipboard.writeText(text).then(() => {
-      toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
-    });
+    await navigator.clipboard.writeText(text);
+    toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
   }, [steps]);
 
   return (
@@ -141,15 +140,17 @@ function LiveLogs(): ReactElement {
           lastSeqRef.current = msg.seq;
           setEntries((prev) => [...prev, msg]);
           break;
+        case "error":
+          toast({ type: "build", description: msg.error, variant: "error" });
+          break;
       }
     },
   });
 
-  const copyLogs = useCallback(() => {
+  const copyLogs = useCallback(async () => {
     const text = entries.map((e) => e.line).join("\n");
-    navigator.clipboard.writeText(text).then(() => {
-      toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
-    });
+    await navigator.clipboard.writeText(text);
+    toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
   }, [entries]);
 
   return (

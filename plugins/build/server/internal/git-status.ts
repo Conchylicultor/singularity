@@ -8,10 +8,11 @@ import { REPO_ROOT, WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
 // merged externally and that pull will itself bump local main.
 export async function getMainAheadCount(): Promise<number> {
   let base = "HEAD";
-  try {
-    const stored = (await Bun.file(`${WEB_DIST_DIR}/.build-commit`).text()).trim();
+  const commitFile = Bun.file(`${WEB_DIST_DIR}/.build-commit`);
+  if (await commitFile.exists()) {
+    const stored = (await commitFile.text()).trim();
     if (stored) base = stored;
-  } catch {}
+  }
   const proc = Bun.spawnSync(["git", "log", `${base}..refs/heads/main`, "--oneline"], {
     cwd: REPO_ROOT,
   });

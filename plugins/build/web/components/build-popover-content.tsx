@@ -7,6 +7,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { buildHistoryResource } from "../../shared";
 import type { BuildRun } from "../../shared";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
@@ -73,6 +74,9 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           lastSeqRef.current = msg.seq;
           setEntries((prev) => [...prev, msg]);
           break;
+        case "error":
+          toast({ type: "build", description: msg.error, variant: "error" });
+          break;
       }
     },
   });
@@ -85,11 +89,10 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
     handle.send(JSON.stringify(msg));
   }, [wsHandle]);
 
-  const copyLogs = useCallback(() => {
+  const copyLogs = useCallback(async () => {
     const text = entries.map((e) => e.line).join("\n");
-    navigator.clipboard.writeText(text).then(() => {
-      toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
-    });
+    await navigator.clipboard.writeText(text);
+    toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
   }, [entries]);
 
   return (
@@ -193,16 +196,9 @@ function BuildHistoryList({
             <span className="text-muted-foreground">
               <RelativeTime date={run.startedAt} />
             </span>
-            <span
-              className={cn(
-                "rounded px-1 py-0.5 text-[10px] font-medium",
-                run.trigger === "auto"
-                  ? "bg-info/15 text-info"
-                  : "bg-muted text-muted-foreground",
-              )}
-            >
+            <Badge size="sm" variant={run.trigger === "auto" ? "info" : "muted"}>
               {run.trigger}
-            </span>
+            </Badge>
             <span className="ml-auto tabular-nums text-muted-foreground">
               {run.finishedAt === null ? "running…" : formatDuration(run.startedAt, run.finishedAt)}
             </span>

@@ -11,7 +11,7 @@ export function BuildCommitsSection({ runId }: { runId: string }): ReactElement 
 
   if (isPending) return <Placeholder>Loading commits...</Placeholder>;
   if (isError) return <Placeholder tone="error">Failed to load commits.</Placeholder>;
-  if (!data || data.length === 0) {
+  if (data.length === 0) {
     return <Placeholder>No commits in this build.</Placeholder>;
   }
 

@@ -22,7 +22,7 @@ async function getFrontendHash(): Promise<string> {
     // long). Return "" so a transient error can't break the live-state sub; the
     // web side ignores an empty hash and simply won't arm the reload dot.
     buildLog.publish(
-      `frontendHash: failed to read ${WEB_DIST_DIR}/index.html: ${(err as Error)?.message ?? err}`,
+      `frontendHash: failed to read ${WEB_DIST_DIR}/index.html: ${err instanceof Error ? err.message : String(err)}`,
       "stderr",
     );
     return "";

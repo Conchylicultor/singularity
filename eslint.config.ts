@@ -129,7 +129,6 @@ const baseConfigs: Linter.Config[] = [
     ignores: [
       "**/node_modules/**",
       "**/dist/**",
-      "**/build/**",
       "**/.git/**",
       "**/.check-*/**",
       ".claude/worktrees/**",

@@ -44,6 +44,7 @@ export function BuildProfilingSection({ runId }: { runId: string }): ReactElemen
       const res = await fetch(`/api/build/runs/${encodeURIComponent(runId)}/profile`);
       if (!res.ok) return;
       setData((await res.json()) as BuildData);
+    // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       /* profile unavailable */
     }
