@@ -6,6 +6,7 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { LexicalEditor } from "lexical";
+import { cn } from "@/lib/utils";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { textDataSchema, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
@@ -39,6 +40,7 @@ export function BlockTextEditor({
   editor,
   marker,
   placeholder,
+  contentClassName,
 }: {
   block: Block;
   isFocused: boolean;
@@ -47,6 +49,8 @@ export function BlockTextEditor({
   marker?: ReactNode;
   /** Shown when the block is empty and focused. */
   placeholder?: ReactNode;
+  /** Extra classes for the editable content (e.g. strikethrough when done). */
+  contentClassName?: string;
 }) {
   const data = textDataSchema.parse(block.data);
   const isEmpty = data.text.length === 0;
@@ -55,7 +59,10 @@ export function BlockTextEditor({
 
   const field = useEditableField({
     value: data.text,
-    onSave: (next) => editor.update({ text: next }),
+    // This editor owns only the `text` field; preserve any sibling data (e.g. a
+    // to-do's `checked`) so saving text never clobbers it.
+    onSave: (next) =>
+      editor.update({ ...(block.data as Record<string, unknown>), text: next }),
   });
 
   const initialConfig = useMemo(
@@ -82,7 +89,7 @@ export function BlockTextEditor({
           <PlainTextPlugin
             contentEditable={
               <ContentEditable
-                className="outline-none px-3 py-1 text-sm leading-6"
+                className={cn("outline-none px-3 py-1 text-sm leading-6", contentClassName)}
                 onFocus={() => {
                   field.onFocus();
                   editor.onFocus();

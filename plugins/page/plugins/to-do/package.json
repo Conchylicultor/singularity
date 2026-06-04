@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-to-do",
+  "description": "To-do / checkbox block type for the page editor.",
+  "private": true,
+  "version": "0.0.1"
+}

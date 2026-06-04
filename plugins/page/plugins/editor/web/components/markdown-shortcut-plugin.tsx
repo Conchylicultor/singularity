@@ -35,10 +35,10 @@ export function MarkdownShortcutPlugin({
   // Flatten every registered block's prefixes into {prefix, type} pairs, longest
   // prefix first so a more specific marker wins over a shorter one.
   const rules = useMemo(() => {
-    const out: { prefix: string; type: string }[] = [];
+    const out: { prefix: string; type: string; empty?: () => unknown }[] = [];
     for (const c of contributions) {
       for (const prefix of c.block.markdownPrefixes ?? []) {
-        out.push({ prefix, type: c.block.type });
+        out.push({ prefix, type: c.block.type, empty: c.block.empty });
       }
     }
     return out.sort((a, b) => b.prefix.length - a.prefix.length);
@@ -66,7 +66,7 @@ export function MarkdownShortcutPlugin({
         prevText = text;
         if (pending || text === before) return;
 
-        for (const { prefix, type } of rulesRef.current) {
+        for (const { prefix, type, empty } of rulesRef.current) {
           if (type === blockTypeRef.current) continue;
           // Only on the transition into the prefixed state.
           if (text.startsWith(prefix) && !before.startsWith(prefix)) {
@@ -92,7 +92,9 @@ export function MarkdownShortcutPlugin({
                 paragraph.selectEnd();
               });
               prevText = remaining;
-              editorRef.current.convertTo(type, { text: remaining });
+              // Seed the target type's default payload (e.g. a to-do's
+              // `checked`) before overlaying the preserved text.
+              editorRef.current.convertTo(type, { ...(empty?.() ?? {}), text: remaining });
             });
             return;
           }

@@ -30,6 +30,13 @@ export interface BlockHandle<T> {
   marker?: string;
   /** For editable-text block types: placeholder shown when empty and focused. */
   placeholder?: string;
+  /**
+   * For text block types with a boolean state: the shared text renderer renders
+   * an interactive checkbox marker bound to `data[field]`, and applies
+   * `doneClassName` (default: strikethrough + muted) to the text content when the
+   * field is truthy. Generic — the renderer never names a specific block type.
+   */
+  toggle?: { field: string; doneClassName?: string };
 }
 
 export function defineBlock<S extends ZodTypeAny>(opts: {
@@ -41,6 +48,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   markdownPrefixes?: string[];
   marker?: string;
   placeholder?: string;
+  toggle?: { field: string; doneClassName?: string };
 }): BlockHandle<z.infer<S>> {
   return {
     type: opts.type,
@@ -52,5 +60,6 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     markdownPrefixes: opts.markdownPrefixes,
     marker: opts.marker,
     placeholder: opts.placeholder,
+    toggle: opts.toggle,
   };
 }

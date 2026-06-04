@@ -1375,7 +1375,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Editor.Block`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
       - Cross-plugin:
-        - Slot contributors: `bulleted-list`, `page-link`, `text`
+        - Slot contributors: `bulleted-list`, `page-link`, `text`, `to-do`
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -1406,6 +1406,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `textBlock`
       - Core:
         - Exports: Values: `textBlock`
+    - **`to-do`** — To-do / checkbox block type for the page editor.
+      - Web:
+        - Contributes: `Editor.Block` "to-do" → `BlockTextRenderer`
+        - Exports: Values: `toDoBlock`
+      - Core:
+        - Exports: Values: `toDoBlock`, `toDoDataSchema`
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
