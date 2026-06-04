@@ -50,7 +50,7 @@ export function Badge({
   return (
     <As
       className={cn(
-        "inline-flex items-center gap-1 rounded-md p-chip font-medium tabular-nums",
+        "inline-flex items-center gap-1 whitespace-nowrap rounded-md p-chip font-medium tabular-nums",
         size === "sm" && "text-3xs",
         size === "md" && "text-xs",
         colorClass ?? VARIANT_CLASS[variant],
