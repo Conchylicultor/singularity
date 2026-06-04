@@ -78,6 +78,7 @@ listen_port = ${PGBOUNCER_PORT}
 pool_mode = transaction
 max_client_conn = 200
 default_pool_size = 5
+min_pool_size = 5
 auth_type = trust
 auth_file = ${PGBOUNCER_USERLIST_FILE}
 logfile = ${PGBOUNCER_LOG_FILE}

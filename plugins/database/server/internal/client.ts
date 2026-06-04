@@ -28,25 +28,43 @@ const pool = new Pool({
   idleTimeoutMillis: 20_000,
 });
 
-// Time every query that flows through pool.query (all drizzle ORM queries + the
-// awaitDbReady SELECT 1). Only the promise form is timed; the callback form is
-// passed through untouched. Direct pool.connect() → client.query paths bypass
-// this — see plugins/database/CLAUDE.md.
+// Time every query that flows through pool.query (all drizzle ORM queries).
+// The promise form is reimplemented to split the two phases that node-postgres
+// Pool.query collapses internally — connection acquisition (pool queue-wait +
+// pgbouncer backend establishment) and query execution — into two separate
+// spans:
+//   - "[acquire]" : time to check out a live connection. At cold boot this is
+//                   where the multi-second cost lives; once warm it's sub-ms.
+//   - "<sql text>": pure execution time on an already-acquired client.
+// Before this split, the single "db" span lumped acquisition into execution, so
+// a trivial PK lookup could read as multi-second right after a restart. The
+// callback form is passed straight through to origQuery untouched (drizzle never
+// uses it). Direct pool.connect() → client.query paths still bypass timing —
+// see plugins/database/CLAUDE.md.
 const origQuery = pool.query.bind(pool);
+const origConnect = pool.connect.bind(pool);
 // biome-ignore lint/suspicious/noExplicitAny: pass-through wrapper over pg's overloaded query signature.
 pool.query = ((...a: Parameters<typeof origQuery>): any => {
+  const last = a[a.length - 1];
+  if (typeof last === "function") return origQuery(...a); // callback form, untimed
+
   const first = a[0] as string | { text?: string } | undefined;
   const text = typeof first === "string" ? first : (first?.text ?? "?");
-  const t0 = performance.now();
-  // pg's overloaded query() can be typed as returning void (callback form), so
-  // widen to unknown before the thenable check.
-  const r: unknown = origQuery(...a);
-  if (r && typeof (r as Promise<unknown>).finally === "function") {
-    return (r as Promise<unknown>).finally(() =>
-      recordSpan("db", text, performance.now() - t0),
-    );
-  }
-  return r;
+
+  return (async () => {
+    const acq0 = performance.now();
+    const client = await origConnect(); // unwrapped: avoids double-recording
+    recordSpan("db", "[acquire]", performance.now() - acq0);
+    try {
+      const exec0 = performance.now();
+      // biome-ignore lint/suspicious/noExplicitAny: proxy pg's overloaded query.
+      const res = await (client.query as any)(...a);
+      recordSpan("db", text, performance.now() - exec0);
+      return res;
+    } finally {
+      client.release();
+    }
+  })();
 }) as typeof pool.query;
 
 export const db = drizzle(pool);
@@ -94,4 +112,24 @@ export async function awaitDbReady(): Promise<void> {
     );
   })();
   return readyPromise;
+}
+
+// Eagerly open and validate connections up to the pool's `max` so the first
+// real-query wave (the onReady thundering herd + the frontend's first loaders)
+// hits live connections instead of paying connection-establishment cost. The
+// SELECT 1 on each forces pgbouncer to attach a backend now, not on the first
+// user query. node-postgres `min` does NOT pre-connect — it only avoids
+// destroying idle connections — so this explicit warm step is required. Called
+// from the database plugin's onReady, after awaitDbReady() and before migrations
+// and any other plugin's onReady. awaitDbReady() leaves 1 connection idle, so we
+// only open the remainder; self-healing if `max` is small (e.g. 1 in tests).
+export async function warmPool(): Promise<void> {
+  const target = pool.options.max ?? 5;
+  const need = target - pool.idleCount;
+  if (need <= 0) return;
+  const clients = await Promise.all(
+    Array.from({ length: need }, () => pool.connect()),
+  );
+  await Promise.all(clients.map((c) => c.query("SELECT 1")));
+  for (const c of clients) c.release();
 }

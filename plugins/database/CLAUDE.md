@@ -10,12 +10,23 @@ Owns all database infrastructure for the Singularity server:
 ## Runtime query profiling
 
 `pool.query` is wrapped (in `server/internal/client.ts`) to record per-query
-timing into the runtime-profiler recorder (`db` spans). This captures all
-drizzle ORM queries and the `awaitDbReady` `SELECT 1`. Each `db` span is
-attributed to the innermost enclosing request/loader (its `parent`) via the
-recorder's ambient context, so N+1 patterns point straight at the caller. **Direct
-`pool.connect()` → `client.query` paths bypass this timing** — they go through a
-checked-out client, not `pool.query`, so their durations are not recorded.
+timing into the runtime-profiler recorder (`db` spans). The promise form is
+reimplemented to split the two phases node-postgres collapses into one — it
+emits a separate **`[acquire]`** span for connection checkout (pool queue-wait +
+pgbouncer backend establishment) and a **`<sql text>`** span for pure execution
+on an already-acquired client. This keeps a trivial query from reading as
+multi-second right after a restart when the cost is really cold-connection
+acquisition; a spiking `[acquire]` aggregate is the signal for that. Each `db`
+span is attributed to the innermost enclosing request/loader (its `parent`) via
+the recorder's ambient context, so N+1 patterns point straight at the caller.
+**Direct `pool.connect()` → `client.query` paths bypass this timing** (e.g.
+`awaitDbReady`'s `SELECT 1` and `warmPool`) — they go through a checked-out
+client, not `pool.query`, so their durations are not recorded.
+
+`warmPool()` (called in `onReady`, after `awaitDbReady` and before migrations)
+eagerly opens + validates connections up to the pool's `max` so the boot
+thundering herd hits warm connections instead of paying establishment cost.
+node-postgres `min` does **not** pre-connect, so this explicit step is required.
 
 ## Bootstrap
 
