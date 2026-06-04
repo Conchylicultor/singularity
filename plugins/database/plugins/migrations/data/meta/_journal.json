@@ -827,6 +827,13 @@
       "tag": "20260604_134352_892eeb1b__view_correlation_indexes",
       "hash": "892eeb1b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780583731000,
+      "tag": "20260604_143531_ac8ba782__tasks_v_precompute_completion",
+      "hash": "ac8ba782",
+      "breakpoints": true
     }
   ]
 }

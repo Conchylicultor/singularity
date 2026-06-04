@@ -73,6 +73,27 @@ export const attempts = pgView("attempts_v").as((qb) => {
 // Tasks view reads the `attempts` view so the derivation rides the same
 // `status` / `active` definitions.
 export const tasks = pgView("tasks_v").as((qb) => {
+  // Per-task "has a completed attempt", computed once over all tasks. It is
+  // referenced by both task_facts.hasCompleted and the has_blocking_dep
+  // dependency join, so Postgres auto-materializes it — the attempts_v status
+  // re-derivation runs once per task instead of once per dependency. Previously
+  // has_blocking_dep re-derived attempts_v inside a per-dependency anti-join
+  // (and, being referenced twice by the status CASE below, ran it twice),
+  // scanning ~1.3M rows per evaluation on every notifyConversationsChanged.
+  // Drizzle 0.36.4 can't emit the MATERIALIZED keyword, but multi-reference
+  // auto-materialization yields the same plan.
+  const completed = qb.$with("task_completed").as(
+    qb
+      .select({
+        id: _tasks.id,
+        hasCompleted: sql<boolean>`EXISTS (
+          SELECT 1 FROM ${attempts} a
+           WHERE a.task_id = ${sql.raw('"tasks"."id"')} AND a.status = 'completed'
+        )`.as("has_completed"),
+      })
+      .from(_tasks),
+  );
+
   const facts = qb.$with("task_facts").as(
     qb
       .select({
@@ -80,10 +101,7 @@ export const tasks = pgView("tasks_v").as((qb) => {
         hasAttempt: sql<boolean>`EXISTS (
           SELECT 1 FROM ${_attempts} a WHERE a.task_id = ${sql.raw('"tasks"."id"')}
         )`.as("has_attempt"),
-        hasCompleted: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${attempts} a
-           WHERE a.task_id = ${sql.raw('"tasks"."id"')} AND a.status = 'completed'
-        )`.as("has_completed"),
+        hasCompleted: sql<boolean>`${completed.hasCompleted}`.as("has_completed"),
         hasActive: sql<boolean>`EXISTS (
           SELECT 1 FROM ${attempts} a
            WHERE a.task_id = ${sql.raw('"tasks"."id"')} AND a.active
@@ -99,22 +117,23 @@ export const tasks = pgView("tasks_v").as((qb) => {
             JOIN ${_attempts} a ON a.id = p.attempt_id
            WHERE a.task_id = ${sql.raw('"tasks"."id"')}
         )`.as("min_completed_push_at"),
+        // Reuses the precomputed per-task completion (dtc) instead of
+        // re-deriving attempts_v.status='completed' for every dependency.
         hasBlockingDep: sql<boolean>`EXISTS (
           SELECT 1 FROM ${_taskDependencies} td
             JOIN ${_tasks} dep ON dep.id = td.depends_on_task_id
+            JOIN ${completed} dtc ON dtc.id = dep.id
            WHERE td.task_id = ${sql.raw('"tasks"."id"')}
              AND dep.dropped_at IS NULL
-             AND NOT EXISTS (
-               SELECT 1 FROM ${attempts} a
-                WHERE a.task_id = dep.id AND a.status = 'completed'
-             )
+             AND NOT dtc.has_completed
         )`.as("has_blocking_dep"),
       })
-      .from(_tasks),
+      .from(_tasks)
+      .innerJoin(completed, eq(completed.id, _tasks.id)),
   );
 
   return qb
-    .with(facts)
+    .with(completed, facts)
     .select({
       ...getTableColumns(_tasks),
       status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
