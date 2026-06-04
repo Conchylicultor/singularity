@@ -9,6 +9,7 @@
 
 import { Midi } from "@tonejs/midi";
 import type {
+  KeySignature,
   Note,
   Score,
   TempoEvent,
@@ -52,6 +53,16 @@ export function compile(raw: unknown): Score {
     timeSigMap = [{ beat: 0, numerator: 4, denominator: 4 }];
   }
 
+  // --- Key signature ---------------------------------------------------
+  // @tonejs/midi exposes header.keySignatures as { ticks, key, scale }[] where
+  // `key` is a note name ("Eb", "F#") and `scale` is "major" | "minor". Take the
+  // first; many files declare none, in which case meta.key stays undefined and
+  // the keyboard falls back to natural spelling.
+  const ks = midi.header.keySignatures[0];
+  const key: KeySignature | undefined = ks?.key
+    ? { tonic: ks.key, mode: ks.scale === "minor" ? "minor" : "major" }
+    : undefined;
+
   // --- Tracks and notes ------------------------------------------------
   // Only include MIDI tracks that contain at least one note.
   const tracks: TrackMeta[] = [];
@@ -87,6 +98,7 @@ export function compile(raw: unknown): Score {
   return {
     meta: {
       ...(midi.header.name ? { title: midi.header.name } : {}),
+      ...(key ? { key } : {}),
     },
     tracks,
     tempoMap,

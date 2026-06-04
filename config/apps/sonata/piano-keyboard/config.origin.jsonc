@@ -1,0 +1,6 @@
+// @hash 75f3ad334c67
+{
+  // Which keys show a note name on the keyboard.
+  // Allowed values: "diatonic", "whites-plus-in-key", "all"
+  "labelScope": "diatonic"
+}

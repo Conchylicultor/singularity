@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { PianoKeyboard } from "./components/piano-keyboard";
+import { pianoKeyboardConfig } from "../shared/config";
 
 export default {
   name: "Sonata: Piano Keyboard",
@@ -12,5 +14,6 @@ export default {
       requires: ["pitch-plane"],
       component: PianoKeyboard,
     }),
+    ConfigV2.WebRegister({ descriptor: pianoKeyboardConfig }),
   ],
 } satisfies PluginDefinition;

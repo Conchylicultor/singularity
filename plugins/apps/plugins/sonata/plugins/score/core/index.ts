@@ -39,3 +39,6 @@ export {
 
 export type { TempoIndex } from "./tempo-index";
 export { buildTempoIndex } from "./tempo-index";
+
+export { makeKeySpeller, accidentalGlyph } from "./spelling";
+export type { KeySpeller } from "./spelling";

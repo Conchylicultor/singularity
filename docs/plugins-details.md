@@ -202,9 +202,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
           - Web:
             - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.seek-back (arrowleft)", `Shortcuts.Shortcut` "sonata.seek-forward (arrowright)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)"
-        - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys.
+        - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
-            - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`
+            - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`, `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
+          - Server:
+            - Uses: `config_v2.ConfigV2`
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
           - Web:
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`
@@ -239,7 +242,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
         - **`score`**
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `bars`, `beatToSeconds`, `buildTempoIndex`, `emptyScore`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `bars`, `beatToSeconds`, `buildTempoIndex`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
             - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
@@ -453,7 +456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
