@@ -1,7 +1,8 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { getConfig } from "@plugins/config_v2/server";
 import { sendTurn } from "@plugins/conversations/server";
 import { startPushAndExit } from "../../shared/endpoints";
-import { PUSH_AND_EXIT_PROMPT } from "./prompt";
+import { pushAndExitConfig } from "../../shared/config";
 import { recordNotification } from "@plugins/notifications/server";
 import { hasRunning, startJob, setStatus, clearJob } from "./state";
 
@@ -12,7 +13,7 @@ export const handleStart = implement(startPushAndExit, async ({ params }) => {
   }
   startJob(id);
   try {
-    await sendTurn(id, PUSH_AND_EXIT_PROMPT);
+    await sendTurn(id, getConfig(pushAndExitConfig).prompt);
   } catch (err) {
     const message = err instanceof Error ? err.message : String(err);
     setStatus(id, "error", message);

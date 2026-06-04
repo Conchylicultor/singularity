@@ -447,7 +447,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
@@ -873,14 +873,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `promptTemplatesConfig`
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Web:
-            - Contributes: `PromptEditorSlots.FloatingAction` → `PushAndExitButton`
-            - Uses: `conversations.useConversation`, `conversations.useConversationById`, `conversations.useConversations`, `notifications.toast`
+            - Contributes: `PromptEditorSlots.FloatingAction` → `PushAndExitButton`, `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`, `conversations.useConversation`, `conversations.useConversationById`, `conversations.useConversations`, `notifications.toast`
           - Server:
-            - Uses: `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
+            - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
             - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
             - Resources: `push-and-exit` (push)
           - Shared:
-            - Exports: Types: `JobState`; Values: `cancelPushAndExit`, `pushAndExitResource`, `startPushAndExit`
+            - Exports: Types: `JobState`; Values: `cancelPushAndExit`, `pushAndExitConfig`, `pushAndExitResource`, `startPushAndExit`
         - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
           - Web:
             - Contributes: `Pane.Register` "conv-push-profiling", `Conversation.ActionBar` → `PushProfilingButton`
