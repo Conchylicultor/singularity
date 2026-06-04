@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-import { existsSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
+import { existsSync, lstatSync, mkdirSync, unlinkSync, writeFileSync } from "fs";
 import { readdir, readlink, rename, rm, symlink, unlink } from "fs/promises";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
@@ -103,12 +103,17 @@ async function writeCentralRoutesManifest(root: string): Promise<void> {
   await rename(tmp, CENTRAL_ROUTES_FILE);
 }
 
-// Staging / old-dir prefixes inside web/ for atomic publish. Each invocation
-// builds into `dist.staging.<pid>/` and atomically renames to `dist/` at the
-// end — the gateway never sees a partially-wiped dist (icons present, no
-// index.html). Leftovers from a crashed run are swept at the start of each
-// build.
+// Publish layout inside web-core/. `dist` is a *symlink* → `dist.live.<pid>`,
+// the versioned release the gateway serves. A build compiles into
+// `dist.staging.<pid>/`, renames it to a `dist.live.<pid>/` release, then
+// repoints `dist` by renaming a fresh `dist.swap.<pid>` symlink over it. That
+// final rename is a POSIX-atomic replace of a symlink, so `dist` always
+// resolves to a *complete* release — there is no window where it is absent.
+// (`OLD_PREFIX` is the legacy move-aside scheme; still swept for back-compat.)
+// Leftovers from a crashed run are swept at the start of each build.
 const STAGING_PREFIX = "dist.staging.";
+const LIVE_PREFIX = "dist.live.";
+const SWAP_PREFIX = "dist.swap.";
 const OLD_PREFIX = "dist.old.";
 
 // Cross-process build mutex via atomic symlink. Protects against the narrow
@@ -157,9 +162,45 @@ async function acquireBuildLock(lockPath: string): Promise<() => void> {
   throw new Error(`Timed out waiting for build lock at ${lockPath}`);
 }
 
+// Reclaim build leftovers and self-heal a crashed publish. `dist` is a symlink
+// → `dist.live.<pid>`; a publish killed mid-swap can leave `dist` missing or
+// dangling while a complete `dist.live.*` release survives on disk. Restore the
+// newest surviving release so the site is served again from the very next build
+// start, then reclaim every other transient dir — but never the release `dist`
+// currently points at (deleting it would dangle the live symlink).
 async function sweepStagingLeftovers(webDir: string): Promise<void> {
-  for (const entry of await readdir(webDir)) {
-    if (entry.startsWith(STAGING_PREFIX) || entry.startsWith(OLD_PREFIX)) {
+  const distPath = resolve(webDir, "dist");
+  const entries = await readdir(webDir);
+
+  // The release `dist` currently resolves to (basename), if it is a live symlink.
+  let current: string | null = null;
+  const stat = lstatSync(distPath, { throwIfNoEntry: false });
+  if (stat?.isSymbolicLink()) {
+    if (existsSync(distPath)) {
+      current = basename(await readlink(distPath)); // existsSync follows: false ⇒ dangling
+    } else {
+      await unlink(distPath); // dangling symlink — drop it, restore below
+    }
+  }
+
+  // No healthy `dist` but a complete release survives → repoint at the newest.
+  if (current === null) {
+    const releases = entries.filter((e) => e.startsWith(LIVE_PREFIX)).sort();
+    const newest = releases.at(-1);
+    if (newest) {
+      current = newest;
+      await symlink(newest, distPath); // relative target, resolved within webDir
+    }
+  }
+
+  for (const entry of entries) {
+    if (entry === current) continue;
+    if (
+      entry.startsWith(STAGING_PREFIX) ||
+      entry.startsWith(LIVE_PREFIX) ||
+      entry.startsWith(SWAP_PREFIX) ||
+      entry.startsWith(OLD_PREFIX)
+    ) {
       await rm(resolve(webDir, entry), { recursive: true, force: true });
     }
   }
@@ -799,22 +840,43 @@ export function registerBuild(program: Command) {
         writeFileSync(resolve(stagingPath, ".build-commit"), buildCommit + "\n");
       }
 
-      // Crash-safe publish via move-aside. The previous `rm(dist); rename(staging)`
-      // was NOT atomic: `rm -rf` is a recursive, interruptible delete, so a build
-      // killed mid-rm (e.g. an overlapping build's backend restart) left `dist`
-      // half-emptied — icons present, index.html gone — which the gateway serves
-      // as a permanent 404 on `/`. Instead move the live dir aside (atomic rename)
-      // and move the new one in (atomic rename): `dist` is always a *complete*
-      // tree, old or new, never partial. The only gap is between the two adjacent
-      // renames where `dist` is briefly absent — recoverable (the next build
-      // republishes), unlike a silently-partial dist. Leftover `dist.old.*` from a
-      // crash here is reclaimed by sweepStagingLeftovers at the next build start.
+      // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap. The
+      // staging tree is renamed to a versioned release, then `dist` is repointed
+      // by renaming a fresh symlink over it — a POSIX-atomic replace when `dist`
+      // is already a symlink, so `dist` always resolves to a *complete* release
+      // with no window where it is absent.
+      //
+      // This supersedes the earlier move-aside (`rename(dist→old); rename(staging→dist)`),
+      // which left a real gap between the two renames where `dist` did not exist
+      // at all: a build killed there (e.g. the gateway interrupting an in-flight
+      // build) left a permanent 404 on `/`. On the one-time migration from a
+      // legacy real-directory `dist`, it is removed just before the swap — that
+      // single build has a brief gap; every subsequent build is gapless.
       endSpan = buildProfilerStart("atomicPublish", "build:frontend", "atomic publish");
       const livePath = resolve(webDir, "dist");
-      const oldPath = resolve(webDir, `${OLD_PREFIX}${process.pid}`);
-      if (existsSync(livePath)) await rename(livePath, oldPath);
-      await rename(stagingPath, livePath);
-      await rm(oldPath, { recursive: true, force: true });
+      const releaseName = `${LIVE_PREFIX}${process.pid}`;
+      const releasePath = resolve(webDir, releaseName);
+      const swapPath = resolve(webDir, `${SWAP_PREFIX}${process.pid}`);
+
+      await rename(stagingPath, releasePath);
+
+      // Reclaim the release `dist` currently points at after the swap. If `dist`
+      // is a legacy real directory, remove it first — a symlink cannot be
+      // renamed over a non-empty directory.
+      let prevRelease: string | null = null;
+      const liveStat = lstatSync(livePath, { throwIfNoEntry: false });
+      if (liveStat?.isSymbolicLink()) {
+        prevRelease = basename(await readlink(livePath));
+      } else if (liveStat?.isDirectory()) {
+        await rm(livePath, { recursive: true, force: true });
+      }
+
+      await symlink(releaseName, swapPath); // relative target, resolved within webDir
+      await rename(swapPath, livePath); // atomic replace of the dist symlink
+
+      if (prevRelease && prevRelease !== releaseName) {
+        await rm(resolve(webDir, prevRelease), { recursive: true, force: true });
+      }
       endSpan();
 
       // 6. Write registry JSON

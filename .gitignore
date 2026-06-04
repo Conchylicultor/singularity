@@ -14,7 +14,13 @@ test-results/
 # Build output
 dist/
 dist.staging.*/
+dist.live.*/
 dist.old.*/
+# web-core publish: `dist` is a symlink → dist.live.<pid>; `dist.swap.*` is the
+# transient swap symlink. Trailing-slash patterns don't match symlinks, so these
+# are listed without a slash (the anchored path covers the live `dist` symlink).
+plugins/framework/plugins/web-core/dist
+dist.swap.*
 /gateway/gateway
 **/.build.lock
 
