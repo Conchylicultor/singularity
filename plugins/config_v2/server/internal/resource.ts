@@ -32,12 +32,22 @@ export function markRegistryReady(): void {
   resolveRegistryReady();
 }
 
+// Wraps a loader so it resolves only after initRegistry has populated the
+// registry (descriptorByPath / configGetter / scopeForkedChecker). Pre-readiness
+// the server already serves subscriptions, so without this gate a loader answers
+// from empty state — emitting an incomplete/wrong resource the client then caches.
+function whenRegistryReady<A, R>(fn: (arg: A) => R | Promise<R>): (arg: A) => Promise<R> {
+  return async (arg: A) => {
+    await registryReady;
+    return fn(arg);
+  };
+}
+
 export const configV2ServerResource = defineResource<ConfigV2Values, { path: string; scopeId?: string }>({
   key: "config-v2.values",
   mode: "push",
   schema: configV2ValuesSchema,
-  loader: async ({ path, scopeId }) => {
-    await registryReady;
+  loader: whenRegistryReady(({ path, scopeId }) => {
     const descriptor = descriptorByPath.get(path);
     if (!descriptor || !configGetter) {
       // After readiness, an unregistered path is a genuine bug (unknown descriptor)
@@ -52,7 +62,7 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
       }
     }
     return redacted;
-  },
+  }),
 });
 
 function computeAllConflicts(): ConfigV2Conflicts {
@@ -87,7 +97,7 @@ export const configV2ConflictsServerResource = defineResource<ConfigV2Conflicts>
   key: "config-v2.conflicts",
   mode: "push",
   schema: configV2ConflictsSchema,
-  loader: () => computeAllConflicts(),
+  loader: whenRegistryReady(() => computeAllConflicts()),
 });
 
 export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {
@@ -130,7 +140,7 @@ export const configV2ScopeForkedServerResource = defineResource<ConfigV2ScopeFor
   key: "config-v2.scope-forked",
   mode: "push",
   schema: configV2ScopeForkedSchema,
-  loader: ({ scopeId }) => ({ forked: scopeForkedChecker ? scopeForkedChecker(scopeId) : false }),
+  loader: whenRegistryReady(({ scopeId }) => ({ forked: scopeForkedChecker ? scopeForkedChecker(scopeId) : false })),
 });
 
 function fieldValueJson(content: JsonValue | null, key: string): string {
@@ -142,7 +152,11 @@ function fieldValueJson(content: JsonValue | null, key: string): string {
 
 function computeTiers(path: string, scopeId?: string): ConfigV2Tiers {
   const descriptor = descriptorByPath.get(path);
-  if (!descriptor) return {};
+  if (!descriptor) {
+    // After readiness, an unregistered path is a genuine bug (unknown descriptor)
+    // — fail loudly rather than emit empty tiers that render every field as "default".
+    throw new Error(`[config-v2] no descriptor registered for tiers path "${path}"`);
+  }
 
   const parts = path.replace(/\.jsonc$/, "").split("/");
   const dir = parts.slice(0, -1).join("/");
@@ -191,7 +205,7 @@ export const configV2TiersServerResource = defineResource<ConfigV2Tiers, { path:
   key: "config-v2.tiers",
   mode: "push",
   schema: configV2TiersSchema,
-  loader: ({ path, scopeId }) => computeTiers(path, scopeId),
+  loader: whenRegistryReady(({ path, scopeId }) => computeTiers(path, scopeId)),
 });
 
 export function getAllDescriptors(): [string, ConfigDescriptor][] {
