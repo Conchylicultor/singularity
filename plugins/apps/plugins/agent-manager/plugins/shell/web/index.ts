@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Apps } from "@plugins/apps/web";
-import { MdDashboard } from "react-icons/md";
+import { MdChat } from "react-icons/md";
 import { AgentManagerLayout } from "./components/agent-manager-layout";
 
 export default {
@@ -10,7 +10,7 @@ export default {
   contributions: [
     Apps.App({
       id: "agent-manager",
-      icon: MdDashboard,
+      icon: MdChat,
       tooltip: "Agent Manager",
       component: AgentManagerLayout,
       path: "/",
