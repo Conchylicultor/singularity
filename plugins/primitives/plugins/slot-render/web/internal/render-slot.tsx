@@ -3,7 +3,10 @@ import {
   Fragment,
   useCallback,
   useContext,
+  useLayoutEffect,
   useMemo,
+  useRef,
+  useState,
   type ComponentType,
   type ReactNode,
 } from "react";
@@ -98,6 +101,24 @@ export function defineRenderSlot<P>(
       [cleanItems],
     );
 
+    // Single-line discipline at the slot boundary: when the slot lays out
+    // horizontally, every contribution is wrapped in a `min-w-0` cell so the
+    // flex shrink-chain is never broken above a contribution. Without this,
+    // each contributor would have to remember `min-w-0` on its own root or its
+    // text silently wraps when the row is compressed. Fixed-size controls (the
+    // `Button` primitive is `shrink-0`) are unaffected; flexible text shrinks
+    // and truncates. Vertical lists are left untouched (zero layout change).
+    // Orientation is read from the container at runtime — same sentinel
+    // technique as the reorder list middleware — so slots declare nothing.
+    const sentinelRef = useRef<HTMLSpanElement>(null);
+    const [horizontal, setHorizontal] = useState(false);
+    useLayoutEffect(() => {
+      const parent = sentinelRef.current?.parentElement;
+      if (!parent) return;
+      const dir = getComputedStyle(parent).flexDirection;
+      setHorizontal(dir === "row" || dir === "row-reverse");
+    }, []);
+
     const renderItem = useCallback(
       (contribution: Contribution): ReactNode => {
         const cId = contribution.id as string | undefined;
@@ -116,13 +137,16 @@ export function defineRenderSlot<P>(
               )
             : null;
 
-        return (
-          <Fragment key={cId}>
-            {applyItemMiddlewares(node, id, contribution)}
-          </Fragment>
+        const wrapped = applyItemMiddlewares(node, id, contribution);
+        return horizontal ? (
+          <div key={cId} className="flex min-w-0 items-center">
+            {wrapped}
+          </div>
+        ) : (
+          <Fragment key={cId}>{wrapped}</Fragment>
         );
       },
-      [cleanById, children],
+      [cleanById, children, horizontal],
     );
 
     const defaultRendering = (
@@ -147,15 +171,26 @@ export function defineRenderSlot<P>(
       }
     }
 
+    // Sentinel: a zero-layout (`display:none`) sibling of the contributions,
+    // used to read the host container's flex-direction for the `min-w-0` cell
+    // wrapping above. Rendered alongside `result` so it survives the reorder
+    // middleware path (which renders its own item list, not `children`).
+    const withSentinel = (
+      <>
+        <span ref={sentinelRef} className="hidden" aria-hidden />
+        {result}
+      </>
+    );
+
     if (subId !== undefined) {
       return (
         <RenderSlotSubIdContext.Provider value={subId}>
-          {result}
+          {withSentinel}
         </RenderSlotSubIdContext.Provider>
       );
     }
 
-    return result;
+    return withSentinel;
   };
 
   return renderSlot;

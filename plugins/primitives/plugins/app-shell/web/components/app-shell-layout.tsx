@@ -70,7 +70,7 @@ export function AppShellLayout({
       </Sidebar>
 
       <SidebarInset className="min-w-0">
-        <header className="flex items-center border-b px-3 h-12 gap-2 bg-background">
+        <header className="flex items-center border-b px-3 h-12 gap-2 bg-background overflow-hidden">
           <SidebarTrigger />
           <Separator orientation="vertical" className="h-5" />
           <toolbarSlot.Render>

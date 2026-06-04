@@ -1698,6 +1698,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DropZone`, `TreeNode`; Values: `buildTree`, `computeDrop`, `isDescendant`
       - Web:
         - Exports: Types: `ExpandableRow`, `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`, `TreeRowChromeProps`, `UseSubtreeExpandAllReturn`; Values: `hideTerminalSubtrees`, `RenameInput`, `RowChrome`, `TreeList`, `TreeRowChrome`, `useSubtreeExpandAll`, `useTreeListContext`, `useTreeRow`
+    - **`truncating-text`** — Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
+      - Web:
+        - Exports: Types: `TruncatingTextProps`; Values: `TruncatingText`
 
 - **`reorder`** — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-worktree storage of slot contribution ranks.
   - Server:

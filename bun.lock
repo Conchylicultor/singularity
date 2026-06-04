@@ -1495,6 +1495,10 @@
       "name": "@singularity/plugin-primitives-tree",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/truncating-text": {
+      "name": "@singularity/plugin-primitives-truncating-text",
+      "version": "0.0.1",
+    },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
       "version": "0.0.1",
@@ -2992,6 +2996,8 @@
     "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
+
+    "@singularity/plugin-primitives-truncating-text": ["@singularity/plugin-primitives-truncating-text@workspace:plugins/primitives/plugins/truncating-text"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

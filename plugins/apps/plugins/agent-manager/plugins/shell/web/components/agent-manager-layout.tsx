@@ -15,10 +15,10 @@ export function AgentManagerLayout() {
             history.pushState({}, "", "/");
             window.dispatchEvent(new PopStateEvent("popstate"));
           }}
-          className="flex items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
-          <img src="/icon.svg" alt="Singularity" className="size-6" />
-          <span className="text-base font-semibold tracking-tight">
+          <img src="/icon.svg" alt="Singularity" className="size-6 shrink-0" />
+          <span className="truncate text-base font-semibold tracking-tight">
             Singularity
           </span>
         </a>

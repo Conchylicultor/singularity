@@ -61,7 +61,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   return (
     <div className="flex h-full flex-col">
       <div
-        className={`flex h-10 items-center gap-2 border-b px-2${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
+        className={`flex h-10 min-w-0 items-center gap-2 overflow-hidden border-b px-2${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >
@@ -69,11 +69,11 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
         {resolvedTitle != null &&
           resolvedTitle !== "" &&
           (typeof resolvedTitle === "string" ? (
-            <span className="truncate text-sm font-medium">
+            <span className="min-w-0 truncate text-sm font-medium">
               {resolvedTitle}
             </span>
           ) : (
-            resolvedTitle
+            <div className="flex min-w-0 items-center">{resolvedTitle}</div>
           ))}
         <PaneActionsSlot pane={pane} position="left" />
         {hideRightActions ? (
