@@ -11,6 +11,7 @@ import { useBlockEditor, type BlockRendererProps } from "@plugins/page/plugins/e
 import { textBlock } from "../../core";
 import { ValueSyncPlugin } from "./value-sync-plugin";
 import { KeyboardPlugin } from "./keyboard-plugin";
+import { SlashMenuPlugin } from "./slash-menu-plugin";
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditor | null> }) {
   const [editor] = useLexicalComposerContext();
@@ -23,8 +24,9 @@ function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<Lexi
   return null;
 }
 
-export function TextBlock({ block, editor }: BlockRendererProps) {
+export function TextBlock({ block, isFocused, editor }: BlockRendererProps) {
   const data = textBlock.parse(block.data);
+  const isEmpty = data.text.length === 0;
   const { registerFocusHandle } = useBlockEditor();
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
 
@@ -51,23 +53,33 @@ export function TextBlock({ block, editor }: BlockRendererProps) {
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <PlainTextPlugin
-        contentEditable={
-          <ContentEditable
-            className="outline-none px-3 py-1 text-sm leading-6"
-            onFocus={() => {
-              field.onFocus();
-              editor.onFocus();
-            }}
-            onBlur={field.onBlur}
-          />
-        }
-        ErrorBoundary={LexicalErrorBoundary}
-      />
-      <HistoryPlugin />
-      <ValueSyncPlugin value={field.value} onChange={field.onChange} />
-      <KeyboardPlugin editor={editor} />
-      <EditorRefPlugin editorRef={lexicalEditorRef} />
+      <div className="relative">
+        <PlainTextPlugin
+          contentEditable={
+            <ContentEditable
+              className="outline-none px-3 py-1 text-sm leading-6"
+              onFocus={() => {
+                field.onFocus();
+                editor.onFocus();
+              }}
+              onBlur={field.onBlur}
+            />
+          }
+          placeholder={
+            isEmpty && isFocused ? (
+              <div className="text-muted-foreground pointer-events-none absolute left-0 top-0 px-3 py-1 text-sm leading-6">
+                Type &apos;/&apos; for commands
+              </div>
+            ) : null
+          }
+          ErrorBoundary={LexicalErrorBoundary}
+        />
+        <HistoryPlugin />
+        <ValueSyncPlugin value={field.value} onChange={field.onChange} />
+        <KeyboardPlugin editor={editor} />
+        <SlashMenuPlugin block={block} editor={editor} />
+        <EditorRefPlugin editorRef={lexicalEditorRef} />
+      </div>
     </LexicalComposer>
   );
 }

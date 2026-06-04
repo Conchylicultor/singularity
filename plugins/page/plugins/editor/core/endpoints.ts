@@ -25,6 +25,11 @@ export const CreateBlockBodySchema = z.object({
   type: z.string(),
   data: z.unknown().optional(),
   rank: RankSchema.optional(),
+  /**
+   * When set, position the new block immediately after this existing block —
+   * same parent, rank between it and its next sibling. Overrides `parentId`.
+   */
+  afterId: z.string().optional(),
 });
 export type CreateBlockBody = z.infer<typeof CreateBlockBodySchema>;
 

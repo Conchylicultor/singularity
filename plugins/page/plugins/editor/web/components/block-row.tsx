@@ -1,11 +1,13 @@
 import { useMemo } from "react";
-import { MdDragIndicator } from "react-icons/md";
+import { MdAdd, MdDragIndicator } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import { cn } from "@/lib/utils";
 import type { Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
+import { BlockTypeMenu } from "./block-type-menu";
+import { BlockActionsMenu } from "./block-actions-menu";
 
 export const INDENT = 24;
 
@@ -43,21 +45,50 @@ export function BlockRow({
       className="group/row relative"
       style={{ paddingLeft: depth * INDENT }}
     >
-      <button
-        type="button"
-        ref={setDragRef}
-        aria-label="Drag to reorder"
-        {...attributes}
-        {...listeners}
-        className={cn(
-          "absolute top-1 z-10 flex size-5 items-center justify-center rounded",
-          "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
-          "opacity-0 group-hover/row:opacity-60",
-        )}
-        style={{ left: depth * INDENT - 20 }}
-      >
-        <MdDragIndicator className="size-4" />
-      </button>
+      {/* Gutter "+" — inserts a new block immediately below this one. */}
+      <BlockTypeMenu
+        align="start"
+        side="bottom"
+        onSelect={(b) => api.insertAfter(b.type, b.empty?.() ?? {})}
+        trigger={
+          <button
+            type="button"
+            aria-label="Insert block below"
+            className={cn(
+              "absolute top-1 z-10 flex size-5 items-center justify-center rounded",
+              "text-muted-foreground hover:bg-accent cursor-pointer",
+              "opacity-0 group-hover/row:opacity-60",
+            )}
+            style={{ left: depth * INDENT - 40 }}
+          >
+            <MdAdd className="size-4" />
+          </button>
+        }
+      />
+      {/* Drag handle — drags to reorder (PointerSensor needs 4px movement),
+          and a plain click opens the block-actions (turn into / delete) menu. */}
+      <BlockActionsMenu
+        api={api}
+        align="start"
+        side="bottom"
+        trigger={
+          <button
+            type="button"
+            ref={setDragRef}
+            aria-label="Reorder or open block actions"
+            {...attributes}
+            {...listeners}
+            className={cn(
+              "absolute top-1 z-10 flex size-5 items-center justify-center rounded",
+              "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
+              "opacity-0 group-hover/row:opacity-60",
+            )}
+            style={{ left: depth * INDENT - 20 }}
+          >
+            <MdDragIndicator className="size-4" />
+          </button>
+        }
+      />
       <div className={cn("rounded", isDragging && "opacity-40")}>
         <Editor.Block.Dispatch block={block} isFocused={isFocused} editor={api} />
       </div>

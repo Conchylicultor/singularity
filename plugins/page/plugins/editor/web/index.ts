@@ -5,6 +5,12 @@ export type { BlockContribution } from "./slots";
 export type { BlockEditorAPI, BlockRendererProps } from "./types";
 export { BlockEditor } from "./components/block-editor";
 export { useBlockEditor } from "./block-editor-context";
+export {
+  useInsertableBlocks,
+  filterBlockTypes,
+  BlockTypeList,
+} from "./components/block-type-list";
+export { BlockTypeMenu } from "./components/block-type-menu";
 
 export default {
   name: "Page Editor",

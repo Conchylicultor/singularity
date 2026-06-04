@@ -176,7 +176,10 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
       onDragEnd={onDragEnd}
       onDragCancel={onDragCancel}
     >
-      <div className="py-2 pl-6 pr-2">
+      {/* pl-12 leaves room for the two-button gutter cluster (+ and drag
+          handle, at -40 and -20 left of the content) without it colliding
+          with the pane/sidebar edge. */}
+      <div className="py-2 pl-12 pr-2">
         {flat.map((f) => (
           <BlockRow
             key={f.block.id}

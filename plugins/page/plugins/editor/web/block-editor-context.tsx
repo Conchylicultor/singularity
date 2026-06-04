@@ -113,6 +113,24 @@ export function BlockEditorProvider({
       update(data: unknown) {
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { data } });
       },
+      convertTo(type: string, data: unknown) {
+        void fetchEndpoint(updateBlock, { id: blockId }, { body: { type, data } });
+      },
+      insertAfter(type: string, data: unknown) {
+        void (async () => {
+          const created = await fetchEndpoint(
+            createBlock,
+            { documentId },
+            { body: { type, data, afterId: blockId } },
+          );
+          pendingFocusRef.current = created.id;
+          const handle = focusHandlesRef.current.get(created.id);
+          if (handle) {
+            pendingFocusRef.current = null;
+            handle.focus();
+          }
+        })();
+      },
       split(position: number) {
         void (async () => {
           const result = await fetchEndpoint(splitBlock, { id: blockId }, { body: { position } });
@@ -180,7 +198,7 @@ export function BlockEditorProvider({
         setFocusedBlockId(blockId);
       },
     }),
-    [],
+    [documentId],
   );
 
   return (

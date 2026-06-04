@@ -1,4 +1,5 @@
-import { eq } from "drizzle-orm";
+import { and, asc, eq, gt, isNull } from "drizzle-orm";
+import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { nextRankUnder } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
@@ -18,9 +19,46 @@ export const handleCreateBlock = implement(createBlock, async ({ params, body })
   if (!doc) throw new HttpError(404, "Document not found");
 
   const id = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const parentId = body.parentId ?? null;
-  const rank = body.rank
-    ?? await nextRankUnder(_blocks, _blocks.parentId, parentId);
+  let parentId = body.parentId ?? null;
+  let rank;
+
+  if (body.afterId) {
+    // Insert immediately after an existing block: same parent, rank between it
+    // and its next sibling at that parent. Mirrors handle-split-block's logic.
+    const [after] = await db
+      .select()
+      .from(_blocks)
+      .where(eq(_blocks.id, body.afterId))
+      .limit(1);
+    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+    if (!after) throw new HttpError(404, "Block not found");
+
+    parentId = after.parentId;
+    const parentFilter = after.parentId === null
+      ? isNull(_blocks.parentId)
+      : eq(_blocks.parentId, after.parentId);
+    const [nextSibling] = await db
+      .select()
+      .from(_blocks)
+      .where(
+        and(
+          eq(_blocks.documentId, params.documentId),
+          parentFilter,
+          gt(_blocks.rank, after.rank),
+        ),
+      )
+      .orderBy(asc(_blocks.rank))
+      .limit(1);
+
+    const afterRank = Rank.from(after.rank as unknown as string);
+    const nextRank = nextSibling
+      ? Rank.from(nextSibling.rank as unknown as string)
+      : null;
+    rank = Rank.between(afterRank, nextRank);
+  } else {
+    rank = body.rank
+      ?? await nextRankUnder(_blocks, _blocks.parentId, parentId);
+  }
   await db.insert(_blocks).values({
     id,
     documentId: params.documentId,

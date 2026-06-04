@@ -1366,7 +1366,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
-        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `Editor`, `useBlockEditor`
+        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
       - Cross-plugin:
         - Slot contributors: `page-link`, `text`
       - Server:
