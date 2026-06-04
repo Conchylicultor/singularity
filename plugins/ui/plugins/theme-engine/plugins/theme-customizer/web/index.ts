@@ -20,7 +20,6 @@ export default {
     Pane.Register({ pane: themeCustomizerPane }),
     ActionBar.Item({
       id: "theme-customizer",
-      excludeFromReorder: true,
       component: ThemeCustomizerButton,
     }),
   ],
