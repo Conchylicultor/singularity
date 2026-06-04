@@ -52,7 +52,11 @@ export function TreeRowChrome({
       ref={rowRef}
       onClick={onSelect}
       className={cn(
-        "group flex min-h-7 items-center gap-1 rounded px-1 py-1 text-sm",
+        // Named group so the hover-reveal of the chevron/actions below is scoped
+        // to THIS row only. A bare `group` would also fire when any ancestor that
+        // happens to use a bare `group` class is hovered (e.g. the shadcn sidebar
+        // wrapper), leaking every row's actions visible at once.
+        "group/tree-row flex min-h-7 items-center gap-1 rounded px-1 py-1 text-sm",
         "hover:bg-accent",
         selected && "bg-accent",
         className,
@@ -71,8 +75,8 @@ export function TreeRowChrome({
             "flex size-5 shrink-0 items-center justify-center rounded",
             "hover:bg-background/60",
             hasChildren
-              ? "opacity-40 group-hover:opacity-100"
-              : "opacity-0 group-hover:opacity-60",
+              ? "opacity-40 group-hover/tree-row:opacity-100"
+              : "opacity-0 group-hover/tree-row:opacity-60",
           )}
         >
           <CollapsibleChevron open={isOpen} className="size-4" />
@@ -86,7 +90,7 @@ export function TreeRowChrome({
       {actions && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover:opacity-100"
+          className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover/tree-row:opacity-100"
         >
           {actions}
         </div>
