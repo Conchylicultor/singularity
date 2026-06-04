@@ -18,6 +18,7 @@ import {
   WORKTREES_DIR,
 } from "../paths";
 import { buildProfilerStart, pushBuildSpan, writeBuildProfile } from "../profiler";
+import { withHostSlot, type HostSlotKind } from "../host-semaphore";
 import { pushBuildStepLog, writeBuildLogs } from "../build-logs-writer";
 import { appendBuildLog } from "../build-log-writer-global";
 import { markWorktreeOpStart, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
@@ -802,76 +803,94 @@ export function registerBuild(program: Command) {
         if (scope !== null) process.env.SINGULARITY_ESLINT_SCOPE = scope.join("\n");
       }
 
-      const parallel: Array<Promise<StepResult>> = [];
+      // Gate this heavy section (eslint + tsc + vite) behind the host-wide
+      // concurrency limit so concurrent builds across worktrees don't thrash the
+      // machine. Main-branch builds are exempt (never queued); agent builds share
+      // the bounded build pool. See host-semaphore.ts.
+      const slotKind: HostSlotKind = branch === "main" ? "exempt" : "build";
+      let endSlotWaitSpan: (() => void) | undefined;
+      const stepResults = await withHostSlot(
+        slotKind,
+        async () => {
+          const parallel: Array<Promise<StepResult>> = [];
 
-      if (!opts.skipChecks) {
-        parallel.push(
-          (async (): Promise<StepResult> => {
-            const lines: StepResult["lines"] = [];
-            const start = performance.now();
-            const ok = await runChecks(undefined, {
-              onCheckDone: (id, durationMs, wallStartMs) => {
-                pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
-              },
-              log: (line, stream) => {
-                lines.push({ text: line, stream });
-              },
-            });
-            return {
-              id: "checks",
-              label: "checks",
-              lines,
-              durationMs: Math.round(performance.now() - start),
-              success: ok,
-            };
-          })(),
-        );
-      }
+          if (!opts.skipChecks) {
+            parallel.push(
+              (async (): Promise<StepResult> => {
+                const lines: StepResult["lines"] = [];
+                const start = performance.now();
+                const ok = await runChecks(undefined, {
+                  onCheckDone: (id, durationMs, wallStartMs) => {
+                    pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
+                  },
+                  log: (line, stream) => {
+                    lines.push({ text: line, stream });
+                  },
+                });
+                return {
+                  id: "checks",
+                  label: "checks",
+                  lines,
+                  durationMs: Math.round(performance.now() - start),
+                  success: ok,
+                };
+              })(),
+            );
+          }
 
-      if (opts.skipChecks) {
-        const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
-        for (const target of runtimeTargets) {
+          if (opts.skipChecks) {
+            const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
+            for (const target of runtimeTargets) {
+              parallel.push(
+                (async (): Promise<StepResult> => {
+                  const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
+                  const start = performance.now();
+                  // Identical flags to the `typescript` check so both share one
+                  // `.tsbuildinfo` per target without options-hash churn.
+                  const buildInfo = tsBuildInfoPath(root, target.name);
+                  const output = await execBuffered(
+                    [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
+                    target.dir,
+                  );
+                  end();
+                  return {
+                    id: `tsc:${target.name}`,
+                    label: `tsc ${target.name}`,
+                    lines: output.lines,
+                    durationMs: Math.round(performance.now() - start),
+                    success: output.exitCode === 0,
+                  };
+                })(),
+              );
+            }
+          }
+
           parallel.push(
             (async (): Promise<StepResult> => {
-              const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
+              const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
               const start = performance.now();
-              // Identical flags to the `typescript` check so both share one
-              // `.tsbuildinfo` per target without options-hash churn.
-              const buildInfo = tsBuildInfoPath(root, target.name);
-              const output = await execBuffered(
-                [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
-                target.dir,
-              );
+              const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
               end();
               return {
-                id: `tsc:${target.name}`,
-                label: `tsc ${target.name}`,
+                id: "viteBuild",
+                label: "vite build",
                 lines: output.lines,
                 durationMs: Math.round(performance.now() - start),
                 success: output.exitCode === 0,
               };
             })(),
           );
-        }
-      }
 
-      parallel.push(
-        (async (): Promise<StepResult> => {
-          const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
-          const start = performance.now();
-          const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
-          end();
-          return {
-            id: "viteBuild",
-            label: "vite build",
-            lines: output.lines,
-            durationMs: Math.round(performance.now() - start),
-            success: output.exitCode === 0,
-          };
-        })(),
+          return await Promise.all(parallel);
+        },
+        {
+          onWaitStart: () => {
+            console.log("Waiting for a build slot (machine busy)...");
+            endSlotWaitSpan = buildProfilerStart("buildSlotWait", "build:queue", "waiting for build slot");
+          },
+          onAcquired: () => endSlotWaitSpan?.(),
+        },
       );
-
-      const stepResults = await Promise.all(parallel);
 
       for (const result of stepResults) {
         pushBuildStepLog(result);

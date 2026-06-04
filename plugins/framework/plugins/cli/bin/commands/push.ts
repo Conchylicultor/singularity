@@ -38,6 +38,9 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 async function runChecksSubprocess(root: string): Promise<boolean> {
   const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,
+    // Tag as a push so the check takes the reserved push slot in the host
+    // concurrency gate — pushes are never queued behind agent builds.
+    env: { ...process.env, SINGULARITY_PUSH_CHECK: "1" },
     stdout: "inherit",
     stderr: "inherit",
   });

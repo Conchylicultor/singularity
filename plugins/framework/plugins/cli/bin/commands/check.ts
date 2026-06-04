@@ -1,5 +1,6 @@
 import type { Command } from "commander";
 import { checkBroadcasts } from "../broadcasts";
+import { withHostSlot, type HostSlotKind } from "../host-semaphore";
 import { listAllChecks, runChecks } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 export function registerCheck(program: Command) {
@@ -15,7 +16,13 @@ export function registerCheck(program: Command) {
         return;
       }
       await checkBroadcasts("check");
-      const ok = await runChecks(checks.length > 0 ? checks : undefined);
+      // Push runs its checks via this command in a subprocess (see push.ts);
+      // it tags them so they take the reserved push slot instead of a build
+      // slot. A direct `./singularity check` is a build-pool job.
+      const kind: HostSlotKind = process.env.SINGULARITY_PUSH_CHECK ? "push" : "build";
+      const ok = await withHostSlot(kind, () =>
+        runChecks(checks.length > 0 ? checks : undefined),
+      );
       if (!ok) process.exit(1);
     });
 }
