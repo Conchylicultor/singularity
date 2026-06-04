@@ -115,8 +115,17 @@ export function defineRenderSlot<P>(
     useLayoutEffect(() => {
       const parent = sentinelRef.current?.parentElement;
       if (!parent) return;
-      const dir = getComputedStyle(parent).flexDirection;
-      setHorizontal(dir === "row" || dir === "row-reverse");
+      // `flex-direction`'s computed value is `row` for EVERY element — it's the
+      // CSS initial value, reported regardless of `display`. So a plain block or
+      // grid host reports `row` and would be wrongly treated as horizontal,
+      // wrapping each contribution in a `min-w-0` cell that collapses wide
+      // block-level content to its min-content width. Gate on the parent being
+      // an actual flex container first; non-flex hosts fall through to the
+      // untouched vertical path.
+      const style = getComputedStyle(parent);
+      const isFlex = style.display === "flex" || style.display === "inline-flex";
+      const dir = style.flexDirection;
+      setHorizontal(isFlex && (dir === "row" || dir === "row-reverse"));
     }, []);
 
     const renderItem = useCallback(

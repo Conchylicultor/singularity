@@ -2,9 +2,14 @@
 
 ## Single-line discipline for horizontal slots
 
-`.Render` detects its host container's `flex-direction` at runtime (via a
+`.Render` detects whether its host is a **flex row** at runtime (via a
 `display:none` sentinel — same technique as the reorder list middleware) and,
-for **row** slots, wraps every contribution in a `min-w-0` flex cell. This keeps
+for row slots, wraps every contribution in a `min-w-0` flex cell. Detection
+gates on the host actually being a flex container (`display:flex`/`inline-flex`)
+*before* reading `flex-direction` — `flex-direction` computes to `row` for every
+element (it's the CSS initial value), so a plain block or grid host would
+otherwise be misread as a row and collapse wide block content to min-content
+width. Non-flex hosts fall through to the untouched vertical path. This keeps
 the flex shrink-chain unbroken above each contribution, so flexible text can
 truncate instead of wrapping when a chrome row is compressed. Contributors
 declare nothing; vertical lists are untouched.
