@@ -101,7 +101,6 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/secrets", hierarchyPath: "infra/secrets", loader: () => import("@plugins/infra/plugins/secrets/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/worktree", hierarchyPath: "infra/worktree", loader: () => import("@plugins/infra/plugins/worktree/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "notifications", hierarchyPath: "notifications", loader: () => import("@plugins/notifications/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/jobs"] },
-  { pluginPath: "page/plugins/debug", hierarchyPath: "page/debug", loader: () => import("@plugins/page/plugins/debug/server"), dependsOn: ["database", "infra/plugins/endpoints", "page/plugins/editor", "primitives/plugins/rank"] },
   { pluginPath: "page/plugins/editor", hierarchyPath: "page/editor", loader: () => import("@plugins/page/plugins/editor/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/events", "primitives/plugins/rank"] },
   { pluginPath: "page/plugins/links", hierarchyPath: "page/links", loader: () => import("@plugins/page/plugins/links/server"), dependsOn: ["database", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor"] },
   { pluginPath: "page/plugins/page-link", hierarchyPath: "page/page-link", loader: () => import("@plugins/page/plugins/page-link/server"), dependsOn: ["page/plugins/links"] },

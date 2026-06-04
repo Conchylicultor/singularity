@@ -1030,7 +1030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `debug`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `improve`, `indexes`, `jobs`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1354,15 +1354,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`page`** — Block-based page editor.
   - Plugins:
-    - **`debug`** — Debug harness for the block-based page editor. Debug harness for the block-based page editor.
-      - Web:
-        - Contributes: `Pane.Register` "page-debug", `DebugApp.Sidebar` "Page Editor" → `component`
-        - Exports: Values: `pageDebugPane`
-      - Server:
-        - Uses: `database.db`
-        - Routes: `POST /api/page-debug/ensure`
-      - Core:
-        - Exports: Values: `ensureDebugDocument`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
@@ -1581,7 +1572,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Pane.Register`
         - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `debug`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
+        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Web:
         - Exports: Values: `useDraft`

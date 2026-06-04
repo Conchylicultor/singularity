@@ -6,7 +6,6 @@
 
 - Description: Block-based page editor.
 - Sub-plugins:
-  - **`debug`** — Debug harness for the block-based page editor. Debug harness for the block-based page editor.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.

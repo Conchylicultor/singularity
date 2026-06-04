@@ -1143,10 +1143,6 @@
       "name": "@singularity/plugin-page",
       "version": "0.0.1",
     },
-    "plugins/page/plugins/debug": {
-      "name": "@singularity/plugin-page-debug",
-      "version": "0.0.1",
-    },
     "plugins/page/plugins/editor": {
       "name": "@singularity/plugin-page-editor",
       "version": "0.0.1",
@@ -2782,8 +2778,6 @@
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
-
-    "@singularity/plugin-page-debug": ["@singularity/plugin-page-debug@workspace:plugins/page/plugins/debug"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 
