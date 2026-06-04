@@ -54,6 +54,7 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
     collapsed: node.collapsed,
     runtimes: node.runtimes,
     children: node.children.map((c) => toApiNode(c, symbolConsumers)),
+    facets: node.facets,
     publicApi: {
       exports: {
         web: mapExports(node.exports.web),

@@ -19,6 +19,7 @@ const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
       central: z.boolean(),
     }),
     children: z.array(pluginNodeSchema),
+    facets: z.record(z.string(), z.unknown()).optional(),
     publicApi: z.any().optional(),
   }),
 );

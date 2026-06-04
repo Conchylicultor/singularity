@@ -1442,7 +1442,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`
         - **`exports`**
           - Core:
-            - Exports: Types: `ExportedSymbol`, `ExportsData`; Values: `exportsFacetDef`
+            - Exports: Types: `ExportedSymbol`, `ExportsData`; Values: `exportsFacetDef`, `exportsToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin exports table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Exports"
+            - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "exports" → `ExportsDetailSection`
+            - **`render-diff`** — Diff renderer for the exports facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Exports"
         - **`registrations`**
           - Core:
             - Exports: Types: `DocMetaRegistration`; Values: `registrationsFacetDef`

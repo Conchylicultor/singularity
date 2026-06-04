@@ -47,6 +47,10 @@ See `plugins/commands/` for the reference implementation.
   - **`cross-refs`**
   - **`db-schema`**
   - **`exports`**
+    - Plugins:
+      - **`render-catalog`** — Aggregated cross-plugin exports table in the Forge catalog.
+      - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
+      - **`render-diff`** — Diff renderer for the exports facet (PR review).
   - **`registrations`**
   - **`resources`**
   - **`routes`**

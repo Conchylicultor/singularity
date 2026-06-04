@@ -77,6 +77,12 @@ export interface PluginNode {
   collapsed: boolean;
   runtimes: { web: boolean; server: boolean; central: boolean };
   children: PluginNode[];
+  /**
+   * Per-facet extracted data, keyed by facet id. Additive alongside `publicApi`
+   * during the facets-v3 migration; optional so existing PluginNode literals stay
+   * valid. The tree endpoint always populates it (empty `{}` under skipBarrelImport).
+   */
+  facets?: Record<string, unknown>;
   publicApi?: PublicApi;
 }
 
