@@ -1,9 +1,9 @@
 import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
-import { databaseExists } from "@plugins/database/plugins/admin/server";
+import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { listWorktrees } from "../../shared/endpoints";
+import { listWorktrees, type WorktreeEntry } from "../../shared/endpoints";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;
@@ -14,21 +14,6 @@ const DELETABLE_TASK_STATUSES = new Set([
   "done",
   "dropped",
 ]);
-
-type WorktreeEntry = {
-  attemptId: string;
-  taskId: string;
-  taskTitle: string;
-  taskStatus: string;
-  attemptStatus: string;
-  worktreePath: string;
-  createdAt: string;
-  dirExists: boolean;
-  dbExists: boolean;
-  unpushedCount: number;
-  isDirty: boolean;
-  isSafe: boolean;
-};
 
 async function dirExists(path: string): Promise<boolean> {
   try {
@@ -87,15 +72,21 @@ export const handleList = implement(listWorktrees, async () => {
   try {
     await ensureMainWorktreeRoot();
 
-    const [attempts, tasks] = await Promise.all([listAttempts(), listTasks()]);
+    // One catalog query for all DB names instead of an N+1 `databaseExists`
+    // per attempt — with 2000+ attempts the per-row query was the dominant
+    // cost that pushed the request past Bun's 10s idleTimeout.
+    const [attempts, tasks, databases] = await Promise.all([
+      listAttempts(),
+      listTasks(),
+      listDatabases(),
+    ]);
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
+    const dbSet = new Set(databases);
 
     const entries = await pMap(attempts, CONCURRENCY, async (attempt): Promise<WorktreeEntry> => {
       const task = taskMap.get(attempt.taskId);
-      const [exists, dbPresent] = await Promise.all([
-        dirExists(attempt.worktreePath),
-        databaseExists(attempt.id),
-      ]);
+      const exists = await dirExists(attempt.worktreePath);
+      const dbPresent = dbSet.has(attempt.id);
 
       let unpushedCount = 0;
       let isDirty = false;
@@ -131,7 +122,7 @@ export const handleList = implement(listWorktrees, async () => {
 
     entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
 
-    return { ok: true, entries };
+    return { entries };
   } catch (e) {
     throw new HttpError(500, String(e));
   }

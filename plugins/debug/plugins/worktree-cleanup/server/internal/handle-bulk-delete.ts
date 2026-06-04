@@ -49,7 +49,9 @@ export const handleBulkDelete = implement(bulkDeleteWorktrees, async ({ body }) 
   }
 
   const succeeded = results.filter((r) => r.ok).length;
-  const failed = results.filter((r) => !r.ok);
+  const failed = results.filter(
+    (r): r is { id: string; ok: false; error: string } => !r.ok,
+  );
 
-  return { ok: true, succeeded, failed };
+  return { succeeded, failed };
 });

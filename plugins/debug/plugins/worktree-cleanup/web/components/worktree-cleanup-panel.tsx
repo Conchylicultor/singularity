@@ -3,33 +3,22 @@ import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Button } from "@/components/ui/button";
+import {
+  listWorktrees,
+  bulkDeleteWorktrees,
+  deleteWorktree,
+  type WorktreeEntry,
+} from "../../shared/endpoints";
 
-type WorktreeEntry = {
-  attemptId: string;
-  taskId: string;
-  taskTitle: string;
-  taskStatus: string;
-  attemptStatus: string;
-  worktreePath: string;
-  createdAt: string;
-  dirExists: boolean;
-  dbExists: boolean;
-  unpushedCount: number;
-  isDirty: boolean;
-  isSafe: boolean;
-};
-
-type ListResponse = { ok: true; entries: WorktreeEntry[] } | { ok: false; error: string };
 type DeleteEvent =
   | { step: "worktree" | "database" }
   | { ok: true }
   | { ok: false; error: string };
 
 type DeletingStep = "worktree" | "database";
-type BulkDeleteResponse =
-  | { ok: true; succeeded: number; failed: { id: string; error: string }[] }
-  | { ok: false; error: string };
 
 function relativeAge(iso: string): string {
   const ms = Date.now() - new Date(iso).getTime();
@@ -92,15 +81,10 @@ export function WorktreeCleanupPanel() {
     setListError(null);
     setBulkResult(null);
     try {
-      const res = await fetch("/api/debug/worktrees");
-      const data = (await res.json()) as ListResponse;
-      if (data.ok) {
-        setEntries(data.entries);
-      } else {
-        setListError(data.error);
-      }
+      const data = await fetchEndpoint(listWorktrees, {});
+      setEntries(data.entries);
     } catch (e) {
-      setListError(String(e));
+      setListError(getEndpointErrorMessage(e));
     } finally {
       setLoading(false);
     }
@@ -118,7 +102,12 @@ export function WorktreeCleanupPanel() {
       return next;
     });
     try {
-      const res = await fetch(`/api/debug/worktrees/${id}`, { method: "DELETE" });
+      const res = await fetch(interpolatePath(deleteWorktree.path, { id }), { method: "DELETE" });
+      if (!res.ok) {
+        // Non-2xx bodies (e.g. a gateway "backend unavailable" 502) are plain
+        // text, not the NDJSON stream — surface the text instead of choking on it.
+        throw new Error((await res.text().catch(() => null)) || `HTTP ${res.status}`);
+      }
       const reader = res.body!.getReader();
       const decoder = new TextDecoder();
       let buffer = "";
@@ -158,27 +147,21 @@ export function WorktreeCleanupPanel() {
     setBulkResult(null);
     setLoading(true);
     try {
-      const res = await fetch("/api/debug/worktrees/bulk-delete", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: safeIds }),
-      });
-      const data = (await res.json()) as BulkDeleteResponse;
-      if (data.ok) {
-        const { succeeded, failed } = data;
-        setBulkResult(
-          failed.length === 0
-            ? `Deleted ${succeeded} worktree${succeeded !== 1 ? "s" : ""}`
-            : `Deleted ${succeeded}, ${failed.length} error${failed.length !== 1 ? "s" : ""}`,
-        );
-        if (failed.length > 0) {
-          setRowErrors(new Map(failed.map((f) => [f.id, f.error])));
-        }
-      } else {
-        setBulkResult(`Error: ${data.error}`);
+      const { succeeded, failed } = await fetchEndpoint(
+        bulkDeleteWorktrees,
+        {},
+        { body: { ids: safeIds } },
+      );
+      setBulkResult(
+        failed.length === 0
+          ? `Deleted ${succeeded} worktree${succeeded !== 1 ? "s" : ""}`
+          : `Deleted ${succeeded}, ${failed.length} error${failed.length !== 1 ? "s" : ""}`,
+      );
+      if (failed.length > 0) {
+        setRowErrors(new Map(failed.map((f) => [f.id, f.error])));
       }
     } catch (e) {
-      setBulkResult(`Error: ${String(e)}`);
+      setBulkResult(`Error: ${getEndpointErrorMessage(e)}`);
     } finally {
       setLoading(false);
     }
