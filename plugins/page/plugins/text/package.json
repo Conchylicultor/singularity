@@ -2,9 +2,5 @@
   "name": "@singularity/plugin-page-text",
   "description": "Plain-text block type for the page editor.",
   "private": true,
-  "version": "0.0.1",
-  "dependencies": {
-    "lexical": "^0.44.0",
-    "@lexical/react": "^0.44.0"
-  }
+  "version": "0.0.1"
 }

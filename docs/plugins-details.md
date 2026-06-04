@@ -1364,12 +1364,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`page`** — Block-based page editor.
   - Plugins:
+    - **`bulleted-list`** — Bulleted-list block type for the page editor.
+      - Web:
+        - Contributes: `Editor.Block` "bulleted-list" → `BlockTextRenderer`
+        - Exports: Values: `bulletedListBlock`
+      - Core:
+        - Exports: Values: `bulletedListBlock`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
-        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
+        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
       - Cross-plugin:
-        - Slot contributors: `page-link`, `text`
+        - Slot contributors: `bulleted-list`, `page-link`, `text`
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -1377,7 +1383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineTriggerEvent('page.blocksChanged')`
         - Routes: `GET /api/documents`, `POST /api/documents`, `GET /api/documents/:id`, `PATCH /api/documents/:id`, `DELETE /api/documents/:id`, `GET /api/documents/:documentId/blocks`, `POST /api/documents/:documentId/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`
       - Core:
-        - Exports: Types: `Block`, `BlockHandle`, `CreateBlockBody`, `CreateDocumentBody`, `Document`, `MoveBlockBody`, `SplitBlockBody`, `UpdateBlockBody`, `UpdateDocumentBody`; Values: `BlockSchema`, `blocksResource`, `createBlock`, `CreateBlockBodySchema`, `createDocument`, `CreateDocumentBodySchema`, `defineBlock`, `deleteBlock`, `deleteDocument`, `DocumentSchema`, `documentsResource`, `getDocument`, `indentBlock`, `listBlocks`, `listDocuments`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `splitBlock`, `SplitBlockBodySchema`, `updateBlock`, `UpdateBlockBodySchema`, `updateDocument`, `UpdateDocumentBodySchema`
+        - Exports: Types: `Block`, `BlockHandle`, `CreateBlockBody`, `CreateDocumentBody`, `Document`, `MoveBlockBody`, `SplitBlockBody`, `TextData`, `UpdateBlockBody`, `UpdateDocumentBody`; Values: `BlockSchema`, `blocksResource`, `createBlock`, `CreateBlockBodySchema`, `createDocument`, `CreateDocumentBodySchema`, `defineBlock`, `deleteBlock`, `deleteDocument`, `DocumentSchema`, `documentsResource`, `getDocument`, `indentBlock`, `listBlocks`, `listDocuments`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `splitBlock`, `SplitBlockBodySchema`, `textDataSchema`, `updateBlock`, `UpdateBlockBodySchema`, `updateDocument`, `UpdateDocumentBodySchema`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
       - Server:
         - Uses: `database.db`
@@ -1396,7 +1402,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `pageLinkBlock`
     - **`text`** — Plain-text block type for the page editor.
       - Web:
-        - Contributes: `Editor.Block` "text" → `TextBlock`
+        - Contributes: `Editor.Block` "text" → `BlockTextRenderer`
         - Exports: Values: `textBlock`
       - Core:
         - Exports: Values: `textBlock`

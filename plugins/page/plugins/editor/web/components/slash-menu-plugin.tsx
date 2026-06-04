@@ -8,13 +8,13 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import type { Block, BlockHandle } from "@plugins/page/plugins/editor/core";
+import type { Block, BlockHandle } from "../../core";
+import type { BlockEditorAPI } from "../types";
 import {
   BlockTypeList,
   filterBlockTypes,
   useInsertableBlocks,
-  type BlockEditorAPI,
-} from "@plugins/page/plugins/editor/web";
+} from "./block-type-list";
 
 /**
  * Inline, Notion-style slash menu. The menu is driven entirely by the block's
@@ -82,14 +82,13 @@ export function SlashMenuPlugin({
   }, [query, insertable.length]);
 
   function handleSelect(handle: BlockHandle<unknown>) {
-    if (handle.type === block.type) {
-      // "Text" chosen on a text block → just strip the `/query`, keep focus.
-      lexicalEditor.update(() => {
-        $getRoot().clear();
-      });
-    } else {
-      // Convert: replaces the block data (dropping the `/query`); the live
-      // resource re-renders the block as its new type.
+    // Always strip the `/query` from the live editor. Text-like target types
+    // share one renderer, so the conversion reconciles in place (the editor is
+    // not remounted) — without this the `/query` text would linger.
+    lexicalEditor.update(() => {
+      $getRoot().clear();
+    });
+    if (handle.type !== block.type) {
       editor.convertTo(handle.type, handle.empty?.() ?? {});
     }
     setOpen(false);

@@ -11,7 +11,7 @@ import {
   KEY_TAB_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import type { BlockEditorAPI } from "@plugins/page/plugins/editor/web";
+import type { BlockEditorAPI } from "../types";
 
 function getAbsoluteOffset(): number | null {
   const selection = $getSelection();

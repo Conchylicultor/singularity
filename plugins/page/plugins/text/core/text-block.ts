@@ -1,11 +1,11 @@
-import { z } from "zod";
 import { MdNotes } from "react-icons/md";
-import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { defineBlock, textDataSchema } from "@plugins/page/plugins/editor/core";
 
 export const textBlock = defineBlock({
   type: "text",
-  schema: z.object({ text: z.string() }),
+  schema: textDataSchema,
   label: "Text",
   icon: MdNotes,
   empty: () => ({ text: "" }),
+  placeholder: "Type '/' for commands",
 });

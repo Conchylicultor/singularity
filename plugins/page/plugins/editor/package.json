@@ -2,5 +2,9 @@
   "name": "@singularity/plugin-page-editor",
   "description": "Block-based document editor — tables, routes, and live state.",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "dependencies": {
+    "lexical": "^0.44.0",
+    "@lexical/react": "^0.44.0"
+  }
 }

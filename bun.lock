@@ -1151,9 +1151,17 @@
       "name": "@singularity/plugin-page",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/bulleted-list": {
+      "name": "@singularity/plugin-page-bulleted-list",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/editor": {
       "name": "@singularity/plugin-page-editor",
       "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
     },
     "plugins/page/plugins/links": {
       "name": "@singularity/plugin-page-links",
@@ -1166,10 +1174,6 @@
     "plugins/page/plugins/text": {
       "name": "@singularity/plugin-page-text",
       "version": "0.0.1",
-      "dependencies": {
-        "@lexical/react": "^0.44.0",
-        "lexical": "^0.44.0",
-      },
     },
     "plugins/plugin-meta": {
       "name": "@singularity/plugin-plugin-meta",
@@ -2790,6 +2794,8 @@
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
+
+    "@singularity/plugin-page-bulleted-list": ["@singularity/plugin-page-bulleted-list@workspace:plugins/page/plugins/bulleted-list"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 

@@ -36,3 +36,6 @@ export type {
 
 export { defineBlock } from "./define-block";
 export type { BlockHandle } from "./define-block";
+
+export { textDataSchema } from "./text-data";
+export type { TextData } from "./text-data";
