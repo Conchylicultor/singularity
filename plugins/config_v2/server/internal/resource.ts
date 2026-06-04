@@ -18,13 +18,32 @@ const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
 let configGetter: ConfigGetter | null = null;
 let scopeForkedChecker: ScopeForkedChecker | null = null;
 
+// Registry readiness gate. The server serves WS/HTTP resource subscriptions before
+// onReady runs initRegistry, so a client can subscribe before descriptors are
+// registered. The loader awaits this promise rather than answering with an empty
+// config — an incomplete config object crashes consumers that destructure fields.
+// initRegistry calls markRegistryReady() once every descriptor is registered.
+let resolveRegistryReady!: () => void;
+const registryReady = new Promise<void>((resolve) => {
+  resolveRegistryReady = resolve;
+});
+
+export function markRegistryReady(): void {
+  resolveRegistryReady();
+}
+
 export const configV2ServerResource = defineResource<ConfigV2Values, { path: string; scopeId?: string }>({
   key: "config-v2.values",
   mode: "push",
   schema: configV2ValuesSchema,
-  loader: ({ path, scopeId }) => {
+  loader: async ({ path, scopeId }) => {
+    await registryReady;
     const descriptor = descriptorByPath.get(path);
-    if (!descriptor || !configGetter) return {};
+    if (!descriptor || !configGetter) {
+      // After readiness, an unregistered path is a genuine bug (unknown descriptor)
+      // — fail loudly rather than emit an empty config that breaks consumers.
+      throw new Error(`[config-v2] no descriptor registered for resource path "${path}"`);
+    }
     const values = configGetter(descriptor, scopeId) as ConfigV2Values;
     const redacted = { ...values };
     for (const [key, field] of Object.entries(descriptor.fields)) {

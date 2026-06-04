@@ -16,7 +16,7 @@ import { userScopedDir, BASE_SCOPE } from "./scope-paths";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, registerDescriptorPath, setConfigGetter, setScopeForkedChecker } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 
 interface CacheEntry {
@@ -233,26 +233,37 @@ export async function ensureScopeEntry(
 }
 
 export async function initRegistry(): Promise<void> {
-  setConfigGetter(getConfig);
-  setScopeForkedChecker(isScopeForked);
-  const contributions = ConfigV2.Register.getContributions();
+  try {
+    setConfigGetter(getConfig);
+    setScopeForkedChecker(isScopeForked);
+    const contributions = ConfigV2.Register.getContributions();
 
-  for (const contribution of contributions) {
-    const { descriptor } = contribution;
-    const pluginId = contribution._pluginId;
-    if (!pluginId) {
-      console.warn(
-        `[config-v2] contribution for descriptor "${descriptor.name}" has no _pluginId — skipping`,
-      );
-      continue;
+    for (const contribution of contributions) {
+      const { descriptor } = contribution;
+      const pluginId = contribution._pluginId;
+      if (!pluginId) {
+        console.warn(
+          `[config-v2] contribution for descriptor "${descriptor.name}" has no _pluginId — skipping`,
+        );
+        continue;
+      }
+
+      const storePath = `${pluginId}/${descriptor.name}.jsonc`;
+      registerDescriptorPath(storePath, descriptor, pluginId);
+
+      // Register only the BASE entry per descriptor (as today). Scoped entries are
+      // created on demand by ensureScopeEntry once a fork writes their files.
+      await buildEntry(descriptor, pluginId, storePath, BASE_SCOPE);
     }
-
-    const storePath = `${pluginId}/${descriptor.name}.jsonc`;
-    registerDescriptorPath(storePath, descriptor, pluginId);
-
-    // Register only the BASE entry per descriptor (as today). Scoped entries are
-    // created on demand by ensureScopeEntry once a fork writes their files.
-    await buildEntry(descriptor, pluginId, storePath, BASE_SCOPE);
+  } finally {
+    // Open the readiness gate even if init threw partway through. Otherwise the
+    // resource loader awaits registryReady forever and every config read hangs
+    // app-wide on a loading spinner with no error surfaced. With the gate open,
+    // already-registered descriptors resolve normally and any unregistered path
+    // hits the loader's clear per-path throw (loud client error, not a hang).
+    // The original error still propagates out of initRegistry (awaited in
+    // onReady), so the boot failure remains loudly logged server-side.
+    markRegistryReady();
   }
 }
 

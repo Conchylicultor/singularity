@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import {
   PluginProvider,
   Core,
@@ -8,8 +8,19 @@ import {
 import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
+import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generated";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
+
+// Shown while the app suspends on first load — chiefly while config_v2 resources
+// resolve (useConfig suspends instead of flashing default values).
+function AppLoading() {
+  return (
+    <div className="flex h-screen w-screen items-center justify-center">
+      <Spinner className="text-muted-foreground size-6" />
+    </div>
+  );
+}
 
 function RootRenderer() {
   const roots = Core.Root.useContributions();
@@ -48,7 +59,9 @@ export default function App() {
       {state.errors.length > 0 && <PluginLoadErrors errors={state.errors} />}
       <NotificationsProvider>
         <PluginProvider plugins={state.plugins}>
-          <RootRenderer />
+          <Suspense fallback={<AppLoading />}>
+            <RootRenderer />
+          </Suspense>
         </PluginProvider>
       </NotificationsProvider>
     </>

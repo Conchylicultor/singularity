@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { NotificationsProvider, useResource, useNotificationsStatus, useNotificationsChannelStatuses } from "./use-resource";
+export { NotificationsProvider, useResource, useSuspenseResource, useNotificationsStatus, useNotificationsChannelStatuses } from "./use-resource";
 export type { ResourceResult } from "./use-resource";
 export { NotificationsClient, queryKeyFor } from "./notifications-client";
 export type { ResourceKey, ChannelStatuses } from "./notifications-client";

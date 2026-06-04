@@ -3,6 +3,7 @@ import {
   QueryClient,
   QueryClientProvider,
   useQuery,
+  useSuspenseQuery,
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
@@ -75,6 +76,23 @@ export type ResourceResult<T> =
   | { pending: true; error: Error | null; refetch: () => Promise<void> }
   | { pending: false; data: T; error: Error | null; refetch: () => Promise<void> };
 
+// Shared HTTP fetch for a resource. Used by useResource's queryFn (the WS-down
+// fallback) and by useSuspenseResource, where it drives the initial load while
+// the component is suspended — a suspended component's observe() effect hasn't
+// committed, so the WS sub-ack isn't available yet.
+async function fetchResourceValue<T, P extends ResourceParams>(
+  resource: ResourceDescriptor<T, P>,
+  p: ResourceParams,
+): Promise<T> {
+  const qs = new URLSearchParams(p).toString();
+  const base = resource.origin === "central" ? "/api/central-resources" : "/api/resources";
+  const url = `${base}/${encodeURIComponent(resource.key)}${qs ? `?${qs}` : ""}`;
+  const res = await fetch(url);
+  if (!res.ok) throw new Error(`Resource ${resource.key} fetch failed: ${res.status}`);
+  const body = (await res.json()) as { value: unknown; version: number };
+  return resource.schema.parse(body.value) as T;
+}
+
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
 // `data` is only accessible after narrowing `result.pending === false`.
 // The generic T is inferred from the ResourceDescriptor — casting silently hides type
@@ -102,15 +120,7 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
 
   const q = useQuery({
     queryKey: queryKeyFor(key, p),
-    queryFn: async (): Promise<T> => {
-      const qs = new URLSearchParams(p).toString();
-      const base = origin === "central" ? "/api/central-resources" : "/api/resources";
-      const url = `${base}/${encodeURIComponent(key)}${qs ? `?${qs}` : ""}`;
-      const res = await fetch(url);
-      if (!res.ok) throw new Error(`Resource ${key} fetch failed: ${res.status}`);
-      const body = (await res.json()) as { value: unknown; version: number };
-      return schema.parse(body.value) as T;
-    },
+    queryFn: () => fetchResourceValue(resource, p),
     // sub-ack writes setQueryData, so normally queryFn never runs.
     // It's the fallback when the WS is down.
     initialData: resource.initialData as NonUndefinedGuard<T>,
@@ -131,4 +141,44 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
         : { pending: false, data, error, refetch: () => refetchRef.current().then(() => {}) },
     [pending, data, error],
   );
+}
+
+// Suspending variant of useResource. Instead of exposing a `pending` flag with
+// default/initial data, it SUSPENDS until the resource has real data, so callers
+// render under a <Suspense fallback> while loading rather than flashing defaults.
+//
+// Unlike useResource it deliberately does NOT seed `initialData`: initialData marks
+// the query "success" immediately, which would defeat suspense. The promise thrown
+// by useSuspenseQuery is resolved by the HTTP fetch (queryFn). Once the component
+// mounts, the observe() effect below subscribes over the WS and keeps the cached
+// value live via setQueryData, exactly like useResource.
+export function useSuspenseResource<T, P extends ResourceParams = ResourceParams>(
+  resource: ResourceDescriptor<T, P>,
+  params?: P,
+): T {
+  const notifications = useContext(NotificationsContext);
+  if (!notifications) {
+    throw new Error("useSuspenseResource must be used within a NotificationsProvider");
+  }
+  const key = resource.key;
+  const origin = resource.origin;
+  const p = (params ?? ({} as P)) as ResourceParams;
+  const schema = resource.schema;
+
+  // Refcount sub/unsub. Commits only after suspense resolves and the component
+  // mounts; thereafter WS pushes keep the cached value live.
+  useEffect(() => {
+    notifications.observe(key, p, origin, schema);
+    return () => notifications.unobserve(key, p, origin);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
+  }, [notifications, key, origin, schema, JSON.stringify(p)]);
+
+  const q = useSuspenseQuery({
+    queryKey: queryKeyFor(key, p),
+    queryFn: () => fetchResourceValue(resource, p),
+    // No initialData → the query starts pending → useSuspenseQuery throws until
+    // the first real value lands (HTTP fetch or WS sub-ack).
+  });
+
+  return q.data;
 }

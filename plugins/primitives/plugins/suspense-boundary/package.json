@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-suspense-boundary",
+  "description": "Wraps each slot contribution in a React Suspense boundary so a suspending child shows a local loading spinner instead of blanking a larger region.",
+  "private": true,
+  "version": "0.0.1"
+}

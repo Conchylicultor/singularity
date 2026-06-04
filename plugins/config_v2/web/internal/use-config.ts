@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useSuspenseResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2Resource } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/config_v2/core";
 
@@ -13,24 +13,23 @@ export function useConfig<F extends FieldsRecord>(
 
   const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
-  const path = reg?._pluginId
-    ? `${reg._pluginId}/${descriptor.name}.jsonc`
-    : descriptor.name + ".jsonc";
-
-  // Omit scopeId entirely when absent — `{ path, scopeId: undefined }` serializes
-  // to a different live-state cache key than `{ path }` and would split the cache.
-  const result = useResource(
-    configV2Resource,
-    opts?.scopeId ? { path, scopeId: opts.scopeId } : { path },
-  );
-
   if (!reg?._pluginId) {
     throw new Error(
       `[config-v2] useConfig: descriptor "${descriptor.name}" has no web registration. ` +
         `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,
     );
   }
+  const path = `${reg._pluginId}/${descriptor.name}.jsonc`;
 
-  if (result.pending) return descriptor.defaults as ConfigValues<F>;
-  return result.data as ConfigValues<F>;
+  // Omit scopeId entirely when absent — `{ path, scopeId: undefined }` serializes
+  // to a different live-state cache key than `{ path }` and would split the cache.
+  //
+  // Suspends until config is loaded rather than returning default values: the
+  // server's resource loader waits for the registry to be ready, so the first
+  // value is always fully resolved and consumers can destructure fields safely.
+  const data = useSuspenseResource(
+    configV2Resource,
+    opts?.scopeId ? { path, scopeId: opts.scopeId } : { path },
+  );
+  return data as ConfigValues<F>;
 }
