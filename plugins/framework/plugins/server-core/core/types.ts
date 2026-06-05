@@ -81,7 +81,20 @@ export interface ServerPluginDefinition {
    */
   register?: Registration[];
   /**
-   * Called once after `runMigrations()` completes. Use this for background
+   * Runs after the socket binds but BEFORE the server reports ready and before
+   * any plugin's `onReady`. The framework awaits ALL plugins' `onReadyBlocking`
+   * as a hard barrier, then flips the readiness flag (`isServerReady`) that
+   * `GET /api/health/ready` reports and the gateway gates its hot-swap on.
+   * Use ONLY for work that must complete before the backend can correctly
+   * serve requests — DB migrations + pool warmup, registry init. Everything
+   * else (pollers, watchers, reconcilers) belongs in `onReady`. A
+   * `loadBearing` plugin's rejection aborts boot. Because this is a barrier,
+   * every `onReady` is guaranteed to observe a migrated DB and a ready registry.
+   */
+  onReadyBlocking?: () => void | Promise<void>;
+  /**
+   * Called once after `onReadyBlocking` has completed across all plugins (so a
+   * migrated DB and ready registry are guaranteed). Use this for background
    * work (pollers, watchers) that issues DB queries — scheduling it from the
    * plugin's module body races the migration runner.
    */

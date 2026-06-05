@@ -23,14 +23,14 @@ the recorder's ambient context, so N+1 patterns point straight at the caller.
 `awaitDbReady`'s `SELECT 1` and `warmPool`) — they go through a checked-out
 client, not `pool.query`, so their durations are not recorded.
 
-`warmPool()` (called in `onReady`, after `awaitDbReady` and before migrations)
+`warmPool()` (called in `onReadyBlocking`, after `awaitDbReady` and before migrations)
 eagerly opens + validates connections up to the pool's `max` so the boot
 thundering herd hits warm connections instead of paying establishment cost.
 node-postgres `min` does **not** pre-connect, so this explicit step is required.
 
 ## Bootstrap
 
-`awaitPgReady` + `runMigrations` are called in the database plugin's `onReady` hook — before any other plugin's `onReady` runs. Consumers can safely use the DB in their own `onReady`.
+`awaitPgReady` + `runMigrations` are called in the database plugin's `onReadyBlocking` hook. `onReadyBlocking` is a hard barrier the framework awaits in full before flipping the server-ready flag and before any plugin's `onReady` runs — so consumers can safely use the DB in their own `onReady`, and the gateway holds its hot-swap until migrations have landed. (Previously this lived in `onReady`, where it raced other plugins' `onReady` and the gateway swap until migrations happened to be slow.)
 
 ## Import paths
 

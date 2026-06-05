@@ -122,7 +122,7 @@ go build -o gateway .
 The gateway expects backends to:
 
 1. Read their socket path from the `SOCKET_PATH` env var (required; backends should error out if missing)
-2. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it (gateway polls readiness with `net.Dial("unix", path)`)
+2. Bind that Unix socket and accept HTTP/1.1 + WebSocket connections on it. The gateway polls readiness via `GET /api/health/ready` over the socket — it hot-swaps only once that returns `200` (backend fully ready: migrations applied, DB warm, registry built), not on a bare socket accept. A `404` (backend predates the readiness endpoint) falls back to "HTTP-reachable = ready"; `503` means still booting.
 3. Use relative redirects (gateway does not rewrite `Location` headers)
 4. Handle `/api/*` and `/ws/*` routes
 

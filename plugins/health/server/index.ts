@@ -1,11 +1,13 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleHealth } from "./internal/handle-health";
-import { getHealth } from "../shared/endpoints";
+import { handleHealthReady } from "./internal/handle-health-ready";
+import { getHealth, getHealthReady } from "../shared/endpoints";
 
 export default {
   name: "Health",
   description: "Liveness endpoint used by clients to detect server restarts.",
   httpRoutes: {
     [getHealth.route]: handleHealth,
+    [getHealthReady.route]: handleHealthReady,
   },
 } satisfies ServerPluginDefinition;

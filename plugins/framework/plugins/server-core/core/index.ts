@@ -8,6 +8,7 @@ export { reportServerError, setErrorReporter } from "./error-reporter";
 export type { ServerErrorReport } from "./error-reporter";
 export { getProfilingData, profilerStart } from "./profiler";
 export type { PhaseId, Span } from "./profiler";
+export { isServerReady, markServerReady } from "./readiness";
 export {
   Resource,
   defineResource,

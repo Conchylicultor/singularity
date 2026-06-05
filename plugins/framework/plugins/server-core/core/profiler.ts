@@ -4,6 +4,7 @@ export type PhaseId =
   | "runMigrations"
   | "routePopulation"
   | "socketBind"
+  | "onReadyBlocking"
   | "onReady"
   | "onAllReady";
 

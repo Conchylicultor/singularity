@@ -9,7 +9,10 @@ export default {
   description:
     "Core database infrastructure. Connection pooling and DB readiness.",
   loadBearing: true,
-  async onReady() {
+  // Blocking: every other plugin's `onReady` (and incoming requests) must see a
+  // migrated, warm DB. Running this in the `onReadyBlocking` barrier makes that
+  // guarantee real and lets the gateway hold the hot-swap until migrations land.
+  async onReadyBlocking() {
     await awaitDbReady();
     await warmPool();
     await runMigrations(db);

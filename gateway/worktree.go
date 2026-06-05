@@ -605,16 +605,36 @@ func (w *Worktree) onBackendExit(bk *backend, err error) {
 	w.state = StateIdle
 }
 
-// waitReady polls the backend's Unix socket with dials until it accepts a
-// connection or the deadline expires. If the process exits before becoming
-// ready, returns immediately.
+// waitReady polls the backend's `GET /api/health/ready` over its Unix socket
+// until the backend reports ready, exits, or the deadline expires. This gates
+// the hot-swap on genuine readiness (migrations applied, DB warm, registry
+// built) rather than a bare socket accept — the old backend keeps serving until
+// the new one can actually handle requests.
+//
+//   - 200 → ready.
+//   - 404 → endpoint absent (backend predates this change); fall back to
+//     "HTTP-reachable = ready" so older worktrees still start.
+//   - 503 / transport error (socket still coming up) → not ready yet; keep polling.
 func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{}) error {
+	client := &http.Client{
+		Timeout: 2 * time.Second,
+		Transport: &http.Transport{
+			DialContext: func(ctx context.Context, _, _ string) (net.Conn, error) {
+				var d net.Dialer
+				return d.DialContext(ctx, "unix", socketPath)
+			},
+		},
+	}
 	deadline := time.Now().Add(timeout)
 	for time.Now().Before(deadline) {
-		conn, err := net.DialTimeout("unix", socketPath, 200*time.Millisecond)
+		resp, err := client.Get("http://backend/api/health/ready")
 		if err == nil {
-			_ = conn.Close()
-			return nil
+			status := resp.StatusCode
+			_, _ = io.Copy(io.Discard, resp.Body)
+			_ = resp.Body.Close()
+			if status == http.StatusOK || status == http.StatusNotFound {
+				return nil
+			}
 		}
 		select {
 		case <-exitCh:

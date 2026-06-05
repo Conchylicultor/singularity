@@ -22,9 +22,16 @@ export default {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,
   },
+  // Blocking: the config registry must be built before resources resolve, so
+  // config-driven loaders don't briefly serve empty during a hot-swap.
+  // `initRegistry` opens its own gate in a `finally`, so a partial failure
+  // surfaces loudly per-path rather than hanging.
+  async onReadyBlocking() {
+    await initRegistry();
+  },
+  // Background: the file watcher only needs to catch later edits.
   async onReady() {
     await initConfigWatcher();
-    await initRegistry();
   },
   async onShutdown() {
     shutdownRegistry();
