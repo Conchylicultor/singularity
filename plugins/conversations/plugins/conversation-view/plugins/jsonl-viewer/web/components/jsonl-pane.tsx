@@ -8,6 +8,7 @@ import {
 import type { Conversation } from "@plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
@@ -241,12 +242,13 @@ export function JsonlPane({
         {totals && (
           <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-10">
             <div className="mx-auto flex max-w-reading justify-end px-3">
-              <span
-                className="pointer-events-auto tabular-nums text-xs text-muted-foreground/60"
+              <Badge
+                colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
+                className="pointer-events-auto"
                 title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
               >
                 {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
-              </span>
+              </Badge>
             </div>
           </div>
         )}
