@@ -1547,7 +1547,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `ResourceDef`, `ResourceFacetData`; Values: `parseResources`, `resourcesFacetDef`
         - **`routes`**
           - Core:
-            - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`
+            - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`, `routesToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin routes table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Routes"
+            - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "routes" → `RoutesDetailSection`
+            - **`render-diff`** — Diff renderer for the routes facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Routes"
         - **`slots`**
           - Core:
             - Exports: Types: `SlotDef`; Values: `slotsFacetDef`, `slotsToComparable`

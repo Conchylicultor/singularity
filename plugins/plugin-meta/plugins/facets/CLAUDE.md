@@ -62,6 +62,10 @@ See `plugins/commands/` for the reference implementation.
   - **`registrations`**
   - **`resources`**
   - **`routes`**
+    - Plugins:
+      - **`render-catalog`** — Aggregated cross-plugin routes table in the Forge catalog.
+      - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
+      - **`render-diff`** — Diff renderer for the routes facet (PR review).
   - **`slots`**
     - Plugins:
       - **`render-catalog`** — Aggregated cross-plugin slots table in the Forge catalog.

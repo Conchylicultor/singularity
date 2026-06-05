@@ -1302,6 +1302,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-routes",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-routes-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-routes-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-routes-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/slots": {
       "name": "@singularity/plugin-plugin-meta-facets-slots",
       "version": "0.0.1",
@@ -2985,6 +2997,12 @@
     "@singularity/plugin-plugin-meta-facets-resources": ["@singularity/plugin-plugin-meta-facets-resources@workspace:plugins/plugin-meta/plugins/facets/plugins/resources"],
 
     "@singularity/plugin-plugin-meta-facets-routes": ["@singularity/plugin-plugin-meta-facets-routes@workspace:plugins/plugin-meta/plugins/facets/plugins/routes"],
+
+    "@singularity/plugin-plugin-meta-facets-routes-render-catalog": ["@singularity/plugin-plugin-meta-facets-routes-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-routes-render-detail": ["@singularity/plugin-plugin-meta-facets-routes-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-routes-render-diff": ["@singularity/plugin-plugin-meta-facets-routes-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-slots": ["@singularity/plugin-plugin-meta-facets-slots@workspace:plugins/plugin-meta/plugins/facets/plugins/slots"],
 
