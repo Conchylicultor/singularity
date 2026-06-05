@@ -16,4 +16,5 @@ export {
   CLAUDE_SESSIONS_DIR,
   MAIN_WORKTREE_NAME,
   isMain,
+  currentWorktreeName,
 } from "./internal/paths";

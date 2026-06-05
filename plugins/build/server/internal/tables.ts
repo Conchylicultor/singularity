@@ -1,9 +1,16 @@
 import { integer, pgTable, text, timestamp } from "drizzle-orm/pg-core";
+import { MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/core";
 
 export const _buildRuns = pgTable("build_runs", {
   id: text("id").primaryKey(),
   trigger: text("trigger").notNull(),
   commitHash: text("commit_hash"),
+  // Namespace (worktree slug, or MAIN_WORKTREE_NAME on main) that produced this
+  // run. A worktree DB is forked from main and inherits main's rows; tagging the
+  // producing namespace lets the history resource and orphan sweep scope to their
+  // own runs so inherited main builds don't surface a phantom "Build failed".
+  // Backfills to MAIN_WORKTREE_NAME — historically only main's auto-build wrote here.
+  namespace: text("namespace").notNull().default(MAIN_WORKTREE_NAME),
   startedAt: timestamp("started_at", { withTimezone: true }).defaultNow().notNull(),
   finishedAt: timestamp("finished_at", { withTimezone: true }),
   exitCode: integer("exit_code"),

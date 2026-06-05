@@ -18,6 +18,15 @@ export function isMain(): boolean {
   return process.env.SINGULARITY_WORKTREE === MAIN_WORKTREE_NAME;
 }
 
+/**
+ * The namespace this backend runs in: the worktree slug, or `MAIN_WORKTREE_NAME`
+ * on main. Use to tag/scope per-namespace data so it can't leak across the
+ * DB-fork boundary (a worktree DB is forked from main and inherits its rows).
+ */
+export function currentWorktreeName(): string {
+  return process.env.SINGULARITY_WORKTREE ?? MAIN_WORKTREE_NAME;
+}
+
 export const HOME_DIR             = homedir();
 export const SINGULARITY_DIR     = join(HOME_DIR, ".singularity");
 export const BACKUPS_DIR         = join(HOME_DIR, ".backups/singularity");

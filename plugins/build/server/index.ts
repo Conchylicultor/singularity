@@ -1,9 +1,9 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { inArray, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
-import { isMain } from "@plugins/infra/plugins/paths/server";
+import { isMain, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { ConfigV2, getConfig } from "@plugins/config_v2/server";
 import { db } from "@plugins/database/server";
 import { handleBuild } from "./internal/handle-build";
@@ -26,10 +26,13 @@ export default {
   },
   register: [buildRunJob],
   onReady: async () => {
+    // Scoped to this namespace: a worktree DB inherits main's rows via the fork,
+    // and reconciling those inherited (foreign-pid) builds here is what previously
+    // stamped them exit_code=-1 → a phantom "Build failed" in every worktree.
     const unfinished = await db
       .select({ id: _buildRuns.id, pid: _buildRuns.pid })
       .from(_buildRuns)
-      .where(isNull(_buildRuns.finishedAt));
+      .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
     const orphanIds = unfinished.filter((r) => !isPidAlive(r.pid)).map((r) => r.id);
     if (orphanIds.length > 0) {
       await db

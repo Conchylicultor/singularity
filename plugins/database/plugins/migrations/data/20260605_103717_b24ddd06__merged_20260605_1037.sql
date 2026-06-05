@@ -1,0 +1,1 @@
+ALTER TABLE "build_runs" ADD COLUMN "namespace" text DEFAULT 'singularity' NOT NULL;

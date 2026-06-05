@@ -1,8 +1,8 @@
 import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { eq, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { REPO_ROOT, SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/notifications/server";
 import { _buildRuns } from "./tables";
 import { buildHistoryResource } from "./build-history-resource";
@@ -42,7 +42,7 @@ async function isAnyBuildAlive(): Promise<boolean> {
   const rows = await db
     .select({ pid: _buildRuns.pid })
     .from(_buildRuns)
-    .where(isNull(_buildRuns.finishedAt));
+    .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
   return rows.some((r) => isPidAlive(r.pid));
 }
 
@@ -86,7 +86,9 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     env: { ...process.env, SINGULARITY_BUILD_ID: buildId },
   });
 
-  await db.insert(_buildRuns).values({ id: buildId, trigger, commitHash, pid: proc.pid });
+  await db
+    .insert(_buildRuns)
+    .values({ id: buildId, trigger, commitHash, pid: proc.pid, namespace: currentWorktreeName() });
   buildHistoryResource.notify();
   if (trigger === "auto") {
     await recordNotification({

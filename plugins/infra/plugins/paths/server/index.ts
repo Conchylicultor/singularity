@@ -18,6 +18,7 @@ export {
   CLAUDE_SESSIONS_DIR,
   MAIN_WORKTREE_NAME,
   isMain,
+  currentWorktreeName,
 } from "../core/internal/paths";
 
 export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
