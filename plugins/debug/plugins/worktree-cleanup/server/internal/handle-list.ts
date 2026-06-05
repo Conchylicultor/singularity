@@ -2,8 +2,8 @@ import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
-import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { listWorktrees, type WorktreeEntry } from "../../shared/endpoints";
+import { ndjsonResponse } from "../../shared/ndjson";
+import { type WorktreeEntry } from "../../shared/endpoints";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;
@@ -68,8 +68,58 @@ async function pMap<T, R>(items: T[], limit: number, fn: (item: T) => Promise<R>
   return results;
 }
 
-export const handleList = implement(listWorktrees, async () => {
-  try {
+type Attempt = Awaited<ReturnType<typeof listAttempts>>[number];
+type Task = Awaited<ReturnType<typeof listTasks>>[number];
+
+async function buildEntry(
+  attempt: Attempt,
+  taskMap: Map<string, Task>,
+  dbSet: Set<string>,
+): Promise<WorktreeEntry> {
+  const task = taskMap.get(attempt.taskId);
+  const exists = await dirExists(attempt.worktreePath);
+  const dbPresent = dbSet.has(attempt.id);
+
+  let unpushedCount = 0;
+  let isDirty = false;
+
+  if (exists) {
+    const hygiene = await getGitHygiene(attempt.worktreePath);
+    unpushedCount = hygiene.unpushedCount;
+    isDirty = hygiene.isDirty;
+  }
+
+  const taskDeletable = task ? DELETABLE_TASK_STATUSES.has(task.status) : true;
+  const ageMs = Date.now() - attempt.createdAt.getTime();
+  const oldEnough = ageMs >= 72 * 60 * 60 * 1000;
+  // No worktree but DB remains: always safe (nothing to lose, just a DB drop).
+  // Worktree present: safe only when clean, old enough, and task is done/dropped.
+  const isSafe = (!exists && dbPresent) || (exists && unpushedCount === 0 && !isDirty && taskDeletable && oldEnough);
+
+  return {
+    attemptId: attempt.id,
+    taskId: attempt.taskId,
+    taskTitle: task?.title ?? "(unknown task)",
+    taskStatus: task?.status ?? "unknown",
+    attemptStatus: attempt.status,
+    worktreePath: attempt.worktreePath,
+    createdAt: attempt.createdAt.toISOString(),
+    dirExists: exists,
+    dbExists: dbPresent,
+    unpushedCount,
+    isDirty,
+    isSafe,
+  };
+}
+
+// Streamed NDJSON: each computed worktree row is emitted as it completes,
+// followed by a terminal `{ end: true }` sentinel. Streaming keeps the socket
+// alive past Bun's 10s idleTimeout (1257 worktrees × git status >> 10s) and lets
+// rows render progressively. Errors inside the producer are framed as `{ error }`
+// by ndjsonResponse, so no try/catch is needed here. No server-side sort — rows
+// stream in completion order and the client sorts.
+export function handleList(): Response {
+  return ndjsonResponse(async (emit) => {
     await ensureMainWorktreeRoot();
 
     // One catalog query for all DB names instead of an N+1 `databaseExists`
@@ -83,47 +133,10 @@ export const handleList = implement(listWorktrees, async () => {
     const taskMap = new Map(tasks.map((t) => [t.id, t]));
     const dbSet = new Set(databases);
 
-    const entries = await pMap(attempts, CONCURRENCY, async (attempt): Promise<WorktreeEntry> => {
-      const task = taskMap.get(attempt.taskId);
-      const exists = await dirExists(attempt.worktreePath);
-      const dbPresent = dbSet.has(attempt.id);
-
-      let unpushedCount = 0;
-      let isDirty = false;
-
-      if (exists) {
-        const hygiene = await getGitHygiene(attempt.worktreePath);
-        unpushedCount = hygiene.unpushedCount;
-        isDirty = hygiene.isDirty;
-      }
-
-      const taskDeletable = task ? DELETABLE_TASK_STATUSES.has(task.status) : true;
-      const ageMs = Date.now() - attempt.createdAt.getTime();
-      const oldEnough = ageMs >= 72 * 60 * 60 * 1000;
-      // No worktree but DB remains: always safe (nothing to lose, just a DB drop).
-      // Worktree present: safe only when clean, old enough, and task is done/dropped.
-      const isSafe = (!exists && dbPresent) || (exists && unpushedCount === 0 && !isDirty && taskDeletable && oldEnough);
-
-      return {
-        attemptId: attempt.id,
-        taskId: attempt.taskId,
-        taskTitle: task?.title ?? "(unknown task)",
-        taskStatus: task?.status ?? "unknown",
-        attemptStatus: attempt.status,
-        worktreePath: attempt.worktreePath,
-        createdAt: attempt.createdAt.toISOString(),
-        dirExists: exists,
-        dbExists: dbPresent,
-        unpushedCount,
-        isDirty,
-        isSafe,
-      };
+    await pMap(attempts, CONCURRENCY, async (attempt) => {
+      emit({ item: await buildEntry(attempt, taskMap, dbSet) });
     });
 
-    entries.sort((a, b) => b.createdAt.localeCompare(a.createdAt));
-
-    return { entries };
-  } catch (e) {
-    throw new HttpError(500, String(e));
-  }
-});
+    emit({ end: true });
+  });
+}

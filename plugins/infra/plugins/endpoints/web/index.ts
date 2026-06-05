@@ -3,7 +3,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { fetchEndpoint, EndpointError, getEndpointErrorMessage } from "./internal/fetch-endpoint";
 export { useEndpoint } from "./internal/use-endpoint";
 export { useEndpointMutation } from "./internal/use-endpoint-mutation";
-export { registerEndpointErrorReporter } from "./internal/error-reporter";
+export { registerEndpointErrorReporter, reportEndpointError } from "./internal/error-reporter";
 export type { EndpointErrorInfo } from "./internal/error-reporter";
 
 export default {

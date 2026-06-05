@@ -2,9 +2,8 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 
 // Single source of truth for a worktree row — shared by the server handler
-// (return shape) and the web panel (rendered shape), and used as the list
-// endpoint's response schema so the client parses/validates rather than
-// blindly JSON-parsing whatever the gateway returns.
+// (return shape) and the web panel, which parses/validates each streamed NDJSON
+// row with this schema rather than blindly JSON-parsing whatever the gateway returns.
 export const WorktreeEntrySchema = z.object({
   attemptId: z.string(),
   taskId: z.string(),
@@ -21,11 +20,9 @@ export const WorktreeEntrySchema = z.object({
 });
 export type WorktreeEntry = z.infer<typeof WorktreeEntrySchema>;
 
+// Streamed as NDJSON (no `response` schema) — see server/internal/handle-list.ts.
 export const listWorktrees = defineEndpoint({
   route: "GET /api/debug/worktrees",
-  response: z.object({
-    entries: z.array(WorktreeEntrySchema),
-  }),
 });
 
 export const BulkDeleteWorktreesBodySchema = z.object({

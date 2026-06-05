@@ -1319,7 +1319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
       - Web:
-        - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `useEndpoint`, `useEndpointMutation`
+        - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:
         - Exports: Values: `HttpError`, `implement`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.

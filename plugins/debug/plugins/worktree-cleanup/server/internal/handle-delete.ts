@@ -4,6 +4,7 @@ import { getAttempt } from "@plugins/tasks-core/server";
 import { dropDatabase } from "@plugins/database/plugins/admin/server";
 import { removeWorktree } from "@plugins/infra/plugins/worktree/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { ndjsonResponse } from "../../shared/ndjson";
 
 export async function handleDelete(
   _req: Request,
@@ -15,44 +16,32 @@ export async function handleDelete(
   const attempt = await getAttempt(id);
   if (!attempt) return Response.json({ ok: false, error: "Attempt not found" }, { status: 404 });
 
-  const encoder = new TextEncoder();
-  const stream = new ReadableStream({
-    async start(controller) {
-      const emit = (data: object) =>
-        controller.enqueue(encoder.encode(JSON.stringify(data) + "\n"));
+  return ndjsonResponse(async (emit) => {
+    let dirPresent = false;
+    try {
+      await stat(attempt.worktreePath);
+      dirPresent = true;
+    // eslint-disable-next-line promise-safety/no-bare-catch
+    } catch {
+      // Directory already gone — skip git step
+    }
 
-      let dirPresent = false;
+    if (dirPresent) {
+      emit({ step: "worktree" });
       try {
-        await stat(attempt.worktreePath);
-        dirPresent = true;
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {
-        // Directory already gone — skip git step
+        await removeWorktree(attempt.worktreePath);
+      } catch (e) {
+        emit({ ok: false, error: String(e) });
+        return;
       }
+    }
 
-      if (dirPresent) {
-        emit({ step: "worktree" });
-        try {
-          await removeWorktree(attempt.worktreePath);
-        } catch (e) {
-          emit({ ok: false, error: String(e) });
-          controller.close();
-          return;
-        }
-      }
+    emit({ step: "database" });
+    await dropDatabase(id);
 
-      emit({ step: "database" });
-      await dropDatabase(id);
+    emit({ step: "config" });
+    await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });
 
-      emit({ step: "config" });
-      await rm(join(SINGULARITY_DIR, "config", id), { recursive: true, force: true });
-
-      emit({ ok: true });
-      controller.close();
-    },
-  });
-
-  return new Response(stream, {
-    headers: { "Content-Type": "application/x-ndjson" },
+    emit({ ok: true });
   });
 }

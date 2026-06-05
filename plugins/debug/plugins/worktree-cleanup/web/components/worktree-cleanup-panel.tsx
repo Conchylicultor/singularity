@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -6,10 +6,12 @@ import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Button } from "@/components/ui/button";
+import { readNdjson } from "../internal/read-ndjson";
 import {
   listWorktrees,
   bulkDeleteWorktrees,
   deleteWorktree,
+  WorktreeEntrySchema,
   type WorktreeEntry,
 } from "../../shared/endpoints";
 
@@ -76,23 +78,57 @@ export function WorktreeCleanupPanel() {
   const [rowErrors, setRowErrors] = useState<Map<string, string>>(new Map());
   const [bulkResult, setBulkResult] = useState<string | null>(null);
 
+  const loadAbort = useRef<AbortController | null>(null);
+
   const load = useCallback(async () => {
+    loadAbort.current?.abort();
+    const ctrl = new AbortController();
+    loadAbort.current = ctrl;
+
     setLoading(true);
     setListError(null);
     setBulkResult(null);
+    setEntries([]);
+
+    const acc: WorktreeEntry[] = [];
+    let ended = false;
+    let sinceFlush = 0;
     try {
-      const data = await fetchEndpoint(listWorktrees, {});
-      setEntries(data.entries);
+      for await (const frame of readNdjson(
+        listWorktrees.route,
+        interpolatePath(listWorktrees.path, {}),
+        { signal: ctrl.signal },
+      )) {
+        if ("error" in frame) throw new Error(String(frame.error));
+        if ("end" in frame) {
+          ended = true;
+          continue;
+        }
+        acc.push(WorktreeEntrySchema.parse((frame as { item: unknown }).item));
+        // Batch renders (~25 setEntries for 1257 rows) instead of one per row.
+        if (++sinceFlush >= 50) {
+          sinceFlush = 0;
+          setEntries([...acc]);
+        }
+      }
+      setEntries([...acc]);
+      // A dropped socket yields no terminal sentinel — fail loud rather than
+      // render a partial list as if it were complete.
+      if (!ended) throw new Error("worktree list stream truncated");
     } catch (e) {
+      if (ctrl.signal.aborted) return; // superseded by a newer load / unmount
       setListError(getEndpointErrorMessage(e));
     } finally {
-      setLoading(false);
+      if (!ctrl.signal.aborted) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
     void load();
   }, [load]);
+
+  // Abort any in-flight stream on unmount.
+  useEffect(() => () => loadAbort.current?.abort(), []);
 
   const deleteOne = useCallback(async (id: string) => {
     setDeletingSteps((prev) => new Map(prev).set(id, "worktree"));
@@ -102,29 +138,16 @@ export function WorktreeCleanupPanel() {
       return next;
     });
     try {
-      const res = await fetch(interpolatePath(deleteWorktree.path, { id }), { method: "DELETE" });
-      if (!res.ok) {
-        // Non-2xx bodies (e.g. a gateway "backend unavailable" 502) are plain
-        // text, not the NDJSON stream — surface the text instead of choking on it.
-        throw new Error((await res.text().catch(() => null)) || `HTTP ${res.status}`);
-      }
-      const reader = res.body!.getReader();
-      const decoder = new TextDecoder();
-      let buffer = "";
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-        buffer += decoder.decode(value, { stream: true });
-        const lines = buffer.split("\n");
-        buffer = lines.pop() ?? "";
-        for (const line of lines) {
-          if (!line.trim()) continue;
-          const event = JSON.parse(line) as DeleteEvent;
-          if ("step" in event) {
-            setDeletingSteps((prev) => new Map(prev).set(id, event.step));
-          } else if (!event.ok) {
-            setRowErrors((prev) => new Map(prev).set(id, event.error));
-          }
+      for await (const frame of readNdjson(
+        deleteWorktree.route,
+        interpolatePath(deleteWorktree.path, { id }),
+        { method: "DELETE" },
+      )) {
+        const event = frame as DeleteEvent;
+        if ("step" in event) {
+          setDeletingSteps((prev) => new Map(prev).set(id, event.step));
+        } else if (!event.ok) {
+          setRowErrors((prev) => new Map(prev).set(id, event.error));
         }
       }
     } catch (e) {
@@ -168,6 +191,12 @@ export function WorktreeCleanupPanel() {
     await load();
   }, [entries, load]);
 
+  // Server streams rows in completion order; sort for display (was a server sort).
+  const sortedEntries = useMemo(
+    () => (entries ? [...entries].sort((a, b) => b.createdAt.localeCompare(a.createdAt)) : null),
+    [entries],
+  );
+
   const safeCount = entries?.filter((e) => e.isSafe).length ?? 0;
 
   return (
@@ -176,7 +205,7 @@ export function WorktreeCleanupPanel() {
       <div className="flex items-center justify-between px-4 py-3 border-b gap-3">
         <div className="flex items-center gap-2 min-w-0">
           <h2 className="text-sm font-semibold shrink-0">Worktree Cleanup</h2>
-          {entries && (
+          {entries && entries.length > 0 && (
             <span className="text-xs text-muted-foreground truncate">
               {entries.length} worktree{entries.length !== 1 ? "s" : ""} · {safeCount} safe to delete
             </span>
@@ -209,9 +238,9 @@ export function WorktreeCleanupPanel() {
       <div className="flex-1 overflow-auto">
         {listError ? (
           <Placeholder tone="error">{listError}</Placeholder>
-        ) : loading && !entries ? (
+        ) : loading && (!sortedEntries || sortedEntries.length === 0) ? (
           <Placeholder>Loading…</Placeholder>
-        ) : entries?.length === 0 ? (
+        ) : sortedEntries?.length === 0 ? (
           <Placeholder>No worktrees found.</Placeholder>
         ) : (
           <table className="w-full text-sm">
@@ -224,7 +253,7 @@ export function WorktreeCleanupPanel() {
               </tr>
             </thead>
             <tbody>
-              {entries?.map((entry) => (
+              {sortedEntries?.map((entry) => (
                 <EntryRow
                   key={entry.attemptId}
                   entry={entry}
