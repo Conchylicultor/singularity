@@ -275,7 +275,6 @@ export const webEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/sortable-list", hierarchyPath: "primitives/sortable-list", loader: () => import("@plugins/primitives/plugins/sortable-list/web"), dependsOn: [] },
   { pluginPath: "primitives/plugins/spinner", hierarchyPath: "primitives/spinner", loader: () => import("@plugins/primitives/plugins/spinner/web"), dependsOn: [] },
   { pluginPath: "primitives/plugins/status-dot", hierarchyPath: "primitives/status-dot", loader: () => import("@plugins/primitives/plugins/status-dot/web"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/suspense-boundary", hierarchyPath: "primitives/suspense-boundary", loader: () => import("@plugins/primitives/plugins/suspense-boundary/web"), dependsOn: ["primitives/plugins/slot-render", "primitives/plugins/spinner"] },
   { pluginPath: "primitives/plugins/syntax-highlight", hierarchyPath: "primitives/syntax-highlight", loader: () => import("@plugins/primitives/plugins/syntax-highlight/web"), dependsOn: ["primitives/plugins/select-scope"] },
   { pluginPath: "primitives/plugins/tabbed-view", hierarchyPath: "primitives/tabbed-view", loader: () => import("@plugins/primitives/plugins/tabbed-view/web"), dependsOn: ["primitives/plugins/slot-render"] },
   { pluginPath: "primitives/plugins/text-editor/plugins/paste-images", hierarchyPath: "primitives/text-editor/paste-images", loader: () => import("@plugins/primitives/plugins/text-editor/plugins/paste-images/web"), dependsOn: ["infra/plugins/attachments", "primitives/plugins/text-editor"] },
