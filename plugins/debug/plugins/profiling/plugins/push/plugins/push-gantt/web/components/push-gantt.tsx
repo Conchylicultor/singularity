@@ -50,50 +50,62 @@ export interface PushGanttProps {
   ) => void;
 }
 
-const OUTCOME_STYLES: Record<string, { color: string; bg: string }> = {
-  success: {
-    color: "bg-success",
-    bg: "bg-success/10",
-  },
-  failed_rebase: {
-    color: "bg-destructive",
-    bg: "bg-destructive/10",
-  },
-  failed_checks: {
-    color: "bg-warning",
-    bg: "bg-warning/10",
-  },
-  failed_push: {
-    color: "bg-destructive",
-    bg: "bg-destructive/10",
-  },
-  error: {
-    color: "bg-muted-foreground",
-    bg: "bg-muted/50",
-  },
-  // In-flight, still blocked on the lock. Its hold bar has zero width (holdMs 0),
-  // so only the growing yellow wait bar (WAIT_COLOR) renders for this row.
-  waiting: {
-    color: "bg-warning",
-    bg: "bg-warning/10",
-  },
-  // In-flight, lock acquired and running. The wait bar is now frozen and the
-  // hold bar grows in this color on each refresh until the push completes.
-  running: {
-    color: "bg-info",
-    bg: "bg-info/10",
-  },
+// ── Visual language ─────────────────────────────────────────────────────────
+// Two orthogonal channels so a bar is never ambiguous:
+//   • Fill color answers "what is this?" — build → blue, push → green,
+//     lock-wait → yellow. The fill NEVER changes with status.
+//   • Status answers "how did it go?" via a treatment layered on top of the
+//     fill: ok → solid, in-flight → pulsing, failed/interrupted → red ring.
+//     Status NEVER recolors the fill.
+// This is why a running push is green+pulsing (not blue) and a failed build is
+// blue+red-ring (not a different hue): color = type, ring = error.
+const TYPE_FILL = {
+  build: "bg-info",
+  push: "bg-success",
+  wait: "bg-warning",
+} as const;
+
+type EventStatus = "ok" | "running" | "failed" | "interrupted";
+
+const STATUS_TREATMENT: Record<EventStatus, string> = {
+  ok: "",
+  running: "animate-pulse",
+  // ring-inset so the ring isn't clipped by the row's overflow-hidden track.
+  failed: "ring-1 ring-inset ring-destructive",
+  interrupted: "ring-1 ring-inset ring-destructive",
 };
 
-const DEFAULT_STYLE = {
-  color: "bg-muted-foreground/60",
-  bg: "bg-muted/50",
+// Status dot in the row label — summarizes the worktree's last push. Mirrors
+// the bar language: green = push landed, green-pulse = push in flight,
+// red = failed/interrupted.
+const STATUS_DOT: Record<EventStatus, string> = {
+  ok: "bg-success",
+  running: "bg-success animate-pulse",
+  failed: "bg-destructive",
+  interrupted: "bg-destructive",
 };
 
-const WAIT_COLOR = "bg-warning";
-const BUILD_COLOR = "bg-info";
-const BUILD_FAILED_COLOR = "bg-info/70";
-const BUILD_INTERRUPTED_COLOR = "bg-destructive";
+function buildStatus(build: BuildEntry): EventStatus {
+  if (build.interrupted) return "interrupted";
+  return build.success ? "ok" : "failed";
+}
+
+function pushStatus(push: PushEntry): EventStatus {
+  if (push.interrupted) return "interrupted";
+  switch (push.outcome) {
+    case "success":
+      return "ok";
+    // In-flight: "waiting" still blocked on the lock (hold bar zero-width, only
+    // the yellow wait bar shows); "running" has the lock and the green hold bar
+    // grows each refresh until done.
+    case "waiting":
+    case "running":
+      return "running";
+    // failed_rebase, failed_checks, failed_push, error
+    default:
+      return "failed";
+  }
+}
 
 // Hard-killed builds have no known end, so there is no duration to scale a bar
 // from. Render them as a fixed-width marker at their start instead — a visible
@@ -152,9 +164,9 @@ function PushAttemptRow({
   const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
 
   const lastPush = group.pushes[group.pushes.length - 1];
-  const lastStyle = lastPush
-    ? (OUTCOME_STYLES[lastPush.outcome] ?? DEFAULT_STYLE)
-    : { color: "bg-info", bg: "bg-info/10" };
+  const dotColor = lastPush
+    ? STATUS_DOT[pushStatus(lastPush)]
+    : TYPE_FILL.build;
   const totalDuration =
     group.pushes.reduce((sum, p) => sum + p.waitMs + p.holdMs, 0) +
     group.builds.reduce((sum, b) => sum + b.durationMs, 0);
@@ -183,25 +195,20 @@ function PushAttemptRow({
       onClick={handleClick}
     >
       <div className="flex w-40 shrink-0 items-center gap-1.5 truncate">
-        <div
-          className={cn("size-2 shrink-0 rounded-full", lastStyle.color)}
-        />
+        <div className={cn("size-2 shrink-0 rounded-full", dotColor)} />
         <span className="truncate font-mono text-[11px] text-muted-foreground">
           {group.worktree.replace(/^claude-web\//, "")}
         </span>
       </div>
       <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
         {group.builds.map((build, i) => {
-          const buildLabel = build.interrupted
-            ? "build (interrupted)"
-            : build.success
-              ? "build (ok)"
-              : "build (failed)";
-          const buildColor = build.interrupted
-            ? BUILD_INTERRUPTED_COLOR
-            : build.success
-              ? BUILD_COLOR
-              : BUILD_FAILED_COLOR;
+          const status = buildStatus(build);
+          const buildLabel =
+            status === "interrupted"
+              ? "build (interrupted)"
+              : status === "ok"
+                ? "build (ok)"
+                : "build (failed)";
           const buildSpan: Span = {
             id: `build:${group.worktree}:${i}`,
             phase: group.worktree,
@@ -216,7 +223,8 @@ function PushAttemptRow({
               key={buildSpan.id}
               className={cn(
                 "absolute top-0 h-full rounded transition-opacity",
-                buildColor,
+                TYPE_FILL.build,
+                STATUS_TREATMENT[status],
                 isBuildHovered ? "opacity-100" : "opacity-40",
               )}
               style={{
@@ -231,13 +239,14 @@ function PushAttemptRow({
           );
         })}
         {group.pushes.map((push) => {
-          const style = OUTCOME_STYLES[push.outcome] ?? DEFAULT_STYLE;
+          const status = pushStatus(push);
 
           // Hard-killed mid-flight: no known end, no real duration. Render a
-          // fixed-width marker at the start, like an interrupted build.
+          // fixed-width green marker (still a push) at the start; the red ring
+          // from STATUS_TREATMENT marks it as interrupted.
           if (push.interrupted) {
             const markerSpan: Span = {
-              id: `${push.pushId}:interrupted`,
+              id: `push:${push.pushId}:interrupted`,
               phase: group.worktree,
               label: "push (interrupted)",
               startMs: push.startMs,
@@ -249,7 +258,8 @@ function PushAttemptRow({
                 key={push.pushId}
                 className={cn(
                   "absolute top-0 h-full rounded transition-opacity",
-                  BUILD_INTERRUPTED_COLOR,
+                  TYPE_FILL.push,
+                  STATUS_TREATMENT[status],
                   isMarkerHovered ? "opacity-100" : "opacity-70",
                 )}
                 style={{
@@ -265,7 +275,7 @@ function PushAttemptRow({
           const waitSpan: Span | null =
             push.waitMs > 0
               ? {
-                  id: `${push.pushId}:wait`,
+                  id: `wait:${push.pushId}`,
                   phase: group.worktree,
                   label: "lock wait",
                   startMs: push.startMs,
@@ -274,7 +284,7 @@ function PushAttemptRow({
               : null;
 
           const pushSpan: Span = {
-            id: `${push.pushId}:push`,
+            id: `push:${push.pushId}`,
             phase: group.worktree,
             label: `push (${push.outcome})`,
             startMs: push.startMs + push.waitMs,
@@ -290,7 +300,9 @@ function PushAttemptRow({
                 <div
                   className={cn(
                     "absolute top-0 h-full rounded-l transition-opacity",
-                    WAIT_COLOR,
+                    // Lock-wait is always yellow — its own event, never recolored
+                    // by the push outcome that follows it.
+                    TYPE_FILL.wait,
                     isWaitHovered ? "opacity-100" : "opacity-50",
                   )}
                   style={{
@@ -304,7 +316,8 @@ function PushAttemptRow({
               <div
                 className={cn(
                   "absolute top-0 h-full transition-opacity",
-                  style.color,
+                  TYPE_FILL.push,
+                  STATUS_TREATMENT[status],
                   push.waitMs > 0 ? "rounded-r" : "rounded",
                   isPushHovered ? "opacity-100" : "opacity-70",
                 )}
