@@ -12,14 +12,14 @@ const columns: ColumnDef<IndexRow>[] = [
   {
     id: "name",
     header: "Name",
-    width: "w-56 shrink-0",
+    width: "14rem",
     value: (row) => row.indexname,
     cell: (row) => <code className="font-mono">{row.indexname}</code>,
   },
   {
     id: "definition",
     header: "Definition",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.indexdef,
     cell: (row) => (
       <code className="break-all font-mono text-muted-foreground">

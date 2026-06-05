@@ -35,6 +35,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     id: f.id,
     header: f.label,
     width: f.width,
+    align: f.align,
     // data-table only sorts columns that carry `value`, and uses `value` as the
     // cell fallback. We always forward it when the field has one — sorting an
     // already-host-sorted column by the same key is idempotent. (For v1, a field

@@ -31,7 +31,7 @@ const AGG_COLUMNS: ColumnDef<AggRow>[] = [
   {
     id: "label",
     header: "Label",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     cell: (row) => (
       <div className="flex min-w-0 flex-col gap-0.5">
         <span className="truncate font-mono text-xs" title={row.label}>
@@ -44,25 +44,29 @@ const AGG_COLUMNS: ColumnDef<AggRow>[] = [
   {
     id: "count",
     header: "Count",
-    width: "w-14 text-right",
+    width: "3.5rem",
+    align: "end",
     value: (row) => row.count,
   },
   {
     id: "avgMs",
     header: "Avg (ms)",
-    width: "w-20 text-right",
+    width: "5rem",
+    align: "end",
     value: (row) => row.avgMs,
   },
   {
     id: "maxMs",
     header: "Max (ms)",
-    width: "w-20 text-right",
+    width: "5rem",
+    align: "end",
     value: (row) => row.maxMs,
   },
   {
     id: "lastMs",
     header: "Last (ms)",
-    width: "w-20 text-right",
+    width: "5rem",
+    align: "end",
     value: (row) => row.lastMs,
   },
 ];

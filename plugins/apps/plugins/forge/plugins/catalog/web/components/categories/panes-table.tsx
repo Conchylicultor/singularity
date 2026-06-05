@@ -13,7 +13,7 @@ const columns: ColumnDef<PaneRow>[] = [
   {
     id: "paneId",
     header: "Pane ID",
-    width: "w-40 shrink-0",
+    width: "10rem",
     value: (row) => row.item.paneId ?? "",
     cell: (row) => (
       <code className="truncate font-mono text-foreground">
@@ -24,7 +24,7 @@ const columns: ColumnDef<PaneRow>[] = [
   {
     id: "segment",
     header: "Segment",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.item.panePath ?? "",
     cell: (row) => (
       <code className="truncate font-mono text-muted-foreground">

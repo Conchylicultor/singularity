@@ -4,7 +4,16 @@ import type { SortState } from "./use-data-table";
 export interface ColumnDef<TRow> {
   id: string;
   header?: string;
+  /**
+   * CSS grid track size for this column. Default `"auto"` (content-sized to the
+   * widest cell, like a real table). e.g. `"12rem"` (fixed), `"minmax(0,1fr)"`
+   * (absorbs leftover space + truncates), `"minmax(120px,200px)"`.
+   * Header and body share one grid via subgrid, so alignment is automatic — no
+   * `shrink-0` / `min-w-0` needed.
+   */
   width?: string;
+  /** Text alignment within the column (applies to header + cells). Default `"start"`. */
+  align?: "start" | "end" | "center";
   value?: (row: TRow) => string | number | undefined;
   cell?: (row: TRow) => ReactNode;
 }

@@ -102,6 +102,7 @@ export function SongLibrary() {
         value: (s) => s.title,
         sortable: true,
         filterable: true,
+        width: "minmax(0,2fr)",
       },
       {
         id: "composer",
@@ -110,6 +111,7 @@ export function SongLibrary() {
         value: (s) => s.composer ?? "Unknown",
         sortable: true,
         filterable: true,
+        width: "minmax(0,1fr)",
       },
       {
         id: "duration",
@@ -118,7 +120,8 @@ export function SongLibrary() {
         value: (s) => s.durationSec,
         cell: (s) => formatDuration(s.durationSec),
         sortable: true,
-        width: "w-20",
+        width: "5rem",
+        align: "end",
       },
       {
         id: "added",
@@ -129,6 +132,7 @@ export function SongLibrary() {
         value: (s) => new Date(s.createdAt),
         cell: (s) => formatRelativeTime(new Date(s.createdAt)),
         sortable: true,
+        width: "7rem",
       },
     ],
     [],

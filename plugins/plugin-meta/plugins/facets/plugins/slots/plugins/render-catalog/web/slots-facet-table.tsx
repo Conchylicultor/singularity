@@ -19,7 +19,7 @@ const columns: ColumnDef<SlotRow>[] = [
   {
     id: "name",
     header: "Group.Member",
-    width: "w-48 shrink-0",
+    width: "12rem",
     value: (row) => `${row.groupName}.${row.memberName}`,
     cell: (row) => (
       <code className="truncate font-mono font-medium text-foreground">
@@ -30,7 +30,7 @@ const columns: ColumnDef<SlotRow>[] = [
   {
     id: "slotId",
     header: "Slot ID",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.slotId,
     cell: (row) => (
       <code className="truncate font-mono text-muted-foreground/60">

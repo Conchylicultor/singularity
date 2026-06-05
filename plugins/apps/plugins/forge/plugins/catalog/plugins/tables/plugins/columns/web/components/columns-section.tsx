@@ -15,31 +15,31 @@ const columns: ColumnDef<ColumnRow>[] = [
   {
     id: "ordinal_position",
     header: "#",
-    width: "w-8 shrink-0",
+    width: "2rem",
     value: (row) => row.ordinal_position,
   },
   {
     id: "column_name",
     header: "Column",
-    width: "w-48 shrink-0",
+    width: "12rem",
     cell: (row) => <code className="font-mono">{row.column_name}</code>,
   },
   {
     id: "data_type",
     header: "Type",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.data_type,
   },
   {
     id: "is_nullable",
     header: "Nullable",
-    width: "w-20 shrink-0",
+    width: "5rem",
     value: (row) => row.is_nullable,
   },
   {
     id: "column_default",
     header: "Default",
-    width: "w-48 shrink-0",
+    width: "12rem",
     cell: (row) =>
       row.column_default != null ? (
         <code className="font-mono text-muted-foreground">

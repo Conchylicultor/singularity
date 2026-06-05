@@ -27,8 +27,13 @@ export interface FieldDef<TRow> {
   sortable?: boolean;
   /** Include in default search accessor; default true for text/enum. */
   filterable?: boolean;
-  /** Tailwind width class, passed to the table column. */
+  /**
+   * CSS grid track size for the table column. Default `"auto"` (content-sized).
+   * e.g. `"12rem"` (fixed), `"minmax(0,1fr)"` (absorbs leftover space + truncates).
+   */
   width?: string;
+  /** Text alignment within the table column (header + cells). Default `"start"`. */
+  align?: "start" | "end" | "center";
   /** type:"enum" — enables Phase 3 chip/multiselect filtering. */
   options?: { value: string; label: string }[];
   /** type:"media" — gallery cover source. */

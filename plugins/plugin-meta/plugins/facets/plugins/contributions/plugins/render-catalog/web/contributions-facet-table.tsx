@@ -21,7 +21,7 @@ const columns: ColumnDef<ContributionRow>[] = [
   {
     id: "slot",
     header: "Slot",
-    width: "w-48 shrink-0",
+    width: "12rem",
     value: (row) => row.slot,
     cell: (row) => (
       <code className="truncate font-mono font-medium text-foreground">
@@ -32,7 +32,7 @@ const columns: ColumnDef<ContributionRow>[] = [
   {
     id: "id",
     header: "ID",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.id ?? "",
     cell: (row) => (
       <code className="truncate font-mono text-muted-foreground/60">

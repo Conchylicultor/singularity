@@ -13,7 +13,7 @@ const columns: ColumnDef<ResourceRow>[] = [
   {
     id: "key",
     header: "Key",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.item.key,
     cell: (row) => (
       <code className="truncate font-mono text-foreground">
@@ -24,7 +24,8 @@ const columns: ColumnDef<ResourceRow>[] = [
   {
     id: "mode",
     header: "Mode",
-    width: "w-12 shrink-0 text-center",
+    width: "3rem",
+    align: "center",
     value: (row) => row.item.mode,
     cell: (row) => (
       <span className="font-mono text-[10px] text-muted-foreground/60">

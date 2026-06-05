@@ -21,7 +21,7 @@ const columns: ColumnDef<ExportRow>[] = [
   {
     id: "name",
     header: "Symbol",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.name,
     cell: (row) => (
       <code className="truncate font-mono text-foreground">{row.name}</code>

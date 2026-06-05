@@ -4,7 +4,7 @@ import {
   MdArrowUpward,
   MdUnfoldMore,
 } from "react-icons/md";
-import type { DataTableProps } from "./types";
+import type { ColumnDef, DataTableProps } from "./types";
 import { useDataTable } from "./use-data-table";
 
 export function DataTable<TRow>({
@@ -33,16 +33,25 @@ export function DataTable<TRow>({
     );
   }
 
+  // One grid owns the column tracks; the header and every row are full-span
+  // subgrids that inherit those exact tracks (and the column gap), so columns
+  // align structurally — independent of content. Dynamic template → inline style.
+  const template = columns.map((col) => col.width ?? "auto").join(" ");
+
   return (
-    <div className="flex flex-col">
-      <div className="sticky top-0 z-10 flex items-center gap-2 border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="grid gap-x-2" style={{ gridTemplateColumns: template }}>
+      <div className="sticky top-0 z-10 col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {columns.map((col) => {
           const sortable = !!col.value;
           const active = sortState?.columnId === col.id;
           return (
             <span
               key={col.id}
-              className={cn(col.width, sortable && "cursor-pointer select-none")}
+              className={cn(
+                "min-w-0 truncate",
+                alignClass(col.align),
+                sortable && "cursor-pointer select-none",
+              )}
               onClick={sortable ? () => toggleSort(col.id) : undefined}
             >
               {col.header}
@@ -57,7 +66,7 @@ export function DataTable<TRow>({
         <div
           key={rowKey(row, i)}
           className={cn(
-            "flex items-center gap-2 border-b border-border/30 p-control text-xs hover:bg-accent/30",
+            "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-xs hover:bg-accent/30",
             onRowClick && "cursor-pointer",
           )}
           onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -75,7 +84,7 @@ export function DataTable<TRow>({
           }
         >
           {columns.map((col) => (
-            <div key={col.id} className={cn(col.width, "truncate")}>
+            <div key={col.id} className={cn("min-w-0 truncate", alignClass(col.align))}>
               {col.cell
                 ? col.cell(row)
                 : col.value
@@ -87,6 +96,10 @@ export function DataTable<TRow>({
       ))}
     </div>
   );
+}
+
+function alignClass(align: ColumnDef<unknown>["align"]): string | undefined {
+  return align === "end" ? "text-right" : align === "center" ? "text-center" : undefined;
 }
 
 function SortIcon({

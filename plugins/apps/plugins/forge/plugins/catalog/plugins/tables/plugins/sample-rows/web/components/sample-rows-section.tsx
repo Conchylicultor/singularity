@@ -32,7 +32,7 @@ export function SampleRowsSection({
       (data?.columns ?? []).map((col) => ({
         id: col,
         header: col,
-        width: "min-w-[120px] max-w-[200px] shrink-0",
+        width: "minmax(120px,200px)",
         cell: (row: Record<string, unknown>) =>
           row[col] === null ? (
             <span className="italic text-muted-foreground">null</span>

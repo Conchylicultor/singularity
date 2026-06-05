@@ -29,7 +29,7 @@ const columns: ColumnDef<RouteRow>[] = [
   {
     id: "method",
     header: "Method",
-    width: "w-12 shrink-0",
+    width: "3rem",
     value: (row) => parseRoute(row.item.route).method,
     cell: (row) => {
       const { method } = parseRoute(row.item.route);
@@ -48,7 +48,7 @@ const columns: ColumnDef<RouteRow>[] = [
   {
     id: "path",
     header: "Path",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => parseRoute(row.item.route).path,
     cell: (row) => (
       <code className="truncate font-mono text-foreground">
