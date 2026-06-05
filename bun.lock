@@ -1266,6 +1266,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-slots",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-slots-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-slots-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-slots-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/parse-utils": {
       "name": "@singularity/plugin-plugin-meta-parse-utils",
       "version": "0.0.1",
@@ -2907,6 +2919,12 @@
     "@singularity/plugin-plugin-meta-facets-routes": ["@singularity/plugin-plugin-meta-facets-routes@workspace:plugins/plugin-meta/plugins/facets/plugins/routes"],
 
     "@singularity/plugin-plugin-meta-facets-slots": ["@singularity/plugin-plugin-meta-facets-slots@workspace:plugins/plugin-meta/plugins/facets/plugins/slots"],
+
+    "@singularity/plugin-plugin-meta-facets-slots-render-catalog": ["@singularity/plugin-plugin-meta-facets-slots-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-slots-render-detail": ["@singularity/plugin-plugin-meta-facets-slots-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-slots-render-diff": ["@singularity/plugin-plugin-meta-facets-slots-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-parse-utils": ["@singularity/plugin-plugin-meta-parse-utils@workspace:plugins/plugin-meta/plugins/parse-utils"],
 

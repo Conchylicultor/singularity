@@ -1505,7 +1505,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`
         - **`slots`**
           - Core:
-            - Exports: Types: `SlotDef`; Values: `slotsFacetDef`
+            - Exports: Types: `SlotDef`; Values: `slotsFacetDef`, `slotsToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin slots table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Slots"
+            - **`render-detail`** — Per-plugin slots section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "slots" → `SlotsDetailSection`
+            - **`render-diff`** — Diff renderer for the slots facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Slots"
     - **`parse-utils`**
       - Core:
         - Exports: Types: `BarrelExport`; Values: `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
