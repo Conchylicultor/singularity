@@ -1416,12 +1416,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `bulletedListBlock`
       - Core:
         - Exports: Values: `bulletedListBlock`
+    - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
+      - Web:
+        - Contributes: `Editor.Block` "code-block" → `CodeBlock`
+        - Exports: Values: `codeBlock`
+      - Core:
+        - Exports: Values: `codeBlock`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
       - Cross-plugin:
-        - Slot contributors: `bulleted-list`, `image`, `page-link`, `text`, `to-do`, `toggle`
+        - Slot contributors: `bulleted-list`, `code-block`, `image`, `page-link`, `text`, `to-do`, `toggle`
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`

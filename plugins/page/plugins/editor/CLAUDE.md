@@ -9,7 +9,7 @@
   - Slots: `Editor.Block`
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `useBlockEditor`, `useInsertableBlocks`
 - Cross-plugin:
-  - Slot contributors: `bulleted-list`, `image`, `page-link`, `text`, `to-do`, `toggle`
+  - Slot contributors: `bulleted-list`, `code-block`, `image`, `page-link`, `text`, `to-do`, `toggle`
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`

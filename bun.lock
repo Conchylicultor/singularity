@@ -1182,6 +1182,10 @@
       "name": "@singularity/plugin-page-bulleted-list",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/code-block": {
+      "name": "@singularity/plugin-page-code-block",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/editor": {
       "name": "@singularity/plugin-page-editor",
       "version": "0.0.1",
@@ -2899,6 +2903,8 @@
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
 
     "@singularity/plugin-page-bulleted-list": ["@singularity/plugin-page-bulleted-list@workspace:plugins/page/plugins/bulleted-list"],
+
+    "@singularity/plugin-page-code-block": ["@singularity/plugin-page-code-block@workspace:plugins/page/plugins/code-block"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 
