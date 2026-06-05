@@ -128,7 +128,7 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
 
   // Refcount sub/unsub on mount/unmount.
   useEffect(() => {
-    notifications.observe(key, p, origin, schema);
+    notifications.observe(key, p, origin, schema, resource.keyed?.keyOf);
     return () => notifications.unobserve(key, p, origin);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
   }, [notifications, key, origin, schema, JSON.stringify(p)]);

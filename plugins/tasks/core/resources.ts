@@ -13,7 +13,7 @@ import {
   AttemptWithConversationsSchema,
   PushSchema,
 } from "@plugins/tasks-core/core";
-import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { resourceDescriptor, keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { z } from "zod";
 
 export type {
@@ -27,11 +27,21 @@ export type {
 
 // Bulk list: lean per-row projection (no `description`). The detail pane reads
 // the full task from `taskDetailResource`, keyed by id.
-export const tasksResource = resourceDescriptor<TaskListItem[]>("tasks", z.array(TaskListItemSchema), []);
+export const tasksResource = keyedResourceDescriptor<TaskListItem[]>(
+  "tasks",
+  z.array(TaskListItemSchema),
+  [],
+  (r) => (r as TaskListItem).id,
+);
 export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
   "task-detail",
   TaskSchema.nullable(),
   null,
 );
-export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts", z.array(AttemptWithConversationsSchema), []);
+export const attemptsResource = keyedResourceDescriptor<AttemptWithConversations[]>(
+  "attempts",
+  z.array(AttemptWithConversationsSchema),
+  [],
+  (r) => (r as AttemptWithConversations).id,
+);
 export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema), []);
