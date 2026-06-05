@@ -121,7 +121,6 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
       )}
       <span className="min-w-0 flex-1 truncate">
         {title ? <span className="truncate">{title}</span> : <span className="font-mono">{op.slug}</span>}
-        {title && <span className="ml-1.5 font-mono text-2xs text-muted-foreground">{op.slug}</span>}
         {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
       </span>
       <span className="shrink-0 text-muted-foreground">{phaseText}</span>
