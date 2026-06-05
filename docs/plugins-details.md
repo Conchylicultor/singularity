@@ -204,7 +204,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.seek-back (arrowleft)", `Shortcuts.Shortcut` "sonata.seek-forward (arrowright)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)"
         - **`library`** — Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
           - Web:
+            - Slots: `Library.Sort`
             - Contributes: `Sonata.Home` "library" → `SongLibrary`
+            - Exports: Types: `SortOrderProps`; Values: `Library`
+          - Cross-plugin:
+            - Slot contributors: `playback-history`
           - Server:
             - Uses: `database.db`
             - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
@@ -221,6 +225,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
           - Web:
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`
+        - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and adds Most/Recently played sort orderings (Library.Sort). Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
+          - Web:
+            - Contributes: `Sonata.Effect` "record-play" → `RecordPlayObserver`, `Library.CardMeta` "play-stats" → `PlayStats`, `Library.Sort` "Most played" → `MostPlayedOrder`, `Library.Sort` "Recently played" → `RecentlyPlayedOrder`
+            - Exports: Values: `usePlaybackHistory`, `usePlaybackHistoryMap`
+          - Server:
+            - Uses: `database.db`
+            - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
+            - Exports: Values: `playbackHistoryLiveResource`, `songPlayback`
         - **`progress`** — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
           - Plugins:
             - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
@@ -260,7 +272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `TEMPO_MATH_FLOOR`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `scrubber`, `transport-bar`
+            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `transport-bar`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`chord-grid`** — Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy.
@@ -1074,7 +1086,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:

@@ -1,6 +1,6 @@
 {
-  "id": "690173a2-fd75-4735-abc7-893e12062d2a",
-  "prevId": "8342ed4a-adb1-4887-8ac0-6de7f3bf7f3b",
+  "id": "36c5d715-2cc7-40cc-8c89-78db9fb31f97",
+  "prevId": "7ee475b7-c0f5-44b9-aa8c-e79e074b74ba",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -820,6 +820,13 @@
           "type": "text",
           "primaryKey": false,
           "notNull": false
+        },
+        "namespace": {
+          "name": "namespace",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'singularity'"
         },
         "started_at": {
           "name": "started_at",

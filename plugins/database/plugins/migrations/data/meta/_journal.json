@@ -869,6 +869,13 @@
       "tag": "20260605_103717_b24ddd06__merged_20260605_1037",
       "hash": "b24ddd06",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780662456000,
+      "tag": "20260605_122736_130658a9__sonata_playback_and_track_count",
+      "hash": "130658a9",
+      "breakpoints": true
     }
   ]
 }
