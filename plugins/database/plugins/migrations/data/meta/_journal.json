@@ -848,6 +848,13 @@
       "tag": "20260605_085650_ecf94351__backfill_claude_cli_call_haiku_alias",
       "hash": "ecf94351",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780654464000,
+      "tag": "20260605_101424_9197b3d6__merged_20260605_1014",
+      "hash": "9197b3d6",
+      "breakpoints": true
     }
   ]
 }

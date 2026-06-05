@@ -15,6 +15,11 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
 
 - **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
+    - **`sonata`** — Sonata — extensible piano and music app.
+      - Plugins:
+        - **`library`** — Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
+          - `/api/sonata/songs (POST)`
+          - `/api/sonata/songs/:id (DELETE)`
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.

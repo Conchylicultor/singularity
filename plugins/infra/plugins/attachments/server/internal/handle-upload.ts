@@ -1,6 +1,4 @@
-import { db } from "@plugins/database/server";
-import { _attachments } from "./tables";
-import { diskPathFor, ensureAttachmentsRoot } from "./paths";
+import { createAttachment } from "./operations";
 
 const MAX_SIZE = 20 * 1024 * 1024; // 20 MB
 
@@ -33,32 +31,17 @@ export async function handleUpload(req: Request): Promise<Response> {
     return new Response(`file too large (max ${MAX_SIZE} bytes)`, { status: 413 });
   }
 
-  await ensureAttachmentsRoot();
-  const id = crypto.randomUUID();
-  const filename = file.name || `upload-${id}`;
-  const mime = file.type || "application/octet-stream";
-  const diskPath = diskPathFor(id, filename);
-
   const bytes = new Uint8Array(await file.arrayBuffer());
-  await Bun.write(diskPath, bytes);
+  const att = await createAttachment(
+    bytes,
+    file.name || `upload-${crypto.randomUUID()}`,
+    file.type || "application/octet-stream",
+  );
 
-  const [row] = await db
-    .insert(_attachments)
-    .values({
-      id,
-      filename,
-      mime,
-      size: file.size,
-      diskPath,
-    })
-    .returning();
-
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) return new Response("failed to record attachment", { status: 500 });
   return Response.json({
-    id: row.id,
-    filename: row.filename,
-    mime: row.mime,
-    size: row.size,
+    id: att.id,
+    filename: att.filename,
+    mime: att.mime,
+    size: att.size,
   });
 }

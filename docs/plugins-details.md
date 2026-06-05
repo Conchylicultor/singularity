@@ -202,6 +202,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
           - Web:
             - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.seek-back (arrowleft)", `Shortcuts.Shortcut` "sonata.seek-forward (arrowright)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)"
+        - **`library`** — Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
+          - Web:
+            - Contributes: `Sonata.Home` "library" → `SongLibrary`
+          - Server:
+            - Uses: `database.db`
+            - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
+            - Exports: Values: `_songs`, `songsLiveResource`
+            - Routes: `POST /api/sonata/songs`, `DELETE /api/sonata/songs/:id`
+          - Core:
+            - Exports: Types: `CreateSongBody`, `Song`; Values: `createSong`, `CreateSongBodySchema`, `deleteSong`, `SongSchema`, `songsResource`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
             - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`, `ConfigV2.WebRegister`
@@ -250,7 +260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `scrubber`
+            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `scrubber`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`chord-grid`** — Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy.
@@ -259,6 +269,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.
               - Web:
                 - Contributes: `Sonata.Source` "MIDI File"
+                - Exports: Values: `compile`, `MIDI_SOURCE_ID`
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
             - Exports: Types: `ChordTemplate`; Values: `CHORD_TEMPLATES`, `formatChordSymbol`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
@@ -1050,7 +1061,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1263,7 +1274,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`, `plugins/infra/plugins/attachments/server/internal/tables.ts`
-        - Exports: Types: `AttachmentLink`; Values: `_attachments`, `Attachments`, `deleteAttachment`, `getAttachment`
+        - Exports: Types: `AttachmentLink`; Values: `_attachments`, `Attachments`, `createAttachment`, `deleteAttachment`, `getAttachment`
         - Register: `defineJob('attachments.orphan-sweep')`
       - Web:
         - Exports: Types: `Attachment`, `UploadedAttachment`; Values: `listAttachments`, `uploadAttachment`

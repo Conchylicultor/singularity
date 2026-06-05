@@ -119,6 +119,13 @@ export const Sonata = {
     createVoices: (ctx: AudioContext, destination: AudioNode) => InstrumentVoices;
   }>("sonata.instrument", { docLabel: (p) => p.label }),
 
+  // HOME — the app landing surface (song library). Single render slot; the
+  // library plugin contributes its gallery here. Shell shows it when view==="library".
+  Home: defineRenderSlot<{ component: ComponentType }>("sonata.home", {
+    reorder: false,
+    docLabel: (p) => p.id,
+  }),
+
   // TRANSPORT — full-width horizontal strip below the toolbar (progress bar, …).
   Transport: defineRenderSlot<{ component: ComponentType }>("sonata.transport", {
     reorder: false,

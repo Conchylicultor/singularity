@@ -11,7 +11,7 @@ import {
 } from "../shared/endpoints";
 
 export { _attachments } from "./internal/tables";
-export { deleteAttachment, getAttachment } from "./internal/operations";
+export { createAttachment, deleteAttachment, getAttachment } from "./internal/operations";
 export { Attachments } from "./internal/attachments";
 export type { AttachmentLink } from "./internal/define-link";
 

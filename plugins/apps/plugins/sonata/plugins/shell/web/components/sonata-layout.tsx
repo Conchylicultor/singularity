@@ -67,21 +67,18 @@ function Picker({
 function SonataLayoutInner() {
   const {
     score,
+    view,
+    currentSongTitle,
     cursorBeat,
     isPlaying,
     tempoScale,
-    activeSourceId,
     activeDisplayId,
-    loadedSourceIds,
-    activeRaw,
-    setActiveSource,
     setActiveDisplay,
-    setRaw,
+    backToLibrary,
     play,
     stop,
   } = useSonata();
 
-  const sources = Sonata.Source.useContributions();
   // Enumerate displays via the dispatch slot's contributions — the `Extra`
   // metadata (id/label/icon/capabilities) is fully readable; only `component`
   // is sealed. Never names a specific display.
@@ -90,28 +87,35 @@ function SonataLayoutInner() {
   // Default the active display to the first contributed one.
   const effectiveDisplayId = activeDisplayId ?? displays[0]?.id ?? null;
 
-  const activeSource = sources.find((s) => s.id === activeSourceId);
-  const LoaderComponent = activeSource?.LoaderComponent;
+  // LIBRARY — the landing surface. The (separate) library plugin contributes its
+  // gallery to `Sonata.Home`; the shell just gives it the full area. Renders
+  // blank if nothing is contributed yet.
+  if (view === "library") {
+    return (
+      <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
+        <Sonata.Home.Render>{(h) => <h.component key={h.id} />}</Sonata.Home.Render>
+      </div>
+    );
+  }
 
+  // PLAYER — streamlined chrome: ← Library + song title replace the Source
+  // picker; the Display picker and transport cluster stay. No Source picker and
+  // no active-source loader strip.
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      {/* Toolbar: source picker, display picker, transport. */}
+      {/* Toolbar: back-to-library + title, display picker, transport. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
-          <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
-            Source
+          <button
+            type="button"
+            onClick={backToLibrary}
+            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50"
+          >
+            ← Library
+          </button>
+          <span className="text-sm font-semibold text-foreground">
+            {currentSongTitle ?? "Untitled"}
           </span>
-          <Picker
-            items={sources.map((s) => ({
-              id: s.id,
-              label: s.label,
-              icon: s.icon,
-            }))}
-            activeId={activeSourceId}
-            onSelect={setActiveSource}
-            empty="No sources"
-            loadedIds={loadedSourceIds}
-          />
         </div>
 
         <div className="flex items-center gap-2">
@@ -152,13 +156,6 @@ function SonataLayoutInner() {
       <Sonata.Transport.Render>
         {(t) => <t.component key={t.id} />}
       </Sonata.Transport.Render>
-
-      {/* Active source loader (UI to provide input). */}
-      {LoaderComponent ? (
-        <div className="border-b border-border px-6 py-3">
-          <LoaderComponent raw={activeRaw} onRaw={setRaw} />
-        </div>
-      ) : null}
 
       {/* Main area: the active display + free-floating Section panels. */}
       <div className="flex min-h-0 flex-1">

@@ -56,6 +56,14 @@ export interface SonataContextValue {
    * transport cursor all share one consistent timeline.
    */
   score: Score;
+  /**
+   * The app's navigation view. `"library"` is the landing surface (the song
+   * gallery, contributed via `Sonata.Home`); `"player"` is the streamlined
+   * playback chrome for the current song.
+   */
+  view: "library" | "player";
+  /** Title of the song currently open in the player (null on the library). */
+  currentSongTitle: string | null;
   /** Playhead position in quarter-note beats. */
   cursorBeat: number;
   isPlaying: boolean;
@@ -80,6 +88,16 @@ export interface SonataContextValue {
   setActiveDisplay: (id: string | null) => void;
   /** Feed raw input from the active source's LoaderComponent (keyed by source). */
   setRaw: (raw: unknown) => void;
+  /**
+   * Bulk, source-agnostic raw write — merge a `{ sourceId: raw }` map into the
+   * accumulated raw inputs. Unlike `setRaw` this does NOT depend on (or change)
+   * `activeSourceId`; the library uses it to load a song's persisted inputs.
+   */
+  setRawMap: (rawMap: Record<string, unknown>) => void;
+  /** Open the player on `title` (sets `currentSongTitle` + `view="player"`). */
+  openPlayer: (title: string) => void;
+  /** Return to the library: stops playback, then `view="library"`. */
+  backToLibrary: () => void;
   /** Move the playhead (e.g. scrub / seek). */
   setCursorBeat: (beat: number) => void;
   /** Nudge the playhead by `deltaBeat` beats, clamped to [0, end]; re-anchors playback. */
@@ -118,6 +136,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
   const analyzers = Sonata.Analyzer.useContributions();
 
+  // Navigation: the app lands on the library and switches into the player.
+  const [view, setView] = useState<"library" | "player">("library");
+  const [currentSongTitle, setCurrentSongTitle] = useState<string | null>(null);
+
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
   const [activeDisplayId, setActiveDisplayId] = useState<string | null>(null);
   // Raw input keyed by source id — each source keeps its own input so they
@@ -138,6 +160,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     if (!id) return;
     setRawById((prev) => ({ ...prev, [id]: raw }));
   }, []);
+
+  // Bulk, source-agnostic raw write (does NOT touch activeSourceId). Used by the
+  // library to load a song's persisted per-source inputs in one shot.
+  const setRawMap = useCallback(
+    (m: Record<string, unknown>) =>
+      setRawById((prev) => ({ ...prev, ...m })),
+    [],
+  );
 
   // Default the active source/display to the first contributed one.
   useEffect(() => {
@@ -213,6 +243,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   isPlayingRef.current = isPlaying;
   const tempoScaleRef = useRef(tempoScale);
   tempoScaleRef.current = tempoScale;
+  // Mirror the nav view so the published (stable) transport callbacks can gate
+  // on it without re-publishing — keyboard shortcuts must only drive the player.
+  const viewRef = useRef(view);
+  viewRef.current = view;
 
   // Anchor the transport at `beat` against the active clock's `now()`. Used at
   // play, on every clock swap, and on seek / tempo change so they all compose.
@@ -248,6 +282,18 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     if (scoreEndBeat(scoreRef.current) <= 0) return;
     setIsPlaying(true);
   }, []);
+
+  // Navigation actions. Opening a song switches to the player; the existing
+  // `useEffect([baseScore])` auto-stops + rewinds when its raw input changes.
+  const openPlayer = useCallback((title: string) => {
+    setCurrentSongTitle(title);
+    setView("player");
+  }, []);
+
+  const backToLibrary = useCallback(() => {
+    stop();
+    setView("library");
+  }, [stop]);
 
   // Absolute seek — the primitive the progression bar drives. Clamps to the
   // score span and re-anchors so the audio/cursor stay glued while playing.
@@ -342,7 +388,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // refs mean we publish once on mount and clear on unmount.
   useEffect(() => {
     publishSonataTransport({
-      togglePlay: () => (isPlayingRef.current ? stop() : play()),
+      // Gate transport on the player view so global Space/arrows don't start
+      // playback while the user is on the library landing surface.
+      togglePlay: () => {
+        if (viewRef.current !== "player") return;
+        isPlayingRef.current ? stop() : play();
+      },
       seekBy,
       nudgeTempo: (delta) => setTempoScale(tempoScaleRef.current + delta),
     });
@@ -359,6 +410,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
+      view,
+      currentSongTitle,
       cursorBeat,
       isPlaying,
       tempoScale,
@@ -370,6 +423,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setActiveSource: setActiveSourceId,
       setActiveDisplay: setActiveDisplayId,
       setRaw,
+      setRawMap,
+      openPlayer,
+      backToLibrary,
       setCursorBeat,
       seekBy,
       seekTo,
@@ -380,6 +436,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }),
     [
       score,
+      view,
+      currentSongTitle,
       cursorBeat,
       isPlaying,
       tempoScale,
@@ -389,6 +447,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       loadedSourceIds,
       activeRaw,
       setRaw,
+      setRawMap,
+      openPlayer,
+      backToLibrary,
       seekBy,
       seekTo,
       setTempoScale,

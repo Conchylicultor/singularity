@@ -8,6 +8,7 @@
 - Sub-plugins:
   - **`audio`** [2 sub-plugins] — Audio playback umbrella for Sonata: engine + instruments.
   - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
+  - **`library`** — Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
   - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
   - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
   - **`progress`** [4 sub-plugins] — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
