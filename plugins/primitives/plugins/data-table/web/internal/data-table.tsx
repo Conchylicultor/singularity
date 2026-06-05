@@ -13,8 +13,17 @@ export function DataTable<TRow>({
   filter,
   rowKey,
   emptyLabel = "No results found",
+  sortState: controlledSort,
+  onToggleSort,
+  onRowClick,
 }: DataTableProps<TRow>) {
-  const { rows, sortState, toggleSort } = useDataTable(data, columns, filter);
+  const { rows, sortState, toggleSort } = useDataTable(
+    data,
+    columns,
+    filter,
+    controlledSort,
+    onToggleSort,
+  );
 
   if (rows.length === 0) {
     return (
@@ -47,7 +56,23 @@ export function DataTable<TRow>({
       {rows.map((row, i) => (
         <div
           key={rowKey(row, i)}
-          className="flex items-center gap-2 border-b border-border/30 p-control text-xs hover:bg-accent/30"
+          className={cn(
+            "flex items-center gap-2 border-b border-border/30 p-control text-xs hover:bg-accent/30",
+            onRowClick && "cursor-pointer",
+          )}
+          onClick={onRowClick ? () => onRowClick(row) : undefined}
+          role={onRowClick ? "button" : undefined}
+          tabIndex={onRowClick ? 0 : undefined}
+          onKeyDown={
+            onRowClick
+              ? (e) => {
+                  if (e.key === "Enter" || e.key === " ") {
+                    e.preventDefault();
+                    onRowClick(row);
+                  }
+                }
+              : undefined
+          }
         >
           {columns.map((col) => (
             <div key={col.id} className={cn(col.width, "truncate")}>

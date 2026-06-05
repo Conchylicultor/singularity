@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-data-view-table",
+  "description": "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.",
+  "private": true,
+  "version": "0.0.1"
+}

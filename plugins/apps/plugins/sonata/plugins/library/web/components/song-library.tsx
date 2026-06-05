@@ -1,11 +1,12 @@
-import { useRef, useState } from "react";
-import { MdFileUpload } from "react-icons/md";
-import { cn } from "@/lib/utils";
+import { useMemo, useState } from "react";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { DataView } from "@plugins/primitives/plugins/data-view/web";
+import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -18,18 +19,25 @@ import {
 import { createSong, songsResource } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
-import { SongCard } from "./song-card";
+import { SongCard, formatDuration } from "./song-card";
+import { ImportButton } from "./import-button";
 
 /**
- * The Sonata landing surface: a gallery of saved songs. Clicking a card hydrates
- * the MIDI source with the song's stored bytes and switches the shell to the
- * player. The Import button saves a dropped `.mid` file (upload → create →
- * open). The song list is reactive via the live `songsResource`.
+ * The Sonata landing surface: the saved-song collection rendered through the
+ * `data-view` primitive (gallery of cards + sortable/searchable table). Clicking
+ * a row hydrates the MIDI source with the song's stored bytes and switches the
+ * shell to the player. The Import toolbar action saves a dropped `.mid` file
+ * (upload → create → open). The song list is reactive via the live
+ * `songsResource`; the gallery view keeps the custom `SongCard` (play affordance
+ * + hover-delete) via `viewOptions.gallery.renderCard`.
+ *
+ * Gallery orderings contributed via `Library.Sort` (e.g. play-based orderings
+ * from `playback-history`) still apply: the active ordering produces the row
+ * list that feeds `DataView`, and the ordering picker lives in the toolbar.
  */
 export function SongLibrary() {
   const songs = useResource(songsResource);
   const { setRawMap, openPlayer } = useSonata();
-  const fileInputRef = useRef<HTMLInputElement>(null);
   const [importing, setImporting] = useState(false);
   // Active gallery ordering. "newest" is the built-in default (the list already
   // arrives newest-first); extra orderings (e.g. play-based) are contributed to
@@ -85,71 +93,95 @@ export function SongLibrary() {
     }
   }
 
-  return (
-    <div className="flex h-full flex-col overflow-y-auto">
-      <header className="flex items-center justify-between gap-3 border-b border-border px-6 py-4">
-        <h1 className="text-lg font-semibold text-foreground">Library</h1>
-        <div className="flex items-center gap-3">
-          {!songs.pending && songs.data.length > 0 ? (
-            <SegmentedControl
-              options={sortOptions}
-              value={sort}
-              onChange={setSort}
-              variant="ghost"
-              size="sm"
-            />
-          ) : null}
-          <button
-            type="button"
-            disabled={importing}
-            onClick={() => fileInputRef.current?.click()}
-            className={cn(
-              "flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium",
-              "text-foreground transition-colors hover:bg-muted/50",
-              "disabled:cursor-not-allowed disabled:opacity-60",
-            )}
-          >
-            <MdFileUpload className="size-4" />
-            {importing ? "Importing…" : "Import"}
-          </button>
-        </div>
-        <input
-          ref={fileInputRef}
-          type="file"
-          accept=".mid,.midi"
-          className="hidden"
-          onChange={(e) => {
-            const file = e.target.files?.[0];
-            // Reset so re-selecting the same file fires onChange again.
-            e.target.value = "";
-            if (file) void importFile(file);
-          }}
-        />
-      </header>
+  const fields: FieldDef<Song>[] = useMemo(
+    () => [
+      {
+        id: "title",
+        label: "Title",
+        type: "text",
+        value: (s) => s.title,
+        sortable: true,
+        filterable: true,
+      },
+      {
+        id: "composer",
+        label: "Composer",
+        type: "text",
+        value: (s) => s.composer ?? "Unknown",
+        sortable: true,
+        filterable: true,
+      },
+      {
+        id: "duration",
+        label: "Length",
+        type: "number",
+        value: (s) => s.durationSec,
+        cell: (s) => formatDuration(s.durationSec),
+        sortable: true,
+        width: "w-20",
+      },
+      {
+        id: "added",
+        label: "Added",
+        type: "date",
+        // `createdAt` is an ISO string; wrap in a Date so the `date` type sorts
+        // correctly, and render it as a relative "Nd ago" label.
+        value: (s) => new Date(s.createdAt),
+        cell: (s) => formatRelativeTime(new Date(s.createdAt)),
+        sortable: true,
+      },
+    ],
+    [],
+  );
 
+  return (
+    <div className="flex h-full min-h-0 flex-col">
       {songs.error ? (
         <div className="px-6 py-4 text-sm text-destructive">
           Failed to load songs: {songs.error.message}
         </div>
       ) : null}
-
-      {!songs.pending && songs.data.length === 0 ? (
-        <div className="flex flex-1 items-center justify-center px-6 text-sm text-muted-foreground">
-          No songs yet — import a MIDI file to get started.
-        </div>
-      ) : (
-        <Library.Sort.Dispatch
-          activeSortId={sort}
-          songs={songs.pending ? [] : songs.data}
-          render={(ordered) => (
-            <div className="grid grid-cols-[repeat(auto-fill,minmax(200px,1fr))] gap-4 p-6">
-              {ordered.map((song) => (
-                <SongCard key={song.id} song={song} onOpen={(s) => void open(s)} />
-              ))}
-            </div>
-          )}
-        />
-      )}
+      <Library.Sort.Dispatch
+        activeSortId={sort}
+        songs={songs.pending ? [] : songs.data}
+        render={(ordered) => (
+          <DataView<Song>
+            rows={ordered}
+            fields={fields}
+            rowKey={(s) => s.id}
+            views={["gallery", "table"]}
+            defaultView="gallery"
+            storageKey="sonata:library"
+            title="Library"
+            actions={
+              <>
+                {!songs.pending && songs.data.length > 0 ? (
+                  <SegmentedControl
+                    options={sortOptions}
+                    value={sort}
+                    onChange={setSort}
+                    variant="ghost"
+                    size="sm"
+                  />
+                ) : null}
+                <ImportButton
+                  importing={importing}
+                  onPick={(f) => void importFile(f)}
+                />
+              </>
+            }
+            onRowActivate={(s) => void open(s)}
+            emptyState={<>No songs yet — import a MIDI file to get started.</>}
+            viewOptions={{
+              gallery: {
+                renderCard: (s: Song) => (
+                  <SongCard song={s} onOpen={(x) => void open(x)} />
+                ),
+              },
+            }}
+          />
+        )}
+      />
     </div>
   );
 }

@@ -10,18 +10,27 @@ export function useDataTable<TRow>(
   data: readonly TRow[],
   columns: ColumnDef<TRow>[],
   filter: string | undefined,
+  controlledSort?: SortState | null,
+  onToggleSort?: (columnId: string) => void,
 ) {
-  const [sortState, setSortState] = useState<SortState | null>(null);
+  const [internalSort, setInternalSort] = useState<SortState | null>(null);
+
+  const isControlled = onToggleSort !== undefined;
+  const sortState = isControlled ? (controlledSort ?? null) : internalSort;
 
   const toggleSort = useCallback(
     (columnId: string) => {
-      setSortState((prev) => {
+      if (onToggleSort) {
+        onToggleSort(columnId);
+        return;
+      }
+      setInternalSort((prev) => {
         if (prev?.columnId !== columnId) return { columnId, direction: "asc" };
         if (prev.direction === "asc") return { columnId, direction: "desc" };
         return null;
       });
     },
-    [],
+    [onToggleSort],
   );
 
   const rows = useMemo(() => {
