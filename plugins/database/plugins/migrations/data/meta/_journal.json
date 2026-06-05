@@ -841,6 +841,13 @@
       "tag": "20260604_230341_fae42ac5__add_page_blocks_attachments",
       "hash": "fae42ac5",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780649810000,
+      "tag": "20260605_085650_ecf94351__backfill_claude_cli_call_haiku_alias",
+      "hash": "ecf94351",
+      "breakpoints": true
     }
   ]
 }

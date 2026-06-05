@@ -48,10 +48,12 @@ export const SELECTABLE_MODELS: ConversationModel[] = (
   .filter(([, meta]) => !meta.printOnly)
   .map(([id]) => id);
 
-// Back-compat: rows written before flattening stored "opus"/"sonnet".
+// Back-compat: rows written before flattening stored coarse tiers "opus"/"sonnet"/"haiku".
+// "haiku" only ever reached print-only claude-cli call rows (never session-selectable).
 const LEGACY_ALIASES: Record<string, ConversationModel> = {
   opus: "opus-4-6", // 4-6 was the pre-versioning default
   sonnet: "sonnet-4-6",
+  haiku: "haiku-4-5",
 };
 
 /**
