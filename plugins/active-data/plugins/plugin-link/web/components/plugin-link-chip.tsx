@@ -83,7 +83,7 @@ export function PluginLinkChip({
       leading={<MdWidgets className="size-3 shrink-0 text-muted-foreground" />}
       mono
     >
-      {resolvedId}
+      {id}
     </LinkChip>
   );
 }
