@@ -1638,7 +1638,28 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CursorPage`, `CursorPaginationHandle`, `ScrollSentinelProps`, `UseCursorPaginationOptions`; Values: `cursorPageSchema`, `ScrollSentinel`, `useCursorPagination`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Exports: Types: `ColumnDef`, `DataTableProps`; Values: `DataTable`
+        - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
+    - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
+      - Web:
+        - Slots: `DataViewSlots.View`
+        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `SortState`, `ViewState`; Values: `DataView`, `DataViewSlots`
+      - Cross-plugin:
+        - Slot contributors: `gallery`, `table`
+      - Core:
+        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `SortState`, `ViewState`
+      - Plugins:
+        - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
+          - Web:
+            - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
+            - Exports: Types: `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`, `galleryOptions`
+          - Core:
+            - Exports: Types: `GalleryViewOptions`; Values: `galleryOptions`
+        - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
+          - Web:
+            - Contributes: `DataViewSlots.View` "Table" → `TableView`
+            - Exports: Types: `TableViewOptions`
+          - Core:
+            - Exports: Types: `TableViewOptions`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Web:
         - Exports: Types: `DetailSections`; Values: `defineDetailSections`
