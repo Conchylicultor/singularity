@@ -189,6 +189,11 @@ export function SonataLayout() {
       <div className="relative h-full min-h-0">
         <SonataLayoutInner />
         <PaneOverlayHost />
+        {/* Headless, always-mounted Sonata-scoped side effects (e.g. play
+            recording). Contributors render nothing; they observe context. */}
+        <Sonata.Effect.Render>
+          {(e) => <e.component key={e.id} />}
+        </Sonata.Effect.Render>
       </div>
     </SonataProvider>
   );

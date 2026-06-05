@@ -13,6 +13,9 @@ export const SongSchema = z.object({
   midiAttachmentId: z.string(),
   durationSec: z.number(),
   endBeat: z.number(),
+  /** Number of note-bearing MIDI tracks (file-derived, immutable). `null` for
+   *  rows imported before this was tracked. */
+  midiTrackCount: z.number().nullable(),
   createdAt: z.string(),
 });
 

@@ -221,6 +221,10 @@
       "name": "@singularity/plugin-apps-sonata-piano-roll",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/playback-history": {
+      "name": "@singularity/plugin-apps-sonata-playback-history",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/progress": {
       "name": "@singularity/plugin-apps-sonata-progress",
       "version": "0.0.1",
@@ -2433,6 +2437,8 @@
     "@singularity/plugin-apps-sonata-piano-keyboard": ["@singularity/plugin-apps-sonata-piano-keyboard@workspace:plugins/apps/plugins/sonata/plugins/piano-keyboard"],
 
     "@singularity/plugin-apps-sonata-piano-roll": ["@singularity/plugin-apps-sonata-piano-roll@workspace:plugins/apps/plugins/sonata/plugins/piano-roll"],
+
+    "@singularity/plugin-apps-sonata-playback-history": ["@singularity/plugin-apps-sonata-playback-history@workspace:plugins/apps/plugins/sonata/plugins/playback-history"],
 
     "@singularity/plugin-apps-sonata-progress": ["@singularity/plugin-apps-sonata-progress@workspace:plugins/apps/plugins/sonata/plugins/progress"],
 

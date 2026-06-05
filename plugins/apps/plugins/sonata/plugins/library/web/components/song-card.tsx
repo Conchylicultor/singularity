@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
+import { Library } from "../slots";
 
 /** Format a duration in seconds as `m:ss`. */
 function formatDuration(seconds: number): string {
@@ -55,8 +56,16 @@ export function SongCard({
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="text-xs tabular-nums text-muted-foreground">
-          {formatDuration(song.durationSec)}
+        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span className="tabular-nums">{formatDuration(song.durationSec)}</span>
+          {song.midiTrackCount != null ? (
+            <>
+              <span aria-hidden>·</span>
+              <span className="tabular-nums">
+                {song.midiTrackCount} {song.midiTrackCount === 1 ? "track" : "tracks"}
+              </span>
+            </>
+          ) : null}
         </span>
         <span
           aria-hidden
@@ -65,6 +74,11 @@ export function SongCard({
           <MdPlayArrow className="size-4" />
         </span>
       </div>
+
+      {/* Per-card metadata contributed by other plugins (e.g. play stats). */}
+      <Library.CardMeta.Render>
+        {(m) => <m.component key={m.id} song={song} />}
+      </Library.CardMeta.Render>
 
       <button
         type="button"

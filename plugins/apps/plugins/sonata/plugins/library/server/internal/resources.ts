@@ -16,6 +16,7 @@ export function toSong(row: typeof _songs.$inferSelect): Song {
     midiAttachmentId: row.midiAttachmentId,
     durationSec: row.durationSec,
     endBeat: row.endBeat,
+    midiTrackCount: row.midiTrackCount,
     createdAt: row.createdAt.toISOString(),
   };
 }

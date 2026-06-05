@@ -1,4 +1,5 @@
 import { Midi } from "@tonejs/midi";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { createAttachment } from "@plugins/infra/plugins/attachments/server";
 import { _songs } from "./tables";
@@ -20,7 +21,16 @@ export async function seedStarters(): Promise<void> {
   );
 
   for (const starter of STARTERS) {
-    if (existing.has(starter.id)) continue;
+    if (existing.has(starter.id)) {
+      // Backfill track count for starters seeded before this column existed —
+      // all starters are single-track by construction. Cheap no-op once set;
+      // does not re-mint the attachment.
+      await db
+        .update(_songs)
+        .set({ midiTrackCount: 1 })
+        .where(and(eq(_songs.id, starter.id), isNull(_songs.midiTrackCount)));
+      continue;
+    }
 
     const midi = new Midi();
     // Set tempo BEFORE adding notes: `addNote` converts our absolute-seconds
@@ -51,6 +61,7 @@ export async function seedStarters(): Promise<void> {
         midiAttachmentId: att.id,
         durationSec,
         endBeat,
+        midiTrackCount: midi.tracks.length,
       })
       .onConflictDoNothing();
     await songAttachments.add(starter.id, [att.id]);

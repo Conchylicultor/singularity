@@ -77,6 +77,16 @@ export interface SonataContextValue {
   view: "library" | "player";
   /** Title of the song currently open in the player (null on the library). */
   currentSongTitle: string | null;
+  /** Id of the song currently open in the player (null on the library). Lets
+   *  player-scoped effects attribute a play to a specific song. */
+  currentSongId: string | null;
+  /**
+   * Monotonic counter bumped on every `openPlayer` call — including reopening the
+   * *same* song. Effects that should fire once per open (e.g. recording a play on
+   * the first Play press) key their "already handled" guard on this so a fresh
+   * open re-arms them while pause→resume within one open does not.
+   */
+  songOpenEpoch: number;
   /** Playhead position in quarter-note beats. */
   cursorBeat: number;
   isPlaying: boolean;
@@ -107,8 +117,9 @@ export interface SonataContextValue {
    * `activeSourceId`; the library uses it to load a song's persisted inputs.
    */
   setRawMap: (rawMap: Record<string, unknown>) => void;
-  /** Open the player on `title` (sets `currentSongTitle` + `view="player"`). */
-  openPlayer: (title: string) => void;
+  /** Open the player on a song (sets current id/title, `view="player"`, bumps
+   *  `songOpenEpoch`). */
+  openPlayer: (song: { id: string; title: string }) => void;
   /** Return to the library: stops playback, then `view="library"`. */
   backToLibrary: () => void;
   /** Move the playhead (e.g. scrub / seek). */
@@ -152,6 +163,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Navigation: the app lands on the library and switches into the player.
   const [view, setView] = useState<"library" | "player">("library");
   const [currentSongTitle, setCurrentSongTitle] = useState<string | null>(null);
+  const [currentSongId, setCurrentSongId] = useState<string | null>(null);
+  const [songOpenEpoch, setSongOpenEpoch] = useState(0);
 
   const [activeSourceId, setActiveSourceId] = useState<string | null>(null);
   const [activeDisplayId, setActiveDisplayId] = useState<string | null>(null);
@@ -300,8 +313,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   // Navigation actions. Opening a song switches to the player; the existing
   // `useEffect([baseScore])` auto-stops + rewinds when its raw input changes.
-  const openPlayer = useCallback((title: string) => {
-    setCurrentSongTitle(title);
+  const openPlayer = useCallback((song: { id: string; title: string }) => {
+    setCurrentSongId(song.id);
+    setCurrentSongTitle(song.title);
+    // Bump every open (even the same song) so once-per-open effects re-arm.
+    setSongOpenEpoch((n) => n + 1);
     setView("player");
   }, []);
 
@@ -433,6 +449,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       score,
       view,
       currentSongTitle,
+      currentSongId,
+      songOpenEpoch,
       cursorBeat,
       isPlaying,
       tempoScale,
@@ -459,6 +477,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       score,
       view,
       currentSongTitle,
+      currentSongId,
+      songOpenEpoch,
       cursorBeat,
       isPlaying,
       tempoScale,

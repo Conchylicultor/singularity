@@ -134,6 +134,15 @@ export const Sonata = {
     docLabel: (p) => p.id,
   }),
 
+  // EFFECT — headless, always-mounted Sonata-scoped side effects. Components
+  // contributed here render nothing; they observe shared context (current song,
+  // playback state) and run effects (e.g. recording a play, scrobbling). Mounted
+  // once inside SonataProvider so contributors can `useSonata()`.
+  Effect: defineRenderSlot<{ component: ComponentType }>("sonata.effect", {
+    reorder: false,
+    docLabel: (p) => p.id,
+  }),
+
   // TRANSPORT — full-width horizontal strip below the toolbar (progress bar, …).
   Transport: defineRenderSlot<{ component: ComponentType }>("sonata.transport", {
     reorder: false,

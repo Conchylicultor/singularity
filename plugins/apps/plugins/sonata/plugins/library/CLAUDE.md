@@ -6,7 +6,11 @@
 
 - Description: Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
 - Web:
+  - Slots: `Library.Sort`
   - Contributes: `Sonata.Home` "library" → `SongLibrary`
+  - Exports: Types: `SortOrderProps`; Values: `Library`
+- Cross-plugin:
+  - Slot contributors: `playback-history`
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`

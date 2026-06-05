@@ -15,6 +15,7 @@ export const handleCreateSong = implement(createSong, async ({ body }) => {
     midiAttachmentId: body.attachmentId,
     durationSec: body.durationSec,
     endBeat: body.endBeat,
+    midiTrackCount: body.midiTrackCount,
   });
   // Link the attachment so the orphan sweep never reclaims this song's MIDI.
   await songAttachments.add(id, [body.attachmentId]);

@@ -14,6 +14,7 @@ export const CreateSongBodySchema = z.object({
   attachmentId: z.string(),
   durationSec: z.number(),
   endBeat: z.number(),
+  midiTrackCount: z.number(),
 });
 export type CreateSongBody = z.infer<typeof CreateSongBodySchema>;
 
