@@ -65,11 +65,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Root` → `AppsLayout`
     - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
   - Cross-plugin:
-    - Imported by: `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
+    - Imported by: `app-cards`, `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
-        - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
+        - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
             - Uses: `apps.Apps`
@@ -178,6 +178,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Forge" → `ForgeLayout`
             - Uses: `apps.Apps`
             - Exports: Values: `Forge`
+    - **`home`** — Home — app launcher and entry point.
+      - Plugins:
+        - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
+          - Web:
+            - Contributes: `Home.Section` "Apps" → `AppGrid`
+            - Uses: `apps.Apps`, `apps.useCurrentAppId`
+        - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
+          - Web:
+            - Contributes: `Apps.App` "Home" → `HomeLayout`
+            - Uses: `apps.Apps`
+            - Exports: Values: `Home`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
@@ -2243,7 +2254,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Shared:
             - Exports: Types: `CatalogTheme`
 
-- **`welcome`** — Landing pane shown at `/`.
+- **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
   - Web:
     - Contributes: `Pane.Register` "welcome"
     - Uses: `conversations.useConversations`
