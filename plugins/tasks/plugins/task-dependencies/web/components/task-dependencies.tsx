@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
-import { tasksResource, type Task } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
@@ -12,7 +12,7 @@ import type { TaskChainTarget } from "@plugins/tasks/core";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
-function targetForSibling(task: Task): TaskChainTarget {
+function targetForSibling(task: TaskListItem): TaskChainTarget {
   if (task.folderId) {
     return { kind: "folder", folderTaskId: task.folderId };
   }
@@ -93,7 +93,7 @@ function DepChip({
 }: {
   taskId: string;
   depId: string;
-  tasks: readonly Task[];
+  tasks: readonly TaskListItem[];
 }) {
   const dep = tasks.find((t) => t.id === depId) ?? null;
   const title = dep?.title ?? depId;

@@ -1,8 +1,8 @@
-import type { Task } from "./resources";
+import type { TaskListItem } from "./resources";
 
 export function countTransitiveDependents(
   taskId: string,
-  tasks: readonly Task[],
+  tasks: readonly TaskListItem[],
 ): number {
   const dependentsOf = new Map<string, string[]>();
   for (const t of tasks) {

@@ -1,5 +1,6 @@
 export {
   TaskSchema,
+  TaskListItemSchema,
   TaskStatusSchema,
   AttemptSchema,
   AttemptStatusSchema,
@@ -9,6 +10,7 @@ export {
 } from "../server/internal/schema";
 export type {
   Task,
+  TaskListItem,
   TaskStatus,
   Attempt,
   AttemptStatus,

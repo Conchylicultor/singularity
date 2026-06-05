@@ -3,7 +3,7 @@ import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { tasksResource, type Task } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
@@ -40,7 +40,7 @@ function DependentChip({
 }: {
   taskId: string;
   dependentId: string;
-  tasks: readonly Task[];
+  tasks: readonly TaskListItem[];
 }) {
   const dependent = tasks.find((t) => t.id === dependentId) ?? null;
   const title = dependent?.title ?? dependentId;

@@ -1,5 +1,6 @@
 export {
   tasksResource,
+  taskDetailResource,
   attemptsResource,
   pushesResource,
 } from "./resources";
@@ -9,6 +10,7 @@ export type {
   ConversationSummary,
   Push,
   Task,
+  TaskListItem,
 } from "./resources";
 export {
   listTasks,

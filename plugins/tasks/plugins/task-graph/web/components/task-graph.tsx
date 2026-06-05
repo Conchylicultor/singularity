@@ -17,7 +17,7 @@ import {
 import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { tasksResource, type Task } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
@@ -28,7 +28,7 @@ const NODE_HEIGHT = 36;
 const NODE_TYPE = "task";
 
 type TaskNodeData = {
-  task: Task;
+  task: TaskListItem;
   selected: boolean;
   hasChildren: boolean;
 };
@@ -39,7 +39,7 @@ const GROUP_BG_TYPE = "groupBackground";
 type GroupBgData = { groupId: string; label: string; depth: number };
 type GroupBgNode = Node<GroupBgData, typeof GROUP_BG_TYPE>;
 
-function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
+function computeDagClosure(rootId: string, allTasks: readonly TaskListItem[]): TaskListItem[] {
   const byId = new Map(allTasks.map((t) => [t.id, t]));
   const reverseDeps = new Map<string, string[]>();
   for (const t of allTasks) {
@@ -63,10 +63,10 @@ function computeDagClosure(rootId: string, allTasks: readonly Task[]): Task[] {
     for (const r of reverseDeps.get(id) ?? []) stack.push(r);
     if (t.groupId && byId.has(t.groupId)) stack.push(t.groupId);
   }
-  return [...visited].map((id) => byId.get(id)).filter((t): t is Task => !!t);
+  return [...visited].map((id) => byId.get(id)).filter((t): t is TaskListItem => !!t);
 }
 
-function getGroupDepth(groupId: string, byId: Map<string, Task>): number {
+function getGroupDepth(groupId: string, byId: Map<string, TaskListItem>): number {
   let depth = 0;
   let current = groupId;
   const seen = new Set<string>();
@@ -80,13 +80,13 @@ function getGroupDepth(groupId: string, byId: Map<string, Task>): number {
   return depth;
 }
 
-function isNonBlocking(task: Task): boolean {
+function isNonBlocking(task: TaskListItem): boolean {
   return task.status === "done" || task.status === "dropped";
 }
 
 function layoutDag(
-  closure: readonly Task[],
-  allTasks: readonly Task[],
+  closure: readonly TaskListItem[],
+  allTasks: readonly TaskListItem[],
   selectedId: string,
   onNavigate: (taskId: string) => void,
 ) {

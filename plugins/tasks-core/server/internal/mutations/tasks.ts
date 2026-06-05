@@ -3,7 +3,7 @@ import { db } from "@plugins/database/server";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
 import { tasks } from "../schema";
 import type { TaskStatus } from "../schema";
-import { tasksResource } from "../resources";
+import { tasksResource, taskDetailResource } from "../resources";
 import { findNextRankInFolder, isDescendant, taskDependsOn } from "../queries/tasks";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -106,6 +106,7 @@ export async function updateTask(id: string, patch: UpdateTaskPatch) {
       .where(eq(_tasks.id, patch.folderId));
   }
   tasksResource.notify();
+  taskDetailResource.notify({ id });
   await emitStatusChangeIfChanged(id, before);
   const [row] = await db.select().from(tasks).where(eq(tasks.id, id)).limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
@@ -163,6 +164,8 @@ export async function deleteTask(id: string): Promise<boolean> {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return false;
   tasksResource.notify();
+  // Clear any open detail pane for the deleted task.
+  taskDetailResource.notify({ id });
 
   // Bridge: for each downstream Z and upstream X, add Z depends-on X.
   const bridgedDownstream = new Set<string>();

@@ -5,7 +5,7 @@ import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { tasksResource } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
-import type { Task, TaskStatus } from "@plugins/tasks-core/core";
+import type { TaskListItem, TaskStatus } from "@plugins/tasks-core/core";
 import { cn } from "@/lib/utils";
 
 function isTerminal(status: TaskStatus): boolean {
@@ -17,7 +17,7 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
   const [hideTerminal, setHideTerminal] = useState(true);
 
   const filterFn = useCallback(
-    (t: Task) => !hideTerminal || !isTerminal(t.status),
+    (t: TaskListItem) => !hideTerminal || !isTerminal(t.status),
     [hideTerminal],
   );
 

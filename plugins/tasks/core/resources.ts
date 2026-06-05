@@ -5,9 +5,11 @@ import type {
   AttemptWithConversations,
   Push,
   Task,
+  TaskListItem,
 } from "@plugins/tasks-core/core";
 import {
   TaskSchema,
+  TaskListItemSchema,
   AttemptWithConversationsSchema,
   PushSchema,
 } from "@plugins/tasks-core/core";
@@ -20,8 +22,16 @@ export type {
   ConversationSummary,
   Push,
   Task,
+  TaskListItem,
 } from "@plugins/tasks-core/core";
 
-export const tasksResource = resourceDescriptor<Task[]>("tasks", z.array(TaskSchema), []);
+// Bulk list: lean per-row projection (no `description`). The detail pane reads
+// the full task from `taskDetailResource`, keyed by id.
+export const tasksResource = resourceDescriptor<TaskListItem[]>("tasks", z.array(TaskListItemSchema), []);
+export const taskDetailResource = resourceDescriptor<Task | null, { id: string }>(
+  "task-detail",
+  TaskSchema.nullable(),
+  null,
+);
 export const attemptsResource = resourceDescriptor<AttemptWithConversations[]>("attempts", z.array(AttemptWithConversationsSchema), []);
 export const pushesResource = resourceDescriptor<Push[]>("pushes", z.array(PushSchema), []);

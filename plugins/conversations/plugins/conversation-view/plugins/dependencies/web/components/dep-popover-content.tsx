@@ -3,7 +3,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import type { Task } from "@plugins/tasks/core";
+import type { TaskListItem } from "@plugins/tasks/core";
 
 export function DepPopoverContent({
   label,
@@ -18,7 +18,7 @@ export function DepPopoverContent({
   label: string;
   currentConvs: ConversationRecord[];
   orphanIds: string[];
-  allTasks: Task[];
+  allTasks: TaskListItem[];
   candidates: ConversationRecord[];
   busy: string | null;
   onAdd: (conv: ConversationRecord) => void;

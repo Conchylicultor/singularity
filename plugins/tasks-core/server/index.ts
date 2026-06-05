@@ -2,6 +2,7 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import {
   tasksResource,
+  taskDetailResource,
   attemptsResource,
   pushesResource,
   conversationsLiveResource,
@@ -21,6 +22,7 @@ export { _tasks, _attempts, _conversations } from "./internal/tables";
 // Zod schemas and TS types
 export {
   TaskSchema,
+  TaskListItemSchema,
   TaskStatusSchema,
   AttemptSchema,
   AttemptStatusSchema,
@@ -30,6 +32,7 @@ export {
 } from "./internal/schema";
 export type {
   Task,
+  TaskListItem,
   TaskStatus,
   Attempt,
   AttemptStatus,
@@ -38,9 +41,10 @@ export type {
   ConversationKind,
 } from "./internal/schema";
 
-// Resources (four resources, all owned here)
+// Resources (all owned here)
 export {
   tasksResource,
+  taskDetailResource,
   attemptsResource,
   pushesResource,
   conversationsLiveResource,
@@ -157,7 +161,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(conversationsLiveResource)],
+  contributions: [Resource.Declare(tasksResource), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(conversationsLiveResource)],
   register: [pushLanded, taskStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

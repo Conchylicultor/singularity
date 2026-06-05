@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Conversation, Task } from "@plugins/tasks-core/core";
+import type { Conversation, TaskListItem } from "@plugins/tasks-core/core";
 
 export type AttemptGroup = Conversation[]; // [root, ...forks]
 
@@ -20,10 +20,10 @@ const META_TASK_ID = "task-meta-conversations";
 
 export function useTaskAutoGroups(
   ungroupedAttemptGroups: AttemptGroup[],
-  tasks: Task[],
+  tasks: TaskListItem[],
 ): UseTaskAutoGroupsResult {
   return useMemo(() => {
-    const taskById = new Map<string, Task>();
+    const taskById = new Map<string, TaskListItem>();
     const reverseDeps = new Map<string, string[]>();
     for (const task of tasks) {
       taskById.set(task.id, task);
