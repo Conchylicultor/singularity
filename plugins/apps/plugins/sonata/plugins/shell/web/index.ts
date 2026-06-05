@@ -8,6 +8,7 @@ export type { InstrumentVoices, ScheduledNote } from "./slots";
 export {
   useSonata,
   SonataProvider,
+  TEMPO_MATH_FLOOR,
   type SonataContextValue,
   type TransportClock,
 } from "./context";

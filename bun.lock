@@ -284,6 +284,10 @@
       "name": "@singularity/plugin-apps-sonata-theory",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/transport-bar": {
+      "name": "@singularity/plugin-apps-sonata-transport-bar",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/workflows": {
       "name": "@singularity/plugin-apps-workflows",
       "version": "0.0.1",
@@ -2459,6 +2463,8 @@
     "@singularity/plugin-apps-sonata-sources-midi": ["@singularity/plugin-apps-sonata-sources-midi@workspace:plugins/apps/plugins/sonata/plugins/sources/plugins/midi"],
 
     "@singularity/plugin-apps-sonata-theory": ["@singularity/plugin-apps-sonata-theory@workspace:plugins/apps/plugins/sonata/plugins/theory"],
+
+    "@singularity/plugin-apps-sonata-transport-bar": ["@singularity/plugin-apps-sonata-transport-bar@workspace:plugins/apps/plugins/sonata/plugins/transport-bar"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 

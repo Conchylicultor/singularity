@@ -40,6 +40,7 @@ export interface InstrumentVoices {
  *  - Analyzer (rich data)  — pure `(Score) => Annotation[]`; all run, merged in.
  *  - Overlay  (rich visual)— capability-filtered geometry, rendered via `renderIsolated`.
  *  - Instrument            — audio voice manager bound to a Web Audio context.
+ *  - Toolbar               — action widgets on the right of the top toolbar (play/pause, speed, …).
  *  - Transport             — full-width horizontal strip below the toolbar (progress bar, …).
  *  - Section               — pre-existing free-floating panels (current-chord readout, …).
  */
@@ -122,6 +123,13 @@ export const Sonata = {
   // HOME — the app landing surface (song library). Single render slot; the
   // library plugin contributes its gallery here. Shell shows it when view==="library".
   Home: defineRenderSlot<{ component: ComponentType }>("sonata.home", {
+    reorder: false,
+    docLabel: (p) => p.id,
+  }),
+
+  // TOOLBAR — action widgets pinned to the right of the top toolbar (transport
+  // controls: play/pause, speed, …). Open slot so any plugin can add an action.
+  Toolbar: defineRenderSlot<{ component: ComponentType }>("sonata.toolbar", {
     reorder: false,
     docLabel: (p) => p.id,
   }),

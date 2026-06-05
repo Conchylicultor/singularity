@@ -2,7 +2,7 @@ import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
 import { PaneOverlayHost } from "@plugins/layouts/plugins/miller/web";
 import { Sonata } from "../slots";
-import { SonataProvider, useSonata } from "../context";
+import { SonataProvider, useSonata, TEMPO_MATH_FLOOR } from "../context";
 
 /**
  * A horizontal picker rendered from a list of `{ id, label, icon? }` items.
@@ -70,13 +70,10 @@ function SonataLayoutInner() {
     view,
     currentSongTitle,
     cursorBeat,
-    isPlaying,
     tempoScale,
     activeDisplayId,
     setActiveDisplay,
     backToLibrary,
-    play,
-    stop,
   } = useSonata();
 
   // Enumerate displays via the dispatch slot's contributions — the `Extra`
@@ -134,20 +131,12 @@ function SonataLayoutInner() {
           />
         </div>
 
+        {/* Toolbar action widgets (transport controls: play/pause, speed, …).
+            Open slot — renders nothing until a plugin contributes. */}
         <div className="ml-auto flex items-center gap-2">
-          <button
-            type="button"
-            onClick={isPlaying ? stop : play}
-            className="rounded-md border border-border px-3 py-1 text-xs font-medium hover:bg-muted/50"
-          >
-            {isPlaying ? "Stop" : "Play"}
-          </button>
-          <span className="tabular-nums text-xs text-muted-foreground">
-            beat {cursorBeat.toFixed(2)}
-          </span>
-          <span className="tabular-nums text-xs text-muted-foreground">
-            {tempoScale.toFixed(2)}×
-          </span>
+          <Sonata.Toolbar.Render>
+            {(t) => <t.component key={t.id} />}
+          </Sonata.Toolbar.Render>
         </div>
       </div>
 
@@ -164,7 +153,10 @@ function SonataLayoutInner() {
             <Sonata.Display.Dispatch
               score={score}
               cursorBeat={cursorBeat}
-              tempoScale={tempoScale}
+              // Displays scale geometry by this to cancel the scale folded into
+              // `score`; floor it so a frozen 0% (which scales `score` by the
+              // same floor) cancels to a finite layout instead of NaN.
+              tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
               activeDisplayId={effectiveDisplayId}
             />
           ) : (

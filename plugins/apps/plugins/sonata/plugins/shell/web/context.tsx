@@ -20,9 +20,22 @@ import {
 import { Sonata } from "./slots";
 import { publishSonataTransport } from "./transport-store";
 
-/** Tempo scale clamp — slowest 0.25× (quarter speed) to fastest 4× (quadruple). */
-const MIN_TEMPO_SCALE = 0.25;
+/** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
+const MIN_TEMPO_SCALE = 0;
 const MAX_TEMPO_SCALE = 4;
+
+/**
+ * The smallest tempo factor the beat↔seconds math ever sees. At a literal 0×
+ * the tempo map collapses to 0 bpm — infinite seconds per beat — which makes
+ * `beatToSeconds` non-finite and propagates `NaN` through the transport, the
+ * audio scheduler, and the piano-roll geometry (which multiplies seconds by the
+ * scale, so `Infinity × 0 = NaN`). 0% is instead modeled as a *frozen* transport
+ * (playback is paused; see `play`/the freeze effect below), so the cursor never
+ * advances and this floor is never observable — it exists purely to keep the
+ * tempo map finite. It fully cancels in the piano-roll geometry, so the exact
+ * value doesn't affect layout.
+ */
+export const TEMPO_MATH_FLOOR = 0.05;
 
 /**
  * Shared Sonata state + transport.
@@ -196,7 +209,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // consistent timeline. Beats are untouched (analyzers already ran on the
   // unscaled score), only the beat→seconds mapping speeds up or slows down.
   const score = useMemo<Score>(
-    () => scaleTempo(baseScore, tempoScale),
+    () => scaleTempo(baseScore, Math.max(tempoScale, TEMPO_MATH_FLOOR)),
     [baseScore, tempoScale],
   );
 
@@ -280,6 +293,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   const play = useCallback(() => {
     if (scoreEndBeat(scoreRef.current) <= 0) return;
+    // 0% is a frozen transport — there is nothing to advance, so don't start.
+    if (tempoScaleRef.current === 0) return;
     setIsPlaying(true);
   }, []);
 
@@ -332,6 +347,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     reanchor(cursorBeatRef.current);
   }, [score, reanchor]);
+
+  // 0% speed freezes the transport: pause so neither the cursor nor the audio
+  // advances. Stepping the speed back up requires pressing play again.
+  useEffect(() => {
+    if (tempoScale === 0) setIsPlaying(false);
+  }, [tempoScale]);
 
   useEffect(() => {
     if (!isPlaying) {

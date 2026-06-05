@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-sonata-transport-bar",
+  "description": "Sonata toolbar transport: play/pause button and Synthesia-style playback-speed selector.",
+  "private": true,
+  "version": "0.0.1"
+}
