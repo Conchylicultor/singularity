@@ -4,7 +4,8 @@ import { closeSync, existsSync, mkdirSync, openSync, readdirSync, readFileSync, 
 import { basename, join } from "path";
 import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
-import { createPushProfiler } from "../push-profiler";
+import { createPushProfiler, type PushProfiler } from "../push-profiler";
+import { withHostSlot } from "../host-semaphore";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
 
 async function run(
@@ -38,13 +39,37 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 async function runChecksSubprocess(root: string): Promise<boolean> {
   const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,
-    // Tag as a push so the check takes the reserved push slot in the host
-    // concurrency gate — pushes are never queued behind agent builds.
-    env: { ...process.env, SINGULARITY_PUSH_CHECK: "1" },
+    // The parent push process already holds the reserved push slot (see
+    // runChecksUnderPushSlot). Tell the child to run its checks WITHOUT
+    // acquiring a host slot — a second acquire of the single push slot would
+    // deadlock, since this parent holds it and is awaiting the child here.
+    env: { ...process.env, SINGULARITY_HOST_SLOT_HELD: "1" },
     stdout: "inherit",
     stderr: "inherit",
   });
   return (await proc.exited) === 0;
+}
+
+// Run the rebased-tree checks while holding the reserved host-wide push slot in
+// THIS process, so the slot wait is its own visible "slot-wait" bar in the push
+// Gantt (it was previously absorbed into the spawned check's "checks" step).
+// stepStart fires immediately before the acquire; stepEnd fires in onAcquired
+// (which runs on both immediate-acquire and post-wait), so the step always
+// appears (~0ms when uncontended). The "checks" step still wraps the actual
+// subprocess run. The child runs exempt — see runChecksSubprocess.
+async function runChecksUnderPushSlot(root: string, profiler: PushProfiler): Promise<boolean> {
+  profiler.stepStart("slot-wait");
+  return withHostSlot(
+    "push",
+    async () => {
+      profiler.stepStart("checks");
+      console.log("Running checks...");
+      const ok = await runChecksSubprocess(root);
+      profiler.stepEnd("checks");
+      return ok;
+    },
+    { onAcquired: () => profiler.stepEnd("slot-wait") },
+  );
 }
 
 async function getWorktreeRoot(): Promise<string> {
@@ -345,10 +370,7 @@ export function registerPush(program: Command) {
             await postRebaseNormalize(fromMainRoot, pushId);
             profiler.stepEnd("normalize");
 
-            profiler.stepStart("checks");
-            console.log("Running checks...");
-            const ok = await runChecksSubprocess(fromMainRoot);
-            profiler.stepEnd("checks");
+            const ok = await runChecksUnderPushSlot(fromMainRoot, profiler);
             if (!ok) {
               console.error(
                 "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
@@ -455,11 +477,8 @@ export function registerPush(program: Command) {
           // 4. Run checks on the rebased tree — this is exactly what will land on main.
           //    Spawned as a subprocess so the check code comes from the rebased
           //    tree, not the (potentially stale) module cache of this process.
-          profiler.stepStart("checks");
-          console.log("Running checks...");
           const root = await getWorktreeRoot();
-          const ok = await runChecksSubprocess(root);
-          profiler.stepEnd("checks");
+          const ok = await runChecksUnderPushSlot(root, profiler);
           if (!ok) {
             console.error(
               `Checks failed after rebasing ${branch} onto main. ` +

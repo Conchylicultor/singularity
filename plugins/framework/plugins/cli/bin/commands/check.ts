@@ -16,10 +16,13 @@ export function registerCheck(program: Command) {
         return;
       }
       await checkBroadcasts("check");
-      // Push runs its checks via this command in a subprocess (see push.ts);
-      // it tags them so they take the reserved push slot instead of a build
-      // slot. A direct `./singularity check` is a build-pool job.
-      const kind: HostSlotKind = process.env.SINGULARITY_PUSH_CHECK ? "push" : "build";
+      // Push runs its checks via this command in a subprocess (see push.ts).
+      // The PARENT push process already holds the reserved push slot before
+      // spawning us, so we must NOT acquire one ourselves — a second acquire of
+      // the single push slot would deadlock (parent holds it, parent awaits us).
+      // It signals this via SINGULARITY_HOST_SLOT_HELD; we run exempt (no gate).
+      // A direct `./singularity check` is a build-pool job.
+      const kind: HostSlotKind = process.env.SINGULARITY_HOST_SLOT_HELD ? "exempt" : "build";
       const ok = await withHostSlot(kind, () =>
         runChecks(checks.length > 0 ? checks : undefined),
       );

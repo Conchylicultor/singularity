@@ -34,7 +34,7 @@ export interface PushContentionRecord {
   steps: Array<{ name: string; startMs: number; durationMs: number }>;
 }
 
-interface PushProfiler {
+export interface PushProfiler {
   markLockRequested(): void;
   markLockAcquired(): void;
   stepStart(name: string): void;
