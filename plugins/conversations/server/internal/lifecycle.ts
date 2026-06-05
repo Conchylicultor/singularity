@@ -22,6 +22,7 @@ import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
 import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
+import { wrapPreprompt } from "@plugins/conversations/plugins/transcript-watcher/core";
 
 const DEFAULT_RUNTIME = "tmux";
 
@@ -89,8 +90,9 @@ export async function createConversation(
   let conversationId: string;
   let newAttemptId: string | undefined;
   // The task this conversation belongs to, used to resolve a per-task preprompt
-  // (--append-system-prompt). Derived from the existing attempt when reusing a
-  // worktree, otherwise the task we launch under.
+  // (baked into the first user turn as a <special_instructions> block). Derived
+  // from the existing attempt when reusing a worktree, otherwise the task we
+  // launch under.
   let effectiveTaskId: string | undefined;
 
   if (attemptId) {
@@ -168,10 +170,23 @@ export async function createConversation(
   }
 
   // Resolve the per-task preprompt (config list-item id → text). A dangling or
-  // empty selection resolves to undefined → the flag is simply omitted.
-  const appendSystemPrompt = effectiveTaskId
+  // empty selection resolves to undefined → nothing is injected.
+  const preprompt = effectiveTaskId
     ? resolvePreprompt((await getTaskPreprompt(effectiveTaskId))?.prepromptId)
     : undefined;
+
+  // Bake the preprompt into the FIRST user turn (wrapped in
+  // <special_instructions>) so it's durable, visible in the transcript, and
+  // replayed verbatim on resume/fork. Only on a fresh launch: a
+  // forked/resumed transcript already contains the baked first turn, so
+  // re-injecting (`claude --resume --fork-session` copies the original) would
+  // duplicate it. The no-initial-prompt edge yields a first turn that is the
+  // preprompt block alone.
+  if (preprompt && !resumeSessionId) {
+    resolvedPrompt = resolvedPrompt
+      ? `${wrapPreprompt(preprompt)}\n\n${resolvedPrompt}`
+      : wrapPreprompt(preprompt);
+  }
 
   try {
     await runtime.create(conversationId, worktreePath, {
@@ -179,7 +194,6 @@ export async function createConversation(
       model,
       resumeSessionId,
       forkSession: !!opts.forkFromConversationId,
-      appendSystemPrompt,
     });
   } catch (err) {
     // Without this, the row stays at "starting" forever — the poller skips

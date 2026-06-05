@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Per-task preprompt picker in the task detail pane; the selection is appended to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, injected at launch via --append-system-prompt.
+- Description: Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "preprompt" → `TaskPrepromptSection`
   - Uses: `notifications.toast`

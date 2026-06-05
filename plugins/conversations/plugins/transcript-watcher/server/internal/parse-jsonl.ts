@@ -1,4 +1,5 @@
 import { XMLParser } from "fast-xml-parser";
+import { extractPreprompt } from "../../core";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
@@ -196,6 +197,11 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
   const toolCallByUseId = new Map<string, ToolCallEvent>();
   // Deferred tool results whose call hasn't appeared yet
   const pendingResults: { toolUseId: string; result: ToolCallResult }[] = [];
+  // The launch preprompt is baked into the first user turn (wrapped in
+  // <special_instructions>). Lift it out into a dedicated `preprompt` event so
+  // it renders as a collapsed Instructions card, not as raw user text. Only
+  // ever appears once; set true on a real hit so a later turn can't re-trigger.
+  let seenPreprompt = false;
 
   for (const line of raw.split("\n")) {
     if (!line) continue;
@@ -257,7 +263,16 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
 
       const content = msg.content;
       if (typeof content === "string") {
-        const remaining = extractTaskNotifications(content, ts, events);
+        let body = content;
+        if (!seenPreprompt) {
+          const { preprompt, rest } = extractPreprompt(body);
+          if (preprompt) {
+            seenPreprompt = true;
+            events.push({ kind: "preprompt", at: ts, text: preprompt });
+            body = rest;
+          }
+        }
+        const remaining = extractTaskNotifications(body, ts, events);
         if (remaining.length > 0) {
           await pushTextWithImages(remaining, ts, events);
         }
@@ -280,7 +295,16 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
             }
           // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; JSON array may contain null/undefined elements
           } else if (block?.type === "text" && typeof block.text === "string") {
-            const remaining = extractTaskNotifications(block.text, ts, events);
+            let body = block.text;
+            if (!seenPreprompt) {
+              const { preprompt, rest } = extractPreprompt(body);
+              if (preprompt) {
+                seenPreprompt = true;
+                events.push({ kind: "preprompt", at: ts, text: preprompt });
+                body = rest;
+              }
+            }
+            const remaining = extractTaskNotifications(body, ts, events);
             if (remaining.length > 0) {
               await pushTextWithImages(remaining, ts, events);
             }

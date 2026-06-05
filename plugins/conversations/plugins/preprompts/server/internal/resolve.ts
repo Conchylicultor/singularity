@@ -4,8 +4,8 @@ import { prepromptsConfig } from "../../shared/config";
 /**
  * Resolve a preprompt id (a config list-item UUID) to its prompt text.
  * Returns undefined when the id is absent, no longer present in the config
- * (e.g. the preprompt was deleted), or resolves to empty text — callers omit
- * `--append-system-prompt` entirely in that case (fail-soft, never crashes a
+ * (e.g. the preprompt was deleted), or resolves to empty text — callers inject
+ * nothing into the first user turn in that case (fail-soft, never crashes a
  * launch over a dangling reference).
  */
 export function resolvePreprompt(id: string | null | undefined): string | undefined {

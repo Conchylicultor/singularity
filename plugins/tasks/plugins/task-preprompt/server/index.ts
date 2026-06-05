@@ -11,7 +11,7 @@ export { taskPrepromptsResource } from "./internal/resource";
 export default {
   name: "Tasks: Preprompt",
   description:
-    "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, injected at launch via --append-system-prompt.",
+    "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.",
   contributions: [Resource.Declare(taskPrepromptsResource)],
   httpRoutes: {
     [putTaskPreprompt.route]: handlePutTaskPreprompt,

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named system-prompt snippets appended to a task's agent via --append-system-prompt.
+- Description: Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
 - Web:
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`

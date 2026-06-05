@@ -7,7 +7,7 @@ export { useTaskPreprompt } from "./hooks";
 export default {
   name: "Tasks: Preprompt",
   description:
-    "Per-task preprompt picker in the task detail pane; the selection is appended to the agent's system prompt on launch.",
+    "Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch.",
   contributions: [
     TaskDetailSlots.Section({ id: "preprompt", label: "Preprompt", component: TaskPrepromptSection }),
   ],

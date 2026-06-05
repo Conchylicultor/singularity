@@ -7,6 +7,6 @@ export { resolvePreprompt } from "./internal/resolve";
 export default {
   name: "Preprompts",
   description:
-    "Library of named system-prompt snippets appended to a task's agent via --append-system-prompt.",
+    "Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.",
   contributions: [ConfigV2.Register({ descriptor: prepromptsConfig })],
 } satisfies ServerPluginDefinition;

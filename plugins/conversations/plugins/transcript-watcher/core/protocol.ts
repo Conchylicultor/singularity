@@ -1,5 +1,30 @@
 import { z } from "zod";
 
+// Wire tag the agent reads in its first user turn. Named `special_instructions`
+// (not `preprompt`) so the model reads it as an imperative to follow. The
+// internal event kind stays `preprompt`; the UI label is "Instructions". This
+// constant is the SINGLE SOURCE OF TRUTH shared by the launch injector
+// (lifecycle.ts) and the transcript parser (parse-jsonl.ts) — a drift between
+// the two would silently break extraction.
+export const PREPROMPT_TAG = "special_instructions";
+
+/** Wrap preprompt text for prepending to the first user turn. */
+export function wrapPreprompt(text: string): string {
+  return `<${PREPROMPT_TAG}>\n${text}\n</${PREPROMPT_TAG}>`;
+}
+
+/** Lift the first preprompt block out of `text`. Returns the inner text (or null) + the remainder. */
+export function extractPreprompt(text: string): { preprompt: string | null; rest: string } {
+  // Local regex (no `g` flag) — first match only; the preprompt is only ever
+  // injected into the first user turn.
+  const re = new RegExp(`<${PREPROMPT_TAG}>([\\s\\S]*?)</${PREPROMPT_TAG}>`);
+  const m = re.exec(text);
+  if (!m) return { preprompt: null, rest: text };
+  const inner = m[1]!.trim();
+  const rest = (text.slice(0, m.index) + text.slice(m.index + m[0].length)).trim();
+  return { preprompt: inner ? inner : null, rest };
+}
+
 export const TokenUsageSchema = z.object({
   input: z.number().int(),
   output: z.number().int(),
@@ -77,6 +102,11 @@ export const JsonlEventSchema = z.discriminatedUnion("kind", [
   }),
   z.object({
     kind: z.literal("summary"),
+    at: z.string(),
+    text: z.string(),
+  }),
+  z.object({
+    kind: z.literal("preprompt"),
     at: z.string(),
     text: z.string(),
   }),

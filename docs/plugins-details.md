@@ -731,7 +731,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
             - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
-            - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
+            - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `preprompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Server:
             - Uses: `tasks-core.getConversationClaudeSessionId`
             - Resources: `jsonl-events` (push)
@@ -783,6 +783,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
+            - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
+              - Web:
+                - Contributes: `JsonlViewer.EventRenderer` "preprompt" → `PrepromptRow`
             - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "queue-operation" → `QueueOperationRow`
@@ -1007,7 +1010,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Web:
         - Exports: Values: `loadChainForConversation`
-    - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named system-prompt snippets appended to a task's agent via --append-system-prompt.
+    - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
       - Web:
         - Contributes: `ConfigV2.WebRegister`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
@@ -1049,7 +1052,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `tasks-core.getConversationClaudeSessionId`
         - Exports: Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
       - Core:
-        - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `isInterruptContent`, `JsonlEventSchema`, `TokenUsageSchema`
+        - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `extractPreprompt`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `TokenUsageSchema`, `wrapPreprompt`
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
   - Web:
@@ -2011,7 +2014,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Tasks.View` "Tree" → `TasksList`
             - Uses: `tasks.patchTask`
             - Exports: Values: `TasksList`
-    - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is appended to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, injected at launch via --append-system-prompt.
+    - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "preprompt" → `TaskPrepromptSection`
         - Uses: `notifications.toast`
