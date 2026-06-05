@@ -3,7 +3,6 @@ import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
-import { PaneHistoryButtons } from "./pane-chrome";
 
 interface Props {
   pane: PaneInternal;
@@ -61,9 +60,9 @@ function ResolveGuardInner({
  * Minimal chrome header for resolve-guard fallback states (Loading / Not
  * Found). The resolved resource is absent, so the real pane component — and
  * its `Actions` contributions — never render. We still want the standard
- * navigation controls (‹ › history, promote, and especially × close) so the
- * pane can be dismissed. Mirrors `PaneChrome`'s control logic and gating but
- * omits the actions slot, which has no resource to act on.
+ * navigation controls (promote and especially × close) so the pane can be
+ * dismissed. Mirrors `PaneChrome`'s control logic and gating but omits the
+ * actions slot, which has no resource to act on.
  */
 function FallbackChrome({
   pane,
@@ -81,7 +80,6 @@ function FallbackChrome({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-10 items-center gap-2 border-b px-2">
-        {chrome.history && <PaneHistoryButtons pane={paneObject} />}
         <span className="truncate text-sm font-medium text-muted-foreground">
           {title}
         </span>

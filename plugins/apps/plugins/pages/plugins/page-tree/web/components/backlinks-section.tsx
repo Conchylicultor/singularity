@@ -10,7 +10,7 @@ export function BacklinksSection({ documentId }: { documentId: string }) {
   return (
     <Backlinks
       documentId={documentId}
-      onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "push" })}
+      onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
     />
   );
 }

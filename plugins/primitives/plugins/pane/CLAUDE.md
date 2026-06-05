@@ -191,10 +191,10 @@ Modes:
 ## Chrome
 
 **Every pane should wrap its body in `<PaneChrome pane={…}>`** — that's
-the convention. PaneChrome renders a standard header: ‹ › history
-buttons, the title, optional left-side actions, optional right-side
-actions, a promote button (detach from ancestors and make root), and
-a × close button on the far right. Both promote and close only show
+the convention. PaneChrome renders a standard header: the title,
+optional left-side actions, optional right-side actions, a promote
+button (detach from ancestors and make root), and a × close button on
+the far right. Both promote and close only show
 when `depth > 0`. Panes whose body is its own UI
 (sidebar lists, list of cards, etc.) and don't need a chrome header may
 opt out with `chrome: false` in `Pane.define`.
@@ -337,8 +337,6 @@ removing a `Pane.Register({ pane })` entry from a plugin's
 
 ## Not yet implemented (deferred)
 
-- Pane-scoped ‹ › history stack (chrome buttons currently fall back to
-  `window.history.back/forward`).
 - `keepalive` for heavy panes — switching slots remounts by default.
 - Layout tree (drag-and-drop, tabs, overlays).
 
@@ -352,7 +350,7 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneHistoryButtons`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
+  - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
 - Cross-plugin:
   - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
 

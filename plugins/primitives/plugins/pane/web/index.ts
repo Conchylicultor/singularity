@@ -38,11 +38,7 @@ export type {
   PaneOpenMode,
   ResolveHook,
 } from "./pane";
-export {
-  PaneChrome,
-  PaneHistoryButtons,
-  PaneActionsSlot,
-} from "./components/pane-chrome";
+export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
 export { PaneIconAction } from "./components/pane-icon-action";
 export { PaneResolveGuard } from "./components/pane-resolve-guard";
 export { PaneLayoutContext } from "./maximize-context";

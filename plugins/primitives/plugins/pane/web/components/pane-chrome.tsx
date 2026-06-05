@@ -1,12 +1,6 @@
 import { Fragment, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import {
-  MdChevronLeft,
-  MdChevronRight,
-  MdClose,
-  MdMoreHoriz,
-  MdOpenInFull,
-} from "react-icons/md";
+import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
@@ -41,13 +35,12 @@ interface PaneChromeProps {
 }
 
 /**
- * Standard pane header: ‹ › history buttons, title, optional
- * `position="left"` actions, optional `position="right"` actions, an optional
- * expand button, and a × close button on the far right. The close button is
- * shown by default for panes with a parent (opt out via
- * `chrome: { close: false }`). Pane authors who want a fully custom header
- * layout can opt out (`chrome: false` in `Pane.define`) and compose the
- * pieces (`<PaneHistoryButtons/>`, `<PaneActionsSlot/>`) themselves.
+ * Standard pane header: title, optional `position="left"` actions, optional
+ * `position="right"` actions, an optional expand button, and a × close button
+ * on the far right. The close button is shown by default for panes with a
+ * parent (opt out via `chrome: { close: false }`). Pane authors who want a
+ * fully custom header layout can opt out (`chrome: false` in `Pane.define`)
+ * and compose the pieces (`<PaneActionsSlot/>`) themselves.
  */
 export function PaneChrome({ pane, title, actions, hideRightActions, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
@@ -65,7 +58,6 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >
-        {chrome.history && <PaneHistoryButtons pane={pane} />}
         {resolvedTitle != null &&
           resolvedTitle !== "" &&
           (typeof resolvedTitle === "string" ? (
@@ -116,29 +108,6 @@ function chromeTitle(pane: PaneObject<any, any>, match: PaneMatch | null): React
   const entry = match?.chain.find((e) => e.pane === pane._internal);
   if (!entry) return null;
   return chrome.title(entry.fullParams);
-}
-
-export function PaneHistoryButtons({ pane }: { pane: PaneObject<any, any> }) {
-  return (
-    <div className="flex items-center gap-0.5">
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => pane.back()}
-        aria-label="Back"
-      >
-        <MdChevronLeft className="size-4" />
-      </Button>
-      <Button
-        variant="ghost"
-        size="sm"
-        onClick={() => pane.forward()}
-        aria-label="Forward"
-      >
-        <MdChevronRight className="size-4" />
-      </Button>
-    </div>
-  );
 }
 
 export function PaneActionsSlot({
