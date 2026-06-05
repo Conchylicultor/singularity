@@ -1,4 +1,4 @@
-import { useState, useEffect, Suspense } from "react";
+import { useState, useEffect } from "react";
 import {
   PluginProvider,
   Core,
@@ -8,18 +8,27 @@ import {
 import type { LoadedPlugin, PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import { NotificationsProvider } from "@plugins/primitives/plugins/live-state/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { webEntries } from "@plugins/framework/plugins/web-sdk/core/web.generated";
 import { PluginLoadErrors } from "./components/plugin-load-errors";
 
-// Shown while the app suspends on first load — chiefly while config_v2 resources
-// resolve (useConfig suspends instead of flashing default values).
-function AppLoading() {
-  return (
-    <div className="flex h-screen w-screen items-center justify-center">
-      <Spinner className="text-muted-foreground size-6" />
-    </div>
+// Run every Core.Boot readiness task once, before first paint, so plugins can
+// hydrate caches the initial render depends on (e.g. config — replacing
+// per-component Suspense). Enumerated from the raw contributions because
+// PluginProvider (and useContributions) isn't mounted yet. A failing or hung
+// task must never brick boot: allSettled + log, then render regardless — reads
+// degrade to their own fallbacks and self-heal via the WS shortly after.
+async function runBootTasks(plugins: LoadedPlugin[]): Promise<void> {
+  const tasks = plugins.flatMap((p) =>
+    (p.contributions ?? []).filter((c) => c._slotId === Core.Boot.id),
   );
+  const results = await Promise.allSettled(
+    tasks.map((t) => (t as unknown as { run: () => Promise<void> }).run()),
+  );
+  for (const r of results) {
+    if (r.status === "rejected") {
+      console.error("[boot] Core.Boot task failed", r.reason);
+    }
+  }
 }
 
 function RootRenderer() {
@@ -49,7 +58,15 @@ export default function App() {
   const [state, setState] = useState<LoadedState | null>(null);
 
   useEffect(() => {
-    void loadPlugins(webEntries).then(setState);
+    let cancelled = false;
+    void (async () => {
+      const result = await loadPlugins(webEntries);
+      await runBootTasks(result.plugins);
+      if (!cancelled) setState(result);
+    })();
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   if (!state) return null;
@@ -59,9 +76,7 @@ export default function App() {
       {state.errors.length > 0 && <PluginLoadErrors errors={state.errors} />}
       <NotificationsProvider>
         <PluginProvider plugins={state.plugins}>
-          <Suspense fallback={<AppLoading />}>
-            <RootRenderer />
-          </Suspense>
+          <RootRenderer />
         </PluginProvider>
       </NotificationsProvider>
     </>

@@ -1,4 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { configBootTask } from "./internal/boot";
 
 export { useConfig } from "./internal/use-config";
 export { useSetConfig } from "./internal/use-set-config";
@@ -11,5 +12,5 @@ export default {
   name: "Config v2",
   collapsed: true,
   description: "Reactive useConfig hook for reading typed JSONC config in the browser.",
-  contributions: [],
+  contributions: [configBootTask],
 } satisfies PluginDefinition;

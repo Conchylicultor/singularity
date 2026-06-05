@@ -46,4 +46,13 @@ export function defineSlot<P>(
 
 export const Core = {
   Root: defineSlot<{ component: ComponentType }>("core.root"),
+  // Async boot-readiness tasks. App awaits every Core.Boot `run()` once, before
+  // the first render, so plugins can hydrate caches (e.g. config) that the
+  // initial paint depends on — replacing per-component Suspense fallbacks.
+  //
+  // This is a sibling to `register` (one-shot, pre-render), NOT a general
+  // lifecycle hook: readiness/hydration only, run once, and a failing or hung
+  // task must never brick boot (App uses allSettled + log-and-skip). For
+  // per-phase behavior, use React's own lifecycle inside a contributed component.
+  Boot: defineSlot<{ run: () => Promise<void> }>("core.boot"),
 };

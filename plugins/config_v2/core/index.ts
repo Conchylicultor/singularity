@@ -41,4 +41,4 @@ export {
   propagate,
   readTypedConfig,
 } from "./internal/tier-logic";
-export { setConfigField, forkScope, deleteScope } from "./internal/endpoints";
+export { setConfigField, forkScope, deleteScope, configSnapshot } from "./internal/endpoints";

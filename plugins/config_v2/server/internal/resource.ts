@@ -43,6 +43,23 @@ function whenRegistryReady<A, R>(fn: (arg: A) => R | Promise<R>): (arg: A) => Pr
   };
 }
 
+// Resolve a descriptor's effective values for a scope, with storage-provider
+// (secret) fields redacted to their defaults before leaving the server. Shared
+// by the per-key resource loader and the boot snapshot so redaction can't drift.
+function resolveRedactedConfig(descriptor: ConfigDescriptor, scopeId?: string): ConfigV2Values {
+  if (!configGetter) {
+    throw new Error("[config-v2] config getter not initialized");
+  }
+  const values = configGetter(descriptor, scopeId) as ConfigV2Values;
+  const redacted = { ...values };
+  for (const [key, field] of Object.entries(descriptor.fields)) {
+    if (hasFieldStorageProvider(field.type.id)) {
+      redacted[key] = field.defaultValue;
+    }
+  }
+  return redacted;
+}
+
 export const configV2ServerResource = defineResource<ConfigV2Values, { path: string; scopeId?: string }>({
   key: "config-v2.values",
   mode: "push",
@@ -54,16 +71,21 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
       // — fail loudly rather than emit an empty config that breaks consumers.
       throw new Error(`[config-v2] no descriptor registered for resource path "${path}"`);
     }
-    const values = configGetter(descriptor, scopeId) as ConfigV2Values;
-    const redacted = { ...values };
-    for (const [key, field] of Object.entries(descriptor.fields)) {
-      if (hasFieldStorageProvider(field.type.id)) {
-        redacted[key] = field.defaultValue;
-      }
-    }
-    return redacted;
+    return resolveRedactedConfig(descriptor, scopeId);
   }),
 });
+
+// Snapshot of every descriptor's resolved GLOBAL (no-scope) config, keyed by
+// storePath. The client hydrates its cache from this at boot so config reads
+// render real values on first paint (no flash, no Suspense).
+export async function getConfigSnapshot(): Promise<Record<string, ConfigV2Values>> {
+  await registryReady;
+  const out: Record<string, ConfigV2Values> = {};
+  for (const [path, descriptor] of descriptorByPath) {
+    out[path] = resolveRedactedConfig(descriptor);
+  }
+  return out;
+}
 
 function computeAllConflicts(): ConfigV2Conflicts {
   const conflicts: ConfigV2Conflicts = {};

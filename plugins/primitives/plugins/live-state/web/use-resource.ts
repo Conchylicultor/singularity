@@ -3,7 +3,6 @@ import {
   QueryClient,
   QueryClientProvider,
   useQuery,
-  useSuspenseQuery,
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
@@ -72,14 +71,30 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
   return statuses;
 }
 
+// Seed the default query client's cache for a resource before any component
+// observes it. Used at boot to hydrate values (e.g. config) so the first render
+// reads real data synchronously instead of `pending`/defaults — no flash, no
+// Suspense. Writes the SAME default client NotificationsProvider uses (no
+// `queryClient` prop) via the SAME queryKeyFor consumers use, so a later
+// useResource adopts the seeded entry (its non-zero dataUpdatedAt makes
+// `pending` false immediately). The schema registry (NotificationsClient) is
+// untouched — only applyUpdate reads it, and that fires only after a mounted
+// useResource calls observe(), which registers the schema first.
+export function hydrateResource<T, P extends ResourceParams = ResourceParams>(
+  resource: ResourceDescriptor<T, P>,
+  params: P | undefined,
+  value: unknown,
+): void {
+  const parsed = resource.schema.parse(value);
+  getDefaultQueryClient().setQueryData(queryKeyFor(resource.key, params), parsed);
+}
+
 export type ResourceResult<T> =
   | { pending: true; error: Error | null; refetch: () => Promise<void> }
   | { pending: false; data: T; error: Error | null; refetch: () => Promise<void> };
 
-// Shared HTTP fetch for a resource. Used by useResource's queryFn (the WS-down
-// fallback) and by useSuspenseResource, where it drives the initial load while
-// the component is suspended — a suspended component's observe() effect hasn't
-// committed, so the WS sub-ack isn't available yet.
+// Shared HTTP fetch for a resource. Used by useResource's queryFn as the WS-down
+// fallback; the sub-ack normally fills the cache so this rarely runs.
 async function fetchResourceValue<T, P extends ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   p: ResourceParams,
@@ -141,44 +156,4 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
         : { pending: false, data, error, refetch: () => refetchRef.current().then(() => {}) },
     [pending, data, error],
   );
-}
-
-// Suspending variant of useResource. Instead of exposing a `pending` flag with
-// default/initial data, it SUSPENDS until the resource has real data, so callers
-// render under a <Suspense fallback> while loading rather than flashing defaults.
-//
-// Unlike useResource it deliberately does NOT seed `initialData`: initialData marks
-// the query "success" immediately, which would defeat suspense. The promise thrown
-// by useSuspenseQuery is resolved by the HTTP fetch (queryFn). Once the component
-// mounts, the observe() effect below subscribes over the WS and keeps the cached
-// value live via setQueryData, exactly like useResource.
-export function useSuspenseResource<T, P extends ResourceParams = ResourceParams>(
-  resource: ResourceDescriptor<T, P>,
-  params?: P,
-): T {
-  const notifications = useContext(NotificationsContext);
-  if (!notifications) {
-    throw new Error("useSuspenseResource must be used within a NotificationsProvider");
-  }
-  const key = resource.key;
-  const origin = resource.origin;
-  const p = (params ?? ({} as P)) as ResourceParams;
-  const schema = resource.schema;
-
-  // Refcount sub/unsub. Commits only after suspense resolves and the component
-  // mounts; thereafter WS pushes keep the cached value live.
-  useEffect(() => {
-    notifications.observe(key, p, origin, schema);
-    return () => notifications.unobserve(key, p, origin);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
-  }, [notifications, key, origin, schema, JSON.stringify(p)]);
-
-  const q = useSuspenseQuery({
-    queryKey: queryKeyFor(key, p),
-    queryFn: () => fetchResourceValue(resource, p),
-    // No initialData → the query starts pending → useSuspenseQuery throws until
-    // the first real value lands (HTTP fetch or WS sub-ack).
-  });
-
-  return q.data;
 }

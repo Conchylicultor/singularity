@@ -1,5 +1,14 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { configV2ValuesSchema } from "./resource";
+
+// One-shot snapshot of every descriptor's resolved GLOBAL (no-scope) config,
+// keyed by storePath. Fetched once at boot to hydrate the client cache before
+// first paint, so config reads never flash defaults and never suspend.
+export const configSnapshot = defineEndpoint({
+  route: "GET /api/config-v2/snapshot",
+  response: z.record(configV2ValuesSchema),
+});
 
 export const setConfigField = defineEndpoint({
   route: "POST /api/config-v2/set-field",
