@@ -20,8 +20,11 @@ function slugOf(worktreePath: string): string {
 // rows with no match (e.g. the main `singularity` build, or a push from a
 // conversation outside the recent window) fall back to the slug.
 function useTitleBySlug(): Record<string, string> {
-  const { active, recentGone, system } = useConversations();
+  const conv = useConversations();
   return useMemo(() => {
+    const active = conv.pending ? [] : conv.active;
+    const recentGone = conv.pending ? [] : conv.recentGone;
+    const system = conv.pending ? [] : conv.system;
     const map: Record<string, string> = {};
     // Lowest-priority first so a live `active` title wins over a stale one.
     for (const c of [...system, ...recentGone, ...active]) {
@@ -29,7 +32,7 @@ function useTitleBySlug(): Record<string, string> {
       if (title) map[slugOf(c.worktreePath)] = title;
     }
     return map;
-  }, [active, recentGone, system]);
+  }, [conv]);
 }
 
 // Presentational 1s ticker: the op STATE is push-driven via the resource; this

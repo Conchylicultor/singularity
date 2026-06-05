@@ -22,7 +22,8 @@ export function DependenciesButton({
   const [busy, setBusy] = useState<string | null>(null);
 
   const task = useTask(conversation.taskId);
-  const { active } = useConversations();
+  const conv = useConversations();
+  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
   const tasksResult = useResource(tasksResource);
   const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
 

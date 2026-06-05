@@ -16,7 +16,7 @@ export function DropAndExitButton({
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const pushesResult = useResource(pushesResource);
-  const { active } = useConversations();
+  const conv = useConversations();
 
   const hasPush = useMemo(
     () => pushesResult.pending ? false : pushesResult.data.some((p) => p.attemptId === conversation.attemptId),
@@ -24,8 +24,8 @@ export function DropAndExitButton({
   );
 
   const hasOtherActive = useMemo(
-    () => active.some((c) => c.taskId === conversation.taskId && c.id !== conversation.id),
-    [active, conversation.taskId, conversation.id],
+    () => conv.pending ? false : conv.active.some((c) => c.taskId === conversation.taskId && c.id !== conversation.id),
+    [conv, conversation.taskId, conversation.id],
   );
 
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {
@@ -41,6 +41,8 @@ export function DropAndExitButton({
   });
 
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
+
+  if (conv.pending) return null;
 
   if (hasPush) {
     return (

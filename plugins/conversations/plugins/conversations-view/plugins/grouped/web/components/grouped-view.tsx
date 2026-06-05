@@ -14,8 +14,11 @@ export function GroupedView({
   onNavigate,
   onCloseConversation,
 }: ViewProps) {
-  const { active, recentGone, hasMoreGone, system, isLoading } =
-    useConversations();
+  const conv = useConversations();
+  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
+  const recentGone = useMemo(() => (conv.pending ? [] : conv.recentGone), [conv]);
+  const hasMoreGone = conv.pending ? false : conv.hasMoreGone;
+  const system = conv.pending ? [] : conv.system;
 
   const [showSystem, setShowSystem] = useState<boolean>(() => {
     try {
@@ -85,7 +88,7 @@ export function GroupedView({
         <div className="px-4 py-2 text-xs text-muted-foreground">Loading...</div>
       )}
       <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
-      {isEmpty && !isLoading && (
+      {isEmpty && !conv.pending && (
         <div className="px-4 py-2 text-xs text-muted-foreground">
           No conversations
         </div>

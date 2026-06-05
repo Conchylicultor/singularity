@@ -6,31 +6,34 @@ import { conversationsResource, type ConversationEntry } from "../core/resources
 
 export const GonePageSchema = cursorPageSchema(ConversationSchema);
 
-export function useConversations(): {
-  active: ConversationEntry[];
-  recentGone: ConversationEntry[];
-  hasMoreGone: boolean;
-  totalGoneCount: number;
-  system: ConversationEntry[];
-  isLoading: boolean;
-} {
+export type ConversationsState =
+  | { pending: true }
+  | {
+      pending: false;
+      active: ConversationEntry[];
+      recentGone: ConversationEntry[];
+      hasMoreGone: boolean;
+      totalGoneCount: number;
+      system: ConversationEntry[];
+    };
+
+export function useConversations(): ConversationsState {
   const q = useResource(conversationsResource);
-  if (q.pending) {
-    return { active: [], recentGone: [], hasMoreGone: false, totalGoneCount: 0, system: [], isLoading: true };
-  }
+  if (q.pending) return { pending: true };
   return {
+    pending: false,
     active: q.data.active,
     recentGone: q.data.recentGone,
     hasMoreGone: q.data.hasMoreGone,
     totalGoneCount: q.data.totalGoneCount,
     system: q.data.system,
-    isLoading: false,
   };
 }
 
 export function useConversation(id: string): ConversationEntry | null {
-  const { active, recentGone, system } = useConversations();
-  return [...active, ...recentGone, ...system].find((c) => c.id === id) ?? null;
+  const c = useConversations();
+  if (c.pending) return null;
+  return [...c.active, ...c.recentGone, ...c.system].find((x) => x.id === id) ?? null;
 }
 
 // Point lookup by id. Checks the live WS-backed resource first (real-time

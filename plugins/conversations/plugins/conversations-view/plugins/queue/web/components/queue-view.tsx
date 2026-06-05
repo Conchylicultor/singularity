@@ -105,7 +105,9 @@ export function QueueView({
   onNavigate,
   onCloseConversation,
 }: ViewProps) {
-  const { active, recentGone, isLoading } = useConversations();
+  const conv = useConversations();
+  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
+  const recentGone = conv.pending ? [] : conv.recentGone;
   const queueResult = useResource(queueRanksResource);
   const queueData = queueResult.pending ? { ranks: [], pinnedConversationId: null } : queueResult.data;
   const rankRows = queueData.ranks;
@@ -308,7 +310,7 @@ export function QueueView({
     [waitingGroups, pinnedCluster],
   );
 
-  if (!isLoading && waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
+  if (!conv.pending && waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <div className="px-4 py-8 text-center text-xs text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -343,7 +345,7 @@ export function QueueView({
     <div className="flex flex-col">
       {/* Queue */}
       <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
-      {queueExpanded && waitingGroups.length === 0 && (
+      {queueExpanded && !conv.pending && waitingGroups.length === 0 && (
         <div className="px-2 py-1 pl-2 text-2xs italic text-muted-foreground">
           No conversations waiting
         </div>

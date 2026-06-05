@@ -45,7 +45,9 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const { files } = useEditedFiles(convId);
   const pushesResult = useResource(pushesResource);
-  const { active, isLoading: conversationsLoading } = useConversations();
+  const conv = useConversations();
+  const conversationsLoading = conv.pending;
+  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
 
   const isNotRunning = live?.status === "gone" || live?.status === "done";
 

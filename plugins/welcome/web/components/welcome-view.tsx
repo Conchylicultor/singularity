@@ -8,7 +8,10 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { cn } from "@/lib/utils";
 
 export function WelcomeView() {
-  const { active, recentGone, totalGoneCount, isLoading } = useConversations();
+  const conv = useConversations();
+  const active = conv.pending ? [] : conv.active;
+  const recentGone = conv.pending ? [] : conv.recentGone;
+  const totalGoneCount = conv.pending ? 0 : conv.totalGoneCount;
   const conversations = [...active, ...recentGone];
 
   const activeCount = active.length;
@@ -34,7 +37,7 @@ export function WelcomeView() {
         </div>
 
         {/* Stats */}
-        {!isLoading && totalCount > 0 && (
+        {!conv.pending && totalCount > 0 && (
           <div className="flex w-full gap-3">
             {[
               { label: "Total", value: totalCount },
@@ -60,7 +63,7 @@ export function WelcomeView() {
         <LaunchControl className="w-full" openMode="root" />
 
         {/* Recent Conversations */}
-        {!isLoading && recentConversations.length > 0 && (
+        {!conv.pending && recentConversations.length > 0 && (
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
               <span className="text-xs font-medium text-muted-foreground">

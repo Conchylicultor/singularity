@@ -19,8 +19,11 @@ export function HistoryView({
   onNavigate,
   onCloseConversation,
 }: ViewProps) {
-  const { active, recentGone, hasMoreGone, system, isLoading } =
-    useConversations();
+  const conv = useConversations();
+  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
+  const recentGone = useMemo(() => (conv.pending ? [] : conv.recentGone), [conv]);
+  const hasMoreGone = conv.pending ? false : conv.hasMoreGone;
+  const system = useMemo(() => (conv.pending ? [] : conv.system), [conv]);
 
   const liveItems = useMemo(() => {
     const all: Conversation[] = [...active, ...system, ...recentGone];
@@ -65,7 +68,7 @@ export function HistoryView({
 
   return (
     <div className="flex flex-col gap-1">
-      {isEmpty && !isLoading ? (
+      {isEmpty && !conv.pending ? (
         <div className="px-4 py-2 text-xs text-muted-foreground">
           No conversations
         </div>

@@ -51,19 +51,20 @@ export function TaskCard({
   // Wait for the binding to load before rendering anything destructive — the
   // editable card collapses to a chip once we know the persisted state, so
   // showing the card during load would briefly invite a duplicate Create.
-  if (binding.enabled && binding.isLoading) return null;
+  if (binding.enabled && binding.pending) return null;
+  const value = binding.pending ? null : binding.value;
 
-  if (binding.value?.launchedConvId && binding.value.taskId) {
+  if (value?.launchedConvId && value.taskId) {
     return (
       <div className="my-2 flex flex-col gap-1.5">
         <p className="text-muted-foreground text-sm">{initial}</p>
-        <LaunchedAttempts taskId={binding.value.taskId} />
+        <LaunchedAttempts taskId={value.taskId} />
       </div>
     );
   }
 
-  if (binding.value?.taskId) {
-    return <TaskChip taskId={binding.value.taskId} />;
+  if (value?.taskId) {
+    return <TaskChip taskId={value.taskId} />;
   }
 
   const trimmed = prompt.trim();

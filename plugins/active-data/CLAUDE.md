@@ -46,8 +46,9 @@ tag in the message). Inside the contributed component:
 const TaskBindingSchema = z.object({ taskId: z.string() });
 const binding = useActiveDataBinding(TaskBindingSchema);
 
-if (binding.isLoading) return null;          // avoid flashing the editable card
-if (binding.value?.taskId) return <TaskChip taskId={binding.value.taskId} />;
+if (binding.enabled && binding.pending) return null;  // avoid flashing the editable card
+const value = binding.pending ? null : binding.value;
+if (value?.taskId) return <TaskChip taskId={value.taskId} />;
 // ... otherwise render the editable card; call binding.set({ taskId }) on action
 ```
 

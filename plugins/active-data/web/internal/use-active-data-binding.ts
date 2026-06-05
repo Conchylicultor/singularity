@@ -4,11 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { activeDataBindingsResource } from "@plugins/active-data/core";
 import { useActiveDataIdentity } from "./identity-context";
 
-export interface ActiveDataBindingHandle<T> {
-  /** Persisted, schema-validated payload for this widget instance, or null. */
-  value: T | null;
-  /** Whether the bindings list for this conversation has loaded yet. */
-  isLoading: boolean;
+interface ActiveDataBindingBase<T> {
   /** Whether identity is available (false in legacy logs without messageId). */
   enabled: boolean;
   /** Upsert the payload. No-op when `enabled` is false. */
@@ -16,6 +12,14 @@ export interface ActiveDataBindingHandle<T> {
   /** Delete the binding. No-op when `enabled` is false. */
   clear: () => Promise<void>;
 }
+
+export type ActiveDataBindingHandle<T> =
+  | (ActiveDataBindingBase<T> & { pending: true })
+  | (ActiveDataBindingBase<T> & {
+      pending: false;
+      /** Persisted, schema-validated payload for this widget instance, or null. */
+      value: T | null;
+    });
 
 function bindingPath(p: {
   conversationId: string;
@@ -77,5 +81,6 @@ export function useActiveDataBinding<T>(
     }
   }, [identity]);
 
-  return { value, isLoading: resource.pending, enabled: identity !== null, set, clear };
+  if (!identity || resource.pending) return { pending: true, enabled: identity !== null, set, clear };
+  return { pending: false, value, enabled: true, set, clear };
 }

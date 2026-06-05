@@ -9,7 +9,7 @@
 - Web:
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`
-  - Exports: Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
+  - Exports: Types: `ConversationsState`; Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.forkConfig`, `config_v2.getConfig`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `notifications.recordNotification`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`
   - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`, `plugins/conversations/server/internal/tables-turn-completed-event.ts`, `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
