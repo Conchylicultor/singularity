@@ -4,7 +4,7 @@ export { NotificationsProvider, useResource, hydrateResource, useNotificationsSt
 export type { ResourceResult } from "./use-resource";
 export { NotificationsClient, queryKeyFor } from "./notifications-client";
 export type { ResourceKey, ChannelStatuses } from "./notifications-client";
-export { resourceDescriptor, centralResourceDescriptor } from "../core/resource";
+export { resourceDescriptor, keyedResourceDescriptor, centralResourceDescriptor } from "../core/resource";
 export type { ResourceDescriptor, ResourceOrigin } from "../core/resource";
 
 export default {

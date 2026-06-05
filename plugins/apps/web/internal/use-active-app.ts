@@ -3,7 +3,7 @@ import { Apps } from "../slots";
 
 export type ActiveApp = ReturnType<typeof Apps.App.useContributions>[number];
 
-function usePathname(): string {
+export function usePathname(): string {
   return useSyncExternalStore(
     (cb) => {
       window.addEventListener("popstate", cb);
@@ -19,7 +19,6 @@ function usePathname(): string {
 }
 
 function appMatchesPath(appPath: string, pathname: string): boolean {
-  if (appPath === "/") return true;
   return pathname === appPath || pathname.startsWith(appPath + "/");
 }
 

@@ -4,9 +4,9 @@ import { WelcomeView } from "./components/welcome-view";
 export const welcomePane = Pane.define({
   id: "welcome",
   segment: "/",
-  // Index/landing pane for the agent-manager app (`Apps.App` path "/"). Scoping
+  // Index/landing pane for the agent-manager app (`Apps.App` path "/agents"). Scoping
   // it stops welcome being a global fallback that bleeds into every other app.
-  appPath: "/",
+  appPath: "/agents",
   component: WelcomeBody,
 });
 

@@ -12,6 +12,10 @@ export const Apps = {
      * manager). Surfaces that already show the toolbar set opt out of the
      * floating action bar to avoid double-mounting its buttons. */
     hostsToolbar?: boolean;
+    /** The app that hosts root-relative deep-links that match no app's path
+     * (e.g. `/c/:id`). The router canonicalizes such paths into this app's
+     * namespace. Exactly one app should set this. */
+    fallback?: boolean;
   }>("apps.app", {
     docLabel: (p) => p.tooltip,
   }),

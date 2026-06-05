@@ -42,6 +42,7 @@ export interface ResourceKey {
 type ServerMsg =
   | { kind: "sub-ack"; id?: number; key: string; params: ResourceParams; value: unknown; version: number }
   | { kind: "update"; key: string; params: ResourceParams; value: unknown; version: number }
+  | { kind: "delta"; key: string; params: ResourceParams; upserts: [string, unknown][]; deletes: string[]; order?: string[]; version: number }
   | { kind: "invalidate"; key: string; params: ResourceParams; version: number }
   | { kind: "sub-error"; id?: number; key: string; reason: string }
   | { kind: "ping" };
@@ -83,6 +84,12 @@ export class NotificationsClient {
    * (resources are singletons defined at module scope).
    */
   private schemas = new Map<string, ZodType<unknown>>();
+  /**
+   * key → row-identity fn for keyed resources. Registered alongside the schema
+   * in observe(). Used by applyDelta to key prior cache rows when merging a
+   * delta. Absent for non-keyed resources.
+   */
+  private keyedKeyOf = new Map<string, (row: unknown) => string>();
   private channelStatuses = new Map<string, WsStatus>();
   private statusListeners = new Set<(s: WsStatus) => void>();
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
@@ -142,8 +149,10 @@ export class NotificationsClient {
     params: ResourceParams = {},
     origin?: ResourceOrigin,
     schema?: ZodType<unknown>,
+    keyOf?: (row: unknown) => string,
   ): void {
     if (schema) this.schemas.set(key, schema);
+    if (keyOf) this.keyedKeyOf.set(key, keyOf);
     const kind = socketKindFor(origin);
     const channel = this.channels[kind];
     const id = `${key}\0${paramsKey(params)}`;
@@ -218,6 +227,10 @@ export class NotificationsClient {
       this.applyUpdate(channel, msg.key, msg.params, msg.value, msg.version);
       return;
     }
+    if (msg.kind === "delta") {
+      this.applyDelta(channel, msg.key, msg.params, msg.upserts, msg.order, msg.version);
+      return;
+    }
     // Only remaining case: "invalidate"
     this.applyInvalidate(channel, msg.key, msg.params, msg.version);
   }
@@ -244,6 +257,73 @@ export class NotificationsClient {
       );
     }
     this.queryClient.setQueryData(queryKeyFor(key, params), schema.parse(value));
+  }
+
+  // Merge a row-keyed delta into the cached array. Unchanged rows keep their
+  // identical object reference (reused from the prior value via `existingById`),
+  // so memoized row components don't re-render — only changed rows get new
+  // objects. The new array order is authoritative from the server's `order`.
+  // `deletes` is not a parameter: the new array is rebuilt purely from `order`
+  // (the authoritative final id list), so deleted ids are implicitly excluded.
+  // The server still ships `deletes` on the wire for clarity and Layer 2 reuse.
+  private applyDelta(
+    channel: SocketChannel,
+    key: string,
+    params: ResourceParams,
+    upserts: [string, unknown][],
+    order: string[] | undefined,
+    version: number,
+  ): void {
+    const id = `${key}\0${paramsKey(params)}`;
+    const entry = channel.subs.get(id);
+    if (entry) {
+      if (version <= entry.version) return;
+      entry.version = version;
+    }
+    const queryKey = queryKeyFor(key, params);
+    // Base-presence guard (load-bearing): never apply a delta onto a missing
+    // base. If the cache has no value yet, force a fresh full snapshot.
+    if (this.queryClient.getQueryData(queryKey) === undefined) {
+      this.sendSub(channel, key, params);
+      return;
+    }
+    const schema = this.schemas.get(key);
+    if (!schema) {
+      throw new Error(
+        `[notifications] no schema registered for key="${key}". ` +
+          `useResource must observe the descriptor (which carries the schema) ` +
+          `before any update can be applied.`,
+      );
+    }
+    const keyOf = this.keyedKeyOf.get(key);
+    if (!keyOf) {
+      throw new Error(
+        `[notifications] no keyOf registered for keyed resource key="${key}". ` +
+          `Use keyedResourceDescriptor so observe() registers the row identity.`,
+      );
+    }
+    // Parse each upsert row individually via the array schema's element — never
+    // re-parse the whole array (that's the cost this protocol removes).
+    // biome-ignore lint/suspicious/noExplicitAny: zod array schemas expose `.element`.
+    const element = (schema as any).element as ZodType<unknown>;
+    const upsertMap = new Map<string, unknown>();
+    for (const [rowId, row] of upserts) upsertMap.set(rowId, element.parse(row));
+
+    this.queryClient.setQueryData(queryKey, (prev: unknown) => {
+      const prevRows = Array.isArray(prev) ? (prev as unknown[]) : [];
+      if (order === undefined) {
+        // Membership/order unchanged (in-place upserts only): walk the prior
+        // array, swapping changed rows by id. No deletes, no new rows. Unchanged
+        // rows keep their identical reference — only upserted rows get a new
+        // object, preserving the no-re-render-churn property.
+        return prevRows.map((row) => upsertMap.get(keyOf(row)) ?? row);
+      }
+      // Membership/order changed: rebuild from the authoritative `order`,
+      // reusing prior row references for unchanged ids.
+      const existingById = new Map<string, unknown>();
+      for (const row of prevRows) existingById.set(keyOf(row), row);
+      return order.map((rowId) => upsertMap.get(rowId) ?? existingById.get(rowId));
+    });
   }
 
   private applyInvalidate(

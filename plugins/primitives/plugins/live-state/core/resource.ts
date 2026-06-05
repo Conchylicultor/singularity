@@ -26,6 +26,14 @@ export interface ResourceDescriptor<T, P extends Record<string, string> = Record
    * that need a loading distinction can check `dataUpdatedAt === 0`.
    */
   initialData: T;
+  /**
+   * Marks a row-keyed delta-sync resource (server `mode: "keyed"`). The server
+   * ships only changed rows + the id order; the client merges by id. `keyOf`
+   * extracts each row's stable id so the client can rebuild its id→row map from
+   * the prior cache value when applying a delta. See
+   * research/2026-06-05-global-live-state-delta-sync.md.
+   */
+  keyed?: { keyOf: (row: unknown) => string };
   /** Phantom — exists only at the type level so `useResource` can infer `P`. */
   readonly __params?: P;
 }
@@ -36,6 +44,20 @@ export function resourceDescriptor<T, P extends Record<string, string> = Record<
   initialData: T,
 ): ResourceDescriptor<T, P> {
   return { key, schema, initialData };
+}
+
+// Keyed delta-sync variant of `resourceDescriptor`. The matching server
+// resource must declare `mode: "keyed"` with the same row identity. `schema`
+// stays `z.array(Element)`, so `T` (and every `useResource` caller) is
+// unchanged — the client merges per-row deltas into the same `T[]`. `keyOf`
+// lets the client key prior cache rows when applying a delta.
+export function keyedResourceDescriptor<T extends unknown[], P extends Record<string, string> = Record<string, never>>(
+  key: string,
+  schema: ZodType<T>,
+  initialData: T,
+  keyOf: (row: unknown) => string,
+): ResourceDescriptor<T, P> {
+  return { key, schema, initialData, keyed: { keyOf } };
 }
 
 export function centralResourceDescriptor<T, P extends Record<string, string> = Record<string, never>>(

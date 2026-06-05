@@ -10,13 +10,14 @@
   - Contributes: `Core.Root` → `AppsLayout`
   - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
-  - Imported by: `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
+  - Imported by: `app-cards`, `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
   - **`debug`** — Debug app.
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - **`file-explorer`** — File explorer app.
   - **`forge`** — Forge app — plugin graph inspection and publish workflows.
+  - **`home`** — Home — app launcher and entry point.
   - **`pages`** — Notion-like pages app.
   - **`sonata`** — Sonata — extensible piano and music app.
   - **`workflows`** — Workflows app.
