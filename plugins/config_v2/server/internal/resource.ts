@@ -75,16 +75,36 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
   }),
 });
 
-// Snapshot of every descriptor's resolved GLOBAL (no-scope) config, keyed by
-// storePath. The client hydrates its cache from this at boot so config reads
-// render real values on first paint (no flash, no Suspense).
-export async function getConfigSnapshot(): Promise<Record<string, ConfigV2Values>> {
+export interface ConfigSnapshotResult {
+  global?: Record<string, ConfigV2Values>;
+  scope?: { scopeId: string; forked: boolean; values: Record<string, ConfigV2Values> };
+}
+
+// Boot-time snapshot the client hydrates its cache from so config reads render
+// real values on first paint (no flash, no Suspense).
+//
+// - No scopeId: every descriptor's resolved GLOBAL config, keyed by storePath.
+// - scopeId given: that scope's forked-state plus, when forked, its resolved
+//   scoped values for the `scope: "app"` descriptors (the themable set). When
+//   unforked the scope resolves to global anyway, so we skip the values to keep
+//   the payload empty — `useConfig` reads the global key while `forked` is false.
+export async function getConfigSnapshot(scopeId?: string): Promise<ConfigSnapshotResult> {
   await registryReady;
-  const out: Record<string, ConfigV2Values> = {};
-  for (const [path, descriptor] of descriptorByPath) {
-    out[path] = resolveRedactedConfig(descriptor);
+  if (scopeId) {
+    const forked = scopeForkedChecker ? scopeForkedChecker(scopeId) : false;
+    const values: Record<string, ConfigV2Values> = {};
+    if (forked) {
+      for (const { descriptor, storePath } of getScopedDescriptors("app")) {
+        values[storePath] = resolveRedactedConfig(descriptor, scopeId);
+      }
+    }
+    return { scope: { scopeId, forked, values } };
   }
-  return out;
+  const global: Record<string, ConfigV2Values> = {};
+  for (const [path, descriptor] of descriptorByPath) {
+    global[path] = resolveRedactedConfig(descriptor);
+  }
+  return { global };
 }
 
 function computeAllConflicts(): ConfigV2Conflicts {

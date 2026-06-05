@@ -1,7 +1,8 @@
-import { createContext, useContext, useLayoutEffect, useMemo } from "react";
-import { useConfig } from "@plugins/config_v2/web";
+import { createContext, useContext, useEffect, useLayoutEffect, useMemo } from "react";
+import { useConfig, useScopeForked } from "@plugins/config_v2/web";
 import { useCurrentAppId } from "@plugins/apps/web";
 import { themeEngineConfig } from "../../core";
+import { persistActiveForkedScope } from "../internal/active-scope-storage";
 import { ThemeScopeProvider } from "./theme-scope-context";
 import { ThemeEngine, useTokenGroupPresets } from "../slots";
 import type {
@@ -135,6 +136,15 @@ function ColorModeApplier({ scopeId }: { scopeId?: string }) {
 export function ThemeInjector() {
   const appId = useCurrentAppId();
   const scopeId = appId ? `app:${appId}` : undefined;
+
+  // Persist the active app's scope (only when forked) so the pre-paint boot task
+  // can re-hydrate it on a hard reload and avoid the one-frame flash of global
+  // theme. See active-scope-storage.
+  const forked = useScopeForked(scopeId);
+  useEffect(() => {
+    persistActiveForkedScope(scopeId, forked);
+  }, [scopeId, forked]);
+
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
   const groupStyles = groups.map((g) => (

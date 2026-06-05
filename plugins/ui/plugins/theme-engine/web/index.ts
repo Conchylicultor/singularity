@@ -3,6 +3,7 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
 import { themeEngineConfig } from "../core";
 import { ThemeInjector } from "./components/theme-injector";
+import { themeScopeBootTask } from "./internal/boot";
 import { ThemeEngine } from "./slots";
 
 export { ThemeEngine, useTokenGroupPresets } from "./slots";
@@ -26,6 +27,7 @@ export default {
     "Central settings pane for switching visual variants of pluggable UI components.",
   contributions: [
     Core.Root({ component: ThemeInjector }),
+    themeScopeBootTask,
     ConfigV2.WebRegister({ descriptor: themeEngineConfig }),
     DynamicEnum.Options({
       field: themeEngineConfig.fields.globalPreset,

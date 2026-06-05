@@ -11,8 +11,8 @@ import { configSnapshot, configV2Resource } from "@plugins/config_v2/core";
 // after, at the cost of one possible flash).
 export const configBootTask = Core.Boot({
   run: async () => {
-    const snapshot = await fetchEndpoint(configSnapshot, {});
-    for (const [path, values] of Object.entries(snapshot)) {
+    const { global } = await fetchEndpoint(configSnapshot, {});
+    for (const [path, values] of Object.entries(global ?? {})) {
       hydrateResource(configV2Resource, { path }, values);
     }
   },
