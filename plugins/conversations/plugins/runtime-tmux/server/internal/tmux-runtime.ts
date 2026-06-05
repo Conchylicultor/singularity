@@ -601,6 +601,7 @@ export const tmuxRuntime: ConversationRuntime = {
       model?: ConversationModel;
       resumeSessionId?: string;
       forkSession?: boolean;
+      appendSystemPrompt?: string;
     },
   ): Promise<void> {
     // SINGULARITY_CONVERSATION_ID is read by the .githooks/prepare-commit-msg
@@ -620,6 +621,22 @@ export const tmuxRuntime: ConversationRuntime = {
     if (opts?.resumeSessionId) {
       cmdParts.push(`--resume ${opts.resumeSessionId}`);
       if (opts.forkSession) cmdParts.push("--fork-session");
+    }
+
+    // Append-system-prompt (per-task preprompt). Always route through a temp
+    // file the shell cats+deletes: the text is user-authored and may be long
+    // or multi-line, so this sidesteps tmux's ~16KB per-arg cap and all
+    // shell-quoting hazards, exactly like the long-prompt path below.
+    const appendSys =
+      typeof opts?.appendSystemPrompt === "string" && opts.appendSystemPrompt.length > 0
+        ? opts.appendSystemPrompt
+        : undefined;
+    if (appendSys) {
+      const sysFile = `/tmp/singularity-append-system-${conversationId}.txt`;
+      await Bun.write(sysFile, appendSys);
+      cmdParts.push(
+        `--append-system-prompt "$(cat '${sysFile}' && rm -f '${sysFile}')"`,
+      );
     }
 
     // tmux has a ~16KB per-arg cap. For long prompts, write to a temp file and

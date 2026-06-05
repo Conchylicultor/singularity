@@ -3,6 +3,7 @@ import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
@@ -17,11 +18,13 @@ export interface TaskDraftCardProps {
   index: number;
   text: string;
   model: ChainModel;
+  prepromptId: string | null;
   autoFocus: boolean;
   removable: boolean;
   disabled: boolean;
   onTextChange: (next: string) => void;
   onModelChange: (next: ChainModel) => void;
+  onPrepromptChange: (next: string | null) => void;
   onRemove: () => void;
   onSubmitChord: () => void;
   isHead?: boolean;
@@ -98,11 +101,13 @@ export function TaskDraftCard({
   index,
   text,
   model,
+  prepromptId,
   autoFocus,
   removable,
   disabled,
   onTextChange,
   onModelChange,
+  onPrepromptChange,
   onRemove,
   onSubmitChord,
   isHead = false,
@@ -166,6 +171,15 @@ export function TaskDraftCard({
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
         <div className="flex flex-wrap items-center gap-3">
           <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
+          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+            <span>Preprompt</span>
+            <PrepromptSelect
+              value={prepromptId}
+              onChange={onPrepromptChange}
+              disabled={disabled}
+              ariaLabel="Preprompt"
+            />
+          </div>
           {showRelate && (
             <RelateModeChip
               value={relateMode}

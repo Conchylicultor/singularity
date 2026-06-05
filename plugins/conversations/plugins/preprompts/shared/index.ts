@@ -1,0 +1,1 @@
+export { prepromptsConfig } from "./config";

@@ -24,6 +24,9 @@ export interface CardDraft {
   localId: string;
   text: string;
   model: ChainModel;
+  // Selected preprompt id (config list-item) appended to the agent's system
+  // prompt on launch. null = none.
+  prepromptId: string | null;
   includeUrl: boolean;
   includeScreenshot: boolean;
   linkedToPrev: boolean;
@@ -68,11 +71,12 @@ function useIsAgentWorktree(): boolean {
   }, []);
 }
 
-export function makeCard(model: ChainModel): CardDraft {
+export function makeCard(model: ChainModel, prepromptId: string | null = null): CardDraft {
   return {
     localId: crypto.randomUUID(),
     text: "",
     model,
+    prepromptId,
     includeUrl: false,
     includeScreenshot: false,
     linkedToPrev: true,
@@ -129,7 +133,7 @@ export function TaskDraftForm({
     if (submitting) return;
     const inheritFrom = cards[idx] ?? cards[idx - 1];
     const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
-    const card = makeCard(model);
+    const card = makeCard(model, inheritFrom?.prepromptId ?? null);
     const next = [...cards.slice(0, idx), card, ...cards.slice(idx)];
     onCardsChange(next);
   };
@@ -138,7 +142,7 @@ export function TaskDraftForm({
     if (submitting) return;
     const inheritFrom = cards[cards.length - 1];
     const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
-    onCardsChange([...cards, makeCard(model)]);
+    onCardsChange([...cards, makeCard(model, inheritFrom?.prepromptId ?? null)]);
   };
 
   const toggleLink = (idx: number) => {
@@ -206,11 +210,13 @@ export function TaskDraftForm({
                     index={idx}
                     text={card.text}
                     model={card.model}
+                    prepromptId={card.prepromptId}
                     autoFocus={autoFocusId === card.localId}
                     removable={cards.length > 1}
                     disabled={submitting}
                     onTextChange={(t) => updateCard(idx, { text: t })}
                     onModelChange={(m) => updateCard(idx, { model: m })}
+                    onPrepromptChange={(p) => updateCard(idx, { prepromptId: p })}
                     onRemove={() => removeAt(idx)}
                     onSubmitChord={() => {
                       if (!disabled) onSubmit();

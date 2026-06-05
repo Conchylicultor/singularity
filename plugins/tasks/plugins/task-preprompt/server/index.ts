@@ -1,0 +1,20 @@
+import { Resource } from "@plugins/framework/plugins/server-core/core";
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { taskPrepromptsResource } from "./internal/resource";
+import { handlePutTaskPreprompt, handleDeleteTaskPreprompt } from "./internal/routes";
+import { putTaskPreprompt, deleteTaskPreprompt } from "../shared/endpoints";
+
+export { tasksPreprompt } from "./internal/tables";
+export { getTaskPreprompt, setTaskPreprompt } from "./internal/mutations";
+export { taskPrepromptsResource } from "./internal/resource";
+
+export default {
+  name: "Tasks: Preprompt",
+  description:
+    "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, injected at launch via --append-system-prompt.",
+  contributions: [Resource.Declare(taskPrepromptsResource)],
+  httpRoutes: {
+    [putTaskPreprompt.route]: handlePutTaskPreprompt,
+    [deleteTaskPreprompt.route]: handleDeleteTaskPreprompt,
+  },
+} satisfies ServerPluginDefinition;

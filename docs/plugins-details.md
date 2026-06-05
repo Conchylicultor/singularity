@@ -467,7 +467,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `preprompts`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
   - Web:
@@ -992,6 +992,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
       - Web:
         - Exports: Values: `loadChainForConversation`
+    - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named system-prompt snippets appended to a task's agent via --append-system-prompt.
+      - Web:
+        - Contributes: `ConfigV2.WebRegister`
+        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
+        - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`
+      - Server:
+        - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
+        - Exports: Values: `resolvePreprompt`
+      - Shared:
+        - Exports: Values: `prepromptsConfig`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
       - Server:
         - Uses: `conversations.Runtime`
@@ -1061,7 +1071,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `notes`, `notifications`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1373,7 +1383,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Resources: `notifications` (push)
   - Cross-plugin:
-    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`
+    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`, `task-preprompt`
   - Shared:
     - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 
@@ -1939,6 +1949,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Tasks.View` "Tree" → `TasksList`
             - Uses: `tasks.patchTask`
             - Exports: Values: `TasksList`
+    - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is appended to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, injected at launch via --append-system-prompt.
+      - Web:
+        - Contributes: `TaskDetailSlots.Section` "preprompt" → `TaskPrepromptSection`
+        - Uses: `notifications.toast`
+        - Exports: Values: `useTaskPreprompt`
+      - Server:
+        - Uses: `database.db`, `tasks-core._tasks`
+        - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
+        - Entity extension of: `tasks-core` (table `tasks_ext_preprompt`)
+        - Exports: Values: `getTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
+      - Shared:
+        - Exports: Types: `TaskPreprompt`, `TaskPrepromptsPayload`; Values: `deleteTaskPreprompt`, `putTaskPreprompt`, `TaskPrepromptSchema`, `TaskPrepromptsPayloadSchema`, `taskPrepromptsResource`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Web:
         - Exports: Values: `STATUS_META`, `StatusBadge`, `StatusIcon`
@@ -1956,8 +1978,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Resources: `attempts` (push), `pushes` (push)
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
-    - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`)
+    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-preprompt`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+    - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`), `task-preprompt` (table `tasks_ext_preprompt`)
   - Core:
     - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskSchema`, `TaskStatusSchema`
 

@@ -743,6 +743,10 @@
       "name": "@singularity/plugin-conversations-pane-restore",
       "version": "0.0.0",
     },
+    "plugins/conversations/plugins/preprompts": {
+      "name": "@singularity/plugin-conversations-preprompts",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/runtime-api": {
       "name": "@singularity/plugin-conversations-runtime-api",
       "version": "0.0.1",
@@ -1666,6 +1670,10 @@
     },
     "plugins/tasks/plugins/task-list/plugins/tree": {
       "name": "@singularity/plugin-tasks-task-list-tree",
+      "version": "0.0.1",
+    },
+    "plugins/tasks/plugins/task-preprompt": {
+      "name": "@singularity/plugin-tasks-task-preprompt",
       "version": "0.0.1",
     },
     "plugins/tasks/plugins/task-status": {
@@ -2674,6 +2682,8 @@
 
     "@singularity/plugin-conversations-pane-restore": ["@singularity/plugin-conversations-pane-restore@workspace:plugins/conversations/plugins/pane-restore"],
 
+    "@singularity/plugin-conversations-preprompts": ["@singularity/plugin-conversations-preprompts@workspace:plugins/conversations/plugins/preprompts"],
+
     "@singularity/plugin-conversations-recover": ["@singularity/plugin-conversations-recover@workspace:plugins/conversations-recover"],
 
     "@singularity/plugin-conversations-runtime-api": ["@singularity/plugin-conversations-runtime-api@workspace:plugins/conversations/plugins/runtime-api"],
@@ -3087,6 +3097,8 @@
     "@singularity/plugin-tasks-task-list-recent": ["@singularity/plugin-tasks-task-list-recent@workspace:plugins/tasks/plugins/task-list/plugins/recent"],
 
     "@singularity/plugin-tasks-task-list-tree": ["@singularity/plugin-tasks-task-list-tree@workspace:plugins/tasks/plugins/task-list/plugins/tree"],
+
+    "@singularity/plugin-tasks-task-preprompt": ["@singularity/plugin-tasks-task-preprompt@workspace:plugins/tasks/plugins/task-preprompt"],
 
     "@singularity/plugin-tasks-task-status": ["@singularity/plugin-tasks-task-status@workspace:plugins/tasks/plugins/task-status"],
 

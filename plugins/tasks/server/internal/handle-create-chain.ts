@@ -20,6 +20,7 @@ import { createTaskChain } from "../../core/endpoints";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
+import { setTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 
 export const handleCreateChain = implement(createTaskChain, async ({ body }) => {
   // Single folder source — server does not care which target kind it came from.
@@ -105,6 +106,10 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
 
       if (attachments.length > 0) {
         await taskAttachments.add(newTask.id, attachments.map((a) => a.id));
+      }
+
+      if (card.prepromptId) {
+        await setTaskPreprompt(newTask.id, card.prepromptId);
       }
 
       if (isHead && body.relate) {

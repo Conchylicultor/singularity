@@ -20,6 +20,8 @@ import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/
 import { conversationCreated } from "./tables-created-event";
 import { SYSTEM_META_TASK_ID } from "./meta-system";
 import { resolveAttachmentRefs } from "./resolve-prompt-attachments";
+import { resolvePreprompt } from "@plugins/conversations/plugins/preprompts/server";
+import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 
 const DEFAULT_RUNTIME = "tmux";
 
@@ -86,11 +88,16 @@ export async function createConversation(
   let worktreePath: string;
   let conversationId: string;
   let newAttemptId: string | undefined;
+  // The task this conversation belongs to, used to resolve a per-task preprompt
+  // (--append-system-prompt). Derived from the existing attempt when reusing a
+  // worktree, otherwise the task we launch under.
+  let effectiveTaskId: string | undefined;
 
   if (attemptId) {
     const attempt = await getAttempt(attemptId);
     if (!attempt) throw new Error(`Unknown attemptId "${attemptId}"`);
     worktreePath = attempt.worktreePath;
+    effectiveTaskId = attempt.taskId;
     conversationId = newId(CONVERSATION_PREFIX);
   } else {
     let taskId = opts.taskId;
@@ -104,6 +111,7 @@ export async function createConversation(
       });
       taskId = task.id;
     }
+    effectiveTaskId = taskId;
 
     newAttemptId = newId(ATTEMPT_PREFIX);
     const thisAttemptId = newAttemptId;
@@ -159,12 +167,19 @@ export async function createConversation(
     throw err;
   }
 
+  // Resolve the per-task preprompt (config list-item id → text). A dangling or
+  // empty selection resolves to undefined → the flag is simply omitted.
+  const appendSystemPrompt = effectiveTaskId
+    ? resolvePreprompt((await getTaskPreprompt(effectiveTaskId))?.prepromptId)
+    : undefined;
+
   try {
     await runtime.create(conversationId, worktreePath, {
       prompt: resolvedPrompt,
       model,
       resumeSessionId,
       forkSession: !!opts.forkFromConversationId,
+      appendSystemPrompt,
     });
   } catch (err) {
     // Without this, the row stays at "starting" forever — the poller skips

@@ -24,6 +24,9 @@ export type TaskChainLaunch = z.infer<typeof TaskChainLaunchSchema>;
 export const TaskChainCardSchema = z.object({
   text: z.string().min(1),
   launch: TaskChainLaunchSchema,
+  // Preprompt id (config list-item) appended to the agent's system prompt on
+  // launch. Omitted / undefined means no preprompt.
+  prepromptId: z.string().optional(),
   url: z.string().optional(),
   attachmentIds: z.array(z.string()).optional(),
   // When false, this card does not block on the previous card (parallel launch).

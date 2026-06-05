@@ -70,6 +70,7 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
       return {
         text: c.text,
         launch: c.model === "queue" ? null : c.model,
+        prepromptId: c.prepromptId ?? undefined,
         url: c.includeUrl ? args.url : undefined,
         attachmentIds: attachmentIds.length > 0 ? attachmentIds : undefined,
         linkedToPrev: i > 0 && !c.linkedToPrev ? false : undefined,

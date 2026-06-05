@@ -32,6 +32,8 @@ export interface ConversationRuntime {
       model?: ConversationModel;
       resumeSessionId?: string;
       forkSession?: boolean;
+      /** Text appended to the Claude system prompt via --append-system-prompt. */
+      appendSystemPrompt?: string;
     },
   ): Promise<void>;
   delete(conversationId: string): Promise<void>;

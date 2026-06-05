@@ -57,7 +57,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`config_v2`** [11 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [87 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
+- **`conversations`** [load-bearing] [88 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 
@@ -246,6 +246,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`recent`** — Recency-sorted flat task list tab.
         - **`tree`** — Tree-view tab for the task list.
+    - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is appended to the agent's system prompt on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, injected at launch via --append-system-prompt.
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
     - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
 
