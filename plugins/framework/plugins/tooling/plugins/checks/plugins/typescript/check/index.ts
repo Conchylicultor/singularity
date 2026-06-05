@@ -1,4 +1,4 @@
-import { discoverTscTargets } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { discoverTscTargets, tsBuildInfoPath } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -33,7 +33,12 @@ const check: Check = {
     const targets = discoverTscTargets(root);
 
     const results = await Promise.all(
-      targets.map(async (t) => ({ target: t, result: await runTsc(t.dir, t.args) })),
+      targets.map(async (t) => {
+        // Incremental against a `.tsbuildinfo` seeded from main: a fresh
+        // worktree re-checks only its own diff instead of the whole tree.
+        const args = [...t.args, "--incremental", "--tsBuildInfoFile", tsBuildInfoPath(root, t.name)];
+        return { target: t, result: await runTsc(t.dir, args) };
+      }),
     );
 
     const failures = results.filter((r) => !r.result.ok);

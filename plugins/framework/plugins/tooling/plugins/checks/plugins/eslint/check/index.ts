@@ -84,15 +84,33 @@ function findPluginLintDirs(root: string): string[] {
   return dirs;
 }
 
+// `./singularity build` sets SINGULARITY_ESLINT_SCOPE to a newline-separated
+// list of the branch's changed .ts/.tsx files (already filtered against the
+// config's ignore globs) so a cold first build lints only the diff instead of
+// all ~2k files (~10 min → seconds). Unset — push, `./singularity check`, and
+// main builds — means a full-repo lint, preserving the complete type-aware gate.
+// Defined-but-empty means nothing lint-relevant changed (skip).
+function eslintScope(): string[] | null {
+  const raw = process.env.SINGULARITY_ESLINT_SCOPE;
+  if (raw === undefined) return null;
+  return raw.split("\n").map((s) => s.trim()).filter(Boolean);
+}
+
 const check: Check = {
   id: "eslint",
   description: "ESLint rules pass (global + plugin-contributed)",
   async run() {
     const root = await getRoot();
-    const cacheLocation = join(root, ".cache", "eslint");
+    const scope = eslintScope();
+    if (scope !== null && scope.length === 0) return { ok: true };
+    const targets = scope ?? ["."];
+    // Scoped (build) runs use a separate cache file: ESLint's `--cache` prunes
+    // entries for files outside the current run, so a scoped run would shrink
+    // the canonical full-repo cache that push / `./singularity check` depend on.
+    const cacheLocation = join(root, ".cache", scope !== null ? "eslint-scoped" : "eslint");
     bustCacheIfStale(root, cacheLocation);
     const proc = Bun.spawn(
-      [process.execPath, "x", "eslint", ".", "--quiet", "--cache", "--cache-location", cacheLocation, "--cache-strategy", "content"],
+      [process.execPath, "x", "eslint", ...targets, "--quiet", "--cache", "--cache-location", cacheLocation, "--cache-strategy", "content"],
       {
         cwd: root,
         stdout: "pipe",

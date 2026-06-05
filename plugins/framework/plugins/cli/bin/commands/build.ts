@@ -9,7 +9,7 @@ import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generate
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks, discoverTscTargets } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runChecks, discoverTscTargets, tsBuildInfoPath } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   libpqEnv,
   readDatabaseConfig,
@@ -319,6 +319,46 @@ async function getCurrentBranch(): Promise<string> {
     process.exit(1);
   }
   return output.trim();
+}
+
+async function gitText(cwd: string, args: string[]): Promise<string | null> {
+  const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
+  const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
+  return code === 0 ? out : null;
+}
+
+// Build-time eslint scope: the .ts/.tsx files this branch changed vs its
+// merge-base with main, so the eslint check lints only those instead of the
+// whole repo. A worktree's seeded eslint cache goes fully cold on the first
+// build — an eslint content-cache is invalidated wholesale when the config hash
+// drifts, and main's eslint.config.ts moves over time — so a full `eslint .`
+// re-lints ~2k files (~10 min). Scoping to the diff turns that into seconds.
+// Push and `./singularity check` never set the scope env var, so they always run
+// the full type-aware lint and the complete gate is preserved. Returns null when
+// the diff can't be determined or is too large to be worth scoping (→ caller
+// falls back to a full lint); an empty array means nothing lint-relevant changed.
+async function computeEslintScope(root: string): Promise<string[] | null> {
+  const mergeBase = await gitText(root, ["merge-base", "HEAD", "main"]);
+  if (mergeBase === null) return null;
+  const changed = await gitText(root, ["diff", "--name-only", mergeBase.trim()]);
+  const untracked = await gitText(root, ["ls-files", "--others", "--exclude-standard"]);
+  if (changed === null || untracked === null) return null;
+  const files = [...changed.split("\n"), ...untracked.split("\n")]
+    .map((f) => f.trim())
+    .filter(Boolean)
+    // The config lints only **/*.{ts,tsx}; mirror its global ignores so an
+    // explicit file list (which bypasses flat-config `ignores`) stays correct.
+    .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
+    .filter((f) => !f.endsWith(".generated.ts"))
+    .filter((f) => !f.includes("node_modules/"))
+    .filter((f) => !f.includes("/dist/") && !f.startsWith("dist/"))
+    // Skip deletions/renames-away — passing a missing path makes eslint error.
+    .filter((f) => existsSync(join(root, f)));
+  const unique = [...new Set(files)];
+  // A sweeping diff (big rebase/refactor) isn't worth scoping — the type
+  // programs dominate anyway and the cross-file correctness gap widens.
+  if (unique.length > 400) return null;
+  return unique;
 }
 
 // Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
@@ -740,15 +780,27 @@ export function registerBuild(program: Command) {
       await propagateConfigToUser({ root, worktreeName: name, singularityDir: SINGULARITY_DIR });
       endSpan();
 
-      // 3c–5. Run validation (checks, tsc) and the Vite build in parallel.
-      // All four are independent: checks and tsc read source files, Vite
-      // compiles into a staging dir. On failure, the staging dir is cleaned
-      // up and nothing is published. `--skip-checks` still skips checks.
+      // 3c–5. Run validation (checks) and the Vite build in parallel. They are
+      // independent: checks read source files, Vite compiles into a staging
+      // dir. On failure, the staging dir is cleaned up and nothing is published.
+      // The `typescript` check type-checks every target (including the runtime
+      // entrypoints), so we no longer run separate runtime tsc passes here — that
+      // double-checked cli/server-core/central-core on every build. With
+      // `--skip-checks` the check doesn't run, so we still guard server
+      // type-safety with a single incremental tsc over the runtime entrypoints.
       const stagingName = `${STAGING_PREFIX}${process.pid}`;
       const stagingPath = resolve(webDir, stagingName);
-      const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
 
       console.log("Running checks, type-checking, and building frontend in parallel...");
+
+      // Scope the eslint check to this branch's diff (non-main builds only —
+      // main builds run the full lint so the cache they seed stays complete for
+      // future worktrees). On failure to determine the scope we leave the env
+      // var unset, which falls back to a full `eslint .`.
+      if (branch !== "main") {
+        const scope = await computeEslintScope(root);
+        if (scope !== null) process.env.SINGULARITY_ESLINT_SCOPE = scope.join("\n");
+      }
 
       const parallel: Array<Promise<StepResult>> = [];
 
@@ -776,22 +828,31 @@ export function registerBuild(program: Command) {
         );
       }
 
-      for (const target of runtimeTargets) {
-        parallel.push(
-          (async (): Promise<StepResult> => {
-            const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
-            const start = performance.now();
-            const output = await execBuffered([process.execPath, "x", "tsc", ...target.args], target.dir);
-            end();
-            return {
-              id: `tsc:${target.name}`,
-              label: `tsc ${target.name}`,
-              lines: output.lines,
-              durationMs: Math.round(performance.now() - start),
-              success: output.exitCode === 0,
-            };
-          })(),
-        );
+      if (opts.skipChecks) {
+        const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
+        for (const target of runtimeTargets) {
+          parallel.push(
+            (async (): Promise<StepResult> => {
+              const end = buildProfilerStart(`tsc:${target.name}`, "build:validation", `tsc ${target.name}`);
+              const start = performance.now();
+              // Identical flags to the `typescript` check so both share one
+              // `.tsbuildinfo` per target without options-hash churn.
+              const buildInfo = tsBuildInfoPath(root, target.name);
+              const output = await execBuffered(
+                [process.execPath, "x", "tsc", "--noEmit", ...target.args, "--incremental", "--tsBuildInfoFile", buildInfo],
+                target.dir,
+              );
+              end();
+              return {
+                id: `tsc:${target.name}`,
+                label: `tsc ${target.name}`,
+                lines: output.lines,
+                durationMs: Math.round(performance.now() - start),
+                success: output.exitCode === 0,
+              };
+            })(),
+          );
+        }
       }
 
       parallel.push(

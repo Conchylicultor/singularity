@@ -40,3 +40,11 @@ export function discoverTscTargets(root: string): TscTarget[] {
 
   return targets.sort((a, b) => a.name.localeCompare(b.name));
 }
+
+// Stable per-target `.tsbuildinfo` location for incremental type-checking.
+// Lives under `.cache/` (gitignored) — OUTSIDE `node_modules`, so it survives
+// the `bun install` that every build runs — and is seeded from main into fresh
+// worktrees by `setupWorktree` so the first build type-checks only its own diff.
+export function tsBuildInfoPath(root: string, targetName: string): string {
+  return join(root, ".cache", "tsbuildinfo", `${targetName}.tsbuildinfo`);
+}

@@ -1,4 +1,4 @@
-import { existsSync } from "node:fs";
+import { existsSync, readdirSync } from "node:fs";
 import { mkdir } from "node:fs/promises";
 import { join } from "node:path";
 import { GIT } from "@plugins/infra/plugins/paths/server";
@@ -40,6 +40,25 @@ async function copyEslintCacheToWorktree(repoRoot: string, wtPath: string): Prom
   await Bun.write(destPath, rewritten);
 }
 
+// Seed the worktree's incremental TypeScript caches from main so the first
+// build type-checks only its own diff instead of the whole tree. One file per
+// tsc target; `.tsbuildinfo` embeds absolute source paths, so rewrite them the
+// same way the eslint cache copy does. A version/options mismatch just makes
+// tsc fall back to a full check — best-effort, never wrong.
+async function copyTsBuildInfoToWorktree(repoRoot: string, wtPath: string): Promise<void> {
+  const sourceDir = join(repoRoot, ".cache", "tsbuildinfo");
+  if (!existsSync(sourceDir)) return;
+
+  const destDir = join(wtPath, ".cache", "tsbuildinfo");
+  await mkdir(destDir, { recursive: true });
+  for (const entry of readdirSync(sourceDir)) {
+    if (!entry.endsWith(".tsbuildinfo")) continue;
+    const raw = await Bun.file(join(sourceDir, entry)).text();
+    const rewritten = raw.split(repoRoot).join(wtPath);
+    await Bun.write(join(destDir, entry), rewritten);
+  }
+}
+
 export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   const repoRoot = await ensureMainWorktreeRoot();
   const branch = `claude-web/${id}`;
@@ -49,6 +68,10 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
   ).exited;
   try {
     await copyEslintCacheToWorktree(repoRoot, wtPath);
+  // eslint-disable-next-line promise-safety/no-bare-catch
+  } catch {}
+  try {
+    await copyTsBuildInfoToWorktree(repoRoot, wtPath);
   // eslint-disable-next-line promise-safety/no-bare-catch
   } catch {}
   // Trust the mise config so agents can run build commands without hitting
