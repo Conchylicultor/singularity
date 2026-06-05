@@ -1258,6 +1258,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-cross-refs",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/db-schema": {
       "name": "@singularity/plugin-plugin-meta-facets-db-schema",
       "version": "0.0.1",
@@ -2955,6 +2967,12 @@
     "@singularity/plugin-plugin-meta-facets-contributions-render-diff": ["@singularity/plugin-plugin-meta-facets-contributions-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
+
+    "@singularity/plugin-plugin-meta-facets-cross-refs-render-catalog": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-cross-refs-render-detail": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-cross-refs-render-diff": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-db-schema": ["@singularity/plugin-plugin-meta-facets-db-schema@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema"],
 

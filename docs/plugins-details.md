@@ -1511,7 +1511,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `PluginChanges.DiffRenderer` "Contributions"
         - **`cross-refs`**
           - Core:
-            - Exports: Types: `CrossRefsData`; Values: `crossRefsFacetDef`
+            - Exports: Types: `CrossRefsData`; Values: `crossRefsFacetDef`, `crossRefsToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin cross-refs table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Cross-refs"
+            - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "cross-refs" → `CrossRefsDetailSection`
+            - **`render-diff`** — Diff renderer for the cross-refs facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Uses"
         - **`db-schema`**
           - Core:
             - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`
