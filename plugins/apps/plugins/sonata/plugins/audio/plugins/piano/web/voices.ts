@@ -51,12 +51,23 @@ export function createVoices(
     baseUrl: assetMirrorUrl(PIANO_MIRROR_ID),
   });
 
+  // After dispose() the smplr instance throws on any stop/start ("Cannot stop
+  // voices on a disposed Smplr instance"). The panel drives this voice from two
+  // independent effects whose cleanups run in mount order — dispose (voices
+  // effect) before allOff (scheduling effect) — so allOff is *expected* to land
+  // on an already-disposed instance on unmount and instrument-switch. Make the
+  // contract robust to that ordering: once disposed, all voice methods are safe
+  // no-ops (there are no voices left to stop or notes worth scheduling).
+  let disposed = false;
+
   return {
     loaded: piano.ready,
     schedule({ pitch, velocity, when, duration }: ScheduledNote): void {
+      if (disposed) return;
       piano.start({ note: pitch, velocity, time: when, duration });
     },
     allOff(): void {
+      if (disposed) return;
       // Two layers must be silenced: piano.stop() halts voices already on the
       // audio graph, and piano.scheduler.stop() flushes notes still queued in
       // smplr's internal lookahead (the engine pre-schedules ~1.5s ahead, so
@@ -67,6 +78,8 @@ export function createVoices(
       piano.scheduler.stop();
     },
     dispose(): void {
+      if (disposed) return;
+      disposed = true;
       piano.dispose();
     },
   };
