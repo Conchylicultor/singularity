@@ -65,11 +65,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Root` → `AppsLayout`
     - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
   - Cross-plugin:
-    - Imported by: `app-cards`, `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
+    - Imported by: `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
-        - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
+        - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
             - Uses: `apps.Apps`
@@ -178,17 +178,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "Forge" → `ForgeLayout`
             - Uses: `apps.Apps`
             - Exports: Values: `Forge`
-    - **`home`** — Home — app launcher and entry point.
-      - Plugins:
-        - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
-          - Web:
-            - Contributes: `Home.Section` "Apps" → `AppGrid`
-            - Uses: `apps.Apps`, `apps.useCurrentAppId`
-        - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
-          - Web:
-            - Contributes: `Apps.App` "Home" → `HomeLayout`
-            - Uses: `apps.Apps`
-            - Exports: Values: `Home`
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
@@ -213,20 +202,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
           - Web:
             - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.seek-back (arrowleft)", `Shortcuts.Shortcut` "sonata.seek-forward (arrowright)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)"
-        - **`library`** — Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
+        - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
-            - Slots: `Library.Sort`
+            - Slots: `Library.Source`, `Library.Sort`
             - Contributes: `Sonata.Home` "library" → `SongLibrary`
-            - Exports: Types: `SortOrderProps`; Values: `Library`
+            - Exports: Types: `SortOrderProps`; Values: `Library`, `useOpenSong`
           - Cross-plugin:
-            - Slot contributors: `playback-history`
+            - Slot contributors: `midi`, `playback-history`
           - Server:
             - Uses: `database.db`
             - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
-            - Exports: Values: `_songs`, `songsLiveResource`
-            - Routes: `POST /api/sonata/songs`, `DELETE /api/sonata/songs/:id`
+            - Exports: Types: `CreateSongRowInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`
+            - Routes: `DELETE /api/sonata/songs/:id`
           - Core:
-            - Exports: Types: `CreateSongBody`, `Song`; Values: `createSong`, `CreateSongBodySchema`, `deleteSong`, `SongSchema`, `songsResource`
+            - Exports: Types: `Song`; Values: `deleteSong`, `SongSchema`, `songsResource`
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
             - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`, `ConfigV2.WebRegister`
@@ -289,10 +278,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-grid`** — Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy.
               - Web:
                 - Contributes: `Sonata.Source` "Chord Grid"
-            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.
+            - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
               - Web:
-                - Contributes: `Sonata.Source` "MIDI File"
-                - Exports: Values: `compile`, `MIDI_SOURCE_ID`
+                - Contributes: `Sonata.Source` "MIDI File", `Library.Source` "midi", `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
+                - Exports: Values: `compile`, `MIDI_SOURCE_ID`, `useSongMidi`
+              - Server:
+                - Uses: `database.db`
+                - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
+                - Exports: Values: `songMidi`, `songMidiLiveResource`
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
             - Exports: Types: `ChordTemplate`; Values: `CHORD_TEMPLATES`, `formatChordSymbol`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
@@ -1101,7 +1094,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -1730,9 +1723,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `LinkChipProps`; Values: `LinkChip`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Core:
-        - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `keyedResourceDescriptor`, `resourceDescriptor`, `tolerantEnum`
+        - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `resourceDescriptor`, `tolerantEnum`
       - Web:
-        - Exports: Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`; Values: `centralResourceDescriptor`, `hydrateResource`, `keyedResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
+        - Exports: Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`; Values: `centralResourceDescriptor`, `hydrateResource`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `Markdown.Extension`
@@ -2072,7 +2065,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/tasks-core/server/internal/mutations/cross-table.ts`, `plugins/tasks-core/server/internal/schema-attachments.ts`, `plugins/tasks-core/server/internal/schema.ts`, `plugins/tasks-core/server/internal/tables-events.ts`, `plugins/tasks-core/server/internal/tables.ts`
     - Exports: Types: `AdoptOrphanInput`, `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationSummary`, `CreateAttemptInput`, `CreateTaskInput`, `InsertConversationInput`, `InsertPushInput`, `Push`, `PushLandedPayload`, `Task`, `TaskFilters`, `TaskListItem`, `TaskStatus`, `TaskStatusChangedPayload`, `UpdateConversationPatch`, `UpdateTaskPatch`; Values: `_attempts`, `_conversations`, `_pushLandedTriggers`, `_tasks`, `_taskStatusChangedTriggers`, `addTaskDependency`, `adoptOrphanConversation`, `AttemptSchema`, `attemptsResource`, `AttemptStatusSchema`, `backfillMetaParent`, `conversationAttachments`, `ConversationKindSchema`, `CONVERSATIONS_META_TASK_ID`, `ConversationSchema`, `conversationsLiveResource`, `createAttempt`, `createTask`, `deleteAttempt`, `deleteConversationRow`, `deleteTask`, `dropTaskTree`, `emitStatusChangeIfChanged`, `ensureMetaTask`, `findNextRankInFolder`, `getAttempt`, `getConversation`, `getConversationClaudeSessionId`, `getConversationRuntime`, `getLatestPush`, `getTask`, `getTaskDependencyIds`, `hasBlockingDep`, `insertConversation`, `insertConversationOnConflictDoNothing`, `insertPush`, `isDescendant`, `listActiveConversations`, `listActiveSystemConversations`, `listArmedDependentsOf`, `listAttempts`, `listAttemptsForTask`, `listBlockingDepIds`, `listConversationsForDisplay`, `listConversationsForInfra`, `listDependentIds`, `listGoneConversations`, `listPushes`, `listPushesByPushId`, `listPushesForAttempt`, `listPushShasIn`, `listTasks`, `markConversationClosed`, `markConversationGone`, `notifyConversationsChanged`, `pushesResource`, `pushLanded`, `PushSchema`, `readTaskStatus`, `RECENT_GONE_LIMIT`, `removeTaskDependency`, `taskAttachments`, `taskDependsOn`, `taskDetailResource`, `TaskListItemSchema`, `TaskSchema`, `tasksResource`, `taskStatusChanged`, `TaskStatusSchema`, `updateConversation`, `updateConversationsTitleForTask`, `updateTask`, `updateTaskTitle`
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
-    - Resources: `attempts` (keyed), `pushes` (push)
+    - Resources: `attempts` (push), `pushes` (push)
   - Cross-plugin:
     - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-preprompt`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
     - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`), `task-preprompt` (table `tasks_ext_preprompt`)
@@ -2254,7 +2247,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Shared:
             - Exports: Types: `CatalogTheme`
 
-- **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
+- **`welcome`** — Landing pane shown at `/`.
   - Web:
     - Contributes: `Pane.Register` "welcome"
     - Uses: `conversations.useConversations`

@@ -1,8 +1,8 @@
 /**
- * Stable id of the MIDI source. Lives in its own file (not the barrel, which
- * may not declare runtime `const`s) so consumers — e.g. the library, which
- * hydrates this source from a saved song's bytes — reference an id rather than
- * a magic string. This is a declared, intentional DAG edge: the library is
- * MIDI-backed by design.
+ * Stable id of the MIDI source — the key under which its raw lives in `rawById`
+ * and the `sourceId` of its `Library.Source` / `Sonata.Source` contributions.
+ * Lives in its own file (not the barrel, which may not declare runtime `const`s).
+ * The library never references this: it collects sources generically via the
+ * `Library.Source` registry, so MIDI is just one contributor among many.
  */
 export const MIDI_SOURCE_ID = "midi";

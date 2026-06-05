@@ -1,20 +1,24 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdMusicNote } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { MidiLoader } from "./loader";
 import { compile } from "./compile";
 import { MIDI_SOURCE_ID } from "./constants";
+import { hydrate } from "./hydrate";
+import { MidiAddAction } from "./components/midi-add-action";
+import { MidiCardMeta } from "./components/midi-card-meta";
 
-// Re-export the source id and `compile` so consumers (the library) can
-// reference the id and parse a song's MIDI bytes for card metadata without
-// depending on the source's internal file layout.
+// Re-export the source id and `compile` so consumers can parse a song's MIDI
+// bytes for card metadata without depending on the source's internal layout.
 export { MIDI_SOURCE_ID };
 export { compile };
+export { useSongMidi } from "./hooks";
 
 export default {
   name: "Sonata: MIDI Source",
   description:
-    "MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi.",
+    "MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count.",
   contributions: [
     Sonata.Source({
       id: MIDI_SOURCE_ID,
@@ -23,5 +27,7 @@ export default {
       LoaderComponent: MidiLoader,
       compile,
     }),
+    Library.Source({ sourceId: MIDI_SOURCE_ID, hydrate, AddAction: MidiAddAction }),
+    Library.CardMeta({ id: "midi-track-count", component: MidiCardMeta }),
   ],
 } satisfies PluginDefinition;

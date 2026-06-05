@@ -58,14 +58,6 @@ export function SongCard({
       <div className="flex items-center justify-between">
         <span className="flex items-center gap-2 text-xs text-muted-foreground">
           <span className="tabular-nums">{formatDuration(song.durationSec)}</span>
-          {song.midiTrackCount != null ? (
-            <>
-              <span aria-hidden>·</span>
-              <span className="tabular-nums">
-                {song.midiTrackCount} {song.midiTrackCount === 1 ? "track" : "tracks"}
-              </span>
-            </>
-          ) : null}
         </span>
         <span
           aria-hidden

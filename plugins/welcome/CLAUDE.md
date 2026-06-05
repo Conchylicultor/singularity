@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Landing pane (agent-manager index) shown at `/agents`.
+- Description: Landing pane shown at `/`.
 - Web:
   - Contributes: `Pane.Register` "welcome"
   - Uses: `conversations.useConversations`

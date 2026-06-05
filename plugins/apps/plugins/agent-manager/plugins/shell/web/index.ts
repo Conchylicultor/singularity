@@ -6,16 +6,15 @@ import { AgentManagerLayout } from "./components/agent-manager-layout";
 export default {
   name: "Agent Manager: Shell",
   description:
-    "App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.",
+    "App shell for the agent manager. Registers the / app entry and renders the main Shell layout.",
   contributions: [
     Apps.App({
       id: "agent-manager",
       icon: MdChatBubble,
       tooltip: "Agent Manager",
       component: AgentManagerLayout,
-      path: "/agents",
+      path: "/",
       hostsToolbar: true,
-      fallback: true,
     }),
   ],
 } satisfies PluginDefinition;

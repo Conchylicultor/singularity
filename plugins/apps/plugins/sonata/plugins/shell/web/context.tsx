@@ -112,9 +112,10 @@ export interface SonataContextValue {
   /** Feed raw input from the active source's LoaderComponent (keyed by source). */
   setRaw: (raw: unknown) => void;
   /**
-   * Bulk, source-agnostic raw write — merge a `{ sourceId: raw }` map into the
-   * accumulated raw inputs. Unlike `setRaw` this does NOT depend on (or change)
-   * `activeSourceId`; the library uses it to load a song's persisted inputs.
+   * Bulk, source-agnostic raw write — set the full `{ sourceId: raw }` map,
+   * REPLACING the current inputs (not merging). Unlike `setRaw` this does NOT
+   * depend on (or change) `activeSourceId`; the library uses it to load a song's
+   * complete set of persisted per-source inputs in one shot.
    */
   setRawMap: (rawMap: Record<string, unknown>) => void;
   /** Open the player on a song (sets current id/title, `view="player"`, bumps
@@ -188,10 +189,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   }, []);
 
   // Bulk, source-agnostic raw write (does NOT touch activeSourceId). Used by the
-  // library to load a song's persisted per-source inputs in one shot.
+  // library to load a song's complete set of per-source inputs in one shot.
+  // REPLACES the prior raw map (rather than merging) so opening a song never
+  // leaves a previously-opened song's source inputs lingering — each open shows
+  // exactly the new song's sources.
   const setRawMap = useCallback(
-    (m: Record<string, unknown>) =>
-      setRawById((prev) => ({ ...prev, ...m })),
+    (m: Record<string, unknown>) => setRawById(m),
     [],
   );
 

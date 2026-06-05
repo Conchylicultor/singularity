@@ -58,8 +58,7 @@ export const pushesResource = defineResource({
 
 export const attemptsResource = defineResource({
   key: "attempts",
-  mode: "keyed",
-  keyOf: (r) => r.id,
+  mode: "push",
   schema: z.array(AttemptWithConversationsSchema),
   dependsOn: [{ resource: conversationsLiveResource }, { resource: pushesResource }],
   loader: async (): Promise<AttemptWithConversations[]> => {
@@ -94,8 +93,7 @@ export const attemptsResource = defineResource({
 // (incl. description) from `taskDetailResource` below.
 export const tasksResource = defineResource<TaskListItem[]>({
   key: "tasks",
-  mode: "keyed",
-  keyOf: (r) => r.id,
+  mode: "push",
   schema: z.array(TaskListItemSchema),
   dependsOn: [{ resource: attemptsResource }],
   loader: async () =>

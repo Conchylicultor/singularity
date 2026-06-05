@@ -8,11 +8,11 @@ export function AgentManagerLayout() {
       toolbarSlot={Shell.Toolbar}
       header={
         <a
-          href="/agents"
+          href="/"
           onClick={(e) => {
             e.preventDefault();
-            if (window.location.pathname === "/agents") return;
-            history.pushState({}, "", "/agents");
+            if (window.location.pathname === "/") return;
+            history.pushState({}, "", "/");
             window.dispatchEvent(new PopStateEvent("popstate"));
           }}
           className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"

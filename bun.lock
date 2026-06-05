@@ -171,18 +171,6 @@
       "name": "@singularity/plugin-apps-forge-shell",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/home": {
-      "name": "@singularity/plugin-apps-home",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/home/plugins/app-cards": {
-      "name": "@singularity/plugin-apps-home-app-cards",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/home/plugins/shell": {
-      "name": "@singularity/plugin-apps-home-shell",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/pages": {
       "name": "@singularity/plugin-apps-pages",
       "version": "0.0.1",
@@ -221,9 +209,6 @@
     "plugins/apps/plugins/sonata/plugins/library": {
       "name": "@singularity/plugin-apps-sonata-library",
       "version": "0.0.1",
-      "dependencies": {
-        "@tonejs/midi": "^2.0.28",
-      },
     },
     "plugins/apps/plugins/sonata/plugins/piano-keyboard": {
       "name": "@singularity/plugin-apps-sonata-piano-keyboard",
@@ -2479,12 +2464,6 @@
     "@singularity/plugin-apps-forge-publish-load-bearing": ["@singularity/plugin-apps-forge-publish-load-bearing@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/load-bearing"],
 
     "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
-
-    "@singularity/plugin-apps-home": ["@singularity/plugin-apps-home@workspace:plugins/apps/plugins/home"],
-
-    "@singularity/plugin-apps-home-app-cards": ["@singularity/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
-
-    "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
 

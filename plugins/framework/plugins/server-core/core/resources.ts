@@ -19,7 +19,7 @@ export const Resource = {
 //   WS  /ws/notifications                        — single push channel
 // and broadcasts updates when the plugin calls resource.notify().
 
-export type ResourceMode = "push" | "invalidate" | "keyed";
+export type ResourceMode = "push" | "invalidate";
 export type ResourceParams = Record<string, string>;
 
 // Upstream edge: when `resource` notifies, this resource is cascaded.
@@ -48,16 +48,6 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    * research/2026-04-29-global-resource-schema-validation.md.
    */
   schema?: ZodType<T>;
-  /**
-   * Row identity for `mode: "keyed"` resources. Required (and only meaningful)
-   * when `mode === "keyed"`: the loader's `T` must be an array, and `keyOf`
-   * extracts a stable id from each row. The server keeps a per-(key,params)
-   * snapshot of id→hash and broadcasts only changed rows + the id order, so a
-   * single-row change ships one row instead of the whole array. See
-   * research/2026-06-05-global-live-state-delta-sync.md.
-   */
-  // biome-ignore lint/suspicious/noExplicitAny: row type is the element of the array payload — erased here.
-  keyOf?: (row: any) => string;
   /**
    * Upstream resources. When any listed resource notifies, this resource is
    * scheduled to notify within the same microtask flush, with per-key /
@@ -91,14 +81,6 @@ interface RegistryEntry {
   key: string;
   mode: ResourceMode;
   loader: (params: ResourceParams) => Promise<unknown> | unknown;
-  /** Row identity for keyed mode. Undefined for push/invalidate entries. */
-  keyOf?: (row: unknown) => string;
-  /**
-   * Per-pk snapshot of id→hash for keyed entries. Allocated lazily only when
-   * `mode === "keyed"`. Lets the diff ship only changed rows. Evicted per-pk on
-   * the N→0 sub transition so memory is bounded to actively-observed pks.
-   */
-  snapshots?: Map<string, Map<string, string>>;
   /** Monotonic version per params-tuple. */
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
@@ -138,11 +120,6 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     throw new Error(`defineResource: duplicate key "${def.key}"`);
   }
   const mode = def.mode ?? "invalidate";
-  if (mode === "keyed" && !def.keyOf) {
-    throw new Error(
-      `defineResource: mode "keyed" requires a keyOf for key "${def.key}"`,
-    );
-  }
   const upstreamKeys: string[] = [];
   const ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }> = [];
   for (const dep of def.dependsOn ?? []) {
@@ -164,8 +141,6 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     key: def.key,
     mode,
     loader: def.loader as (params: ResourceParams) => Promise<unknown> | unknown,
-    keyOf: def.keyOf as ((row: unknown) => string) | undefined,
-    snapshots: mode === "keyed" ? new Map() : undefined,
     versions: new Map(),
     pendingNotifies: new Map(),
     subCounts: new Map(),
@@ -306,85 +281,6 @@ function scheduleNotify(entry: RegistryEntry, params: ResourceParams): void {
   queueMicrotask(() => { void flushNotifies(); });
 }
 
-// Build the id→hash map for a keyed resource's array value. The hash is the
-// row's canonical JSON string — a fast non-crypto identity over the full row
-// (including nested arrays like an attempt's `conversations`). Shared by
-// `diffKeyed` and `handleSub` so both sides compute identity identically.
-function snapshotOf(entry: RegistryEntry, value: unknown): Map<string, string> {
-  const keyOf = entry.keyOf;
-  if (!keyOf) {
-    throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
-  }
-  if (!Array.isArray(value)) {
-    throw new Error(
-      `[resources] keyed resource "${entry.key}" loader must return an array`,
-    );
-  }
-  const map = new Map<string, string>();
-  for (const row of value) map.set(keyOf(row), JSON.stringify(row));
-  return map;
-}
-
-interface KeyedDiff {
-  upserts: [string, unknown][];
-  deletes: string[];
-  /**
-   * The full ordered id list, OR `undefined` when order/membership are
-   * unchanged (the common in-place-update case: a status/title flip on one
-   * row). The snapshot Map is built from `value` in order, so iterating the
-   * prior snapshot's keys yields the prior order; when it matches the new order
-   * element-for-element we omit it from the wire. An omitted `order` strictly
-   * means "in-place upserts, membership/order unchanged" — `deletes` is then
-   * necessarily empty and there are no brand-new ids.
-   */
-  order: string[] | undefined;
-  hadSnapshot: boolean;
-}
-
-// Diff the new array `value` against the stored snapshot for `pk`, then REPLACE
-// that snapshot with the freshly computed id→hash map. `hadSnapshot` is false
-// only when there was no prior snapshot entry for `pk` (first notify) — callers
-// send a full update in that case so brand-new clients get a complete base.
-function diffKeyed(entry: RegistryEntry, pk: string, value: unknown): KeyedDiff {
-  const keyOf = entry.keyOf;
-  if (!keyOf) {
-    throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
-  }
-  if (!Array.isArray(value)) {
-    throw new Error(
-      `[resources] keyed resource "${entry.key}" loader must return an array`,
-    );
-  }
-  const snapshots = (entry.snapshots ??= new Map());
-  const prev = snapshots.get(pk);
-  const hadSnapshot = prev !== undefined;
-  // Map preserves insertion order, and the snapshot was built from the prior
-  // `value` in order, so its key iteration order is the prior id order.
-  const prevOrder = prev ? [...prev.keys()] : undefined;
-  const next = new Map<string, string>();
-  const upserts: [string, unknown][] = [];
-  const order: string[] = [];
-  for (const row of value) {
-    const id = keyOf(row);
-    const hash = JSON.stringify(row);
-    next.set(id, hash);
-    order.push(id);
-    if (!prev || prev.get(id) !== hash) upserts.push([id, row]);
-  }
-  const deletes: string[] = [];
-  if (prev) {
-    for (const id of prev.keys()) if (!next.has(id)) deletes.push(id);
-  }
-  snapshots.set(pk, next);
-  // Omit `order` when the id sequence is identical to the prior one — a delete
-  // or insert changes membership ⇒ length/sequence differs ⇒ order is sent.
-  const orderUnchanged =
-    prevOrder !== undefined &&
-    prevOrder.length === order.length &&
-    prevOrder.every((id, i) => id === order[i]);
-  return { upserts, deletes, order: orderUnchanged ? undefined : order, hadSnapshot };
-}
-
 async function flushNotifies(): Promise<void> {
   flushScheduled = false;
   rebuildDag();
@@ -407,8 +303,7 @@ async function flushNotifies(): Promise<void> {
       // we still compute when a map wants it — rare today, acceptable cost.
       const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
       const needValue =
-        ((entry.mode === "push" || entry.mode === "keyed") && subs.length > 0) ||
-        hasValueAwareDownstream;
+        (entry.mode === "push" && subs.length > 0) || hasValueAwareDownstream;
       let value: unknown;
       let valueComputed = false;
       if (needValue) {
@@ -428,28 +323,6 @@ async function flushNotifies(): Promise<void> {
         if (entry.mode === "invalidate") {
           const msg = { kind: "invalidate" as const, key: entry.key, params, version };
           for (const s of subs) sendJson(s.ws, msg);
-        } else if (entry.mode === "keyed") {
-          // `value` is guaranteed computed (needValue is true for keyed + subs).
-          // diffKeyed replaces the stored snapshot only here, after the loader
-          // succeeded — the loader-failure `continue` above leaves it untouched.
-          const { upserts, deletes, order, hadSnapshot } = diffKeyed(entry, pk, value);
-          if (!hadSnapshot) {
-            // First notify for this pk: ship a full update so brand-new
-            // subscribers get a complete base to merge subsequent deltas onto.
-            const msg = { kind: "update" as const, key: entry.key, params, value, version };
-            for (const s of subs) sendJson(s.ws, msg);
-          } else {
-            const msg = {
-              kind: "delta" as const,
-              key: entry.key,
-              params,
-              upserts,
-              deletes,
-              order,
-              version,
-            };
-            for (const s of subs) sendJson(s.ws, msg);
-          }
         } else {
           const msg = { kind: "update" as const, key: entry.key, params, value, version };
           for (const s of subs) sendJson(s.ws, msg);
@@ -579,11 +452,6 @@ async function handleSub(
   }
   const version = (entry.versions.get(pk) ?? 0) + 1;
   entry.versions.set(pk, version);
-  // Keyed entries: seed the per-pk snapshot from the full sub-ack value so the
-  // next notify can diff against it. The sub-ack itself stays full-value.
-  if (entry.mode === "keyed") {
-    (entry.snapshots ??= new Map()).set(pk, snapshotOf(entry, value));
-  }
   sendJson(state.ws, { kind: "sub-ack", id, key, params, value, version });
 }
 
@@ -610,9 +478,6 @@ function releaseSubRefcount(key: string, pk: string, params: ResourceParams): vo
   const next = prev - 1;
   if (next === 0) {
     entry.subCounts.delete(pk);
-    // Bound keyed-snapshot memory to actively-observed pks. Re-subscribe
-    // re-hydrates via a full sub-ack and rebuilds the snapshot.
-    entry.snapshots?.delete(pk);
     if (entry.onLastUnsubscribe) {
       try {
         entry.onLastUnsubscribe(params);

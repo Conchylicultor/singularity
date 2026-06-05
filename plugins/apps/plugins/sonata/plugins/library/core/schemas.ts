@@ -1,21 +1,21 @@
 import { z } from "zod";
 
 /**
- * A persisted Sonata song: a stored MIDI file (attachment) plus the metadata
- * the library gallery needs to render a card and the player needs to hydrate
- * its timeline. `createdAt` is an ISO string (it crosses the wire as JSON; the
- * server maps the DB `Date` to `.toISOString()` in the resource loader).
+ * A persisted Sonata song — **source-agnostic** generic metadata only. The raw
+ * per-source data (e.g. the MIDI attachment, a chord-grid's JSON) lives in each
+ * source's own entity-extension side-table, owned by that source plugin; the
+ * core row never names a source. `durationSec`/`endBeat` are score-level (the
+ * composed timeline's length), not tied to any one source.
+ *
+ * `createdAt` is an ISO string (it crosses the wire as JSON; the server maps the
+ * DB `Date` to `.toISOString()` in the resource loader).
  */
 export const SongSchema = z.object({
   id: z.string(),
   title: z.string(),
   composer: z.string().nullable(),
-  midiAttachmentId: z.string(),
   durationSec: z.number(),
   endBeat: z.number(),
-  /** Number of note-bearing MIDI tracks (file-derived, immutable). `null` for
-   *  rows imported before this was tracked. */
-  midiTrackCount: z.number().nullable(),
   createdAt: z.string(),
 });
 

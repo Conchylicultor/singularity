@@ -17,8 +17,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - Plugins:
     - **`sonata`** — Sonata — extensible piano and music app.
       - Plugins:
-        - **`library`** — Song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home), opens a song into the player, and imports MIDI files. Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.
-          - `/api/sonata/songs (POST)`
+        - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - `/api/sonata/songs/:id (DELETE)`
     - **`workflows`** — Workflows app.
       - Plugins:

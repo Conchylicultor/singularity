@@ -6,6 +6,6 @@ export { welcomePane } from "./panes";
 
 export default {
   name: "Welcome",
-  description: "Landing pane (agent-manager index) shown at `/agents`.",
+  description: "Landing pane shown at `/`.",
   contributions: [Pane.Register({ pane: welcomePane })],
 } satisfies PluginDefinition;

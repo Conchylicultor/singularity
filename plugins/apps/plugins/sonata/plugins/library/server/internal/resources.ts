@@ -13,10 +13,8 @@ export function toSong(row: typeof _songs.$inferSelect): Song {
     id: row.id,
     title: row.title,
     composer: row.composer,
-    midiAttachmentId: row.midiAttachmentId,
     durationSec: row.durationSec,
     endBeat: row.endBeat,
-    midiTrackCount: row.midiTrackCount,
     createdAt: row.createdAt.toISOString(),
   };
 }

@@ -1,4 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import {
   defineDispatchSlot,
   defineRenderSlot,
@@ -23,14 +24,30 @@ export interface SortOrderProps {
 /**
  * Extension seams the song library exposes:
  *
+ *  - `Source` — the source registry. Each input source (MIDI, chord-grid, …)
+ *    contributes how it persists/hydrates a song, so the library stays fully
+ *    source-agnostic (the collection–consumer separation). `hydrate(songId)`
+ *    returns that source's client raw for the song (or `undefined` if it has
+ *    none); `useOpenSong` collects every source's raw and loads them in one shot.
+ *    The optional `AddAction` is an "add a song of this source" affordance the
+ *    library renders in its header. Adding a new source = a new contribution
+ *    here, with zero library or core-schema changes.
  *  - `CardMeta` — per-card metadata strip. Contributors render a snippet given
- *    the `song` (e.g. play count / last-played). Headless-friendly.
+ *    the `song` (e.g. play count / last-played, MIDI track count). Headless-friendly.
  *  - `Sort` — gallery orderings. A dispatch slot keyed by the active sort id;
  *    the matched ordering component computes and renders the ordered grid. The
  *    built-in "Newest" is the fallback (the list is already newest-first), so
  *    play-based orderings are pure additive contributions.
  */
 export const Library = {
+  Source: defineSlot<{
+    /** Stable id of the source (matches its `Sonata.Source` id / `rawById` key). */
+    sourceId: string;
+    /** This source's client raw for `songId`, or `undefined` if it has none. */
+    hydrate: (songId: string) => Promise<unknown | undefined>;
+    /** Optional header affordance to create a song of this source. */
+    AddAction?: ComponentType;
+  }>("sonata.library.source", { docLabel: (c) => c.sourceId }),
   CardMeta: defineRenderSlot<{ component: ComponentType<{ song: Song }> }>(
     "sonata.library.card-meta",
     { reorder: false, docLabel: (p) => p.id },

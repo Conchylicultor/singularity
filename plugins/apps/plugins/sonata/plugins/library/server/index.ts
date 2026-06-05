@@ -1,24 +1,25 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { createSong, deleteSong } from "../core/endpoints";
-import { handleCreateSong } from "./internal/handle-create-song";
+import { deleteSong } from "../core/endpoints";
 import { handleDeleteSong } from "./internal/handle-delete-song";
 import { songsLiveResource } from "./internal/resources";
-import { seedStarters } from "./internal/seed";
 
 export { _songs } from "./internal/tables";
 export { songsLiveResource } from "./internal/resources";
+export { createSongRow } from "./internal/create-song-row";
+export type { CreateSongRowInput } from "./internal/create-song-row";
+// The generic song↔attachment link. Source-agnostic: a song may carry linked
+// attachments regardless of which source produced them. Sources call
+// `songAttachments.add(songId, [attachmentId])` when persisting their raw so the
+// orphan sweep never reclaims an in-use file.
+export { songAttachments } from "./internal/schema-attachments";
 
 export default {
   name: "Sonata: Library",
   description:
-    "Persists Sonata songs (DB row + MIDI attachment), seeds bundled public-domain starters at boot, and serves the reactive song list.",
+    "Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.",
   httpRoutes: {
-    [createSong.route]: handleCreateSong,
     [deleteSong.route]: handleDeleteSong,
   },
   contributions: [Resource.Declare(songsLiveResource)],
-  onReady: async () => {
-    await seedStarters();
-  },
 } satisfies ServerPluginDefinition;

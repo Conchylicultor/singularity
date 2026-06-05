@@ -1,35 +1,24 @@
 import { useMemo, useState } from "react";
-import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
-import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import {
-  beatToSeconds,
-  scoreEndBeat,
-} from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import {
-  compile,
-  MIDI_SOURCE_ID,
-} from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web";
-import { createSong, songsResource } from "../../core";
+import { songsResource } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
+import { useOpenSong } from "../hooks";
 import { SongCard, formatDuration } from "./song-card";
-import { ImportButton } from "./import-button";
 
 /**
  * The Sonata landing surface: the saved-song collection rendered through the
- * `data-view` primitive (gallery of cards + sortable/searchable table). Clicking
- * a row hydrates the MIDI source with the song's stored bytes and switches the
- * shell to the player. The Import toolbar action saves a dropped `.mid` file
- * (upload → create → open). The song list is reactive via the live
- * `songsResource`; the gallery view keeps the custom `SongCard` (play affordance
- * + hover-delete) via `viewOptions.gallery.renderCard`.
+ * `data-view` primitive (gallery of cards + sortable/searchable table). Opening
+ * a song hydrates every source that has data for it via the generic
+ * `Library.Source` registry (see `useOpenSong`) and switches to the player —
+ * the library never names MIDI (or any source). The toolbar renders each
+ * source's "add a song" affordance (`Library.Source.AddAction`). The song list
+ * is reactive via the live `songsResource`; the gallery view keeps the custom
+ * `SongCard` (play affordance + hover-delete) via `viewOptions.gallery.renderCard`.
  *
  * Gallery orderings contributed via `Library.Sort` (e.g. play-based orderings
  * from `playback-history`) still apply: the active ordering produces the row
@@ -37,8 +26,8 @@ import { ImportButton } from "./import-button";
  */
 export function SongLibrary() {
   const songs = useResource(songsResource);
-  const { setRawMap, openPlayer } = useSonata();
-  const [importing, setImporting] = useState(false);
+  const openSong = useOpenSong();
+  const sources = Library.Source.useContributions();
   // Active gallery ordering. "newest" is the built-in default (the list already
   // arrives newest-first); extra orderings (e.g. play-based) are contributed to
   // `Library.Sort` by other plugins and dispatched on below.
@@ -48,50 +37,6 @@ export function SongLibrary() {
     { id: "newest", label: "Newest" },
     ...sortContributions.map((c) => ({ id: c.id, label: c.label })),
   ];
-
-  async function open(song: Song) {
-    // Fetch the stored MIDI bytes and hand them to the MIDI source, then enter
-    // the player. `setRawMap` is source-agnostic so it doesn't disturb the
-    // active-source picker.
-    const res = await fetch(attachmentUrl(song.midiAttachmentId));
-    if (!res.ok) {
-      throw new Error(
-        `Failed to load MIDI for "${song.title}" (${res.status})`,
-      );
-    }
-    const buf = await res.arrayBuffer();
-    setRawMap({ [MIDI_SOURCE_ID]: buf });
-    openPlayer({ id: song.id, title: song.title });
-  }
-
-  async function importFile(file: File) {
-    setImporting(true);
-    try {
-      const buf = await file.arrayBuffer();
-      // Parse client-side for the card metadata (title + length). `compile`
-      // throws loudly on malformed MIDI — we let it propagate.
-      const score = compile(buf);
-      const endBeat = scoreEndBeat(score);
-      const up = await uploadAttachment(file, file.name, "audio/midi");
-      const song = await fetchEndpoint(
-        createSong,
-        {},
-        {
-          body: {
-            title: score.meta.title ?? file.name.replace(/\.midi?$/i, ""),
-            composer: null,
-            attachmentId: up.id,
-            durationSec: beatToSeconds(score, endBeat),
-            endBeat,
-            midiTrackCount: score.tracks.length,
-          },
-        },
-      );
-      await open(song);
-    } finally {
-      setImporting(false);
-    }
-  }
 
   const fields: FieldDef<Song>[] = useMemo(
     () => [
@@ -168,18 +113,18 @@ export function SongLibrary() {
                     size="sm"
                   />
                 ) : null}
-                <ImportButton
-                  importing={importing}
-                  onPick={(f) => void importFile(f)}
-                />
+                {/* Per-source "add a song" affordances (e.g. MIDI Import). */}
+                {sources.map((s) =>
+                  s.AddAction ? <s.AddAction key={s.sourceId} /> : null,
+                )}
               </>
             }
-            onRowActivate={(s) => void open(s)}
-            emptyState={<>No songs yet — import a MIDI file to get started.</>}
+            onRowActivate={(s) => void openSong(s)}
+            emptyState={<>No songs yet — add one to get started.</>}
             viewOptions={{
               gallery: {
                 renderCard: (s: Song) => (
-                  <SongCard song={s} onOpen={(x) => void open(x)} />
+                  <SongCard song={s} onOpen={(x) => void openSong(x)} />
                 ),
               },
             }}

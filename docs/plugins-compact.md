@@ -12,7 +12,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
-        - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
+        - **`shell`** — App shell for the agent manager. Registers the / app entry and renders the main Shell layout.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
@@ -34,10 +34,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
         - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
-    - **`home`** — Home — app launcher and entry point.
-      - Plugins:
-        - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
-        - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
     - **`pages`** — Notion-like pages app.
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
@@ -277,7 +273,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
 
-- **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
+- **`welcome`** — Landing pane shown at `/`.
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
 

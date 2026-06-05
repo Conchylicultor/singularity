@@ -1,9 +1,6 @@
 {
   "name": "@singularity/plugin-apps-sonata-library",
-  "description": "Sonata song library — persists songs (DB + MIDI attachment), seeds bundled starters, renders the gallery landing.",
+  "description": "Sonata song library — persists source-agnostic song rows, renders the gallery landing, and opens songs by collecting every source's raw via the Library.Source registry.",
   "private": true,
-  "version": "0.0.1",
-  "dependencies": {
-    "@tonejs/midi": "^2.0.28"
-  }
+  "version": "0.0.1"
 }
