@@ -1234,6 +1234,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-contributions",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-contributions-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-contributions-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-contributions-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/cross-refs": {
       "name": "@singularity/plugin-plugin-meta-facets-cross-refs",
       "version": "0.0.1",
@@ -2911,6 +2923,12 @@
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
 
     "@singularity/plugin-plugin-meta-facets-contributions": ["@singularity/plugin-plugin-meta-facets-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions"],
+
+    "@singularity/plugin-plugin-meta-facets-contributions-render-catalog": ["@singularity/plugin-plugin-meta-facets-contributions-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-contributions-render-detail": ["@singularity/plugin-plugin-meta-facets-contributions-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-contributions-render-diff": ["@singularity/plugin-plugin-meta-facets-contributions-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
 

@@ -1489,7 +1489,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `CommandDef`; Values: `commandsFacetDef`
         - **`contributions`**
           - Core:
-            - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionsFacetDef`
+            - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionId`, `contributionsFacetDef`, `contributionsToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin contributions table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Contributions"
+            - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
+            - **`render-diff`** — Diff renderer for the contributions facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Contributions"
         - **`cross-refs`**
           - Core:
             - Exports: Types: `CrossRefsData`; Values: `crossRefsFacetDef`

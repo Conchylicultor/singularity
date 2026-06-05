@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-facets-contributions-render-detail",
+  "description": "Per-plugin contributions section in the plugin detail pane.",
+  "private": true,
+  "version": "0.0.1"
+}

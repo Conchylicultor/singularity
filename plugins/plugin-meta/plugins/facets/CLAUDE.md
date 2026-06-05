@@ -44,6 +44,10 @@ See `plugins/commands/` for the reference implementation.
 - Sub-plugins:
   - **`commands`**
   - **`contributions`**
+    - Plugins:
+      - **`render-catalog`** — Aggregated cross-plugin contributions table in the Forge catalog.
+      - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
+      - **`render-diff`** — Diff renderer for the contributions facet (PR review).
   - **`cross-refs`**
   - **`db-schema`**
   - **`exports`**
