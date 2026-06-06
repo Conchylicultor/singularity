@@ -52,11 +52,11 @@ zero consumer changes — exactly the segmented-progress-bar collection model.
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots: `DataViewSlots.View`
-  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `SortState`, `ViewState`; Values: `DataView`, `DataViewSlots`
+  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
 - Cross-plugin:
-  - Slot contributors: `gallery`, `table`
+  - Slot contributors: `gallery`, `number`, `table`
 - Core:
-  - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `SortState`, `ViewState`
+  - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
 - Sub-plugins:
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.

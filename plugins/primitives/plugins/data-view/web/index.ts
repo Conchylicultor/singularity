@@ -3,6 +3,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export { DataView } from "./components/data-view";
 export { DataViewSlots } from "./slots";
 export type { DataViewContribution } from "./slots";
+export { useResolveCell } from "./cell-slot";
+export { useResolveFilter } from "./filter-slot";
 export type {
   FieldValue,
   FieldType,
@@ -11,6 +13,9 @@ export type {
   ViewState,
   DataViewRenderProps,
   DataViewProps,
+  TableCellProps,
+  FilterControlProps,
+  FilterContribution,
 } from "../core";
 
 export default {

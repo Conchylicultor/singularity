@@ -1,5 +1,10 @@
 import { useMemo } from "react";
-import type { FieldDef, FieldValue, ViewState } from "../../core";
+import type {
+  FieldDef,
+  FieldValue,
+  FilterContribution,
+  ViewState,
+} from "../../core";
 
 function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
   if (field.filterable === true) return true;
@@ -20,6 +25,7 @@ export function useDataViewRows<TRow>(
   rows: readonly TRow[],
   fields: FieldDef<TRow>[],
   state: ViewState,
+  resolveFilter: (typeId: string) => FilterContribution | undefined,
   searchAccessor?: (row: TRow) => string,
 ): readonly TRow[] {
   return useMemo(() => {
@@ -39,9 +45,19 @@ export function useDataViewRows<TRow>(
       result = result.filter((row) => accessor(row).toLowerCase().includes(lc));
     }
 
-    // --- Filter (Phase 3 — intentional no-op hook point) ---
-    // Per-field filters (state.filters) are carried but not yet applied.
-    // Phase 3 will apply them here, before sort.
+    // --- Filter (apply per-field predicates via the data-view.filter slot) ---
+    // With no filter Control rendered yet (task 2), `state.filters` stays empty,
+    // so this is a behavior-preserving no-op today; the mechanism is unit-correct.
+    for (const [fieldId, filterValue] of Object.entries(state.filters)) {
+      const field = fields.find((f) => f.id === fieldId);
+      if (!field) continue;
+      const contribution = resolveFilter(field.type ?? "text");
+      if (!contribution || !contribution.isActive(filterValue)) continue;
+      const valueFn = field.value;
+      result = result.filter((row) =>
+        contribution.predicate(filterValue, valueFn ? valueFn(row) : undefined),
+      );
+    }
 
     // --- Sort ---
     if (state.sort) {
@@ -62,5 +78,5 @@ export function useDataViewRows<TRow>(
     }
 
     return result;
-  }, [rows, fields, state, searchAccessor]);
+  }, [rows, fields, state, resolveFilter, searchAccessor]);
 }

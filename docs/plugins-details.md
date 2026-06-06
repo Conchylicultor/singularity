@@ -1236,6 +1236,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Shared:
     - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
 
+- **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+  - Web:
+    - Slots: `Fields.Identity`
+    - Exports: Values: `Fields`
+  - Cross-plugin:
+    - Slot contributors: `int`, `number`
+    - Imported by: `int`, `number`
+  - Core:
+    - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
+  - Plugins:
+    - **`int`** — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
+      - Web:
+        - Contributes: `Fields.Identity` "int"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `intFieldType`, `intIdentity`
+    - **`number`** — Number field type: identity plus the data-view cell and filter (min/max) capabilities.
+      - Web:
+        - Contributes: `Fields.Identity` "number", `DataViewSlots.Cell` "number" → `NumberCell`, `DataViewSlots.Filter` "number"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `numberFieldType`, `numberIdentity`
+
 - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
   - Web:
     - Contributes: `Core.Root` → `FloatingBar`, `ConfigV2.WebRegister`
@@ -1713,11 +1738,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots: `DataViewSlots.View`
-        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `SortState`, `ViewState`; Values: `DataView`, `DataViewSlots`
+        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
       - Cross-plugin:
-        - Slot contributors: `gallery`, `table`
+        - Slot contributors: `gallery`, `number`, `table`
       - Core:
-        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `SortState`, `ViewState`
+        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:

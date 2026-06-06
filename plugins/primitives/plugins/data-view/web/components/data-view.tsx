@@ -10,6 +10,7 @@ import type { DataViewProps, DataViewRenderProps } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import { useViewState } from "../internal/use-view-state";
 import { useDataViewRows } from "../internal/use-data-view-rows";
+import { useResolveFilter } from "../filter-slot";
 import { ViewSwitcher } from "./view-switcher";
 
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
@@ -59,10 +60,12 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const activeViewId = activeView?.id ?? "";
   const activeState = viewState.stateFor(activeViewId);
 
+  const resolveFilter = useResolveFilter();
   const processedRows = useDataViewRows(
     rows,
     fields,
     activeState,
+    resolveFilter,
     searchAccessor,
   );
 

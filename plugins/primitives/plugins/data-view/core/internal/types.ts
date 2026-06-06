@@ -1,10 +1,12 @@
-import { type ReactNode } from "react";
+import { type ComponentType, type ReactNode } from "react";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
 /**
- * Forward-compatible taxonomy; drives sort comparison, default search inclusion,
- * and (Phase 3) which filter control the future filter bar renders for the field.
+ * @deprecated Closed taxonomy kept only for back-compat with existing
+ * `f.type === "media"` / `"text"` comparisons. The canonical field-type id is
+ * now an open `string` resolved against the `fields.identity` registry.
+ * Removed in task 2 of the unified-fields migration.
  */
 export type FieldType =
   | "text"
@@ -17,8 +19,8 @@ export type FieldType =
 export interface FieldDef<TRow> {
   id: string;
   label: string;
-  /** Default "text". */
-  type?: FieldType;
+  /** Field type id (open registry id). Default "text". */
+  type?: string;
   /** Comparable projection used for sort/search/filter. */
   value?: (row: TRow) => FieldValue;
   /** Custom renderer; falls back to String(value ?? ""). */
@@ -69,6 +71,34 @@ export interface DataViewRenderProps<TRow> {
   /** viewOptions[activeViewId] — opaque to the host, typed by each view. */
   options: unknown;
   emptyState?: ReactNode;
+}
+
+/**
+ * Props passed to a `data-view.cell` contribution. `value` is the already-projected
+ * `field.value(row)`; `raw` is the row itself (escape hatch only, non-canonical).
+ */
+export interface TableCellProps {
+  value: FieldValue;
+  field: FieldDef<unknown>;
+  raw?: unknown;
+}
+
+/** Props passed to a `data-view.filter` Control (the future filter-bar input). */
+export interface FilterControlProps {
+  value: unknown;
+  onChange: (value: unknown) => void;
+  field: FieldDef<unknown>;
+}
+
+/**
+ * A `data-view.filter` contribution: the Control (rendered by the future filter
+ * bar) plus the pure predicate/isActive functions applied in the row pipeline.
+ */
+export interface FilterContribution {
+  match: string;
+  Control: ComponentType<FilterControlProps>;
+  predicate: (filterValue: unknown, fieldValue: FieldValue) => boolean;
+  isActive: (filterValue: unknown) => boolean;
 }
 
 export interface DataViewProps<TRow> {

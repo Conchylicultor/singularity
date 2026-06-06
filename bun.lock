@@ -912,6 +912,18 @@
       "name": "@singularity/plugin-events-test",
       "version": "0.0.1",
     },
+    "plugins/fields": {
+      "name": "@singularity/plugin-fields",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/int": {
+      "name": "@singularity/plugin-fields-int",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/number": {
+      "name": "@singularity/plugin-fields-number",
+      "version": "0.0.1",
+    },
     "plugins/floating-bar": {
       "name": "@singularity/plugin-floating-bar",
       "version": "0.0.1",
@@ -2870,6 +2882,12 @@
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 
     "@singularity/plugin-events-test": ["@singularity/plugin-events-test@workspace:plugins/events-test"],
+
+    "@singularity/plugin-fields": ["@singularity/plugin-fields@workspace:plugins/fields"],
+
+    "@singularity/plugin-fields-int": ["@singularity/plugin-fields-int@workspace:plugins/fields/plugins/int"],
+
+    "@singularity/plugin-fields-number": ["@singularity/plugin-fields-number@workspace:plugins/fields/plugins/number"],
 
     "@singularity/plugin-floating-bar": ["@singularity/plugin-floating-bar@workspace:plugins/floating-bar"],
 

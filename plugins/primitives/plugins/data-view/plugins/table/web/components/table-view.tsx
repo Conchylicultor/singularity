@@ -4,10 +4,11 @@ import {
   type ColumnDef,
   type SortState as TableSortState,
 } from "@plugins/primitives/plugins/data-table/web";
-import type {
-  DataViewRenderProps,
-  FieldValue,
-  SortState,
+import {
+  useResolveCell,
+  type DataViewRenderProps,
+  type FieldValue,
+  type SortState,
 } from "@plugins/primitives/plugins/data-view/web";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
@@ -25,6 +26,9 @@ function mapSort(sort: SortState | null): TableSortState | null {
 }
 
 export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
+  // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
+  const resolveCell = useResolveCell();
+
   // DataTable's `emptyLabel` is string-only; render a custom empty node here so
   // the host-provided `emptyState` (ReactNode) is honored.
   if (props.rows.length === 0 && props.emptyState !== undefined) {
@@ -41,7 +45,13 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // already-host-sorted column by the same key is idempotent. (For v1, a field
     // with `sortable === false` still exposes `value`; documented in CLAUDE.md.)
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
-    cell: f.cell,
+    // 3-tier cell precedence: ① consumer `cell` override → ② contributed
+    // per-type `data-view.cell` (honoring `extends`) → ③ `String(value)`.
+    cell: f.cell
+      ? f.cell
+      : (row: unknown) =>
+          resolveCell(f, f.value ? f.value(row) : undefined, row) ??
+          String(f.value?.(row) ?? ""),
   }));
 
   return (
