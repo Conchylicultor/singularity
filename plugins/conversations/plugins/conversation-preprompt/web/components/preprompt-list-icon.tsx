@@ -12,8 +12,8 @@ export function PrepromptListIcon({ conv }: { conv: ConversationItemConv }) {
   if (!record?.icon?.svgNodes?.length) return null;
   return (
     <WithTooltip content={`Preprompt: ${record.title}`}>
-      <span className="inline-flex">
-        <PrepromptIcon record={record} size="xs" />
+      <span className="inline-flex text-muted-foreground">
+        <PrepromptIcon record={record} />
       </span>
     </WithTooltip>
   );

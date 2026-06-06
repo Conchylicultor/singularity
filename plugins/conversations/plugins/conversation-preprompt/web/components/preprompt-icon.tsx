@@ -1,29 +1,48 @@
+import { createElement } from "react";
 import type { ReactNode } from "react";
-import { Avatar, type AvatarSize } from "@plugins/primitives/plugins/avatar/web";
-import type { ConversationPreprompt } from "../../shared";
+import { cn } from "@/lib/utils";
+import type {
+  ConversationPreprompt,
+  PrepromptIcon as PrepromptIconSpec,
+} from "../../shared";
 
-// Renders a preprompt's chosen icon as a small colored avatar disc, sourced
-// from the conversation's launch-time snapshot. When the preprompt has no
-// icon, renders `fallback` (a header chip uses its default glyph; the sidebar
-// marker passes nothing so unset preprompts stay unadorned).
+type SvgNode = NonNullable<NonNullable<PrepromptIconSpec>["svgNodes"]>[number];
+
+function renderSvgNodes(nodes: SvgNode[]): ReactNode {
+  return nodes.map((node, i) =>
+    createElement(
+      node.tag,
+      { key: i, ...node.attr },
+      node.child.length > 0 ? renderSvgNodes(node.child) : undefined,
+    ),
+  );
+}
+
+// Renders a preprompt's chosen icon as a bare, muted glyph, sourced from the
+// conversation's launch-time snapshot. The picked colour is intentionally
+// dropped in the conversation view — markers read as neutral status (like the
+// op-status build/push glyphs), not as a coloured label. When the preprompt
+// has no icon, renders `fallback` (the header chip passes its default glyph;
+// the sidebar marker passes nothing so unset preprompts stay unadorned).
 export function PrepromptIcon({
   record,
-  size = "xs",
+  className,
   fallback = null,
 }: {
   record: ConversationPreprompt;
-  size?: AvatarSize;
+  className?: string;
   fallback?: ReactNode;
 }) {
   const nodes = record.icon?.svgNodes;
   if (!nodes?.length) return <>{fallback}</>;
   return (
-    <Avatar
-      size={size}
-      svgNodes={nodes}
-      color={record.icon?.color ?? null}
-      fallbackKey={record.prepromptId}
-      title={record.title}
-    />
+    <svg
+      viewBox="0 0 24 24"
+      fill="currentColor"
+      aria-hidden
+      className={cn("size-3.5", className)}
+    >
+      {renderSvgNodes(nodes)}
+    </svg>
   );
 }

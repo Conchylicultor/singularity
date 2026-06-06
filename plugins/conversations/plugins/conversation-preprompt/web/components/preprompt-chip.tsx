@@ -28,6 +28,7 @@ export function PrepromptChip() {
           icon={
             <PrepromptIcon
               record={record}
+              className="size-3"
               fallback={<MdCampaign className="size-3" />}
             />
           }
