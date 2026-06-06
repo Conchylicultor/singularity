@@ -1,4 +1,4 @@
-import { generateKeyBetween } from "fractional-indexing";
+import { generateKeyBetween, generateNKeysBetween } from "fractional-indexing";
 import { z } from "zod";
 
 export class Rank {
@@ -16,6 +16,20 @@ export class Rank {
 
   static between(prev: Rank | null, next: Rank | null): Rank {
     return new Rank(generateKeyBetween(prev?._v ?? null, next?._v ?? null));
+  }
+
+  /**
+   * Generate `n` evenly-spaced ranks strictly between `prev` and `next`, in
+   * ascending order. Use this for inserting a contiguous run of items (bulk
+   * move, paste, duplicate) — it splits the interval once instead of repeatedly
+   * calling `between` and feeding the result back, which grows key length
+   * unboundedly. Returns `[]` when `n <= 0`.
+   */
+  static nBetween(prev: Rank | null, next: Rank | null, n: number): Rank[] {
+    if (n <= 0) return [];
+    return generateNKeysBetween(prev?._v ?? null, next?._v ?? null, n).map(
+      (v) => new Rank(v),
+    );
   }
 
   static equals(a: Rank, b: Rank): boolean {

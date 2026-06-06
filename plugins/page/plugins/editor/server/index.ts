@@ -14,6 +14,10 @@ import { handleSplitBlock } from "./internal/handle-split-block";
 import { handleMergeBlocks } from "./internal/handle-merge-blocks";
 import { handleIndentBlock } from "./internal/handle-indent-block";
 import { handleOutdentBlock } from "./internal/handle-outdent-block";
+import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
+import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
+import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
+import { handlePasteBlock } from "./internal/handle-paste-block";
 import { documentsLiveResource, blocksLiveResource } from "./internal/resources";
 import { blocksChanged } from "./internal/tables-events";
 import {
@@ -31,6 +35,10 @@ import {
   mergeBlocks,
   indentBlock,
   outdentBlock,
+  bulkDeleteBlocks,
+  bulkMoveBlocks,
+  bulkDuplicateBlocks,
+  pasteBlocks,
 } from "../core/endpoints";
 
 export { _documents, _blocks } from "./internal/tables";
@@ -60,6 +68,10 @@ export default {
     [mergeBlocks.route]: handleMergeBlocks,
     [indentBlock.route]: handleIndentBlock,
     [outdentBlock.route]: handleOutdentBlock,
+    [bulkDeleteBlocks.route]: handleBulkDeleteBlock,
+    [bulkMoveBlocks.route]: handleBulkMoveBlock,
+    [bulkDuplicateBlocks.route]: handleBulkDuplicateBlock,
+    [pasteBlocks.route]: handlePasteBlock,
   },
   register: [blocksChanged],
   contributions: [

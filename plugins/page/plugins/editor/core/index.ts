@@ -18,12 +18,20 @@ export {
   mergeBlocks,
   indentBlock,
   outdentBlock,
+  bulkDeleteBlocks,
+  bulkMoveBlocks,
+  bulkDuplicateBlocks,
+  pasteBlocks,
   CreateDocumentBodySchema,
   UpdateDocumentBodySchema,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
   SplitBlockBodySchema,
+  BulkDeleteBlocksBodySchema,
+  BulkMoveBlocksBodySchema,
+  BulkDuplicateBlocksBodySchema,
+  PasteBlocksBodySchema,
 } from "./endpoints";
 export type {
   CreateDocumentBody,
@@ -32,7 +40,14 @@ export type {
   UpdateBlockBody,
   MoveBlockBody,
   SplitBlockBody,
+  BulkDeleteBlocksBody,
+  BulkMoveBlocksBody,
+  BulkDuplicateBlocksBody,
+  PasteBlocksBody,
 } from "./endpoints";
+
+export { SerializedBlockSchema } from "./serialized-block";
+export type { SerializedBlock } from "./serialized-block";
 
 export { defineBlock } from "./define-block";
 export type { BlockHandle } from "./define-block";

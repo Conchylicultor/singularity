@@ -6,7 +6,7 @@
 
 - Description: Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 - Core:
-  - Exports: Types: `DropZone`, `TreeNode`; Values: `buildTree`, `computeDrop`, `isDescendant`
+  - Exports: Types: `DropZone`, `TreeNode`; Values: `buildTree`, `computeDrop`, `isDescendant`, `selectionRoots`, `subtreeIds`
 - Web:
   - Exports: Types: `ExpandableRow`, `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`, `TreeRowChromeProps`, `UseSubtreeExpandAllReturn`; Values: `hideTerminalSubtrees`, `RenameInput`, `RowChrome`, `TreeList`, `TreeRowChrome`, `useSubtreeExpandAll`, `useTreeListContext`, `useTreeRow`
 

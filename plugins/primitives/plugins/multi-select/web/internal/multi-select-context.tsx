@@ -9,6 +9,7 @@ export type MultiSelectState = {
 
 export type MultiSelectAction =
   | { type: "TOGGLE"; id: string; shiftKey: boolean }
+  | { type: "SET_RANGE"; anchorId: string; targetId: string }
   | { type: "SELECT_ALL" }
   | { type: "CLEAR_ALL" }
   | { type: "SET_ORDERED_IDS"; ids: readonly string[] };
@@ -87,6 +88,26 @@ export function multiSelectReducer(
         ...state,
         selectedIds: next,
         anchorId: id,
+        isActive: next.size > 0,
+      };
+    }
+
+    case "SET_RANGE": {
+      // Replace the selection with exactly the contiguous range
+      // [anchorId..targetId] (document-style range select, as opposed to the
+      // additive TOGGLE+shift behavior). No-op if either id is unknown.
+      const { anchorId, targetId } = action;
+      const anchorIdx = state.orderedIds.indexOf(anchorId);
+      const targetIdx = state.orderedIds.indexOf(targetId);
+      if (anchorIdx === -1 || targetIdx === -1) return state;
+      const lo = Math.min(anchorIdx, targetIdx);
+      const hi = Math.max(anchorIdx, targetIdx);
+      const next = new Set<string>();
+      for (let i = lo; i <= hi; i++) next.add(state.orderedIds[i]!);
+      return {
+        ...state,
+        selectedIds: next,
+        anchorId,
         isActive: next.size > 0,
       };
     }

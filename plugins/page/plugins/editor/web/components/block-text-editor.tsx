@@ -111,7 +111,7 @@ export function BlockTextEditor({
           />
           <HistoryPlugin />
           <ValueSyncPlugin value={field.value} onChange={field.onChange} />
-          <KeyboardPlugin editor={editor} splitOptions={splitOptions} />
+          <KeyboardPlugin blockId={block.id} editor={editor} splitOptions={splitOptions} />
           <SlashMenuPlugin block={block} editor={editor} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
           <EditorRefPlugin editorRef={lexicalEditorRef} />

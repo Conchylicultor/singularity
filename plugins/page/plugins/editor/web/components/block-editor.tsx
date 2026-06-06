@@ -16,16 +16,35 @@ import {
   buildTree,
   computeDrop,
   isDescendant,
+  selectionRoots,
+  subtreeIds,
   type DropZone,
   type TreeNode,
 } from "@plugins/primitives/plugins/tree/core";
-import { blocksResource, type Block } from "../../core";
+import {
+  MultiSelectProvider,
+  SelectionBar,
+  useMultiSelect,
+} from "@plugins/primitives/plugins/multi-select/web";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { blocksResource, type Block, type SerializedBlock } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
+import { Editor } from "../slots";
+import { serializeForest } from "../serialize-blocks";
+import { blocksToMarkdown, markdownToForest } from "../markdown-blocks";
+import {
+  SelectionControlProvider,
+  type SelectionControl,
+} from "../selection-control";
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow } from "./block-row";
 
 type FlatBlock = { block: Block; depth: number; hasChildren: boolean };
 type DropTarget = { id: string; zone: DropZone };
+
+/** Custom clipboard MIME carrying a serialized block forest (round-trips full
+ *  structure); `text/plain` carries a markdown fallback for external apps. */
+const BLOCKS_MIME = "application/x-singularity-blocks+json";
 
 // Depth-first flatten that carries each block's depth. Rendering the tree as a
 // flat list of keyed siblings (rather than nesting children inside their parent's
@@ -77,14 +96,14 @@ export function BlockEditor({
 }) {
   return (
     <BlockEditorProvider documentId={documentId} onOpenPage={onOpenPage}>
-      <BlockEditorInner documentId={documentId} />
+      <BlockEditorInner />
     </BlockEditorProvider>
   );
 }
 
-function BlockEditorInner({ documentId }: { documentId: string }) {
+function BlockEditorInner() {
+  const { documentId, setFlatOrder, setRows } = useBlockEditor();
   const result = useResource(blocksResource, { documentId });
-  const { setFlatOrder, move } = useBlockEditor();
 
   const { rows, flat } = useMemo(() => {
     if (result.pending) {
@@ -99,39 +118,371 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
-  }, [flat, setFlatOrder]);
+    setRows(rows);
+  }, [flat, rows, setFlatOrder, setRows]);
+
+  const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
+
+  if (result.pending) {
+    return <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>;
+  }
+
+  return (
+    <MultiSelectProvider orderedIds={orderedIds}>
+      <SelectionLayer rows={rows} flat={flat} />
+    </MultiSelectProvider>
+  );
+}
+
+function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
+  const {
+    move,
+    bulkMove,
+    bulkDelete,
+    bulkDuplicate,
+    paste,
+    focusBlock,
+    focusedBlockId,
+  } = useBlockEditor();
+  const { selectedIds, isActive, setRange, clearAll, selectAll } =
+    useMultiSelect();
+  const contributions = Editor.Block.useContributions();
+  const handles = useMemo(() => contributions.map((c) => c.block), [contributions]);
+
+  const containerRef = useRef<HTMLDivElement>(null);
+  const anchorRef = useRef<string | null>(null);
+  const headRef = useRef<string | null>(null);
+
+  const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
+
+  // Keep the live selection reachable from imperative DOM event handlers
+  // (clipboard) without re-subscribing them on every selection change.
+  const selectedRef = useRef(selectedIds);
+  selectedRef.current = selectedIds;
+  const rowsRef = useRef(rows);
+  rowsRef.current = rows;
+
+  const focusContainer = useCallback(() => {
+    containerRef.current?.focus();
+  }, []);
+
+  const applyRange = useCallback(
+    (anchor: string, head: string) => {
+      anchorRef.current = anchor;
+      headRef.current = head;
+      setRange(anchor, head);
+    },
+    [setRange],
+  );
+
+  const clearSelection = useCallback(() => {
+    anchorRef.current = null;
+    headRef.current = null;
+    clearAll();
+  }, [clearAll]);
+
+  const neighbor = useCallback(
+    (id: string, dir: "up" | "down"): string | null => {
+      const idx = orderedIds.indexOf(id);
+      if (idx === -1) return null;
+      const next = dir === "down" ? idx + 1 : idx - 1;
+      return orderedIds[next] ?? null;
+    },
+    [orderedIds],
+  );
+
+  const selectionControl = useMemo<SelectionControl>(
+    () => ({
+      enterSelectionMode(blockId, extend) {
+        if (!extend) {
+          applyRange(blockId, blockId);
+        } else {
+          const target = neighbor(blockId, extend) ?? blockId;
+          applyRange(blockId, target);
+        }
+        focusContainer();
+      },
+      extendTo(blockId) {
+        const anchor = anchorRef.current ?? focusedBlockId ?? blockId;
+        applyRange(anchor, blockId);
+        focusContainer();
+      },
+      selectOnly(blockId) {
+        applyRange(blockId, blockId);
+        focusContainer();
+      },
+      clear: clearSelection,
+    }),
+    [applyRange, neighbor, focusContainer, focusedBlockId, clearSelection],
+  );
+
+  // ---- Clipboard (DOM copy/cut/paste on the focused container) -------------
+
+  const writeClipboard = useCallback(
+    (e: React.ClipboardEvent) => {
+      const roots = selectionRoots(rowsRef.current, selectedRef.current);
+      if (roots.length === 0) return false;
+      const forest = serializeForest(rowsRef.current, roots);
+      e.clipboardData.setData(BLOCKS_MIME, JSON.stringify(forest));
+      e.clipboardData.setData("text/plain", blocksToMarkdown(forest, handles));
+      e.preventDefault();
+      return true;
+    },
+    [handles],
+  );
+
+  const onCopy = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (document.activeElement !== containerRef.current) return;
+      writeClipboard(e);
+    },
+    [writeClipboard],
+  );
+
+  const onCut = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (document.activeElement !== containerRef.current) return;
+      if (writeClipboard(e)) {
+        bulkDelete([...selectedRef.current]);
+        clearSelection();
+      }
+    },
+    [writeClipboard, bulkDelete, clearSelection],
+  );
+
+  const onPaste = useCallback(
+    (e: React.ClipboardEvent) => {
+      if (document.activeElement !== containerRef.current) return;
+      const json = e.clipboardData.getData(BLOCKS_MIME);
+      let forest: SerializedBlock[];
+      if (json) {
+        try {
+          forest = JSON.parse(json) as SerializedBlock[];
+        } catch {
+          return;
+        }
+      } else {
+        const text = e.clipboardData.getData("text/plain");
+        if (!text.trim()) return;
+        forest = markdownToForest(text, handles);
+      }
+      if (!Array.isArray(forest) || forest.length === 0) return;
+      e.preventDefault();
+      const roots = selectionRoots(rowsRef.current, selectedRef.current);
+      const afterId =
+        headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
+      void paste({ blocks: forest, afterId });
+    },
+    [handles, paste, focusedBlockId],
+  );
+
+  // Nudge the whole selection up/down by one slot among its siblings.
+  const moveSelection = useCallback(
+    (dir: "up" | "down") => {
+      const roots = selectionRoots(rowsRef.current, selectedRef.current);
+      if (roots.length === 0) return;
+      const moving = new Set(roots.flatMap((r) => subtreeIds(rowsRef.current, r)));
+      // Operate within the first root's sibling list (the common case: a
+      // contiguous run of same-parent blocks).
+      const first = rowsRef.current.find((r) => r.id === roots[0]);
+      if (!first) return;
+      const siblings = rowsRef.current
+        .filter((r) => r.parentId === first.parentId)
+        .sort((a, b) => Rank.compare(a.rank, b.rank));
+      const rootSet = new Set(roots);
+      const idxs = siblings
+        .map((s, i) => (rootSet.has(s.id) ? i : -1))
+        .filter((i) => i >= 0);
+      if (idxs.length === 0) return;
+      const top = Math.min(...idxs);
+      const bottom = Math.max(...idxs);
+      const remaining = siblings.filter((s) => !moving.has(s.id));
+      let afterId: string | null;
+      if (dir === "up") {
+        // Place before the sibling currently above the run.
+        const above = siblings[top - 1];
+        if (!above) return;
+        const aboveIdxInRemaining = remaining.findIndex((s) => s.id === above.id);
+        afterId = remaining[aboveIdxInRemaining - 1]?.id ?? null;
+      } else {
+        const below = siblings[bottom + 1];
+        if (!below) return;
+        afterId = below.id;
+      }
+      bulkMove({ ids: roots, parentId: first.parentId, afterId });
+    },
+    [bulkMove],
+  );
+
+  // ---- Keyboard (block-selection mode; container must be the focus) --------
+
+  const onKeyDown = useCallback(
+    (e: React.KeyboardEvent) => {
+      if (document.activeElement !== containerRef.current) return;
+      if (!isActive) return;
+      const mod = e.metaKey || e.ctrlKey;
+
+      if (e.key === "Escape") {
+        e.preventDefault();
+        clearSelection();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        selectAll();
+        anchorRef.current = orderedIds[0] ?? null;
+        headRef.current = orderedIds[orderedIds.length - 1] ?? null;
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "d") {
+        e.preventDefault();
+        void bulkDuplicate([...selectedRef.current]);
+        return;
+      }
+      if (e.key === "Backspace" || e.key === "Delete") {
+        e.preventDefault();
+        bulkDelete([...selectedRef.current]);
+        clearSelection();
+        return;
+      }
+      if (e.key === "Enter") {
+        e.preventDefault();
+        const head = headRef.current;
+        clearSelection();
+        if (head) focusBlock(head);
+        return;
+      }
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        const dir = e.key === "ArrowDown" ? "down" : "up";
+        const head = headRef.current ?? anchorRef.current;
+        if (!head) return;
+        const next = neighbor(head, dir);
+        if (!next) {
+          e.preventDefault();
+          return;
+        }
+        e.preventDefault();
+        if (e.altKey && e.shiftKey) {
+          moveSelection(dir);
+        } else if (e.shiftKey) {
+          applyRange(anchorRef.current ?? head, next);
+        } else {
+          applyRange(next, next);
+        }
+      }
+    },
+    [
+      isActive,
+      clearSelection,
+      selectAll,
+      orderedIds,
+      bulkDuplicate,
+      bulkDelete,
+      focusBlock,
+      neighbor,
+      applyRange,
+      moveSelection,
+    ],
+  );
+
+  // ---- Marquee drag-select on the empty container background ---------------
+
+  const [marquee, setMarquee] = useState<{ top: number; height: number } | null>(
+    null,
+  );
+  const marqueeStartRef = useRef<{ id: string | null; y: number } | null>(null);
+  const marqueeMovedRef = useRef(false);
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if (e.button !== 0) return;
+      const el = e.target as HTMLElement;
+      // Only start on empty background — never over a block, gutter button, or
+      // editable text (those have their own pointer behavior).
+      if (
+        el.closest("[data-block-id]") ||
+        el.closest("button") ||
+        el.closest('[contenteditable="true"]')
+      ) {
+        return;
+      }
+      const start = rowAtPointer(e.clientY);
+      marqueeStartRef.current = { id: start?.id ?? null, y: e.clientY };
+      marqueeMovedRef.current = false;
+      focusContainer();
+
+      const onMove = (ev: PointerEvent) => {
+        const startInfo = marqueeStartRef.current;
+        if (!startInfo) return;
+        const cur = rowAtPointer(ev.clientY);
+        const container = containerRef.current;
+        if (container) {
+          const r = container.getBoundingClientRect();
+          const top = Math.min(startInfo.y, ev.clientY) - r.top;
+          const height = Math.abs(ev.clientY - startInfo.y);
+          if (height > 3) {
+            marqueeMovedRef.current = true;
+            setMarquee({ top, height });
+          }
+        }
+        if (cur && startInfo.id) applyRange(startInfo.id, cur.id);
+      };
+      const onUp = () => {
+        if (!marqueeMovedRef.current) clearSelection();
+        marqueeStartRef.current = null;
+        setMarquee(null);
+        window.removeEventListener("pointermove", onMove);
+        window.removeEventListener("pointerup", onUp);
+      };
+      window.addEventListener("pointermove", onMove);
+      window.addEventListener("pointerup", onUp);
+    },
+    [applyRange, clearSelection, focusContainer],
+  );
+
+  // ---- Drag-and-drop (single block, or the whole selection) ----------------
 
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  // Resolved selection roots + their subtree when dragging a multi-selection.
+  const bulkDragRef = useRef<{ roots: string[]; subtree: Set<string> } | null>(
+    null,
+  );
 
-  // Capture the live pointer position; collision detection runs on every drag
-  // frame. We only use the pointer (not dnd-kit's `over`) and resolve the row
-  // ourselves from live DOM rects via rowAtPointer.
   const pointerRef = useRef<{ x: number; y: number } | null>(null);
   const collisionDetection = useCallback<CollisionDetection>((args) => {
     if (args.pointerCoordinates) pointerRef.current = args.pointerCoordinates;
     return pointerWithin(args);
   }, []);
 
-  // Resolve where a drop would land from the pointer's vertical position: top
-  // half of a row → before, bottom half → after. A drop lands as a sibling of
-  // the target (inheriting its depth); deeper nesting is done by dropping next
-  // to an already-nested block, or with Tab/indent. One target at a time →
-  // exactly one insertion line, with no before/after duplication.
   const currentTarget = (): DropTarget | null => {
     const pointer = pointerRef.current;
     if (!pointer || !activeId) return null;
     const target = rowAtPointer(pointer.y);
-    if (!target || target.id === activeId) return null;
-    if (isDescendant(rows, activeId, target.id)) return null;
+    if (!target) return null;
+    const bulk = bulkDragRef.current;
+    if (bulk) {
+      if (bulk.subtree.has(target.id)) return null;
+    } else {
+      if (target.id === activeId) return null;
+      if (isDescendant(rows, activeId, target.id)) return null;
+    }
     return target;
   };
 
   const onDragStart = (event: DragStartEvent) => {
-    setActiveId((event.active.data.current?.id as string | undefined) ?? null);
+    const id = (event.active.data.current?.id as string | undefined) ?? null;
+    setActiveId(id);
+    if (id && selectedIds.has(id)) {
+      const roots = selectionRoots(rows, selectedIds);
+      const subtree = new Set(roots.flatMap((r) => subtreeIds(rows, r)));
+      bulkDragRef.current = { roots, subtree };
+    } else {
+      bulkDragRef.current = null;
+    }
   };
 
   const onDragMove = () => {
@@ -144,9 +495,30 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
   const onDragEnd = () => {
     const target = currentTarget();
     const dragged = activeId;
+    const bulk = bulkDragRef.current;
     setDropTarget(null);
     setActiveId(null);
+    bulkDragRef.current = null;
     if (!dragged || !target) return;
+
+    if (bulk) {
+      const targetRow = rows.find((r) => r.id === target.id);
+      if (!targetRow) return;
+      const parentId = targetRow.parentId;
+      let afterId: string | null;
+      if (target.zone === "after") {
+        afterId = target.id;
+      } else {
+        const siblings = rows
+          .filter((r) => r.parentId === parentId && !bulk.subtree.has(r.id))
+          .sort((a, b) => Rank.compare(a.rank, b.rank));
+        const idx = siblings.findIndex((s) => s.id === target.id);
+        afterId = siblings[idx - 1]?.id ?? null;
+      }
+      bulkMove({ ids: bulk.roots, parentId, afterId });
+      return;
+    }
+
     const dest = computeDrop(rows, dragged, target.zone, target.id);
     if (!dest) return;
     const current = rows.find((r) => r.id === dragged);
@@ -163,47 +535,112 @@ function BlockEditorInner({ documentId }: { documentId: string }) {
   const onDragCancel = () => {
     setDropTarget(null);
     setActiveId(null);
+    bulkDragRef.current = null;
   };
 
-  if (result.pending) {
-    return <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>;
-  }
+  const selectedCount = selectedIds.size;
 
   return (
-    <DndContext
-      sensors={sensors}
-      collisionDetection={collisionDetection}
-      onDragStart={onDragStart}
-      onDragMove={onDragMove}
-      onDragEnd={onDragEnd}
-      onDragCancel={onDragCancel}
-    >
-      {/* pl-16 leaves room for the three-button gutter cluster (chevron, drag
-          handle, and +, at -20/-40/-60 left of the content) without it colliding
-          with the pane/sidebar edge. */}
-      <div className="py-2 pl-16 pr-2">
-        {flat.map((f) => (
-          <BlockRow
-            key={f.block.id}
-            block={f.block}
-            depth={f.depth}
-            hasChildren={f.hasChildren}
-            isDragging={activeId === f.block.id}
-            dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
-          />
-        ))}
-        <div className="mt-1">
-          <AddBlockMenu />
-        </div>
-      </div>
-      <DragOverlay dropAnimation={null}>
-        {activeId ? (
-          // eslint-disable-next-line badge/no-adhoc-chip -- drag overlay container, not a chip
-          <div className="bg-background/90 border-accent text-muted-foreground flex items-center gap-1 rounded border px-2 py-1 text-sm shadow">
-            <MdDragIndicator className="size-4" />
+    <SelectionControlProvider value={selectionControl}>
+      <DndContext
+        sensors={sensors}
+        collisionDetection={collisionDetection}
+        onDragStart={onDragStart}
+        onDragMove={onDragMove}
+        onDragEnd={onDragEnd}
+        onDragCancel={onDragCancel}
+      >
+        <SelectionBar
+          actions={
+            <>
+              <button
+                type="button"
+                className="text-foreground hover:text-foreground/80"
+                onClick={() => {
+                  containerRef.current?.focus();
+                  document.execCommand("copy");
+                }}
+              >
+                Copy
+              </button>
+              <button
+                type="button"
+                className="text-foreground hover:text-foreground/80"
+                onClick={() => void bulkDuplicate([...selectedIds])}
+              >
+                Duplicate
+              </button>
+              <button
+                type="button"
+                className="text-destructive hover:text-destructive/80"
+                onClick={() => {
+                  bulkDelete([...selectedIds]);
+                  clearSelection();
+                }}
+              >
+                Delete
+              </button>
+            </>
+          }
+        />
+        <ContentScope>
+          {/* pl-16 leaves room for the three-button gutter cluster (chevron, drag
+              handle, and +, at -20/-40/-60 left of the content). min-h gives an
+              empty area below the content to start a marquee from. */}
+          <div
+            ref={containerRef}
+            tabIndex={-1}
+            role="listbox"
+            aria-multiselectable
+            aria-label="Document blocks"
+            onKeyDown={onKeyDown}
+            onCopy={onCopy}
+            onCut={onCut}
+            onPaste={onPaste}
+            onPointerDown={onPointerDown}
+            onFocusCapture={(e) => {
+              // Focusing into a block's editor (clicking to type) drops any block
+              // selection. Focusing the container itself (selection mode) doesn't.
+              if (e.target !== containerRef.current && isActive) clearSelection();
+            }}
+            className="relative min-h-40 py-2 pl-16 pr-2 outline-none"
+          >
+            {flat.map((f) => (
+              <BlockRow
+                key={f.block.id}
+                block={f.block}
+                depth={f.depth}
+                hasChildren={f.hasChildren}
+                isDragging={
+                  activeId === f.block.id ||
+                  (bulkDragRef.current?.subtree.has(f.block.id) ?? false)
+                }
+                dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
+              />
+            ))}
+            <div className="mt-1">
+              <AddBlockMenu />
+            </div>
+            {marquee && (
+              <div
+                className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-0 rounded border"
+                style={{ top: marquee.top, height: marquee.height }}
+              />
+            )}
           </div>
-        ) : null}
-      </DragOverlay>
-    </DndContext>
+        </ContentScope>
+        <DragOverlay dropAnimation={null}>
+          {activeId ? (
+            // eslint-disable-next-line badge/no-adhoc-chip -- drag overlay container, not a chip
+            <div className="bg-background/90 border-accent text-muted-foreground flex items-center gap-1 rounded border px-2 py-1 text-sm shadow">
+              <MdDragIndicator className="size-4" />
+              {bulkDragRef.current && selectedCount > 1
+                ? `${selectedCount} blocks`
+                : null}
+            </div>
+          ) : null}
+        </DragOverlay>
+      </DndContext>
+    </SelectionControlProvider>
   );
 }

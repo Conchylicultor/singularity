@@ -1,4 +1,12 @@
-import { createContext, useCallback, useContext, useRef, useState, type ReactNode } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useRef,
+  useState,
+  type MutableRefObject,
+  type ReactNode,
+} from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -10,7 +18,12 @@ import {
   indentBlock,
   outdentBlock,
   moveBlock,
+  bulkDeleteBlocks,
+  bulkMoveBlocks,
+  bulkDuplicateBlocks,
+  pasteBlocks,
   type Block,
+  type SerializedBlock,
 } from "../core";
 import type { BlockEditorAPI } from "./types";
 
@@ -21,7 +34,25 @@ interface BlockEditorContextValue {
   registerFocusHandle: (id: string, handle: { focus: () => void }) => () => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
   setFlatOrder: (blocks: Block[]) => void;
+  /** All blocks of the document (incl. collapsed), kept current for bulk ops. */
+  setRows: (blocks: Block[]) => void;
+  rowsRef: MutableRefObject<Block[]>;
+  /** Focus a block's text editor by id (defers until it mounts if needed). */
+  focusBlock: (id: string) => void;
   move: (id: string, dest: { parentId: string | null; rank: Rank }) => void;
+  /** Bulk operations on a set of selected block ids (see server endpoints). */
+  bulkDelete: (ids: string[]) => void;
+  bulkMove: (args: {
+    ids: string[];
+    parentId: string | null;
+    afterId: string | null;
+  }) => void;
+  bulkDuplicate: (ids: string[]) => Promise<string[]>;
+  paste: (args: {
+    blocks: SerializedBlock[];
+    afterId: string | null;
+    parentId?: string | null;
+  }) => Promise<string[]>;
   /**
    * Create a block of the given type at the end of the document and focus it
    * once the live resource re-renders the list.
@@ -55,6 +86,7 @@ export function BlockEditorProvider({
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
   const focusHandlesRef = useRef(new Map<string, { focus: () => void }>());
   const flatOrderRef = useRef<Block[]>([]);
+  const rowsRef = useRef<Block[]>([]);
   const pendingFocusRef = useRef<string | null>(null);
 
   const registerFocusHandle = useCallback(
@@ -74,6 +106,62 @@ export function BlockEditorProvider({
   const setFlatOrder = useCallback((blocks: Block[]) => {
     flatOrderRef.current = blocks;
   }, []);
+
+  const setRows = useCallback((blocks: Block[]) => {
+    rowsRef.current = blocks;
+  }, []);
+
+  const focusBlock = useCallback((id: string) => {
+    const handle = focusHandlesRef.current.get(id);
+    if (handle) handle.focus();
+    else pendingFocusRef.current = id;
+  }, []);
+
+  const bulkDelete = useCallback(
+    (ids: string[]) => {
+      if (ids.length === 0) return;
+      void fetchEndpoint(bulkDeleteBlocks, { documentId }, { body: { ids } });
+    },
+    [documentId],
+  );
+
+  const bulkMove = useCallback(
+    (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
+      if (args.ids.length === 0) return;
+      void fetchEndpoint(bulkMoveBlocks, { documentId }, { body: args });
+    },
+    [documentId],
+  );
+
+  const bulkDuplicate = useCallback(
+    async (ids: string[]): Promise<string[]> => {
+      if (ids.length === 0) return [];
+      const { rootIds } = await fetchEndpoint(
+        bulkDuplicateBlocks,
+        { documentId },
+        { body: { ids } },
+      );
+      return rootIds;
+    },
+    [documentId],
+  );
+
+  const paste = useCallback(
+    async (args: {
+      blocks: SerializedBlock[];
+      afterId: string | null;
+      parentId?: string | null;
+    }): Promise<string[]> => {
+      if (args.blocks.length === 0) return [];
+      const { rootIds } = await fetchEndpoint(
+        pasteBlocks,
+        { documentId },
+        { body: { ...args, parentId: args.parentId ?? null } },
+      );
+      return rootIds;
+    },
+    [documentId],
+  );
 
   const move = useCallback(
     (id: string, dest: { parentId: string | null; rank: Rank }) => {
@@ -217,7 +305,14 @@ export function BlockEditorProvider({
         registerFocusHandle,
         makeBlockAPI,
         setFlatOrder,
+        setRows,
+        rowsRef,
+        focusBlock,
         move,
+        bulkDelete,
+        bulkMove,
+        bulkDuplicate,
+        paste,
         insert,
         onOpenPage,
       }}

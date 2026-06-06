@@ -8,10 +8,12 @@ import {
   KEY_ARROW_UP_COMMAND,
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND,
+  KEY_ESCAPE_COMMAND,
   KEY_TAB_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { BlockEditorAPI } from "../types";
+import { useSelectionControl } from "../selection-control";
 
 function getAbsoluteOffset(): number | null {
   const selection = $getSelection();
@@ -70,9 +72,11 @@ function isAtEnd(): boolean {
 }
 
 export function KeyboardPlugin({
+  blockId,
   editor,
   splitOptions,
 }: {
+  blockId: string;
   editor: BlockEditorAPI;
   splitOptions?: { asChild?: boolean; childType?: string };
 }) {
@@ -81,6 +85,11 @@ export function KeyboardPlugin({
   editorRef.current = editor;
   const splitOptionsRef = useRef(splitOptions);
   splitOptionsRef.current = splitOptions;
+  const selection = useSelectionControl();
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  const blockIdRef = useRef(blockId);
+  blockIdRef.current = blockId;
 
   useEffect(() => {
     const unregisterEnter = lexicalEditor.registerCommand<KeyboardEvent | null>(
@@ -135,32 +144,52 @@ export function KeyboardPlugin({
 
     const unregisterArrowUp = lexicalEditor.registerCommand<KeyboardEvent | null>(
       KEY_ARROW_UP_COMMAND,
-      () => {
+      (event) => {
         let atStart = false;
         lexicalEditor.getEditorState().read(() => {
           atStart = isAtStart();
         });
-        if (atStart) {
-          editorRef.current.focusUp();
+        if (!atStart) return false;
+        // Shift+Up at the top of a block starts a block selection toward the
+        // previous block; plain Up moves the caret to it.
+        if (event?.shiftKey && selectionRef.current) {
+          event.preventDefault();
+          selectionRef.current.enterSelectionMode(blockIdRef.current, "up");
           return true;
         }
-        return false;
+        editorRef.current.focusUp();
+        return true;
       },
       COMMAND_PRIORITY_HIGH,
     );
 
     const unregisterArrowDown = lexicalEditor.registerCommand<KeyboardEvent | null>(
       KEY_ARROW_DOWN_COMMAND,
-      () => {
+      (event) => {
         let atEnd = false;
         lexicalEditor.getEditorState().read(() => {
           atEnd = isAtEnd();
         });
-        if (atEnd) {
-          editorRef.current.focusDown();
+        if (!atEnd) return false;
+        if (event?.shiftKey && selectionRef.current) {
+          event.preventDefault();
+          selectionRef.current.enterSelectionMode(blockIdRef.current, "down");
           return true;
         }
-        return false;
+        editorRef.current.focusDown();
+        return true;
+      },
+      COMMAND_PRIORITY_HIGH,
+    );
+
+    const unregisterEscape = lexicalEditor.registerCommand<KeyboardEvent | null>(
+      KEY_ESCAPE_COMMAND,
+      (event) => {
+        if (!selectionRef.current) return false;
+        event?.preventDefault();
+        // Leave text editing and select this whole block (block-selection mode).
+        selectionRef.current.enterSelectionMode(blockIdRef.current);
+        return true;
       },
       COMMAND_PRIORITY_HIGH,
     );
@@ -171,6 +200,7 @@ export function KeyboardPlugin({
       unregisterTab();
       unregisterArrowUp();
       unregisterArrowDown();
+      unregisterEscape();
     };
   }, [lexicalEditor]);
 

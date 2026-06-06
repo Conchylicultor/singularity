@@ -2,9 +2,11 @@ import { useMemo } from "react";
 import { MdAdd, MdChevronRight, MdDragIndicator } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
+import { useMultiSelectItem } from "@plugins/primitives/plugins/multi-select/web";
 import { cn } from "@/lib/utils";
 import type { Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
+import { useSelectionControl } from "../selection-control";
 import { Editor } from "../slots";
 import { BlockTypeMenu } from "./block-type-menu";
 import { BlockActionsMenu } from "./block-actions-menu";
@@ -29,6 +31,8 @@ export function BlockRow({
   const { focusedBlockId, makeBlockAPI } = useBlockEditor();
   const api = useMemo(() => makeBlockAPI(block.id), [makeBlockAPI, block.id]);
   const isFocused = focusedBlockId === block.id;
+  const { isSelected } = useMultiSelectItem(block.id);
+  const selection = useSelectionControl();
 
   // Show a collapse chevron when the block has children, or always for block
   // types that opt in (e.g. the toggle block). Read generically from the handle.
@@ -118,7 +122,22 @@ export function BlockRow({
           </button>
         }
       />
-      <div className={cn("rounded", isDragging && "opacity-40")}>
+      {/* Shift+click anywhere on the row extends the block selection instead of
+          placing a caret. mousedown + preventDefault stops the text selection /
+          focus that a click would otherwise start. */}
+      <div
+        className={cn(
+          "rounded",
+          isDragging && "opacity-40",
+          isSelected && "bg-primary/10 ring-primary/30 ring-1",
+        )}
+        onMouseDownCapture={(e) => {
+          if (e.shiftKey && selection) {
+            e.preventDefault();
+            selection.extendTo(block.id);
+          }
+        }}
+      >
         <Editor.Block.Dispatch block={block} isFocused={isFocused} editor={api} />
       </div>
       {dropZone && (

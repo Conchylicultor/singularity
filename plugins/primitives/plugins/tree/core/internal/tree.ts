@@ -37,6 +37,59 @@ export function isDescendant<T extends { id: string; parentId: string | null }>(
   return false;
 }
 
+/**
+ * The "roots" of a selection: selected ids none of whose ancestors are also
+ * selected. Bulk operations act on these; descendants follow implicitly (e.g.
+ * an FK cascade on delete, or moving with their parent). Preserves the order in
+ * which ids appear in `rows`.
+ */
+export function selectionRoots<T extends { id: string; parentId: string | null }>(
+  rows: readonly T[],
+  selectedIds: ReadonlySet<string>,
+): string[] {
+  const parents = new Map(rows.map((r) => [r.id, r.parentId] as const));
+  const hasSelectedAncestor = (id: string): boolean => {
+    let cur = parents.get(id) ?? null;
+    const seen = new Set<string>();
+    while (cur) {
+      if (seen.has(cur)) return false;
+      seen.add(cur);
+      if (selectedIds.has(cur)) return true;
+      cur = parents.get(cur) ?? null;
+    }
+    return false;
+  };
+  return rows
+    .filter((r) => selectedIds.has(r.id) && !hasSelectedAncestor(r.id))
+    .map((r) => r.id);
+}
+
+/**
+ * All ids in `rootId`'s subtree (the root itself plus every descendant), in
+ * breadth-first order. Returns `[rootId]` when the row has no children.
+ */
+export function subtreeIds<T extends { id: string; parentId: string | null }>(
+  rows: readonly T[],
+  rootId: string,
+): string[] {
+  const childrenOf = new Map<string, string[]>();
+  for (const r of rows) {
+    if (r.parentId === null) continue;
+    const list = childrenOf.get(r.parentId);
+    if (list) list.push(r.id);
+    else childrenOf.set(r.parentId, [r.id]);
+  }
+  const out: string[] = [];
+  const queue = [rootId];
+  while (queue.length) {
+    const id = queue.shift()!;
+    out.push(id);
+    const children = childrenOf.get(id);
+    if (children) queue.push(...children);
+  }
+  return out;
+}
+
 export function computeDrop<T extends Node>(
   rows: readonly T[],
   draggedId: string,

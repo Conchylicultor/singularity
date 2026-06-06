@@ -97,6 +97,10 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
       - `/api/blocks/:id/merge (POST)`
       - `/api/blocks/:id/indent (POST)`
       - `/api/blocks/:id/outdent (POST)`
+      - `/api/documents/:documentId/blocks/bulk-delete (POST)`
+      - `/api/documents/:documentId/blocks/bulk-move (POST)`
+      - `/api/documents/:documentId/blocks/bulk-duplicate (POST)`
+      - `/api/documents/:documentId/blocks/paste (POST)`
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

@@ -1,2 +1,8 @@
-export { buildTree, computeDrop, isDescendant } from "./internal/tree";
+export {
+  buildTree,
+  computeDrop,
+  isDescendant,
+  selectionRoots,
+  subtreeIds,
+} from "./internal/tree";
 export type { DropZone, TreeNode } from "./internal/tree";
