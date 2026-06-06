@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-facets-commands-render-catalog",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Aggregated cross-plugin commands table in the Forge catalog."
+}

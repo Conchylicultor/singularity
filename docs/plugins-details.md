@@ -1548,7 +1548,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`commands`**
           - Core:
-            - Exports: Types: `CommandDef`; Values: `commandsFacetDef`
+            - Exports: Types: `CommandDef`; Values: `commandsFacetDef`, `commandsToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin commands table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Commands"
+            - **`render-detail`** — Per-plugin commands section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "commands" → `CommandsDetailSection`
+            - **`render-diff`** — Diff renderer for the commands facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Commands"
         - **`contributions`**
           - Core:
             - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionId`, `contributionsFacetDef`, `contributionsToComparable`

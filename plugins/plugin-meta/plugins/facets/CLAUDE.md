@@ -43,6 +43,10 @@ See `plugins/commands/` for the reference implementation.
   - Exports: Types: `DocFact`, `ExtractContext`, `Facet`, `FacetDef`, `RenderDocContext`; Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
 - Sub-plugins:
   - **`commands`**
+    - Plugins:
+      - **`render-catalog`** — Aggregated cross-plugin commands table in the Forge catalog.
+      - **`render-detail`** — Per-plugin commands section in the plugin detail pane.
+      - **`render-diff`** — Diff renderer for the commands facet (PR review).
   - **`contributions`**
     - Plugins:
       - **`render-catalog`** — Aggregated cross-plugin contributions table in the Forge catalog.

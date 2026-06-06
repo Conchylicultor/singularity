@@ -1263,6 +1263,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-commands",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-commands-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-commands-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-commands-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/contributions": {
       "name": "@singularity/plugin-plugin-meta-facets-contributions",
       "version": "0.0.1",
@@ -3028,6 +3040,12 @@
     "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
+
+    "@singularity/plugin-plugin-meta-facets-commands-render-catalog": ["@singularity/plugin-plugin-meta-facets-commands-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-commands-render-detail": ["@singularity/plugin-plugin-meta-facets-commands-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-commands-render-diff": ["@singularity/plugin-plugin-meta-facets-commands-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-contributions": ["@singularity/plugin-plugin-meta-facets-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions"],
 
