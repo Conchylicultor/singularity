@@ -29,7 +29,6 @@ export type { SlotDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/
 export type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
 export type { RouteDef, RoutesData } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 export type { ResourceDef } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
-export { parseResources } from "@plugins/plugin-meta/plugins/facets/plugins/resources/core";
 export type { EntityExtension, EntityExtensionRef, TableDef } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 export type { Contribution, ContributionsFacetData, DocMetaContribution } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 export type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";

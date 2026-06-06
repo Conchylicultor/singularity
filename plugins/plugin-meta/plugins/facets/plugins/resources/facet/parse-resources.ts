@@ -1,5 +1,5 @@
 import { walkFiles, readIfExists, matchBracket, parseStringField } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import type { ResourceDef } from "./types";
+import type { ResourceDef } from "../core";
 
 export function parseResources(serverDir: string): ResourceDef[] {
   const files: string[] = [];

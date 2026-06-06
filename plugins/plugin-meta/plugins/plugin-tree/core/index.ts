@@ -1,5 +1,4 @@
-export { buildPluginTree, readIfExists, stripTypes, matchBracket, parseBarrelExports, parseDefineGroup, parseResources, walkFiles, parseStringField, parseBoolField } from "./internal/plugin-tree";
-// Note: parseResources is re-exported from ./internal/plugin-tree which itself re-exports from resources/core
+export { buildPluginTree, readIfExists, stripTypes, matchBracket, parseBarrelExports, parseDefineGroup, walkFiles, parseStringField, parseBoolField } from "./internal/plugin-tree";
 export type {
   BarrelExport,
   Runtime,

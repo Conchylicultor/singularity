@@ -4,7 +4,8 @@ import {
   createFacet,
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import { type ResourceFacetData, resourcesFacetDef, parseResources } from "../core";
+import { type ResourceFacetData, resourcesFacetDef } from "../core";
+import { parseResources } from "./parse-resources";
 
 export default createFacet<ResourceFacetData>({
   def: resourcesFacetDef,

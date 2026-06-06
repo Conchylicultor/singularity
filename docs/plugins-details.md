@@ -1571,7 +1571,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `DocMetaRegistration`; Values: `registrationsFacetDef`
         - **`resources`**
           - Core:
-            - Exports: Types: `ResourceDef`, `ResourceFacetData`; Values: `parseResources`, `resourcesFacetDef`
+            - Exports: Types: `ResourceDef`, `ResourceFacetData`; Values: `resourcesFacetDef`, `resourcesToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin resources table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Resources"
+            - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "resources" → `ResourcesDetailSection`
+            - **`render-diff`** — Diff renderer for the resources facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Resources"
         - **`routes`**
           - Core:
             - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`, `routesToComparable`
@@ -1616,7 +1626,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
     - **`plugin-tree`**
       - Core:
-        - Exports: Types: `BarrelExport`, `CommandDef`, `Contribution`, `ContributionsFacetData`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`; Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseResources`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Exports: Types: `BarrelExport`, `CommandDef`, `Contribution`, `ContributionsFacetData`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`; Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Contributes: `Pane.Register` "plugin-view"

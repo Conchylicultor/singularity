@@ -1311,6 +1311,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-resources",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-resources-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-resources-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-resources-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/routes": {
       "name": "@singularity/plugin-plugin-meta-facets-routes",
       "version": "0.0.1",
@@ -3016,6 +3028,12 @@
     "@singularity/plugin-plugin-meta-facets-registrations": ["@singularity/plugin-plugin-meta-facets-registrations@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations"],
 
     "@singularity/plugin-plugin-meta-facets-resources": ["@singularity/plugin-plugin-meta-facets-resources@workspace:plugins/plugin-meta/plugins/facets/plugins/resources"],
+
+    "@singularity/plugin-plugin-meta-facets-resources-render-catalog": ["@singularity/plugin-plugin-meta-facets-resources-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-resources-render-detail": ["@singularity/plugin-plugin-meta-facets-resources-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-resources-render-diff": ["@singularity/plugin-plugin-meta-facets-resources-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-routes": ["@singularity/plugin-plugin-meta-facets-routes@workspace:plugins/plugin-meta/plugins/facets/plugins/routes"],
 

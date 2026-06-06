@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-facets-resources-render-detail",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Per-plugin resources section in the plugin detail pane."
+}
