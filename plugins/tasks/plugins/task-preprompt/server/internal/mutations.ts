@@ -18,3 +18,14 @@ export async function setTaskPreprompt(
   }
   taskPrepromptsResource.notify();
 }
+
+// Snapshot a source task's preprompt onto a destination task. Used when an agent
+// spawns a subtask so it inherits the spawning agent's system prompt. No-op when
+// the source has no preprompt (the subtask simply gets none).
+export async function inheritTaskPreprompt(
+  fromTaskId: string,
+  toTaskId: string,
+): Promise<void> {
+  const source = await getTaskPreprompt(fromTaskId);
+  if (source) await setTaskPreprompt(toTaskId, source.prepromptId);
+}

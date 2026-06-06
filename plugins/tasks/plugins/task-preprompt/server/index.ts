@@ -5,7 +5,7 @@ import { handlePutTaskPreprompt, handleDeleteTaskPreprompt } from "./internal/ro
 import { putTaskPreprompt, deleteTaskPreprompt } from "../shared/endpoints";
 
 export { tasksPreprompt } from "./internal/tables";
-export { getTaskPreprompt, setTaskPreprompt } from "./internal/mutations";
+export { getTaskPreprompt, setTaskPreprompt, inheritTaskPreprompt } from "./internal/mutations";
 export { taskPrepromptsResource } from "./internal/resource";
 
 export default {

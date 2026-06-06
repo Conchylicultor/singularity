@@ -2090,7 +2090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `database.db`, `tasks-core._tasks`
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks-core` (table `tasks_ext_preprompt`)
-        - Exports: Values: `getTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
+        - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
       - Shared:
         - Exports: Types: `TaskPreprompt`, `TaskPrepromptsPayload`; Values: `deleteTaskPreprompt`, `putTaskPreprompt`, `TaskPrepromptSchema`, `TaskPrepromptsPayloadSchema`, `taskPrepromptsResource`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.

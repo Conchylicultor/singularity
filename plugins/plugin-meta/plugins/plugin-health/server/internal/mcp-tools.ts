@@ -2,6 +2,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { createTask, getConversation } from "@plugins/tasks-core/server";
+import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { _pluginHealthReviews, healthReviewExt } from "./tables";
 import { pluginHealthReviewsResource } from "./resource";
 
@@ -75,6 +76,10 @@ Good: "Floating promise in sidebar refresh". Bad: "Add await to line 42".`,
     });
 
     await healthReviewExt.upsert(task.id, { reviewId: review!.id });
+
+    // Inherit the spawning agent's system prompt onto the proposed task, so it
+    // launches under the same instructions once accepted.
+    if (currentTaskId) await inheritTaskPreprompt(currentTaskId, task.id);
 
     pluginHealthReviewsResource.notify();
 

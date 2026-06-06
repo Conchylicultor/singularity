@@ -8,6 +8,7 @@ import {
 } from "@plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { DEFAULT_MODEL, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
+import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { armTaskAutoStart } from "./arm-auto-start";
 import { rewireDependencies } from "./rewire-dependencies";
 
@@ -115,6 +116,10 @@ agent see the actual outcome instead of executing a stale plan.`,
       description: description ?? null,
       author: conversationId,
     });
+
+    // Inherit the spawning agent's system prompt: snapshot the calling task's
+    // preprompt onto the subtask so it launches under the same instructions.
+    await inheritTaskPreprompt(currentTaskId, task.id);
 
     await withNotifyBatch(() =>
       rewireDependencies({ newTaskId: task.id, targetId, relation }),

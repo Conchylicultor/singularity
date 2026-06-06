@@ -13,7 +13,7 @@
   - Uses: `database.db`, `tasks-core._tasks`
   - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `tasks_ext_preprompt`)
-  - Exports: Values: `getTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
+  - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
 - Shared:
   - Exports: Types: `TaskPreprompt`, `TaskPrepromptsPayload`; Values: `deleteTaskPreprompt`, `putTaskPreprompt`, `TaskPrepromptSchema`, `TaskPrepromptsPayloadSchema`, `taskPrepromptsResource`
 
