@@ -1552,7 +1552,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `PluginChanges.DiffRenderer` "Uses"
         - **`db-schema`**
           - Core:
-            - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`
+            - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`, `dbSchemaToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin tables table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Tables"
+            - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "db-schema" → `DbSchemaDetailSection`
+            - **`render-diff`** — Diff renderer for the db-schema facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Tables"
         - **`exports`**
           - Core:
             - Exports: Types: `ExportedSymbol`, `ExportsData`; Values: `exportsFacetDef`, `exportsToComparable`

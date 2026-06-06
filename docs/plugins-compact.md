@@ -146,7 +146,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
-    - **`facets`** [27 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
+    - **`facets`** [30 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**

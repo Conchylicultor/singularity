@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-detail",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Per-plugin db-schema section in the plugin detail pane."
+}

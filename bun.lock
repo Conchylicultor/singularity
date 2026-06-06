@@ -1287,6 +1287,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-db-schema",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/exports": {
       "name": "@singularity/plugin-plugin-meta-facets-exports",
       "version": "0.0.1",
@@ -3016,6 +3028,12 @@
     "@singularity/plugin-plugin-meta-facets-cross-refs-render-diff": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-db-schema": ["@singularity/plugin-plugin-meta-facets-db-schema@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema"],
+
+    "@singularity/plugin-plugin-meta-facets-db-schema-render-catalog": ["@singularity/plugin-plugin-meta-facets-db-schema-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-db-schema-render-detail": ["@singularity/plugin-plugin-meta-facets-db-schema-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-db-schema-render-diff": ["@singularity/plugin-plugin-meta-facets-db-schema-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-exports": ["@singularity/plugin-plugin-meta-facets-exports@workspace:plugins/plugin-meta/plugins/facets/plugins/exports"],
 
