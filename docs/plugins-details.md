@@ -595,7 +595,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `tasks-core.ConversationSchema`
     - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Cross-plugin:
-    - Imported by: `agents`, `ask-user-question`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `op-status`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
+    - Imported by: `agents`, `ask-user-question`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `op-status`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
     - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
@@ -611,6 +611,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('conversation-category.classify')`
       - Shared:
         - Exports: Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`; Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `SetCategoryBodySchema`, `setConversationCategory`
+    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
+      - Web:
+        - Contributes: `Conversation.Header` → `PrepromptChip`
+        - Exports: Values: `useConversationPreprompt`
+      - Server:
+        - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
+        - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
+        - Entity extension of: `tasks-core` (table `conversations_ext_preprompt`)
+        - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
+        - Register: `defineJob('conversation-preprompt.record')`
+      - Shared:
+        - Exports: Types: `ConversationPreprompt`, `ConversationPrepromptsPayload`; Values: `ConversationPrepromptSchema`, `ConversationPrepromptsPayloadSchema`, `conversationPrepromptsResource`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Web:
         - Contributes: `Conversation.Header` → `ProgressBarToolbar`, `Item.Chips` → `ProgressBarRow`
@@ -1033,7 +1045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
-        - Exports: Values: `resolvePreprompt`
+        - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`
       - Shared:
         - Exports: Values: `prepromptsConfig`
     - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
@@ -1105,7 +1117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:
@@ -2078,8 +2090,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Resources: `attempts` (keyed), `pushes` (push)
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-preprompt`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
-    - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`), `task-preprompt` (table `tasks_ext_preprompt`)
+    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-preprompt`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+    - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-preprompt` (table `conversations_ext_preprompt`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`), `task-preprompt` (table `tasks_ext_preprompt`)
   - Core:
     - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskListItem`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskListItemSchema`, `TaskSchema`, `TaskStatusSchema`
 

@@ -437,6 +437,10 @@
       "name": "@singularity/plugin-conversations-conversation-category",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-preprompt": {
+      "name": "@singularity/plugin-conversations-conversation-preprompt",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-progress": {
       "name": "@singularity/plugin-conversations-conversation-progress",
       "version": "0.0.1",
@@ -2610,6 +2614,8 @@
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
     "@singularity/plugin-conversations-conversation-category": ["@singularity/plugin-conversations-conversation-category@workspace:plugins/conversations/plugins/conversation-category"],
+
+    "@singularity/plugin-conversations-conversation-preprompt": ["@singularity/plugin-conversations-conversation-preprompt@workspace:plugins/conversations/plugins/conversation-preprompt"],
 
     "@singularity/plugin-conversations-conversation-progress": ["@singularity/plugin-conversations-conversation-progress@workspace:plugins/conversations/plugins/conversation-progress"],
 

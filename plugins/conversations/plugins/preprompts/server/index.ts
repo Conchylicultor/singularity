@@ -2,7 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { prepromptsConfig } from "../shared/config";
 
-export { resolvePreprompt } from "./internal/resolve";
+export { resolvePreprompt, resolvePrepromptItem } from "./internal/resolve";
 
 export default {
   name: "Preprompts",

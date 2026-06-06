@@ -11,7 +11,7 @@
   - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
-  - Exports: Values: `resolvePreprompt`
+  - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`
 - Shared:
   - Exports: Values: `prepromptsConfig`
 
