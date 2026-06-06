@@ -19,6 +19,7 @@ export const conversationPrepromptsResource = defineResource<ConversationPreprom
         prepromptId: t.prepromptId,
         title: t.title,
         text: t.text,
+        icon: t.icon,
         updatedAt: t.updatedAt,
       })
       .from(t);

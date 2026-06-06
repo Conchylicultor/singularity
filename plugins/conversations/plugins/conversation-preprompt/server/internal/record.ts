@@ -1,3 +1,4 @@
+import type { AvatarSpec } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
 import { conversationPreprompt } from "./tables";
 import { conversationPrepromptsResource } from "./resource";
 
@@ -5,7 +6,7 @@ import { conversationPrepromptsResource } from "./resource";
 // live-state resource so the header chip re-renders.
 export async function recordConversationPreprompt(
   conversationId: string,
-  data: { prepromptId: string; title: string; text: string },
+  data: { prepromptId: string; title: string; text: string; icon: AvatarSpec | null },
 ): Promise<void> {
   await conversationPreprompt.upsert(conversationId, data);
   conversationPrepromptsResource.notify();

@@ -890,6 +890,13 @@
       "tag": "20260605_172816_eb90ba5e__add_conversation_preprompt",
       "hash": "eb90ba5e",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780743856000,
+      "tag": "20260606_110416_1fa00d21__add_preprompt_icon",
+      "hash": "1fa00d21",
+      "breakpoints": true
     }
   ]
 }

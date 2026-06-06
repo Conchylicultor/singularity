@@ -1,0 +1,1 @@
+ALTER TABLE "conversations_ext_preprompt" ADD COLUMN "icon" jsonb;

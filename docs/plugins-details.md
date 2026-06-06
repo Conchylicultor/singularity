@@ -611,9 +611,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('conversation-category.classify')`
       - Shared:
         - Exports: Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`; Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `SetCategoryBodySchema`, `setConversationCategory`
-    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
+    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's chosen icon. Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
       - Web:
-        - Contributes: `Conversation.Header` → `PrepromptChip`
+        - Contributes: `Conversation.Header` → `PrepromptChip`, `Item.Chips` → `PrepromptListIcon`
         - Exports: Values: `useConversationPreprompt`
       - Server:
         - Uses: `conversations.conversationCreated`, `database.db`, `tasks-core._conversations`, `tasks-core.getConversation`
@@ -622,7 +622,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
         - Register: `defineJob('conversation-preprompt.record')`
       - Shared:
-        - Exports: Types: `ConversationPreprompt`, `ConversationPrepromptsPayload`; Values: `ConversationPrepromptSchema`, `ConversationPrepromptsPayloadSchema`, `conversationPrepromptsResource`
+        - Exports: Types: `ConversationPreprompt`, `ConversationPrepromptsPayload`, `PrepromptIcon`; Values: `ConversationPrepromptSchema`, `ConversationPrepromptsPayloadSchema`, `conversationPrepromptsResource`
     - **`conversation-progress`** — 4-step progress bar (research → plan → implementation → pushed) in the conversation toolbar and sidebar chip. Tracks each conversation through four phases (research → design → implementation → pushed) via git heuristics: no files = research, only research/** = design, any other file = implementation, push event = pushed.
       - Web:
         - Contributes: `Conversation.Header` → `ProgressBarToolbar`, `Item.Chips` → `ProgressBarRow`
@@ -640,7 +640,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Item.Avatar`
             - Exports: Types: `ConversationItemConv`, `ConversationItemProps`; Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
           - Cross-plugin:
-            - Slot contributors: `agents`, `conversation-category`, `conversation-progress`, `op-status`
+            - Slot contributors: `agents`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `op-status`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Web:
         - Contributes: `Pane.Register` "conversation", `Conversation.Header` → `ConversationTitle`

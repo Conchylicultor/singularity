@@ -6,4 +6,5 @@ export {
 export type {
   ConversationPreprompt,
   ConversationPrepromptsPayload,
+  PrepromptIcon,
 } from "./schemas";

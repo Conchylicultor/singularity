@@ -5,6 +5,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationPreprompt } from "../internal/hooks";
+import { PrepromptIcon } from "./preprompt-icon";
 
 // Header chip surfacing the preprompt the conversation's task was launched
 // with. Sourced entirely from the conversation's recorded snapshot — clicking
@@ -24,7 +25,12 @@ export function PrepromptChip() {
           as="button"
           className="hover:opacity-80"
           aria-label={`Preprompt: ${record.title}`}
-          icon={<MdCampaign className="size-3" />}
+          icon={
+            <PrepromptIcon
+              record={record}
+              fallback={<MdCampaign className="size-3" />}
+            />
+          }
         >
           <span className="max-w-32 truncate">{record.title}</span>
         </Badge>

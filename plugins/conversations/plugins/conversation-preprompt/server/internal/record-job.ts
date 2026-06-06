@@ -49,6 +49,7 @@ export const recordPrepromptJob = defineJob({
       prepromptId: item.id,
       title: item.title,
       text: item.prompt,
+      icon: item.icon,
     });
   },
 });
