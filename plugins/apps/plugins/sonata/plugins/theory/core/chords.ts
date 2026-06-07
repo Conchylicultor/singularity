@@ -91,13 +91,24 @@ export function qualitySymbol(quality: string): string {
   return tmpl.symbol;
 }
 
-/** Display symbol for a chord, e.g. {root:0,quality:"min7"} → "Cm7". */
+const pc12 = (pc: number): number => ((pc % 12) + 12) % 12;
+
+/**
+ * Display symbol for a chord, e.g. {root:0,quality:"min7"} → "Cm7". When `bass`
+ * is present and differs from the root (an inversion), a slash bass is appended
+ * from the sharps-only `PC_NAMES`, e.g. {root:0,quality:"maj",bass:4} → "C/E".
+ */
 export function formatChordSymbol(data: {
   root: number;
   quality: string;
+  bass?: number;
 }): string {
-  const root = PC_NAMES[((data.root % 12) + 12) % 12]!;
-  return root + qualitySymbol(data.quality);
+  const root = PC_NAMES[pc12(data.root)]!;
+  const base = root + qualitySymbol(data.quality);
+  if (data.bass === undefined || pc12(data.bass) === pc12(data.root)) {
+    return base;
+  }
+  return base + "/" + PC_NAMES[pc12(data.bass)]!;
 }
 
 /**
@@ -110,11 +121,20 @@ export function formatChordSymbol(data: {
  * Callers use this for the enharmonic refinement (`ChordData.spelledSymbol`),
  * keeping the normalized `symbol` as the primary; the resolver/speller is the
  * caller's concern so this stays a pure formatting function.
+ *
+ * An inversion `bass` is spelled through the same speller and appended as a
+ * slash, so "C/E" in a flat key reads correctly (e.g. "C/E" stays "C/E", but a
+ * D♭ bass reads "…/D♭" rather than "…/C#").
  */
 export function formatSpelledChordSymbol(
-  data: { root: number; quality: string },
+  data: { root: number; quality: string; bass?: number },
   speller: KeySpeller,
 ): string {
   const { step, alter } = speller.spell(data.root);
-  return step + accidentalGlyph(alter) + qualitySymbol(data.quality);
+  const base = step + accidentalGlyph(alter) + qualitySymbol(data.quality);
+  if (data.bass === undefined || pc12(data.bass) === pc12(data.root)) {
+    return base;
+  }
+  const bass = speller.spell(data.bass);
+  return base + "/" + bass.step + accidentalGlyph(bass.alter);
 }

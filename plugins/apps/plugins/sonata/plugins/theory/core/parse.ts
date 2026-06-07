@@ -8,6 +8,11 @@
  *
  * Returns `null` for anything that isn't a recognised chord, so callers can skip
  * (and surface) typos rather than crash on user input.
+ *
+ * Slash/inversion symbols (e.g. `"C/E"`) are intentionally NOT parsed in v1:
+ * authoring sources don't emit inversions, and detection sets `ChordData.bass`
+ * directly. The round-trip is unaffected — `formatChordSymbol` only appends a
+ * slash when `bass` is set, which this parser never produces.
  */
 
 import type { ChordData } from "@plugins/apps/plugins/sonata/plugins/score/core";

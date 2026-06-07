@@ -85,10 +85,15 @@ export interface Note {
 // label every display shows. `spelledSymbol` is the key-aware enharmonic
 // refinement (e.g. `B♭m` where `symbol` is `A#m`), present *only* when a key
 // context yields a spelling that differs from `symbol`; otherwise omitted.
+// `bass` is the pitch-class in the bass when it differs from the root (an
+// inversion / slash chord, e.g. `C/E`); present *only* on a genuine inversion
+// where the bass is a chord tone, otherwise omitted. The slash is already baked
+// into `symbol`/`spelledSymbol`, so displays need not special-case it.
 export type ChordData = {
   symbol: string;
   root: number;
   quality: string;
+  bass?: number;
   spelledSymbol?: string;
 };
 export type VoicingData = { label?: string }; // targets notes via target.noteIds

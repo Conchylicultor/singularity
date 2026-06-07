@@ -33,6 +33,7 @@ export {
   beatToSeconds,
   scaleTempo,
   bars,
+  beatGrid,
   mergeScores,
   mergeAnnotations,
 } from "./helpers";

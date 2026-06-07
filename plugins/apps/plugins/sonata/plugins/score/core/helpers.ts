@@ -149,6 +149,64 @@ export function bars(score: Score): { index: number; startBeat: number }[] {
 }
 
 /**
+ * Derive a beat grid from `timeSigMap` and `meta.pickupBeats` — the start beat
+ * of each grid cell from the origin to the latest content end. Like `bars()`,
+ * but one entry per *beat* (cell) rather than per bar, so chord detection can
+ * segment on a fixed musical pulse instead of on raw note onsets/offsets (which
+ * fragment arpeggios into a window per note).
+ *
+ * Cell length (in quarter-note beats) is `(4 / denominator) / subdivisions`:
+ * one quarter-note beat by default; `subdivisions = 2` halves it to an eighth
+ * grid, etc. In 6/8 the beat is `4/8 = 0.5` quarter-note beats, so the default
+ * grid pulses every eighth note — the felt beat of 6/8.
+ *
+ * Pure; never mutates. A pickup (anacrusis) is cell 0, mirroring `bars()`.
+ */
+export function beatGrid(
+  score: Score,
+  subdivisions = 1,
+): { index: number; startBeat: number }[] {
+  const div = subdivisions > 0 ? subdivisions : 1;
+
+  const maxBeat = scoreEndBeat(score);
+  const pickup = score.meta.pickupBeats ?? 0;
+
+  // Default to 4/4 if no time signatures are declared.
+  const sigs =
+    score.timeSigMap.length > 0
+      ? [...score.timeSigMap].sort((a, b) => a.beat - b.beat)
+      : [{ beat: 0, numerator: 4, denominator: 4 }];
+
+  const result: { index: number; startBeat: number }[] = [];
+  let beat = 0;
+  let index = 0;
+
+  // A pickup (anacrusis) is cell 0; the grid then proceeds from the pickup's end.
+  if (pickup > 0) {
+    result.push({ index, startBeat: 0 });
+    index++;
+    beat = pickup;
+  }
+
+  let sigIdx = 0;
+  // Guard against a runaway loop on degenerate (non-positive) cell lengths.
+  let guard = 0;
+  const GUARD_MAX = 1_000_000;
+  while (beat <= maxBeat && guard++ < GUARD_MAX) {
+    // Advance to the time signature active at `beat`.
+    while (sigIdx + 1 < sigs.length && sigs[sigIdx + 1]!.beat <= beat) sigIdx++;
+    const sig = sigs[sigIdx]!;
+    const cellLen = (4 / sig.denominator) / div;
+    if (cellLen <= 0) break;
+    result.push({ index, startBeat: beat });
+    index++;
+    beat += cellLen;
+  }
+
+  return result;
+}
+
+/**
  * Merge several Scores into one, namespacing each layer's track and note ids by
  * its layer index so identities never collide, and unioning annotations (with
  * their targets remapped to the namespaced note ids). Sources stay independent
