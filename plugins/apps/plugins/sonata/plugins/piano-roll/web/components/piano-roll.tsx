@@ -3,6 +3,7 @@ import { cn } from "@/lib/utils";
 import {
   bars,
   buildTempoIndex,
+  type KeyLane,
   type Score,
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -81,6 +82,38 @@ function GridLines({
             {b.index + 1}
           </span>
         </div>
+      ))}
+    </>
+  );
+}
+
+/**
+ * Octave separators: vertical lines at every C boundary (the left edge of each C
+ * key), so the eye can register which octave a falling note belongs to. Pitch is
+ * the FIXED horizontal axis, so these are screen-anchored — they never scroll,
+ * unlike the time-axis bar lines. Drawn full lane height from the published key
+ * layout, so each line sits exactly on its key's left edge.
+ */
+function OctaveLines({
+  keys,
+  laneHeight,
+}: {
+  keys: readonly KeyLane[];
+  laneHeight: number;
+}) {
+  const cKeys = useMemo(
+    () => keys.filter((k) => ((k.pitch % 12) + 12) % 12 === 0),
+    [keys],
+  );
+
+  return (
+    <>
+      {cKeys.map((k) => (
+        <div
+          key={k.pitch}
+          className="pointer-events-none absolute top-0 border-l border-border/40"
+          style={{ left: k.center - k.width / 2, height: laneHeight }}
+        />
       ))}
     </>
   );
@@ -197,6 +230,11 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
           the fixed full keyboard across the width, so notes align
           column-for-key with the keyboard below. */}
       <div ref={laneRef} className="relative min-h-0 flex-1 overflow-hidden">
+        {/* Octave separators: screen-anchored vertical lines at each C boundary.
+            Placed before the scroll layer in DOM so falling notes paint above
+            the grid; outside it because pitch is the fixed horizontal axis. */}
+        <OctaveLines keys={projection.keys ?? []} laneHeight={lane.height} />
+
         <ScrollLayer
           cursorBeat={cursorBeat}
           laneHeight={lane.height}
