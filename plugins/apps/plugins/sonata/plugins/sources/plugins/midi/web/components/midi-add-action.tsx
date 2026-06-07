@@ -36,7 +36,7 @@ export function MidiAddAction() {
         {},
         {
           body: {
-            title: score.meta.title ?? file.name.replace(/\.midi?$/i, ""),
+            title: file.name.replace(/\.midi?$/i, ""),
             composer: null,
             attachmentId: up.id,
             durationSec: beatToSeconds(score, endBeat),
