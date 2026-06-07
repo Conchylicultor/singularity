@@ -65,6 +65,7 @@ All HTTP and WebSocket routes exposed by server and central plugins. Only plugin
   - Plugins:
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - `/api/logs/channels (GET)`
+      - `/api/logs/emit (POST)`
       - `/ws/logs (WS)`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.

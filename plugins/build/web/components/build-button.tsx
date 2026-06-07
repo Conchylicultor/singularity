@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { clientLog } from "@plugins/debug/plugins/logs/web";
 import { mainAheadCountResource, buildHistoryResource, frontendHashResource } from "../../shared";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
@@ -69,6 +70,16 @@ export function BuildButton() {
     failed: "Build failed",
   }[status];
   const spinning = status === "building" || status === "restarting";
+
+  // Trace the client-side derivation an agent can read without a browser (see
+  // plugins/debug/plugins/logs). Captures whether wsStatus ever leaves "open"
+  // while building — the original "Server restarting…" investigation.
+  useEffect(() => {
+    clientLog(
+      "build-btn",
+      JSON.stringify({ status, building, wsStatus, staleTab, finishedAt: latestRun?.finishedAt }),
+    );
+  }, [status, building, wsStatus, staleTab, latestRun?.finishedAt]);
 
   return (
     <InlinePopover

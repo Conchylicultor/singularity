@@ -185,6 +185,10 @@ It prints the matched button's `disabled` / `aria-pressed` / text state and
 writes `-before.png` + `-after.png`, so a single run tells you whether the
 feature actually works.
 
+## Debugging
+
+Browser/server logs persist to `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl` (one JSON `{t,stream,line}` per line). Emit from the browser via `clientLog(channel, line)`. Read them by `tail`/`cat` on the file or the `read_logs` MCP tool (omit `channel` to list channels). See [`plugins/debug/plugins/logs/CLAUDE.md`](plugins/debug/plugins/logs/CLAUDE.md).
+
 ## Sidequests
 
 Independent projects that live in `sidequests/`, not directly related to Singularity. Each has its own `CLAUDE.md`.
