@@ -1,3 +1,4 @@
+import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { CONFIG_DIR } from "./config-dir";
 
@@ -20,4 +21,16 @@ export function scopeSegment(scopeId?: string): string {
 // so base files stay exactly where they are today (zero migration).
 export function userScopedDir(hierarchyPath: string, scopeId?: string): string {
   return join(CONFIG_DIR, hierarchyPath, scopeSegment(scopeId));
+}
+
+// Reverse of scopeSegment, for boot-time discovery: every scopeId that already
+// has a config directory on disk under `hierarchyPath`. Keeps the "@app/<id>" →
+// "app:<id>" encoding next to the forward mapping so the registry never hard-codes
+// the path convention. A missing "@app" dir is the normal un-forked case → [].
+export function discoverScopeIds(hierarchyPath: string): string[] {
+  const appDir = join(CONFIG_DIR, hierarchyPath, "@app");
+  if (!existsSync(appDir)) return [];
+  return readdirSync(appDir, { withFileTypes: true })
+    .filter((e) => e.isDirectory())
+    .map((e) => `app:${e.name}`);
 }

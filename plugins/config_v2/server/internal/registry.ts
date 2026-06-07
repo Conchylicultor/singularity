@@ -12,7 +12,7 @@ import {
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
-import { userScopedDir, BASE_SCOPE } from "./scope-paths";
+import { userScopedDir, discoverScopeIds, BASE_SCOPE } from "./scope-paths";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
@@ -254,6 +254,22 @@ export async function initRegistry(): Promise<void> {
       // Register only the BASE entry per descriptor (as today). Scoped entries are
       // created on demand by ensureScopeEntry once a fork writes their files.
       await buildEntry(descriptor, pluginId, storePath, BASE_SCOPE);
+    }
+
+    // Rehydrate forked scoped entries from disk. Scoped (per-app) entries are
+    // otherwise only ever created lazily on fork/setConfig, so after a server
+    // restart none exist — yet their override files persist on disk. Without this
+    // the in-memory cache silently disagrees with durable state: getConfig (which
+    // needs a live entry AND the on-disk fork) falls back to base/global values
+    // for an app with a saved per-app override, and knownScopeIds stays empty so
+    // base-config changes stop notifying forked scopes. Rebuild every scoped entry
+    // whose override file is already on disk so the cache matches what was forked.
+    for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
+      for (const scopeId of discoverScopeIds(hierarchyPath)) {
+        if (isForked(descriptor, scopeId)) {
+          await ensureScopeEntry(descriptor, scopeId);
+        }
+      }
     }
   } finally {
     // Open the readiness gate even if init threw partway through. Otherwise the
