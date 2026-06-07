@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-plugin-meta-plugin-view-public-api",
-  "description": "Displays the plugin's public exports, slots, routes, and consumer relationships in the plugin detail pane.",
-  "private": true,
-  "version": "0.0.1"
-}

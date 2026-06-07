@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: DB tables catalog tab with an extensible per-table detail slot.
+- Description: Per-table detail pane (with an extensible section slot) opened from the catalog's Tables tab.
 - Web:
-  - Contributes: `Pane.Register` "table-detail", `Catalog.Category` "Tables" → `TablesTable`
+  - Contributes: `Pane.Register` "table-detail"
   - Exports: Values: `TableDetail`, `tableDetailPane`
 - Sub-plugins:
   - **`columns`** — Table column definitions section in the table detail view.

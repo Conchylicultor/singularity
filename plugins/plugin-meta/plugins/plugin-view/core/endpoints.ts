@@ -2,9 +2,10 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { PluginNode, PluginTreePayload } from "./types";
 
-// Recursive plugin node. `publicApi` is left loose (z.any) — the tree carries a
-// large per-plugin API surface that consumers read directly; modelling it here
-// would duplicate the types in `types.ts` for no parse-safety benefit.
+// Recursive plugin node. `facets` is left loose (z.record of z.unknown) — each
+// facet's shape lives in its own `core/` and consumers read `facets[id]` directly
+// via a contribution-carried id; modelling every facet here would duplicate those
+// types for no parse-safety benefit.
 const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
   z.object({
     path: z.string(),
@@ -19,8 +20,7 @@ const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
       central: z.boolean(),
     }),
     children: z.array(pluginNodeSchema),
-    facets: z.record(z.string(), z.unknown()).optional(),
-    publicApi: z.any().optional(),
+    facets: z.record(z.string(), z.unknown()),
   }),
 );
 

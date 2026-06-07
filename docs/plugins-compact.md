@@ -20,7 +20,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`catalog`** — Central view of all plugin contributions aggregated by type.
           - Plugins:
-            - **`tables`** — DB tables catalog tab with an extensible per-table detail slot.
+            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the catalog's Tables tab.
               - Plugins:
                 - **`columns`** — Table column definitions section in the table detail view.
                 - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
@@ -153,7 +153,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**
-    - **`plugin-view`** [4 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+    - **`plugin-view`** [3 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:

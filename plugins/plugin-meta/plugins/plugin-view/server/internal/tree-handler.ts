@@ -1,50 +1,13 @@
 import {
   buildPluginTree,
   type PluginNode as TreePluginNode,
-  type PluginTree,
-  type BarrelExport as TreeBarrelExport,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPluginTree } from "../../core/endpoints";
-import type { BarrelExport, PluginNode, PluginTreePayload } from "../../core/types";
+import type { PluginNode, PluginTreePayload } from "../../core/types";
 
-function categorize(name: string, kind: "type" | "value"): "type" | "hook" | "component" | "value" {
-  if (kind === "type") return "type";
-  if (/^use[A-Z]/.test(name)) return "hook";
-  if (/^[A-Z]/.test(name)) return "component";
-  return "value";
-}
-
-function buildSymbolConsumers(tree: PluginTree): Map<string, Map<string, string[]>> {
-  const result = new Map<string, Map<string, string[]>>();
-  for (const node of tree.byDir.values()) {
-    for (const use of [...node.server.apiUses, ...node.central.apiUses, ...node.webApiUses, ...node.coreApiUses, ...node.sharedApiUses]) {
-      const dot = use.indexOf(".");
-      if (dot < 0) continue;
-      const targetPlugin = use.slice(0, dot);
-      const symbol = use.slice(dot + 1);
-      if (!result.has(targetPlugin)) result.set(targetPlugin, new Map());
-      const bySymbol = result.get(targetPlugin)!;
-      if (!bySymbol.has(symbol)) bySymbol.set(symbol, []);
-      const consumers = bySymbol.get(symbol)!;
-      if (!consumers.includes(node.name)) consumers.push(node.name);
-    }
-  }
-  return result;
-}
-
-function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string, string[]>>): PluginNode {
-  const myConsumers = symbolConsumers.get(node.name) ?? new Map<string, string[]>();
-
-  const mapExports = (exports: TreeBarrelExport[]): BarrelExport[] =>
-    exports.map(({ name, kind }) => ({
-      name,
-      kind,
-      category: categorize(name, kind),
-      consumers: myConsumers.get(name)?.sort() ?? [],
-    }));
-
+function toApiNode(node: TreePluginNode): PluginNode {
   return {
     path: node.path,
     name: node.name,
@@ -53,57 +16,8 @@ function toApiNode(node: TreePluginNode, symbolConsumers: Map<string, Map<string
     loadBearing: node.loadBearing,
     collapsed: node.collapsed,
     runtimes: node.runtimes,
-    children: node.children.map((c) => toApiNode(c, symbolConsumers)),
+    children: node.children.map(toApiNode),
     facets: node.facets,
-    publicApi: {
-      exports: {
-        web: mapExports(node.exports.web),
-        server: mapExports(node.exports.server),
-        central: mapExports(node.exports.central),
-        core: mapExports(node.exports.core),
-        shared: mapExports(node.exports.shared),
-      },
-      importedBy: node.importedBy.sort(),
-      slots: node.slots.map((s) => ({
-        groupName: s.groupName,
-        memberName: s.memberName,
-        slotId: s.slotId,
-        contributors: node.slotContributors.sort(),
-      })),
-      routes: [
-        ...node.server.httpRoutes,
-        ...node.server.wsRoutes,
-        ...node.central.httpRoutes,
-        ...node.central.wsRoutes,
-      ].map((route) => ({
-        route,
-        callers: node.endpointCallers.sort(),
-      })),
-      resources: [...node.server.resources, ...node.central.resources],
-      contributions: node.contributions.map((c) => ({
-        slot: c.slot,
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- props["id"] can be undefined at runtime
-        id: c.props["id"]?.replace(/^["'`]|["'`]$/g, ""),
-        paneId: c.paneId,
-        panePath: c.panePath,
-      })),
-      commands: node.commands.map((c) => ({
-        groupName: c.groupName,
-        memberName: c.memberName,
-        commandId: c.commandId,
-      })),
-      tables: node.tables.map((t) => ({ name: t.name, varName: t.varName })),
-      entityExtensions: node.entityExtensions.map((e) => ({
-        parentPlugin: e.parentPlugin,
-        extName: e.extName,
-        tableName: e.tableName,
-      })),
-      extendedBy: node.extendedBy.map((e) => ({
-        childPlugin: e.childPlugin,
-        extName: e.extName,
-        tableName: e.tableName,
-      })),
-    },
   };
 }
 
@@ -119,8 +33,7 @@ function tally(
 
 export const handleTree = implement(getPluginTree, async () => {
   const tree = await buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true });
-  const symbolConsumers = buildSymbolConsumers(tree);
-  const plugins = tree.roots.map((r) => toApiNode(r, symbolConsumers));
+  const plugins = tree.roots.map(toApiNode);
 
   const totals = { plugins: 0, loadBearing: 0, umbrellas: 0 };
   for (const p of plugins) tally(p, totals);

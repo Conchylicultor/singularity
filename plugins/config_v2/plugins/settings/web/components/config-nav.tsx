@@ -81,6 +81,7 @@ export function ConfigNav() {
           collapsed: false,
           runtimes: { web: true, server: false, central: false },
           children: [],
+          facets: {},
         };
         pruned.push({ node, registrations: orphanRegs, children: [] });
       }

@@ -1,70 +1,3 @@
-export interface BarrelExport {
-  name: string;
-  kind: "type" | "value";
-  category: "type" | "hook" | "component" | "value";
-  consumers?: string[];
-}
-
-export interface SlotInfo {
-  groupName: string;
-  memberName: string;
-  slotId: string;
-  contributors: string[];
-}
-
-export interface RouteInfo {
-  route: string;
-  callers: string[];
-}
-
-export interface ResourceInfo {
-  key: string;
-  mode: string;
-}
-
-export interface ContributionInfo {
-  slot: string;
-  id?: string;
-  paneId?: string;
-  panePath?: string;
-}
-
-export interface CommandInfo {
-  groupName: string;
-  memberName: string;
-  commandId: string;
-}
-
-export interface TableInfo {
-  name: string;
-  varName: string;
-}
-
-export interface EntityExtensionInfo {
-  parentPlugin: string;
-  extName: string;
-  tableName: string;
-}
-
-export interface EntityExtensionRef {
-  childPlugin: string;
-  extName: string;
-  tableName: string;
-}
-
-export interface PublicApi {
-  exports: Record<"web" | "server" | "central" | "core" | "shared", BarrelExport[]>;
-  importedBy: string[];
-  slots: SlotInfo[];
-  routes: RouteInfo[];
-  resources: ResourceInfo[];
-  contributions: ContributionInfo[];
-  commands: CommandInfo[];
-  tables: TableInfo[];
-  entityExtensions: EntityExtensionInfo[];
-  extendedBy: EntityExtensionRef[];
-}
-
 export interface PluginNode {
   /** Path relative to plugins/, e.g. "active-data/plugins/conv". */
   path: string;
@@ -78,12 +11,12 @@ export interface PluginNode {
   runtimes: { web: boolean; server: boolean; central: boolean };
   children: PluginNode[];
   /**
-   * Per-facet extracted data, keyed by facet id. Additive alongside `publicApi`
-   * during the facets-v3 migration; optional so existing PluginNode literals stay
-   * valid. The tree endpoint always populates it (empty `{}` under skipBarrelImport).
+   * Per-facet extracted data, keyed by facet id (e.g. "exports", "routes").
+   * The sole metadata surface: every consumer reads `node.facets[facetId]` via an
+   * id carried by its own contribution (DiffRenderer/PluginView.Section/Catalog.FacetTable),
+   * never a hardcoded literal. The tree endpoint always populates it.
    */
-  facets?: Record<string, unknown>;
-  publicApi?: PublicApi;
+  facets: Record<string, unknown>;
 }
 
 export interface PluginTreePayload {

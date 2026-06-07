@@ -1439,10 +1439,6 @@
       "name": "@singularity/plugin-plugin-meta-plugin-view",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/plugin-view/plugins/public-api": {
-      "name": "@singularity/plugin-plugin-meta-plugin-view-public-api",
-      "version": "0.0.1",
-    },
     "plugins/plugin-meta/plugins/plugin-view/plugins/runtimes": {
       "name": "@singularity/plugin-plugin-meta-plugin-view-runtimes",
       "version": "0.0.1",
@@ -3160,8 +3156,6 @@
     "@singularity/plugin-plugin-meta-plugin-tree": ["@singularity/plugin-plugin-meta-plugin-tree@workspace:plugins/plugin-meta/plugins/plugin-tree"],
 
     "@singularity/plugin-plugin-meta-plugin-view": ["@singularity/plugin-plugin-meta-plugin-view@workspace:plugins/plugin-meta/plugins/plugin-view"],
-
-    "@singularity/plugin-plugin-meta-plugin-view-public-api": ["@singularity/plugin-plugin-meta-plugin-view-public-api@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/public-api"],
 
     "@singularity/plugin-plugin-meta-plugin-view-runtimes": ["@singularity/plugin-plugin-meta-plugin-view-runtimes@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/runtimes"],
 

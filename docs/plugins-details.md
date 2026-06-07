@@ -110,15 +110,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`catalog`** — Central view of all plugin contributions aggregated by type.
           - Web:
-            - Slots: `Catalog.FacetTable`, `Catalog.Category`
-            - Contributes: `Pane.Register` "catalog", `Forge.Sidebar` "Catalog" → `component`, `Catalog.Category` "Routes" → `RoutesTable`, `Catalog.Category` "Panes" → `PanesTable`, `Catalog.Category` "Slots" → `SlotsTable`, `Catalog.Category` "Resources" → `ResourcesTable`, `Catalog.Category` "Contributions" → `ContributionsTable`
-            - Exports: Types: `CatalogFacetTable`, `FacetTableEntry`; Values: `Catalog`, `countFlat`, `defineFacetTable`, `flattenTree`, `PluginChip`
-          - Cross-plugin:
-            - Slot contributors: `tables`
+            - Slots: `Catalog.FacetTable`
+            - Contributes: `Pane.Register` "catalog", `Forge.Sidebar` "Catalog" → `component`
+            - Exports: Types: `CatalogFacetTable`, `FacetTableEntry`; Values: `Catalog`, `defineFacetTable`, `PluginChip`
           - Plugins:
-            - **`tables`** — DB tables catalog tab with an extensible per-table detail slot.
+            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the catalog's Tables tab.
               - Web:
-                - Contributes: `Pane.Register` "table-detail", `Catalog.Category` "Tables" → `TablesTable`
+                - Contributes: `Pane.Register` "table-detail"
                 - Exports: Values: `TableDetail`, `tableDetailPane`
               - Plugins:
                 - **`columns`** — Table column definitions section in the table detail view.
@@ -1707,15 +1705,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Pane.Register` "plugin-view"
         - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
       - Core:
-        - Exports: Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`; Values: `getPluginTree`
+        - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
       - Server:
         - Routes: `GET /api/plugin-view/tree`
       - Cross-plugin:
         - Endpoint callers: `catalog`, `plugin-link`, `publish`
       - Plugins:
-        - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
-          - Web:
-            - Contributes: `PluginViewSlots.Section` "public-api" → `PublicApiSection`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "runtimes" → `RuntimesSection`

@@ -17,13 +17,12 @@ sibling plugins (e.g. publish's tree component).
   - Contributes: `Pane.Register` "plugin-view"
   - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
 - Core:
-  - Exports: Types: `BarrelExport`, `CommandInfo`, `ContributionInfo`, `EntityExtensionInfo`, `EntityExtensionRef`, `PluginNode`, `PluginTreePayload`, `PublicApi`, `ResourceInfo`, `RouteInfo`, `SlotInfo`, `TableInfo`; Values: `getPluginTree`
+  - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
 - Server:
   - Routes: `GET /api/plugin-view/tree`
 - Cross-plugin:
   - Endpoint callers: `catalog`, `plugin-link`, `publish`
 - Sub-plugins:
-  - **`public-api`** — Displays the plugin's public exports, slots, routes, and consumer relationships.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
   - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.

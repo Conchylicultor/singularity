@@ -6,6 +6,7 @@ import {
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { DbSchemaFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
+import { tableDetailPane } from "@plugins/apps/plugins/forge/plugins/catalog/plugins/tables/web";
 import { MdTableChart } from "react-icons/md";
 
 type TableRow = {
@@ -58,4 +59,12 @@ export const dbSchemaFacetTable = defineFacetTable<TableRow>({
   columns,
   rows,
   rowKey: (r) => `${r.plugin.hierarchyId}:${r.name}`,
+  // Clicking a table opens its live-SQL detail pane (columns, FKs, indexes,
+  // row count, sample rows) owned by `catalog/plugins/tables`.
+  onRowClick: (r, { openPane }) =>
+    openPane(
+      tableDetailPane,
+      { tableName: r.name, pluginId: r.plugin.hierarchyId },
+      { mode: "push" },
+    ),
 });
