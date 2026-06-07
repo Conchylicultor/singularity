@@ -102,14 +102,18 @@ func (p *Proxy) handleStatic(w http.ResponseWriter, r *http.Request, wt *Worktre
 	http.NotFound(w, r)
 }
 
-// handleHTTP cold-starts the backend if needed and proxies the request.
+// handleHTTP cold-starts the backend if needed and proxies the request. The
+// request is counted against the serving backend for the duration so a hot
+// restart drains it before terminating the process (avoids mid-request 502s).
 func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree) {
-	rp, err := wt.Ensure(r.Context())
+	bk, err := wt.Ensure(r.Context())
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	rp.ServeHTTP(w, r)
+	bk.incHTTP()
+	defer bk.decHTTP()
+	bk.proxy.ServeHTTP(w, r)
 	wt.TouchBackend()
 }
 
@@ -118,11 +122,11 @@ func (p *Proxy) handleHTTP(w http.ResponseWriter, r *http.Request, wt *Worktree)
 // is pinned to the backend that was active at dial time — a hot restart swaps
 // new requests to the new backend without disturbing open connections.
 func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Worktree) {
-	if _, err := wt.Ensure(r.Context()); err != nil {
+	bk, err := wt.Ensure(r.Context())
+	if err != nil {
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
-	bk := wt.activeBackend()
 	if bk == nil {
 		http.Error(w, "backend socket unavailable", http.StatusBadGateway)
 		return
@@ -157,8 +161,8 @@ func (p *Proxy) handleWebSocket(w http.ResponseWriter, r *http.Request, wt *Work
 	}
 
 	wt.TouchBackend()
-	bk.incConns()
-	defer bk.decConns()
+	bk.incWS()
+	defer bk.decWS()
 
 	errc := make(chan error, 2)
 	go func() {

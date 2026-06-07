@@ -236,17 +236,26 @@ func TestBackendConnTracking(t *testing.T) {
 	if bk.conns() != 0 {
 		t.Fatal("initial conns should be 0")
 	}
-	bk.incConns()
-	bk.incConns()
-	if bk.conns() != 2 {
-		t.Fatalf("expected 2 conns, got %d", bk.conns())
+	bk.incWS()
+	bk.incWS()
+	bk.incHTTP()
+	if bk.wsCount() != 2 {
+		t.Fatalf("expected 2 ws conns, got %d", bk.wsCount())
 	}
-	bk.decConns()
+	if bk.httpCount() != 1 {
+		t.Fatalf("expected 1 http conn, got %d", bk.httpCount())
+	}
+	if bk.conns() != 3 {
+		t.Fatalf("expected 3 total conns, got %d", bk.conns())
+	}
+	bk.decWS()
+	bk.decHTTP()
 	if bk.conns() != 1 {
-		t.Fatalf("expected 1 conn, got %d", bk.conns())
+		t.Fatalf("expected 1 total conn, got %d", bk.conns())
 	}
-	bk.decConns()
-	bk.decConns() // should not go negative
+	bk.decWS()
+	bk.decWS()   // should not go negative
+	bk.decHTTP() // should not go negative
 	if bk.conns() != 0 {
 		t.Fatalf("expected 0 conns, got %d", bk.conns())
 	}
@@ -302,15 +311,54 @@ func TestEnsureReturnsProxyDuringRestart(t *testing.T) {
 	wt.restartDone = make(chan struct{})
 	wt.mu.Unlock()
 
-	// Ensure() should return the old proxy during a restart, not block or error.
+	// Ensure() should return the old backend during a restart, not block or error.
 	ctx, cancel := context.WithTimeout(context.Background(), 100*time.Millisecond)
 	defer cancel()
 	got, err := wt.Ensure(ctx)
 	if err != nil {
 		t.Fatalf("Ensure during restart should not error: %v", err)
 	}
-	if got != proxy {
-		t.Fatal("Ensure during restart should return the old proxy")
+	if got == nil || got.proxy != proxy {
+		t.Fatal("Ensure during restart should return the old backend's proxy")
+	}
+}
+
+// TestDrainWaitsForHTTPNotWS verifies the drain blocks on in-flight HTTP
+// requests but ignores long-lived WebSocket connections. bk.cmd is nil so the
+// kill step is skipped and only the drain-wait behavior is exercised.
+func TestDrainWaitsForHTTPNotWS(t *testing.T) {
+	cfg := &Config{SocketsDir: shortTempDir(t)}
+	wt, err := NewWorktree("t", &Spec{Server: "/tmp/s"}, cfg)
+	if err != nil {
+		t.Fatalf("NewWorktree: %v", err)
+	}
+
+	// WebSocket connections alone must NOT hold the drain — they never close on
+	// their own. With no in-flight HTTP, drainAndStop returns promptly.
+	bk := &backend{socketPath: filepath.Join(cfg.SocketsDir, "t.sock")}
+	bk.incWS()
+	bk.incWS()
+	start := time.Now()
+	wt.drainAndStop(bk)
+	if elapsed := time.Since(start); elapsed > 2*time.Second {
+		t.Fatalf("drain should not wait on WS conns; took %v", elapsed)
+	}
+
+	// An in-flight HTTP request holds the drain until it completes.
+	bk2 := &backend{socketPath: filepath.Join(cfg.SocketsDir, "t2.sock")}
+	bk2.incHTTP()
+	go func() {
+		time.Sleep(150 * time.Millisecond)
+		bk2.decHTTP()
+	}()
+	start = time.Now()
+	wt.drainAndStop(bk2)
+	elapsed := time.Since(start)
+	if elapsed < 100*time.Millisecond {
+		t.Fatalf("drain returned before the in-flight HTTP request finished (%v)", elapsed)
+	}
+	if elapsed > 5*time.Second {
+		t.Fatalf("drain waited too long for HTTP to finish (%v)", elapsed)
 	}
 }
 

@@ -88,28 +88,62 @@ type backend struct {
 	socketPath string
 	proxy      *httputil.ReverseProxy // nil until waitReady succeeds
 
-	connMu      sync.Mutex
-	activeConns int
+	// connMu guards both connection counters. httpConns tracks in-flight HTTP
+	// requests — bounded, short-lived, and waited on at drain so they finish
+	// cleanly instead of resetting into a 502. wsConns tracks WebSocket
+	// connections (live-state, terminal, logs) — long-lived, never close on
+	// their own, so they are NOT waited on at drain; clients reconnect.
+	connMu    sync.Mutex
+	httpConns int
+	wsConns   int
 }
 
-func (b *backend) incConns() {
+func (b *backend) incHTTP() {
 	b.connMu.Lock()
-	b.activeConns++
+	b.httpConns++
 	b.connMu.Unlock()
 }
 
-func (b *backend) decConns() {
+func (b *backend) decHTTP() {
 	b.connMu.Lock()
-	if b.activeConns > 0 {
-		b.activeConns--
+	if b.httpConns > 0 {
+		b.httpConns--
 	}
 	b.connMu.Unlock()
 }
 
+func (b *backend) incWS() {
+	b.connMu.Lock()
+	b.wsConns++
+	b.connMu.Unlock()
+}
+
+func (b *backend) decWS() {
+	b.connMu.Lock()
+	if b.wsConns > 0 {
+		b.wsConns--
+	}
+	b.connMu.Unlock()
+}
+
+func (b *backend) httpCount() int {
+	b.connMu.Lock()
+	defer b.connMu.Unlock()
+	return b.httpConns
+}
+
+func (b *backend) wsCount() int {
+	b.connMu.Lock()
+	defer b.connMu.Unlock()
+	return b.wsConns
+}
+
+// conns returns total active connections (in-flight HTTP + WebSocket). Used by
+// the idle sweeper and status snapshot, which treat any activity as "busy".
 func (b *backend) conns() int {
 	b.connMu.Lock()
 	defer b.connMu.Unlock()
-	return b.activeConns
+	return b.httpConns + b.wsConns
 }
 
 // Worktree owns one backend's lifecycle: spawn, supervise, proxy, idle teardown.
@@ -198,22 +232,25 @@ func (w *Worktree) restartTargetPath() string {
 	return w.primarySocketPath()
 }
 
-// Ensure starts the backend if needed and returns a ready ReverseProxy.
+// Ensure starts the backend if needed and returns the active backend. The
+// caller serves the request through bk.proxy; returning the backend (not just
+// the proxy) lets HTTP/WS handlers count their connection against the exact
+// process serving it, so drain waits on the right backend.
 // Concurrent callers share a single in-flight spawn via readyCh.
-func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
+func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 	w.mu.Lock()
 
 	switch w.state {
 	case StateRunning:
-		p := w.active.proxy
+		bk := w.active
 		w.mu.Unlock()
-		return p, nil
+		return bk, nil
 
 	case StateRestarting:
-		// Old backend still serving — return its proxy for zero downtime.
-		p := w.active.proxy
+		// Old backend still serving — return it for zero downtime.
+		bk := w.active
 		w.mu.Unlock()
-		return p, nil
+		return bk, nil
 
 	case StateStarting:
 		ch := w.readyCh
@@ -285,18 +322,17 @@ func (w *Worktree) Ensure(ctx context.Context) (*httputil.ReverseProxy, error) {
 	w.state = StateRunning
 	bk.proxy = newReverseProxy(socketPath)
 	w.lastActivity = time.Now()
-	p := bk.proxy
 	w.mu.Unlock()
 	close(readyCh)
 	slog.Info("backend ready", "worktree", w.Name, "socket", socketPath)
-	return p, nil
+	return bk, nil
 }
 
-func (w *Worktree) snapshotAfterSpawn() (*httputil.ReverseProxy, error) {
+func (w *Worktree) snapshotAfterSpawn() (*backend, error) {
 	w.mu.Lock()
 	defer w.mu.Unlock()
 	if w.state == StateRunning && w.active != nil {
-		return w.active.proxy, nil
+		return w.active, nil
 	}
 	if w.lastSpawnErr != nil {
 		return nil, w.lastSpawnErr
@@ -377,17 +413,24 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	return nil
 }
 
-// drainAndStop waits for active WebSocket connections on bk to drain (up to
-// drainTimeout), then signals and waits for the process to exit. Runs in a
-// goroutine kicked off by Restart(); never modifies w.state.
+// drainAndStop lets in-flight HTTP requests on bk finish (up to drainTimeout)
+// before terminating the process — killing mid-request resets the connection
+// and the client sees a 502. WebSocket connections (live-state, terminal, logs)
+// are long-lived and never close on their own, so they are NOT waited on; they
+// are cut when the process exits and clients reconnect to the already-live new
+// backend. Runs in a goroutine kicked off by Restart(); never modifies w.state.
 func (w *Worktree) drainAndStop(bk *backend) {
 	deadline := time.Now().Add(drainTimeout)
-	for bk.conns() > 0 && time.Now().Before(deadline) {
-		time.Sleep(200 * time.Millisecond)
+	for bk.httpCount() > 0 && time.Now().Before(deadline) {
+		time.Sleep(50 * time.Millisecond)
 	}
-	if n := bk.conns(); n > 0 {
-		slog.Warn("drain timeout; forcing stop with active WS connections",
-			"worktree", w.Name, "activeConns", n)
+	if n := bk.httpCount(); n > 0 {
+		slog.Warn("drain timeout; forcing stop with in-flight HTTP requests",
+			"worktree", w.Name, "httpConns", n)
+	}
+	if n := bk.wsCount(); n > 0 {
+		slog.Info("hot restart: cutting WebSocket connections; clients will reconnect",
+			"worktree", w.Name, "wsConns", n)
 	}
 	if bk.cmd != nil && bk.cmd.Process != nil {
 		_ = killGroup(bk.cmd, syscall.SIGTERM)
@@ -465,15 +508,6 @@ func (w *Worktree) TouchBackend() {
 	w.mu.Lock()
 	w.lastActivity = time.Now()
 	w.mu.Unlock()
-}
-
-// activeBackend returns the currently active backend, or nil. Called by
-// handleWebSocket to capture the backend at connection time so the WS
-// connection pins to that specific process.
-func (w *Worktree) activeBackend() *backend {
-	w.mu.Lock()
-	defer w.mu.Unlock()
-	return w.active
 }
 
 // Snapshot returns a consistent view of the worktree state for /gateway/worktrees.
