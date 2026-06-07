@@ -1,7 +1,7 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
-import { multilineTextField } from "@plugins/config_v2/plugins/fields/plugins/multiline-text/core";
+import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { avatarField } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
 
 // Library of named preprompts. Each item's text is prepended to the agent's

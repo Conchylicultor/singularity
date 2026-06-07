@@ -1,5 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { boolField, intField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
 
 export const localBackupConfig = defineConfig({
   fields: {

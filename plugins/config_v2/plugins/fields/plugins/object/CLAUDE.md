@@ -12,7 +12,9 @@ instances work automatically through the recursive dispatch.
 
 ```ts
 import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
-import { textField, intField, boolField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 
 const myConfig = defineConfig({
   fields: {

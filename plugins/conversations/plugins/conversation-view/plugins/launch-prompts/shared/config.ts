@@ -1,7 +1,7 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
-import { multilineTextField } from "@plugins/config_v2/plugins/fields/plugins/multiline-text/core";
+import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
 import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "@plugins/conversations/plugins/model-provider/core";
 

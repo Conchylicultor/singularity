@@ -25,6 +25,7 @@ reuse these capabilities via the `extends`-chain fallback.
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `textFieldType`, `textIdentity`
 - Sub-plugins:
+  - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
   - **`filter`** — Text field type: data-view filter (substring contains control).
   - **`table`** — Text field type: data-view table cell (read-only text cell).
 

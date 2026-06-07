@@ -21,6 +21,7 @@ data-view capabilities live in dedicated sub-plugins under `plugins/`:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `boolFieldType`, `boolIdentity`
 - Sub-plugins:
+  - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
   - **`filter`** — Boolean field type: data-view filter (yes/no segmented control).
   - **`table`** — Boolean field type: data-view table cell (read-only check/dash cell).
 

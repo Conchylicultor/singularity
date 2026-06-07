@@ -1,5 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { multilineTextField } from "@plugins/config_v2/plugins/fields/plugins/multiline-text/core";
+import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
 
 export const pushAndExitConfig = defineConfig({
   fields: {

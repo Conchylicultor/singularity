@@ -1,5 +1,6 @@
 export { defineConfig } from "./internal/define-config";
 export { buildFieldsSchema, fieldSchemaWithDefault } from "./internal/schema-builder";
+export { pickMeta } from "./internal/pick-meta";
 // TEMPORARY re-export shim — unified-fields migration, stage S1→S4
 // (research/2026-06-07-global-unify-fieldtype-token.md). fields/core now owns the
 // FieldType token; config_v2's ~13 field-type plugins migrate to @plugins/fields/core

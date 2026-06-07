@@ -1,5 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { boolField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 
 export const floatingBarConfig = defineConfig({
   fields: {

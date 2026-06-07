@@ -1,5 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { intField, floatField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
 import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 
 export const colorAdjustConfig = defineConfig({

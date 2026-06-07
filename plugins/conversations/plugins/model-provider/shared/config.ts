@@ -1,7 +1,7 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
 import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
-import { boolField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "../core";
 
 // SELECTABLE_MODELS already excludes print-only models (e.g. haiku), which are

@@ -1,5 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { textField } from "@plugins/config_v2/plugins/fields/plugins/primitives/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
 import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
 import { shapeGroup } from "./group";

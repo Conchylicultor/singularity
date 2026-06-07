@@ -513,15 +513,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Boot`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Core:
-    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
+    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
   - Server:
     - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `registerFieldStorageProvider`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Plugins:
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
-        - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldRenderer`, `Fields`
+        - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
       - Plugins:
         - **`avatar`** — Avatar field type (icon + color picker).
           - Web:
@@ -552,24 +552,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`, `config_v2.fieldSchemaWithDefault`
             - Exports: Types: `ListFieldDef`, `ListItem`; Values: `isListFieldDef`, `listField`, `listFieldType`
-        - **`multiline-text`** — Multi-line text field type.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `MultilineTextFieldDef`; Values: `multilineTextField`, `multilineTextFieldType`
         - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
           - Web:
             - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`, `config_v2.fieldSchemaWithDefault`
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`, `objectFieldType`
-        - **`primitives`** — Basic field types: bool, text, int, float.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`, `config-v2.fields.renderer` "text" → `TextRenderer`, `config-v2.fields.renderer` "int" → `IntRenderer`, `config-v2.fields.renderer` "float" → `FloatRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `BoolFieldDef`, `FloatFieldDef`, `IntFieldDef`, `TextFieldDef`; Values: `boolField`, `boolFieldType`, `floatField`, `floatFieldType`, `intField`, `intFieldType`, `textField`, `textFieldType`
         - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
           - Web:
             - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
@@ -1269,6 +1257,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `boolFieldType`, `boolIdentity`
       - Plugins:
+        - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `BoolFieldDef`; Values: `boolField`
         - **`filter`** — Boolean field type: data-view filter (yes/no segmented control).
           - Web:
             - Contributes: `DataViewSlots.Filter` "bool"
@@ -1324,6 +1318,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `floatFieldType`, `floatIdentity`
+      - Plugins:
+        - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "float" → `FloatRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `FloatFieldDef`; Values: `floatField`
     - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
       - Web:
         - Contributes: `Fields.Identity` "image"
@@ -1342,6 +1343,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `intFieldType`, `intIdentity`
+      - Plugins:
+        - **`config`** — Integer field type: config-render capability (number stepper for config-v2.fields.renderer) plus the intField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "int" → `IntRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `IntFieldDef`; Values: `intField`
     - **`multiline-text`** — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "multiline-text"
@@ -1349,6 +1357,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `multilineTextFieldType`, `multilineTextIdentity`
+      - Plugins:
+        - **`config`** — Long-text field type: config-render capability (textarea for config-v2.fields.renderer) plus the multilineTextField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `MultilineTextFieldDef`; Values: `multilineTextField`
     - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "number"
@@ -1371,6 +1386,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `textFieldType`, `textIdentity`
       - Plugins:
+        - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "text" → `TextRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `TextFieldDef`; Values: `textField`
         - **`filter`** — Text field type: data-view filter (substring contains control).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
