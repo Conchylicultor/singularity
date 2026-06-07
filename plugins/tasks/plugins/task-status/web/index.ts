@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { STATUS_META, StatusIcon, StatusBadge } from "./components/task-status";
+export { STATUS_META, StatusIcon, StatusBadge, StatusSignal } from "./components/task-status";
 
 export default {
   name: "Task: Status",

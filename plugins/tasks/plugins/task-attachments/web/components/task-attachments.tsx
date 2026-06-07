@@ -1,8 +1,11 @@
 import { useEffect, useState } from "react";
 import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
 import { toast } from "@plugins/notifications/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -26,9 +29,9 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
   if (!attachments || attachments.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-2">
-      <SectionLabel as="span">Attachments</SectionLabel>
-      <div className="flex flex-wrap gap-3">
+    <Collapsible defaultOpen className="flex flex-col gap-2">
+      <SectionHeaderRow variant="eyebrow">Attachments</SectionHeaderRow>
+      <CollapsibleContent className="flex flex-wrap gap-3">
         {attachments.map((a) =>
           a.mime.startsWith("image/") ? (
             <a
@@ -59,7 +62,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
             </Row>
           ),
         )}
-      </div>
-    </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

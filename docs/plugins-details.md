@@ -2249,7 +2249,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `TaskPreprompt`, `TaskPrepromptsPayload`; Values: `deleteTaskPreprompt`, `putTaskPreprompt`, `TaskPrepromptSchema`, `TaskPrepromptsPayloadSchema`, `taskPrepromptsResource`
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
       - Web:
-        - Exports: Values: `STATUS_META`, `StatusBadge`, `StatusIcon`
+        - Exports: Values: `STATUS_META`, `StatusBadge`, `StatusIcon`, `StatusSignal`
     - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
       - Server:
         - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `tasks-core.getTask`, `tasks-core.updateConversationsTitleForTask`, `tasks-core.updateTaskTitle`

@@ -1,5 +1,10 @@
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { toast } from "@plugins/notifications/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import { useTaskPreprompt } from "../hooks";
 import { setTaskPrepromptRemote } from "../internal/api";
 
@@ -17,11 +22,14 @@ export function TaskPrepromptSection({ taskId }: { taskId: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-1.5">
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
-        <span>Append to the agent's system prompt on launch</span>
-        <PrepromptSelect value={current} onChange={handleChange} ariaLabel="Task preprompt" />
-      </div>
-    </div>
+    <Collapsible defaultOpen className="flex flex-col gap-1.5">
+      <SectionHeaderRow variant="eyebrow">Preprompt</SectionHeaderRow>
+      <CollapsibleContent>
+        <div className="flex items-center gap-2 text-xs text-muted-foreground">
+          <span>Append to the agent's system prompt on launch</span>
+          <PrepromptSelect value={current} onChange={handleChange} ariaLabel="Task preprompt" />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

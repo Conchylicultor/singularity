@@ -47,7 +47,7 @@ export function CommitsChip() {
     >
       <MdAltRoute className="size-4" />
       <span className="text-muted-foreground">↑</span>
-      <span>{ahead}</span>
+      <span className="text-muted-foreground">{ahead}</span>
       {behind > 0 ? (
         <>
           <span className="text-muted-foreground">↓</span>
@@ -57,8 +57,8 @@ export function CommitsChip() {
       {pushCount > 0 ? (
         <>
           <span className="text-muted-foreground">·</span>
-          <MdPublish className="size-3.5 text-success" />
-          <span className="text-success">{pushCount}</span>
+          <MdPublish className={`size-3.5 ${behind > 0 ? "text-muted-foreground" : "text-success"}`} />
+          <span className={behind > 0 ? "text-muted-foreground" : "text-success"}>{pushCount}</span>
         </>
       ) : null}
     </Button>

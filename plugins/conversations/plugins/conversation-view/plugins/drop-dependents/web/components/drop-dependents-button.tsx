@@ -43,7 +43,7 @@ export function DropDependentsButton({
 
   return (
     <Button
-      variant="destructive"
+      variant="outline"
       size="icon-sm"
       title={isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Exit`}
       aria-label={`Drop task and ${dependentCount} dependents and exit`}

@@ -83,7 +83,7 @@ export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
 export function ConvRelativeTime({ conv }: { conv: ConversationItemConv }) {
   const isSystem = conv.kind === "system";
   return (
-    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground/60">
+    <span className="shrink-0 text-3xs tabular-nums text-muted-foreground/60">
       {isSystem && conv.spawnedBy ? `${conv.spawnedBy} · ` : null}
       <RelativeTime date={conv.createdAt} />
     </span>

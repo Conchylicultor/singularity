@@ -53,7 +53,6 @@ export function DropAndExitButton({
         aria-label="Complete & Exit"
         disabled={disabled}
         onClick={() => mutate({ params: { id: conversation.id } })}
-        className="border-success/30 bg-success/10 text-success hover:bg-success/15 dark:border-success/40"
       >
         <MdCheckCircle className="size-3.5" />
       </Button>
@@ -77,7 +76,7 @@ export function DropAndExitButton({
 
   return (
     <Button
-      variant="destructive"
+      variant="outline"
       size="icon-sm"
       title={isPending ? "Dropping…" : "Drop & Exit"}
       aria-label="Drop & Exit"

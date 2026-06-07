@@ -1,7 +1,11 @@
 import { useEffect, useMemo, useState } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -78,10 +82,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
 
   return (
     <div className="flex flex-col gap-6">
-      <section className="flex flex-col gap-2">
-        <SectionLabel as="h3" className="font-medium">
-          Pushes
-        </SectionLabel>
+      <Collapsible defaultOpen className="flex flex-col gap-2">
+        <SectionHeaderRow variant="eyebrow">Pushes</SectionHeaderRow>
+        <CollapsibleContent className="flex flex-col gap-2">
         {pushes.length === 0 ? (
           <p className="text-muted-foreground text-sm">No pushes yet.</p>
         ) : (
@@ -122,12 +125,12 @@ export function TaskEvents({ taskId }: { taskId: string }) {
             })}
           </ul>
         )}
-      </section>
+        </CollapsibleContent>
+      </Collapsible>
 
-      <section className="flex flex-col gap-2">
-        <SectionLabel as="h3" className="font-medium">
-          Attempts
-        </SectionLabel>
+      <Collapsible defaultOpen className="flex flex-col gap-2">
+        <SectionHeaderRow variant="eyebrow">Attempts</SectionHeaderRow>
+        <CollapsibleContent className="flex flex-col gap-2">
         {attempts.length === 0 ? (
           <p className="text-muted-foreground text-sm">No attempts yet.</p>
         ) : (
@@ -182,7 +185,8 @@ export function TaskEvents({ taskId }: { taskId: string }) {
             })}
           </ul>
         )}
-      </section>
+        </CollapsibleContent>
+      </Collapsible>
     </div>
   );
 }

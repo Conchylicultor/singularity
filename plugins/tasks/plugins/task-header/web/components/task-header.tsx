@@ -5,7 +5,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { patchTask, setAutoStart, useTask, type AutoStartModel } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
-import { StatusBadge } from "@plugins/tasks/plugins/task-status/web";
+import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
 import { Button } from "@/components/ui/button";
@@ -56,21 +56,15 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <SectionLabel as="span">
           Status
         </SectionLabel>
-        <StatusBadge status={task.status} />
-        <Button
-          size="sm"
-          variant={task.status === "held" ? "secondary" : "outline"}
-          onClick={toggleHold}
-        >
-          {task.status === "held" ? "Resume" : "Hold"}
-        </Button>
-        <Button
-          size="sm"
-          variant={task.status === "dropped" ? "secondary" : "outline"}
-          onClick={toggleDrop}
-        >
-          {task.status === "dropped" ? "Undrop" : "Drop task"}
-        </Button>
+        <StatusSignal status={task.status} />
+        <div className="ml-auto flex items-center gap-1">
+          <Button size="sm" variant="ghost" onClick={toggleHold}>
+            {task.status === "held" ? "Resume" : "Hold"}
+          </Button>
+          <Button size="sm" variant="ghost" onClick={toggleDrop}>
+            {task.status === "dropped" ? "Undrop" : "Drop task"}
+          </Button>
+        </div>
       </div>
       <div className="flex items-center gap-3">
         <SectionLabel as="span">

@@ -1,11 +1,14 @@
 import { useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
@@ -17,20 +20,20 @@ export function TaskDependents({ taskId }: { taskId: string }) {
   );
 
   return (
-    <section className="flex flex-col gap-2">
-      <SectionLabel as="h3" className="font-medium">
-        Dependents
-      </SectionLabel>
-      {dependentIds.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No dependents.</p>
-      ) : (
-        <ul className="flex flex-wrap gap-2">
-          {dependentIds.map((depId) => (
-            <DependentChip key={depId} taskId={taskId} dependentId={depId} tasks={tasks} />
-          ))}
-        </ul>
-      )}
-    </section>
+    <Collapsible defaultOpen className="flex flex-col gap-2">
+      <SectionHeaderRow variant="eyebrow">Dependents</SectionHeaderRow>
+      <CollapsibleContent>
+        {dependentIds.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No dependents.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {dependentIds.map((depId) => (
+              <DependentChip key={depId} taskId={taskId} dependentId={depId} tasks={tasks} />
+            ))}
+          </ul>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 

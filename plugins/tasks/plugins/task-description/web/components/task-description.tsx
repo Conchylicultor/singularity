@@ -1,6 +1,11 @@
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -39,23 +44,26 @@ export function TaskDescription({ taskId }: { taskId: string }) {
   if (!task || detail.pending) return null;
 
   return (
-    <div className="flex flex-col gap-3">
-      <DescriptionView
-        value={descField.value}
-        onChange={descField.onChange}
-        onFocus={descField.onFocus}
-        onBlur={descField.onBlur}
-        onFileOpen={openFile}
-      />
-      <div className="flex justify-end">
-        <LaunchControl
-          size="sm"
-          getRequest={buildLaunchRequest}
-          disabled={!task.title.trim()}
-          className="w-auto"
-          openAfterLaunch={false}
+    <Collapsible defaultOpen className="flex flex-col gap-3">
+      <SectionHeaderRow variant="eyebrow">Description</SectionHeaderRow>
+      <CollapsibleContent className="flex flex-col gap-3">
+        <DescriptionView
+          value={descField.value}
+          onChange={descField.onChange}
+          onFocus={descField.onFocus}
+          onBlur={descField.onBlur}
+          onFileOpen={openFile}
         />
-      </div>
-    </div>
+        <div className="flex justify-end">
+          <LaunchControl
+            size="sm"
+            getRequest={buildLaunchRequest}
+            disabled={!task.title.trim()}
+            className="w-auto"
+            openAfterLaunch={false}
+          />
+        </div>
+      </CollapsibleContent>
+    </Collapsible>
   );
 }

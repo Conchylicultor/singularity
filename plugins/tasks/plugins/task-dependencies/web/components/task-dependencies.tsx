@@ -1,7 +1,10 @@
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
 import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
@@ -9,7 +12,7 @@ import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import type { TaskChainTarget } from "@plugins/tasks/core";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
@@ -47,43 +50,47 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   const target = targetForSibling(task);
 
   return (
-    <section className="flex flex-col gap-2">
-      <div className="flex items-center justify-between">
-        <SectionLabel as="h3" className="font-medium">
-          Dependencies
-        </SectionLabel>
-        <div className="flex items-center gap-1">
-          {folderCandidate && (
-            <Button size="xs" variant="outline" onClick={addFolderAsDep}>
-              Add folder as dep
-            </Button>
-          )}
-          <TaskDraftPopover
-            trigger="+ Prerequisite"
-            triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
-            target={target}
-            relate={{ taskId, defaultMode: "prerequisite" }}
-            heading="Add prerequisite"
-          />
-          <TaskDraftPopover
-            trigger="+ Follow-up"
-            triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
-            target={target}
-            relate={{ taskId, defaultMode: "followup" }}
-            heading="Add follow-up"
-          />
-        </div>
-      </div>
-      {deps.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No dependencies.</p>
-      ) : (
-        <ul className="flex flex-wrap gap-2">
-          {deps.map((depId) => (
-            <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.pending ? [] : tasksResult.data} />
-          ))}
-        </ul>
-      )}
-    </section>
+    <Collapsible defaultOpen className="flex flex-col gap-2">
+      <SectionHeaderRow
+        variant="eyebrow"
+        actions={
+          <>
+            {folderCandidate && (
+              <Button size="xs" variant="outline" onClick={addFolderAsDep}>
+                Add folder as dep
+              </Button>
+            )}
+            <TaskDraftPopover
+              trigger="+ Prerequisite"
+              triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
+              target={target}
+              relate={{ taskId, defaultMode: "prerequisite" }}
+              heading="Add prerequisite"
+            />
+            <TaskDraftPopover
+              trigger="+ Follow-up"
+              triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
+              target={target}
+              relate={{ taskId, defaultMode: "followup" }}
+              heading="Add follow-up"
+            />
+          </>
+        }
+      >
+        Dependencies
+      </SectionHeaderRow>
+      <CollapsibleContent>
+        {deps.length === 0 ? (
+          <p className="text-muted-foreground text-sm">No dependencies.</p>
+        ) : (
+          <ul className="flex flex-wrap gap-2">
+            {deps.map((depId) => (
+              <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.pending ? [] : tasksResult.data} />
+            ))}
+          </ul>
+        )}
+      </CollapsibleContent>
+    </Collapsible>
   );
 }
 
