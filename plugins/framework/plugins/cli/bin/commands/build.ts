@@ -7,6 +7,8 @@ import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
 import { computeEslintScope } from "../eslint-affected";
 import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
+import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
@@ -83,13 +85,19 @@ const CENTRAL_RUNTIME_ROUTES: ReadonlyArray<string> = [
 async function collectCentralRoutes(root: string): Promise<string[]> {
   const out = new Set<string>(CENTRAL_RUNTIME_ROUTES);
   for (const p of await collectAllPlugins(root)) {
-    for (const route of p.central.httpRoutes) {
-      const space = route.indexOf(" ");
-      const path = space >= 0 ? route.slice(space + 1) : route;
-      const colon = path.indexOf("/:");
-      out.add(colon >= 0 ? path.slice(0, colon + 1) : path);
+    const data = getFacet(p, routesFacetDef);
+    if (!data) continue;
+    for (const r of data.routes) {
+      if (r.runtime !== "central") continue;
+      if (r.type === "http") {
+        const space = r.route.indexOf(" ");
+        const path = space >= 0 ? r.route.slice(space + 1) : r.route;
+        const colon = path.indexOf("/:");
+        out.add(colon >= 0 ? path.slice(0, colon + 1) : path);
+      } else {
+        out.add(r.route);
+      }
     }
-    for (const route of p.central.wsRoutes) out.add(route);
   }
   return Array.from(out).sort();
 }

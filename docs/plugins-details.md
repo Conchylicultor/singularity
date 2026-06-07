@@ -1479,7 +1479,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`
-            - Exports: Types: `CollectedDirDef`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `PluginNode`, `PluginTree`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `pluginRoutesDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderRoutesDoc`
+            - Exports: Types: `CollectedDirDef`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `PluginNode`, `PluginTree`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Exports: Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`; Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
@@ -1848,7 +1848,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginHealthReview`, `PluginStaleness`, `ReviewTaskSummary`; Values: `getPluginHealthReviews`, `getPluginHealthTasks`, `getPluginStaleness`, `PluginHealthReviewSchema`, `PluginStalenessSchema`, `ReviewTaskSummarySchema`
     - **`plugin-tree`**
       - Core:
-        - Exports: Types: `BarrelExport`, `CommandDef`, `Contribution`, `ContributionsFacetData`, `DocMetaContribution`, `DocMetaRegistration`, `EntityExtension`, `EntityExtensionRef`, `PluginNode`, `PluginTree`, `ResourceDef`, `RouteDef`, `Runtime`, `RuntimeDetail`, `SlotDef`, `TableDef`; Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Contributes: `Pane.Register` "plugin-view"

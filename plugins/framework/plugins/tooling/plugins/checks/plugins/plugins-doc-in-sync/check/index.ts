@@ -4,11 +4,9 @@ import {
   pluginClaudeMdPath,
   pluginCompactDocPath,
   pluginDetailsDocPath,
-  pluginRoutesDocPath,
   renderCompactDoc,
   renderDetailsDoc,
   renderPluginClaudeMd,
-  renderRoutesDoc,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -25,7 +23,7 @@ async function getRoot(): Promise<string> {
 const check: Check = {
   id: "plugins-doc-in-sync",
   description:
-    "docs/plugins-compact.md, docs/plugins-details.md, docs/routes.md, and every plugin's CLAUDE.md AUTOGEN block match the current plugin source",
+    "docs/plugins-compact.md, docs/plugins-details.md, and every plugin's CLAUDE.md AUTOGEN block match the current plugin source",
   async run() {
     const root = await getRoot();
 
@@ -57,22 +55,6 @@ const check: Check = {
       return {
         ok: false,
         message: "docs/plugins-details.md is out of sync with plugin source",
-        hint: "Run `./singularity build` and commit the regenerated file.",
-      };
-    }
-
-    const routesFile = pluginRoutesDocPath(root);
-    if (!existsSync(routesFile)) {
-      return {
-        ok: false,
-        message: "docs/routes.md is missing",
-        hint: "Run `./singularity build` to generate it.",
-      };
-    }
-    if (readFileSync(routesFile, "utf8") !== await renderRoutesDoc({ root })) {
-      return {
-        ok: false,
-        message: "docs/routes.md is out of sync with plugin source",
         hint: "Run `./singularity build` and commit the regenerated file.",
       };
     }

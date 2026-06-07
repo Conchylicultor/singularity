@@ -115,9 +115,6 @@ export default createFacet<RoutesData>({
     const escaped = prefixes.map((p) => p.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
     const re = new RegExp(`\\/api\\/(${escaped.join("|")})(?![A-Za-z0-9_-])`, "g");
 
-    // Clear callers populated by the broken monolithic pass, then repopulate
-    for (const info of tree.byDir.values()) info.endpointCallers = [];
-
     for (const caller of tree.byDir.values()) {
       const files: string[] = [];
       for (const sub of ["web", "server", "central"]) {
@@ -134,17 +131,15 @@ export default createFacet<RoutesData>({
       for (const prefix of hit) {
         const owner = apiPrefixToOwner.get(prefix);
         if (!owner || owner === caller) continue;
-        if (!owner.endpointCallers.includes(caller.name)) {
-          owner.endpointCallers.push(caller.name);
+        const ownerData = getFacet(owner, routesFacetDef);
+        if (ownerData && !ownerData.endpointCallers.includes(caller.name)) {
+          ownerData.endpointCallers.push(caller.name);
         }
       }
     }
-    for (const info of tree.byDir.values()) info.endpointCallers.sort();
-
-    // Copy computed endpointCallers into facet data for renderDoc
     for (const info of tree.byDir.values()) {
       const data = getFacet(info, routesFacetDef);
-      if (data) data.endpointCallers = [...info.endpointCallers];
+      if (data) data.endpointCallers.sort();
     }
   },
 

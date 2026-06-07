@@ -22,7 +22,6 @@
     {
       "name": "Doc",
       "patterns": [
-        { "pattern": "docs/routes.md" },
         { "pattern": "**/CLAUDE.md" },
         { "pattern": "docs/plugins-compact.md" },
         { "pattern": "docs/plugins-details.md" },

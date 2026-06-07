@@ -1,43 +1,79 @@
 # facets
 
-Facet-based metadata extraction and doc rendering pipeline. Owns the `Facet`
-primitive and the `loadFacets()` loader. Each facet sub-plugin extracts one
-aspect of plugin metadata (exports, slots, commands, etc.) from the plugin
-tree.
+A **facet** is a self-contained slice of plugin metadata (exports, slots,
+commands, routes, resources, db-schema, cross-refs, contributions,
+registrations). Each facet runs against every plugin and produces structured
+data consumed by four surfaces: **doc** (markdown), **detail** (Forge plugin
+pane), **diff** (PR review), and **catalog** (Forge aggregated tables).
 
-## Mental model
+## Mental model: separate by *runtime*, not by "rendering"
+
+A facet is split across folders by **the runtime that executes the code** —
+identical to the web/server/core split used everywhere else in the repo:
+
+- `core/` — types, the `facetDef`, and **pure data transforms** (`toComparable`).
+  Runtime-agnostic; importable from either build-time or the browser.
+- `facet/` — **build-time** operations (`extract`, `relate`, `renderDoc`),
+  discovered by `loadFacets()` (dynamic import; runs inside `./singularity build`,
+  browser-less).
+- `plugins/render-{diff,detail,catalog}/web/` — **browser** React renderers,
+  discovered by web slots.
+
+`renderDoc` lives on the facet (not in a render sub-plugin) because doc rendering
+is a build-time string operation, co-located with the facet's other build-time
+ops. Diff/detail/catalog are browser React. Same data, different runtimes,
+different homes — this is coherence, not asymmetry.
+
+## Generic collection API
 
 The facets plugin exposes a **generic API** (`loadFacets`, `getFacet`,
-`DocFact`). Consumers (docgen, Forge UI, PR diff) use only this generic API —
-they iterate over collected facets and call `renderDoc()` / `getFacet()`
-without ever importing or naming individual facet sub-plugins.
+`DocFact`). The four rendering/doc consumers (docgen, Forge detail, Forge
+catalog, PR diff) use only this generic API — they iterate over collected
+facets/renderers and call `renderDoc()` / `getFacet()` / the render slot, never
+importing or naming an individual facet sub-plugin. A consumer may read
+`node.facets[id]` only via an `id` carried by a *contribution* (e.g.
+`renderer.facetId`), never a hardcoded literal.
 
-Each facet sub-plugin implements the internal details: how to extract its
-specific data, how to compute cross-references, and how to render its doc
-facts. Adding or removing a facet sub-plugin automatically updates all
-consumers with zero changes to consumer code.
+**Rule: rendering/doc consumers must never name a facet.** If one needs to, the
+abstraction is leaking — redesign the generic API. (A non-rendering runtime
+concern that genuinely depends on one specific aspect — e.g. the gateway's
+central-routes manifest in `cli/.../build.ts` reading the `routes` facet — may
+import that facet's `core/` directly; it is not one of the four generic
+surfaces, so naming it is honest rather than a leak.)
 
-**Rule: consumers must never import individual facet sub-plugins.** Import
-only from `@plugins/plugin-meta/plugins/facets/core`. If a consumer needs
-to name a specific facet, the abstraction is leaking — redesign the generic
-API instead.
+## Facet vs. core PluginNode
+
+The internal `PluginNode` (`plugin-tree/core`) carries only **structural
+identity**: `path`, `name`, `hierarchyId`, `description`, `runtimes`,
+`collapsed`, `loadBearing`, `children`, and the generic `facets` bag. Everything
+describing *what a plugin contributes* is a facet, surfaced via
+`node.facets[id]`. **New metadata that isn't structural identity becomes a new
+facet, never a new flat field on `PluginNode`.** A facet's `relate()` writes its
+cross-plugin reverse indexes into its own facet data (via `getFacet`), never
+onto `PluginNode`.
 
 ## Adding a facet
 
-1. Create `plugins/<name>/facet/index.ts` under this umbrella.
-2. `export default` a value conforming to the `Facet` interface from
-   `@plugins/plugin-meta/plugins/facets/core`.
-3. Import parsing helpers and types (e.g. `CommandDef`, `parseDefineGroup`)
-   from `@plugins/plugin-meta/plugins/plugin-tree/core`.
-4. Run `./singularity build` — codegen auto-populates `facet.generated.ts`,
-   and `buildPluginTree()` calls your `extract()` on every plugin node.
+Adding a facet = adding one folder subtree; no consumer changes.
 
-A complete facet also needs its three render sub-plugins so it appears on every
-browser surface: `render-diff/web` (contributes to `review.plugin-changes.diff-renderer`),
-`render-detail/web` (contributes to `plugin-view.section` — its Section `id` **must
-equal the facet id**), and `render-catalog/web` (contributes to `catalog.facet-table`).
-The `facets:render-complete` check (`facets/check/`) enforces that every facet covers all three slots
-with a matching facet id, and fails the build otherwise.
+1. `core/` — declare the data type and `export const fooFacetDef =
+   defineFacet<FooData>("foo")`. Add a pure `fooToComparable(data): string[]` if
+   the facet appears in the diff surface.
+2. `facet/index.ts` — `export default createFacet({ def, extract, relate?,
+   renderDoc })`. Import parsing helpers (`parseDefineGroup`, `walkFiles`,
+   `readIfExists`, …) from
+   `@plugins/plugin-meta/plugins/parse-utils/core`; import the facet's own types
+   from its `core/`.
+3. `plugins/render-diff/web/` — contribute a `DiffRenderer { facetId, label,
+   toComparable }` to `review.plugin-changes.diff-renderer`.
+4. `plugins/render-detail/web/` — contribute a `PluginView.Section` whose Section
+   `id` **must equal the facet id**; read `node.facets[id]`.
+5. `plugins/render-catalog/web/` — contribute a `Catalog.FacetTable { facetId,
+   label, columns, rows }` to `catalog.facet-table`.
+
+Run `./singularity build`; the `facets:render-complete` check (`facets/check/`)
+fails the build unless every facet covers all three render slots with a matching
+facet id.
 
 See `plugins/commands/` for the reference implementation.
 

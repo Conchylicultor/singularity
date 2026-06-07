@@ -133,11 +133,6 @@ const DETAILS_HEADER =
   "# Plugins (details)\n\n" +
   "Full reference for every plugin. Read this on demand (e.g. before writing a helper, to check whether one already exists). The slim always-loaded index is [`plugins-compact.md`](./plugins-compact.md).\n\n";
 
-const ROUTES_HEADER =
-  "# Plugin Routes\n\n" +
-  "All HTTP and WebSocket routes exposed by server and central plugins. " +
-  "Only plugins with at least one route (directly or in a descendant) are shown.\n\n";
-
 const enrichedTreeCache = new Map<string, Promise<PluginTree>>();
 
 export function buildEnrichedTree(root: string): Promise<PluginTree> {
@@ -155,10 +150,6 @@ export async function renderCompactDoc({ root }: GenerateDocsOptions): Promise<s
 
 export async function renderDetailsDoc({ root }: GenerateDocsOptions): Promise<string> {
   return renderDetailsDocFromTree(await buildEnrichedTree(root), root);
-}
-
-export async function renderRoutesDoc({ root }: GenerateDocsOptions): Promise<string> {
-  return renderRoutesDocFromTree(await buildEnrichedTree(root), root);
 }
 
 function renderPluginClaudeAutogen(p: PluginNode, root: string, facets: Facet[]): string {
@@ -216,10 +207,6 @@ export function pluginDetailsDocPath(root: string): string {
   return join(root, "docs", "plugins-details.md");
 }
 
-export function pluginRoutesDocPath(root: string): string {
-  return join(root, "docs", "routes.md");
-}
-
 export function pluginClaudeMdPath(p: PluginNode): string {
   return join(p.dir, "CLAUDE.md");
 }
@@ -238,7 +225,6 @@ export async function generatePluginDocs({ root }: GenerateDocsOptions): Promise
 
   writeIfChanged(pluginCompactDocPath(root), renderCompactDocFromTree(tree, root));
   writeIfChanged(pluginDetailsDocPath(root), renderDetailsDocFromTree(tree, root));
-  writeIfChanged(pluginRoutesDocPath(root), renderRoutesDocFromTree(tree, root));
 
   for (const info of tree.byDir.values()) {
     const file = pluginClaudeMdPath(info);
@@ -266,65 +252,6 @@ function renderCompactDocFromTree(tree: PluginTree, root: string): string {
 function renderDetailsDocFromTree(tree: PluginTree, root: string): string {
   const body = renderTreeBody(tree.roots, root, "detail", tree.facets);
   return `${DETAILS_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
-}
-
-function pluginHasRoutesDeep(p: PluginNode): boolean {
-  return (
-    p.server.httpRoutes.length > 0 ||
-    p.server.wsRoutes.length > 0 ||
-    p.central.httpRoutes.length > 0 ||
-    p.central.wsRoutes.length > 0 ||
-    p.children.some(pluginHasRoutesDeep)
-  );
-}
-
-function groupHttpRoutes(routes: string[]): string[] {
-  const byPath = new Map<string, string[]>();
-  for (const r of routes) {
-    const sp = r.indexOf(" ");
-    const method = r.slice(0, sp);
-    const path = r.slice(sp + 1);
-    if (!byPath.has(path)) byPath.set(path, []);
-    byPath.get(path)!.push(method);
-  }
-  return [...byPath.entries()].map(([path, methods]) => `${path} (${methods.join(", ")})`);
-}
-
-function renderRoutesPluginTree(p: PluginNode, depth: number): string[] {
-  if (!pluginHasRoutesDeep(p)) return [];
-
-  const indent = "  ".repeat(depth);
-  const bodyIndent = `${indent}  `;
-  const lines: string[] = [];
-
-  const desc = pluginDescription(p);
-  const descStr = desc ? ` — ${desc}` : "";
-  lines.push(`${indent}- **\`${p.name}\`**${descStr}`);
-
-  for (const r of groupHttpRoutes(p.server.httpRoutes))  lines.push(`${bodyIndent}- \`${r}\``);
-  for (const r of p.server.wsRoutes)                     lines.push(`${bodyIndent}- \`${r} (WS)\``);
-  for (const r of groupHttpRoutes(p.central.httpRoutes)) lines.push(`${bodyIndent}- \`${r}\` _(central)_`);
-  for (const r of p.central.wsRoutes)                    lines.push(`${bodyIndent}- \`${r} (WS)\` _(central)_`);
-
-  const routeChildren = p.children.filter(pluginHasRoutesDeep);
-  if (routeChildren.length > 0) {
-    lines.push(`${bodyIndent}- Plugins:`);
-    for (const c of routeChildren)
-      lines.push(...renderRoutesPluginTree(c, depth + 2));
-  }
-
-  return lines;
-}
-
-function renderRoutesDocFromTree(tree: PluginTree, _root: string): string {
-  const roots = tree.roots.filter(pluginHasRoutesDeep);
-  const lines: string[] = [];
-  for (let i = 0; i < roots.length; i++) {
-    if (i > 0) lines.push("");
-    lines.push(...renderRoutesPluginTree(roots[i]!, 0));
-  }
-  const body = lines.join("\n") + "\n";
-  return `${ROUTES_HEADER}${BEGIN}\n\n${body}\n${END}\n`;
 }
 
 export { renderPluginClaudeMd, buildPluginTree };

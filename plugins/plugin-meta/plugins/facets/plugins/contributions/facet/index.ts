@@ -139,17 +139,15 @@ export default createFacet<ContributionsFacetData>({
       for (const group of groups) {
         const owner = slotGroupToOwner.get(group);
         if (!owner || owner === contributor) continue;
-        if (!owner.slotContributors.includes(contributor.name)) {
-          owner.slotContributors.push(contributor.name);
+        const ownerData = getFacet(owner, contributionsFacetDef);
+        if (ownerData && !ownerData.slotContributors.includes(contributor.name)) {
+          ownerData.slotContributors.push(contributor.name);
         }
       }
     }
-    for (const info of tree.byDir.values()) info.slotContributors.sort();
-
-    // Copy computed slotContributors into facet data for renderDoc
     for (const info of tree.byDir.values()) {
       const data = getFacet(info, contributionsFacetDef);
-      if (data) data.slotContributors = [...info.slotContributors];
+      if (data) data.slotContributors.sort();
     }
   },
 
