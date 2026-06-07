@@ -33,6 +33,33 @@ export interface PianoRollProps {
 /** Height of the pitch-axis gutter (the piano keyboard) at the bottom. */
 const KEYBOARD_HEIGHT = 112;
 
+/**
+ * Font size (px) for a falling-bar note name, sized so the whole label fits
+ * *inside* the bar — no overflow into neighbouring columns. The width budget is
+ * the label's intrinsic advance in em: one cap letter (≈0.70em in Inter
+ * semibold) plus, when present, the compact accidental rendered at 0.7em and
+ * tucked in (net ≈0.34em). Dividing the bar width by that budget makes a bare
+ * natural on a wide white key large, while a flat/sharp on the narrower black
+ * key (blackW ≈ 0.62·whiteW) plus its extra glyph comes out smaller — exactly
+ * the desired "black-key names are smaller" behaviour. Capped by the bar height
+ * so short notes don't get oversized text, and by a tasteful ceiling. Returns
+ * null when even the legible floor won't fit, so the caller skips the label.
+ */
+function noteLabelFontPx(
+  keyWidth: number,
+  barHeight: number,
+  hasAccidental: boolean,
+): number | null {
+  const FLOOR = 7;
+  const LETTER_EM = 0.7;
+  const ACCIDENTAL_EM = 0.34;
+  const FILL = 0.94;
+  const emWidth = LETTER_EM + (hasAccidental ? ACCIDENTAL_EM : 0);
+  const widthFit = (keyWidth * FILL) / emWidth;
+  if (widthFit < FLOOR) return null;
+  return Math.max(FLOOR, Math.min(widthFit, barHeight * 0.85, 28));
+}
+
 /** Observe an element's pixel size via ResizeObserver (no polling). */
 function useElementSize(): [
   React.RefObject<HTMLDivElement | null>,
@@ -220,7 +247,11 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         return {
           note: n,
           rect: toRect(n),
-          label: `${s.step}${accidentalGlyph(s.alter)}`,
+          // Step letter and accidental kept apart so the glyph can be rendered
+          // compact + tucked against the letter (the unicode ♭/♯ carry a wide
+          // left-bearing that otherwise wastes space and overflows the column).
+          step: s.step,
+          accidental: accidentalGlyph(s.alter),
           color: colorMap.get(n.track) ?? null,
           // Synthesia-style: notes landing on black keys (sharps/flats) read a
           // shade darker than the white-key notes of the same track, so the
@@ -240,42 +271,75 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         laneWidth={lane.width}
       />
 
-      {noteRects.map(({ note, rect, label, color, isBlack }) => (
+      {noteRects.map(({ note, rect, step, accidental, color, isBlack }) => {
+        // Note name sized to fit inside the bar; null when it can't fit legibly.
+        const fontPx = showNoteNames
+          ? noteLabelFontPx(rect.w, rect.h, accidental !== "")
+          : null;
+        return (
         <div
           key={note.id}
-          className={cn(
-            "absolute z-10 rounded-sm border shadow-sm",
-            // Fall back to the primary token only when no track color resolved
-            // (e.g. before the rollup loads); otherwise tint per track.
-            color ? null : "border-primary/40 bg-primary/70",
-          )}
+          className="absolute z-10"
           style={{
             left: rect.x,
             top: rect.y,
             width: Math.max(2, rect.w - 1),
             height: Math.max(2, rect.h - 1),
-            opacity: 0.4 + (note.velocity / 127) * 0.6,
-            // Darken black-key notes one shade below their track color. Applied
-            // as a luminance filter so it works for any color format and for
-            // the token fallback alike, without parsing the color string.
-            filter: isBlack ? "brightness(0.72)" : undefined,
-            ...(color
-              ? { backgroundColor: color, borderColor: color }
-              : null),
           }}
           title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
         >
-          {/* Synthesia-style name, anchored to the bar's leading (bottom) edge.
-              Centered and allowed to overflow the (often one-key-narrow) bar
-              width so two-char accidentals like "D♯" stay legible instead of
-              being clipped — they spill into the usually-empty side gutters. */}
-          {showNoteNames ? (
-            <span className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center text-3xs font-medium leading-none text-primary-foreground">
-              {label}
+          {/* Color fill is its own layer so velocity-driven opacity (and the
+              black-key brightness shade) dim the bar WITHOUT also fading the
+              label sitting on top of it. */}
+          <div
+            className={cn(
+              "absolute inset-0 rounded-sm border shadow-sm",
+              // Fall back to the primary token only when no track color resolved
+              // (e.g. before the rollup loads); otherwise tint per track.
+              color ? null : "border-primary/40 bg-primary/70",
+            )}
+            style={{
+              opacity: 0.4 + (note.velocity / 127) * 0.6,
+              // Darken black-key notes one shade below their track color. Applied
+              // as a luminance filter so it works for any color format and for
+              // the token fallback alike, without parsing the color string.
+              filter: isBlack ? "brightness(0.72)" : undefined,
+              ...(color
+                ? { backgroundColor: color, borderColor: color }
+                : null),
+            }}
+          />
+          {/* Synthesia-style name, anchored to the bar's leading (bottom) edge
+              and centered. Sized by noteLabelFontPx to sit fully inside the bar
+              (naturals large on wide white keys, accidentals smaller on narrow
+              black keys). A dark halo (text-shadow) keeps the white glyph legible
+              on every palette hue — including bright amber/lime/cyan and
+              velocity-dimmed/black-key-darkened bars — without per-note luminance
+              math, which the opacity blend toward the dark roll background would
+              defeat anyway. */}
+          {fontPx !== null ? (
+            <span
+              className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center font-semibold leading-none text-white"
+              style={{
+                fontSize: fontPx,
+                textShadow:
+                  "0 1px 1.5px rgba(0,0,0,0.95), 0 0 1px rgba(0,0,0,0.9)",
+              }}
+            >
+              {step}
+              {accidental ? (
+                // Compact accidental tucked tight against the letter: smaller
+                // and pulled in to cancel the glyph's wide left-bearing, so the
+                // pair stays near one column wide instead of overflowing.
+                <span style={{ fontSize: "0.7em", marginLeft: "-0.12em" }}>
+                  {accidental}
+                </span>
+              ) : null}
             </span>
           ) : null}
         </div>
-      ))}
+        );
+      })}
 
       {/* Overlays anchor against the published projection. */}
       <ProjectionProvider projection={projection}>
