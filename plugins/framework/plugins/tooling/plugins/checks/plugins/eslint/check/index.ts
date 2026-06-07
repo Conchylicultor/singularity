@@ -104,13 +104,22 @@ const check: Check = {
     const scope = eslintScope();
     if (scope !== null && scope.length === 0) return { ok: true };
     const targets = scope ?? ["."];
+    // The push affected-set run sets SINGULARITY_ESLINT_NO_CACHE=1 to lint the
+    // explicit list FRESH: it re-evaluates unchanged dependents (their content
+    // is unchanged, so a content-keyed `--cache` would return a stale result —
+    // exactly the cross-file gap the affected set exists to close). Build's
+    // scoped run leaves this unset → stays cached (build is non-authoritative).
+    const noCache = process.env.SINGULARITY_ESLINT_NO_CACHE === "1";
     // Scoped (build) runs use a separate cache file: ESLint's `--cache` prunes
     // entries for files outside the current run, so a scoped run would shrink
     // the canonical full-repo cache that push / `./singularity check` depend on.
     const cacheLocation = join(root, ".cache", scope !== null ? "eslint-scoped" : "eslint");
-    bustCacheIfStale(root, cacheLocation);
+    const cacheArgs = noCache
+      ? []
+      : ["--cache", "--cache-location", cacheLocation, "--cache-strategy", "content"];
+    if (!noCache) bustCacheIfStale(root, cacheLocation);
     const proc = Bun.spawn(
-      [process.execPath, "x", "eslint", ...targets, "--quiet", "--cache", "--cache-location", cacheLocation, "--cache-strategy", "content"],
+      [process.execPath, "x", "eslint", ...targets, "--quiet", ...cacheArgs],
       {
         cwd: root,
         stdout: "pipe",

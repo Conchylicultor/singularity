@@ -5,6 +5,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
+import { computeEslintScope } from "../eslint-affected";
 import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
@@ -320,46 +321,6 @@ async function getCurrentBranch(): Promise<string> {
     process.exit(1);
   }
   return output.trim();
-}
-
-async function gitText(cwd: string, args: string[]): Promise<string | null> {
-  const proc = Bun.spawn(["git", ...args], { cwd, stdout: "pipe", stderr: "pipe" });
-  const [out, code] = await Promise.all([new Response(proc.stdout).text(), proc.exited]);
-  return code === 0 ? out : null;
-}
-
-// Build-time eslint scope: the .ts/.tsx files this branch changed vs its
-// merge-base with main, so the eslint check lints only those instead of the
-// whole repo. A worktree's seeded eslint cache goes fully cold on the first
-// build — an eslint content-cache is invalidated wholesale when the config hash
-// drifts, and main's eslint.config.ts moves over time — so a full `eslint .`
-// re-lints ~2k files (~10 min). Scoping to the diff turns that into seconds.
-// Push and `./singularity check` never set the scope env var, so they always run
-// the full type-aware lint and the complete gate is preserved. Returns null when
-// the diff can't be determined or is too large to be worth scoping (→ caller
-// falls back to a full lint); an empty array means nothing lint-relevant changed.
-async function computeEslintScope(root: string): Promise<string[] | null> {
-  const mergeBase = await gitText(root, ["merge-base", "HEAD", "main"]);
-  if (mergeBase === null) return null;
-  const changed = await gitText(root, ["diff", "--name-only", mergeBase.trim()]);
-  const untracked = await gitText(root, ["ls-files", "--others", "--exclude-standard"]);
-  if (changed === null || untracked === null) return null;
-  const files = [...changed.split("\n"), ...untracked.split("\n")]
-    .map((f) => f.trim())
-    .filter(Boolean)
-    // The config lints only **/*.{ts,tsx}; mirror its global ignores so an
-    // explicit file list (which bypasses flat-config `ignores`) stays correct.
-    .filter((f) => f.endsWith(".ts") || f.endsWith(".tsx"))
-    .filter((f) => !f.endsWith(".generated.ts"))
-    .filter((f) => !f.includes("node_modules/"))
-    .filter((f) => !f.includes("/dist/") && !f.startsWith("dist/"))
-    // Skip deletions/renames-away — passing a missing path makes eslint error.
-    .filter((f) => existsSync(join(root, f)));
-  const unique = [...new Set(files)];
-  // A sweeping diff (big rebase/refactor) isn't worth scoping — the type
-  // programs dominate anyway and the cross-file correctness gap widens.
-  if (unique.length > 400) return null;
-  return unique;
 }
 
 // Self-heal `core.hooksPath`. `.githooks/prepare-commit-msg` is how each
