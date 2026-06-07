@@ -916,12 +916,28 @@
       "name": "@singularity/plugin-fields",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/enum": {
+      "name": "@singularity/plugin-fields-enum",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/enum/plugins/config": {
+      "name": "@singularity/plugin-fields-enum-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/int": {
       "name": "@singularity/plugin-fields-int",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/number": {
       "name": "@singularity/plugin-fields-number",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/number/plugins/filter": {
+      "name": "@singularity/plugin-fields-number-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/number/plugins/table": {
+      "name": "@singularity/plugin-fields-number-table",
       "version": "0.0.1",
     },
     "plugins/floating-bar": {
@@ -2909,9 +2925,17 @@
 
     "@singularity/plugin-fields": ["@singularity/plugin-fields@workspace:plugins/fields"],
 
+    "@singularity/plugin-fields-enum": ["@singularity/plugin-fields-enum@workspace:plugins/fields/plugins/enum"],
+
+    "@singularity/plugin-fields-enum-config": ["@singularity/plugin-fields-enum-config@workspace:plugins/fields/plugins/enum/plugins/config"],
+
     "@singularity/plugin-fields-int": ["@singularity/plugin-fields-int@workspace:plugins/fields/plugins/int"],
 
     "@singularity/plugin-fields-number": ["@singularity/plugin-fields-number@workspace:plugins/fields/plugins/number"],
+
+    "@singularity/plugin-fields-number-filter": ["@singularity/plugin-fields-number-filter@workspace:plugins/fields/plugins/number/plugins/filter"],
+
+    "@singularity/plugin-fields-number-table": ["@singularity/plugin-fields-number-table@workspace:plugins/fields/plugins/number/plugins/table"],
 
     "@singularity/plugin-floating-bar": ["@singularity/plugin-floating-bar@workspace:plugins/floating-bar"],
 

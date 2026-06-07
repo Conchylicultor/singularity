@@ -1,17 +1,24 @@
-import { type ReactNode, useMemo } from "react";
+import { type ReactNode, useMemo, useState } from "react";
+import { MdFilterList } from "react-icons/md";
 import type {
   Contribution,
   SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { cn } from "@/lib/utils";
-import type { DataViewProps, DataViewRenderProps } from "../../core";
+import type {
+  DataViewProps,
+  DataViewRenderProps,
+  FieldDef,
+} from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import { useViewState } from "../internal/use-view-state";
 import { useDataViewRows } from "../internal/use-data-view-rows";
 import { useResolveFilter } from "../filter-slot";
 import { ViewSwitcher } from "./view-switcher";
+import { FilterBar } from "./filter-bar";
 
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const {
@@ -69,6 +76,12 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     searchAccessor,
   );
 
+  const hasFilters = useMemo(
+    () => fields.some((f) => resolveFilter(f.type ?? "text") !== undefined),
+    [fields, resolveFilter],
+  );
+  const [showFilters, setShowFilters] = useState(false);
+
   if (!activeView) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
@@ -108,6 +121,15 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           placeholder="Search…"
           wrapperClassName="ml-auto w-48"
         />
+        {hasFilters ? (
+          <IconButton
+            icon={MdFilterList}
+            label="Filter"
+            variant={showFilters ? "secondary" : "ghost"}
+            aria-pressed={showFilters}
+            onClick={() => setShowFilters((v) => !v)}
+          />
+        ) : null}
         {actions}
         <ViewSwitcher
           views={available}
@@ -115,6 +137,16 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           onSelect={viewState.setActiveView}
         />
       </div>
+      {showFilters && hasFilters ? (
+        <div className="shrink-0 px-2 pb-2">
+          <FilterBar
+            fields={fields as FieldDef<unknown>[]}
+            filters={activeState.filters}
+            setFilter={(id, v) => viewState.setFilter(activeViewId, id, v)}
+            resolveFilter={resolveFilter}
+          />
+        </div>
+      ) : null}
       <div className={cn("min-h-0 flex-1 overflow-y-auto")}>
         {renderIsolated(
           DataViewSlots.View.id,

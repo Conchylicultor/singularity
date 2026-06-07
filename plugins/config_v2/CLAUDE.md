@@ -118,7 +118,7 @@ Because the running app resolves to origin during a conflict, the settings edito
       - **`avatar`** — Avatar field type (icon + color picker).
       - **`color`** — Color field type: hex color string with a popover color picker.
       - **`dynamic-enum`** — Dynamic enum field type: options resolved at render time from slot contributions.
-      - **`enum`** — Enum field type: single-choice from a fixed set of options.
+      - **`enum`** — Enum field type for config_v2: single-choice from a fixed set.
       - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
       - **`multiline-text`** — Multi-line text field type.
       - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.

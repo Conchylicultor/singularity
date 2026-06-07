@@ -2,20 +2,6 @@ import { type ComponentType, type ReactNode } from "react";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
-/**
- * @deprecated Closed taxonomy kept only for back-compat with existing
- * `f.type === "media"` / `"text"` comparisons. The canonical field-type id is
- * now an open `string` resolved against the `fields.identity` registry.
- * Removed in task 2 of the unified-fields migration.
- */
-export type FieldType =
-  | "text"
-  | "number"
-  | "date"
-  | "boolean"
-  | "enum"
-  | "media";
-
 export interface FieldDef<TRow> {
   id: string;
   label: string;

@@ -1,6 +1,5 @@
 export type {
   FieldValue,
-  FieldType,
   FieldDef,
   SortState,
   ViewState,

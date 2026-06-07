@@ -4,6 +4,13 @@ Enum field type for config_v2. Single-choice selection from a fixed set of
 options. Renders as a radio group (≤3 options) or dropdown (≥4), with an
 optional `display` override.
 
+This plugin is now **core-only**: it owns the `enumField` factory + token +
+`EnumFieldDef` shape, still imported by config descriptors. The renderer
+contribution (`config-v2.fields.renderer`) was relocated into the unified fields
+matrix at `@plugins/fields/plugins/enum/plugins/config`, which reads this
+plugin's `EnumFieldDef` shape (type-only) and dispatches by the shared id
+string `"enum"`.
+
 ## Usage
 
 ```ts
@@ -33,9 +40,7 @@ const myConfig = defineConfig({
 
 ## Plugin reference
 
-- Description: Enum field type: single-choice from a fixed set of options.
-- Web:
-  - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
+- Description: Enum field type for config_v2: single-choice from a fixed set.
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
   - Exports: Types: `EnumFieldDef`, `EnumOption`; Values: `enumField`, `enumFieldType`

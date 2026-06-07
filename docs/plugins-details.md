@@ -529,9 +529,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`, `dynamicEnumFieldType`
-        - **`enum`** — Enum field type: single-choice from a fixed set of options.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
+        - **`enum`** — Enum field type for config_v2: single-choice from a fixed set.
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
             - Exports: Types: `EnumFieldDef`, `EnumOption`; Values: `enumField`, `enumFieldType`
@@ -1241,11 +1239,22 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `int`, `number`
-    - Imported by: `int`, `number`
+    - Slot contributors: `enum`, `int`, `number`
+    - Imported by: `enum`, `int`, `number`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
+    - **`enum`** — Enum (select) field type: identity only. The config-render capability lives in the plugins/config sub-plugin; table/filter capabilities are deferred to task 3.
+      - Web:
+        - Contributes: `Fields.Identity` "enum"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `enumFieldType`, `enumIdentity`
+      - Plugins:
+        - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
     - **`int`** — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "int"
@@ -1253,13 +1262,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `intFieldType`, `intIdentity`
-    - **`number`** — Number field type: identity plus the data-view cell and filter (min/max) capabilities.
+    - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
-        - Contributes: `Fields.Identity` "number", `DataViewSlots.Cell` "number" → `NumberCell`, `DataViewSlots.Filter` "number"
+        - Contributes: `Fields.Identity` "number"
         - Uses: `fields.Fields`
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `numberFieldType`, `numberIdentity`
+      - Plugins:
+        - **`filter`** — Number field type: data-view filter (min/max range control).
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "number"
+        - **`table`** — Number field type: data-view table cell (read-only numeric cell).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "number" → `NumberCell`
 
 - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
   - Web:
@@ -1758,11 +1774,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots: `DataViewSlots.View`
-        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
+        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
       - Cross-plugin:
-        - Slot contributors: `gallery`, `number`, `table`
+        - Slot contributors: `filter`, `gallery`, `table`
       - Core:
-        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldType`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
+        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:

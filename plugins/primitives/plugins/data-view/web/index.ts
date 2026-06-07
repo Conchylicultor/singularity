@@ -7,7 +7,6 @@ export { useResolveCell } from "./cell-slot";
 export { useResolveFilter } from "./filter-slot";
 export type {
   FieldValue,
-  FieldType,
   FieldDef,
   SortState,
   ViewState,

@@ -61,7 +61,11 @@ export function SongLibrary() {
       {
         id: "duration",
         label: "Length",
-        type: "number",
+        // `int` derives its data-view cell + filter from `number` via the
+        // fields `extends` chain (int → number); the explicit `cell` below is the
+        // tier-1 override (m:ss), so the inherited number cell is bypassed while
+        // the inherited number range filter still applies in the filter bar.
+        type: "int",
         value: (s) => s.durationSec,
         cell: (s) => formatDuration(s.durationSec),
         sortable: true,
