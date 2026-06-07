@@ -5,7 +5,11 @@
 // `bunx playwright screenshot ...` CLI is fine.
 //
 // Usage:
-//   bun e2e/screenshot.mjs --url <url> [--click <aria-label>] [--out <path>]
+//   bun e2e/screenshot.mjs --url <url> [--click <aria-label>] [--out <path>] [--color-scheme dark|light]
+//
+// By default the screenshot inherits the host OS appearance (macOS dark/light)
+// so a `colorMode: "system"` app renders exactly as the user sees it. Pass
+// `--color-scheme dark|light` to force one.
 //
 // Example (my docs button):
 //   bun e2e/screenshot.mjs \
@@ -17,6 +21,7 @@
 // the matched button's state (disabled, aria-pressed, text). Copy and adapt
 // for richer flows (multi-click, assertions, etc.).
 
+import { execFileSync } from "node:child_process";
 import { chromium } from "playwright";
 
 function arg(name, fallback) {
@@ -24,20 +29,43 @@ function arg(name, fallback) {
   return i >= 0 ? process.argv[i + 1] : fallback;
 }
 
+// Headless Chromium hardcodes `prefers-color-scheme: light`, so a `colorMode:
+// "system"` app always renders light in screenshots even when the user's OS is
+// dark. To mirror what the user actually sees, detect the real OS appearance and
+// emulate it. On macOS `defaults read -g AppleInterfaceStyle` prints "Dark" when
+// dark and exits non-zero (no key) when light. `--color-scheme` overrides.
+function detectOsColorScheme() {
+  if (process.platform === "darwin") {
+    try {
+      const out = execFileSync("defaults", ["read", "-g", "AppleInterfaceStyle"], {
+        encoding: "utf8",
+        stdio: ["ignore", "pipe", "ignore"],
+      });
+      return out.trim() === "Dark" ? "dark" : "light";
+    } catch {
+      return "light"; // key absent → Light appearance
+    }
+  }
+  return "light";
+}
+
 const url = arg("url");
 const click = arg("click");
 const out = arg("out", "/tmp/screenshot");
 const viewport = arg("viewport", "1400x900").split("x").map(Number);
 const waitMs = Number(arg("wait", "3000"));
+const colorScheme = arg("color-scheme", detectOsColorScheme());
 
 if (!url) {
-  console.error("Usage: bun e2e/screenshot.mjs --url <url> [--click <aria-label>] [--out <path>]");
+  console.error("Usage: bun e2e/screenshot.mjs --url <url> [--click <aria-label>] [--out <path>] [--color-scheme dark|light]");
   process.exit(2);
 }
 
+console.log(`color-scheme: ${colorScheme}`);
 const browser = await chromium.launch();
 const context = await browser.newContext({
   viewport: { width: viewport[0], height: viewport[1] },
+  colorScheme,
 });
 const page = await context.newPage();
 
