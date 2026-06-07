@@ -911,6 +911,13 @@
       "tag": "20260607_090007_4157a2a2__add_sonata_chord_grid_ext",
       "hash": "4157a2a2",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1780847954000,
+      "tag": "20260607_155914_a271fcd9__add_sonata_track_view",
+      "hash": "a271fcd9",
+      "breakpoints": true
     }
   ]
 }

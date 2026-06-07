@@ -1,10 +1,11 @@
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
   Sonata,
   useSonata,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useMutedTrackIds } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { startScheduling, type ScheduleHandle } from "../scheduler";
 
@@ -23,6 +24,19 @@ const DEFAULT_VOLUME = 0.8;
  */
 export function AudioPanel() {
   const { score, isPlaying, cursorBeat, seekEpoch, registerClock } = useSonata();
+
+  // Muted tracks are dropped from the play-list before scheduling. Deriving a
+  // filtered score (rather than passing the set down) keeps `startScheduling`
+  // track-agnostic; its identity changes when the mute set changes, so the
+  // scheduling effect re-runs and the schedule reflects the new mute state.
+  const mutedIds = useMutedTrackIds();
+  const audibleScore = useMemo(
+    () =>
+      mutedIds.size === 0
+        ? score
+        : { ...score, notes: score.notes.filter((n) => !mutedIds.has(n.track)) },
+    [score, mutedIds],
+  );
 
   // Keep the latest cursor in a ref so the scheduling effect reads it WITHOUT
   // depending on it (re-anchor only on play/stop, like the transport).
@@ -131,6 +145,8 @@ export function AudioPanel() {
   // Re-runs on `seekEpoch` too: a seek repositions the playback origin without
   // changing `score`, so we must cancel the in-flight schedule and re-anchor
   // from the new cursor — otherwise audio keeps playing from the pre-seek spot.
+  // It also re-runs when `audibleScore` changes (tempo, edits, or a mute toggle),
+  // re-scheduling from the current cursor so muting/unmuting takes effect live.
   useEffect(() => {
     if (!voices) return;
 
@@ -152,7 +168,7 @@ export function AudioPanel() {
     void (async () => {
       await voices.loaded;
       if (cancelled) return;
-      handle = startScheduling(score, fromBeat, audioAnchor, voices, ctx);
+      handle = startScheduling(audibleScore, fromBeat, audioAnchor, voices, ctx);
     })();
 
     return () => {
@@ -160,7 +176,7 @@ export function AudioPanel() {
       handle?.cancel();
       voices.allOff();
     };
-  }, [isPlaying, score, activeInstrumentId, voices, seekEpoch]);
+  }, [isPlaying, audibleScore, activeInstrumentId, voices, seekEpoch]);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">

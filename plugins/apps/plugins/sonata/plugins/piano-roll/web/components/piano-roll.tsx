@@ -10,6 +10,10 @@ import {
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
+import {
+  useTrackColorMap,
+  useHiddenTrackIds,
+} from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { pianoRollConfig } from "../../shared/config";
 import { buildProjection, PX_PER_SECOND } from "./geometry";
 import { ProjectionProvider } from "./projection-context";
@@ -195,16 +199,30 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // not rebuilt every frame (the projection already built its own internally).
   const tempo = useMemo(() => buildTempoIndex(score), [score]);
 
+  // Per-track view-state: hidden tracks are dropped from the roll entirely;
+  // every drawn note is tinted by its track's effective color (palette default
+  // or user override). Both come from the track-mixer's reactive rollup, so a
+  // toggle/recolor re-derives `noteRects` (and only then — not per frame).
+  const colorMap = useTrackColorMap();
+  const hiddenIds = useHiddenTrackIds();
+
   // Note rectangles, derived from the projection (single geometry source). The
   // key-signature-aware name is computed here too so it stays stable across
   // frames; the label only renders when `showNoteNames` is on.
   const noteRects = useMemo(() => {
     const toRect = projection.noteToRect!;
-    return score.notes.map((n) => {
-      const s = speller.spell(n.pitch);
-      return { note: n, rect: toRect(n), label: `${s.step}${accidentalGlyph(s.alter)}` };
-    });
-  }, [projection, score.notes, speller]);
+    return score.notes
+      .filter((n) => !hiddenIds.has(n.track))
+      .map((n) => {
+        const s = speller.spell(n.pitch);
+        return {
+          note: n,
+          rect: toRect(n),
+          label: `${s.step}${accidentalGlyph(s.alter)}`,
+          color: colorMap.get(n.track) ?? null,
+        };
+      });
+  }, [projection, score.notes, speller, colorMap, hiddenIds]);
 
   // The cursor-invariant content. Built here (cursor-free) so its element
   // identity is stable across frames; passed as `children` to ScrollLayer.
@@ -216,11 +234,14 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         laneWidth={lane.width}
       />
 
-      {noteRects.map(({ note, rect, label }) => (
+      {noteRects.map(({ note, rect, label, color }) => (
         <div
           key={note.id}
           className={cn(
-            "absolute z-10 rounded-sm border border-primary/40 bg-primary/70 shadow-sm",
+            "absolute z-10 rounded-sm border shadow-sm",
+            // Fall back to the primary token only when no track color resolved
+            // (e.g. before the rollup loads); otherwise tint per track.
+            color ? null : "border-primary/40 bg-primary/70",
           )}
           style={{
             left: rect.x,
@@ -228,6 +249,9 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
             width: Math.max(2, rect.w - 1),
             height: Math.max(2, rect.h - 1),
             opacity: 0.4 + (note.velocity / 127) * 0.6,
+            ...(color
+              ? { backgroundColor: color, borderColor: color }
+              : null),
           }}
           title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
         >
