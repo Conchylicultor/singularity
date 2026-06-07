@@ -1,7 +1,7 @@
 import { createContext, useContext, useEffect, useLayoutEffect, useMemo } from "react";
 import { useConfig, useScopeForked } from "@plugins/config_v2/web";
 import { useCurrentAppId } from "@plugins/apps/web";
-import { themeEngineConfig } from "../../core";
+import { useResolvedColorMode } from "../use-color-mode";
 import { persistActiveForkedScope } from "../internal/active-scope-storage";
 import { ThemeScopeProvider } from "./theme-scope-context";
 import { ThemeEngine, useTokenGroupPresets } from "../slots";
@@ -106,29 +106,17 @@ function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId
   return null;
 }
 
-// Reads the active app's colorMode and toggles the single global `.dark` class.
-// Only one app is mounted at a time (AppsLayout), so a global class is correct —
-// no per-app DOM scoping. Switching apps re-runs useCurrentAppId (pathname store)
-// and re-resolves the colorMode automatically.
+// Reads the active app's resolved color mode and toggles the single global `.dark`
+// class. Only one app is mounted at a time (AppsLayout), so a global class is
+// correct — no per-app DOM scoping. Switching apps re-runs useCurrentAppId
+// (pathname store) and re-resolves the mode automatically. The resolution itself
+// lives in useResolvedColorMode so the class and prop-themed components never drift.
 function ColorModeApplier({ scopeId }: { scopeId?: string }) {
-  const { colorMode } = useConfig(themeEngineConfig, { scopeId }) as {
-    colorMode: "light" | "dark" | "system";
-  };
+  const resolved = useResolvedColorMode(scopeId);
 
   useLayoutEffect(() => {
-    const apply = () => {
-      const resolved =
-        colorMode === "dark" ||
-        (colorMode === "system" &&
-          window.matchMedia("(prefers-color-scheme: dark)").matches);
-      document.documentElement.classList.toggle("dark", resolved);
-    };
-    apply();
-    if (colorMode !== "system") return;
-    const mq = window.matchMedia("(prefers-color-scheme: dark)");
-    mq.addEventListener("change", apply);
-    return () => mq.removeEventListener("change", apply);
-  }, [colorMode]);
+    document.documentElement.classList.toggle("dark", resolved === "dark");
+  }, [resolved]);
 
   return null;
 }

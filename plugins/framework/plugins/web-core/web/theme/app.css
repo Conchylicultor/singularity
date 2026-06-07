@@ -96,6 +96,9 @@
 
 /* Default theme values — overridden at runtime by ThemeInjector. */
 :root {
+    /* Tell the UA which scheme to paint native surfaces in (form controls,
+       scrollbars, canvas). Inherited; `.dark` flips it below. */
+    color-scheme: light;
     --background: oklch(1 0 0);
     --foreground: oklch(0.145 0 0);
     --card: oklch(1 0 0);
@@ -172,6 +175,7 @@
 }
 
 .dark {
+    color-scheme: dark;
     --background: oklch(0.145 0 0);
     --foreground: oklch(0.88 0 0);
     --card: oklch(0.205 0 0);

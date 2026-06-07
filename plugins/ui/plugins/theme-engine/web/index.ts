@@ -19,6 +19,8 @@ export type {
 export { ThemeScope } from "./components/theme-scope";
 export { ThemeScopeProvider, useThemeScopeId } from "./components/theme-scope-context";
 export { ColorAdjustContext } from "./components/theme-injector";
+export { useColorMode, useResolvedColorMode } from "./use-color-mode";
+export type { ColorMode } from "./use-color-mode";
 export { transformValues } from "./internal/transform";
 
 export default {
