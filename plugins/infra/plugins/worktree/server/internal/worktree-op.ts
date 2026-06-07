@@ -1,11 +1,15 @@
 import {
+  closeSync,
   mkdirSync,
+  openSync,
   readdirSync,
   readFileSync,
+  renameSync,
   rmSync,
   writeFileSync,
 } from "node:fs";
 import { join } from "node:path";
+import { dlopen } from "bun:ffi";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
 // A per-worktree, crash-safe marker for a long-running operation (build, push)
@@ -161,4 +165,147 @@ export function listActiveWorktreeOps(): WorktreeOpInfo[] {
     }
   }
   return out;
+}
+
+// ---------------------------------------------------------------------------
+// Push-lock ownership: one source of truth
+// ---------------------------------------------------------------------------
+//
+// A push marker's stored `phase` is a per-process *self-assertion* and cannot be
+// trusted to say who holds the global push lock: a hard-killed push (SIGKILL/OOM)
+// leaves a stale "running" marker, and pid-liveness reaping is defeated by PID
+// reuse — so two markers can read "running" at once, or none can. The kernel
+// flock on `push.lock` (held only by the CLI push process, auto-released on death)
+// is the ONLY crash-safe, PID-reuse-proof truth for "is a push running". This
+// module derives each push marker's displayed phase from two authoritative inputs:
+//
+//   - existence of a running push  → the kernel flock probe (`pushLockHeld`)
+//   - identity of the holder       → a single global holder file (one file ⇒ at
+//                                     most one running slug ⇒ two-running is
+//                                     structurally impossible)
+//
+// The holder file is written by whoever holds the flock (in the CLI's
+// onLockAcquired) and removed on release; the server only reads it.
+
+// MUST match `PUSH_LOCK_PATH` in the CLI push command — both flock the same file.
+export const PUSH_LOCK_PATH = join(SINGULARITY_DIR, "push.lock");
+const PUSH_HOLDER_PATH = join(SINGULARITY_DIR, "push-holder.json");
+
+export interface PushHolder {
+  slug: string;
+  pid: number;
+  pushId: string;
+  acquiredAt: string;
+}
+
+// Lazily dlopen libc's flock so this module stays importable in non-FFI contexts
+// (it is only ever exercised under Bun on the server / CLI).
+let flockFn: ((fd: number, op: number) => number) | null = null;
+function flock(fd: number, op: number): number {
+  if (!flockFn) {
+    const { symbols } = dlopen(
+      process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
+      { flock: { args: ["i32", "i32"], returns: "i32" } },
+    );
+    flockFn = symbols.flock as (fd: number, op: number) => number;
+  }
+  return flockFn(fd, op);
+}
+const LOCK_EX = 2;
+const LOCK_NB = 4;
+
+// True iff some process currently holds the push flock. Crash-proof and
+// PID-reuse-proof: asks the kernel directly. Probes non-blocking and releases
+// immediately on success (open in append mode so we never truncate the lock
+// file the CLI may be holding). When the lock is held the probe fails fast
+// without acquiring, so it never disturbs the real holder.
+export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
+  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  let fd: number;
+  try {
+    fd = openSync(lockPath, "a");
+  } catch {
+    return false;
+  }
+  try {
+    // Non-zero return ⇒ EWOULDBLOCK ⇒ someone else holds it.
+    return flock(fd, LOCK_EX | LOCK_NB) !== 0;
+  } finally {
+    closeSync(fd); // releases the flock if we happened to acquire it
+  }
+}
+
+// Atomically publish the holder identity (temp + rename) so a reader never sees
+// a torn write. Called by the flock holder the instant the lock is granted. The
+// path defaults to the real holder file; tests pass a temp path.
+export function writePushHolder(holder: PushHolder, path: string = PUSH_HOLDER_PATH): void {
+  mkdirSync(SINGULARITY_DIR, { recursive: true });
+  const tmp = `${path}.${process.pid}.tmp`;
+  writeFileSync(tmp, JSON.stringify(holder));
+  renameSync(tmp, path);
+}
+
+export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | null {
+  let parsed: Partial<PushHolder>;
+  try {
+    parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>;
+  } catch {
+    return null; // absent or unparseable
+  }
+  if (
+    typeof parsed.slug !== "string" ||
+    typeof parsed.pid !== "number" ||
+    typeof parsed.pushId !== "string"
+  ) {
+    return null;
+  }
+  return {
+    slug: parsed.slug,
+    pid: parsed.pid,
+    pushId: parsed.pushId,
+    acquiredAt: typeof parsed.acquiredAt === "string" ? parsed.acquiredAt : new Date(0).toISOString(),
+  };
+}
+
+// Remove the holder file ONLY if it still names this push — a late-dying waiter
+// (or a previous holder whose exit handler fires after the next holder took
+// over) must not delete the current holder's file.
+export function clearPushHolder(pushId: string, path: string = PUSH_HOLDER_PATH): void {
+  const holder = readPushHolder(path);
+  if (holder && holder.pushId !== pushId) return;
+  rmSync(path, { force: true });
+}
+
+export interface DerivePushDeps {
+  isAlive: (pid: number) => boolean;
+  lockHeld: () => boolean;
+}
+
+// Pure: given the live op markers and the current holder file, return the markers
+// with each PUSH marker's phase set to the DERIVED truth. Builds pass through
+// untouched (they never contend on the push lock). At most one slug can be
+// "running" — the one the single holder file names, and only when its pid is
+// alive AND the kernel confirms the lock is genuinely held (the only check that
+// survives PID reuse). Every other push is "waiting-for-lock".
+export function derivePushPhases(
+  markers: WorktreeOpInfo[],
+  holder: PushHolder | null,
+  deps: DerivePushDeps,
+): WorktreeOpInfo[] {
+  const runningSlug =
+    holder && deps.isAlive(holder.pid) && deps.lockHeld() ? holder.slug : null;
+  return markers.map((m) =>
+    m.op === "push"
+      ? { ...m, phase: m.slug === runningSlug ? "running" : "waiting-for-lock" }
+      : m,
+  );
+}
+
+// Composition used by the op-status resource loader: scan live markers, read the
+// holder file, and derive push phases against the real pid/flock predicates.
+export function resolveActiveWorktreeOps(): WorktreeOpInfo[] {
+  return derivePushPhases(listActiveWorktreeOps(), readPushHolder(), {
+    isAlive: isPidAlive,
+    lockHeld: pushLockHeld,
+  });
 }

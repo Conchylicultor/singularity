@@ -6,7 +6,7 @@ import { SINGULARITY_DIR } from "../paths";
 import { checkBroadcasts } from "../broadcasts";
 import { createPushProfiler, type PushProfiler } from "../push-profiler";
 import { withHostSlot } from "../host-semaphore";
-import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp } from "@plugins/infra/plugins/worktree/server";
+import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder, PUSH_LOCK_PATH } from "@plugins/infra/plugins/worktree/server";
 import { computeAffectedFiles } from "../eslint-affected";
 
 async function run(
@@ -266,7 +266,9 @@ async function getCurrentBranch(): Promise<string> {
   return stdout;
 }
 
-const PUSH_LOCK_PATH = join(SINGULARITY_DIR, "push.lock");
+// PUSH_LOCK_PATH is owned by the worktree primitive (imported above) so the
+// CLI flock and the server-side `pushLockHeld` probe can never target different
+// files — that shared truth is what the op-status derivation depends on.
 
 const { symbols: ffi } = dlopen(
   process.platform === "darwin" ? "libc.dylib" : "libc.so.6",
@@ -356,11 +358,24 @@ export function registerPush(program: Command) {
       // failure path, and thrown errors — via the on-exit handler; a SIGKILLed
       // push self-heals via the marker's pid-liveness check.
       markWorktreeOpStart(opSlug, "push", "waiting-for-lock");
-      process.on("exit", () => clearWorktreeOp(opSlug, "push"));
+      process.on("exit", () => {
+        clearWorktreeOp(opSlug, "push");
+        // Only removes the holder file if it still names THIS push (guards
+        // against a late-firing exit handler deleting the next holder's file).
+        clearPushHolder(pushId);
+      });
       const onLockAcquired = (): void => {
-        // Lock granted — the push is no longer queued. Flip the marker so the
-        // conversation banner switches from "queued / waiting for lock" to
-        // "in progress" (instantaneous when there was no contention).
+        // Lock granted — publish this push as the single global lock holder. The
+        // op-status resource DERIVES "running" from this holder file + the kernel
+        // flock, so this is the authoritative signal (immune to a stale marker
+        // left by a hard-killed peer). The marker phase flip below is now just an
+        // advisory hint AND the filesystem event that wakes the op watcher.
+        writePushHolder({
+          slug: opSlug,
+          pid: process.pid,
+          pushId,
+          acquiredAt: new Date().toISOString(),
+        });
         setWorktreeOpPhase(opSlug, "push", "running");
         profiler.markLockAcquired();
       };

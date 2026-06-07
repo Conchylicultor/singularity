@@ -1540,7 +1540,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/secrets/get`, `POST /api/secrets/set`, `POST /api/secrets/delete`, `POST /api/secrets/has`, `POST /api/secrets/meta`, `POST /api/secrets/list`
     - **`worktree`**
       - Server:
-        - Exports: Types: `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`; Values: `clearWorktreeOp`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `removeWorktree`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`
+        - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
