@@ -7,6 +7,17 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 
+// Sanctioned, TEMPORARY cross-plugin barrel re-exports for gradual migrations.
+// Key: `${reexporting-plugin}/${runtime} -> ${source-specifier}`. Normally forbidden
+// by the cross-plugin-reexport rule; each entry is a scoped, documented exception
+// removed once all importers move to the source barrel directly.
+const REEXPORT_EXCEPTIONS: ReadonlySet<string> = new Set([
+  // Unified-fields migration (research/2026-06-07-global-unify-fieldtype-token.md, S1→S4):
+  // config_v2/core temporarily re-exports the FieldType token from fields/core.
+  // Remove with the shim in task 8.
+  "config_v2/core -> @plugins/fields/core",
+]);
+
 // Framework-level files exempt from cross-plugin boundary checks (both the
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).
 // Generated files (*.generated.ts) are exempt from R9 via a pattern check
@@ -120,7 +131,7 @@ const check: Check = {
           }
           continue;
         }
-        checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath);
+        checkBarrelPurity(barrel, relative(root, barrel), violations, p.relPath, runtime);
       }
     }
 
@@ -530,7 +541,13 @@ function dirContainsTsFiles(dir: string): boolean {
  * top-level `await`, control flow) is a violation — it should live in a sibling file
  * (conventionally `shared/`).
  */
-function checkBarrelPurity(absPath: string, relPath: string, violations: Violation[], pluginPath: string) {
+function checkBarrelPurity(
+  absPath: string,
+  relPath: string,
+  violations: Violation[],
+  pluginPath: string,
+  runtime: string,
+) {
   const raw = safeRead(absPath);
   if (!raw) return;
   // stripComments (not stripCommentsAndStrings) so `from` specifiers survive
@@ -549,7 +566,8 @@ function checkBarrelPurity(absPath: string, relPath: string, violations: Violati
           const lastSeg = segments[segments.length - 1]!;
           if (VALID_RUNTIMES.has(lastSeg)) {
             const specPluginPath = segments.slice(0, -1).join("/");
-            if (specPluginPath !== pluginPath) {
+            const exceptionKey = `${pluginPath}/${runtime} -> ${specifier}`;
+            if (specPluginPath !== pluginPath && !REEXPORT_EXCEPTIONS.has(exceptionKey)) {
               violations.push({
                 rule: "cross-plugin-reexport",
                 file: `${relPath}:${line}`,

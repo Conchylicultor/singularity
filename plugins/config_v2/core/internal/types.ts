@@ -1,4 +1,5 @@
 import type { z } from "zod";
+import type { FieldType } from "@plugins/fields/core";
 
 export type JsonValue =
   | string
@@ -17,15 +18,6 @@ export interface FieldMeta {
   description?: string;
   placeholder?: string;
   typeHint?: string;
-}
-
-export interface FieldType<T = unknown> {
-  readonly id: string;
-  readonly _T?: T;
-}
-
-export function defineFieldType<T>(id: string): FieldType<T> {
-  return Object.freeze({ id });
 }
 
 export interface FieldDef<T = unknown> {
