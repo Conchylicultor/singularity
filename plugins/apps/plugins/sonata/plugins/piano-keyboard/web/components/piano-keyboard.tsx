@@ -18,6 +18,17 @@ import { pianoKeyboardConfig } from "../../shared/config";
 
 type LabelScope = "diatonic" | "whites-plus-in-key" | "all";
 
+/**
+ * Resting key colors. A piano is a physical object — white keys are always
+ * ivory, black keys always near-black — so these stay fixed in both light and
+ * dark themes rather than tracking the UI's foreground/background tokens (which
+ * flip in dark mode and would invert the keys). The lit state still uses the
+ * theme's accent / per-track color. Inline styles keep these out of the
+ * className-only `no-hardcoded-colors` check.
+ */
+const WHITE_KEY = { bg: "#fafafa", border: "#d4d4d8", label: "#52525b" };
+const BLACK_KEY = { bg: "#1c1c1c", border: "#0a0a0a", label: "#d4d4d4" };
+
 /** White pitch-class → natural letter (for keys outside the key signature). */
 const NATURAL_LETTER: Record<number, string> = {
   0: "C",
@@ -117,19 +128,21 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
         return (
           <div
             key={k.pitch}
-            className={`absolute bottom-0 top-0 flex items-end justify-center rounded-b-sm border border-border pb-1 ${
-              lit ? "bg-primary" : "bg-background"
+            className={`absolute bottom-0 top-0 flex items-end justify-center rounded-b-sm border pb-1 ${
+              lit ? "bg-primary" : ""
             }`}
             style={{
               left: k.center - k.width / 2,
               width: k.width,
-              ...(color ? { backgroundColor: color } : null),
+              borderColor: WHITE_KEY.border,
+              backgroundColor: color || (lit ? undefined : WHITE_KEY.bg),
             }}
           >
             <span
               className={`select-none text-[9px] leading-none ${
-                lit ? "text-primary-foreground" : "text-muted-foreground/70"
+                lit ? "text-primary-foreground" : ""
               }`}
+              style={lit ? undefined : { color: WHITE_KEY.label }}
             >
               {keyLabel(k, speller, scope)}
             </span>
@@ -143,20 +156,22 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
         return (
           <div
             key={k.pitch}
-            className={`absolute top-0 z-10 flex items-end justify-center rounded-b-sm border border-border pb-0.5 ${
-              lit ? "bg-primary" : "bg-foreground"
+            className={`absolute top-0 z-10 flex items-end justify-center rounded-b-sm border pb-0.5 ${
+              lit ? "bg-primary" : ""
             }`}
             style={{
               left: k.center - k.width / 2,
               width: k.width,
               height: "62%",
-              ...(color ? { backgroundColor: color } : null),
+              borderColor: BLACK_KEY.border,
+              backgroundColor: color || (lit ? undefined : BLACK_KEY.bg),
             }}
           >
             <span
               className={`select-none text-[7px] leading-none ${
-                lit ? "text-primary-foreground" : "text-background/80"
+                lit ? "text-primary-foreground" : ""
               }`}
+              style={lit ? undefined : { color: BLACK_KEY.label }}
             >
               {keyLabel(k, speller, scope)}
             </span>
