@@ -231,9 +231,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
           - Server:
             - Uses: `config_v2.ConfigV2`
-        - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.
+        - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
           - Web:
-            - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`
+            - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `ConfigV2.WebRegister`
+            - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
+          - Server:
+            - Uses: `config_v2.ConfigV2`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and adds Most/Recently played sort orderings (Library.Sort). Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
           - Web:
             - Contributes: `Sonata.Effect` "record-play" → `RecordPlayObserver`, `Library.CardMeta` "play-stats" → `PlayStats`, `Library.Sort` "Most played" → `MostPlayedOrder`, `Library.Sort` "Recently played" → `RecentlyPlayedOrder`
@@ -502,7 +505,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Boot`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `preprompts`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
+    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
   - Server:
