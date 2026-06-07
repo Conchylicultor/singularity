@@ -6,8 +6,7 @@
 
 - Description: Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
 - Web:
-  - Contributes: `ThemeEngine.PresetSource` "Preset Source", `ThemeCustomizer.Section` "tweakcn" → `TweakcnSection`
-  - Uses: `config_v2.useConfigRegistrations`
+  - Contributes: `ThemeEngine.PresetSource` "Preset Source"
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`

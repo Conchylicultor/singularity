@@ -12,6 +12,7 @@ import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import { getCatalog, applyCatalogTheme } from "../../core";
 import { CommunityThemeCard } from "./community-theme-card";
+import { ImportByUrl } from "./import-by-url";
 
 export function CommunityBrowserSection({ search }: { search: string }) {
   const scopeId = useThemeScopeId();
@@ -65,7 +66,9 @@ export function CommunityBrowserSection({ search }: { search: string }) {
   const sectionMatchesSearch =
     search.length === 0 ||
     "community themes".includes(q) ||
-    "community".includes(q);
+    "community".includes(q) ||
+    "import by url".includes(q) ||
+    "tweakcn".includes(q);
 
   if (!sectionMatchesSearch && visible.length === 0) return null;
 
@@ -164,6 +167,8 @@ export function CommunityBrowserSection({ search }: { search: string }) {
           No themes match your search.
         </p>
       )}
+
+      <ImportByUrl search={search} onApply={handleApply} />
     </div>
   );
 }

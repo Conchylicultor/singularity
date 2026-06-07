@@ -1,10 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import type { TokenGroupPreset } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
-import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listTweakcnThemes } from "../core";
-import { TweakcnSection } from "./components/tweakcn-section";
 
 export default {
   name: "UI: Tweakcn",
@@ -25,11 +23,6 @@ export default {
             dark: t.presets[groupId]!.dark,
           }));
       },
-    }),
-    ThemeCustomizer.Section({
-      id: "tweakcn",
-      label: "Import from tweakcn",
-      component: TweakcnSection,
     }),
   ],
 } satisfies PluginDefinition;
