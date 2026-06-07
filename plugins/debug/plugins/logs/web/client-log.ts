@@ -5,7 +5,7 @@ import { emitLogs } from "../core/endpoints";
 // Browser console.log-style logging that persists to a per-worktree JSONL file
 // the agent can read with `tail`/`cat` — no browser/Playwright needed. Lines are
 // buffered per channel and flushed (debounced) to POST /api/logs/emit, which
-// appends them to ~/.singularity/worktrees/<wt>/logs/<channel>.jsonl.
+// appends them to the per-worktree logs directory (see persist.ts / logs CLAUDE.md).
 
 type LogStream = "stdout" | "stderr";
 interface BufferedLine {

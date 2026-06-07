@@ -9,7 +9,7 @@ const DEFAULT_TAIL = 200;
 export const readLogsTool = Mcp.tool({
   name: "read_logs",
   description: `Read browser/server debug log channels for a worktree (the non-SQL sibling of query_db, for logs emitted via clientLog() or Log.channel({persist:true})).
-Logs persist to ~/.singularity/worktrees/<wt>/logs/<channel>.jsonl and survive backend restarts.
+Logs persist to a per-worktree JSONL file and survive backend restarts.
 Omit \`channel\` to list available channels. Default: the current conversation's worktree; pass \`worktree\` to target another (e.g. "singularity" for main). Returns up to \`tail\` newest entries (default ${DEFAULT_TAIL}).`,
   inputSchema: {
     channel: z
