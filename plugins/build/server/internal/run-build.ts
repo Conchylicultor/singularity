@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { and, eq, isNull } from "drizzle-orm";
+import { and, eq, inArray, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/notifications/server";
@@ -46,6 +46,34 @@ async function isAnyBuildAlive(): Promise<boolean> {
   return rows.some((r) => isPidAlive(r.pid));
 }
 
+/**
+ * Close any unfinished build_runs rows for this namespace whose owning process is
+ * dead, stamping exit_code=-1. Scoped to this namespace: a worktree DB forks
+ * main's rows, and reaping those inherited (foreign-pid) builds would surface a
+ * phantom "Build failed" in every worktree. Runs on boot and before each claim so
+ * a crashed owner never permanently wedges the build_runs_inflight_uniq lock.
+ */
+export async function reconcileOrphanBuilds(): Promise<void> {
+  const unfinished = await db
+    .select({ id: _buildRuns.id, pid: _buildRuns.pid })
+    .from(_buildRuns)
+    .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
+  const orphanIds = unfinished.filter((r) => !isPidAlive(r.pid)).map((r) => r.id);
+  if (orphanIds.length === 0) return;
+  await db
+    .update(_buildRuns)
+    .set({ finishedAt: new Date(), exitCode: -1 })
+    .where(inArray(_buildRuns.id, orphanIds));
+  buildHistoryResource.notify();
+}
+
+// node-postgres surfaces a unique_violation as SQLSTATE 23505. The partial unique
+// index build_runs_inflight_uniq throws this when a second in-flight build for the
+// namespace is claimed concurrently — the signal that this caller lost the race.
+function isUniqueViolation(err: unknown): boolean {
+  return (err as { code?: string } | null)?.code === "23505";
+}
+
 export function triggerBuild(trigger: "manual" | "auto"): void {
   if (inflight) return;
   inflight = true;
@@ -71,13 +99,36 @@ function getHeadCommit(): string | null {
 }
 
 async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
+  // A crashed prior owner can leave an unfinished row that the partial unique
+  // index treats as a live claim and that would block every future build. Close
+  // those dead-owner rows before claiming so a corpse never wedges the lock.
+  await reconcileOrphanBuilds();
+
   const buildStartMs = Date.now();
   const buildId = `build-${buildStartMs}-${Math.random().toString(36).slice(2, 8)}`;
   const commitHash = getHeadCommit();
 
-  // Spawn before inserting so the row carries the child pid from the start: the
-  // pid is what marks this run as in-flight for the durable lock and protects it
-  // from the orphan reconciler, both of which can fire the instant the row exists.
+  // Claim the single in-flight slot atomically. Insert *before* spawning so the
+  // claiming INSERT — guarded by the build_runs_inflight_uniq partial unique index
+  // — is what wins or loses the race, not a check-then-act with a TOCTOU window.
+  // Seed pid with this backend's own (live) pid so the row is protected from the
+  // orphan reconciler and visible to the durable lock from the instant it exists;
+  // it is swapped to the detached child pid below, before the build restarts
+  // (kills) this backend. A trigger that lost the race fails here with 23505 and
+  // bails without ever starting a second `./singularity build`.
+  try {
+    await db.insert(_buildRuns).values({
+      id: buildId,
+      trigger,
+      commitHash,
+      pid: process.pid,
+      namespace: currentWorktreeName(),
+    });
+  } catch (err) {
+    if (isUniqueViolation(err)) return;
+    throw err;
+  }
+
   const proc = Bun.spawn(["./singularity", "build", "--allow-main"], {
     cwd: REPO_ROOT,
     stdout: "pipe",
@@ -86,9 +137,7 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     env: { ...process.env, SINGULARITY_BUILD_ID: buildId },
   });
 
-  await db
-    .insert(_buildRuns)
-    .values({ id: buildId, trigger, commitHash, pid: proc.pid, namespace: currentWorktreeName() });
+  await db.update(_buildRuns).set({ pid: proc.pid }).where(eq(_buildRuns.id, buildId));
   buildHistoryResource.notify();
   if (trigger === "auto") {
     await recordNotification({

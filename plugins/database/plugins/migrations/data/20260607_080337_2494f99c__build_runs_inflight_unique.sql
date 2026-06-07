@@ -1,0 +1,1 @@
+CREATE UNIQUE INDEX IF NOT EXISTS "build_runs_inflight_uniq" ON "build_runs" USING btree ("namespace") WHERE "build_runs"."finished_at" IS NULL;

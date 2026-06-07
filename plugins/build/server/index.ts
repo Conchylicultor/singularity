@@ -1,19 +1,16 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { and, eq, inArray, isNull } from "drizzle-orm";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
-import { isMain, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
+import { isMain } from "@plugins/infra/plugins/paths/server";
 import { ConfigV2, getConfig } from "@plugins/config_v2/server";
-import { db } from "@plugins/database/server";
 import { handleBuild } from "./internal/handle-build";
-import { isPidAlive } from "./internal/run-build";
+import { reconcileOrphanBuilds } from "./internal/run-build";
 import { buildRunJob } from "./internal/build-run-job";
 import { getMainAheadCount } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { frontendHashResource } from "./internal/frontend-hash-resource";
-import { _buildRuns } from "./internal/tables";
 export { _buildRuns } from "./internal/tables";
 import { buildConfig } from "../shared";
 import { triggerBuildEndpoint } from "../core/endpoints";
@@ -26,21 +23,10 @@ export default {
   },
   register: [buildRunJob],
   onReady: async () => {
-    // Scoped to this namespace: a worktree DB inherits main's rows via the fork,
-    // and reconciling those inherited (foreign-pid) builds here is what previously
-    // stamped them exit_code=-1 → a phantom "Build failed" in every worktree.
-    const unfinished = await db
-      .select({ id: _buildRuns.id, pid: _buildRuns.pid })
-      .from(_buildRuns)
-      .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
-    const orphanIds = unfinished.filter((r) => !isPidAlive(r.pid)).map((r) => r.id);
-    if (orphanIds.length > 0) {
-      await db
-        .update(_buildRuns)
-        .set({ finishedAt: new Date(), exitCode: -1 })
-        .where(inArray(_buildRuns.id, orphanIds));
-      buildHistoryResource.notify();
-    }
+    // Close any build left unfinished by a crashed owner (scoped to this
+    // namespace so inherited main rows aren't reaped into a phantom "Build
+    // failed"). Also clears the build_runs_inflight_uniq lock for the next build.
+    await reconcileOrphanBuilds();
 
     if (!isMain()) return;
 
