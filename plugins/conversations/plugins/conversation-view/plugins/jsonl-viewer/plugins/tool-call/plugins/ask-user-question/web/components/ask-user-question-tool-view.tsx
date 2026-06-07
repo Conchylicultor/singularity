@@ -306,7 +306,11 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
         defaultOpen
         isError={showAsError}
       >
-        <AnswerForm questions={questions} convId={convId} />
+        <AnswerForm
+          questions={questions}
+          convId={convId}
+          toolUseId={event.toolUseId}
+        />
       </ToolCallCard>
     );
   }

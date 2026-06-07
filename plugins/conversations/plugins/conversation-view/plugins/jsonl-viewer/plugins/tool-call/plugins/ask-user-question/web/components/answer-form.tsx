@@ -1,13 +1,15 @@
-import { useState } from "react";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
 import { Indicator, type Question } from "./ask-user-question-tool-view";
 
+// Persisted shape: `selected` is a string[] (not a Set) so the draft survives a
+// JSON round-trip through localStorage via useDraft.
 interface QuestionAnswer {
-  selected: Set<string>;
+  selected: string[];
   otherText: string;
 }
 
@@ -15,7 +17,7 @@ function isAnswered(answer: QuestionAnswer, question: Question): boolean {
   // Multi-select (checkbox) questions accept zero selections as a valid
   // answer ("none of these"); only single-select requires a choice.
   if (question.multiSelect) return true;
-  return answer.selected.size > 0 || answer.otherText.trim().length > 0;
+  return answer.selected.length > 0 || answer.otherText.trim().length > 0;
 }
 
 function serializeAnswers(
@@ -35,12 +37,20 @@ function serializeAnswers(
 export function AnswerForm({
   questions,
   convId,
+  toolUseId,
 }: {
   questions: Question[];
   convId: string;
+  toolUseId: string;
 }) {
-  const [answers, setAnswers] = useState<QuestionAnswer[]>(() =>
-    questions.map(() => ({ selected: new Set<string>(), otherText: "" })),
+  // Persist the in-progress answer like the prompt draft. Scoping by the
+  // tool-use id (unique per question) means a restored draft always belongs to
+  // the exact question still on screen, and never collides with another
+  // question in the same conversation.
+  const [answers, setAnswers, clearDraft] = useDraft<QuestionAnswer[]>(
+    "ask-user-question:answer",
+    () => questions.map(() => ({ selected: [], otherText: "" })),
+    { scope: `${convId}:${toolUseId}` },
   );
 
   const updateAnswer = (qi: number, next: QuestionAnswer) => {
@@ -50,13 +60,13 @@ export function AnswerForm({
   const toggleOption = (qi: number, label: string, multiSelect: boolean) => {
     const current = answers[qi]!;
     if (multiSelect) {
-      const selected = new Set(current.selected);
-      if (selected.has(label)) selected.delete(label);
-      else selected.add(label);
+      const selected = current.selected.includes(label)
+        ? current.selected.filter((l) => l !== label)
+        : [...current.selected, label];
       updateAnswer(qi, { ...current, selected });
     } else {
       // Single-select: choosing an option clears any freeform text.
-      updateAnswer(qi, { selected: new Set([label]), otherText: "" });
+      updateAnswer(qi, { selected: [label], otherText: "" });
     }
   };
 
@@ -67,11 +77,12 @@ export function AnswerForm({
       updateAnswer(qi, { ...current, otherText: value });
     } else {
       // Single-select: typing freeform clears option selection.
-      updateAnswer(qi, { selected: new Set<string>(), otherText: value });
+      updateAnswer(qi, { selected: [], otherText: value });
     }
   };
 
   const m = useEndpointMutation(answerAskUserQuestion, {
+    onSuccess: () => clearDraft(),
     onError: (err) =>
       toast({
         type: "conversation",
@@ -102,7 +113,7 @@ export function AnswerForm({
             <p className="mb-1.5 text-xs text-foreground">{q.question}</p>
             <div className="space-y-1">
               {q.options.map((opt, oi) => {
-                const isSelected = answer.selected.has(opt.label);
+                const isSelected = answer.selected.includes(opt.label);
                 return (
                   <button
                     key={oi}
