@@ -1,7 +1,7 @@
 /**
  * Chord-grid loader: a text editor for chord symbols + a voicing picker.
  *
- * Authors the grid (e.g. `| C G | Am F |`) and chooses how chords become notes.
+ * Authors the grid (e.g. `Amaj9 Am9 (E E6)`) and chooses how chords become notes.
  * Fully **controlled** by the shell's persisted `raw` — there is no local state,
  * so switching the visible source and back never loses what was typed. Every
  * edit emits `{ text, voicingId, octave }` to the shell, which compiles it.
@@ -10,7 +10,8 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { asChordGridRaw, parseGrid, type ChordGridRaw } from "./compile";
+import { asChordGridRaw, type ChordGridRaw } from "./compile";
+import { parseGrid } from "./parse-grid";
 import { VOICINGS } from "./voicings";
 
 interface Props {
@@ -18,7 +19,7 @@ interface Props {
   onRaw: (raw: unknown) => void;
 }
 
-const PLACEHOLDER = "| C G | Am F |\n| Dm7 G7 | Cmaj7 |";
+const PLACEHOLDER = "Amaj9 Am9 (E E6) (E E6)\nCmaj7 Am7 Dm9 G13";
 const MIN_OCTAVE = 1;
 const MAX_OCTAVE = 7;
 
@@ -89,8 +90,10 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
 
       <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
         <span className="text-muted-foreground">
-          {events.length} chord{events.length === 1 ? "" : "s"} · bars split on{" "}
-          <code className="rounded bg-muted px-1">|</code>
+          {events.length} chord{events.length === 1 ? "" : "s"} · each cell is a
+          bar · <code className="rounded bg-muted px-1">( )</code> share a bar ·{" "}
+          <code className="rounded bg-muted px-1">.</code> holds the previous
+          chord
         </span>
         {skipped.length > 0 ? (
           <span className={cn("text-destructive")} role="alert">

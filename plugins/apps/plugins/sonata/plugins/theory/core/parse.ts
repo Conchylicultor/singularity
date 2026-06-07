@@ -30,6 +30,19 @@ const LETTER_PC: Record<string, number> = {
  * dominant-7th / major triad respectively.
  */
 const SUFFIX_TO_QUALITY: ReadonlyArray<{ suffix: string; quality: string }> = [
+  // extended / added-tone chords (longest aliases first)
+  { suffix: "major9", quality: "maj9" },
+  { suffix: "maj9", quality: "maj9" },
+  { suffix: "M9", quality: "maj9" },
+  { suffix: "min9", quality: "min9" },
+  { suffix: "m9", quality: "min9" },
+  { suffix: "-9", quality: "min9" },
+  { suffix: "9", quality: "dom9" },
+  { suffix: "13", quality: "dom13" },
+  { suffix: "min6", quality: "min6" },
+  { suffix: "m6", quality: "min6" },
+  { suffix: "-6", quality: "min6" },
+  { suffix: "6", quality: "maj6" },
   // explicit aliases
   { suffix: "maj7", quality: "maj7" },
   { suffix: "major7", quality: "maj7" },

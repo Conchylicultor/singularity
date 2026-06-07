@@ -51,6 +51,19 @@ export const CHORD_TEMPLATES: readonly ChordTemplate[] = [
   { quality: "min", symbol: "m", intervals: [3, 7] },
   { quality: "aug", symbol: "+", intervals: [4, 8] },
   { quality: "dim", symbol: "dim", intervals: [3, 6] },
+  // ── Added-tone & extended chords ─────────────────────────────────────────
+  // Authoring-oriented (chord → notes). They are intentionally listed last and
+  // upper extensions use literal interval sizes (9th = 14, 13th = 21) so the
+  // voicing spacing is correct. This also keeps them inert in `detectChord`:
+  // extensions > 11 can never appear in its mod-12 relative-interval set, and
+  // the 6th chords are always enharmonic to an earlier-listed min7 / halfdim7
+  // inversion that ties or beats them — so detection is unchanged.
+  { quality: "maj6", symbol: "6", intervals: [4, 7, 9] },
+  { quality: "min6", symbol: "m6", intervals: [3, 7, 9] },
+  { quality: "maj9", symbol: "maj9", intervals: [4, 7, 11, 14] },
+  { quality: "dom9", symbol: "9", intervals: [4, 7, 10, 14] },
+  { quality: "min9", symbol: "m9", intervals: [3, 7, 10, 14] },
+  { quality: "dom13", symbol: "13", intervals: [4, 7, 10, 14, 21] },
 ];
 
 const BY_QUALITY = new Map(CHORD_TEMPLATES.map((t) => [t.quality, t]));

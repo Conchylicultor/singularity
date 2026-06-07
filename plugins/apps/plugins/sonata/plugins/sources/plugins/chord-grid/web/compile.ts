@@ -1,10 +1,12 @@
 /**
  * Compile chord-grid raw input → `Score`.
  *
- * The grid text is the **authored truth**: bars are separated by `|`, chords
- * within a bar are whitespace-separated and split the bar equally. Each chord
- * becomes a `source:"authored"` chord annotation, and the selected voicing
- * strategy *derives* the notes — the opposite direction of the MIDI source.
+ * The grid text is the **authored truth**, written in the chord-grid
+ * mini-language (see `parse-grid.ts`): whitespace/newline-separated cells, each
+ * one bar; a group `( … )` shares a bar between several chords; a hold `.`
+ * sustains the previous chord. Each chord becomes a `source:"authored"` chord
+ * annotation, and the selected voicing strategy *derives* the notes — the
+ * opposite direction of the MIDI source.
  *
  * The grid declares **no tempo / time-signature opinion** (empty maps): it has
  * no authored tempo, so when merged with a source that does (e.g. MIDI),
@@ -20,13 +22,8 @@ import type {
   Note,
   Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { parseChordSymbol } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import {
-  CHORD_GRID_TRACK,
-  DEFAULT_VOICING_ID,
-  findVoicing,
-  type ChordEvent,
-} from "./voicings";
+import { parseGrid } from "./parse-grid";
+import { CHORD_GRID_TRACK, DEFAULT_VOICING_ID, findVoicing } from "./voicings";
 
 /** Raw input shape produced by `ChordGridLoader`. */
 export interface ChordGridRaw {
@@ -34,9 +31,6 @@ export interface ChordGridRaw {
   voicingId: string;
   octave: number;
 }
-
-/** Default bar length in quarter-note beats (4/4). */
-const BEATS_PER_BAR = 4;
 
 function isChordGridRaw(raw: unknown): raw is ChordGridRaw {
   return (
@@ -67,43 +61,6 @@ export function asChordGridRaw(raw: unknown): ChordGridRaw {
     };
   }
   return EMPTY_CHORD_GRID_RAW;
-}
-
-/** Parse the grid text into timed chord events; unparseable tokens are skipped. */
-export function parseGrid(text: string): {
-  events: ChordEvent[];
-  skipped: string[];
-} {
-  const bars = text
-    .split("|")
-    .map((b) => b.trim())
-    .filter((b) => b.length > 0);
-
-  const events: ChordEvent[] = [];
-  const skipped: string[] = [];
-  let beat = 0;
-
-  for (const bar of bars) {
-    const tokens = bar.split(/\s+/).filter((t) => t.length > 0);
-    if (tokens.length === 0) {
-      beat += BEATS_PER_BAR;
-      continue;
-    }
-    const slot = BEATS_PER_BAR / tokens.length;
-    tokens.forEach((tok, i) => {
-      const data = parseChordSymbol(tok);
-      const start = beat + slot * i;
-      const end = start + slot;
-      if (data) {
-        events.push({ data, start, end });
-      } else {
-        skipped.push(tok);
-      }
-    });
-    beat += BEATS_PER_BAR;
-  }
-
-  return { events, skipped };
 }
 
 export function compile(raw: unknown): Score {

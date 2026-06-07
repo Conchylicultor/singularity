@@ -12,7 +12,7 @@ import { ChordGridEditorSection } from "./components/chord-grid-editor-section";
 export default {
   name: "Sonata: Chord Grid Source",
   description:
-    "Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy. Persists per-song grid text/voicing/octave and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section.",
+    "Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. compile() derives notes from them via the selected voicing strategy. Persists per-song grid text/voicing/octave and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section.",
   contributions: [
     Sonata.Source({
       id: CHORD_GRID_SOURCE_ID,
