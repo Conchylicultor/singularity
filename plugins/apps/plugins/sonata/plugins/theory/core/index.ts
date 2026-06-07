@@ -18,3 +18,5 @@ export {
   formatChordSymbol,
 } from "./chords";
 export { parseChordSymbol } from "./parse";
+export { detectChord, detectChordWindows } from "./detect";
+export type { ChordMatch, ChordWindow } from "./detect";

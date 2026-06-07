@@ -304,7 +304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports: Values: `songMidi`, `songMidiLiveResource`
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
-            - Exports: Types: `ChordTemplate`; Values: `CHORD_TEMPLATES`, `formatChordSymbol`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
+            - Exports: Types: `ChordMatch`, `ChordTemplate`, `ChordWindow`; Values: `CHORD_TEMPLATES`, `detectChord`, `detectChordWindows`, `formatChordSymbol`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to Sonata.Toolbar.
           - Web:
             - Contributes: `Sonata.Toolbar` "playback" → `PlaybackControls`
