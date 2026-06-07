@@ -449,8 +449,9 @@ export function registerPush(program: Command) {
                 `     (or 'git rebase --abort' to bail out)`,
                 `  4. Re-run ./singularity push`,
                 ``,
-                `If main's shape has diverged enough that your commit no longer makes sense,`,
-                `'git reset --hard origin/main' + reapply as a fresh commit is cleaner than rebasing.`,
+                `If main's shape has diverged so much your commit no longer applies, re-apply your`,
+                `changes by hand onto a fresh worktree branched from origin/main. Never 'git reset'`,
+                `your branch onto main — it stages a deletion of every commit that landed in between.`,
               ].join("\n"),
             );
             profiler.complete("failed_rebase");
