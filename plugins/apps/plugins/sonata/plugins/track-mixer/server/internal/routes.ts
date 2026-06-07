@@ -16,6 +16,7 @@ export const handleUpsertTrackView = implement(
     const now = new Date();
     const set: Record<string, unknown> = { updatedAt: now };
     if (body.color !== undefined) set.color = body.color;
+    if (body.instrument !== undefined) set.instrument = body.instrument;
     if (body.muted !== undefined) set.muted = body.muted;
     if (body.hidden !== undefined) set.hidden = body.hidden;
 
@@ -25,6 +26,7 @@ export const handleUpsertTrackView = implement(
         songId: params.songId,
         trackId: body.trackId,
         color: body.color ?? null,
+        instrument: body.instrument ?? null,
         muted: body.muted ?? false,
         hidden: body.hidden ?? false,
       })

@@ -48,6 +48,12 @@ export interface TrackMeta {
   id: string;
   name?: string;
   instrumentHint?: string;
+  /**
+   * General MIDI program number (0-127) of the track's instrument, when the
+   * source carries one. The audio layer auto-maps this to a registered timbre;
+   * `instrumentHint` is the human-readable counterpart used for display.
+   */
+  gmProgram?: number;
 }
 
 /** A piecewise-constant tempo segment: from `beat` onward, the tempo is `bpm`. */

@@ -6,6 +6,7 @@ import { TrackMixerPanel } from "./components/track-mixer-panel";
 export {
   useTrackMixerEntries,
   useTrackColorMap,
+  useTrackInstrumentMap,
   useHiddenTrackIds,
   useMutedTrackIds,
   type TrackMixerEntry,

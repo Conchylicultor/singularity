@@ -19,6 +19,7 @@ export const trackViewLiveResource = defineResource<TrackViewRow[]>({
       songId: r.songId,
       trackId: r.trackId,
       color: r.color,
+      instrument: r.instrument,
       muted: r.muted,
       hidden: r.hidden,
     }));

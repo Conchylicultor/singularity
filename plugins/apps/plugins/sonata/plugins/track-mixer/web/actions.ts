@@ -14,6 +14,18 @@ export function setTrackColor(
   void fetchEndpoint(upsertTrackView, { songId }, { body: { trackId, color } });
 }
 
+export function setTrackInstrument(
+  songId: string,
+  trackId: string,
+  instrumentId: string | null,
+): void {
+  void fetchEndpoint(
+    upsertTrackView,
+    { songId },
+    { body: { trackId, instrument: instrumentId } },
+  );
+}
+
 export function setTrackMuted(
   songId: string,
   trackId: string,

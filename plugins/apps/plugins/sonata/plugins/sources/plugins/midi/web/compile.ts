@@ -77,6 +77,12 @@ export function compile(raw: unknown): Score {
       id: trackId,
       ...(track.name ? { name: track.name } : {}),
       ...(track.instrument.name ? { instrumentHint: track.instrument.name } : {}),
+      // GM program number (0-127) drives per-track instrument auto-mapping in
+      // the audio layer. Percussion tracks (channel 10) carry a program too but
+      // are out of scope for melodic timbres — they fall back to the default.
+      ...(typeof track.instrument.number === "number"
+        ? { gmProgram: track.instrument.number }
+        : {}),
     };
     tracks.push(trackMeta);
 

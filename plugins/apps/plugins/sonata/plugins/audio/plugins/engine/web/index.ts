@@ -6,7 +6,7 @@ import { AudioPanel } from "./components/audio-panel";
 export default {
   name: "Sonata: Audio Engine",
   description:
-    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, with an instrument picker, master volume, and load status.",
+    "Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume and aggregate load status.",
   contributions: [
     Sonata.Section({
       id: "audio",

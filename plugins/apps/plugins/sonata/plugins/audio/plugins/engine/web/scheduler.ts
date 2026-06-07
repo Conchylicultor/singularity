@@ -21,12 +21,18 @@ const REFILL_SEC = 0.75; // wake to refill when ~half the window remains
  * the cursor beat at that same instant. Each note's beat-onset is mapped to an
  * absolute audio time (reusing the same tempo index, so audio shares the
  * cursor's tempo map) and Web Audio fires it sample-accurately.
+ *
+ * Routing is per-track: each note carries its `track`, and `resolveVoices(track)`
+ * returns the voice manager for that track's resolved instrument — so tracks with
+ * distinct timbres sound simultaneously through their own managers. A track whose
+ * manager isn't (yet) registered is skipped; resolution upstream always yields a
+ * registered id, so this only guards transient gaps.
  */
 export function startScheduling(
   score: Score,
   fromBeat: number,
   audioAnchor: number,
-  voices: InstrumentVoices,
+  resolveVoices: (trackId: string) => InstrumentVoices | undefined,
   ctx: AudioContext,
 ): ScheduleHandle {
   const tempo = buildTempoIndex(score);
@@ -41,6 +47,7 @@ export function startScheduling(
     .map((n) => {
       const startSec = tempo.beatToSeconds(n.start);
       return {
+        track: n.track,
         pitch: n.pitch,
         velocity: n.velocity,
         when: audioAnchor + startSec - t0,
@@ -57,7 +64,7 @@ export function startScheduling(
     if (cancelled) return;
     const horizon = ctx.currentTime + LOOKAHEAD_SEC;
     for (let note = pending[i]; note && note.when <= horizon; note = pending[++i]) {
-      voices.schedule(note);
+      resolveVoices(note.track)?.schedule(note);
     }
     if (i >= pending.length) return; // everything scheduled; arm no further wake-ups
 

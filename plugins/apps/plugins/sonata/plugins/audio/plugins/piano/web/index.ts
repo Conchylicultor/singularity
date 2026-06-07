@@ -12,6 +12,12 @@ export default {
       id: "piano",
       label: "Acoustic Piano",
       icon: MdPiano,
+      // The premium sampled grand owns GM program 0 (acoustic grand piano) and
+      // is the fallback for tracks with no program/override. The soundfont set
+      // covers programs 1-127, so there is no program overlap.
+      gmProgram: 0,
+      group: "Piano",
+      default: true,
       createVoices,
     }),
   ],

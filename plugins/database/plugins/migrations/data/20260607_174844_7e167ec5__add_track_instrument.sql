@@ -1,0 +1,1 @@
+ALTER TABLE "sonata_track_view" ADD COLUMN "instrument" text;

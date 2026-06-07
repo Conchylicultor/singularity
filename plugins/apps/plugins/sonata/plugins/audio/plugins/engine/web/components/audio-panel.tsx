@@ -5,8 +5,10 @@ import {
   useSonata,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { useMutedTrackIds } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import {
+  useMutedTrackIds,
+  useTrackInstrumentMap,
+} from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { startScheduling, type ScheduleHandle } from "../scheduler";
 
 const DEFAULT_VOLUME = 0.8;
@@ -21,6 +23,14 @@ const DEFAULT_VOLUME = 0.8;
  * size. Because both the visual rAF cursor and this schedule anchor at the same
  * play instant and derive time from `beatToSeconds`, sound stays locked to the
  * cursor through tempo changes.
+ *
+ * Instruments are PER-TRACK: there is no global picker here (instrument
+ * selection lives in the Tracks panel). The panel maintains one voice manager
+ * per *distinct in-use* instrument id — shared by every track resolving to that
+ * instrument — and routes each note to its track's manager. The set of in-use
+ * instruments derives live from `useTrackInstrumentMap()` + the audible score,
+ * so changing a track's instrument mid-session loads the new timbre and the
+ * scheduling effect re-runs to play it.
  */
 export function AudioPanel() {
   const { score, isPlaying, cursorBeat, seekEpoch, registerClock } = useSonata();
@@ -38,31 +48,49 @@ export function AudioPanel() {
     [score, mutedIds],
   );
 
+  // Resolved trackId → instrumentId (override ?? GM-program match ?? default),
+  // live-state backed: it changes when someone picks a new instrument for a
+  // track, which flows into the in-use set and the scheduling effect below.
+  const trackInstrumentMap = useTrackInstrumentMap();
+
+  // Instruments are read generically — never names a contributor (collection
+  // clean). A by-id map lets us look up a contribution's `createVoices`.
+  const instruments = Sonata.Instrument.useContributions();
+  const instrumentById = useMemo(
+    () => new Map(instruments.map((inst) => [inst.id, inst] as const)),
+    [instruments],
+  );
+
   // Keep the latest cursor in a ref so the scheduling effect reads it WITHOUT
   // depending on it (re-anchor only on play/stop, like the transport).
   const cursorBeatRef = useRef(cursorBeat);
   cursorBeatRef.current = cursorBeat;
 
-  // Instruments are read generically — never names the piano (collection clean).
-  const instruments = Sonata.Instrument.useContributions();
-  const [activeInstrumentId, setActiveInstrumentId] = useState<string | null>(
-    null,
-  );
-  // Default to the first contributed instrument once contributions arrive.
-  const effectiveInstrumentId = activeInstrumentId ?? instruments[0]?.id ?? null;
-  const activeInstrument = instruments.find(
-    (i) => i.id === effectiveInstrumentId,
-  );
+  // The DISTINCT instrument ids actually in use: resolve every track that still
+  // has audible notes. A track whose notes are all muted contributes nothing
+  // (so its manager is torn down). Sorted + joined into a stable key so the
+  // reconcile effect fires only when the *set* of in-use ids changes — not on
+  // every render and not when an unrelated track's note tally shifts.
+  const inUseIds = useMemo(() => {
+    const ids = new Set<string>();
+    for (const n of audibleScore.notes) {
+      const id = trackInstrumentMap.get(n.track);
+      if (id) ids.add(id);
+    }
+    return ids;
+  }, [audibleScore, trackInstrumentMap]);
+  const inUseKey = useMemo(() => [...inUseIds].sort().join("|"), [inUseIds]);
 
   const [volume, setVolume] = useState(DEFAULT_VOLUME);
-  const [ready, setReady] = useState(false);
   const [loadError, setLoadError] = useState<string | null>(null);
 
   // --- Web Audio graph: AudioContext + master gain, owned in refs. ----------
   const ctxRef = useRef<AudioContext | null>(null);
   const masterRef = useRef<GainNode | null>(null);
-  const voicesRef = useRef<InstrumentVoices | null>(null);
-  const [voices, setVoices] = useState<InstrumentVoices | null>(null);
+  // One voice manager per distinct in-use instrument id, shared across every
+  // track that resolves to it (safe: muted tracks are already filtered out
+  // upstream, so a shared manager never sounds a muted track).
+  const managersRef = useRef<Map<string, InstrumentVoices>>(new Map());
 
   // Create the context eagerly on mount; it starts suspended until a gesture.
   useEffect(() => {
@@ -87,9 +115,13 @@ export function AudioPanel() {
     };
     document.addEventListener("pointerdown", unlock, { once: true });
 
+    const managers = managersRef.current;
     return () => {
       unregisterClock();
       document.removeEventListener("pointerdown", unlock);
+      // Dispose every voice manager before tearing down the context.
+      for (const manager of managers.values()) manager.dispose();
+      managers.clear();
       // Guard against React StrictMode's double invoke: only close once.
       if (ctx.state !== "closed") {
         void ctx.close();
@@ -106,77 +138,138 @@ export function AudioPanel() {
     if (masterRef.current) masterRef.current.gain.value = volume;
   }, [volume]);
 
-  // --- Voices: (re)build whenever ctx + active instrument are ready. --------
+  // --- Manager reconcile: one InstrumentVoices per distinct in-use id. ------
+  // Keyed on `inUseKey` (the stable set fingerprint) so it fires only when the
+  // in-use *set* changes: create managers for newly-needed ids, dispose ones no
+  // longer in use. Aggregate load errors loudly (mirror the prior per-instrument
+  // `loaded.then(ok, err)` pattern). This effect is declared BEFORE the
+  // scheduling/status effects, so on any render where the in-use set changes it
+  // mutates the ref first — the later effects then read the up-to-date managers
+  // without needing a separate version signal.
   useEffect(() => {
     const ctx = ctxRef.current;
     const master = masterRef.current;
-    if (!ctx || !master || !activeInstrument) return;
+    if (!ctx || !master) return;
 
-    setReady(false);
-    setLoadError(null);
-    const next = activeInstrument.createVoices(ctx, master);
-    voicesRef.current = next;
-    setVoices(next);
-
+    const managers = managersRef.current;
+    let changed = false;
     let cancelled = false;
-    // Surface a rejected load instead of spinning "Loading…" forever (and
-    // leaving the rejection floating). Note: smplr resolves `loaded` even when
-    // individual samples 404 — the loud signal for the offline-uncached case is
-    // server-side (the asset-mirror 502 + log), not this rejection arm.
-    void next.loaded.then(
-      () => {
-        if (!cancelled) setReady(true);
-      },
-      (err: unknown) => {
-        if (!cancelled) {
-          setLoadError(err instanceof Error ? err.message : String(err));
-        }
-      },
-    );
+
+    // Add newly-needed instruments.
+    for (const id of inUseIds) {
+      if (managers.has(id)) continue;
+      const contribution = instrumentById.get(id);
+      if (!contribution) continue; // no registered contribution for this id
+      const next = contribution.createVoices(ctx, master);
+      managers.set(id, next);
+      changed = true;
+      // Surface a rejected load instead of spinning "Loading…" forever (and
+      // leaving the rejection floating).
+      void next.loaded.then(
+        () => {},
+        (err: unknown) => {
+          if (!cancelled) {
+            setLoadError(err instanceof Error ? err.message : String(err));
+          }
+        },
+      );
+    }
+
+    // Remove instruments no longer in use.
+    for (const [id, manager] of managers) {
+      if (inUseIds.has(id)) continue;
+      manager.dispose();
+      managers.delete(id);
+      changed = true;
+    }
+
+    if (changed) setLoadError(null);
 
     return () => {
       cancelled = true;
-      next.dispose();
-      if (voicesRef.current === next) voicesRef.current = null;
     };
-  }, [activeInstrument]);
+    // `inUseKey` is the stable fingerprint of `inUseIds`; `instrumentById` only
+    // changes when contributions change. Both are intentional deps.
+  }, [inUseKey, inUseIds, instrumentById]);
 
   // --- Scheduling effect: anchor on play, schedule upfront, allOff on stop. --
   // Re-runs on `seekEpoch` too: a seek repositions the playback origin without
   // changing `score`, so we must cancel the in-flight schedule and re-anchor
   // from the new cursor — otherwise audio keeps playing from the pre-seek spot.
-  // It also re-runs when `audibleScore` changes (tempo, edits, or a mute toggle),
-  // re-scheduling from the current cursor so muting/unmuting takes effect live.
+  // It also re-runs when `audibleScore` changes (tempo, edits, or a mute toggle)
+  // or when `trackInstrumentMap` changes (a track's instrument changed) —
+  // re-scheduling from the current cursor so the new timbre takes effect live.
+  // Both inputs also drive `inUseIds`/the reconcile effect, which runs first and
+  // has the managers ready in the ref by the time this effect reads them.
   useEffect(() => {
-    if (!voices) return;
+    const ctx = ctxRef.current;
+    if (!ctx) return;
+
+    const managers = [...managersRef.current.values()];
 
     if (!isPlaying) {
-      voices.allOff();
+      for (const manager of managers) manager.allOff();
       return;
     }
 
-    const ctx = ctxRef.current;
-    if (!ctx) return;
     void ctx.resume();
 
     // Capture the shared anchor synchronously at the play instant.
     const audioAnchor = ctx.currentTime;
     const fromBeat = cursorBeatRef.current;
 
+    // Route a track to its instrument's manager, reading the ref live so it
+    // always reflects the latest reconcile.
+    const resolveVoices = (trackId: string): InstrumentVoices | undefined =>
+      managersRef.current.get(trackInstrumentMap.get(trackId) ?? "");
+
     let handle: ScheduleHandle | null = null;
     let cancelled = false;
     void (async () => {
-      await voices.loaded;
+      await Promise.all(managers.map((m) => m.loaded));
       if (cancelled) return;
-      handle = startScheduling(audibleScore, fromBeat, audioAnchor, voices, ctx);
+      handle = startScheduling(
+        audibleScore,
+        fromBeat,
+        audioAnchor,
+        resolveVoices,
+        ctx,
+      );
     })();
 
     return () => {
       cancelled = true;
       handle?.cancel();
-      voices.allOff();
+      for (const manager of managers) manager.allOff();
     };
-  }, [isPlaying, audibleScore, activeInstrumentId, voices, seekEpoch]);
+  }, [isPlaying, audibleScore, trackInstrumentMap, seekEpoch]);
+
+  // Aggregate status: "Loading…" until every in-use manager is loaded, the
+  // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it
+  // re-evaluates whenever the in-use set changes (the reconcile effect, declared
+  // earlier, has already updated the ref by then).
+  const [status, setStatus] = useState<"empty" | "loading" | "ready">("empty");
+  useEffect(() => {
+    const managers = [...managersRef.current.values()];
+    if (managers.length === 0) {
+      setStatus("empty");
+      return;
+    }
+    setStatus("loading");
+    let cancelled = false;
+    void Promise.all(managers.map((m) => m.loaded)).then(
+      () => {
+        if (!cancelled) setStatus("ready");
+      },
+      () => {
+        // The load error is surfaced by the reconcile effect; leave status at
+        // "loading" so the error line (not "Ready") shows.
+      },
+    );
+    return () => {
+      cancelled = true;
+    };
+  }, [inUseKey]);
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
@@ -184,25 +277,8 @@ export function AudioPanel() {
         Audio
       </div>
 
-      {/* Instrument picker — generic over the contribution shape. */}
-      <div className="mt-3">
-        {instruments.length === 0 ? (
-          <span className="text-xs text-muted-foreground">No instruments</span>
-        ) : (
-          <SegmentedControl
-            options={instruments.map((inst) => ({
-              id: inst.id,
-              label: inst.label,
-              icon: inst.icon ? <inst.icon className="size-3.5" /> : undefined,
-            }))}
-            value={effectiveInstrumentId ?? ""}
-            onChange={setActiveInstrumentId}
-          />
-        )}
-      </div>
-
       {/* Master volume. */}
-      <label className="mt-4 block">
+      <label className="mt-3 block">
         <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
           Volume
         </span>
@@ -217,20 +293,20 @@ export function AudioPanel() {
         />
       </label>
 
-      {/* Sample-load status line. */}
+      {/* Aggregate sample-load status line. */}
       <div
         className={cn(
           "mt-3 text-xs",
           loadError ? "text-destructive" : "text-muted-foreground",
         )}
       >
-        {activeInstrument
-          ? loadError
-            ? `Failed to load: ${loadError}`
-            : ready
+        {loadError
+          ? `Failed to load: ${loadError}`
+          : status === "empty"
+            ? "No instruments in use"
+            : status === "ready"
               ? "Ready"
-              : "Loading instrument…"
-          : "No instrument selected"}
+              : "Loading instrument…"}
       </div>
     </div>
   );

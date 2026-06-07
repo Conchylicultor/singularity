@@ -22,6 +22,10 @@ export const _trackView = pgTable(
       .references(() => _songs.id, { onDelete: "cascade" }),
     trackId: text("track_id").notNull(),
     color: text("color"),
+    // Per-track instrument override. Nullable: null means "auto" — derive the
+    // timbre from the track's GM program, else the default instrument. A non-null
+    // value pins a specific registered `Sonata.Instrument` id.
+    instrument: text("instrument"),
     muted: boolean("muted").notNull().default(false),
     hidden: boolean("hidden").notNull().default(false),
     createdAt: timestamp("created_at", { withTimezone: true })

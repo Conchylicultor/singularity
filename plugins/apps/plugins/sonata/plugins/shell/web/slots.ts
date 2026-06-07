@@ -112,10 +112,20 @@ export const Sonata = {
   }>("sonata.pitch-axis", { docLabel: (p) => p.id }),
 
   // INSTRUMENTS — contribute a voice manager bound to a Web Audio AudioContext.
+  // The optional fields below are generic metadata consumed only through the
+  // collection API (`useContributions`) — never by naming a contributor: they
+  // let a per-track resolver auto-map a track's MIDI program to a timbre, group
+  // the picker, and pick a fallback. A timbre that opts out simply omits them.
   Instrument: defineSlot<{
     id: string;
     label: string;
     icon?: IconType;
+    /** GM program (0-127) this timbre represents — the auto-map key. */
+    gmProgram?: number;
+    /** Picker grouping label (e.g. the GM family). */
+    group?: string;
+    /** Fallback timbre for tracks with no program/override (exactly one). */
+    default?: boolean;
     /** Create a voice manager bound to `ctx`, routed into `destination`. */
     createVoices: (ctx: AudioContext, destination: AudioNode) => InstrumentVoices;
   }>("sonata.instrument", { docLabel: (p) => p.label }),
