@@ -1,5 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
+import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 
 /**
  * Which keys show a note name on the keyboard. Spelling always follows the

@@ -1,5 +1,5 @@
 import { getConfig } from "@plugins/config_v2/server";
-import type { AvatarSpec } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
+import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
 import { prepromptsConfig } from "../../shared/config";
 
 export interface ResolvedPreprompt {

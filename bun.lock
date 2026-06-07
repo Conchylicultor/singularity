@@ -399,18 +399,6 @@
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
     },
-    "plugins/config_v2/plugins/fields/plugins/avatar": {
-      "name": "@singularity/plugin-config_v2-fields-avatar",
-    },
-    "plugins/config_v2/plugins/fields/plugins/color": {
-      "name": "@singularity/plugin-config_v2-fields-color",
-    },
-    "plugins/config_v2/plugins/fields/plugins/dynamic-enum": {
-      "name": "@singularity/plugin-config_v2-fields-dynamic-enum",
-    },
-    "plugins/config_v2/plugins/fields/plugins/enum": {
-      "name": "@singularity/plugin-config_v2-fields-enum",
-    },
     "plugins/config_v2/plugins/fields/plugins/list": {
       "name": "@singularity/plugin-config_v2-fields-list",
     },
@@ -930,6 +918,14 @@
       "name": "@singularity/plugin-fields",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/avatar": {
+      "name": "@singularity/plugin-fields-avatar",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/avatar/plugins/config": {
+      "name": "@singularity/plugin-fields-avatar-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bool": {
       "name": "@singularity/plugin-fields-bool",
       "version": "0.0.1",
@@ -950,6 +946,10 @@
       "name": "@singularity/plugin-fields-color",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/color/plugins/config": {
+      "name": "@singularity/plugin-fields-color-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/color/plugins/table": {
       "name": "@singularity/plugin-fields-color-table",
       "version": "0.0.1",
@@ -964,6 +964,14 @@
     },
     "plugins/fields/plugins/date/plugins/table": {
       "name": "@singularity/plugin-fields-date-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/dynamic-enum": {
+      "name": "@singularity/plugin-fields-dynamic-enum",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/dynamic-enum/plugins/config": {
+      "name": "@singularity/plugin-fields-dynamic-enum-config",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/enum": {
@@ -2775,14 +2783,6 @@
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
-    "@singularity/plugin-config_v2-fields-avatar": ["@singularity/plugin-config_v2-fields-avatar@workspace:plugins/config_v2/plugins/fields/plugins/avatar"],
-
-    "@singularity/plugin-config_v2-fields-color": ["@singularity/plugin-config_v2-fields-color@workspace:plugins/config_v2/plugins/fields/plugins/color"],
-
-    "@singularity/plugin-config_v2-fields-dynamic-enum": ["@singularity/plugin-config_v2-fields-dynamic-enum@workspace:plugins/config_v2/plugins/fields/plugins/dynamic-enum"],
-
-    "@singularity/plugin-config_v2-fields-enum": ["@singularity/plugin-config_v2-fields-enum@workspace:plugins/config_v2/plugins/fields/plugins/enum"],
-
     "@singularity/plugin-config_v2-fields-list": ["@singularity/plugin-config_v2-fields-list@workspace:plugins/config_v2/plugins/fields/plugins/list"],
 
     "@singularity/plugin-config_v2-fields-object": ["@singularity/plugin-config_v2-fields-object@workspace:plugins/config_v2/plugins/fields/plugins/object"],
@@ -3037,6 +3037,10 @@
 
     "@singularity/plugin-fields": ["@singularity/plugin-fields@workspace:plugins/fields"],
 
+    "@singularity/plugin-fields-avatar": ["@singularity/plugin-fields-avatar@workspace:plugins/fields/plugins/avatar"],
+
+    "@singularity/plugin-fields-avatar-config": ["@singularity/plugin-fields-avatar-config@workspace:plugins/fields/plugins/avatar/plugins/config"],
+
     "@singularity/plugin-fields-bool": ["@singularity/plugin-fields-bool@workspace:plugins/fields/plugins/bool"],
 
     "@singularity/plugin-fields-bool-config": ["@singularity/plugin-fields-bool-config@workspace:plugins/fields/plugins/bool/plugins/config"],
@@ -3047,6 +3051,8 @@
 
     "@singularity/plugin-fields-color": ["@singularity/plugin-fields-color@workspace:plugins/fields/plugins/color"],
 
+    "@singularity/plugin-fields-color-config": ["@singularity/plugin-fields-color-config@workspace:plugins/fields/plugins/color/plugins/config"],
+
     "@singularity/plugin-fields-color-table": ["@singularity/plugin-fields-color-table@workspace:plugins/fields/plugins/color/plugins/table"],
 
     "@singularity/plugin-fields-date": ["@singularity/plugin-fields-date@workspace:plugins/fields/plugins/date"],
@@ -3054,6 +3060,10 @@
     "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
 
     "@singularity/plugin-fields-date-table": ["@singularity/plugin-fields-date-table@workspace:plugins/fields/plugins/date/plugins/table"],
+
+    "@singularity/plugin-fields-dynamic-enum": ["@singularity/plugin-fields-dynamic-enum@workspace:plugins/fields/plugins/dynamic-enum"],
+
+    "@singularity/plugin-fields-dynamic-enum-config": ["@singularity/plugin-fields-dynamic-enum-config@workspace:plugins/fields/plugins/dynamic-enum/plugins/config"],
 
     "@singularity/plugin-fields-enum": ["@singularity/plugin-fields-enum@workspace:plugins/fields/plugins/enum"],
 

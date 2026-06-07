@@ -1,4 +1,4 @@
-import type { AvatarSpec } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
+import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
 import { conversationPreprompt } from "./tables";
 import { conversationPrepromptsResource } from "./resource";
 

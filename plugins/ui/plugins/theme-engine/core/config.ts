@@ -1,6 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
-import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
+import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
+import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 
 export const themeEngineConfig = defineConfig({
   scope: "app",

@@ -48,14 +48,16 @@ capability. Leaf plugins under `plugins/` register one type each.
   - Slots: `Fields.Identity`
   - Exports: Values: `Fields`
 - Cross-plugin:
-  - Slot contributors: `bool`, `color`, `date`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
-  - Imported by: `bool`, `color`, `date`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
+  - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
+  - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
 - Core:
   - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
 - Sub-plugins:
+  - **`avatar`** [1 sub-plugin] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
   - **`bool`** [3 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
-  - **`color`** [1 sub-plugin] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
+  - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
   - **`date`** [2 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`dynamic-enum`** [1 sub-plugin] — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
   - **`enum`** [3 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
   - **`float`** [1 sub-plugin] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).

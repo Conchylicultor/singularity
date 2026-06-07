@@ -1,7 +1,7 @@
 import { text, jsonb } from "drizzle-orm/pg-core";
 import { _conversations } from "@plugins/tasks-core/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import type { AvatarSpec } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
+import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
 
 // Snapshot of the task's selected preprompt at conversation-launch time. The
 // title, text, and icon are copied (not just the id) so the chip reflects

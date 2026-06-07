@@ -513,7 +513,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Boot`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
   - Cross-plugin:
-    - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+    - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
   - Server:
@@ -523,29 +523,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
       - Plugins:
-        - **`avatar`** — Avatar field type (icon + color picker).
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`, `config_v2.getFieldResolver`
-            - Exports: Types: `AvatarFieldDef`, `AvatarSpec`, `SvgNode`; Values: `avatarField`, `avatarFieldType`
-        - **`color`** — Color field type: hex color string with a popover color picker.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `ColorFieldDef`; Values: `colorField`, `colorFieldType`
-        - **`dynamic-enum`** — Dynamic enum field type: options resolved at render time from slot contributions.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
-            - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`, `dynamicEnumFieldType`
-        - **`enum`** — Enum field type for config_v2: single-choice from a fixed set.
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `EnumFieldDef`, `EnumOption`; Values: `enumField`, `enumFieldType`
         - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
           - Web:
             - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
@@ -1258,11 +1235,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `bool`, `color`, `date`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
-    - Imported by: `bool`, `color`, `date`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
+    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
+    - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
+    - **`avatar`** — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "avatar"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Types: `AvatarSpec`, `SvgNode`; Values: `avatarFieldType`, `avatarIdentity`
+      - Plugins:
+        - **`config`** — Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.getFieldResolver`, `config_v2.pickMeta`
+            - Exports: Types: `AvatarFieldDef`; Values: `avatarField`
     - **`bool`** — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "bool"
@@ -1291,6 +1282,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `colorFieldType`, `colorIdentity`
       - Plugins:
+        - **`config`** — Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `ColorFieldDef`; Values: `colorField`
         - **`table`** — Color field type: data-view table cell (read-only color swatch).
           - Web:
             - Contributes: `DataViewSlots.Cell` "color" → `ColorCell`
@@ -1308,6 +1305,21 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`table`** — Date field type: data-view table cell (read-only relative-time cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "date" → `DateCell`
+    - **`dynamic-enum`** — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
+      - Web:
+        - Contributes: `Fields.Identity` "dynamic-enum"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `dynamicEnumFieldType`, `dynamicEnumIdentity`
+      - Plugins:
+        - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
+            - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`
+            - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`
     - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "enum"
@@ -1319,6 +1331,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
             - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`
+            - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`
         - **`filter`** — Enum (select) field type: data-view filter (multi-select option chips).
           - Web:
             - Contributes: `DataViewSlots.Filter` "enum"

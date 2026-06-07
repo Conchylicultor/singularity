@@ -2,7 +2,7 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
-import { avatarField } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
+import { avatarField } from "@plugins/fields/plugins/avatar/plugins/config/core";
 
 export const conversationCategoryConfig = defineConfig({
   fields: {

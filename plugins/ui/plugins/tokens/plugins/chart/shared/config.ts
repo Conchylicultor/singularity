@@ -1,6 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { dynamicEnumField } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/core";
+import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
 import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
 import { chartGroup } from "./group";
 

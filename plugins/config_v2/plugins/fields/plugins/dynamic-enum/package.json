@@ -1,5 +1,0 @@
-{
-  "name": "@singularity/plugin-config_v2-fields-dynamic-enum",
-  "private": true,
-  "description": "Dynamic enum field type for config_v2: options resolved at render time from slot contributions."
-}

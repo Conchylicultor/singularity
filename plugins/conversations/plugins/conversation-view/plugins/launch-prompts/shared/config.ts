@@ -2,7 +2,7 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
 import { multilineTextField } from "@plugins/fields/plugins/multiline-text/plugins/config/core";
-import { enumField } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
+import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
 import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "@plugins/conversations/plugins/model-provider/core";
 
 export const launchPromptsConfig = defineConfig({

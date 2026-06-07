@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-avatar",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Avatar (icon + color) field type: identity only — value is an AvatarSpec.",
+  "singularity": {
+    "collapsed": true
+  }
+}

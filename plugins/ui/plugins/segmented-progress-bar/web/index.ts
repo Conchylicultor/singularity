@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
-import { DynamicEnum } from "@plugins/config_v2/plugins/fields/plugins/dynamic-enum/web";
+import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 import { segmentedProgressBarConfig } from "../core";
 import { SegmentedProgressBar } from "./slots";

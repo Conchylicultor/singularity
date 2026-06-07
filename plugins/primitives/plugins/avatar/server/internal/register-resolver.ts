@@ -1,5 +1,5 @@
 import { registerFieldResolver } from "@plugins/config_v2/core";
-import type { SvgNode } from "@plugins/config_v2/plugins/fields/plugins/avatar/core";
+import type { SvgNode } from "@plugins/fields/plugins/avatar/core";
 import { ICON_SVG_MAP } from "./icon-svg-map.generated";
 
 registerFieldResolver("avatar", (val) => {

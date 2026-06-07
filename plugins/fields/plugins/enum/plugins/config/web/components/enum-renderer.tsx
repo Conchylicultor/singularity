@@ -6,7 +6,7 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
-import type { EnumFieldDef } from "@plugins/config_v2/plugins/fields/plugins/enum/core";
+import type { EnumFieldDef } from "../../core";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
 
 const EnumRenderer: FieldRendererComponent<string> = ({
