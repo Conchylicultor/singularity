@@ -76,9 +76,26 @@ export function ProgressBar() {
           "relative flex-1 py-3.5" + (ready ? " cursor-pointer" : "")
         }
       >
+        {/* Layering (bottom → top): the rail track + fill are the background
+            bar, the marker layer is the annotation stratum painted *on* the
+            bar, and the playhead handle is the foreground knob. This z-order
+            (rail → markers → handle) is why bar ticks must live in the marker
+            layer rather than overhang the rail: they read as notches on the
+            bar's surface, with the handle still sitting readably on top. */}
+
+        {/* The track rail, centered within the region. */}
+        <div className="relative h-2.5 rounded-full bg-muted">
+          {/* Filled portion up to the playhead. */}
+          <div
+            className="absolute inset-y-0 left-0 rounded-full bg-primary"
+            style={{ width: `${filledPct}%` }}
+          />
+        </div>
+
         {/* Marker layer — spans the full region (not just the rail) so markers
             have vertical headroom for labels/bands above and below the track.
-            Pointer-transparent so clicks fall through to the seek track; each
+            Painted above the rail so on-rail markers (bar ticks) are visible;
+            pointer-transparent so clicks fall through to the seek track; each
             marker anchors itself horizontally via `beatToFraction`. */}
         <div className="pointer-events-none absolute inset-0">
           {markers.map((m) =>
@@ -89,21 +106,15 @@ export function ProgressBar() {
           )}
         </div>
 
-        {/* The track rail, centered within the region. */}
-        <div className="relative h-2.5 rounded-full bg-muted">
-          {/* Filled portion up to the playhead. */}
+        {/* Playhead handle — foreground, above both rail and markers. Centered
+            on the rail (the rail is vertically centered in the region, so the
+            region's mid-line is the rail's). */}
+        {ready ? (
           <div
-            className="absolute inset-y-0 left-0 rounded-full bg-primary"
-            style={{ width: `${filledPct}%` }}
+            className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-primary shadow"
+            style={{ left: `${filledPct}%` }}
           />
-          {/* Playhead handle. */}
-          {ready ? (
-            <div
-              className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-primary shadow"
-              style={{ left: `${filledPct}%` }}
-            />
-          ) : null}
-        </div>
+        ) : null}
       </div>
 
       {/* Minimal cursor / end readout. */}
