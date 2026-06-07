@@ -2071,7 +2071,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `PluginChanges.DiffRenderer`
         - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
         - Uses: `review.ReviewSlots`
-        - Exports: Values: `PluginChangesSlots`
+        - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
       - Server:
         - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `tasks-core.getConversation`, `tasks-core.listPushesByPushId`
         - Routes: `GET /api/review/plugin-changes`

@@ -4,6 +4,8 @@ import { PluginChangesSection } from "./components/plugin-changes-section";
 import { PluginChangesSummary } from "./components/plugin-changes-summary";
 
 export { PluginChanges as PluginChangesSlots } from "./slots";
+export { usePluginFacetDiffs } from "./use-facet-diffs";
+export type { FacetDiff } from "./use-facet-diffs";
 
 export default {
   name: "Review: Plugin Changes",

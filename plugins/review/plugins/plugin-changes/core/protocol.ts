@@ -20,13 +20,12 @@ export interface PluginChangeDiff {
   additions: number;
   deletions: number;
   files: PluginChangedFile[];
-  slots: DiffList;
-  contributions: DiffList;
-  exports: DiffList;
-  routes: DiffList;
-  apiUses: DiffList;
-  resources: DiffList;
-  tables: DiffList;
+  /** Raw facet data (`node.facets`) for this plugin in the worktree. The server
+   *  is facet-blind: it ships the data and the client computes per-facet diffs by
+   *  iterating the `PluginChanges.DiffRenderer` slot (see `usePluginFacetDiffs`). */
+  currentFacets: Record<string, unknown>;
+  /** Raw facet data for the same plugin on main (`{}` when newly added). */
+  mainFacets: Record<string, unknown>;
 }
 
 export interface PluginChangesResponse {

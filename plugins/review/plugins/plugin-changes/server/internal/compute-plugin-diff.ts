@@ -3,7 +3,7 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
-import type { DiffList, PluginChangeDiff } from "../../core/protocol";
+import type { PluginChangeDiff } from "../../core/protocol";
 
 function flattenTree(roots: PluginNode[]): Map<string, PluginNode> {
   const map = new Map<string, PluginNode>();
@@ -25,66 +25,6 @@ function findPluginPath(
     if (rel.startsWith(pp + "/")) return pp;
   }
   return null;
-}
-
-function diffSets(current: string[], main: string[]): DiffList {
-  const mainSet = new Set(main);
-  const currentSet = new Set(current);
-  return {
-    added: current.filter((x) => !mainSet.has(x)),
-    removed: main.filter((x) => !currentSet.has(x)),
-  };
-}
-
-function slotStrings(node: PluginNode): string[] {
-  return node.slots.map((s) => `${s.groupName}.${s.memberName}`);
-}
-
-function contributionStrings(node: PluginNode): string[] {
-  return node.contributions.map((c) => {
-    const id = c.paneId ?? c.props["id"]?.replace(/^["'`]|["'`]$/g, "");
-    return id ? `${c.slot} "${id}"` : c.slot;
-  });
-}
-
-function exportStrings(node: PluginNode): string[] {
-  const result: string[] = [];
-  for (const runtime of ["web", "server", "central", "core"] as const) {
-    for (const exp of node.exports[runtime]) {
-      result.push(`${runtime}: ${exp.name}`);
-    }
-  }
-  return result;
-}
-
-function routeStrings(node: PluginNode): string[] {
-  return [
-    ...node.server.httpRoutes,
-    ...node.server.wsRoutes,
-    ...node.central.httpRoutes,
-    ...node.central.wsRoutes,
-  ];
-}
-
-function apiUseStrings(node: PluginNode): string[] {
-  return [
-    ...new Set([
-      ...node.server.apiUses,
-      ...node.central.apiUses,
-      ...node.webApiUses,
-      ...node.coreApiUses,
-    ]),
-  ];
-}
-
-function resourceStrings(node: PluginNode): string[] {
-  return [...node.server.resources, ...node.central.resources].map(
-    (r) => `${r.key} (${r.mode})`,
-  );
-}
-
-function tableStrings(node: PluginNode): string[] {
-  return node.tables.map((t) => t.name);
 }
 
 export async function computePluginChanges(
@@ -119,7 +59,6 @@ export async function computePluginChanges(
     if (!current) continue;
     const main = mainNodes.get(pluginPath) ?? null;
 
-    const empty: string[] = [];
     const diff: PluginChangeDiff = {
       hierarchyId: current.hierarchyId,
       name: current.name,
@@ -135,31 +74,10 @@ export async function computePluginChanges(
         deletions: f.deletions,
         ...(f.from ? { from: f.from } : {}),
       })),
-      slots: diffSets(slotStrings(current), main ? slotStrings(main) : empty),
-      contributions: diffSets(
-        contributionStrings(current),
-        main ? contributionStrings(main) : empty,
-      ),
-      exports: diffSets(
-        exportStrings(current),
-        main ? exportStrings(main) : empty,
-      ),
-      routes: diffSets(
-        routeStrings(current),
-        main ? routeStrings(main) : empty,
-      ),
-      apiUses: diffSets(
-        apiUseStrings(current),
-        main ? apiUseStrings(main) : empty,
-      ),
-      resources: diffSets(
-        resourceStrings(current),
-        main ? resourceStrings(main) : empty,
-      ),
-      tables: diffSets(
-        tableStrings(current),
-        main ? tableStrings(main) : empty,
-      ),
+      // Server is facet-blind: ship raw facet data for both sides, the client
+      // computes per-facet diffs via the PluginChanges.DiffRenderer slot.
+      currentFacets: current.facets,
+      mainFacets: main?.facets ?? {},
     };
 
     diffs.push(diff);

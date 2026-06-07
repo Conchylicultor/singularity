@@ -1,8 +1,12 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { PluginChangesSlots } from "@plugins/review/plugins/plugin-changes/web";
-import { ApiChangesSection, hasDiffs } from "./components/api-changes-section";
+import { ApiChangesSection } from "./components/api-changes-section";
 import { ApiChangesSummary } from "./components/api-changes-summary";
 
+// No `hasContent`: facet diffs are computed client-side from the
+// PluginChanges.DiffRenderer slot (a hook), which a plain predicate can't reach.
+// ApiChangesSection/Summary are the single source of truth for their own
+// emptiness — each returns null when there are no facet diffs.
 export default {
   name: "Review: API Changes",
   description:
@@ -13,7 +17,6 @@ export default {
       label: "API Changes",
       component: ApiChangesSection,
       summary: ApiChangesSummary,
-      hasContent: (plugin) => hasDiffs(plugin),
     }),
   ],
 } satisfies PluginDefinition;

@@ -1,8 +1,11 @@
 import { MdAdd, MdRemove } from "react-icons/md";
-import type { DiffList, PluginChangeDiff, PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
+import {
+  usePluginFacetDiffs,
+  type FacetDiff,
+} from "@plugins/review/plugins/plugin-changes/web";
+import type { PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
 
-function DiffSection({ label, diff }: { label: string; diff: DiffList }) {
-  if (diff.added.length === 0 && diff.removed.length === 0) return null;
+function DiffSection({ label, diff }: { label: string; diff: FacetDiff["diff"] }) {
   return (
     <div className="flex flex-col gap-0.5">
       <span className="text-xs font-medium text-muted-foreground uppercase tracking-wider">
@@ -24,28 +27,14 @@ function DiffSection({ label, diff }: { label: string; diff: DiffList }) {
   );
 }
 
-export function hasDiffs(plugin: PluginChangeDiff): boolean {
-  return (
-    plugin.slots.added.length + plugin.slots.removed.length +
-    plugin.contributions.added.length + plugin.contributions.removed.length +
-    plugin.exports.added.length + plugin.exports.removed.length +
-    plugin.routes.added.length + plugin.routes.removed.length +
-    plugin.apiUses.added.length + plugin.apiUses.removed.length +
-    plugin.resources.added.length + plugin.resources.removed.length +
-    plugin.tables.added.length + plugin.tables.removed.length > 0
-  );
-}
-
 export function ApiChangesSection({ plugin }: PluginReviewProps) {
+  const facetDiffs = usePluginFacetDiffs(plugin);
+  if (facetDiffs.length === 0) return null;
   return (
     <div className="flex flex-col gap-3">
-      <DiffSection label="Slots" diff={plugin.slots} />
-      <DiffSection label="Contributions" diff={plugin.contributions} />
-      <DiffSection label="Exports" diff={plugin.exports} />
-      <DiffSection label="Routes" diff={plugin.routes} />
-      <DiffSection label="Resources" diff={plugin.resources} />
-      <DiffSection label="Tables" diff={plugin.tables} />
-      <DiffSection label="API Uses" diff={plugin.apiUses} />
+      {facetDiffs.map((fd) => (
+        <DiffSection key={fd.facetId} label={fd.label} diff={fd.diff} />
+      ))}
     </div>
   );
 }
