@@ -7,10 +7,13 @@ import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
  * already folds in `timeSigMap` and the pickup) so bar math lives in exactly one
  * place and can never desync from the roll or the chord analyzer.
  *
- * Each boundary becomes a thin muted tick; bar numbers are labelled only every
- * Nth bar so a long song reads as a clean ruler instead of a wall of digits.
- * The whole layer is `pointer-events-none` — the scrubber owns the seek track
- * underneath, and ticks are pure decoration that clicks fall straight through.
+ * Each boundary becomes a thin muted tick drawn *inside* the rail (its height
+ * matches the centered `h-2.5` track, so ticks read as notches in the bar rather
+ * than fence posts poking out above and below it); bar numbers are labelled only
+ * every Nth bar, floating in the headroom above so a long song reads as a clean
+ * ruler instead of a wall of digits. The whole layer is `pointer-events-none` —
+ * the scrubber owns the seek track underneath, and ticks are pure decoration
+ * that clicks fall straight through.
  */
 export function BarTicks({
   score,
@@ -42,9 +45,12 @@ export function BarTicks({
         return (
           <div
             key={index}
-            className="absolute inset-y-0 w-px -translate-x-1/2 bg-muted-foreground/40"
+            className="absolute inset-y-0 -translate-x-1/2"
             style={{ left }}
           >
+            {/* Tick confined to the centered rail (h-2.5), so it sits inside the
+                bar instead of overhanging it. */}
+            <div className="absolute left-0 top-1/2 h-2.5 w-px -translate-y-1/2 bg-muted-foreground/40" />
             {showLabel && (
               <span className="absolute left-1 top-0 text-3xs leading-none text-muted-foreground tabular-nums">
                 {index + 1}
