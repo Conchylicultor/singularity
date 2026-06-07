@@ -15,7 +15,7 @@ import {
   useHiddenTrackIds,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { pianoRollConfig } from "../../shared/config";
-import { buildProjection, PX_PER_SECOND } from "./geometry";
+import { buildProjection, isBlackPitch, PX_PER_SECOND } from "./geometry";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
 import { PitchAxisHost } from "./pitch-axis-host";
@@ -222,6 +222,10 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
           rect: toRect(n),
           label: `${s.step}${accidentalGlyph(s.alter)}`,
           color: colorMap.get(n.track) ?? null,
+          // Synthesia-style: notes landing on black keys (sharps/flats) read a
+          // shade darker than the white-key notes of the same track, so the
+          // accidental rows are visually distinct from the diatonic ones.
+          isBlack: isBlackPitch(n.pitch),
         };
       });
   }, [projection, score.notes, speller, colorMap, hiddenIds]);
@@ -236,7 +240,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         laneWidth={lane.width}
       />
 
-      {noteRects.map(({ note, rect, label, color }) => (
+      {noteRects.map(({ note, rect, label, color, isBlack }) => (
         <div
           key={note.id}
           className={cn(
@@ -251,6 +255,10 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
             width: Math.max(2, rect.w - 1),
             height: Math.max(2, rect.h - 1),
             opacity: 0.4 + (note.velocity / 127) * 0.6,
+            // Darken black-key notes one shade below their track color. Applied
+            // as a luminance filter so it works for any color format and for
+            // the token fallback alike, without parsing the color string.
+            filter: isBlack ? "brightness(0.72)" : undefined,
             ...(color
               ? { backgroundColor: color, borderColor: color }
               : null),
