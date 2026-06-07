@@ -1,6 +1,6 @@
-import { existsSync, mkdirSync, renameSync, writeFileSync } from "node:fs";
+import { existsSync, mkdirSync, readFileSync, renameSync, writeFileSync } from "node:fs";
 import { join } from "node:path";
-import { and, eq, inArray, isNull } from "drizzle-orm";
+import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
 import { recordNotification } from "@plugins/notifications/server";
@@ -47,23 +47,69 @@ async function isAnyBuildAlive(): Promise<boolean> {
 }
 
 /**
+ * Recover the *true* terminal exit code of an orphaned build from the durable
+ * per-build log the detached `./singularity build` writes (build-logs-<id>.json).
+ *
+ * An auto-build from main restarts *this very backend* mid-build, so the process
+ * that spawned the build (and `await`s `proc.exited`) is routinely SIGTERM-killed
+ * before it can record the result — while the build CLI itself survives the
+ * restart and runs to completion. Without consulting its artifact we'd blindly
+ * stamp every such row exit=-1, turning a fully successful deploy into a phantom
+ * "Build failed" (the build button then shows red even though the app updated).
+ *
+ * The CLI writes this file on both terminal paths: full success (every step
+ * green) and a checks/vite step failure (the failing step carries success=false).
+ * A dead owner pid guarantees the CLI is past its log-writing point, so there is
+ * no read/write race. Absent file ⇒ no clean terminal signal (a hard SIGKILL, or
+ * a post-publish boot/health-probe failure that exits before the log is written)
+ * ⇒ keep the -1 failure sentinel.
+ */
+function resolveOrphanExitCode(buildId: string): number {
+  const name = currentWorktreeName();
+  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
+  // Mirror handle-build-run-logs.ts: primary path plus the legacy `<name>-`
+  // flattened filename, so both layouts resolve.
+  for (const path of [
+    join(worktreesDir, name, `build-logs-${buildId}.json`),
+    join(worktreesDir, `${name}-build-logs-${buildId}.json`),
+  ]) {
+    try {
+      const parsed = JSON.parse(readFileSync(path, "utf-8")) as {
+        steps?: Array<{ success: boolean }>;
+      };
+      const steps = parsed.steps ?? [];
+      if (steps.length === 0) return -1;
+      return steps.every((s) => s.success) ? 0 : 1;
+    } catch {
+      continue;
+    }
+  }
+  return -1;
+}
+
+/**
  * Close any unfinished build_runs rows for this namespace whose owning process is
- * dead, stamping exit_code=-1. Scoped to this namespace: a worktree DB forks
- * main's rows, and reaping those inherited (foreign-pid) builds would surface a
- * phantom "Build failed" in every worktree. Runs on boot and before each claim so
- * a crashed owner never permanently wedges the build_runs_inflight_uniq lock.
+ * dead, stamping the build's recovered exit code (see resolveOrphanExitCode — a
+ * successful build whose tracking backend was killed by its own restart must NOT
+ * be recorded as failed). Scoped to this namespace: a worktree DB forks main's
+ * rows, and reaping those inherited (foreign-pid) builds would surface a phantom
+ * "Build failed" in every worktree. Runs on boot and before each claim so a
+ * crashed owner never permanently wedges the build_runs_inflight_uniq lock.
  */
 export async function reconcileOrphanBuilds(): Promise<void> {
   const unfinished = await db
     .select({ id: _buildRuns.id, pid: _buildRuns.pid })
     .from(_buildRuns)
     .where(and(isNull(_buildRuns.finishedAt), eq(_buildRuns.namespace, currentWorktreeName())));
-  const orphanIds = unfinished.filter((r) => !isPidAlive(r.pid)).map((r) => r.id);
-  if (orphanIds.length === 0) return;
-  await db
-    .update(_buildRuns)
-    .set({ finishedAt: new Date(), exitCode: -1 })
-    .where(inArray(_buildRuns.id, orphanIds));
+  const orphans = unfinished.filter((r) => !isPidAlive(r.pid));
+  if (orphans.length === 0) return;
+  const finishedAt = new Date();
+  for (const orphan of orphans) {
+    await db
+      .update(_buildRuns)
+      .set({ finishedAt, exitCode: resolveOrphanExitCode(orphan.id) })
+      .where(eq(_buildRuns.id, orphan.id));
+  }
   buildHistoryResource.notify();
 }
 
