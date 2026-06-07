@@ -296,12 +296,12 @@ export async function buildPluginTree(
 
   const tree: PluginTree = { pluginsRoot, byDir, roots, facets: [] };
 
-  // Step 4: barrel import + facet pipeline (unless skipped)
+  // Step 4a: barrel import (web → server → central) — gated, only the 2 runtime
+  // facets (contributions runtime part, registrations) need imported modules.
+  // The other 7 facets parse files from disk and populate without barrels.
+  const importedModules = new Map<string, { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]>();
   if (!opts?.skipBarrelImport) {
     registerBarrelStubs(join(pluginsRoot, ".."));
-
-    // 4a: import all barrels (web → server → central)
-    const importedModules = new Map<string, { mod: Record<string, unknown>; runtime: "web" | "server" | "central" }[]>();
 
     // Seed web-sdk core barrel (defines Core.Root etc. — needed for slot display names)
     const webSdkCoreBarrel = join(pluginsRoot, "framework/plugins/web-sdk/core/index.ts");
@@ -328,26 +328,28 @@ export async function buildPluginTree(
         mods.push({ mod, runtime });
       }
     }
-
-    // 4b: facet extract
-    const facets = await loadFacets();
-    tree.facets = facets;
-    for (const node of byDir.values()) {
-      const nodeModules = importedModules.get(node.dir) ?? [];
-      for (const facet of facets) {
-        const data = facet.extract({ dir: node.dir, importedModules: nodeModules });
-        setFacet(node, facet.def, data);
-      }
-    }
-
-    // 4c: facet relate
-    for (const facet of facets) {
-      if (facet.relate) facet.relate({ tree });
-    }
-
-    // 4d: backward-compat shim
-    populateCompatFields(tree);
   }
+
+  // Step 4b: facet extract — ALWAYS. Static facets fully populate; runtime facets
+  // are partial (empty importedModules) under skipBarrelImport — acceptable.
+  const facets = await loadFacets();
+  tree.facets = facets;
+  for (const node of byDir.values()) {
+    const nodeModules = importedModules.get(node.dir) ?? [];
+    for (const facet of facets) {
+      const data = facet.extract({ dir: node.dir, importedModules: nodeModules });
+      setFacet(node, facet.def, data);
+    }
+  }
+
+  // Step 4c: facet relate — ALWAYS.
+  for (const facet of facets) {
+    if (facet.relate) facet.relate({ tree });
+  }
+
+  // Step 4d: backward-compat shim (removed in Phase 6). Runs always so the static
+  // facet data reaches consumers still reading the legacy flat PluginNode fields.
+  populateCompatFields(tree);
 
   return tree;
 }
