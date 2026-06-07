@@ -1,4 +1,4 @@
-import { type ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { type ReactElement, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -37,9 +37,7 @@ export interface TaskDraftRelate {
 }
 
 export interface TaskDraftPopoverProps {
-  trigger: ReactNode;
-  triggerClassName?: string;
-  triggerTitle?: string;
+  trigger: ReactElement;
   tooltip?: ReactNode;
   target: TaskChainTarget;
   captures?: CaptureKind[];
@@ -55,8 +53,6 @@ export interface TaskDraftPopoverProps {
 
 export function TaskDraftPopover({
   trigger,
-  triggerClassName,
-  triggerTitle,
   tooltip,
   target,
   captures = ["url"],
@@ -226,11 +222,7 @@ export function TaskDraftPopover({
     <InlinePopover
       open={open}
       onOpenChange={setOpen}
-      trigger={
-        <button className={triggerClassName} title={triggerTitle} aria-label={triggerTitle}>
-          {trigger}
-        </button>
-      }
+      trigger={trigger}
       tooltip={tooltip}
     >
       <TaskDraftForm

@@ -6,7 +6,8 @@ import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource } from "@plugins/tasks/core";
 import { toast } from "@plugins/notifications/web";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { cn } from "@/lib/utils";
@@ -220,26 +221,14 @@ export function DependenciesButton({
 
   return (
     <WithTooltip content={peekContent} side="top">
-      <div
-        className={cn(
-          buttonVariants({
-            variant: "outline",
-            size: "xs",
-          }),
-          "gap-0 overflow-hidden p-0 hover:bg-transparent dark:hover:bg-transparent",
-        )}
-      >
+      <ButtonGroup>
         <InlinePopover
           open={blockedByOpen}
           onOpenChange={setBlockedByOpen}
           align="end"
           contentClassName="w-96 p-2"
           trigger={
-            <button
-              type="button"
-              className="flex h-full items-center gap-0.5 rounded-l px-1.5 transition-colors hover:bg-accent"
-              aria-label="Blocked by"
-            >
+            <Button variant="outline" size="xs" aria-label="Blocked by">
               {hasBlockedBy && (
                 <span className="text-[10px] tabular-nums">
                   {depTaskIds.size}
@@ -248,7 +237,7 @@ export function DependenciesButton({
               <span className={cn("text-[10px]", hasBlockedBy ? "text-muted-foreground" : "text-muted-foreground/40")}>
                 {"←"}
               </span>
-            </button>
+            </Button>
           }
         >
           <DepPopoverContent
@@ -263,7 +252,7 @@ export function DependenciesButton({
           />
         </InlinePopover>
 
-        <div className="flex shrink-0 items-center border-x border-border/50 px-1">
+        <div className="flex shrink-0 items-center px-1">
           <MdLink className="size-3 text-muted-foreground" />
         </div>
 
@@ -273,11 +262,7 @@ export function DependenciesButton({
           align="end"
           contentClassName="w-96 p-2"
           trigger={
-            <button
-              type="button"
-              className="flex h-full items-center gap-0.5 rounded-r px-1.5 transition-colors hover:bg-accent"
-              aria-label="Blocking"
-            >
+            <Button variant="outline" size="xs" aria-label="Blocking">
               <span className={cn("text-[10px]", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>
                 {"→"}
               </span>
@@ -286,7 +271,7 @@ export function DependenciesButton({
                   {blockedTaskIds.size}
                 </span>
               )}
-            </button>
+            </Button>
           }
         >
           <DepPopoverContent
@@ -300,7 +285,7 @@ export function DependenciesButton({
             onRemove={(id) => void removeBlocked(id)}
           />
         </InlinePopover>
-      </div>
+      </ButtonGroup>
     </WithTooltip>
   );
 }

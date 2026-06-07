@@ -1,7 +1,7 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Button, buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   conversationSummariesResource,
@@ -37,10 +37,11 @@ export function SummarizeButton() {
   }
 
   return (
-    <button
-      type="button"
+    <Button
+      variant={isOpen ? "secondary" : "ghost"}
+      size="sm"
       onClick={toggle}
-      className={`${buttonVariants({ variant: isOpen ? "secondary" : "ghost", size: "sm" })} gap-1.5`}
+      className="gap-1.5"
       title={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-label={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-pressed={isOpen}
@@ -48,6 +49,6 @@ export function SummarizeButton() {
       <Badge colorClass={PHASE_CLASSES[latest.phase]}>
         {PHASE_LABEL[latest.phase]}
       </Badge>
-    </button>
+    </Button>
   );
 }

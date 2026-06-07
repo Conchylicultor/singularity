@@ -1,6 +1,7 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { useDroppable } from "@dnd-kit/core";
+import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
@@ -222,9 +223,11 @@ export function RestoreButton({
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <button
-          className="flex h-7 shrink-0 items-center justify-center gap-1.5 rounded-md border border-dashed border-muted-foreground/40 px-2.5 text-xs text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground transition-colors"
+        <Button
+          variant="outline"
+          size="sm"
           aria-label="Add items"
+          className="border-dashed border-muted-foreground/40 text-muted-foreground hover:border-muted-foreground/70 hover:text-foreground"
         >
           <MdAdd className="size-3.5" />
           {hasHidden
@@ -232,7 +235,7 @@ export function RestoreButton({
               ? "1 hidden"
               : `${hiddenItems.length} hidden`
             : "Add"}
-        </button>
+        </Button>
       }
       contentClassName="w-56 p-0"
     >

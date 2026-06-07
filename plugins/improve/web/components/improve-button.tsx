@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdAdd } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { buttonVariants } from "@/components/ui/button";
+import { Button } from "@/components/ui/button";
 import { Improve } from "../commands";
 import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
 
@@ -22,12 +22,11 @@ export function ImproveButton() {
         if (!next) setInitialText("");
       }}
       trigger={
-        <>
-          <MdAdd className="size-4" />
+        <Button variant="outline" size="sm">
+          <MdAdd />
           Improve
-        </>
+        </Button>
       }
-      triggerClassName={buttonVariants({ variant: "outline", size: "sm" })}
       tooltip="Improve"
       target={{ kind: "metaTask", metaTaskId: IMPROVEMENTS_META_TASK_ID }}
       captures={["url", "screenshot"]}

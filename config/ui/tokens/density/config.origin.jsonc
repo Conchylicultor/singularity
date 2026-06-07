@@ -1,4 +1,4 @@
-// @hash 522271aebe36
+// @hash 6b7188d35dbc
 {
   "preset": "comfortable",
   "overrides": {
@@ -8,7 +8,11 @@
       "padControlX": "",
       "padControlY": "",
       "padRowX": "",
-      "padRowY": ""
+      "padRowY": "",
+      "controlHeightXs": "",
+      "controlHeightSm": "",
+      "controlHeightMd": "",
+      "controlHeightLg": ""
     },
     "dark": {
       "padChipX": "",
@@ -16,7 +20,11 @@
       "padControlX": "",
       "padControlY": "",
       "padRowX": "",
-      "padRowY": ""
+      "padRowY": "",
+      "controlHeightXs": "",
+      "controlHeightSm": "",
+      "controlHeightMd": "",
+      "controlHeightLg": ""
     }
   }
 }

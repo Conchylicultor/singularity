@@ -1563,6 +1563,10 @@
       "name": "@singularity/plugin-primitives-commit-list",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/control-size": {
+      "name": "@singularity/plugin-primitives-control-size",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/copy-to-clipboard": {
       "name": "@singularity/plugin-primitives-copy-to-clipboard",
       "version": "0.0.1",
@@ -3294,6 +3298,8 @@
     "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
 
     "@singularity/plugin-primitives-commit-list": ["@singularity/plugin-primitives-commit-list@workspace:plugins/primitives/plugins/commit-list"],
+
+    "@singularity/plugin-primitives-control-size": ["@singularity/plugin-primitives-control-size@workspace:plugins/primitives/plugins/control-size"],
 
     "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
 

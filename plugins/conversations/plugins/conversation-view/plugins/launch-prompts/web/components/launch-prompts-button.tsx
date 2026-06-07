@@ -10,6 +10,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import { Button } from "@/components/ui/button";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { launchPromptsConfig } from "../../shared/config";
@@ -53,9 +54,9 @@ export function LaunchPromptsButton({
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
-        disabled={launching}
-        className="inline-flex h-7 items-center gap-1.5 rounded-full border px-3 text-xs transition-colors hover:bg-accent hover:text-accent-foreground disabled:opacity-50"
-        aria-label="Launch prompts"
+        render={
+          <Button variant="outline" size="sm" disabled={launching} aria-label="Launch prompts" />
+        }
       >
         <MdPlaylistPlay className="size-3" />
         Launch

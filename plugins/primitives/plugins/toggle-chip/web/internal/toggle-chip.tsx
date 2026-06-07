@@ -64,8 +64,8 @@ export function ToggleChip({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full font-medium transition-colors",
         "disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" && "p-chip text-2xs",
-        size === "md" && "p-control text-xs",
+        size === "sm" && "control-xs p-chip text-2xs",
+        size === "md" && "control-sm p-control text-xs",
         active ? VARIANT_CLASS[variant].active : VARIANT_CLASS[variant].inactive,
         className,
       )}

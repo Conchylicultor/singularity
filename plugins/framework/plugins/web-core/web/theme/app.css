@@ -164,6 +164,10 @@
     --pad-control-y: 0.375rem;
     --pad-row-x: 0.5rem;
     --pad-row-y: 0.375rem;
+    --control-height-xs: 1.5rem;
+    --control-height-sm: 1.75rem;
+    --control-height-md: 2rem;
+    --control-height-lg: 2.25rem;
     --shadow-2xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0px oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
@@ -240,6 +244,10 @@
     --pad-control-y: 0.375rem;
     --pad-row-x: 0.5rem;
     --pad-row-y: 0.375rem;
+    --control-height-xs: 1.5rem;
+    --control-height-sm: 1.75rem;
+    --control-height-md: 2rem;
+    --control-height-lg: 2.25rem;
     --shadow-2xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0px oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
@@ -284,6 +292,20 @@
 @utility p-chip    { padding: var(--pad-chip-y) var(--pad-chip-x); }
 @utility p-control { padding: var(--pad-control-y) var(--pad-control-x); }
 @utility p-row     { padding: var(--pad-row-y) var(--pad-row-x); }
+
+/* Control height utilities — the single source of truth for interactive-control
+ * heights (Button, ToggleChip, ButtonGroup, …). Values come from the density
+ * token group (--control-height-* runtime vars, overridden by ThemeInjector),
+ * so every control scales together with the active density preset. Height only:
+ * padding/font/icon stay per-primitive. */
+@utility control-xs { height: var(--control-height-xs); }
+@utility control-sm { height: var(--control-height-sm); }
+@utility control-md { height: var(--control-height-md); }
+@utility control-lg { height: var(--control-height-lg); }
+@utility control-icon-xs { height: var(--control-height-xs); width: var(--control-height-xs); }
+@utility control-icon-sm { height: var(--control-height-sm); width: var(--control-height-sm); }
+@utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); }
+@utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); }
 
 @layer base {
   * {

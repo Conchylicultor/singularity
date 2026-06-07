@@ -1858,6 +1858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CommitRow`; Values: `COMMIT_ROW_HEIGHT`, `CommitRail`, `CommitRowItem`, `CommitRowSchema`, `MergeBaseMarker`
       - Server:
         - Exports: Values: `LOG_FORMAT`, `parseGitLog`, `runGit`
+    - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
         - Exports: Types: `CopyButtonProps`; Values: `CopyButton`, `useCopyToClipboard`

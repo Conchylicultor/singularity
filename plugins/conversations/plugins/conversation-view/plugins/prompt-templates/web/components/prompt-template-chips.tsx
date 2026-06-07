@@ -1,5 +1,8 @@
 import { useState, useMemo } from "react";
 import { MdEdit, MdSend } from "react-icons/md";
+import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import {
   FloatingAction,
   FloatingActionFadeIn,
@@ -43,33 +46,27 @@ function TemplateChip({
   sending: boolean;
 }) {
   return (
-    <div
-      className={`inline-flex items-center h-6 rounded-full border border-input bg-background text-xs${pinned ? "" : " border-dashed"}`}
-    >
-      <button
-        type="button"
-        className="flex items-center gap-1 pl-2 pr-1.5 h-full rounded-l-full hover:bg-accent hover:text-accent-foreground transition-colors"
+    <ButtonGroup className={cn("text-xs", !pinned && "[&>*]:border-dashed")}>
+      <Button
+        variant="outline"
+        size="xs"
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => applyTemplate(template, insertText)}
       >
         <MdEdit className="size-3 shrink-0" />
         <span>{template.title}</span>
-      </button>
-      <div className="w-px h-3 bg-border" />
-      <button
-        type="button"
-        className={`flex items-center px-1.5 h-full rounded-r-full transition-colors${
-          canSend && !sending
-            ? " hover:bg-accent text-muted-foreground hover:text-accent-foreground"
-            : " text-muted-foreground/30 cursor-default"
-        }`}
-        onMouseDown={(e) => e.preventDefault()}
+      </Button>
+      <Button
+        variant="outline"
+        size="xs"
         disabled={!canSend || sending}
+        onMouseDown={(e) => e.preventDefault()}
         onClick={() => onSend(template)}
+        className={canSend && !sending ? "text-muted-foreground" : "text-muted-foreground/30"}
       >
         <MdSend className="size-3 shrink-0" />
-      </button>
-    </div>
+      </Button>
+    </ButtonGroup>
   );
 }
 

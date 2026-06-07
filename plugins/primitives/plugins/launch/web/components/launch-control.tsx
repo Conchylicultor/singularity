@@ -23,6 +23,7 @@ import {
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { cn } from "@/lib/utils";
 
 export type LaunchRequest = {
@@ -156,15 +157,15 @@ export function LaunchControl({
 
   if (size === "icon") {
     return (
-      <div className={cn("flex items-center", className)}>
+      <ButtonGroup className={className}>
         <Button
           variant="ghost"
-          size="icon"
+          size="icon-xs"
           disabled={busy}
           aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
           title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
           onClick={() => void launch(defaultModel)}
-          className={cn("size-6 rounded-r-none", launching === defaultModel && "opacity-50")}
+          className={cn(launching === defaultModel && "opacity-50")}
         >
           <MdPlayArrow className={MODEL_REGISTRY[defaultModel].iconSize} />
         </Button>
@@ -173,10 +174,10 @@ export function LaunchControl({
             render={
               <Button
                 variant="ghost"
-                size="icon"
+                size="icon-xs"
                 disabled={disabled}
                 aria-label="Choose model"
-                className="size-6 rounded-l-none px-0"
+                className="px-0"
               />
             }
           >
@@ -184,14 +185,14 @@ export function LaunchControl({
           </DropdownMenuTrigger>
           {rows}
         </DropdownMenu>
-      </div>
+      </ButtonGroup>
     );
   }
 
   const btnSize = size === "sm" ? "sm" : "default";
 
   return (
-    <div className={cn("flex items-center", className)}>
+    <ButtonGroup className={className}>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -199,7 +200,7 @@ export function LaunchControl({
               variant={btnVariant}
               size={btnSize}
               disabled={disabled}
-              className={cn("gap-1 rounded-r-none", blue)}
+              className={cn("gap-1", blue)}
             />
           }
         >
@@ -216,13 +217,13 @@ export function LaunchControl({
         title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
         onClick={() => void launch(defaultModel)}
         className={cn(
-          "rounded-l-none px-2.5",
+          "px-2.5",
           blue,
           variant === "default" && "border-l border-white/20",
         )}
       >
         <MdPlayArrow className={cn("size-4", launching === defaultModel && "opacity-50")} />
       </Button>
-    </div>
+    </ButtonGroup>
   );
 }

@@ -61,15 +61,13 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
               </Button>
             )}
             <TaskDraftPopover
-              trigger="+ Prerequisite"
-              triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
+              trigger={<Button size="xs" variant="outline">+ Prerequisite</Button>}
               target={target}
               relate={{ taskId, defaultMode: "prerequisite" }}
               heading="Add prerequisite"
             />
             <TaskDraftPopover
-              trigger="+ Follow-up"
-              triggerClassName="text-xs px-2 py-0.5 rounded border hover:bg-muted cursor-pointer"
+              trigger={<Button size="xs" variant="outline">+ Follow-up</Button>}
               target={target}
               relate={{ taskId, defaultMode: "followup" }}
               heading="Add follow-up"

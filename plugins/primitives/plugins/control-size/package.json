@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-control-size",
+  "description": "Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).",
+  "private": true,
+  "version": "0.0.1"
+}
