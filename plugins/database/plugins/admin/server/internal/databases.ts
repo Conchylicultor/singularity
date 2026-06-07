@@ -28,3 +28,14 @@ export async function dropDatabase(name: string): Promise<void> {
   assertSafeName(name);
   await getAdminPool().query(`DROP DATABASE IF EXISTS "${name}" WITH (FORCE)`);
 }
+
+// Number of active backend connections to `name` (via pg_stat_activity). Used
+// by the fork-temp sweep to avoid dropping a temp that an in-flight fork's
+// pg_restore still holds a connection to.
+export async function countActiveConnections(name: string): Promise<number> {
+  const result = await getAdminPool().query<{ n: number }>(
+    "SELECT count(*)::int AS n FROM pg_stat_activity WHERE datname = $1",
+    [name],
+  );
+  return result.rows[0]?.n ?? 0;
+}

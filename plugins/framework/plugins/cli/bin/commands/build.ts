@@ -352,29 +352,29 @@ async function ensureHooksPath(): Promise<void> {
   );
 }
 
-// Returns true once the DB exists AND the fork has landed (i.e.
-// __singularity_migrations has at least one row). Checking pg_database alone
-// is not enough: CREATE DATABASE runs at the very start of forkDatabase, so
-// the DB appears in pg_database while pg_restore is still running. Waiting
-// for __singularity_migrations ensures we don't race a still-in-progress
-// (or silently-dead) restore.
+// Returns true once the forked DB exists. With atomic-publish forks (temp DB +
+// rename as the last step — see plugins/database/plugins/admin/server/internal/fork.ts),
+// the canonical name appears only when the fork fully completed, so an
+// existence check against pg_database is sufficient — no need to probe table
+// contents to distinguish a half-baked DB.
 async function databaseReady(name: string): Promise<boolean> {
   // Use a direct pg client instead of `psql`: psql is not bundled by
   // embedded-postgres, and we'd rather not depend on the user's PATH for
-  // routine readiness checks.
+  // routine readiness checks. Connect to `postgres` (the target may not exist
+  // yet) and query pg_database for the target.
   const env = libpqEnv();
   const { Client } = await import("pg");
   const c = new Client({
     host: env.PGHOST!,
     port: parseInt(env.PGPORT!, 10),
     user: env.PGUSER!,
-    database: name,
+    database: "postgres",
     connectionTimeoutMillis: 1500,
   });
   try {
     await c.connect();
-    const r = await c.query("SELECT 1 FROM __singularity_migrations LIMIT 1");
-    return r.rowCount === 1;
+    const r = await c.query("SELECT 1 FROM pg_database WHERE datname = $1", [name]);
+    return (r.rowCount ?? 0) > 0;
   } catch {
     return false;
   } finally {
@@ -432,10 +432,11 @@ async function waitForPg(): Promise<void> {
 }
 
 async function waitForDatabase(name: string): Promise<void> {
-  // Conversation creation kicks off `pg_dump | pg_restore` in the background
+  // Conversation creation enqueues a durable `database.fork` graphile job
   // (see plugins/conversations/server/internal/lifecycle.ts). By the time the
   // user runs `./singularity build` in the new worktree the fork is usually
-  // done, but poll for a short window to cover the race.
+  // done, but poll for a window that comfortably covers an early graphile
+  // backoff retry.
   await retryUntil(
     async (attempt) => {
       if (await databaseReady(name)) return true;
@@ -444,17 +445,19 @@ async function waitForDatabase(name: string): Promise<void> {
     },
     {
       delay: fixed(1_000),
-      deadline: 30_000,
+      deadline: 60_000,
       onDeadline: () => {
         console.error(
           [
-            `ERROR: DB fork for "${name}" did not complete within 30s.`,
+            `ERROR: DB fork for "${name}" did not complete within 60s.`,
             "",
-            "This likely means the fork was interrupted (e.g. the server restarted",
-            "mid-fork). Do NOT attempt to fix this yourself.",
+            "The fork runs as the durable `database.fork` job on the main",
+            "backend. It self-heals across retries, so a transient interruption",
+            "should resolve on its own — but if it's still not ready, the job may",
+            "have exhausted its attempts (state: \"dead\").",
             "",
-            "Stop here and report the failure so it can be investigated.",
-            "Check server logs and the fork-error toast in the main app for details.",
+            "Check the `database.fork` job state at /api/jobs on the main app and",
+            "the deduped fork-error notification for the failure reason.",
           ].join("\n"),
         );
         process.exit(1);

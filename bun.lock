@@ -834,6 +834,10 @@
         "@embedded-postgres/linux-x64": "18.3.0-beta.17",
       },
     },
+    "plugins/database/plugins/fork": {
+      "name": "@singularity/plugin-database-fork",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/migrations": {
       "name": "@singularity/plugin-database-migrations",
       "version": "0.0.1",
@@ -2988,6 +2992,8 @@
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
 
     "@singularity/plugin-database-embedded": ["@singularity/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
+
+    "@singularity/plugin-database-fork": ["@singularity/plugin-database-fork@workspace:plugins/database/plugins/fork"],
 
     "@singularity/plugin-database-migrations": ["@singularity/plugin-database-migrations@workspace:plugins/database/plugins/migrations"],
 

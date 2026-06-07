@@ -13,9 +13,8 @@ import {
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { Conversation, ConversationKind } from "@plugins/tasks-core/core";
-import { forkDatabase } from "@plugins/database/plugins/admin/server";
+import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
-import { recordNotification } from "@plugins/notifications/server";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";
 import { conversationCreated } from "./tables-created-event";
 import { SYSTEM_META_TASK_ID } from "./meta-system";
@@ -120,23 +119,14 @@ export async function createConversation(
     attemptId = thisAttemptId;
     worktreePath = await worktreePathFor(thisAttemptId);
     await setupWorktree(thisAttemptId, worktreePath);
-    void forkDatabase("singularity", thisAttemptId).catch((err) => {
-      console.error(`[conversations] db fork failed for ${thisAttemptId}`, err);
-      const message = err instanceof Error ? err.message : String(err);
-      // Fire-and-forget: record a single deduped notification server-side so
-      // it surfaces once regardless of how many browser tabs are open. The
-      // recordNotification promise is intentionally not awaited inside this
-      // already-detached fork-error handler.
-      void recordNotification({
-        type: "db",
-        title: "DB fork failed",
-        description: `${thisAttemptId}: ${message}`,
-        variant: "error",
-        dedupeKey: `fork-error:${thisAttemptId}`,
-      });
-    });
     void forkConfig(thisAttemptId);
     await createAttempt({ id: thisAttemptId, taskId, worktreePath });
+    // Durable fork via a graphile job: the enqueue is a committed row, so an
+    // interrupted fork (e.g. backend restart mid-fork) is re-run when the
+    // worker reboots instead of bricking the worktree. Enqueued after
+    // createAttempt so the attempt row exists before the job can run. Failures
+    // surface via the job's deduped fork-error notification and /api/jobs.
+    await databaseForkJob.enqueue({ source: "singularity", target: thisAttemptId });
     conversationId = newId(CONVERSATION_PREFIX);
   }
 

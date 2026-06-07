@@ -71,6 +71,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
     - **`embedded`** [load-bearing] — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
+    - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
     - **`pgbouncer`** [load-bearing] — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
     - **`query`** — MCP tool for agents to query worktree databases for debugging and inspection.

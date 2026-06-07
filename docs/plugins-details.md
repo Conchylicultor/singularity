@@ -1127,12 +1127,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
       - Server:
-        - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
+        - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Server:
         - Exports: Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
       - Shared:
         - Exports: Values: `MAX_CONNECTIONS`, `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_MAJOR`, `PG_PID_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
+    - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
+      - Server:
+        - Uses: `notifications.recordNotification`
+        - Exports: Values: `databaseForkJob`
+        - Register: `defineJob('database.fork')`, `defineJob('database.fork-temp-sweep')`
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Exports: Values: `runMigrations`
@@ -1557,7 +1562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listJobs`, `retryJob`
       - Cross-plugin:
-        - Endpoint callers: `queue`
+        - Endpoint callers: `conversations`, `fork`, `queue`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Server:
         - Exports: Types: `McpTool`, `McpToolContext`, `McpToolResult`; Values: `Mcp`
@@ -1601,7 +1606,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Resources: `notifications` (push)
   - Cross-plugin:
-    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`, `task-preprompt`
+    - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `fork`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`, `task-preprompt`
   - Shared:
     - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 
