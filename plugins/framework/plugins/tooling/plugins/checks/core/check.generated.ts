@@ -40,6 +40,7 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/checks/plugins/typescript", hierarchyPath: "framework/tooling/checks/typescript", loader: () => import("@plugins/framework/plugins/tooling/plugins/checks/plugins/typescript/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/endpoints", hierarchyPath: "infra/endpoints", loader: () => import("@plugins/infra/plugins/endpoints/check"), dependsOn: [] },
   { pluginPath: "infra/plugins/paths", hierarchyPath: "infra/paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
+  { pluginPath: "plugin-meta/plugins/facets", hierarchyPath: "plugin-meta/facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/avatar", hierarchyPath: "primitives/avatar", loader: () => import("@plugins/primitives/plugins/avatar/check"), dependsOn: [] },
   { pluginPath: "welcome", hierarchyPath: "welcome", loader: () => import("@plugins/welcome/check"), dependsOn: [] },
 ];

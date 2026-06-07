@@ -48,7 +48,7 @@ Think carefully about the plugin's boundaries, APIs, etc. when designing plugins
 
 When a plugin collects sub-plugin contributions (e.g. facets, checks, collected dirs), consumers must use only the **generic collection API** — never import or name individual contributors. The collection plugin owns the registry and generic interface; each contributor implements the internal details. Adding or removing a contributor updates all consumers automatically with zero code changes. If a consumer needs to reference a specific contributor, the abstraction is leaking — redesign the generic API instead.
 
-### Plugin boundary rules (enforced by `./singularity check --plugin-boundaries`)
+### Plugin boundary rules (enforced by `./singularity check plugin-boundaries`)
 
 - **One barrel per runtime.** `plugins/<name>/<runtime>/index.ts` is the only cross-plugin entry point. No `api.ts`, no deep paths.
 - **Cross-plugin import grammar.** Only runtime barrels are legal: `@plugins/<name>/{web,server,core}` for top-level plugins, or `@plugins/<name>/plugins/.../.../{web,server,core}` for any nesting depth. `shared/` is plugin-private — cross-plugin imports from `shared/` are forbidden (enforced by R10). Forbidden: paths that go *inside* a barrel (`/web/components/`, `/server/internal/`, etc.), workspace-name imports (`@singularity/plugin-shell`), and relative `../` escapes into another plugin's tree.
@@ -115,7 +115,7 @@ Run repo validation checks (e.g. `schema.ts` matches committed migrations):
 ```bash
 ./singularity check                       # run all checks
 ./singularity check --list                # list available checks
-./singularity check --migrations-in-sync  # run a single check
+./singularity check migrations-in-sync    # run a single check (check id as positional arg)
 ```
 
 Checks also run automatically as the first step of `push`, and (unless `--skip-checks` is passed) at the start of `build` after migration/doc generation. New built-in checks live in `plugins/framework/plugins/tooling/plugins/checks/core/` and are registered in `plugins/framework/plugins/tooling/plugins/checks/core/index.ts`.
