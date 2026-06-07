@@ -214,7 +214,9 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
     return score.notes
       .filter((n) => !hiddenIds.has(n.track))
       .map((n) => {
-        const s = speller.spell(n.pitch);
+        // Prefer the note's own populated spelling (from the key-context pass);
+        // fall back to lazy key-aware spelling for any note left unspelled.
+        const s = n.spelling ?? speller.spell(n.pitch);
         return {
           note: n,
           rect: toRect(n),

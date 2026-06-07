@@ -44,6 +44,7 @@ export function ChordReadout() {
             {current.data.symbol}
           </div>
           <div className="mt-1 text-xs text-muted-foreground">
+            {current.data.spelledSymbol ? `${current.data.spelledSymbol} · ` : ""}
             {current.data.quality}
             {current.confidence !== undefined
               ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`

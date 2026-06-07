@@ -14,12 +14,16 @@
  * acyclic.
  */
 
-import type {
-  ChordData,
-  Note,
-  Score,
+import {
+  effectiveKeyAt,
+  makeKeySpeller,
+  type ChordData,
+  type KeySignature,
+  type KeySpeller,
+  type Note,
+  type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { CHORD_TEMPLATES, PC_NAMES } from "./chords";
+import { CHORD_TEMPLATES, formatSpelledChordSymbol, PC_NAMES } from "./chords";
 
 /** Result of chord detection, or `null` if no template matches. */
 export interface ChordMatch {
@@ -123,6 +127,20 @@ export function detectChordWindows(
   const isSkipped = (start: number, end: number): boolean =>
     skipSpans.some((s) => start < s.end && end > s.start);
 
+  // Key-aware spelling: spellers are built once per distinct in-effect key
+  // (key changes are sparse), not once per window. `spell(undefined)` is never
+  // requested — windows with no key context simply omit `spelledSymbol`.
+  const spellerByKey = new Map<string, KeySpeller>();
+  const spellerFor = (key: KeySignature): KeySpeller => {
+    const id = `${key.tonic}|${key.mode}`;
+    let speller = spellerByKey.get(id);
+    if (!speller) {
+      speller = makeKeySpeller(key);
+      spellerByKey.set(id, speller);
+    }
+    return speller;
+  };
+
   // Window boundaries = every distinct onset, plus the final note-off, so each
   // window has a constant set of sounding pitches.
   const boundarySet = new Set<number>();
@@ -150,7 +168,10 @@ export function detectChordWindows(
       prev.data.symbol === match.data.symbol &&
       Math.abs(prev.end - start) < 1e-6
     ) {
-      // Coalesce: extend the previous window to cover this one.
+      // Coalesce: extend the previous window to cover this one. We coalesce on
+      // the normalized `symbol`; the first window's `spelledSymbol` already
+      // stands for the whole coalesced span (the key in force at the span's
+      // start), so there's nothing to recompute here.
       prev.end = end;
       const ids = new Set([...prev.noteIds, ...sounding.map((n) => n.id)]);
       prev.noteIds = Array.from(ids);
@@ -158,10 +179,20 @@ export function detectChordWindows(
       continue;
     }
 
+    // Enharmonic refinement: spell the root in the key at the window start.
+    // Only attach `spelledSymbol` when a key is in force AND it actually
+    // differs from the normalized `symbol` — no point duplicating the primary.
+    const key = effectiveKeyAt(score, start);
+    const data: ChordData = { ...match.data };
+    if (key) {
+      const spelled = formatSpelledChordSymbol(match.data, spellerFor(key));
+      if (spelled !== data.symbol) data.spelledSymbol = spelled;
+    }
+
     windows.push({
       start,
       end,
-      data: match.data,
+      data,
       confidence: match.confidence,
       noteIds: sounding.map((n) => n.id),
     });

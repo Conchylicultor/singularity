@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import {
   accidentalGlyph,
+  effectiveKeyAt,
   makeKeySpeller,
   type KeyLane,
   type KeySpeller,
@@ -71,7 +72,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   const { score, cursorBeat } = useSonata();
   const { labelScope } = useConfig(pianoKeyboardConfig);
 
-  const speller = useMemo(() => makeKeySpeller(score.meta.key), [score.meta.key]);
+  const speller = useMemo(() => makeKeySpeller(effectiveKeyAt(score, 0)), [score]);
 
   // Per-track view-state, shared with the falling notes (color + hidden) and the
   // audio engine (muted). Memo-stable across frames, so folding it into the

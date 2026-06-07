@@ -11,7 +11,8 @@
  * fixes which letters are sharp or flat, and the 7 diatonic letters cover all 7
  * letter names exactly once — so each in-key pitch-class has one spelling.
  */
-import type { KeySignature, PitchSpelling } from "./types";
+import { effectiveKeyAt } from "./key-context";
+import type { KeySignature, PitchSpelling, Score } from "./types";
 
 type Step = PitchSpelling["step"];
 
@@ -131,4 +132,40 @@ export function makeKeySpeller(key?: KeySignature): KeySpeller {
   };
 
   return { diatonic, spell };
+}
+
+/**
+ * Fill in every note's `spelling` from the key in force at its onset.
+ *
+ * Most note sources emit `pitch` only and leave `spelling` undefined; this pass
+ * resolves the staff spelling (Eb vs D#) from the key context via
+ * `effectiveKeyAt`. Authored spelling is *preserved* — a note that already
+ * carries a `spelling` (e.g. from a sheet-music source) is never re-spelled, so
+ * authored truth always wins over inference.
+ *
+ * Pure: returns a new Score, never mutates the input.
+ *
+ * Performance: key changes are sparse, so we build at most one `KeySpeller` per
+ * distinct in-effect key (keyed by a stable tonic|mode string, including the
+ * no-key case as the empty key) rather than one speller per note.
+ */
+export function spellScore(score: Score): Score {
+  const spellerByKey = new Map<string, KeySpeller>();
+  const spellerFor = (key: KeySignature | undefined): KeySpeller => {
+    const id = `${key?.tonic ?? ""}|${key?.mode ?? ""}`;
+    let speller = spellerByKey.get(id);
+    if (!speller) {
+      speller = makeKeySpeller(key);
+      spellerByKey.set(id, speller);
+    }
+    return speller;
+  };
+
+  const notes = score.notes.map((note) => {
+    if (note.spelling) return note; // preserve authored spelling untouched.
+    const key = effectiveKeyAt(score, note.start);
+    return { ...note, spelling: spellerFor(key).spell(note.pitch) };
+  });
+
+  return { ...score, notes };
 }

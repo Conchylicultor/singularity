@@ -81,7 +81,16 @@ export interface Note {
 }
 
 /** Discriminated `data` payloads for built-in annotation types. */
-export type ChordData = { symbol: string; root: number; quality: string };
+// `symbol` is the normalized (sharps) name — always present and the primary
+// label every display shows. `spelledSymbol` is the key-aware enharmonic
+// refinement (e.g. `B♭m` where `symbol` is `A#m`), present *only* when a key
+// context yields a spelling that differs from `symbol`; otherwise omitted.
+export type ChordData = {
+  symbol: string;
+  root: number;
+  quality: string;
+  spelledSymbol?: string;
+};
 export type VoicingData = { label?: string }; // targets notes via target.noteIds
 export type SectionData = { name: string };
 

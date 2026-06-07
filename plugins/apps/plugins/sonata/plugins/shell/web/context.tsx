@@ -15,8 +15,10 @@ import {
   mergeScores,
   scaleTempo,
   scoreEndBeat,
+  spellScore,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Sonata } from "./slots";
 import { publishSonataTransport } from "./transport-store";
 
@@ -244,8 +246,15 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       .map((s) => s.compile(rawById[s.id]));
     if (compiled.length === 0) return emptyScore();
     const merged = mergeScores(compiled);
-    const derived = analyzers.flatMap((a) => a.analyze(merged));
-    return mergeAnnotations(merged, derived);
+    // Two pure pre-analysis steps establish key context: inferKeys derives the
+    // tonal centre(s) from the notes (when no key is authored), then spellScore
+    // fills each note's enharmonic `spelling` from the key in force. Order
+    // matters — inference first, so both note-spelling and the chord analyzer
+    // (which reads `effectiveKeyAt`) see the key.
+    const keyed = inferKeys(merged); // theory/core
+    const spelled = spellScore(keyed); // score/core
+    const derived = analyzers.flatMap((a) => a.analyze(spelled));
+    return mergeAnnotations(spelled, derived);
   }, [sources, analyzers, rawById]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the

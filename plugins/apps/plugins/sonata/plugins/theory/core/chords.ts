@@ -11,6 +11,11 @@
  * richer chord on ties.
  */
 
+import {
+  accidentalGlyph,
+  type KeySpeller,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
+
 /** Pitch-class names. Index = MIDI pitch-class (0=C … 11=B). */
 export const PC_NAMES = [
   "C",
@@ -93,4 +98,23 @@ export function formatChordSymbol(data: {
 }): string {
   const root = PC_NAMES[((data.root % 12) + 12) % 12]!;
   return root + qualitySymbol(data.quality);
+}
+
+/**
+ * Key-aware display symbol for a chord. Unlike `formatChordSymbol` (which always
+ * names the root from the sharps-only `PC_NAMES`), this spells the root through
+ * a `KeySpeller`, so a B♭ minor chord in a flat key reads "B♭m" rather than
+ * "A#m". The octave the speller returns is irrelevant for a root *name* — we use
+ * only its `step` + alteration glyph — then append the canonical quality suffix.
+ *
+ * Callers use this for the enharmonic refinement (`ChordData.spelledSymbol`),
+ * keeping the normalized `symbol` as the primary; the resolver/speller is the
+ * caller's concern so this stays a pure formatting function.
+ */
+export function formatSpelledChordSymbol(
+  data: { root: number; quality: string },
+  speller: KeySpeller,
+): string {
+  const { step, alter } = speller.spell(data.root);
+  return step + accidentalGlyph(alter) + qualitySymbol(data.quality);
 }

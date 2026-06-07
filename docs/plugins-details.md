@@ -276,7 +276,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
         - **`score`**
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `bars`, `beatToSeconds`, `buildTempoIndex`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyEntry`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `asKeySignature`, `bars`, `beatToSeconds`, `buildTempoIndex`, `collectKeyEntries`, `effectiveKeyAt`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`, `spellScore`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
             - Slots: `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
@@ -304,7 +304,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports: Values: `songMidi`, `songMidiLiveResource`
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
-            - Exports: Types: `ChordMatch`, `ChordTemplate`, `ChordWindow`; Values: `CHORD_TEMPLATES`, `detectChord`, `detectChordWindows`, `formatChordSymbol`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
+            - Exports: Types: `ChordMatch`, `ChordTemplate`, `ChordWindow`; Values: `CHORD_TEMPLATES`, `detectChord`, `detectChordWindows`, `formatChordSymbol`, `formatSpelledChordSymbol`, `inferKeys`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
             - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`

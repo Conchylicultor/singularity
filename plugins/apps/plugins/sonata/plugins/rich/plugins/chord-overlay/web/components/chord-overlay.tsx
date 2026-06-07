@@ -36,11 +36,14 @@ export function ChordOverlay({
             key={`${a.start}-${data.symbol}-${i}`}
             className="absolute left-0 -translate-y-1/2 rounded-r-md border border-border/60 bg-background/90 px-1.5 py-0.5 text-[11px] font-semibold leading-none text-foreground shadow-sm backdrop-blur-sm"
             style={{ top: y }}
-            title={
-              a.confidence !== undefined
-                ? `${data.symbol} · ${(a.confidence * 100).toFixed(0)}% confidence`
-                : data.symbol
-            }
+            title={(() => {
+              const name = data.spelledSymbol
+                ? `${data.symbol} (${data.spelledSymbol})`
+                : data.symbol;
+              return a.confidence !== undefined
+                ? `${name} · ${(a.confidence * 100).toFixed(0)}% confidence`
+                : name;
+            })()}
           >
             {data.symbol}
           </div>

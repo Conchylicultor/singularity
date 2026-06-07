@@ -16,7 +16,9 @@ export {
   qualityToIntervals,
   qualitySymbol,
   formatChordSymbol,
+  formatSpelledChordSymbol,
 } from "./chords";
 export { parseChordSymbol } from "./parse";
 export { detectChord, detectChordWindows } from "./detect";
 export type { ChordMatch, ChordWindow } from "./detect";
+export { inferKeys } from "./key-detect";
