@@ -55,6 +55,23 @@ function formatElapsed(ms: number): string {
   return h > 0 ? `${h}:${pad(m)}:${pad(s)}` : `${m}:${pad(s)}`;
 }
 
+// The instant the op's CURRENT phase began. A running push clocks its push time
+// from when the lock was granted (`runningAt`); a waiting push and a build clock
+// from `startedAt`. So the live timer always measures the phase shown, never
+// wait + push lumped together.
+function phaseStartedAt(op: WorktreeOp): number {
+  return new Date(op.runningAt ?? op.startedAt).getTime();
+}
+
+// How long a now-running push spent queued for the lock before it started
+// pushing (startedAt → runningAt). null when the op isn't a running push or
+// never actually waited.
+function waitedMs(op: WorktreeOp): number | null {
+  if (op.op !== "push" || op.phase !== "running" || !op.runningAt) return null;
+  const ms = new Date(op.runningAt).getTime() - new Date(op.startedAt).getTime();
+  return ms > 1000 ? ms : null;
+}
+
 function summaryLabel(op: WorktreeOp): string {
   if (op.op === "build") return "Build in progress";
   return op.phase === "waiting-for-lock" ? "Push queued — waiting for lock" : "Push in progress";
@@ -97,7 +114,8 @@ function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
 function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: number }) {
   const { op, queuePos, isSelf } = row;
   const waiting = op.op === "push" && op.phase === "waiting-for-lock";
-  const elapsed = formatElapsed(now - new Date(op.startedAt).getTime());
+  const elapsed = formatElapsed(now - phaseStartedAt(op));
+  const waited = waitedMs(op);
   const phaseText =
     op.op === "build" ? "Building" : waiting ? "Waiting for lock" : "Pushing";
 
@@ -124,6 +142,14 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
         {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
       </span>
       <span className="shrink-0 text-muted-foreground">{phaseText}</span>
+      {waited !== null && (
+        <span
+          className="shrink-0 text-muted-foreground/70"
+          title="Time spent queued for the push lock before pushing started"
+        >
+          waited {formatElapsed(waited)}
+        </span>
+      )}
       <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>
     </div>
   );
@@ -147,7 +173,8 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
   if (!op) return null;
 
   const queued = op.op === "push" && op.phase === "waiting-for-lock";
-  const elapsed = formatElapsed(now - new Date(op.startedAt).getTime());
+  const elapsed = formatElapsed(now - phaseStartedAt(op));
+  const waited = waitedMs(op);
   const others = rows.length - 1;
 
   return (
@@ -172,6 +199,14 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
         {others > 0 && (
           <span className="shrink-0 text-muted-foreground">
             +{others} other{others === 1 ? "" : "s"}
+          </span>
+        )}
+        {waited !== null && (
+          <span
+            className="shrink-0 text-muted-foreground/70"
+            title="Time spent queued for the push lock before pushing started"
+          >
+            waited {formatElapsed(waited)}
           </span>
         )}
         <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>

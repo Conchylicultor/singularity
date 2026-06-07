@@ -35,6 +35,12 @@ export interface WorktreeOpInfo {
   op: WorktreeOp;
   startedAt: string;
   phase: WorktreeOpPhase;
+  // When a push is actually running, the instant the push lock was granted
+  // (from the holder file's `acquiredAt`) — i.e. when waiting ended and pushing
+  // began. null for waiting pushes and builds. Derived, never stored in the
+  // marker: see derivePushPhases. Lets the UI clock push time separately from
+  // the wait spent queued for the lock.
+  runningAt: string | null;
 }
 
 // The root holding every worktree's per-worktree singularity state (the `ops/`
@@ -121,6 +127,9 @@ function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
     startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : new Date(0).toISOString(),
     // Back-compat: markers written before the phase field default to "running".
     phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",
+    // Filled in by derivePushPhases from the authoritative holder file; the
+    // marker itself never carries it.
+    runningAt: null,
   };
 }
 
@@ -287,18 +296,25 @@ export interface DerivePushDeps {
 // "running" — the one the single holder file names, and only when its pid is
 // alive AND the kernel confirms the lock is genuinely held (the only check that
 // survives PID reuse). Every other push is "waiting-for-lock".
+//
+// The running push also gets `runningAt` set to the holder's `acquiredAt` (when
+// the lock was granted) so the UI can clock push time from there rather than
+// from `startedAt`, which includes the time spent queued for the lock.
 export function derivePushPhases(
   markers: WorktreeOpInfo[],
   holder: PushHolder | null,
   deps: DerivePushDeps,
 ): WorktreeOpInfo[] {
-  const runningSlug =
-    holder && deps.isAlive(holder.pid) && deps.lockHeld() ? holder.slug : null;
-  return markers.map((m) =>
-    m.op === "push"
-      ? { ...m, phase: m.slug === runningSlug ? "running" : "waiting-for-lock" }
-      : m,
-  );
+  const running = holder && deps.isAlive(holder.pid) && deps.lockHeld() ? holder : null;
+  return markers.map((m) => {
+    if (m.op !== "push") return m;
+    const isRunning = m.slug === running?.slug;
+    return {
+      ...m,
+      phase: isRunning ? "running" : "waiting-for-lock",
+      runningAt: isRunning && running ? running.acquiredAt : null,
+    };
+  });
 }
 
 // Composition used by the op-status resource loader: scan live markers, read the

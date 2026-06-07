@@ -16,10 +16,10 @@ import {
 // --- helpers ---------------------------------------------------------------
 
 function pushMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "push", startedAt: "2026-06-07T00:00:00.000Z", phase: "running" };
+  return { slug, op: "push", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
 }
 function buildMarker(slug: string): WorktreeOpInfo {
-  return { slug, op: "build", startedAt: "2026-06-07T00:00:00.000Z", phase: "running" };
+  return { slug, op: "build", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
 }
 function holder(slug: string, pid = 1234, pushId = "p-1"): PushHolder {
   return { slug, pid, pushId, acquiredAt: "2026-06-07T00:00:00.000Z" };
@@ -39,6 +39,9 @@ test("exactly one push runs — the slug the holder names; two-running impossibl
   expect(phaseOf(out, "A")).toBe("running");
   expect(phaseOf(out, "B")).toBe("waiting-for-lock");
   expect(out.filter((m) => m.phase === "running")).toHaveLength(1);
+  // The running push carries the lock-acquired instant; the waiter does not.
+  expect(out.find((m) => m.slug === "A")?.runningAt).toBe("2026-06-07T00:00:00.000Z");
+  expect(out.find((m) => m.slug === "B")?.runningAt).toBeNull();
 });
 
 test("dead holder pid → nobody running, all waiting", () => {
