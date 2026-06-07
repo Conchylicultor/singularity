@@ -63,7 +63,38 @@ export function readTypedConfig<F extends FieldsRecord>(
   overwrites: ConfigProxy,
 ): ConfigValues<F> {
   const raw = effective(origin, overwrites);
+  // No document on disk at all is the legitimate "use defaults" case, not a
+  // validation failure — resolve silently.
+  if (raw === undefined) return { ...descriptor.defaults };
   const result = descriptor.schema.safeParse(raw);
-  if (!result.success) return { ...descriptor.defaults };
+  if (!result.success) {
+    // Fail loud in logs, but keep the app alive by resolving to defaults — the
+    // UI surfaces this as an "invalid" conflict (see validationIssues +
+    // computeAllConflicts) so the user can reset or fix the stored document.
+    console.warn(
+      `[config-v2] stored config for "${descriptor.name}" failed validation; ` +
+        `resolving to defaults. Issues: ${result.error.issues
+          .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+          .join("; ")}`,
+    );
+    return { ...descriptor.defaults };
+  }
   return result.data as ConfigValues<F>;
+}
+
+// Human-readable issues if the effective document fails the descriptor schema
+// even after default-backfill; null when it parses. Mirrors hasConflict: a pure
+// predicate the server re-runs to populate the conflicts resource.
+export function validationIssues(
+  descriptor: ConfigDescriptor,
+  origin: ConfigProxy,
+  overwrites: ConfigProxy,
+): string[] | null {
+  const raw = effective(origin, overwrites);
+  if (raw === undefined) return null; // absent document ≠ invalid
+  const result = descriptor.schema.safeParse(raw);
+  if (result.success) return null;
+  return result.error.issues.map(
+    (i) => `${i.path.join(".") || "(root)"}: ${i.message}`,
+  );
 }

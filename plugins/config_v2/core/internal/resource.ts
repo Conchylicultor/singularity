@@ -11,6 +11,12 @@ export const configV2Resource = resourceDescriptor<ConfigV2Values, { path: strin
 );
 
 export const configV2ConflictEntrySchema = z.object({
+  // "hash"    — the override's @hash is stale vs its origin (upstream defaults
+  //             moved); the app resolves to origin until reconciled.
+  // "invalid" — the stored document fails the current schema even after default
+  //             backfill (e.g. a field's type changed under it); the app
+  //             resolves to defaults and the user must reset or fix the file.
+  kind: z.enum(["hash", "invalid"]),
   // The origin (upstream) document — this is what the running app resolves to
   // while the conflict is unreconciled, since origin takes precedence on conflict.
   originValues: z.record(z.unknown()),
@@ -18,6 +24,8 @@ export const configV2ConflictEntrySchema = z.object({
   // to this so the user can see and reconcile what they configured, independent
   // of what the app currently resolves to.
   overrideValues: z.record(z.unknown()),
+  // Human-readable zod issues, present only when kind === "invalid".
+  issues: z.array(z.string()).optional(),
 });
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;

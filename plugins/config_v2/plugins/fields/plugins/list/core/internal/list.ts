@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   defineFieldType,
+  fieldSchemaWithDefault,
   type FieldDef,
   type FieldMeta,
   type FieldType,
@@ -40,7 +41,9 @@ export function listField<const F extends FieldsRecord>(
 ): ListFieldDef<F> {
   const subShape: z.ZodRawShape = {};
   for (const [key, field] of Object.entries(opts.itemFields)) {
-    subShape[key] = field.schema;
+    // A missing item key (e.g. a field added after items were stored) heals to
+    // the field's default instead of failing the whole list's validation.
+    subShape[key] = fieldSchemaWithDefault(field);
   }
 
   const itemSchema = z

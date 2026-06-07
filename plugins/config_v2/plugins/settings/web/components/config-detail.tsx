@@ -52,8 +52,13 @@ function ConfigDetailInner({
   // absent from a partial override.
   const valueFor = useCallback(
     (key: string): unknown => {
-      const override = conflictEntry?.overrideValues;
-      if (override && key in override) return override[key];
+      // Only a hash conflict resolves the app to origin while the editor shows
+      // the override. An "invalid" conflict resolves to defaults (= `values`)
+      // and its override holds unparseable data, so bind fields to `values`.
+      if (conflictEntry?.kind === "hash") {
+        const override = conflictEntry.overrideValues;
+        if (override && key in override) return override[key];
+      }
       return values[key];
     },
     [conflictEntry, values],
@@ -140,7 +145,37 @@ function ConfigDetailInner({
       ) : (
         <>
           {conflictEntry && (
-            isSoftConflict ? (
+            conflictEntry.kind === "invalid" ? (
+              <div className="mb-2 flex flex-col gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+                <div className="flex items-center gap-2">
+                  <MdWarning className="size-4 shrink-0" />
+                  <span className="flex-1">Stored config is invalid for the current schema</span>
+                  <div className="flex shrink-0 gap-1.5">
+                    <button
+                      type="button"
+                      onClick={() => setShowRaw(true)}
+                      className="rounded-sm bg-destructive/20 px-2 py-0.5 text-xs font-medium hover:bg-destructive/30"
+                    >
+                      View raw
+                    </button>
+                    <button
+                      type="button"
+                      onClick={handleAcceptAll}
+                      className="rounded-sm bg-destructive/20 px-2 py-0.5 text-xs font-medium hover:bg-destructive/30"
+                    >
+                      Reset to defaults
+                    </button>
+                  </div>
+                </div>
+                {conflictEntry.issues && conflictEntry.issues.length > 0 && (
+                  <ul className="ml-6 list-disc text-xs text-destructive/80">
+                    {conflictEntry.issues.map((issue, i) => (
+                      <li key={i}>{issue}</li>
+                    ))}
+                  </ul>
+                )}
+              </div>
+            ) : isSoftConflict ? (
               <div className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
                 <span>Defaults updated — no conflicts</span>
                 <button

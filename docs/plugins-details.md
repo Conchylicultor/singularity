@@ -502,7 +502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by: `avatar`, `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `conversation-category`, `conversations`, `cost`, `density`, `dynamic-enum`, `enum`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `multiline-text`, `notion`, `object`, `piano-keyboard`, `preprompts`, `primitives`, `prompt-templates`, `push-and-exit`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `tweakcn`, `typography`
   - Core:
-    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`
+    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
   - Server:
     - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `registerFieldStorageProvider`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Plugins:
@@ -537,7 +537,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`, `config_v2.fieldSchemaWithDefault`
             - Exports: Types: `ListFieldDef`, `ListItem`; Values: `isListFieldDef`, `listField`, `listFieldType`
         - **`multiline-text`** — Multi-line text field type.
           - Web:
@@ -549,7 +549,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`, `config_v2.fieldSchemaWithDefault`
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`, `objectFieldType`
         - **`primitives`** — Basic field types: bool, text, int, float.
           - Web:

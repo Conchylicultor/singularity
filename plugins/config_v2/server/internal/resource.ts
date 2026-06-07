@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective } from "../../core";
 import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
 import { CONFIG_DIR } from "./config-dir";
@@ -129,7 +129,26 @@ function computeAllConflicts(): ConfigV2Conflicts {
       const overrideValues = overrideData
         ? (overrideData.content as Record<string, unknown>)
         : (descriptor.defaults as Record<string, unknown>);
-      conflicts[storePath] = { originValues, overrideValues };
+      conflicts[storePath] = { kind: "hash", originValues, overrideValues };
+      continue;
+    }
+
+    // No hash conflict, but the effective document may still fail the current
+    // schema (a field's type changed under stored data, a hand edit went wrong).
+    // The app resolves to defaults; surface it so the user can reset or fix it.
+    const issues = validationIssues(descriptor, origin, overwrites);
+    if (issues) {
+      const stored = effective(origin, overwrites);
+      const overrideValues =
+        stored && typeof stored === "object" && !Array.isArray(stored)
+          ? (stored as Record<string, unknown>)
+          : {};
+      conflicts[storePath] = {
+        kind: "invalid",
+        originValues: descriptor.defaults as Record<string, unknown>,
+        overrideValues,
+        issues,
+      };
     }
   }
   return conflicts;

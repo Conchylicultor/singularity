@@ -1,6 +1,7 @@
 import { z } from "zod";
 import {
   defineFieldType,
+  fieldSchemaWithDefault,
   type FieldDef,
   type FieldMeta,
   type FieldType,
@@ -35,7 +36,7 @@ export function objectField<const F extends FieldsRecord>(
 ): ObjectFieldDef<F> {
   const subShape: z.ZodRawShape = {};
   for (const [key, field] of Object.entries(opts.subFields)) {
-    subShape[key] = field.schema.default(field.defaultValue);
+    subShape[key] = fieldSchemaWithDefault(field);
   }
 
   const schema = z.object(subShape).passthrough();

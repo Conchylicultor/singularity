@@ -1,5 +1,5 @@
 export { defineConfig } from "./internal/define-config";
-export { buildFieldsSchema } from "./internal/schema-builder";
+export { buildFieldsSchema, fieldSchemaWithDefault } from "./internal/schema-builder";
 export { defineFieldType } from "./internal/types";
 export type {
   Disposable,
@@ -40,5 +40,6 @@ export {
   hasConflict,
   propagate,
   readTypedConfig,
+  validationIssues,
 } from "./internal/tier-logic";
 export { setConfigField, forkScope, deleteScope, configSnapshot } from "./internal/endpoints";
