@@ -1,20 +1,24 @@
 /**
- * Categorical track palette: distinct, saturated mid-tone hues that read on the
- * piano-roll's note chips in both light and dark mode. Tracks default to a color
- * by their index in `score.tracks`; the user can override per track. Cycles if a
- * score has more tracks than colors.
+ * Categorical track palette, sourced from the themeable `categorical-*` design
+ * tokens (the same data-viz palette Gantt phases, runtime pills, and the
+ * progress-bar section bands use) rather than hardcoded hexes. Each entry is a
+ * raw `var(--categorical-N)` reference: the piano-roll and piano-keyboard apply
+ * it as an inline `backgroundColor`, so it resolves at paint time, re-skins with
+ * the active theme, and adapts to light/dark automatically. Tracks default to a
+ * color by their index in `score.tracks`; the user can override per track.
+ * Cycles if a score has more tracks than colors.
  */
 export const TRACK_PALETTE = [
-  "#6366f1", // indigo
-  "#ec4899", // pink
-  "#f59e0b", // amber
-  "#10b981", // emerald
-  "#06b6d4", // cyan
-  "#ef4444", // red
-  "#8b5cf6", // violet
-  "#84cc16", // lime
-  "#f97316", // orange
-  "#14b8a6", // teal
+  "var(--categorical-1)",
+  "var(--categorical-2)",
+  "var(--categorical-3)",
+  "var(--categorical-4)",
+  "var(--categorical-5)",
+  "var(--categorical-6)",
+  "var(--categorical-7)",
+  "var(--categorical-8)",
+  "var(--categorical-9)",
+  "var(--categorical-10)",
 ] as const;
 
 /** The default color for the track at `index` (no override stored). */
