@@ -217,11 +217,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Sonata.Home` "library" → `SongLibrary`
             - Exports: Types: `SortOrderProps`; Values: `Library`, `useOpenSong`
           - Cross-plugin:
-            - Slot contributors: `midi`, `playback-history`
+            - Slot contributors: `chord-grid`, `midi`, `playback-history`
           - Server:
             - Uses: `database.db`
             - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
-            - Exports: Types: `CreateSongRowInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`
+            - Exports: Types: `CreateSongRowInput`, `UpdateSongMetaInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`, `updateSongMeta`
             - Routes: `DELETE /api/sonata/songs/:id`
           - Core:
             - Exports: Types: `Song`; Values: `deleteSong`, `SongSchema`, `songsResource`
@@ -284,9 +284,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `transport-bar`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
-            - **`chord-grid`** — Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy.
+            - **`chord-grid`** — Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy. Persists per-song grid text/voicing/octave and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text, voicing, and octave. Creates chord-grid–backed songs and persists edits (syncing the parent song's title/duration).
               - Web:
-                - Contributes: `Sonata.Source` "Chord Grid"
+                - Contributes: `Sonata.Source` "Chord Grid", `Library.Source` "chord-grid", `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
+              - Server:
+                - Uses: `database.db`
+                - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
+                - Exports: Values: `songChordGrid`
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes: `Sonata.Source` "MIDI File", `Library.Source` "midi", `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
@@ -1113,7 +1117,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `chord-grid`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `reorder`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:

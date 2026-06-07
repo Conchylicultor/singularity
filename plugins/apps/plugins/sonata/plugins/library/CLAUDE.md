@@ -10,11 +10,11 @@
   - Contributes: `Sonata.Home` "library" → `SongLibrary`
   - Exports: Types: `SortOrderProps`; Values: `Library`, `useOpenSong`
 - Cross-plugin:
-  - Slot contributors: `midi`, `playback-history`
+  - Slot contributors: `chord-grid`, `midi`, `playback-history`
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
-  - Exports: Types: `CreateSongRowInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`
+  - Exports: Types: `CreateSongRowInput`, `UpdateSongMetaInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`, `updateSongMeta`
   - Routes: `DELETE /api/sonata/songs/:id`
 - Core:
   - Exports: Types: `Song`; Values: `deleteSong`, `SongSchema`, `songsResource`

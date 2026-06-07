@@ -10,8 +10,8 @@
 
 import { useMemo } from "react";
 import { cn } from "@/lib/utils";
-import { parseGrid, type ChordGridRaw } from "./compile";
-import { DEFAULT_VOICING_ID, VOICINGS } from "./voicings";
+import { asChordGridRaw, parseGrid, type ChordGridRaw } from "./compile";
+import { VOICINGS } from "./voicings";
 
 interface Props {
   raw?: unknown;
@@ -21,22 +21,9 @@ interface Props {
 const PLACEHOLDER = "| C G | Am F |\n| Dm7 G7 | Cmaj7 |";
 const MIN_OCTAVE = 1;
 const MAX_OCTAVE = 7;
-const EMPTY: ChordGridRaw = { text: "", voicingId: DEFAULT_VOICING_ID, octave: 4 };
-
-function asRaw(raw: unknown): ChordGridRaw {
-  if (raw && typeof raw === "object" && typeof (raw as ChordGridRaw).text === "string") {
-    const r = raw as ChordGridRaw;
-    return {
-      text: r.text,
-      voicingId: r.voicingId || DEFAULT_VOICING_ID,
-      octave: r.octave ?? 4,
-    };
-  }
-  return EMPTY;
-}
 
 export function ChordGridLoader({ raw, onRaw }: Props) {
-  const current = asRaw(raw);
+  const current = asChordGridRaw(raw);
   const { text, voicingId, octave } = current;
 
   // Live parse feedback (recognised chord count + skipped tokens).

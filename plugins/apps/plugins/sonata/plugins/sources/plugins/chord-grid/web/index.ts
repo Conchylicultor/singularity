@@ -1,20 +1,37 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGridView } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Library } from "@plugins/apps/plugins/sonata/plugins/library/web";
 import { compile } from "./compile";
 import { ChordGridLoader } from "./loader";
+import { CHORD_GRID_SOURCE_ID } from "./constants";
+import { hydrate } from "./hydrate";
+import { ChordGridAddAction } from "./components/chord-grid-add-action";
+import { ChordGridEditorSection } from "./components/chord-grid-editor-section";
 
 export default {
   name: "Sonata: Chord Grid Source",
   description:
-    "Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy.",
+    "Chord-grid input source for Sonata. The grid (e.g. `| C G | Am F |`) authors chord annotations; compile() derives notes from them via the selected voicing strategy. Persists per-song grid text/voicing/octave and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section.",
   contributions: [
     Sonata.Source({
-      id: "chord-grid",
+      id: CHORD_GRID_SOURCE_ID,
       label: "Chord Grid",
       icon: MdGridView,
       LoaderComponent: ChordGridLoader,
       compile,
+    }),
+    Library.Source({
+      sourceId: CHORD_GRID_SOURCE_ID,
+      hydrate,
+      AddAction: ChordGridAddAction,
+    }),
+    Sonata.Section({
+      id: "chord-grid-editor",
+      label: "Chord Grid",
+      icon: MdGridView,
+      component: ChordGridEditorSection,
+      area: "editor",
     }),
   ],
 } satisfies PluginDefinition;

@@ -46,6 +46,29 @@ function isChordGridRaw(raw: unknown): raw is ChordGridRaw {
   );
 }
 
+/** Default chord-grid raw (empty grid, default voicing, middle-C octave). */
+export const EMPTY_CHORD_GRID_RAW: ChordGridRaw = {
+  text: "",
+  voicingId: DEFAULT_VOICING_ID,
+  octave: 4,
+};
+
+/**
+ * Normalize any persisted/hydrated value into a well-formed `ChordGridRaw`,
+ * filling defaults for a missing voicing/octave. Shared by the loader and the
+ * editor section so both read raw identically.
+ */
+export function asChordGridRaw(raw: unknown): ChordGridRaw {
+  if (isChordGridRaw(raw)) {
+    return {
+      text: raw.text,
+      voicingId: raw.voicingId || DEFAULT_VOICING_ID,
+      octave: raw.octave ?? 4,
+    };
+  }
+  return EMPTY_CHORD_GRID_RAW;
+}
+
 /** Parse the grid text into timed chord events; unparseable tokens are skipped. */
 export function parseGrid(text: string): {
   events: ChordEvent[];

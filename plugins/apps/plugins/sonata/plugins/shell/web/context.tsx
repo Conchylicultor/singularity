@@ -112,6 +112,25 @@ export interface SonataContextValue {
   /** Feed raw input from the active source's LoaderComponent (keyed by source). */
   setRaw: (raw: unknown) => void;
   /**
+   * Read a specific source's persisted raw (or `undefined`). Generic, source-
+   * keyed accessor — unlike `activeRaw` it does NOT depend on `activeSourceId`,
+   * so a source's own editor section (e.g. the chord-grid editor) can read its
+   * raw directly. Reactive: identity changes whenever any source's raw changes.
+   */
+  sourceRaw: (sourceId: string) => unknown;
+  /**
+   * Write a specific source's raw (merges one key). The source-keyed companion
+   * to `setRaw` — recompiles the composed score immediately, without touching
+   * `activeSourceId`. Used by per-source editor sections.
+   */
+  setSourceRaw: (sourceId: string, raw: unknown) => void;
+  /**
+   * Rename the song currently open in the player (updates `currentSongTitle` so
+   * the player header stays in sync with an in-editor title edit). Persistence is
+   * the editing source's responsibility; this only updates the in-memory title.
+   */
+  renameCurrentSong: (title: string) => void;
+  /**
    * Bulk, source-agnostic raw write — set the full `{ sourceId: raw }` map,
    * REPLACING the current inputs (not merging). Unlike `setRaw` this does NOT
    * depend on (or change) `activeSourceId`; the library uses it to load a song's
@@ -178,15 +197,24 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
   const [seekEpoch, setSeekEpoch] = useState(0);
 
+  // Source-keyed raw write (merges one key). The generic primitive both `setRaw`
+  // and per-source editor sections build on; never touches `activeSourceId`.
+  const setSourceRaw = useCallback((sourceId: string, raw: unknown) => {
+    setRawById((prev) => ({ ...prev, [sourceId]: raw }));
+  }, []);
+
   // `setRaw` writes the *active* source's slot. Read the active id from a ref so
   // the callback stays stable (loaders depend on its identity in effects).
   const activeSourceIdRef = useRef(activeSourceId);
   activeSourceIdRef.current = activeSourceId;
-  const setRaw = useCallback((raw: unknown) => {
-    const id = activeSourceIdRef.current;
-    if (!id) return;
-    setRawById((prev) => ({ ...prev, [id]: raw }));
-  }, []);
+  const setRaw = useCallback(
+    (raw: unknown) => {
+      const id = activeSourceIdRef.current;
+      if (!id) return;
+      setSourceRaw(id, raw);
+    },
+    [setSourceRaw],
+  );
 
   // Bulk, source-agnostic raw write (does NOT touch activeSourceId). Used by the
   // library to load a song's complete set of per-source inputs in one shot.
@@ -447,6 +475,19 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   const activeRaw = activeSourceId ? rawById[activeSourceId] : undefined;
 
+  // Source-keyed raw read. Recreated when `rawById` changes so consumers re-render
+  // with fresh raw (e.g. the chord-grid editor reflecting a hydrated song).
+  const sourceRaw = useCallback(
+    (sourceId: string) => rawById[sourceId],
+    [rawById],
+  );
+
+  // Rename the open song in-memory so the player header tracks an in-editor edit.
+  const renameCurrentSong = useCallback(
+    (title: string) => setCurrentSongTitle(title),
+    [],
+  );
+
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
@@ -465,6 +506,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setActiveSource: setActiveSourceId,
       setActiveDisplay: setActiveDisplayId,
       setRaw,
+      sourceRaw,
+      setSourceRaw,
+      renameCurrentSong,
       setRawMap,
       openPlayer,
       backToLibrary,
@@ -491,6 +535,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       loadedSourceIds,
       activeRaw,
       setRaw,
+      sourceRaw,
+      setSourceRaw,
+      renameCurrentSong,
       setRawMap,
       openPlayer,
       backToLibrary,

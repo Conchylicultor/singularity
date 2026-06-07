@@ -8,6 +8,8 @@ export { _songs } from "./internal/tables";
 export { songsLiveResource } from "./internal/resources";
 export { createSongRow } from "./internal/create-song-row";
 export type { CreateSongRowInput } from "./internal/create-song-row";
+export { updateSongMeta } from "./internal/update-song-meta";
+export type { UpdateSongMetaInput } from "./internal/update-song-meta";
 // The generic song↔attachment link. Source-agnostic: a song may carry linked
 // attachments regardless of which source produced them. Sources call
 // `songAttachments.add(songId, [attachmentId])` when persisting their raw so the
