@@ -1,12 +1,16 @@
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import {
+  accidentalGlyph,
   bars,
   buildTempoIndex,
+  makeKeySpeller,
   type KeyLane,
   type Score,
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { useConfig } from "@plugins/config_v2/web";
+import { pianoRollConfig } from "../../shared/config";
 import { buildProjection, PX_PER_SECOND } from "./geometry";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
@@ -166,6 +170,14 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // We measure the LANE (above the keyboard); its height drives the time axis.
   const [laneRef, lane] = useElementSize();
 
+  // Synthesia-style note-name labels (opt-in). Spelling follows the score's key
+  // signature so accidentals read in-key (Eb vs D#), matching the keyboard below.
+  const { showNoteNames } = useConfig(pianoRollConfig);
+  const speller = useMemo(
+    () => makeKeySpeller(score.meta.key),
+    [score.meta.key],
+  );
+
   // Cursor-invariant projection: depends only on lane size + score, so it (and
   // every note rect) stays stable while playing — only the ScrollLayer moves.
   const projection = useMemo(
@@ -183,11 +195,16 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // not rebuilt every frame (the projection already built its own internally).
   const tempo = useMemo(() => buildTempoIndex(score), [score]);
 
-  // Note rectangles, derived from the projection (single geometry source).
+  // Note rectangles, derived from the projection (single geometry source). The
+  // key-signature-aware name is computed here too so it stays stable across
+  // frames; the label only renders when `showNoteNames` is on.
   const noteRects = useMemo(() => {
     const toRect = projection.noteToRect!;
-    return score.notes.map((n) => ({ note: n, rect: toRect(n) }));
-  }, [projection, score.notes]);
+    return score.notes.map((n) => {
+      const s = speller.spell(n.pitch);
+      return { note: n, rect: toRect(n), label: `${s.step}${accidentalGlyph(s.alter)}` };
+    });
+  }, [projection, score.notes, speller]);
 
   // The cursor-invariant content. Built here (cursor-free) so its element
   // identity is stable across frames; passed as `children` to ScrollLayer.
@@ -199,7 +216,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         laneWidth={lane.width}
       />
 
-      {noteRects.map(({ note, rect }) => (
+      {noteRects.map(({ note, rect, label }) => (
         <div
           key={note.id}
           className={cn(
@@ -213,7 +230,17 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
             opacity: 0.4 + (note.velocity / 127) * 0.6,
           }}
           title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
-        />
+        >
+          {/* Synthesia-style name, anchored to the bar's leading (bottom) edge.
+              Centered and allowed to overflow the (often one-key-narrow) bar
+              width so two-char accidentals like "D♯" stay legible instead of
+              being clipped — they spill into the usually-empty side gutters. */}
+          {showNoteNames ? (
+            <span className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center text-3xs font-medium leading-none text-primary-foreground">
+              {label}
+            </span>
+          ) : null}
+        </div>
       ))}
 
       {/* Overlays anchor against the published projection. */}

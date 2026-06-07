@@ -1,0 +1,5 @@
+// @hash 5fe95c1aaae9
+{
+  // Show each note's name inside its falling bar, like Synthesia.
+  "showNoteNames": false
+}

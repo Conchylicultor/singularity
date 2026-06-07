@@ -1,7 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGraphicEq } from "react-icons/md";
+import { ConfigV2 } from "@plugins/config_v2/web";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { PianoRoll } from "./components/piano-roll";
+import { pianoRollConfig } from "../shared/config";
 
 export default {
   name: "Sonata: Piano Roll",
@@ -18,5 +20,6 @@ export default {
       capabilities: ["time-axis", "pitch-plane"],
       component: PianoRoll,
     }),
+    ConfigV2.WebRegister({ descriptor: pianoRollConfig }),
   ],
 } satisfies PluginDefinition;
