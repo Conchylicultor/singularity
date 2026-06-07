@@ -69,6 +69,30 @@ Opting in is a ~two-line change on each side:
 Strictly additive: `push`/`invalidate` resources are untouched. `tasks` and
 `attempts` are the first adopters.
 
+### Scoped recompute (`notify(params, { affectedIds })`)
+
+Layer 1 shrinks the wire payload but the keyed loader still recomputes the
+**whole** view on every fire. Layer 2 lets a high-frequency content-only caller
+scope the recompute: `notify(params, { affectedIds: [...] })` tells the loader,
+via `ctx.affectedIds`, which row ids changed, so it can `WHERE id IN (…)` and
+return only those rows. The scoped diff merges the partial result into the
+existing snapshot and ships a `{ kind: "delta", upserts, deletes: [], order:
+undefined }` — exactly Layer 1's content-delta shape, so the client needs zero
+changes. An empty scoped set skips the send entirely.
+
+This is **opt-in and strictly additive**: plain `notify()` / `notify(params)`
+keeps today's full-recompute semantics, which remain authoritative for any
+membership change (create/delete/reorder must stay FULL — a scoped delta never
+asserts `order`/`deletes`). It is also **sticky-FULL**: within one flush, if any
+contributor to a pk is id-less (or a cascade edge can't map ids), the pk
+degrades to a FULL recompute — scoping never silently drops a change, and the
+next FULL notify or a resub self-heals any drift. Cascades propagate scope via
+an `affectedMap?(upstreamAffected, upstreamParams) => string[]` on each
+`dependsOn` edge (upstream-FULL, missing map, or a throwing map ⇒ downstream
+FULL). `affectedMap` must self-query the DB rather than read the upstream value,
+so it does not force the upstream loader to run. The conversation poller and
+`insertPush` are the first adopters.
+
 ### Future escape hatch (NOT yet implemented)
 
 Some hot-path resources may eventually be large enough that Zod-parsing every

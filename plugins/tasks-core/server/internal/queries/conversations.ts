@@ -1,4 +1,4 @@
-import { and, asc, count, desc, eq, isNotNull, lt, ne, type SQL } from "drizzle-orm";
+import { and, asc, count, desc, eq, inArray, isNotNull, lt, ne, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _conversations } from "../tables";
 import { conversations } from "../schema";
@@ -108,13 +108,20 @@ export function listGoneConversations(opts: {
 }
 
 // Narrow projection used by attemptsResource. Sorted oldest-first so the
-// client renders them in attempt-order without further sorting.
-export async function listConversationSummariesByAttempt(): Promise<
+// client renders them in attempt-order without further sorting. Pass
+// `attemptIds` to scope the join to just those attempts (Layer 2 scoped
+// recompute); omit it for the full list.
+export async function listConversationSummariesByAttempt(
+  attemptIds?: readonly string[],
+): Promise<
   Pick<
     Conversation,
     "id" | "attemptId" | "title" | "status" | "kind" | "createdAt" | "spawnedBy"
   >[]
 > {
+  const where = attemptIds
+    ? and(notSystem, inArray(conversations.attemptId, [...attemptIds]))
+    : notSystem;
   return db
     .select({
       id: conversations.id,
@@ -126,7 +133,7 @@ export async function listConversationSummariesByAttempt(): Promise<
       spawnedBy: conversations.spawnedBy,
     })
     .from(conversations)
-    .where(notSystem)
+    .where(where)
     .orderBy(asc(conversations.createdAt));
 }
 

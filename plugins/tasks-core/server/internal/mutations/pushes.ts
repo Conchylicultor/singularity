@@ -34,8 +34,11 @@ export async function insertPush(input: InsertPushInput): Promise<boolean> {
     .returning();
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (row) {
-    pushesResource.notify();
-    attemptsResource.notify();
+    // Scoped recompute: a push lands on exactly one attempt. The pushes notify
+    // carries [attemptId] as its affected ids (the pushes→attempts edge maps
+    // them identity-style to attempt ids); attempts recompute only that row.
+    pushesResource.notify(undefined, { affectedIds: [input.attemptId] });
+    attemptsResource.notify(undefined, { affectedIds: [input.attemptId] });
     // Emit after the INSERT has committed (auto-commit: no tx wraps this call).
     // See docs/events.md §"Transactional boundary on emit()".
     await pushLanded.emit({

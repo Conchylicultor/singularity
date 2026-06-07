@@ -74,7 +74,12 @@ async function collectLive(): Promise<{
 const UNINFORMATIVE_TITLES = ["Untitled", "Untitled conversation", "Claude Code"];
 
 async function tick(): Promise<void> {
-  let changed = false;
+  // Scoped recompute (Layer 2): collect the ids of conversations whose row
+  // actually changed this tick, so the attempts/tasks cascade recomputes only
+  // those rows. `adoptedAny` tracks membership changes (orphan adoption creates
+  // attempt/task rows) — those force a FULL recompute, never scoped.
+  const changedIds = new Set<string>();
+  let adoptedAny = false;
   const [{ next, failedRuntimes }, rows] = await Promise.all([
     collectLive(),
     listConversationsForInfra(),
@@ -103,7 +108,7 @@ async function tick(): Promise<void> {
           });
           if (adopted) {
             dbById.set(adopted.id, adopted);
-            changed = true;
+            adoptedAny = true;
           }
         } catch (err) {
           console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);
@@ -123,10 +128,10 @@ async function tick(): Promise<void> {
 
   for (const [id, info] of next) {
     const prev = snapshot.get(id);
-    if (!prev || prev.working !== info.working) changed = true;
+    if (!prev || prev.working !== info.working) changedIds.add(id);
   }
   for (const id of snapshot.keys()) {
-    if (!next.has(id)) changed = true;
+    if (!next.has(id)) changedIds.add(id);
   }
   snapshot = next;
 
@@ -142,9 +147,9 @@ async function tick(): Promise<void> {
       if (dbRow.status === "gone") continue;
       if (dbRow.closeRequested) {
         await markConversationClosed(id);
-        changed = true;
+        changedIds.add(id);
       } else {
-        if (await markConversationGone(id)) changed = true;
+        if (await markConversationGone(id)) changedIds.add(id);
       }
       continue;
     }
@@ -184,7 +189,7 @@ async function tick(): Promise<void> {
     if (titleChanged && desiredTitle && !UNINFORMATIVE_TITLES.includes(desiredTitle)) {
       await updateTaskTitle(dbRow.taskId, desiredTitle, UNINFORMATIVE_TITLES);
     }
-    changed = true;
+    changedIds.add(id);
 
     // Auto-open question prompts: the moment a conversation enters the
     // interactive-question wait, optionally dismiss the terminal menu for the
@@ -241,13 +246,16 @@ async function tick(): Promise<void> {
     }
     if (dbRow.closeRequested) {
       await markConversationClosed(id);
-      changed = true;
+      changedIds.add(id);
     } else {
-      if (await markConversationGone(id)) changed = true;
+      if (await markConversationGone(id)) changedIds.add(id);
     }
   }
 
-  if (changed) notifyConversationsChanged();
+  // Adoption changes attempt/task membership → FULL recompute. Otherwise scope
+  // the cascade to just the conversations that actually changed this tick.
+  if (adoptedAny) notifyConversationsChanged();
+  else if (changedIds.size) notifyConversationsChanged([...changedIds]);
 }
 
 function logTickError(label: string, err: unknown): void {

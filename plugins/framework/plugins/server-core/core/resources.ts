@@ -34,12 +34,34 @@ export interface DependsOnEntry<P extends ResourceParams = ResourceParams> {
     upstreamParams: any,
     upstreamValue: unknown,
   ) => P[];
+  /**
+   * Scoped-recompute (Layer 2): translate the set of changed upstream row ids
+   * into the set of changed downstream row ids, so the downstream loader can
+   * recompute only the affected rows (`WHERE id IN (…)`) instead of the whole
+   * view. Only consulted when the upstream notify carried `affectedIds`. If
+   * absent (or it throws), the cascade degrades the downstream to a FULL
+   * recompute — never silently drops a change. Must self-query the DB rather
+   * than read the upstream value, so it does NOT force the upstream loader to
+   * run. See research/2026-06-06-global-live-state-layer2-scoped-recompute-impl.md.
+   */
+  affectedMap?: (
+    upstreamAffected: ReadonlySet<string>,
+    // biome-ignore lint/suspicious/noExplicitAny: upstream params type is erased — see above.
+    upstreamParams: any,
+  ) => Promise<string[]> | string[];
 }
 
 export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode?: ResourceMode;
-  loader: (params: P) => Promise<T> | T;
+  /**
+   * Compute the resource value for `params`. When the notify that triggered
+   * this load carried scoped `affectedIds` (Layer 2), `ctx.affectedIds` lists
+   * the changed row ids and the loader MAY recompute only those rows (returning
+   * a partial array for `keyed` mode — the diff merges it into the snapshot).
+   * Full loads (sub-ack, HTTP fallback, plain `notify()`) pass `ctx === undefined`.
+   */
+  loader: (params: P, ctx?: { affectedIds: readonly string[] }) => Promise<T> | T;
   /**
    * Zod schema for the payload. The descriptor exposed to clients carries
    * this schema so the browser parses every payload before it lands in the
@@ -78,19 +100,41 @@ export interface Resource<T, P extends ResourceParams = ResourceParams> {
   mode: ResourceMode;
   schema?: ZodType<T>;
   load(params: P): Promise<T>;
-  /** Signal that state has changed. No-arg = parameterless resource. */
-  notify(params?: P): void;
+  /**
+   * Signal that state has changed. No-arg = parameterless resource.
+   * `opts.affectedIds` (Layer 2) scopes the recompute to those row ids — the
+   * loader receives them via `ctx.affectedIds` and may return only the changed
+   * rows. Omit it for full-recompute semantics (the correct default for any
+   * membership change: create/delete/reorder). Sticky FULL: any id-less
+   * contributor to the same flush degrades the whole pk back to FULL.
+   */
+  notify(params?: P, opts?: { affectedIds?: string[] }): void;
 }
 
 interface DownstreamEdge {
   downstreamKey: string;
   map?: (upstreamParams: ResourceParams, upstreamValue: unknown) => ResourceParams[];
+  affectedMap?: (
+    upstreamAffected: ReadonlySet<string>,
+    upstreamParams: ResourceParams,
+  ) => Promise<string[]> | string[];
+}
+
+// A coalesced pending notify for one params-tuple. `affected === null` means
+// FULL recompute (sticky/absorbing): once a flush has any id-less contributor
+// the pk stays FULL. A non-null Set scopes the recompute to those row ids.
+interface PendingNotify {
+  params: ResourceParams;
+  affected: Set<string> | null;
 }
 
 interface RegistryEntry {
   key: string;
   mode: ResourceMode;
-  loader: (params: ResourceParams) => Promise<unknown> | unknown;
+  loader: (
+    params: ResourceParams,
+    ctx?: { affectedIds: readonly string[] },
+  ) => Promise<unknown> | unknown;
   /** Row identity for keyed mode. Undefined for push/invalidate entries. */
   keyOf?: (row: unknown) => string;
   /**
@@ -102,7 +146,7 @@ interface RegistryEntry {
   /** Monotonic version per params-tuple. */
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
-  pendingNotifies: Map<string, ResourceParams>;
+  pendingNotifies: Map<string, PendingNotify>;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
   /** Upstream keys this entry listens to (for cycle detection). */
@@ -120,8 +164,34 @@ let topoOrder: RegistryEntry[] = [];
 // Time a resource loader call and record a `loader` span keyed by entry.key.
 // recordEntrySpan also establishes the ambient parent context so DB queries
 // issued inside the loader attribute to it.
-function timedLoad(entry: RegistryEntry, params: ResourceParams): Promise<unknown> {
-  return recordEntrySpan("loader", entry.key, () => entry.loader(params));
+function timedLoad(
+  entry: RegistryEntry,
+  params: ResourceParams,
+  ctx?: { affectedIds: readonly string[] },
+): Promise<unknown> {
+  return recordEntrySpan("loader", entry.key, () => entry.loader(params, ctx));
+}
+
+// Coalesce an incoming notify into the pending map for one pk, applying the
+// FULL-absorbing union: a null `incoming` (or an existing FULL) sticks the pk
+// at FULL; otherwise the incoming ids union into the existing scoped set.
+function mergePending(
+  map: Map<string, PendingNotify>,
+  pk: string,
+  params: ResourceParams,
+  incoming: Set<string> | null,
+): void {
+  const existing = map.get(pk);
+  if (!existing) {
+    map.set(pk, { params, affected: incoming === null ? null : new Set(incoming) });
+    return;
+  }
+  if (existing.affected === null) return; // FULL absorbs everything
+  if (incoming === null) {
+    existing.affected = null; // degrade to FULL
+    return;
+  }
+  for (const id of incoming) existing.affected.add(id);
 }
 
 function paramsKey(params: ResourceParams): string {
@@ -157,13 +227,22 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
               upstreamValue: unknown,
             ) => ResourceParams[])
           | undefined,
+        affectedMap: dep.affectedMap as
+          | ((
+              upstreamAffected: ReadonlySet<string>,
+              upstreamParams: ResourceParams,
+            ) => Promise<string[]> | string[])
+          | undefined,
       },
     });
   }
   const entry: RegistryEntry = {
     key: def.key,
     mode,
-    loader: def.loader as (params: ResourceParams) => Promise<unknown> | unknown,
+    loader: def.loader as (
+      params: ResourceParams,
+      ctx?: { affectedIds: readonly string[] },
+    ) => Promise<unknown> | unknown,
     keyOf: def.keyOf as ((row: unknown) => string) | undefined,
     snapshots: mode === "keyed" ? new Map() : undefined,
     versions: new Map(),
@@ -196,8 +275,9 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     async load(params: P): Promise<T> {
       return (await def.loader(params)) as T;
     },
-    notify(params?: P): void {
-      scheduleNotify(entry, (params ?? ({} as P)) as ResourceParams);
+    notify(params?: P, opts?: { affectedIds?: string[] }): void {
+      const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;
+      scheduleNotify(entry, (params ?? ({} as P)) as ResourceParams, affected);
     },
   };
 }
@@ -298,8 +378,12 @@ export async function withNotifyBatch<T>(fn: () => Promise<T>): Promise<T> {
   }
 }
 
-function scheduleNotify(entry: RegistryEntry, params: ResourceParams): void {
-  entry.pendingNotifies.set(paramsKey(params), params);
+function scheduleNotify(
+  entry: RegistryEntry,
+  params: ResourceParams,
+  affected: Set<string> | null,
+): void {
+  mergePending(entry.pendingNotifies, paramsKey(params), params, affected);
   if (batchDepth > 0) return;
   if (flushScheduled) return;
   flushScheduled = true;
@@ -385,6 +469,41 @@ function diffKeyed(entry: RegistryEntry, pk: string, value: unknown): KeyedDiff 
   return { upserts, deletes, order: orderUnchanged ? undefined : order, hadSnapshot };
 }
 
+// Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed
+// affected rows. We MERGE them into the existing snapshot (never replace it):
+// each changed row becomes an upsert and its hash is written back; rows not in
+// `scopedRows` are left intact (no upsert). `deletes` is necessarily empty and
+// `order` is unchanged — a scoped notify never asserts membership/order, so a
+// concurrently-deleted row is corrected by the delete site's own FULL notify.
+// Precondition: a snapshot for `pk` already exists (caller only enters the
+// scoped path when `hadSnapshot`).
+function diffKeyedScoped(
+  entry: RegistryEntry,
+  pk: string,
+  scopedRows: unknown[],
+): { upserts: [string, unknown][] } {
+  const keyOf = entry.keyOf;
+  if (!keyOf) {
+    throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
+  }
+  const snap = entry.snapshots?.get(pk);
+  if (!snap) {
+    throw new Error(
+      `[resources] diffKeyedScoped called for "${entry.key}" pk "${pk}" with no snapshot`,
+    );
+  }
+  const upserts: [string, unknown][] = [];
+  for (const row of scopedRows) {
+    const id = keyOf(row);
+    const hash = JSON.stringify(row);
+    if (snap.get(id) !== hash) {
+      upserts.push([id, row]);
+      snap.set(id, hash);
+    }
+  }
+  return { upserts };
+}
+
 async function flushNotifies(): Promise<void> {
   flushScheduled = false;
   rebuildDag();
@@ -396,8 +515,13 @@ async function flushNotifies(): Promise<void> {
     if (entry.pendingNotifies.size === 0) continue;
     const pending = Array.from(entry.pendingNotifies.values());
     entry.pendingNotifies.clear();
-    for (const params of pending) {
+    for (const { params, affected } of pending) {
       const pk = paramsKey(params);
+      // Scoped notify (Layer 2): `affected !== null` means recompute only those
+      // row ids. An empty scoped set = nothing actually changed → skip the send
+      // entirely (no version bump, no empty delta, no cascade).
+      const scoped = affected !== null;
+      if (scoped && affected.size === 0) continue;
       const version = (entry.versions.get(pk) ?? 0) + 1;
       entry.versions.set(pk, version);
       const subs = subscribersFor(entry.key, pk);
@@ -405,15 +529,18 @@ async function flushNotifies(): Promise<void> {
       // Compute value once if either a subscriber (push mode) or any
       // value-aware downstream `map` needs it. For invalidate-mode upstreams
       // we still compute when a map wants it — rare today, acceptable cost.
+      // `affectedMap` self-queries the DB and must NOT force the value, else we
+      // reintroduce the full upstream load Layer 2 is removing.
       const hasValueAwareDownstream = entry.downstream.some((d) => d.map !== undefined);
       const needValue =
         ((entry.mode === "push" || entry.mode === "keyed") && subs.length > 0) ||
         hasValueAwareDownstream;
+      const ctx = scoped ? { affectedIds: [...affected] } : undefined;
       let value: unknown;
       let valueComputed = false;
       if (needValue) {
         try {
-          value = await timedLoad(entry, params);
+          value = await timedLoad(entry, params, ctx);
           valueComputed = true;
         } catch (err) {
           console.error(`[resources] loader failed for ${entry.key}`, err);
@@ -430,25 +557,69 @@ async function flushNotifies(): Promise<void> {
           for (const s of subs) sendJson(s.ws, msg);
         } else if (entry.mode === "keyed") {
           // `value` is guaranteed computed (needValue is true for keyed + subs).
-          // diffKeyed replaces the stored snapshot only here, after the loader
-          // succeeded — the loader-failure `continue` above leaves it untouched.
-          const { upserts, deletes, order, hadSnapshot } = diffKeyed(entry, pk, value);
-          if (!hadSnapshot) {
-            // First notify for this pk: ship a full update so brand-new
-            // subscribers get a complete base to merge subsequent deltas onto.
-            const msg = { kind: "update" as const, key: entry.key, params, value, version };
-            for (const s of subs) sendJson(s.ws, msg);
-          } else {
+          const hadSnapshot = entry.snapshots?.has(pk) ?? false;
+          if (scoped && !hadSnapshot) {
+            // Near-unreachable: a subscribed pk always seeded a snapshot at
+            // sub-ack. If we somehow get here, the scoped `value` is partial and
+            // unsafe for diffKeyed — reload the FULL value and diff that.
+            let full: unknown;
+            try {
+              full = await timedLoad(entry, params, undefined);
+            } catch (err) {
+              console.error(`[resources] loader failed for ${entry.key}`, err);
+              reportServerError(errorReport(`loader failed for ${entry.key}`, err));
+              continue;
+            }
+            // hadSnapshot was false ⇒ ship a full update base. diffKeyed here
+            // serves only to (re)seed the snapshot from the full value.
+            diffKeyed(entry, pk, full);
             const msg = {
-              kind: "delta" as const,
+              kind: "update" as const,
               key: entry.key,
               params,
-              upserts,
-              deletes,
-              order,
+              value: full,
               version,
             };
             for (const s of subs) sendJson(s.ws, msg);
+          } else if (scoped) {
+            // Scoped path: merge the partial recompute into the snapshot and
+            // ship only the changed rows. `deletes:[]`, `order:undefined` —
+            // a scoped notify never asserts membership/order (those stay FULL).
+            const { upserts } = diffKeyedScoped(entry, pk, value as unknown[]);
+            if (upserts.length) {
+              const msg = {
+                kind: "delta" as const,
+                key: entry.key,
+                params,
+                upserts,
+                deletes: [] as string[],
+                order: undefined,
+                version,
+              };
+              for (const s of subs) sendJson(s.ws, msg);
+            }
+          } else {
+            // FULL path (unchanged from Layer 1). diffKeyed replaces the stored
+            // snapshot only here, after the loader succeeded — the loader-failure
+            // `continue` above leaves it untouched.
+            const { upserts, deletes, order } = diffKeyed(entry, pk, value);
+            if (!hadSnapshot) {
+              // First notify for this pk: ship a full update so brand-new
+              // subscribers get a complete base to merge subsequent deltas onto.
+              const msg = { kind: "update" as const, key: entry.key, params, value, version };
+              for (const s of subs) sendJson(s.ws, msg);
+            } else {
+              const msg = {
+                kind: "delta" as const,
+                key: entry.key,
+                params,
+                upserts,
+                deletes,
+                order,
+                version,
+              };
+              for (const s of subs) sendJson(s.ws, msg);
+            }
           }
         } else {
           const msg = { kind: "update" as const, key: entry.key, params, value, version };
@@ -476,8 +647,30 @@ async function flushNotifies(): Promise<void> {
         } else {
           derived = [params];
         }
+        // Compute the downstream affected set. Upstream FULL ⇒ FULL; no
+        // affectedMap ⇒ FULL; a throwing affectedMap fails safe to FULL. Never
+        // silently narrows a membership change.
+        let downAffected: Set<string> | null;
+        if (affected === null) {
+          downAffected = null;
+        } else if (!edge.affectedMap) {
+          downAffected = null;
+        } else {
+          try {
+            downAffected = new Set(await edge.affectedMap(affected, params));
+          } catch (err) {
+            console.error(
+              `[resources] affectedMap failed (${entry.key} → ${edge.downstreamKey})`,
+              err,
+            );
+            reportServerError(
+              errorReport(`affectedMap failed (${entry.key} → ${edge.downstreamKey})`, err),
+            );
+            downAffected = null;
+          }
+        }
         for (const dp of derived) {
-          down.pendingNotifies.set(paramsKey(dp), dp);
+          mergePending(down.pendingNotifies, paramsKey(dp), dp, downAffected);
         }
       }
     }

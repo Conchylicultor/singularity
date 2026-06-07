@@ -1,8 +1,8 @@
-import { asc, desc, eq } from "drizzle-orm";
+import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { pushes } from "./tables";
-import { attempts, tasks } from "./schema";
+import { attempts, conversations, tasks } from "./schema";
 import {
   TaskSchema,
   TaskListItemSchema,
@@ -61,11 +61,38 @@ export const attemptsResource = defineResource({
   mode: "keyed",
   keyOf: (r) => r.id,
   schema: z.array(AttemptWithConversationsSchema),
-  dependsOn: [{ resource: conversationsLiveResource }, { resource: pushesResource }],
-  loader: async (): Promise<AttemptWithConversations[]> => {
+  dependsOn: [
+    {
+      resource: conversationsLiveResource,
+      // A changed conversation affects exactly its owning attempt. Map the
+      // changed conversation ids → their attempt ids via the conversations_v
+      // view (carries attemptId; index conversations_attempt_id_status_idx).
+      affectedMap: async (convIds) => {
+        const rows = await db
+          .selectDistinct({ attemptId: conversations.attemptId })
+          .from(conversations)
+          .where(inArray(conversations.id, [...convIds]));
+        return rows.map((r) => r.attemptId);
+      },
+    },
+    {
+      resource: pushesResource,
+      // insertPush scopes the pushes notify to [attemptId], so the affected
+      // pushes "ids" ARE attempt ids — identity map.
+      affectedMap: (attemptIds) => [...attemptIds],
+    },
+  ],
+  loader: async (_params, ctx): Promise<AttemptWithConversations[]> => {
+    const ids = ctx?.affectedIds;
     const [attemptRows, convRows] = await Promise.all([
-      db.select().from(attempts).orderBy(asc(attempts.createdAt)),
-      listConversationSummariesByAttempt(),
+      ids
+        ? db
+            .select()
+            .from(attempts)
+            .where(inArray(attempts.id, [...ids]))
+            .orderBy(asc(attempts.createdAt))
+        : db.select().from(attempts).orderBy(asc(attempts.createdAt)),
+      listConversationSummariesByAttempt(ids),
     ]);
     const byAttempt = new Map<string, ConversationSummary[]>();
     for (const c of convRows) {
@@ -97,9 +124,23 @@ export const tasksResource = defineResource<TaskListItem[]>({
   mode: "keyed",
   keyOf: (r) => r.id,
   schema: z.array(TaskListItemSchema),
-  dependsOn: [{ resource: attemptsResource }],
-  loader: async () =>
-    db
+  dependsOn: [
+    {
+      resource: attemptsResource,
+      // A changed attempt affects exactly its owning task. Map changed attempt
+      // ids → their task ids via the attempts_v view (carries taskId; index
+      // attempts_task_id_idx).
+      affectedMap: async (attemptIds) => {
+        const rows = await db
+          .selectDistinct({ taskId: attempts.taskId })
+          .from(attempts)
+          .where(inArray(attempts.id, [...attemptIds]));
+        return rows.map((r) => r.taskId);
+      },
+    },
+  ],
+  loader: async (_params, ctx) => {
+    const sel = db
       .select({
         id: tasks.id,
         folderId: tasks.folderId,
@@ -117,8 +158,14 @@ export const tasksResource = defineResource<TaskListItem[]>({
         finishedAt: tasks.finishedAt,
         dependencies: tasks.dependencies,
       })
-      .from(tasks)
-      .orderBy(asc(tasks.rank), asc(tasks.createdAt)) as unknown as Promise<TaskListItem[]>,
+      .from(tasks);
+    const scoped = ctx?.affectedIds
+      ? sel.where(inArray(tasks.id, [...ctx.affectedIds]))
+      : sel;
+    return scoped.orderBy(asc(tasks.rank), asc(tasks.createdAt)) as unknown as Promise<
+      TaskListItem[]
+    >;
+  },
 });
 
 // Per-id detail resource: the full task row (incl. `description`). Only loads
