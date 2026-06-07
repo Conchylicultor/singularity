@@ -4,6 +4,7 @@ import {
   CollapsibleChevron,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import {
   Section,
   type PluginNode,
@@ -45,34 +46,38 @@ function PluginTreeNode({
   const openPane = useOpenPane();
   const hasChildren = node.children.length > 0;
 
+  const chevronIcon = hasChildren ? (
+    <button
+      type="button"
+      className="flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
+      onClick={(e) => {
+        e.stopPropagation();
+        toggle();
+      }}
+    >
+      <CollapsibleChevron open={expanded} className="size-3.5" />
+    </button>
+  ) : (
+    <span className="size-4 shrink-0" />
+  );
+
   return (
     <>
-      <div
-        className="group flex min-h-7 cursor-pointer items-center gap-1 rounded-md px-2 py-0.5 text-sm hover:bg-accent"
-        style={{ paddingLeft: depth * 16 + 8 }}
+      <Row
+        hover="accent"
+        size="sm"
+        indent={depth * 16 + 8}
+        icon={chevronIcon}
         onClick={() =>
           openPane(pluginViewPane, { pluginId: node.hierarchyId }, { mode: "swap" })
         }
+        className="min-h-7 cursor-pointer"
       >
-        {hasChildren ? (
-          <button
-            type="button"
-            className="flex size-4 shrink-0 items-center justify-center rounded-sm text-muted-foreground hover:text-foreground"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggle();
-            }}
-          >
-            <CollapsibleChevron open={expanded} className="size-3.5" />
-          </button>
-        ) : (
-          <span className="size-4 shrink-0" />
-        )}
         <span className="truncate">{node.name}</span>
         {node.loadBearing && (
           <MdBolt className="size-3 shrink-0 text-warning" />
         )}
-      </div>
+      </Row>
       {expanded &&
         node.children.map((c) => (
           <PluginTreeNode key={c.hierarchyId} node={c} depth={depth + 1} />

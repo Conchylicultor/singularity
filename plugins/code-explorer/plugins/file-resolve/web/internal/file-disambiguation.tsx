@@ -1,3 +1,5 @@
+import { Row } from "@plugins/primitives/plugins/row/web";
+
 export function FileDisambiguation({
   query,
   matches,
@@ -19,14 +21,15 @@ export function FileDisambiguation({
           const dir = lastSlash >= 0 ? filePath.slice(0, lastSlash + 1) : "";
           const name = lastSlash >= 0 ? filePath.slice(lastSlash + 1) : filePath;
           return (
-            <button
+            <Row
               key={filePath}
-              className="flex w-full items-baseline gap-0 rounded px-2 py-1.5 text-left text-xs hover:bg-muted"
+              size="sm"
+              hover="muted"
               onClick={() => onSelect(filePath)}
             >
               <span className="text-muted-foreground">{dir}</span>
               <span className="font-medium text-foreground">{name}</span>
-            </button>
+            </Row>
           );
         })}
       </div>

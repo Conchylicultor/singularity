@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdGridView } from "react-icons/md";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   beatToSeconds,
@@ -55,18 +55,14 @@ export function ChordGridAddAction() {
   }
 
   return (
-    <button
-      type="button"
+    <Button
+      variant="outline"
+      size="sm"
       disabled={creating}
       onClick={() => void create()}
-      className={cn(
-        "flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium",
-        "text-foreground transition-colors hover:bg-muted/50",
-        "disabled:cursor-not-allowed disabled:opacity-60",
-      )}
     >
       <MdGridView className="size-4" />
       {creating ? "Adding…" : "New Chord Grid"}
-    </button>
+    </Button>
   );
 }

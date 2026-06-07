@@ -8,7 +8,7 @@ import { MdChevronRight } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
 
-interface CollapsibleCtx {
+export interface CollapsibleCtx {
   open: boolean;
   toggle: () => void;
   contentId: string;
@@ -23,6 +23,16 @@ function useCtx() {
       "Collapsible compound components must be used inside <Collapsible>",
     );
   return ctx;
+}
+
+/**
+ * Reads the compound collapsible context WITHOUT throwing when absent.
+ * Returns null outside a <Collapsible>. Lets context-aware components (e.g.
+ * SectionHeaderRow) integrate with the compound pattern's open/toggle/aria
+ * wiring while still working standalone. The raw Ctx stays private.
+ */
+export function useCollapsibleContext(): CollapsibleCtx | null {
+  return useContext(Ctx);
 }
 
 export interface CollapsibleProps extends UseCollapsibleOptions {

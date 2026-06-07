@@ -5,12 +5,14 @@ export {
   CollapsibleTrigger,
   CollapsibleContent,
   CollapsibleChevron,
+  useCollapsibleContext,
 } from "./internal/collapsible";
 export type {
   CollapsibleProps,
   CollapsibleTriggerProps,
   CollapsibleContentProps,
   CollapsibleChevronProps,
+  CollapsibleCtx,
 } from "./internal/collapsible";
 
 export { useCollapsible } from "./internal/use-collapsible";

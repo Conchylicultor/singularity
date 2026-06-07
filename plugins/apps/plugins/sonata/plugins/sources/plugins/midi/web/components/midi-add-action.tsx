@@ -1,6 +1,6 @@
 import { useRef, useState } from "react";
 import { MdFileUpload } from "react-icons/md";
-import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
@@ -53,19 +53,15 @@ export function MidiAddAction() {
 
   return (
     <>
-      <button
-        type="button"
+      <Button
+        variant="outline"
+        size="sm"
         disabled={importing}
         onClick={() => fileInputRef.current?.click()}
-        className={cn(
-          "flex items-center gap-1.5 rounded-md border border-border px-3 py-1.5 text-sm font-medium",
-          "text-foreground transition-colors hover:bg-muted/50",
-          "disabled:cursor-not-allowed disabled:opacity-60",
-        )}
       >
         <MdFileUpload className="size-4" />
         {importing ? "Importing…" : "Import"}
-      </button>
+      </Button>
       <input
         ref={fileInputRef}
         type="file"

@@ -1,5 +1,6 @@
 import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
@@ -95,14 +96,13 @@ export function DepPopoverContent({
         <ul className="max-h-64 space-y-px overflow-y-auto">
           {availableConvs.map((c) => (
             <li key={c.taskId}>
-              <button
-                type="button"
-                className="w-full rounded px-2 py-1 text-left hover:bg-accent disabled:opacity-50"
+              <Row
+                size="sm"
                 onClick={() => onAdd(c)}
                 disabled={busy !== null}
               >
                 <ConversationItem conv={c} layout="inline" />
-              </button>
+              </Row>
             </li>
           ))}
         </ul>

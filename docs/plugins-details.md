@@ -1830,7 +1830,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `BreadcrumbProps`, `BreadcrumbSegment`; Values: `Breadcrumb`
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
       - Web:
-        - Exports: Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleProps`, `CollapsibleTriggerProps`, `ExpandAllButtonProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`, `UseExpandAllReturn`; Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `ExpandAllButton`, `useCollapsible`, `useExpandAll`
+        - Exports: Types: `CollapsibleChevronProps`, `CollapsibleContentProps`, `CollapsibleCtx`, `CollapsibleProps`, `CollapsibleTriggerProps`, `ExpandAllButtonProps`, `UseCollapsibleOptions`, `UseCollapsibleReturn`, `UseExpandAllReturn`; Values: `Collapsible`, `CollapsibleChevron`, `CollapsibleContent`, `CollapsibleTrigger`, `ExpandAllButton`, `useCollapsible`, `useCollapsibleContext`, `useExpandAll`
     - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
       - Web:
         - Exports: Types: `AlphaSliderProps`, `ColorAreaProps`, `ColorInputProps`, `ColorPickerPopoverProps`, `ColorPickerProps`, `HueSliderProps`, `SwatchGridProps`; Values: `AlphaSlider`, `Color`, `ColorArea`, `ColorInput`, `ColorPicker`, `ColorPickerPopover`, `HueSlider`, `MAX_CHROMA`, `SwatchGrid`
@@ -1963,6 +1963,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`responsive-overflow`** — Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
       - Web:
         - Exports: Types: `ResponsiveOverflowProps`, `UseResponsiveOverflowHandle`, `UseResponsiveOverflowOptions`; Values: `ResponsiveOverflow`, `useResponsiveOverflow`
+    - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
+      - Web:
+        - Exports: Types: `RowHover`, `RowProps`, `RowSize`, `SectionHeaderRowProps`, `SectionHeaderVariant`; Values: `Row`, `SectionHeaderRow`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Web:
         - Exports: Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`; Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`

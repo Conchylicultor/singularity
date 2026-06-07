@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect, type ReactNode } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { MdClose, MdSearch } from "react-icons/md";
 import {
   Popover,
@@ -155,13 +156,14 @@ export function AvatarPicker({
         {(value.icon || value.color) && (
           <>
             <div className="my-1 h-px bg-border" />
-            <button
-              type="button"
+            <Row
+              size="sm"
+              hover="accent"
               onClick={() => void onChange({ icon: null, color: null, svgNodes: null })}
-              className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-xs text-muted-foreground hover:bg-accent"
+              className="text-muted-foreground"
             >
               Clear
-            </button>
+            </Row>
           </>
         )}
       </PopoverContent>

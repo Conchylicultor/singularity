@@ -24,7 +24,8 @@ import {
 } from "../../core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Button } from "@/components/ui/button";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
 import type { TreeItem } from "./types";
@@ -305,23 +306,22 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                   <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
                 )}
                 {toolbar.hideTerminal && (
-                  <button
-                    type="button"
+                  <ToggleChip
+                    active={hideTerminal}
+                    variant="ghost"
+                    size="sm"
                     onClick={() => setHideTerminal(!hideTerminal)}
-                    aria-pressed={hideTerminal}
                     title={hideTerminal ? "Show completed" : "Hide completed"}
-                    className={cn(
-                      "hover:bg-accent flex w-fit items-center gap-1 rounded px-2 py-1 text-xs",
-                      hideTerminal ? "text-foreground" : "text-muted-foreground",
-                    )}
+                    icon={
+                      hideTerminal ? (
+                        <MdFilterAlt className="size-4" />
+                      ) : (
+                        <MdFilterAltOff className="size-4" />
+                      )
+                    }
                   >
-                    {hideTerminal ? (
-                      <MdFilterAlt className="size-4" />
-                    ) : (
-                      <MdFilterAltOff className="size-4" />
-                    )}
                     {hideTerminal ? "Completed hidden" : "Hide completed"}
-                  </button>
+                  </ToggleChip>
                 )}
               </div>
             </div>
@@ -330,14 +330,15 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
             <Row key={node.id} node={node} depth={0} />
           ))}
           {showRootAdd && (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => void createAtRoot(null)}
-              className="text-muted-foreground hover:bg-accent hover:text-foreground mt-1 flex w-fit items-center gap-1 rounded px-2 py-1 text-sm"
+              className="text-muted-foreground mt-1 w-fit"
             >
               <MdAdd className="size-4" />
               {addLabel}
-            </button>
+            </Button>
           )}
         </div>
       </TreeListProvider>

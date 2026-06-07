@@ -5,6 +5,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
@@ -59,10 +60,23 @@ function DependentChip({
 
   return (
     <li>
-      <div
-        className={`hover:bg-muted flex items-center gap-1 rounded border px-2 py-0.5 text-xs ${
-          isTerminal ? "text-muted-foreground line-through" : ""
-        }`}
+      <Row
+        as="div"
+        bordered
+        size="sm"
+        hover="muted"
+        actionsAlwaysVisible
+        className={isTerminal ? "text-muted-foreground line-through" : undefined}
+        actions={
+          <button
+            type="button"
+            onClick={remove}
+            className="hover:bg-destructive/10 hover:text-destructive rounded p-0.5"
+            aria-label={`Remove dependent ${title}`}
+          >
+            <MdClose className="h-3 w-3" />
+          </button>
+        }
       >
         <button
           type="button"
@@ -72,15 +86,7 @@ function DependentChip({
         >
           {title}
         </button>
-        <button
-          type="button"
-          onClick={remove}
-          className="hover:bg-destructive/10 hover:text-destructive rounded p-0.5"
-          aria-label={`Remove dependent ${title}`}
-        >
-          <MdClose className="h-3 w-3" />
-        </button>
-      </div>
+      </Row>
     </li>
   );
 }

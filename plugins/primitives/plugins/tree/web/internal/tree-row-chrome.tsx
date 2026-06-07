@@ -32,6 +32,12 @@ export type TreeRowChromeProps = {
  * reserved chevron slot. No hooks, no context, no dnd-kit — both the editable
  * RowChrome and read-only trees (e.g. config nav) render through it so every
  * tree row in the app shares one height invariant.
+ *
+ * Deliberately NOT built on the generic `Row` primitive: tree rows need a
+ * NAMED group (`group/tree-row`) to scope the chevron/actions hover-reveal to
+ * the individual row. `Row` uses a bare `group`, which leaks the reveal when an
+ * ancestor also carries a bare `group` (e.g. the shadcn sidebar wrapper) —
+ * showing every row's actions at once. Hence the row/no-adhoc-row exception.
  */
 export function TreeRowChrome({
   depth,
@@ -51,11 +57,8 @@ export function TreeRowChrome({
     <div
       ref={rowRef}
       onClick={onSelect}
+      // eslint-disable-next-line row/no-adhoc-row -- bespoke named-group (group/tree-row) hover scoping; Row's bare-group slots leak the reveal under ancestor groups
       className={cn(
-        // Named group so the hover-reveal of the chevron/actions below is scoped
-        // to THIS row only. A bare `group` would also fire when any ancestor that
-        // happens to use a bare `group` class is hovered (e.g. the shadcn sidebar
-        // wrapper), leaking every row's actions visible at once.
         "group/tree-row flex min-h-7 items-center gap-1 rounded px-1 py-1 text-sm",
         "hover:bg-accent",
         selected && "bg-accent",

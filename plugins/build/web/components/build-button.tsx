@@ -86,8 +86,10 @@ export function BuildButton() {
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <button
-          className={`inline-flex items-center gap-1.5 rounded-md border border-input bg-background px-3 py-1 text-sm font-medium shadow-xs hover:bg-accent hover:text-accent-foreground ${status === "failed" ? "text-destructive" : ""}`}
+        <Button
+          variant="outline"
+          size="sm"
+          className={status === "failed" ? "text-destructive" : undefined}
         >
           {spinning && <Spinner spinning className="size-4" />}
           {label}
@@ -96,6 +98,7 @@ export function BuildButton() {
               <span
                 role="button"
                 tabIndex={0}
+                // eslint-disable-next-line row/no-adhoc-row -- nested interactive chip inside the build trigger button; a real button can't nest inside the Button trigger
                 className="ml-0.5 inline-flex items-center gap-0.5 rounded bg-info/15 px-1.5 py-0.5 text-xs font-medium text-info hover:bg-info/25"
                 onClick={(e) => {
                   e.stopPropagation();
@@ -115,7 +118,7 @@ export function BuildButton() {
               <span className="block size-2 rounded-full bg-muted-foreground" />
             </WithTooltip>
           ) : null}
-        </button>
+        </Button>
       }
       align="end"
       contentClassName="w-[480px] p-0"

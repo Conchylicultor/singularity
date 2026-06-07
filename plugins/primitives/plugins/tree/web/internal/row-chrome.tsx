@@ -7,6 +7,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
+import { Row as RowPrimitive } from "@plugins/primitives/plugins/row/web";
 import { cn } from "@/lib/utils";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
@@ -131,16 +132,17 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
               depth={depth + 1}
             />
           ))}
-          <button
-            type="button"
+          <RowPrimitive
+            as="button"
+            hover="accent"
+            indent={(depth + 1) * 16 + 4}
+            icon={<span className="size-5 shrink-0" />}
             onClick={() => void r.addChild()}
-            className="text-muted-foreground hover:bg-accent hover:text-foreground flex w-full items-center gap-1 rounded px-1 py-1 text-sm"
-            style={{ paddingLeft: (depth + 1) * 16 + 4 }}
+            className="text-muted-foreground"
           >
-            <span className="size-5 shrink-0" />
             <MdAdd className="size-4 shrink-0" />
             Add
-          </button>
+          </RowPrimitive>
         </div>
       )}
     </div>

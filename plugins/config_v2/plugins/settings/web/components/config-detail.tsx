@@ -1,5 +1,6 @@
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md";
+import { Button } from "@/components/ui/button";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
@@ -105,40 +106,41 @@ function ConfigDetailInner({
           confirmReset ? (
             <div className="flex items-center gap-1">
               <span className="text-xs text-muted-foreground">Reset all fields?</span>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={handleResetAll}
-                className="rounded-sm bg-destructive/20 px-2 py-0.5 text-xs font-medium text-destructive hover:bg-destructive/30"
+                className="bg-destructive/20 text-destructive hover:bg-destructive/30"
               >
                 Reset
-              </button>
-              <button
-                type="button"
+              </Button>
+              <Button
+                variant="ghost"
+                size="xs"
                 onClick={() => setConfirmReset(false)}
-                className="rounded-sm px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
               >
                 Cancel
-              </button>
+              </Button>
             </div>
           ) : (
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="xs"
               onClick={() => setConfirmReset(true)}
-              className="flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
             >
               <MdUndo className="size-3.5" />
               Reset all
-            </button>
+            </Button>
           )
         )}
-        <button
-          type="button"
+        <Button
+          variant="ghost"
+          size="xs"
           onClick={() => setShowRaw((v) => !v)}
-          className="flex items-center gap-1 rounded-sm px-2 py-0.5 text-xs text-muted-foreground hover:bg-muted"
         >
           {toggleIcon}
           {showRaw ? "Fields" : "Raw file"}
-        </button>
+        </Button>
       </div>
       {showRaw ? (
         <RawFileView storePath={registration.storePath} />
@@ -151,20 +153,22 @@ function ConfigDetailInner({
                   <MdWarning className="size-4 shrink-0" />
                   <span className="flex-1">Stored config is invalid for the current schema</span>
                   <div className="flex shrink-0 gap-1.5">
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setShowRaw(true)}
-                      className="rounded-sm bg-destructive/20 px-2 py-0.5 text-xs font-medium hover:bg-destructive/30"
+                      className="bg-destructive/20 hover:bg-destructive/30"
                     >
                       View raw
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={handleAcceptAll}
-                      className="rounded-sm bg-destructive/20 px-2 py-0.5 text-xs font-medium hover:bg-destructive/30"
+                      className="bg-destructive/20 hover:bg-destructive/30"
                     >
                       Reset to defaults
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {conflictEntry.issues && conflictEntry.issues.length > 0 && (
@@ -178,13 +182,14 @@ function ConfigDetailInner({
             ) : isSoftConflict ? (
               <div className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
                 <span>Defaults updated — no conflicts</span>
-                <button
-                  type="button"
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={handleDismiss}
-                  className="shrink-0 rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                  className="shrink-0 bg-warning/20 hover:bg-warning/30"
                 >
                   Dismiss
-                </button>
+                </Button>
               </div>
             ) : (
               <>
@@ -192,28 +197,31 @@ function ConfigDetailInner({
                   <MdWarning className="size-4 shrink-0" />
                   <span className="flex-1">Upstream defaults changed</span>
                   <div className="flex shrink-0 gap-1.5">
-                    <button
-                      type="button"
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={() => setShowDiff((v) => !v)}
-                      className="flex items-center gap-1 rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                      className="bg-warning/20 hover:bg-warning/30"
                     >
                       <MdDifference className="size-3.5" />
                       {showDiff ? "Hide diff" : "View diff"}
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={handleAcceptAll}
-                      className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                      className="bg-warning/20 hover:bg-warning/30"
                     >
                       Accept all new defaults
-                    </button>
-                    <button
-                      type="button"
+                    </Button>
+                    <Button
+                      variant="ghost"
+                      size="xs"
                       onClick={handleDismiss}
-                      className="rounded-sm bg-warning/20 px-2 py-0.5 text-xs font-medium hover:bg-warning/30"
+                      className="bg-warning/20 hover:bg-warning/30"
                     >
                       Keep my values
-                    </button>
+                    </Button>
                   </div>
                 </div>
                 {showDiff && <ConflictDiff storePath={registration.storePath} />}

@@ -2,10 +2,9 @@ import { useContext } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
-  CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import {
   ColorAdjustContext,
   transformValues,
@@ -142,22 +141,21 @@ export function ColorPaletteSection({ search }: { search: string }) {
 
           return (
             <Collapsible key={group.label}>
-              <CollapsibleTrigger className="flex w-full items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
-                <CollapsibleChevron className="size-3" />
+              <SectionHeaderRow
+                variant="eyebrow"
+                actions={group.keys.map((key) => (
+                  <span
+                    key={key as string}
+                    className="size-2 rounded-full border border-border/30"
+                    style={{
+                      backgroundColor:
+                        activeValues[key] ?? schema[key]?.default ?? "",
+                    }}
+                  />
+                ))}
+              >
                 {group.label}
-                <span className="ml-auto flex items-center gap-0.5">
-                  {group.keys.map((key) => (
-                    <span
-                      key={key as string}
-                      className="size-2 rounded-full border border-border/30"
-                      style={{
-                        backgroundColor:
-                          activeValues[key] ?? schema[key]?.default ?? "",
-                      }}
-                    />
-                  ))}
-                </span>
-              </CollapsibleTrigger>
+              </SectionHeaderRow>
               <CollapsibleContent className="ml-2">
                 {visibleKeys.map((key) => {
                   const label = schema[key]?.label ?? key;

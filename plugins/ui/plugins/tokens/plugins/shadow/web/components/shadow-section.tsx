@@ -3,10 +3,10 @@ import { MdUndo } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
-  CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Button } from "@/components/ui/button";
 import {
   Color,
   ColorPickerPopover,
@@ -204,14 +204,11 @@ export function ShadowSection({ search }: { search: string }) {
 
       {/* Parameters editor */}
       <Collapsible defaultOpen>
-        <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
-          <CollapsibleChevron className="size-3" />
-          Parameters
-        </CollapsibleTrigger>
+        <SectionHeaderRow variant="eyebrow">Parameters</SectionHeaderRow>
         <CollapsibleContent className="ml-2 mt-1">
           <div className="flex flex-col gap-1.5">
             {/* Color row */}
-            <div className="flex items-center gap-2 py-0.5 px-2 rounded-md hover:bg-muted/50 group">
+            <Row as="div" hover="muted" className="gap-2">
               <span className="text-xs font-medium w-16 shrink-0">Color</span>
               <div className="flex items-center gap-2 flex-1">
                 <ColorPickerPopover
@@ -245,16 +242,13 @@ export function ShadowSection({ search }: { search: string }) {
               >
                 <MdUndo size={14} />
               </button>
-            </div>
+            </Row>
 
             {/* Numeric/text param rows */}
             {PARAM_FIELDS.map(({ key, label }) => {
               const isOverridden = overrides[key] !== "";
               return (
-                <div
-                  key={key}
-                  className="flex items-center gap-2 py-0.5 px-2 rounded-md hover:bg-muted/50"
-                >
+                <Row key={key} as="div" hover="muted" className="gap-2">
                   <span className="text-xs font-medium w-16 shrink-0">
                     {label}
                   </span>
@@ -266,18 +260,19 @@ export function ShadowSection({ search }: { search: string }) {
                     overrides={overrides}
                     setConfig={setConfig}
                   />
-                </div>
+                </Row>
               );
             })}
 
             {hasOverrides && (
-              <button
-                type="button"
-                className="self-start mt-1 px-2 py-0.5 text-xs text-muted-foreground hover:text-foreground border border-border rounded hover:bg-muted/50 transition-colors"
+              <Button
+                variant="ghost"
+                size="xs"
+                className="self-start mt-1 border border-border text-muted-foreground"
                 onClick={() => setConfig("overrides", EMPTY_OVERRIDES)}
               >
                 Reset all
-              </button>
+              </Button>
             )}
           </div>
         </CollapsibleContent>
@@ -285,10 +280,7 @@ export function ShadowSection({ search }: { search: string }) {
 
       {/* Token previews */}
       <Collapsible>
-        <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
-          <CollapsibleChevron className="size-3" />
-          Preview
-        </CollapsibleTrigger>
+        <SectionHeaderRow variant="eyebrow">Preview</SectionHeaderRow>
         <CollapsibleContent className="ml-2 mt-1">
           <div className="flex flex-wrap gap-3 p-2">
             {allKeys.map((key) => {

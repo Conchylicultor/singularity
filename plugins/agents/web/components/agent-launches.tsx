@@ -6,7 +6,7 @@ import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
-import { cn } from "@/lib/utils";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -46,8 +46,32 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
             const title = primary?.title ?? `Launch ${formatDate(launch.createdAt)}`;
             return (
               <li key={launch.id}>
-                <button
-                  type="button"
+                <Row
+                  selected={isActive}
+                  bordered
+                  hover="accent"
+                  disabled={!primary}
+                  className={!primary ? "opacity-60" : undefined}
+                  icon={
+                    primary ? (
+                      <StatusDot colorClass={CONV_STATUS_DOT[primary.status]} />
+                    ) : (
+                      <StatusDot colorClass="bg-muted-foreground/40" />
+                    )
+                  }
+                  actions={
+                    <>
+                      {primary ? (
+                        <span className="text-muted-foreground shrink-0 text-xs">
+                          {primary.status}
+                        </span>
+                      ) : null}
+                      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                        {formatDate(launch.createdAt)}
+                      </span>
+                    </>
+                  }
+                  actionsAlwaysVisible
                   onClick={() => {
                     if (!primary) return;
                     if (isActive && convEntry) {
@@ -58,28 +82,9 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                       }, { mode: "push" });
                     }
                   }}
-                  disabled={!primary}
-                  className={cn(
-                    "flex w-full items-center gap-2 rounded border px-3 py-2 text-left text-sm",
-                    primary ? "hover:bg-accent" : "opacity-60",
-                    isActive && "bg-accent",
-                  )}
                 >
-                  {primary ? (
-                    <StatusDot colorClass={CONV_STATUS_DOT[primary.status]} />
-                  ) : (
-                    <StatusDot colorClass="bg-muted-foreground/40" />
-                  )}
                   <span className="flex-1 truncate">{title}</span>
-                  {primary ? (
-                    <span className="text-muted-foreground shrink-0 text-xs">
-                      {primary.status}
-                    </span>
-                  ) : null}
-                  <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
-                    {formatDate(launch.createdAt)}
-                  </span>
-                </button>
+                </Row>
               </li>
             );
           })}

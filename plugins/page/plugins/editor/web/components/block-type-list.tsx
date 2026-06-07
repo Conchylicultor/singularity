@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import type { BlockHandle } from "../../core";
 import { Editor } from "../slots";
 
@@ -54,22 +54,18 @@ export function BlockTypeList({
       {blocks.map((block, i) => {
         const Icon = block.icon;
         return (
-          <button
+          <Row
             key={block.type}
-            type="button"
-            className={cn(
-              "flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm",
-              i === activeIndex && "bg-accent",
-            )}
+            selected={i === activeIndex}
+            icon={Icon ? <Icon className="text-muted-foreground size-4" /> : undefined}
             onMouseEnter={() => onHoverIndex(i)}
-            onMouseDown={(e) => {
+            onMouseDown={(e: React.MouseEvent) => {
               e.preventDefault();
               onSelect(block);
             }}
           >
-            {Icon ? <Icon className="text-muted-foreground size-4" /> : null}
             {block.label}
-          </button>
+          </Row>
         );
       })}
     </div>

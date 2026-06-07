@@ -7,6 +7,7 @@ import {
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import {
   Section,
   ConsumerList,
@@ -148,18 +149,23 @@ function SymbolRow({ row }: { row: SymbolRow }) {
   const consumers = row.consumers;
 
   return (
-    <div className="group flex items-center gap-2 rounded-sm px-1.5 py-px text-xs hover:bg-accent/50">
-      <Badge
-        size="sm"
-        colorClass={style.className}
-        className="w-10 shrink-0 justify-center font-mono"
-      >
-        {style.label}
-      </Badge>
+    <Row
+      as="div"
+      size="sm"
+      icon={
+        <Badge
+          size="sm"
+          colorClass={style.className}
+          className="w-10 shrink-0 justify-center font-mono"
+        >
+          {style.label}
+        </Badge>
+      }
+    >
       <code className="min-w-0 truncate font-mono text-foreground">
         {row.name}
       </code>
       {consumers.length > 0 && <ConsumerList names={consumers} />}
-    </div>
+    </Row>
   );
 }

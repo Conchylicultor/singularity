@@ -1,4 +1,5 @@
 import { MdLink } from "react-icons/md";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { backlinksResource } from "../../core/resources";
@@ -26,16 +27,17 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
       <ul className="flex flex-col gap-0.5">
         {rows.map((row) => (
           <li key={row.id}>
-            <button
-              type="button"
+            <Row
+              hover="muted"
               onClick={() => onOpenPage?.(row.id)}
-              className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted"
+              icon={
+                <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+                  {row.icon ?? <MdLink className="size-4" />}
+                </span>
+              }
             >
-              <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-                {row.icon ?? <MdLink className="size-4" />}
-              </span>
               <span className="truncate">{row.title || "Untitled"}</span>
-            </button>
+            </Row>
           </li>
         ))}
       </ul>

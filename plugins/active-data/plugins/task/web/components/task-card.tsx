@@ -16,7 +16,8 @@ import {
 import { TaskSchema, type Task } from "@plugins/tasks-core/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
+import { Row } from "@plugins/primitives/plugins/row/web";
+import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 
 const TaskBindingSchema = z.object({
   taskId: z.string(),
@@ -189,8 +190,8 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
                 const isActive = activeConvId === c.id;
                 return (
                   <li key={c.id}>
-                    <button
-                      type="button"
+                    <Row
+                      selected={isActive}
                       onClick={() => {
                         if (activeConvId === c.id && activeConvEntry) {
                           conversationPane.close(activeConvEntry.instanceId);
@@ -198,13 +199,9 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
                           openPane(conversationPane, { convId: c.id }, { mode: "push" });
                         }
                       }}
-                      className={cn(
-                        "hover:bg-accent flex w-full items-start rounded px-2 py-1 text-left",
-                        isActive && "bg-accent",
-                      )}
                     >
                       <ConversationItem conv={c} />
-                    </button>
+                    </Row>
                   </li>
                 );
               })}
@@ -225,17 +222,15 @@ function TaskChip({ taskId }: { taskId: string }) {
   const title = task?.title.trim() || "Untitled task";
   if (!conversation) return null;
   return (
-    <button
-      type="button"
+    <LinkChip
       onClick={(e) => {
         e.stopPropagation();
         openPane(taskSidePane, { taskId }, { mode: "push", input: { convId: conversation.id } });
       }}
-      className="bg-muted text-primary hover:bg-muted/80 inline-flex max-w-full items-center gap-1.5 rounded px-1.5 py-0.5 align-baseline text-xs hover:underline"
+      leading={<span className="text-muted-foreground">✓</span>}
       title={title}
     >
-      <span className="text-muted-foreground">✓</span>
-      <span className="truncate">{title}</span>
-    </button>
+      {title}
+    </LinkChip>
   );
 }

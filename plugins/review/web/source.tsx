@@ -1,3 +1,4 @@
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import type { Push } from "@plugins/tasks/core";
 
 export type Source =
@@ -59,17 +60,19 @@ export function SourceTabs({
 }) {
   return (
     <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-background/95 px-2 py-1.5 backdrop-blur">
-      <SourceTab
+      <ToggleChip
         active={source.kind === "working"}
+        size="sm"
         onClick={() => onChange({ kind: "working" })}
         title="Uncommitted changes vs. main"
       >
         Working tree
-      </SourceTab>
+      </ToggleChip>
       {pushGroups.map((g) => (
-        <SourceTab
+        <ToggleChip
           key={g.pushId}
           active={source.kind === "push" && source.pushId === g.pushId}
+          size="sm"
           onClick={() => onChange({ kind: "push", pushId: g.pushId })}
           title={`${g.message} · ${formatDate(g.createdAt)}`}
         >
@@ -79,37 +82,8 @@ export function SourceTabs({
               ×{g.count}
             </span>
           )}
-        </SourceTab>
+        </ToggleChip>
       ))}
     </div>
-  );
-}
-
-function SourceTab({
-  active,
-  onClick,
-  title,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  title?: string;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      title={title}
-      aria-pressed={active}
-      className={
-        "flex shrink-0 items-center gap-1 rounded-md px-2.5 py-1 text-xs font-medium transition-colors " +
-        (active
-          ? "bg-primary text-primary-foreground"
-          : "text-muted-foreground hover:bg-muted hover:text-foreground")
-      }
-    >
-      {children}
-    </button>
   );
 }

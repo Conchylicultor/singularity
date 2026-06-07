@@ -1,4 +1,5 @@
 import { MdAutoFixHigh } from "react-icons/md";
+import { Button } from "@/components/ui/button";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
@@ -35,10 +36,10 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
   return (
     <LaunchAgentPopover
       trigger={
-        <button className="inline-flex items-center gap-1.5 rounded-md border border-destructive/30 bg-destructive/5 px-3 py-1.5 text-sm font-medium text-destructive hover:bg-destructive/10">
+        <Button variant="destructive" size="sm">
           <MdAutoFixHigh className="size-4" />
           Launch agent to investigate
-        </button>
+        </Button>
       }
       title="Investigate build failure"
       description="Launch an agent to diagnose and fix the failing build."

@@ -48,14 +48,16 @@ export function BranchButtons({
       open={open}
       onOpenChange={setOpen}
       trigger={
-        <button
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 text-xs text-muted-foreground hover:bg-accent"
+        <Button
+          variant="ghost"
+          size="xs"
+          className="text-muted-foreground"
           title="Branch conversation"
           aria-label="Branch conversation"
         >
           <MdCallSplit className="size-3.5" />
           Branch
-        </button>
+        </Button>
       }
       tooltip="Fork this session into a background conversation"
       contentClassName="w-[480px]"

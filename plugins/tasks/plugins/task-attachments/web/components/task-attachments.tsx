@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
 import { toast } from "@plugins/notifications/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -45,15 +46,17 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
               />
             </a>
           ) : (
-            <a
+            <Row
               key={a.id}
+              as="a"
               href={`/api/attachments/${a.id}`}
               download={a.filename}
-              className="hover:bg-muted flex items-center gap-2 rounded border px-3 py-2 text-sm"
+              bordered
+              hover="muted"
             >
               <span>{a.filename}</span>
               <span className="text-muted-foreground text-xs">{formatSize(a.size)}</span>
-            </a>
+            </Row>
           ),
         )}
       </div>

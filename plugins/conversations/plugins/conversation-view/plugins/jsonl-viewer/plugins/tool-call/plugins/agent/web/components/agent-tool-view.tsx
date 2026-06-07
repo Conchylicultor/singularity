@@ -3,6 +3,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
@@ -97,15 +98,18 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
         {/* Report link */}
         {result && (
-          <button
+          <Row
+            size="sm"
+            hover="muted"
+            bordered
             onClick={openReport}
-            className="flex w-full items-center gap-1.5 rounded-md border border-border/40 px-3 py-1.5 text-left text-xs text-muted-foreground hover:bg-muted/40"
+            className="rounded-md border-border/40 text-muted-foreground"
+            icon={<MdArticle className="size-3.5 shrink-0" />}
           >
-            <MdArticle className="size-3.5 shrink-0" />
             <span className="font-medium">
               {result.isError ? "View error" : "View report"}
             </span>
-          </button>
+          </Row>
         )}
       </div>
     </ToolCallCard>

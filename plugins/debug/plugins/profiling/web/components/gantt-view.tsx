@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from "react";
 import { MdRefresh } from "react-icons/md";
+import { Button } from "@/components/ui/button";
 import { Profiling } from "../slots";
 import { ProfilingContext, SpanDetail } from "./shared";
 import type { Span } from "./shared";
@@ -13,13 +14,14 @@ export function GanttView(): ReactElement {
       <div className="flex h-full flex-col overflow-hidden">
         <div className="flex items-center border-b px-4 py-2">
           <div className="flex-1" />
-          <button
-            className="inline-flex items-center gap-1 rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent"
+          <Button
+            variant="ghost"
+            size="xs"
             onClick={() => setRefreshKey((k) => k + 1)}
           >
             <MdRefresh className="size-3.5" />
             Refresh
-          </button>
+          </Button>
         </div>
 
         <div className="flex-1 overflow-y-auto divide-y">

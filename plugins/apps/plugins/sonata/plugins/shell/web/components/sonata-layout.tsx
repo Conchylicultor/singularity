@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
+import { Button } from "@/components/ui/button";
 import { PaneOverlayHost } from "@plugins/layouts/plugins/miller/web";
 import { Sonata } from "../slots";
 import { SonataProvider, useSonata, TEMPO_MATH_FLOOR } from "../context";
@@ -42,6 +43,7 @@ function Picker({
             type="button"
             onClick={() => onSelect(item.id)}
             aria-pressed={active}
+            // eslint-disable-next-line row/no-adhoc-row -- bespoke picker: per-item "loaded" dot indicator that SegmentedControl can't express
             className={cn(
               "flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
               active
@@ -103,13 +105,9 @@ function SonataLayoutInner() {
       {/* Toolbar: back-to-library + title, display picker, transport. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={backToLibrary}
-            className="rounded-md border border-border px-2.5 py-1 text-xs font-medium text-muted-foreground hover:bg-muted/50"
-          >
+          <Button variant="outline" size="xs" onClick={backToLibrary}>
             ← Library
-          </button>
+          </Button>
           <span className="text-sm font-semibold text-foreground">
             {currentSongTitle ?? "Untitled"}
           </span>

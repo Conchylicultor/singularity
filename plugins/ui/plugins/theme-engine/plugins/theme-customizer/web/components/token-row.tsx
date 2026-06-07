@@ -4,6 +4,7 @@ import {
   Color,
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/color-picker/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 export interface TokenRowProps {
   label: string;
@@ -65,7 +66,7 @@ export function TokenRow({
   }
 
   return (
-    <div className="flex items-center gap-2 py-1 px-2 rounded-md hover:bg-muted/50 group">
+    <Row as="div" hover="muted" className="gap-2">
       {isColor ? (
         <ColorPickerPopover
           value={value}
@@ -120,6 +121,6 @@ export function TokenRow({
       >
         <MdUndo size={14} />
       </button>
-    </div>
+    </Row>
   );
 }

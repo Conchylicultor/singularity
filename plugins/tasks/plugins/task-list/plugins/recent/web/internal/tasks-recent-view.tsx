@@ -6,7 +6,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { tasksResource } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
 import type { TaskListItem, TaskStatus } from "@plugins/tasks-core/core";
-import { cn } from "@/lib/utils";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 function isTerminal(status: TaskStatus): boolean {
   return status === "done" || status === "dropped";
@@ -45,25 +45,18 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
       </div>
       <div className="flex flex-col gap-0.5">
         {sorted.map((task) => (
-          <button
+          <Row
             key={task.id}
-            type="button"
+            selected={task.id === selectedId}
+            icon={<StatusIcon status={task.status} />}
+            actions={<RelativeTime date={task.updatedAt} />}
+            actionsAlwaysVisible
             onClick={() => onSelect(task.id)}
-            className={cn(
-              "flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm",
-              task.id === selectedId
-                ? "bg-accent text-foreground"
-                : "text-foreground hover:bg-accent/50",
-            )}
           >
-            <StatusIcon status={task.status} />
             <span className="min-w-0 flex-1 truncate">
               {task.title || "Untitled"}
             </span>
-            <span className="shrink-0 text-xs text-muted-foreground">
-              <RelativeTime date={task.updatedAt} />
-            </span>
-          </button>
+          </Row>
         ))}
       </div>
     </div>

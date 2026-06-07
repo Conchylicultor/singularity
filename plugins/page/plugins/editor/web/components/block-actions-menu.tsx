@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from "react";
 import { MdDelete } from "react-icons/md";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import type { BlockEditorAPI } from "../types";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
@@ -50,18 +51,17 @@ export function BlockActionsMenu({
           }}
         />
         <div className="bg-border my-0.5 h-px" />
-        <button
-          type="button"
-          className="text-destructive hover:bg-accent flex items-center gap-2 rounded px-2 py-1.5 text-left text-sm"
-          onMouseDown={(e) => {
+        <Row
+          className="text-destructive"
+          icon={<MdDelete className="size-4" />}
+          onMouseDown={(e: React.MouseEvent) => {
             e.preventDefault();
             api.remove();
             setOpen(false);
           }}
         >
-          <MdDelete className="size-4" />
           Delete
-        </button>
+        </Row>
       </div>
     </InlinePopover>
   );

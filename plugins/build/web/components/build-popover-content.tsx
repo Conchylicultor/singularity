@@ -7,6 +7,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { buildHistoryResource } from "../../shared";
 import type { BuildRun } from "../../shared";
@@ -182,27 +183,29 @@ function BuildHistoryList({
       )}
       <div className="mt-1 flex flex-col gap-0.5">
         {visible.map((run) => (
-          <div
+          <Row
             key={run.id}
+            as="div"
             role={onRunClick ? "button" : undefined}
             onClick={onRunClick ? () => onRunClick(run.id) : undefined}
-            className={cn(
-              "flex items-center gap-2 rounded px-1 py-0.5 text-xs hover:bg-accent",
-              onRunClick && "cursor-pointer",
-              selectedRunId === run.id && "bg-accent",
-            )}
+            selected={selectedRunId === run.id}
+            size="sm"
+            icon={<StatusDot run={run} />}
+            actionsAlwaysVisible
+            actions={
+              <span className="tabular-nums text-muted-foreground">
+                {run.finishedAt === null ? "running…" : formatDuration(run.startedAt, run.finishedAt)}
+              </span>
+            }
+            className={cn(onRunClick && "cursor-pointer")}
           >
-            <StatusDot run={run} />
             <span className="text-muted-foreground">
               <RelativeTime date={run.startedAt} />
             </span>
             <Badge size="sm" variant={run.trigger === "auto" ? "info" : "muted"}>
               {run.trigger}
             </Badge>
-            <span className="ml-auto tabular-nums text-muted-foreground">
-              {run.finishedAt === null ? "running…" : formatDuration(run.startedAt, run.finishedAt)}
-            </span>
-          </div>
+          </Row>
         ))}
       </div>
     </div>

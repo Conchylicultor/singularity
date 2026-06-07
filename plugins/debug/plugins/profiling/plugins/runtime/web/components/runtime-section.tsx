@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Button } from "@/components/ui/button";
 import {
   getRuntimeProfile,
   resetRuntimeProfile,
@@ -157,13 +158,14 @@ export function RuntimeSection(): ReactElement | null {
     <div className="flex flex-col gap-6 py-4">
       <div className="flex items-center justify-between px-3">
         <span className="text-sm font-medium">Runtime</span>
-        <button
-          className="rounded px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground disabled:opacity-50"
+        <Button
+          variant="ghost"
+          size="xs"
           disabled={resetMutation.isPending}
           onClick={() => resetMutation.mutate({})}
         >
           Reset window
-        </button>
+        </Button>
       </div>
 
       <KindTable title="HTTP Routes" rows={httpRows} emptyLabel="No HTTP spans" />

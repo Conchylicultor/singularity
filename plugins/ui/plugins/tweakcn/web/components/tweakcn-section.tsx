@@ -4,6 +4,7 @@ import {
   useEndpointMutation,
   fetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
+import { Button } from "@/components/ui/button";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
@@ -99,13 +100,15 @@ export function TweakcnSection({ search }: { search: string }) {
           placeholder="Theme ID or tweakcn URL..."
           className="flex-1 rounded-md border border-border bg-muted/20 px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
         />
-        <button
+        <Button
+          variant="ghost"
+          size="sm"
           onClick={handleImport}
           disabled={!input.trim() || importMutation.isPending}
-          className="rounded-md border border-border px-3 py-1.5 text-sm font-medium text-foreground hover:border-primary/50 hover:bg-muted/30 transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
+          className="border border-border"
         >
           {importMutation.isPending ? "Importing..." : "Import"}
-        </button>
+        </Button>
       </div>
 
       {importMutation.isError && (
@@ -128,19 +131,23 @@ export function TweakcnSection({ search }: { search: string }) {
             >
               <span className="text-sm font-medium">{theme.label}</span>
               <div className="flex gap-1.5">
-                <button
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={() => handleApply(theme.tweakcnId, theme.presets)}
-                  className="rounded-md px-2.5 py-1 text-xs font-medium text-primary hover:bg-primary/10 transition-colors"
+                  className="text-primary hover:bg-primary/10"
                 >
                   Apply
-                </button>
-                <button
+                </Button>
+                <Button
+                  variant="ghost"
+                  size="xs"
                   onClick={() => handleDelete(theme.id)}
                   disabled={deleteMutation.isPending}
-                  className="rounded-md px-2.5 py-1 text-xs font-medium text-muted-foreground hover:text-destructive hover:bg-destructive/10 transition-colors disabled:opacity-50"
+                  className="text-muted-foreground hover:text-destructive hover:bg-destructive/10"
                 >
                   Delete
-                </button>
+                </Button>
               </div>
             </div>
           ))}

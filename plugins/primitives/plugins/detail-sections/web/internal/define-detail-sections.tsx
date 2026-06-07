@@ -1,10 +1,9 @@
 import type { ComponentType, ReactNode } from "react";
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
-  CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import {
   defineRenderSlot,
   type RenderSlot,
@@ -48,18 +47,18 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
               return (
                 <Collapsible defaultOpen={options.defaultOpen ?? false}>
                   <div className="rounded-lg border border-border/60">
-                    <CollapsibleTrigger className="flex w-full items-center gap-2 px-4 py-3 text-sm font-semibold hover:bg-muted/30 rounded-lg">
-                      <CollapsibleChevron className="size-3.5 text-muted-foreground" />
-                      {item.label}
-                      {(() => {
-                        const Extra = item.headerExtra;
-                        return Extra ? (
-                          <span className="ml-auto flex items-center">
-                            <Extra />
-                          </span>
-                        ) : null;
-                      })()}
-                    </CollapsibleTrigger>
+                    {(() => {
+                      const Extra = item.headerExtra;
+                      return (
+                        <SectionHeaderRow
+                          variant="title"
+                          className="rounded-lg px-4 py-3"
+                          actions={Extra ? <Extra /> : undefined}
+                        >
+                          {item.label}
+                        </SectionHeaderRow>
+                      );
+                    })()}
                     <CollapsibleContent className="px-4 pb-4">
                       <C {...entityProps} />
                     </CollapsibleContent>

@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { cn } from "@/lib/utils";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Button } from "@/components/ui/button";
 
 type BroadcastSeverity = "error" | "warning" | "info";
@@ -171,19 +171,16 @@ export function BroadcastsPanel() {
             <span className="w-16 shrink-0 text-xs text-muted-foreground">Severity</span>
             <div className="flex gap-1">
               {(["error", "warning", "info"] as BroadcastSeverity[]).map((s) => (
-                <button
+                <ToggleChip
                   key={s}
-                  type="button"
+                  size="sm"
+                  variant="ghost"
+                  active={form.severity === s}
                   onClick={() => setForm((f) => ({ ...f, severity: s }))}
-                  className={cn(
-                    "rounded px-2 py-0.5 text-xs font-medium transition-all",
-                    form.severity === s
-                      ? SEVERITY_STYLES[s]
-                      : "bg-muted text-muted-foreground hover:bg-muted/80",
-                  )}
+                  className={form.severity === s ? SEVERITY_STYLES[s] : undefined}
                 >
                   {s}
-                </button>
+                </ToggleChip>
               ))}
             </div>
           </div>

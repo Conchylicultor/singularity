@@ -7,9 +7,16 @@ import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plu
 import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Button } from "@/components/ui/button";
+import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { cn } from "@/lib/utils";
 
 type Tab = "jobs" | "events" | "triggers";
+
+const TAB_OPTIONS = [
+  { id: "jobs" as Tab, label: "Jobs", icon: <MdWorkOutline className="size-4" /> },
+  { id: "events" as Tab, label: "Events", icon: <MdBolt className="size-4" /> },
+  { id: "triggers" as Tab, label: "Triggers" },
+] as const;
 
 export function QueueView() {
   const [tab, setTab] = useState<Tab>("jobs");
@@ -17,15 +24,12 @@ export function QueueView() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center gap-1 border-b px-3 py-2">
-        <TabButton active={tab === "jobs"} onClick={() => setTab("jobs")}>
-          <MdWorkOutline className="size-4" /> Jobs
-        </TabButton>
-        <TabButton active={tab === "events"} onClick={() => setTab("events")}>
-          <MdBolt className="size-4" /> Events
-        </TabButton>
-        <TabButton active={tab === "triggers"} onClick={() => setTab("triggers")}>
-          Triggers
-        </TabButton>
+        <SegmentedControl
+          options={TAB_OPTIONS}
+          value={tab}
+          onChange={setTab}
+          variant="ghost"
+        />
       </div>
       <div className="flex-1 overflow-auto">
         {tab === "jobs" && <JobsTab />}
@@ -33,31 +37,6 @@ export function QueueView() {
         {tab === "triggers" && <TriggersTab />}
       </div>
     </div>
-  );
-}
-
-function TabButton({
-  active,
-  onClick,
-  children,
-}: {
-  active: boolean;
-  onClick: () => void;
-  children: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={cn(
-        "flex items-center gap-1.5 rounded px-3 py-1.5 text-sm font-medium transition-colors",
-        active
-          ? "bg-accent text-accent-foreground"
-          : "text-muted-foreground hover:bg-accent/50 hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
   );
 }
 

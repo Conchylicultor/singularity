@@ -73,6 +73,7 @@ export function defineTabbedView<ViewProps extends object>(
                       onClick={() => selectView(v.id)}
                       aria-pressed={selected}
                       title={v.title}
+                      // eslint-disable-next-line row/no-adhoc-row -- tabbed-view's own tab control (flex-1 justify-center layout differs from SegmentedControl)
                       className={cn(
                         "flex flex-1 items-center justify-center gap-1 rounded-sm px-2 py-1 text-xs",
                         selected

@@ -1,5 +1,6 @@
 import { useMemo, useState } from "react";
 import { MdDescription, MdLink } from "react-icons/md";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
@@ -50,18 +51,17 @@ function PagePicker({
           ) : (
             filtered.map((doc) => (
               <li key={doc.id}>
-                <button
-                  type="button"
+                <Row
+                  hover="muted"
                   onClick={() => {
                     onSelect(doc.id);
                     setOpen(false);
                     setQuery("");
                   }}
-                  className="flex w-full items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted"
+                  icon={<PageIcon doc={doc} />}
                 >
-                  <PageIcon doc={doc} />
                   <span className="truncate">{doc.title || "Untitled"}</span>
-                </button>
+                </Row>
               </li>
             ))
           )}
@@ -96,13 +96,13 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         <PagePicker
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded px-2 py-1 text-sm text-muted-foreground hover:bg-muted"
+            <Row
+              hover="muted"
+              className="text-muted-foreground"
+              icon={<MdLink className="size-4" />}
             >
-              <MdLink className="size-4" />
-              <span>Select a page…</span>
-            </button>
+              Select a page…
+            </Row>
           }
         />
       </div>
@@ -116,13 +116,12 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         <PagePicker
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
-            <button
-              type="button"
-              className="flex items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted"
+            <Row
+              hover="muted"
+              icon={<MdLink className="size-4 text-muted-foreground" />}
             >
-              <MdLink className="size-4 text-muted-foreground" />
               <Placeholder>(page not found)</Placeholder>
-            </button>
+            </Row>
           }
         />
       </div>
@@ -132,18 +131,19 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // Resolved link: a clickable chip/row that navigates via the host callback.
   return (
     <div className="px-3 py-1">
-      <button
-        type="button"
+      <Row
+        hover="muted"
         onClick={() => onOpenPage?.(pageId)}
-        className="flex items-center gap-2 rounded px-2 py-1 text-left text-sm hover:bg-muted"
+        icon={
+          <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
+            {target?.icon ?? <MdLink className="size-4" />}
+          </span>
+        }
       >
-        <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-          {target?.icon ?? <MdLink className="size-4" />}
-        </span>
         <span className="truncate font-medium underline-offset-2 hover:underline">
           {target?.title || "Untitled"}
         </span>
-      </button>
+      </Row>
     </div>
   );
 }

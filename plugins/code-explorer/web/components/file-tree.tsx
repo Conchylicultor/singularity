@@ -11,7 +11,7 @@ import {
   filterTree,
   SearchInput,
 } from "@plugins/primitives/plugins/search/web";
-import { cn } from "@/lib/utils";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 interface FileTreeNode {
   name: string;
@@ -152,7 +152,7 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
           <div className="px-3 py-2 text-muted-foreground">No matches.</div>
         ) : (
           filtered.map((node) => (
-            <Row
+            <FileTreeRow
               key={node.path}
               node={node}
               depth={0}
@@ -168,7 +168,7 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
   );
 }
 
-interface RowProps {
+interface FileTreeRowProps {
   node: FileTreeNode;
   depth: number;
   expanded: Set<string>;
@@ -177,54 +177,54 @@ interface RowProps {
   onToggle: (dir: string) => void;
 }
 
-function Row({
+function FileTreeRow({
   node,
   depth,
   expanded,
   selectedPath,
   onSelect,
   onToggle,
-}: RowProps) {
+}: FileTreeRowProps) {
   const isOpen = expanded.has(node.path);
   const isSelected = !node.isDir && node.path === selectedPath;
 
+  const icon = node.isDir ? (
+    <>
+      {isOpen ? (
+        <MdExpandMore className="size-3.5 shrink-0 text-muted-foreground" />
+      ) : (
+        <MdChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
+      )}
+      {isOpen ? (
+        <MdFolderOpen className="size-3.5 shrink-0 text-info" />
+      ) : (
+        <MdFolder className="size-3.5 shrink-0 text-info" />
+      )}
+    </>
+  ) : (
+    <>
+      <span className="size-3.5 shrink-0" />
+      <MdInsertDriveFile className="size-3.5 shrink-0 text-muted-foreground" />
+    </>
+  );
+
   return (
     <>
-      <button
-        type="button"
+      <Row
+        selected={isSelected}
+        hover="muted"
+        size="sm"
+        indent={depth * 12 + 6}
+        icon={icon}
         onClick={() => (node.isDir ? onToggle(node.path) : onSelect(node.path))}
-        className={cn(
-          "flex w-full items-center gap-1 rounded px-1.5 py-0.5 text-left hover:bg-muted",
-          isSelected && "bg-accent text-accent-foreground",
-        )}
-        style={{ paddingLeft: `${depth * 12 + 6}px` }}
         title={node.path}
       >
-        {node.isDir ? (
-          <>
-            {isOpen ? (
-              <MdExpandMore className="size-3.5 shrink-0 text-muted-foreground" />
-            ) : (
-              <MdChevronRight className="size-3.5 shrink-0 text-muted-foreground" />
-            )}
-            {isOpen ? (
-              <MdFolderOpen className="size-3.5 shrink-0 text-info" />
-            ) : (
-              <MdFolder className="size-3.5 shrink-0 text-info" />
-            )}
-          </>
-        ) : (
-          <>
-            <span className="size-3.5 shrink-0" />
-            <MdInsertDriveFile className="size-3.5 shrink-0 text-muted-foreground" />
-          </>
-        )}
         <span className="truncate">{node.name}</span>
-      </button>
+      </Row>
       {node.isDir &&
         isOpen &&
         node.children.map((child) => (
-          <Row
+          <FileTreeRow
             key={child.path}
             node={child}
             depth={depth + 1}

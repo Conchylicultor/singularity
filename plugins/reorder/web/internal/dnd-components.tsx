@@ -3,6 +3,7 @@ import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { useDroppable } from "@dnd-kit/core";
 import { Input } from "@/components/ui/input";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { cn } from "@/lib/utils";
 import { useEditMode } from "./edit-mode-store";
@@ -238,42 +239,45 @@ export function RestoreButton({
       {hasHidden && (
           <div className="p-1">
             {hiddenItems.map((item) => (
-              <button
+              <Row
                 key={item.key}
-                className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+                size="sm"
+                hover="accent"
+                icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
                 onClick={() => {
                   handleRestore(item.key);
                   if (hiddenItems.length <= 1) setOpen(false);
                 }}
               >
-                <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
                 {item.label}
-              </button>
+              </Row>
             ))}
           </div>
         )}
 
         <div className="border-t border-border p-1">
-          <button
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+          <Row
+            size="sm"
+            hover="accent"
+            icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
             onClick={() => {
               addGroup();
               setOpen(false);
             }}
           >
-            <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
             Add Group
-          </button>
-          <button
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm hover:bg-accent"
+          </Row>
+          <Row
+            size="sm"
+            hover="accent"
+            icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
             onClick={() => {
               addSpacer();
               setOpen(false);
             }}
           >
-            <MdAdd className="size-3.5 shrink-0 text-muted-foreground" />
             Add Spacer
-          </button>
+          </Row>
         </div>
 
         <div className="border-t border-border px-2.5 py-2">
@@ -295,13 +299,14 @@ export function RestoreButton({
         </div>
 
         <div className="border-t border-border p-1">
-          <button
+          <Row
+            size="sm"
+            hover="accent"
             disabled
-            className="flex w-full items-center gap-2 rounded px-2 py-1.5 text-sm text-muted-foreground/50 cursor-not-allowed"
+            icon={<MdAdd className="size-3.5 shrink-0" />}
           >
-            <MdAdd className="size-3.5 shrink-0" />
             Create custom plugin
-          </button>
+          </Row>
         </div>
       </InlinePopover>
   );

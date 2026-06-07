@@ -5,6 +5,7 @@ import {
   useSonata,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { startScheduling, type ScheduleHandle } from "../scheduler";
 
 const DEFAULT_VOLUME = 0.8;
@@ -168,31 +169,19 @@ export function AudioPanel() {
       </div>
 
       {/* Instrument picker — generic over the contribution shape. */}
-      <div className="mt-3 flex flex-wrap items-center gap-1">
+      <div className="mt-3">
         {instruments.length === 0 ? (
           <span className="text-xs text-muted-foreground">No instruments</span>
         ) : (
-          instruments.map((inst) => {
-            const Icon = inst.icon;
-            const active = inst.id === effectiveInstrumentId;
-            return (
-              <button
-                key={inst.id}
-                type="button"
-                onClick={() => setActiveInstrumentId(inst.id)}
-                aria-pressed={active}
-                className={cn(
-                  "flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
-                  active
-                    ? "border-primary bg-primary/10 text-foreground"
-                    : "border-border bg-transparent text-muted-foreground hover:bg-muted/50",
-                )}
-              >
-                {Icon ? <Icon className="size-3.5" /> : null}
-                {inst.label}
-              </button>
-            );
-          })
+          <SegmentedControl
+            options={instruments.map((inst) => ({
+              id: inst.id,
+              label: inst.label,
+              icon: inst.icon ? <inst.icon className="size-3.5" /> : undefined,
+            }))}
+            value={effectiveInstrumentId ?? ""}
+            onChange={setActiveInstrumentId}
+          />
         )}
       </div>
 

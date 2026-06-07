@@ -1,5 +1,4 @@
 import { MdSmartToy } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import {
@@ -8,6 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { Agents as AgentsSlots } from "../slots";
 import { systemAgentDetailPane } from "../panes";
 
@@ -36,20 +36,15 @@ export function SystemFolder({
           const Icon = d.icon ?? MdSmartToy;
           const selected = d.id === selectedSystemId;
           return (
-            <button
+            <Row
               key={d.id}
-              type="button"
+              selected={selected}
+              indent={16 + 4}
+              icon={<Icon className="text-muted-foreground size-4 shrink-0" />}
               onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
-              className={cn(
-                "flex items-center gap-2 rounded px-1 py-1 text-sm",
-                "hover:bg-accent",
-                selected && "bg-accent",
-              )}
-              style={{ paddingLeft: 16 + 4 }}
             >
-              <Icon className="text-muted-foreground size-4 shrink-0" />
               <span className="truncate">{d.name}</span>
-            </button>
+            </Row>
           );
         })}
       </CollapsibleContent>

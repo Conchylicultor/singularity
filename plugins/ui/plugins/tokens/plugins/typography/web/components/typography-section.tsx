@@ -2,10 +2,9 @@ import { useContext } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Collapsible,
-  CollapsibleTrigger,
   CollapsibleContent,
-  CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import {
   TokenRow,
   TokenModeContext,
@@ -92,10 +91,7 @@ export function TypographySection({ search }: { search: string }) {
 
       {/* Token rows */}
       <Collapsible defaultOpen>
-        <CollapsibleTrigger className="flex items-center gap-1 px-2 py-1 rounded hover:bg-muted/50 text-xs text-muted-foreground uppercase tracking-wider font-medium">
-          <CollapsibleChevron className="size-3" />
-          Tokens
-        </CollapsibleTrigger>
+        <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
         <CollapsibleContent className="ml-2">
           {visibleKeys.map((key) => {
             const label = schema[key]?.label ?? (key as string);

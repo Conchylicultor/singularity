@@ -10,7 +10,7 @@ import {
   pushesResource,
 } from "@plugins/tasks/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
-import { cn } from "@/lib/utils";
+import { Row } from "@plugins/primitives/plugins/row/web";
 
 type RepoInfo = { githubBase: string | null };
 
@@ -107,20 +107,16 @@ export function TaskEvents({ taskId }: { taskId: string }) {
               );
               return (
                 <li key={push.id}>
-                  {url ? (
-                    <a
-                      href={url}
-                      target="_blank"
-                      rel="noreferrer"
-                      className="hover:bg-accent flex items-center gap-3 rounded border px-3 py-2"
-                    >
-                      {content}
-                    </a>
-                  ) : (
-                    <div className="flex items-center gap-3 rounded border px-3 py-2">
-                      {content}
-                    </div>
-                  )}
+                  <Row
+                    as={url ? "a" : "div"}
+                    href={url ?? undefined}
+                    target={url ? "_blank" : undefined}
+                    rel={url ? "noreferrer" : undefined}
+                    bordered
+                    className="gap-3"
+                  >
+                    {content}
+                  </Row>
                 </li>
               );
             })}
@@ -162,8 +158,8 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                         const isActive = activeConvId === c.id;
                         return (
                           <li key={c.id}>
-                            <button
-                              type="button"
+                            <Row
+                              selected={isActive}
                               onClick={() => {
                                 if (activeConvId === c.id && activeConvEntry) {
                                   conversationPane.close(activeConvEntry.instanceId);
@@ -173,13 +169,9 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                                   }, { mode: "push" });
                                 }
                               }}
-                              className={cn(
-                                "hover:bg-accent flex w-full items-start rounded px-2 py-1 text-left",
-                                isActive && "bg-accent",
-                              )}
                             >
                               <ConversationItem conv={c} />
-                            </button>
+                            </Row>
                           </li>
                         );
                       })}

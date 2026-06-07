@@ -1,5 +1,6 @@
 import { useCallback, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
+import { Button } from "@/components/ui/button";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
@@ -104,14 +105,15 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
         </div>
       </SortableList>
 
-      <button
-        type="button"
+      <Button
+        variant="ghost"
+        size="xs"
         onClick={handleAdd}
-        className="flex items-center gap-1 self-start rounded-md px-2 py-1 text-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+        className="self-start"
       >
         <MdAdd className="size-3.5" />
         Add item
-      </button>
+      </Button>
     </div>
   );
 };

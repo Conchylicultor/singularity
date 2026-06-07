@@ -2,6 +2,7 @@ import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/row/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
@@ -89,37 +90,41 @@ export function CategoryChipToolbar() {
             const selected = c === category;
             return (
               <li key={c}>
-                <button
-                  type="button"
-                  className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-xs hover:bg-accent"
+                <Row
+                  size="sm"
+                  hover="accent"
                   onClick={() => onPick(c)}
                   disabled={busy !== null}
+                  icon={
+                    <span
+                      className={`inline-flex size-3 items-center justify-center ${selected ? "opacity-100" : "opacity-0"}`}
+                    >
+                      <MdCheck className="size-3" />
+                    </span>
+                  }
                 >
-                  <span
-                    className={`inline-flex size-3 items-center justify-center ${selected ? "opacity-100" : "opacity-0"}`}
-                  >
-                    <MdCheck className="size-3" />
-                  </span>
                   <Badge size="sm" colorClass={colorClassFor(c)}>
                     {c}
                   </Badge>
-                </button>
+                </Row>
               </li>
             );
           })}
         </ul>
         <div className="my-1 h-px bg-border" />
-        <button
-          type="button"
-          className="flex w-full items-center gap-1.5 rounded px-2 py-1 text-left text-xs hover:bg-accent disabled:opacity-50"
+        <Row
+          size="sm"
+          hover="accent"
           onClick={onReclassify}
           disabled={busy !== null}
+          icon={
+            <MdAutoAwesome
+              className={`size-3 ${busy === "classify" ? "animate-pulse" : ""}`}
+            />
+          }
         >
-          <MdAutoAwesome
-            className={`size-3 ${busy === "classify" ? "animate-pulse" : ""}`}
-          />
           {busy === "classify" ? "Re-classifying…" : "Re-classify with Haiku"}
-        </button>
+        </Row>
     </InlinePopover>
   );
 }

@@ -37,6 +37,7 @@ export function WorkflowNodeCard({
       onClick={() => onOpen(node.id)}
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
+      // eslint-disable-next-line row/no-adhoc-row -- DAG node card: flex-col layout with border-color hover and bg-card; Row is flex-row only
       className={cn(
         "flex w-full min-w-0 flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left transition-all",
         "hover:border-foreground/40",
