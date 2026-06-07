@@ -9,7 +9,8 @@ export function registerCheck(program: Command) {
     .description("Run repo validation checks")
     .argument("[checks...]", "Check IDs to run (default: all)")
     .option("--list", "List available checks and exit")
-    .action(async (checks: string[], opts: { list?: boolean }) => {
+    .option("--no-cache", "Bypass the tree-hash check-result cache")
+    .action(async (checks: string[], opts: { list?: boolean; cache?: boolean }) => {
       if (opts.list) {
         const all = await listAllChecks();
         for (const c of all) console.log(`  ${c.id} — ${c.description}`);
@@ -24,7 +25,7 @@ export function registerCheck(program: Command) {
       // A direct `./singularity check` is a build-pool job.
       const kind: HostSlotKind = process.env.SINGULARITY_HOST_SLOT_HELD ? "exempt" : "build";
       const ok = await withHostSlot(kind, () =>
-        runChecks(checks.length > 0 ? checks : undefined),
+        runChecks(checks.length > 0 ? checks : undefined, { noCache: opts.cache === false }),
       );
       if (!ok) process.exit(1);
     });

@@ -4,3 +4,6 @@ export type { RunChecksOptions } from "./runner";
 export type { Check, CheckResult } from "./types";
 export { discoverTscTargets, tsBuildInfoPath } from "./discover";
 export type { TscTarget } from "./discover";
+export { computeTreeHash } from "./tree-hash";
+export { openCheckCache } from "./cache";
+export type { CheckCache } from "./cache";

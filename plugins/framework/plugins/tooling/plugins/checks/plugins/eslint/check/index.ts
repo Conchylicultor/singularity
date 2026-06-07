@@ -1,8 +1,14 @@
+import { createHash } from "crypto";
 import { existsSync, readdirSync, statSync, unlinkSync } from "fs";
 import { join } from "path";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(): Promise<CheckResult>;
+  cacheSignature?(): string | null;
+};
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -99,6 +105,18 @@ function eslintScope(): string[] | null {
 const check: Check = {
   id: "eslint",
   description: "ESLint rules pass (global + plugin-contributed)",
+  // The eslint surface is parameterized by its scope env, so the cache key must
+  // fold it in: build's cached diff-scope, push's FRESH affected-set, and a
+  // full `eslint .` are different (and differently-strong) checks over the same
+  // tree — they must get distinct keys and never alias each other.
+  cacheSignature() {
+    const scope = eslintScope();
+    if (scope === null) return "scope=full";
+    if (scope.length === 0) return "scope=empty";
+    const noCache = process.env.SINGULARITY_ESLINT_NO_CACHE === "1" ? "fresh" : "cached";
+    const files = createHash("sha256").update([...scope].sort().join("\n")).digest("hex");
+    return `scope=list:${noCache}:${files}`;
+  },
   async run() {
     const root = await getRoot();
     const scope = eslintScope();

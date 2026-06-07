@@ -1301,7 +1301,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`; Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `zone`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
-            - Exports: Types: `Check`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `discoverTscTargets`, `listAllChecks`, `runChecks`, `tsBuildInfoPath`
+            - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
           - Plugins:
             - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**

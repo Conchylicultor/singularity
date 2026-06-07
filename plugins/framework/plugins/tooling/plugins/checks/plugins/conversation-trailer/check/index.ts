@@ -1,5 +1,10 @@
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(): Promise<CheckResult>;
+  cacheSignature?(): string | null;
+};
 
 const STOP_MESSAGE =
   "STOP. Do not attempt to fix, commit, or push. Report this failure to the user verbatim and wait for explicit instructions before starting a debugging session.";
@@ -36,6 +41,9 @@ const check: Check = {
   id: "conversation-trailer",
   description:
     "SINGULARITY_CONVERSATION_ID is set and every commit ahead of main carries the Singularity-Conversation trailer",
+  // Not a pure function of the working tree: reads SINGULARITY_CONVERSATION_ID
+  // env and `git log main..HEAD` trailers. Never cache.
+  cacheSignature: () => null,
   async run() {
     const branch = await currentBranch();
     if (branch === "main") return { ok: true };

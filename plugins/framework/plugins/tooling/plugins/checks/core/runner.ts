@@ -1,4 +1,14 @@
-import type { Check } from "./types";
+import type { Check, CheckResult } from "./types";
+import { computeTreeHash } from "./tree-hash";
+import { openCheckCache } from "./cache";
+
+async function getRoot(): Promise<string> {
+  const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
+    stdout: "pipe",
+    stderr: "pipe",
+  });
+  return (await new Response(proc.stdout).text()).trim();
+}
 
 function isCheck(value: unknown): value is Check {
   return (
@@ -42,6 +52,8 @@ export async function listAllChecks(): Promise<Check[]> {
 export interface RunChecksOptions {
   onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
   log?: (line: string, stream: "stdout" | "stderr") => void;
+  /** Bypass the tree-hash result cache entirely (lookup + record). */
+  noCache?: boolean;
 }
 
 export async function runChecks(ids?: string[], options?: RunChecksOptions): Promise<boolean> {
@@ -58,12 +70,38 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
     return false;
   }
 
+  const noCache = options?.noCache || process.env.SINGULARITY_CHECK_NO_CACHE === "1";
+  const treeHash = noCache ? null : await computeTreeHash(await getRoot());
+  const cache = treeHash ? openCheckCache() : null;
+
   const results = await Promise.all(
     selected.map(async (check) => {
       const wallStart = performance.now();
+
+      // A check opts out of caching by returning null from cacheSignature();
+      // absent → "" (keyed on tree hash alone). The runner never names checks.
+      let sig: string | null = "";
+      if (check.cacheSignature) {
+        try {
+          sig = check.cacheSignature();
+        } catch {
+          sig = null;
+        }
+      }
+      // Narrow inline (not via a stored boolean) so TS sees cache/treeHash/sig
+      // as non-null in the guarded branches.
+      if (cache !== null && treeHash !== null && sig !== null && cache.has(check.id, treeHash, sig)) {
+        const result: CheckResult = { ok: true };
+        return { check, result, durationMs: Math.round(performance.now() - wallStart), wallStart, cached: true };
+      }
+
       const result = await check.run();
       const durationMs = Math.round(performance.now() - wallStart);
-      return { check, result, durationMs, wallStart };
+      // Cache PASSES only — failures must always re-run with full output.
+      if (cache !== null && treeHash !== null && sig !== null && result.ok) {
+        cache.record(check.id, treeHash, sig);
+      }
+      return { check, result, durationMs, wallStart, cached: false };
     }),
   );
 
@@ -73,10 +111,10 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
   const MAX_MESSAGE_LINES = 100;
 
   let allOk = true;
-  for (const { check, result, durationMs, wallStart } of results) {
+  for (const { check, result, durationMs, wallStart, cached } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
-      log(`• ${check.id} ... ok`, "stdout");
+      log(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
     } else {
       allOk = false;
       log(`• ${check.id} ... FAIL`, "stdout");

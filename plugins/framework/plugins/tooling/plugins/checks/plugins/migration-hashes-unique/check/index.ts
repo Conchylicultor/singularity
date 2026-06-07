@@ -2,7 +2,12 @@ import { readdirSync } from "fs";
 import { resolve } from "path";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
+type Check = {
+  id: string;
+  description: string;
+  run(): Promise<CheckResult>;
+  cacheSignature?(): string | null;
+};
 
 // <ts>_<sha8>__<slug>.sql — the runner (server/internal/runner.ts) keys applied
 // state by the sha8 hash token, which is the PRIMARY KEY of __singularity_migrations.
@@ -42,6 +47,10 @@ const check: Check = {
   id: "migration-hashes-unique",
   description:
     "every migration filename carries a distinct sha8 (the runner's applied-state key)",
+  // Not a pure function of the working tree: trackedBasenames() reads
+  // origin/main / main via git ls-tree, so the result can change while the tree
+  // is byte-identical. Never cache.
+  cacheSignature: () => null,
   async run() {
     const root = await getRoot();
     const dir = resolve(root, MIGRATIONS_SUBDIR);
