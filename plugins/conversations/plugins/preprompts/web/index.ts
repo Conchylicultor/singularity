@@ -4,6 +4,7 @@ import { prepromptsConfig } from "../shared/config";
 
 export { PrepromptSelect } from "./components/preprompt-select";
 export type { PrepromptSelectProps } from "./components/preprompt-select";
+export { PrepromptGlyph } from "./components/preprompt-glyph";
 export { usePreprompt } from "./internal/use-preprompt";
 
 export default {

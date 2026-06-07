@@ -8,6 +8,7 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { prepromptsConfig } from "../../shared/config";
+import { PrepromptGlyph } from "./preprompt-glyph";
 
 const OFF = "none";
 
@@ -61,12 +62,27 @@ export function PrepromptSelect({
       disabled={disabled}
     >
       <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-40 text-xs", className)}>
-        <SelectValue />
+        <SelectValue>
+          {(v: string | null) => {
+            if (v == null || v === OFF) return offLabel;
+            const p = preprompts.find((item) => item.id === v);
+            return (
+              <>
+                <PrepromptGlyph icon={p?.icon} className="text-muted-foreground" />
+                <span className="truncate">{p?.title || "Untitled"}</span>
+              </>
+            );
+          }}
+        </SelectValue>
       </SelectTrigger>
       <SelectContent>
-        <SelectItem value={OFF}>{offLabel}</SelectItem>
+        <SelectItem value={OFF}>
+          <span className="size-3.5 shrink-0" aria-hidden />
+          {offLabel}
+        </SelectItem>
         {preprompts.map((p) => (
           <SelectItem key={p.id} value={p.id}>
+            <PrepromptGlyph icon={p.icon} className="text-muted-foreground" />
             {p.title || "Untitled"}
           </SelectItem>
         ))}

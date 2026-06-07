@@ -1045,7 +1045,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ConfigV2.WebRegister`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
-        - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`, `usePreprompt`
+        - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptGlyph`, `PrepromptSelect`, `usePreprompt`
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
         - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`
