@@ -28,6 +28,7 @@ export const _crashes = pgTable(
     label: text("label"),
     count: integer("count").notNull().default(1),
     crashLoop: boolean("crash_loop").notNull().default(false),
+    noise: boolean("noise").notNull().default(false),
     // Soft reference to tasks.id — the cross-plugin FK would cross a plugin
     // boundary, so we validate integrity in code via getTask() instead. A
     // deleted task just surfaces as `needsTask` on the next crash.

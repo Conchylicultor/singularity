@@ -18,6 +18,7 @@ export const _notifications = pgTable(
     variant: text("variant").notNull(),
     dismissed: boolean("dismissed").notNull().default(false),
     read: boolean("read").notNull().default(false),
+    muted: boolean("muted").notNull().default(false),
     linkTo: text("link_to"),
     metadata: jsonb("metadata").$type<Record<string, unknown>>(),
     dedupKey: text("dedup_key"),

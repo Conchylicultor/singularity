@@ -5,6 +5,7 @@ import { recordNotification } from "@plugins/notifications/server";
 import { _crashes } from "./tables";
 import { crashesResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";
+import { isNoiseCrash } from "./noise-rules";
 import { CRASHES_META_TASK_ID } from "./meta-crashes";
 import { fingerprint as fingerprintOf } from "../../shared/fingerprint";
 import type { CrashReport } from "../../shared/types";
@@ -28,6 +29,12 @@ export async function recordCrash(
   const fp = await fingerprintOf(input.errorType, input.stack);
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
   const loop = bumpWindowAndCheck(fp);
+  const noise = isNoiseCrash({
+    source: input.source,
+    errorType: input.errorType ?? null,
+    message: input.message,
+    stack: input.stack ?? null,
+  });
 
   const id = `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   const [row] = await db
@@ -46,6 +53,7 @@ export async function recordCrash(
       slot: input.slot ?? null,
       label: input.label ?? null,
       crashLoop: loop,
+      noise,
     })
     .onConflictDoUpdate({
       target: [_crashes.fingerprint, _crashes.worktree],
@@ -54,6 +62,7 @@ export async function recordCrash(
         lastSeenAt: new Date(),
         updatedAt: new Date(),
         crashLoop: sql`${_crashes.crashLoop} OR ${loop}`,
+        noise,
       },
     })
     .returning();
@@ -77,6 +86,7 @@ export async function recordCrash(
     title: "Crash recorded",
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
     variant: "error",
+    muted: row.noise,
     linkTo: outcome.taskId ? `/tasks/t/${outcome.taskId}` : null,
     metadata: {
       crashId: row.id,

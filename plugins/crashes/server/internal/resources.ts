@@ -3,7 +3,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { _crashes } from "./tables";
-import { CrashSchema } from "./schema";
+import { CrashSchema } from "../../core/resources";
 
 export const crashesResource = defineResource({
   key: "crashes",

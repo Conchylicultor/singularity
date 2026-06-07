@@ -21,6 +21,7 @@ export const notificationsResource = defineResource({
         variant: _notifications.variant,
         dismissed: _notifications.dismissed,
         read: _notifications.read,
+        muted: _notifications.muted,
         linkTo: _notifications.linkTo,
         metadata: _notifications.metadata,
         createdAt: _notifications.createdAt,

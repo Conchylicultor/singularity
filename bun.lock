@@ -812,6 +812,10 @@
       "name": "@singularity/plugin-crashes-mutation-errors",
       "version": "0.0.1",
     },
+    "plugins/crashes/plugins/noise-rules": {
+      "name": "@singularity/plugin-crashes-noise-rules",
+      "version": "0.0.1",
+    },
     "plugins/database": {
       "name": "@singularity/plugin-database",
       "version": "0.0.1",
@@ -861,6 +865,10 @@
     },
     "plugins/debug/plugins/claude-cli-calls": {
       "name": "@singularity/plugin-debug-claude-cli-calls",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/crashes": {
+      "name": "@singularity/plugin-debug-crashes",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/logs": {
@@ -2973,6 +2981,8 @@
 
     "@singularity/plugin-crashes-mutation-errors": ["@singularity/plugin-crashes-mutation-errors@workspace:plugins/crashes/plugins/mutation-errors"],
 
+    "@singularity/plugin-crashes-noise-rules": ["@singularity/plugin-crashes-noise-rules@workspace:plugins/crashes/plugins/noise-rules"],
+
     "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
 
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
@@ -2990,6 +3000,8 @@
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
+
+    "@singularity/plugin-debug-crashes": ["@singularity/plugin-debug-crashes@workspace:plugins/debug/plugins/crashes"],
 
     "@singularity/plugin-debug-logs": ["@singularity/plugin-debug-logs@workspace:plugins/debug/plugins/logs"],
 

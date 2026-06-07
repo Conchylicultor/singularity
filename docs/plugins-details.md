@@ -1097,10 +1097,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
     - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
-    - Exports: Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `recordCrash`
+    - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
     - Resources: `crashes` (push)
-  - Cross-plugin:
-    - Imported by: `conversations`, `endpoint-errors`, `model-provider`, `runtime-tmux`
+  - Core:
+    - Exports: Types: `Crash`; Values: `crashesResource`, `CrashSchema`
   - Plugins:
     - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
       - Web:
@@ -1113,6 +1113,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Core.Root` → `MutationErrorWatcher`
         - Uses: `notifications.toast`
+    - **`noise-rules`** — Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).
+      - Server:
+        - Uses: `crashes.CrashNoiseRule`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
@@ -1155,6 +1158,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `Pane.Register` "claude-cli-calls", `DebugApp.Sidebar` "Claude CLI Calls" → `component`
         - Exports: Values: `claudeCliCallsPane`
+    - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
+      - Web:
+        - Contributes: `Pane.Register` "crashes", `DebugApp.Sidebar` "Crashes" → `component`
+        - Exports: Values: `crashesPane`
+      - Cross-plugin:
+        - Imported by: `conversations`, `endpoint-errors`, `model-provider`, `noise-rules`, `runtime-tmux`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - Web:
         - Contributes: `Pane.Register` "logs", `Pane.Register` "logs-channel", `DebugApp.Sidebar` "Logs" → `component`
@@ -1965,7 +1974,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Pane.Register`
         - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
+        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Web:
         - Exports: Values: `useDraft`

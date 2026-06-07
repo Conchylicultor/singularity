@@ -65,7 +65,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 
-- **`crashes`** [3 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
+- **`crashes`** [4 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 
 - **`database`** [load-bearing] — Core database infrastructure. Connection pooling and DB readiness.
   - Plugins:
@@ -79,6 +79,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
+    - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
     - **`logs`** — System logs pane, opened from the Debug sidebar.
     - **`logs-mcp`** — MCP tool for agents to read persisted browser/server log channels for a worktree.
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.

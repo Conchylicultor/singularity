@@ -16,6 +16,7 @@ export const NotificationSchema = z.object({
   variant: NotificationVariantSchema,
   dismissed: z.boolean(),
   read: z.boolean(),
+  muted: z.boolean(),
   linkTo: z.string().nullable(),
   metadata: z.record(z.unknown()).nullable(),
   createdAt: z.coerce.date(),

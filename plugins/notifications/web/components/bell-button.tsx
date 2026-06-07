@@ -23,6 +23,20 @@ const VARIANT_TEXT: Record<Notification["variant"], string> = {
   success: "text-success",
 };
 
+const VARIANT_BORDER_MUTED: Record<Notification["variant"], string> = {
+  error: "border-l-destructive/40",
+  warning: "border-l-warning/40",
+  info: "border-l-info/40",
+  success: "border-l-success/40",
+};
+
+const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
+  error: "text-destructive/70",
+  warning: "text-warning/70",
+  info: "text-info/70",
+  success: "text-success/70",
+};
+
 function navigateTo(url: string) {
   window.history.pushState({}, "", url);
   window.dispatchEvent(new PopStateEvent("popstate"));
@@ -32,7 +46,7 @@ function navigateTo(url: string) {
 function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notification; dismiss: (id: string) => void; navigateTo: (url: string) => void; onClose: () => void }) {
   return (
     <li
-      className={`flex gap-2 px-3 py-2.5 border-l-2 ${VARIANT_BORDER[n.variant]} ${n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
+      className={`flex gap-2 px-3 py-2.5 border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
       onClick={
         n.linkTo?.startsWith("/")
           ? () => { nav(n.linkTo!); onClose(); }
@@ -40,7 +54,7 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
       }
     >
       <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium truncate ${VARIANT_TEXT[n.variant]}`}>
+        <p className={`text-xs font-medium truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
           {n.title}
         </p>
         <p className="text-xs text-muted-foreground line-clamp-2">
@@ -75,7 +89,7 @@ export function BellButton() {
   const notificationsResult = useResource(notificationsResource);
   const list = notificationsResult.pending ? [] : notificationsResult.data;
   const unreadCount = list.filter(
-    (n) => !n.read && (n.variant === "error" || n.variant === "warning"),
+    (n) => !n.read && !n.muted && (n.variant === "error" || n.variant === "warning"),
   ).length;
 
   const uniqueTypes = Array.from(new Set(list.map((n) => n.type))).filter(Boolean);
@@ -90,7 +104,7 @@ export function BellButton() {
   );
 
   const isCountedUnread = (n: Notification) =>
-    !n.read && (n.variant === "error" || n.variant === "warning");
+    !n.read && !n.muted && (n.variant === "error" || n.variant === "warning");
   const unreadFiltered = filtered.filter(isCountedUnread);
   const restFiltered = filtered.filter((n) => !isCountedUnread(n));
 
@@ -103,7 +117,7 @@ export function BellButton() {
     const currentIds = new Set(data.map((n) => n.id));
     if (prevIdsRef.current !== null) {
       for (const n of data) {
-        if (!prevIdsRef.current.has(n.id) && !recentClientIds.has(n.id)) {
+        if (!prevIdsRef.current.has(n.id) && !recentClientIds.has(n.id) && !n.muted) {
           ShellCommands.Toast({
             title: n.title,
             description: n.description,

@@ -11,6 +11,8 @@ export { _crashes } from "./internal/tables";
 export { crashesResource } from "./internal/resources";
 export { CRASHES_META_TASK_ID } from "./internal/meta-crashes";
 export { recordCrash } from "./internal/record-crash";
+export { CrashNoiseRule } from "./internal/noise-rules";
+export type { CrashNoiseRuleSpec, CrashNoiseInput } from "./internal/noise-rules";
 
 export default {
   name: "Crashes",

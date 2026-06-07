@@ -12,6 +12,11 @@ export interface RecordNotificationInput {
   linkTo?: string | null;
   metadata?: Record<string, unknown> | null;
   /**
+   * Quiet notification: keeps its variant color but is dimmed in the bell list,
+   * excluded from the unread badge, and never pops a toast. Defaults to false.
+   */
+  muted?: boolean;
+  /**
    * Deterministic key that collapses duplicate writes to a single row via a
    * UNIQUE index. Null/undefined means "no dedup" — Postgres treats NULLs as
    * non-conflicting, so a normal insert always happens.
@@ -42,6 +47,7 @@ export async function recordNotification(
       variant: input.variant,
       linkTo: input.linkTo ?? null,
       metadata: input.metadata ?? null,
+      muted: input.muted ?? false,
       dedupKey,
     })
     // null never conflicts, so a normal insert happens when no dedupeKey is set.
