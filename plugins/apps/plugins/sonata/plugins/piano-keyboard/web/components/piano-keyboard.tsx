@@ -7,6 +7,11 @@ import {
   type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useHiddenTrackIds,
+  useMutedTrackIds,
+  useTrackColorMap,
+} from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { pianoKeyboardConfig } from "../../shared/config";
 
@@ -68,18 +73,33 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
 
   const speller = useMemo(() => makeKeySpeller(score.meta.key), [score.meta.key]);
 
-  // MIDI pitches sounding at the cursor — the keys to light up. Recomputed each
-  // frame while playing (cursorBeat advances); a linear scan over notes is
-  // trivial at keyboard scale.
+  // Per-track view-state, shared with the falling notes (color + hidden) and the
+  // audio engine (muted). Memo-stable across frames, so folding it into the
+  // per-frame `sounding` recompute below is free.
+  const colorMap = useTrackColorMap();
+  const hiddenIds = useHiddenTrackIds();
+  const mutedIds = useMutedTrackIds();
+
+  // Pitches sounding at the cursor → the color to light each with. A key lights
+  // only for notes on a track that is neither hidden (gone from the roll) nor
+  // muted (silent), so the keyboard tracks the same view-state as the falling
+  // notes and the audio. The first eligible note per pitch picks the tint.
+  // Recomputed each frame while playing (cursorBeat advances); a linear scan
+  // over notes is trivial at keyboard scale.
   const sounding = useMemo(() => {
-    const s = new Set<number>();
+    const m = new Map<number, string>();
     for (const n of score.notes) {
-      if (n.start <= cursorBeat && cursorBeat < n.start + n.duration) {
-        s.add(n.pitch);
+      if (hiddenIds.has(n.track) || mutedIds.has(n.track)) continue;
+      if (
+        n.start <= cursorBeat &&
+        cursorBeat < n.start + n.duration &&
+        !m.has(n.pitch)
+      ) {
+        m.set(n.pitch, colorMap.get(n.track) ?? "");
       }
     }
-    return s;
-  }, [score.notes, cursorBeat]);
+    return m;
+  }, [score.notes, cursorBeat, colorMap, hiddenIds, mutedIds]);
 
   if (!keys) return null; // defensive: host only mounts us with pitch-plane.
 
@@ -91,14 +111,19 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
     <div className="absolute inset-0 overflow-hidden bg-muted/30">
       {/* White keys (back layer). */}
       {whites.map((k) => {
-        const lit = sounding.has(k.pitch);
+        const color = sounding.get(k.pitch); // undefined → not lit
+        const lit = color !== undefined;
         return (
           <div
             key={k.pitch}
             className={`absolute bottom-0 top-0 flex items-end justify-center rounded-b-sm border border-border pb-1 ${
               lit ? "bg-primary" : "bg-background"
             }`}
-            style={{ left: k.center - k.width / 2, width: k.width }}
+            style={{
+              left: k.center - k.width / 2,
+              width: k.width,
+              ...(color ? { backgroundColor: color } : null),
+            }}
           >
             <span
               className={`select-none text-[9px] leading-none ${
@@ -112,14 +137,20 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
       })}
       {/* Black keys (front layer), ~62% height. */}
       {blacks.map((k) => {
-        const lit = sounding.has(k.pitch);
+        const color = sounding.get(k.pitch); // undefined → not lit
+        const lit = color !== undefined;
         return (
           <div
             key={k.pitch}
             className={`absolute top-0 z-10 flex items-end justify-center rounded-b-sm border border-border pb-0.5 ${
               lit ? "bg-primary" : "bg-foreground"
             }`}
-            style={{ left: k.center - k.width / 2, width: k.width, height: "62%" }}
+            style={{
+              left: k.center - k.width / 2,
+              width: k.width,
+              height: "62%",
+              ...(color ? { backgroundColor: color } : null),
+            }}
           >
             <span
               className={`select-none text-[7px] leading-none ${
