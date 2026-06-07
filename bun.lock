@@ -920,6 +920,38 @@
       "name": "@singularity/plugin-fields",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/bool": {
+      "name": "@singularity/plugin-fields-bool",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/bool/plugins/filter": {
+      "name": "@singularity/plugin-fields-bool-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/bool/plugins/table": {
+      "name": "@singularity/plugin-fields-bool-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/color": {
+      "name": "@singularity/plugin-fields-color",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/color/plugins/table": {
+      "name": "@singularity/plugin-fields-color-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/date": {
+      "name": "@singularity/plugin-fields-date",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/date/plugins/filter": {
+      "name": "@singularity/plugin-fields-date-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/date/plugins/table": {
+      "name": "@singularity/plugin-fields-date-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/enum": {
       "name": "@singularity/plugin-fields-enum",
       "version": "0.0.1",
@@ -928,8 +960,32 @@
       "name": "@singularity/plugin-fields-enum-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/enum/plugins/filter": {
+      "name": "@singularity/plugin-fields-enum-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/enum/plugins/table": {
+      "name": "@singularity/plugin-fields-enum-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/float": {
+      "name": "@singularity/plugin-fields-float",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/image": {
+      "name": "@singularity/plugin-fields-image",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/image/plugins/table": {
+      "name": "@singularity/plugin-fields-image-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/int": {
       "name": "@singularity/plugin-fields-int",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/multiline-text": {
+      "name": "@singularity/plugin-fields-multiline-text",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/number": {
@@ -942,6 +998,18 @@
     },
     "plugins/fields/plugins/number/plugins/table": {
       "name": "@singularity/plugin-fields-number-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/text": {
+      "name": "@singularity/plugin-fields-text",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/text/plugins/filter": {
+      "name": "@singularity/plugin-fields-text-filter",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/text/plugins/table": {
+      "name": "@singularity/plugin-fields-text-table",
       "version": "0.0.1",
     },
     "plugins/floating-bar": {
@@ -2927,17 +2995,51 @@
 
     "@singularity/plugin-fields": ["@singularity/plugin-fields@workspace:plugins/fields"],
 
+    "@singularity/plugin-fields-bool": ["@singularity/plugin-fields-bool@workspace:plugins/fields/plugins/bool"],
+
+    "@singularity/plugin-fields-bool-filter": ["@singularity/plugin-fields-bool-filter@workspace:plugins/fields/plugins/bool/plugins/filter"],
+
+    "@singularity/plugin-fields-bool-table": ["@singularity/plugin-fields-bool-table@workspace:plugins/fields/plugins/bool/plugins/table"],
+
+    "@singularity/plugin-fields-color": ["@singularity/plugin-fields-color@workspace:plugins/fields/plugins/color"],
+
+    "@singularity/plugin-fields-color-table": ["@singularity/plugin-fields-color-table@workspace:plugins/fields/plugins/color/plugins/table"],
+
+    "@singularity/plugin-fields-date": ["@singularity/plugin-fields-date@workspace:plugins/fields/plugins/date"],
+
+    "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
+
+    "@singularity/plugin-fields-date-table": ["@singularity/plugin-fields-date-table@workspace:plugins/fields/plugins/date/plugins/table"],
+
     "@singularity/plugin-fields-enum": ["@singularity/plugin-fields-enum@workspace:plugins/fields/plugins/enum"],
 
     "@singularity/plugin-fields-enum-config": ["@singularity/plugin-fields-enum-config@workspace:plugins/fields/plugins/enum/plugins/config"],
 
+    "@singularity/plugin-fields-enum-filter": ["@singularity/plugin-fields-enum-filter@workspace:plugins/fields/plugins/enum/plugins/filter"],
+
+    "@singularity/plugin-fields-enum-table": ["@singularity/plugin-fields-enum-table@workspace:plugins/fields/plugins/enum/plugins/table"],
+
+    "@singularity/plugin-fields-float": ["@singularity/plugin-fields-float@workspace:plugins/fields/plugins/float"],
+
+    "@singularity/plugin-fields-image": ["@singularity/plugin-fields-image@workspace:plugins/fields/plugins/image"],
+
+    "@singularity/plugin-fields-image-table": ["@singularity/plugin-fields-image-table@workspace:plugins/fields/plugins/image/plugins/table"],
+
     "@singularity/plugin-fields-int": ["@singularity/plugin-fields-int@workspace:plugins/fields/plugins/int"],
+
+    "@singularity/plugin-fields-multiline-text": ["@singularity/plugin-fields-multiline-text@workspace:plugins/fields/plugins/multiline-text"],
 
     "@singularity/plugin-fields-number": ["@singularity/plugin-fields-number@workspace:plugins/fields/plugins/number"],
 
     "@singularity/plugin-fields-number-filter": ["@singularity/plugin-fields-number-filter@workspace:plugins/fields/plugins/number/plugins/filter"],
 
     "@singularity/plugin-fields-number-table": ["@singularity/plugin-fields-number-table@workspace:plugins/fields/plugins/number/plugins/table"],
+
+    "@singularity/plugin-fields-text": ["@singularity/plugin-fields-text@workspace:plugins/fields/plugins/text"],
+
+    "@singularity/plugin-fields-text-filter": ["@singularity/plugin-fields-text-filter@workspace:plugins/fields/plugins/text/plugins/filter"],
+
+    "@singularity/plugin-fields-text-table": ["@singularity/plugin-fields-text-table@workspace:plugins/fields/plugins/text/plugins/table"],
 
     "@singularity/plugin-floating-bar": ["@singularity/plugin-floating-bar@workspace:plugins/floating-bar"],
 

@@ -1245,12 +1245,51 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `enum`, `int`, `number`
-    - Imported by: `enum`, `int`, `number`
+    - Slot contributors: `bool`, `color`, `date`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
+    - Imported by: `bool`, `color`, `date`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
-    - **`enum`** — Enum (select) field type: identity only. The config-render capability lives in the plugins/config sub-plugin; table/filter capabilities are deferred to task 3.
+    - **`bool`** — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
+      - Web:
+        - Contributes: `Fields.Identity` "bool"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `boolFieldType`, `boolIdentity`
+      - Plugins:
+        - **`filter`** — Boolean field type: data-view filter (yes/no segmented control).
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "bool"
+        - **`table`** — Boolean field type: data-view table cell (read-only check/dash cell).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "bool" → `BoolCell`
+    - **`color`** — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
+      - Web:
+        - Contributes: `Fields.Identity` "color"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `colorFieldType`, `colorIdentity`
+      - Plugins:
+        - **`table`** — Color field type: data-view table cell (read-only color swatch).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "color" → `ColorCell`
+    - **`date`** — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
+      - Web:
+        - Contributes: `Fields.Identity` "date"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `dateFieldType`, `dateIdentity`
+      - Plugins:
+        - **`filter`** — Date field type: data-view filter (inclusive date-range control).
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "date"
+        - **`table`** — Date field type: data-view table cell (read-only relative-time cell).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "date" → `DateCell`
+    - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "enum"
         - Uses: `fields.Fields`
@@ -1261,6 +1300,30 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
           - Web:
             - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
+        - **`filter`** — Enum (select) field type: data-view filter (multi-select option chips).
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "enum"
+        - **`table`** — Enum (select) field type: data-view table cell (read-only chip cell).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "enum" → `EnumCell`
+    - **`float`** — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
+      - Web:
+        - Contributes: `Fields.Identity` "float"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `floatFieldType`, `floatIdentity`
+    - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
+      - Web:
+        - Contributes: `Fields.Identity` "image"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `imageFieldType`, `imageIdentity`
+      - Plugins:
+        - **`table`** — Image field type: data-view table cell (read-only thumbnail).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "image" → `ImageCell`
     - **`int`** — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "int"
@@ -1268,6 +1331,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `intFieldType`, `intIdentity`
+    - **`multiline-text`** — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
+      - Web:
+        - Contributes: `Fields.Identity` "multiline-text"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `multilineTextFieldType`, `multilineTextIdentity`
     - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "number"
@@ -1282,6 +1352,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`table`** — Number field type: data-view table cell (read-only numeric cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "number" → `NumberCell`
+    - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
+      - Web:
+        - Contributes: `Fields.Identity` "text"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `textFieldType`, `textIdentity`
+      - Plugins:
+        - **`filter`** — Text field type: data-view filter (substring contains control).
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "text"
+        - **`table`** — Text field type: data-view table cell (read-only text cell).
+          - Web:
+            - Contributes: `DataViewSlots.Cell` "text" → `TextCell`
 
 - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
   - Web:

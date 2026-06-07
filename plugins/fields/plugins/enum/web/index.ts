@@ -5,6 +5,6 @@ import { enumIdentity } from "../core";
 export default {
   name: "Fields: Enum",
   description:
-    "Enum (select) field type: identity only. The config-render capability lives in the plugins/config sub-plugin; table/filter capabilities are deferred to task 3.",
+    "Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.",
   contributions: [Fields.Identity({ identity: enumIdentity })],
 } satisfies PluginDefinition;
