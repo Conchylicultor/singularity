@@ -4,12 +4,13 @@ import { useConversationPreprompt } from "../internal/hooks";
 import { PrepromptIcon } from "./preprompt-icon";
 
 // Sidebar row marker surfacing the preprompt a conversation was launched with,
-// as a small colored icon disc (mirrors the op-status chip's placement). Only
-// rendered when the snapshot carries a chosen icon, so conversations launched
-// without a preprompt — or with an icon-less one — stay unadorned.
+// as a small muted glyph (mirrors the op-status chip's placement). Rendered for
+// every conversation that has a preprompt — PrepromptIcon resolves the icon
+// live and falls back to a default glyph, so the marker is always visible.
+// Conversations launched without any preprompt stay unadorned.
 export function PrepromptListIcon({ conv }: { conv: ConversationItemConv }) {
   const record = useConversationPreprompt(conv.id);
-  if (!record?.icon?.svgNodes?.length) return null;
+  if (!record) return null;
   return (
     <WithTooltip content={`Preprompt: ${record.title}`}>
       <span className="inline-flex text-muted-foreground">

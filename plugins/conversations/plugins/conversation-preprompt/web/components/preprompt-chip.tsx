@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { MdCampaign } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
@@ -25,13 +24,7 @@ export function PrepromptChip() {
           as="button"
           className="hover:opacity-80"
           aria-label={`Preprompt: ${record.title}`}
-          icon={
-            <PrepromptIcon
-              record={record}
-              className="size-3"
-              fallback={<MdCampaign className="size-3" />}
-            />
-          }
+          icon={<PrepromptIcon record={record} className="size-3" />}
         >
           <span className="max-w-32 truncate">{record.title}</span>
         </Badge>

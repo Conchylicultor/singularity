@@ -25,7 +25,7 @@ never the reverse) and the feature fully opt-in and removable.
 
 ## Plugin reference
 
-- Description: Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's chosen icon. Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
+- Description: Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
 - Web:
   - Contributes: `Conversation.Header` → `PrepromptChip`, `Item.Chips` → `PrepromptListIcon`
   - Exports: Values: `useConversationPreprompt`

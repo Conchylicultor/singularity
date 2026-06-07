@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
-  - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`
+  - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`, `usePreprompt`
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
   - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`

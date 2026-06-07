@@ -611,7 +611,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Register: `defineJob('conversation-category.classify')`
       - Shared:
         - Exports: Types: `ConversationCategoriesPayload`, `ConversationCategory`, `SetCategoryBody`; Values: `classifyConversation`, `clearConversationCategory`, `ConversationCategoriesPayloadSchema`, `conversationCategoriesResource`, `conversationCategoryConfig`, `ConversationCategorySchema`, `SetCategoryBodySchema`, `setConversationCategory`
-    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's chosen icon. Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
+    - **`conversation-preprompt`** — Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback). Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.
       - Web:
         - Contributes: `Conversation.Header` → `PrepromptChip`, `Item.Chips` → `PrepromptListIcon`
         - Exports: Values: `useConversationPreprompt`
@@ -1042,7 +1042,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ConfigV2.WebRegister`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`
-        - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`
+        - Exports: Types: `PrepromptSelectProps`; Values: `PrepromptSelect`, `usePreprompt`
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
         - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`

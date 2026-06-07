@@ -9,7 +9,7 @@ export { useConversationPreprompt } from "./internal/hooks";
 export default {
   name: "Conversation: Preprompt",
   description:
-    "Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's chosen icon.",
+    "Header chip showing the preprompt the conversation's task was launched with; a popover reveals the full instruction text. Sidebar rows show the preprompt's icon (resolved live from the library, with a default-glyph fallback).",
   contributions: [
     Conversation.Header({ id: "preprompt", component: PrepromptChip }),
     Item.Chips({ id: "preprompt", component: PrepromptListIcon }),
