@@ -1343,6 +1343,18 @@
       "name": "@singularity/plugin-plugin-meta-facets-registrations",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-catalog": {
+      "name": "@singularity/plugin-plugin-meta-facets-registrations-render-catalog",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-detail": {
+      "name": "@singularity/plugin-plugin-meta-facets-registrations-render-detail",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-diff": {
+      "name": "@singularity/plugin-plugin-meta-facets-registrations-render-diff",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/facets/plugins/resources": {
       "name": "@singularity/plugin-plugin-meta-facets-resources",
       "version": "0.0.1",
@@ -3080,6 +3092,12 @@
     "@singularity/plugin-plugin-meta-facets-exports-render-diff": ["@singularity/plugin-plugin-meta-facets-exports-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-registrations": ["@singularity/plugin-plugin-meta-facets-registrations@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations"],
+
+    "@singularity/plugin-plugin-meta-facets-registrations-render-catalog": ["@singularity/plugin-plugin-meta-facets-registrations-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-catalog"],
+
+    "@singularity/plugin-plugin-meta-facets-registrations-render-detail": ["@singularity/plugin-plugin-meta-facets-registrations-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-detail"],
+
+    "@singularity/plugin-plugin-meta-facets-registrations-render-diff": ["@singularity/plugin-plugin-meta-facets-registrations-render-diff@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-diff"],
 
     "@singularity/plugin-plugin-meta-facets-resources": ["@singularity/plugin-plugin-meta-facets-resources@workspace:plugins/plugin-meta/plugins/facets/plugins/resources"],
 

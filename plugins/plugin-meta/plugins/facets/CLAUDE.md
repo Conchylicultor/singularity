@@ -68,6 +68,10 @@ See `plugins/commands/` for the reference implementation.
       - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the exports facet (PR review).
   - **`registrations`**
+    - Plugins:
+      - **`render-catalog`** — Aggregated cross-plugin registrations table in the Forge catalog.
+      - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.
+      - **`render-diff`** — Diff renderer for the registrations facet (PR review).
   - **`resources`**
     - Plugins:
       - **`render-catalog`** — Aggregated cross-plugin resources table in the Forge catalog.
