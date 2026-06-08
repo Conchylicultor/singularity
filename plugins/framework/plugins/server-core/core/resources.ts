@@ -63,13 +63,14 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    */
   loader: (params: P, ctx?: { affectedIds: readonly string[] }) => Promise<T> | T;
   /**
-   * Zod schema for the payload. The descriptor exposed to clients carries
-   * this schema so the browser parses every payload before it lands in the
-   * TanStack cache. Currently optional during the staged migration; will
-   * become required once every resource declares one. See
-   * research/2026-04-29-global-resource-schema-validation.md.
+   * Zod schema for the payload. Required. The server parses every loader output
+   * against it at load time (single chokepoint in `timedLoad`) before any
+   * broadcast — a payload that violates its schema fails loudly instead of
+   * shipping. The descriptor exposed to clients carries the same schema so the
+   * browser re-parses before the value lands in the TanStack cache. See
+   * research/2026-06-08-global-mandatory-resource-schema-server-validation.md.
    */
-  schema?: ZodType<T>;
+  schema: ZodType<T>;
   /**
    * Row identity for `mode: "keyed"` resources. Required (and only meaningful)
    * when `mode === "keyed"`: the loader's `T` must be an array, and `keyOf`
@@ -98,7 +99,7 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
-  schema?: ZodType<T>;
+  schema: ZodType<T>;
   load(params: P): Promise<T>;
   /**
    * Signal that state has changed. No-arg = parameterless resource.
@@ -131,6 +132,8 @@ interface PendingNotify {
 interface RegistryEntry {
   key: string;
   mode: ResourceMode;
+  /** Payload schema. The loader output is parsed against it in `timedLoad`. */
+  schema: ZodType<unknown>;
   loader: (
     params: ResourceParams,
     ctx?: { affectedIds: readonly string[] },
@@ -163,13 +166,20 @@ let topoOrder: RegistryEntry[] = [];
 
 // Time a resource loader call and record a `loader` span keyed by entry.key.
 // recordEntrySpan also establishes the ambient parent context so DB queries
-// issued inside the loader attribute to it.
+// issued inside the loader attribute to it. The loader output is parsed against
+// the resource's schema before it leaves this function, so every load path
+// (sub-ack, push/keyed/scoped notify, HTTP fallback) is validated at one
+// chokepoint — a schema violation throws here and is handled by each caller's
+// loader-failure path (report + skip the send). Keyed Layer-2 scoped loads
+// return a partial array, which still satisfies the `z.array(Element)` schema.
 function timedLoad(
   entry: RegistryEntry,
   params: ResourceParams,
   ctx?: { affectedIds: readonly string[] },
 ): Promise<unknown> {
-  return recordEntrySpan("loader", entry.key, () => entry.loader(params, ctx));
+  return recordEntrySpan("loader", entry.key, async () =>
+    entry.schema.parse(await entry.loader(params, ctx)),
+  );
 }
 
 // Coalesce an incoming notify into the pending map for one pk, applying the
@@ -208,6 +218,9 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     throw new Error(`defineResource: duplicate key "${def.key}"`);
   }
   const mode = def.mode ?? "invalidate";
+  if (!def.schema) {
+    throw new Error(`defineResource: a schema is required for key "${def.key}"`);
+  }
   if (mode === "keyed" && !def.keyOf) {
     throw new Error(
       `defineResource: mode "keyed" requires a keyOf for key "${def.key}"`,
@@ -239,6 +252,7 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
   const entry: RegistryEntry = {
     key: def.key,
     mode,
+    schema: def.schema as ZodType<unknown>,
     loader: def.loader as (
       params: ResourceParams,
       ctx?: { affectedIds: readonly string[] },
@@ -273,7 +287,9 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     mode,
     schema: def.schema,
     async load(params: P): Promise<T> {
-      return (await def.loader(params)) as T;
+      // Parse here too: this handle method is the one load path that bypasses
+      // `timedLoad`, so it must validate to keep the guarantee total.
+      return def.schema.parse(await def.loader(params));
     },
     notify(params?: P, opts?: { affectedIds?: string[] }): void {
       const affected = opts?.affectedIds ? new Set(opts.affectedIds) : null;

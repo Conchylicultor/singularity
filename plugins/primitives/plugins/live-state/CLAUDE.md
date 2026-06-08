@@ -14,24 +14,30 @@ it has **no ambient boundary** — you must wrap it in your own `<Suspense>`.
 
 ## Resource schemas
 
-Every resource descriptor should declare a `schema` (Zod). The client parses
-every payload through that schema before it lands in the TanStack cache, at
-both write paths:
+Every resource **must** declare a `schema` (Zod) — it is required on
+`defineResource` (both runtimes) and guarded at registration. The payload is
+parsed against that schema **twice**, by design:
 
-- `useResource`'s `queryFn` HTTP fallback (`web/use-resource.ts`).
-- The WS push path in `NotificationsClient.applyUpdate` (a key→schema registry
-  is populated as `useResource` calls `observe`).
+- **On the server, at load time** — the single chokepoint (`timedLoad` in
+  server-core, `loadValidated` in central-core) parses the loader output before
+  any broadcast or HTTP response. A payload that violates its schema throws
+  there and is handled by the existing loader-failure path (reported + the send
+  skipped / a `sub-error` returned) rather than shipping a malformed value. This
+  is the single structural guarantee that every live-state payload matches its
+  declared schema. Keyed Layer-2 scoped loads return a partial array, which
+  still satisfies the `z.array(Element)` schema.
+- **On the client, on receipt** — before the value lands in the TanStack cache,
+  at both write paths: `useResource`'s `queryFn` HTTP fallback
+  (`web/use-resource.ts`) and the WS push path in
+  `NotificationsClient.applyUpdate` (a key→schema registry populated as
+  `useResource` calls `observe`).
 
 This makes the TS type and the runtime shape impossible to drift: types like
 `Date` that don't survive `JSON.parse` are coerced (`z.coerce.date()`) on the
-way in, so consumers can rely on them. Without a schema, the cached value is
-whatever `JSON.parse` produced — that's the bug class this primitive closes.
-
-The `schema` field is currently **optional** to support the staged migration —
-existing resources keep working until they're moved over. It will become
-**required** once every resource declares one (and the `__types` phantom on
-`ResourceDescriptor` will be removed in favour of inferring `T` from `schema`).
-See `research/2026-04-29-global-resource-schema-validation.md`.
+way in, so consumers can rely on them. See
+`research/2026-06-08-global-mandatory-resource-schema-server-validation.md`
+(and the earlier `research/2026-04-29-global-resource-schema-validation.md` for
+the original client-side migration).
 
 ## Keyed delta sync (`mode: "keyed"`)
 

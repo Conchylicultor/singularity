@@ -1,5 +1,11 @@
 # Resource schema validation
 
+> **Status (2026-06-08): complete + hardened.** Every resource now declares a
+> schema, and `schema` is **required** on `defineResource` in both runtimes (no
+> longer optional). The server also parses loader output against the schema at
+> load time, so validation no longer depends on a client subscribing. See
+> `research/2026-06-08-global-mandatory-resource-schema-server-validation.md`.
+
 ## Context
 
 A crash hit on `/c/<id>/tasks` — `TypeError: e.getTime is not a function` thrown inside `formatRelativeTime`. Root cause: `attemptsResource` ships its payload as JSON over the wire, so `createdAt` arrives at the client as an ISO string, but the resource's TS type declares `Date`. The type system can't catch this — `T` is carried only on a phantom `__types` field that's never written at runtime, and `JSON.parse` doesn't reconstruct Dates.

@@ -29,13 +29,14 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
   mode?: ResourceMode;
   loader: (params: P) => Promise<T> | T;
   /**
-   * Zod schema for the payload. The descriptor exposed to clients carries
-   * this schema so the browser parses every payload before it lands in the
-   * TanStack cache. Currently optional during the staged migration; will
-   * become required once every resource declares one. See
-   * research/2026-04-29-global-resource-schema-validation.md.
+   * Zod schema for the payload. Required. The server parses every loader output
+   * against it at load time (via `loadValidated`) before any broadcast — a
+   * payload that violates its schema fails loudly instead of shipping. The
+   * descriptor exposed to clients carries the same schema so the browser
+   * re-parses before the value lands in the TanStack cache. See
+   * research/2026-06-08-global-mandatory-resource-schema-server-validation.md.
    */
-  schema?: ZodType<T>;
+  schema: ZodType<T>;
   dependsOn?: ReadonlyArray<DependsOnEntry<P>>;
   onFirstSubscribe?: (params: P) => void | Promise<void>;
   onLastUnsubscribe?: (params: P) => void;
@@ -44,7 +45,7 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
 export interface Resource<T, P extends ResourceParams = ResourceParams> {
   key: string;
   mode: ResourceMode;
-  schema?: ZodType<T>;
+  schema: ZodType<T>;
   load(params: P): Promise<T>;
   notify(params?: P): void;
 }
@@ -57,6 +58,8 @@ interface DownstreamEdge {
 interface RegistryEntry {
   key: string;
   mode: ResourceMode;
+  /** Payload schema. The loader output is parsed against it in `loadValidated`. */
+  schema: ZodType<unknown>;
   loader: (params: ResourceParams) => Promise<unknown> | unknown;
   versions: Map<string, number>;
   pendingNotifies: Map<string, ResourceParams>;
@@ -78,6 +81,18 @@ function paramsKey(params: ResourceParams): string {
   return JSON.stringify(obj);
 }
 
+// Run a resource loader and parse its output against the resource's schema
+// before it leaves this function, so every load path (sub-ack, push notify,
+// HTTP fallback) is validated at one chokepoint — a schema violation throws
+// here and is handled by each caller's loader-failure path (log + skip the
+// send / return a sub-error).
+async function loadValidated(
+  entry: RegistryEntry,
+  params: ResourceParams,
+): Promise<unknown> {
+  return entry.schema.parse(await entry.loader(params));
+}
+
 export function defineResource<T, P extends ResourceParams = ResourceParams>(
   def: ResourceDefinition<T, P>,
 ): Resource<T, P> {
@@ -85,6 +100,9 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     throw new Error(`defineResource: duplicate key "${def.key}"`);
   }
   const mode = def.mode ?? "invalidate";
+  if (!def.schema) {
+    throw new Error(`defineResource: a schema is required for key "${def.key}"`);
+  }
   const upstreamKeys: string[] = [];
   const ownDownstreamEdges: Array<{ upstreamKey: string; edge: DownstreamEdge }> = [];
   for (const dep of def.dependsOn ?? []) {
@@ -105,6 +123,7 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
   const entry: RegistryEntry = {
     key: def.key,
     mode,
+    schema: def.schema as ZodType<unknown>,
     loader: def.loader as (params: ResourceParams) => Promise<unknown> | unknown,
     versions: new Map(),
     pendingNotifies: new Map(),
@@ -131,7 +150,7 @@ export function defineResource<T, P extends ResourceParams = ResourceParams>(
     mode,
     schema: def.schema,
     async load(params: P): Promise<T> {
-      return (await def.loader(params)) as T;
+      return def.schema.parse(await def.loader(params));
     },
     notify(params?: P): void {
       scheduleNotify(entry, (params ?? ({} as P)) as ResourceParams);
@@ -237,7 +256,7 @@ async function flushNotifies(): Promise<void> {
       let valueComputed = false;
       if (needValue) {
         try {
-          value = await entry.loader(params);
+          value = await loadValidated(entry, params);
           valueComputed = true;
         } catch (err) {
           console.error(`[resources] loader failed for ${entry.key}`, err);
@@ -364,7 +383,7 @@ async function handleSub(
 
   let value: unknown;
   try {
-    value = await entry.loader(params);
+    value = await loadValidated(entry, params);
   } catch (err) {
     console.error(`[resources] loader failed for ${key}`, err);
     sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
@@ -428,7 +447,7 @@ export async function handleResourceHttp(
 
   let value: unknown;
   try {
-    value = await entry.loader(resourceParams);
+    value = await loadValidated(entry, resourceParams);
   } catch (err) {
     console.error(`[resources] loader failed for ${key}`, err);
     return new Response("Loader failed", { status: 500 });
