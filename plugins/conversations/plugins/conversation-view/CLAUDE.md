@@ -6,9 +6,12 @@
 
 - Description: Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
 - Web:
+  - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`
   - Contributes: `Pane.Register` "conversation", `Conversation.Header` → `ConversationTitle`
   - Uses: `conversations.useConversationById`
   - Exports: Types: `ConversationRecord`; Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
+- Cross-plugin:
+  - Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `dependencies`, `dependent-count`, `docs-button`, `event-counter`, `fork-conversation`, `launch-prompts`, `model`, `notes`, `op-status`, `open-app`, `prompt-input`, `push-profiling`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
 - Sub-plugins:
   - **`action-bar`** — Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
   - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.

@@ -1,8 +1,11 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { ReorderSlotPrefs } from "../../shared/resource";
+import type { ReorderDirective } from "../../shared/directive";
 import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
 
+// Spacers are deferred (a follow-up task). The directive model has no way to
+// produce one, so no spacer ever materializes — but the type machinery is kept
+// so the group/DnD code below stays structurally unchanged until spacers land.
 export const SPACER_PREFIX = "__spacer__";
 
 export type SpacerItem = { readonly id: string; readonly _spacer: true };
@@ -43,6 +46,11 @@ export function contributionLabel(c: Contribution): string {
   return (c._pluginName as string | undefined) ?? (c.id as string | undefined) ?? "Item";
 }
 
+function excludeFromReorder(item: Contribution | SpacerItem): boolean {
+  if (isSpacer(item)) return false;
+  return !!(item as Record<string, unknown>).excludeFromReorder;
+}
+
 type GroupsData = {
   groups: ReorderGroup[];
   members: Array<{ contributionId: string; groupId: string; rank: Rank }>;
@@ -56,52 +64,57 @@ export interface ReorderState {
   membershipMap: Map<string, { groupId: string; rank: Rank }>;
 }
 
-export function computeReorderState(
+/**
+ * Apply a reorder directive over the LIVE contribution catalog.
+ *
+ * Drift-tolerant:
+ *  - `hidden`: contributions whose `entryKey ∈ directive.hidden` are removed
+ *    (but `excludeFromReorder` items are NEVER hidden).
+ *  - `order`: visible non-excluded items are ordered by their index in
+ *    `directive.order` (mentioned items first, in that order); unmentioned items
+ *    keep their natural runtime order and are appended after.
+ *  - `excludeFromReorder` items stay pinned last in natural order (as before).
+ *
+ * New contributions append; removed ones are silently ignored — a changing
+ * catalog never invalidates a saved directive. Groups stay DB-backed and the
+ * membership construction is unchanged.
+ */
+export function applyDirective(
   contributions: Contribution[],
-  rankMap: ReorderSlotPrefs,
+  directive: ReorderDirective,
   groupsData: GroupsData | null,
 ): ReorderState {
-  const visible: (Contribution | SpacerItem)[] = [];
+  const hiddenSet = new Set(directive.hidden);
+  const orderIndex = new Map<string, number>();
+  directive.order.forEach((key, i) => orderIndex.set(key, i));
+
+  const visible: Contribution[] = [];
   const hidden: Contribution[] = [];
 
   for (const c of contributions) {
     const key = contributionKey(c);
     if (!key) continue;
-    if (
-      rankMap[key]?.hidden &&
-      !(c as Record<string, unknown>).excludeFromReorder
-    ) {
+    if (hiddenSet.has(key) && !(c as Record<string, unknown>).excludeFromReorder) {
       hidden.push(c);
     } else {
       visible.push(c);
     }
   }
 
-  for (const key of Object.keys(rankMap)) {
-    if (key.startsWith(SPACER_PREFIX) && rankMap[key]?.rank) {
-      visible.push({ id: key, _spacer: true as const });
-    }
-  }
-
   const sorted = visible
-    .map((item, naturalIdx) => ({
-      item,
-      naturalIdx: isSpacer(item) ? Infinity : naturalIdx,
-    }))
+    .map((item, naturalIdx) => ({ item, naturalIdx }))
     .sort((a, b) => {
-      const ax = isSpacer(a.item)
-        ? false
-        : !!(a.item as Record<string, unknown>).excludeFromReorder;
-      const bx = isSpacer(b.item)
-        ? false
-        : !!(b.item as Record<string, unknown>).excludeFromReorder;
+      const ax = excludeFromReorder(a.item);
+      const bx = excludeFromReorder(b.item);
       if (ax !== bx) return ax ? 1 : -1;
       if (ax && bx) return a.naturalIdx - b.naturalIdx;
-      const ar = rankMap[entryKey(a.item)]?.rank ?? null;
-      const br = rankMap[entryKey(b.item)]?.rank ?? null;
-      if (ar && br) return Rank.compare(ar, br);
-      if (ar) return -1;
-      if (br) return 1;
+      // Both reorderable: directive-mentioned first (by directive index), then
+      // unmentioned in natural runtime order.
+      const ai = orderIndex.get(entryKey(a.item));
+      const bi = orderIndex.get(entryKey(b.item));
+      if (ai !== undefined && bi !== undefined) return ai - bi;
+      if (ai !== undefined) return -1;
+      if (bi !== undefined) return 1;
       return a.naturalIdx - b.naturalIdx;
     })
     .map((row) => row.item);
@@ -116,10 +129,7 @@ export function computeReorderState(
     }
   }
 
-  const entries = sorted;
-  const visibleContributions = sorted.filter(
-    (x): x is Contribution => !isSpacer(x),
-  );
+  const entries: (Contribution | SpacerItem)[] = sorted;
 
   let groupedEntries: TopLevelEntry[];
 
@@ -133,10 +143,7 @@ export function computeReorderState(
 
     const ungrouped: (Contribution | SpacerItem)[] = [];
     for (const item of entries) {
-      if (
-        !isSpacer(item) &&
-        (item as Record<string, unknown>).excludeFromReorder
-      ) {
+      if (excludeFromReorder(item)) {
         ungrouped.push(item);
         continue;
       }
@@ -178,20 +185,19 @@ export function computeReorderState(
 
     for (let i = 0; i < ungrouped.length; i++) {
       const item = ungrouped[i]!;
-      const r = rankMap[entryKey(item)]?.rank ?? null;
-      topLevel.push({ rank: r, naturalIdx: i, entry: item });
+      topLevel.push({ rank: null, naturalIdx: i, entry: item });
     }
 
     topLevel.sort((a, b) => {
       const aExcl =
-        !isGroupEntry(a.entry) &&
-        !isSpacer(a.entry) &&
-        !!(a.entry as Record<string, unknown>).excludeFromReorder;
+        !isGroupEntry(a.entry) && excludeFromReorder(a.entry as Contribution | SpacerItem);
       const bExcl =
-        !isGroupEntry(b.entry) &&
-        !isSpacer(b.entry) &&
-        !!(b.entry as Record<string, unknown>).excludeFromReorder;
+        !isGroupEntry(b.entry) && excludeFromReorder(b.entry as Contribution | SpacerItem);
       if (aExcl !== bExcl) return aExcl ? 1 : -1;
+      // Groups carry a DB rank; ungrouped items are placed by the directive order
+      // already baked into their `naturalIdx` (the index within `ungrouped`,
+      // which preserves the directive-sorted `entries` order). A group sorts
+      // relative to items by its rank vs the item's position.
       if (a.rank && b.rank) return Rank.compare(a.rank, b.rank);
       if (a.rank) return -1;
       if (b.rank) return 1;
@@ -202,7 +208,7 @@ export function computeReorderState(
   }
 
   return {
-    visible: visibleContributions,
+    visible: sorted,
     hidden,
     entries,
     groupedEntries,

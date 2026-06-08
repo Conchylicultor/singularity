@@ -1,0 +1,15 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - branch  — Branch
+  // - fork-conversation  — New
+  // - launch-prompts  — Launch
+  // - dependencies  — Deps
+  // - notes-toggle  — Notes
+  // - exit  — Exit
+  // - hold-and-exit  — Exit
+  // - drop-dependents  — Exit
+  // - drop-and-exit  — Exit
+  "order": [],
+  "hidden": []
+}

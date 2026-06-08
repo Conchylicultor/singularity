@@ -6,6 +6,7 @@
 
 - Description: App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.
 - Web:
+  - Slots: `FileExplorer.Sidebar`, `FileExplorer.Toolbar`
   - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
   - Uses: `apps.Apps`
   - Exports: Values: `FileExplorer`

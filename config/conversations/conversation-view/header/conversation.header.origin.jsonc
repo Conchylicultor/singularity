@@ -1,0 +1,14 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - agent-avatar  — agent-avatar
+  // - title  — title
+  // - status  — status
+  // - allow-monitor  — allow-monitor
+  // - model  — model
+  // - category  — category
+  // - progress  — progress
+  // - preprompt  — preprompt
+  "order": [],
+  "hidden": []
+}

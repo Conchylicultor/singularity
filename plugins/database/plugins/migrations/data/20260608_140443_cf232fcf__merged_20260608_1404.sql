@@ -1,0 +1,1 @@
+DROP TABLE "reorder_prefs" CASCADE;

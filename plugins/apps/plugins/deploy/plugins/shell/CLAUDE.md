@@ -6,6 +6,7 @@
 
 - Description: App shell for the deploy platform.
 - Web:
+  - Slots: `Deploy.Section`
   - Contributes: `Apps.App` "Deploy" → `DeployLayout`
   - Uses: `apps.Apps`
   - Exports: Values: `Deploy`

@@ -240,7 +240,9 @@ export async function initRegistry(): Promise<void> {
 
     for (const contribution of contributions) {
       const { descriptor } = contribution;
-      const pluginId = contribution._pluginId;
+      // An explicit `pluginId` lets a plugin register a descriptor under a
+      // *different* plugin's config tree; default to the registering plugin's own id.
+      const pluginId = contribution.pluginId ?? contribution._pluginId;
       if (!pluginId) {
         console.warn(
           `[config-v2] contribution for descriptor "${descriptor.name}" has no _pluginId — skipping`,

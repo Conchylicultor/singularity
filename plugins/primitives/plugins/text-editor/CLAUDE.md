@@ -34,7 +34,10 @@ Plugin slot.
 
 - Description: Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
 - Web:
+  - Slots: `TextEditorSlots.Plugin`
   - Exports: Types: `NodeExtension`, `TextEditorPluginProps`; Values: `registerNodeExtension`, `TextEditor`, `TextEditorSlots`
+- Cross-plugin:
+  - Slot contributors: `paste-images`
 - Sub-plugins:
   - **`paste-images`** — Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
 

@@ -18,12 +18,18 @@ export function useConfigRegistrations(): ConfigRegistration[] {
     () =>
       (raw ?? [])
         .filter((c) => c._pluginId && c._pluginName)
-        .map((c) => ({
-          descriptor: c.descriptor as ConfigDescriptor,
-          pluginId: c._pluginId as string,
-          pluginName: c._pluginName as string,
-          storePath: `${c._pluginId}/${(c.descriptor as ConfigDescriptor).name}.jsonc`,
-        })),
+        .map((c) => {
+          // The descriptor is stored under its explicit `pluginId` override when
+          // present, else the registering plugin's own id.
+          const storePluginId =
+            ((c.pluginId as string | undefined) ?? c._pluginId) as string;
+          return {
+            descriptor: c.descriptor as ConfigDescriptor,
+            pluginId: c._pluginId as string,
+            pluginName: c._pluginName as string,
+            storePath: `${storePluginId}/${(c.descriptor as ConfigDescriptor).name}.jsonc`,
+          };
+        }),
     [raw],
   );
 }

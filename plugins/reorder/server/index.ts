@@ -1,25 +1,12 @@
-import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { reorderPrefsResource } from "./internal/resource";
-import {
-  handleDeleteContribution,
-  handleGetSlot,
-  handlePatchSlot,
-} from "./internal/handlers";
-import { getSlot, patchSlot, deleteContribution } from "../shared/endpoints";
-
-export { _reorderPrefs } from "./internal/tables";
-export { reorderPrefsResource } from "./internal/resource";
+import { reorderConfigRegistrations } from "./internal/config-registrations";
 
 export default {
   name: "Reorder",
   description:
-    "Generic reorder primitive: per-worktree storage of slot contribution ranks.",
+    "Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.",
   loadBearing: true,
-  contributions: [Resource.Declare(reorderPrefsResource)],
-  httpRoutes: {
-    [getSlot.route]: handleGetSlot,
-    [patchSlot.route]: handlePatchSlot,
-    [deleteContribution.route]: handleDeleteContribution,
-  },
+  // One config_v2 directive descriptor per reorderable slot, registered under
+  // the slot's DEFINING plugin (via `pluginId`).
+  contributions: reorderConfigRegistrations,
 } satisfies ServerPluginDefinition;

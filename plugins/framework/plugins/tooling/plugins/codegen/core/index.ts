@@ -25,7 +25,27 @@ export {
 
 export { defineCollectedDir, isCollectedDirDef, type CollectedDirDef } from "./collected-dir";
 
-export { generateConfigOrigins, propagateConfigToUser, renderConfigOriginContent } from "./config-origin-gen";
+export {
+  generateConfigOrigins,
+  propagateConfigToUser,
+  renderConfigOriginContent,
+  resolveOriginAnnotations,
+  setDefaultOriginAnnotations,
+  setDefaultOriginAnnotationsPreparer,
+  type OriginAnnotationsProvider,
+  type OriginAnnotationsPreparer,
+} from "./config-origin-gen";
+
+// Importing this module registers the reorder contribution catalog as the
+// default origin-annotations preparer (side effect at load). Both the build
+// step and the `config-origins-in-sync` check import this barrel, so both
+// processes emit identical contribution-catalog comments in generated origins.
+export {
+  generateReorderableSlots,
+  renderReorderableSlotsManifest,
+  reorderableSlotsManifestPath,
+  type ReorderableSlotEntry,
+} from "./reorderable-slots-gen";
 
 export {
   generateBarrelStubs,

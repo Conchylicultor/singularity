@@ -59,7 +59,12 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
       if (!c || typeof c !== "object") continue;
       const contrib = c as Record<string, unknown>;
       if (isConfigDescriptor(contrib.descriptor)) {
-        const hierarchyPath = node.hierarchyId.replace(/\./g, "/");
+        // An explicit `pluginId` on the registration wins over the node the
+        // descriptor was discovered in — this lets a plugin register a descriptor
+        // that belongs under a *different* defining plugin's tree.
+        const explicit =
+          typeof contrib.pluginId === "string" ? contrib.pluginId : undefined;
+        const hierarchyPath = explicit ?? node.hierarchyId.replace(/\./g, "/");
         results.push({ hierarchyPath, descriptor: contrib.descriptor });
       }
     }
@@ -106,11 +111,85 @@ function renderFieldLines(
   return lines;
 }
 
-function renderOriginJsonc(descriptor: ConfigDescriptor): string {
+/**
+ * Build-time hook that injects extra JSONC comment lines into a generated
+ * `.origin.jsonc`. Each returned string is one comment's *text* (the renderer
+ * prefixes `// `). Comments do not affect the config hash, so annotations can
+ * change every build for free (e.g. a live catalog of available contributions).
+ */
+export type OriginAnnotationsProvider = (
+  descriptor: ConfigDescriptor,
+  hierarchyPath: string,
+) => string[];
+
+/**
+ * Process-wide default annotations provider. Both the build step and the
+ * `config-origins-in-sync` check resolve their provider through
+ * {@link resolveOriginAnnotations}, so whatever the build wiring registers here
+ * is applied identically on both sides — keeping the committed origin text and
+ * the check's expected text byte-for-byte equal. Defaults to `undefined`
+ * (no annotations → output identical to before this hook existed).
+ */
+let defaultOriginAnnotations: OriginAnnotationsProvider | undefined;
+
+export function setDefaultOriginAnnotations(
+  provider: OriginAnnotationsProvider | undefined,
+): void {
+  defaultOriginAnnotations = provider;
+}
+
+/** Explicit provider wins; otherwise fall back to the registered default. */
+export function resolveOriginAnnotations(
+  explicit?: OriginAnnotationsProvider,
+): OriginAnnotationsProvider | undefined {
+  return explicit ?? defaultOriginAnnotations;
+}
+
+/**
+ * Async, root-aware default-annotations *preparer*. Some annotation providers
+ * (e.g. reorder's contribution catalog) can only be built after walking the
+ * enriched plugin tree — an async operation. A sync `OriginAnnotationsProvider`
+ * can't do that itself, so a preparer module registers a function here that,
+ * given the repo root, builds whatever it needs (the tree is already cached by
+ * the time `renderConfigOriginContent` runs) and returns the resolved sync
+ * provider.
+ *
+ * Critical for build↔check symmetry: `./singularity build` and the standalone
+ * `./singularity check` run in SEPARATE processes, so a `setDefaultOriginAnnotations`
+ * call made inside the build command is invisible to the check. The preparer is
+ * instead registered as a side effect of *importing* a shared module that BOTH
+ * the build step and the `config-origins-in-sync` check import — so both
+ * processes resolve identical annotation comments.
+ */
+export type OriginAnnotationsPreparer = (
+  root: string,
+) => Promise<OriginAnnotationsProvider | undefined>;
+
+let defaultOriginAnnotationsPreparer: OriginAnnotationsPreparer | undefined;
+
+export function setDefaultOriginAnnotationsPreparer(
+  preparer: OriginAnnotationsPreparer | undefined,
+): void {
+  defaultOriginAnnotationsPreparer = preparer;
+}
+
+function renderOriginJsonc(
+  descriptor: ConfigDescriptor,
+  hierarchyPath: string,
+  originAnnotations?: OriginAnnotationsProvider,
+): string {
   const hash = computeHash(descriptor.defaults as unknown as JsonValue);
   const lines: string[] = [];
   lines.push(`// @hash ${hash}`);
   lines.push("{");
+
+  // Annotation comments live inside the object, before the fields. They are
+  // pure comments so they never alter the parsed JSON or its hash.
+  if (originAnnotations) {
+    for (const line of originAnnotations(descriptor, hierarchyPath)) {
+      lines.push(`  // ${line}`);
+    }
+  }
 
   lines.push(
     ...renderFieldLines(
@@ -126,13 +205,23 @@ function renderOriginJsonc(descriptor: ConfigDescriptor): string {
 
 export async function renderConfigOriginContent(opts: {
   root: string;
+  originAnnotations?: OriginAnnotationsProvider;
 }): Promise<Map<string, string>> {
   const configs = await discoverConfigs(opts.root);
   const result = new Map<string, string>();
+  // Prefer an explicit/sync default provider; otherwise, if an async preparer
+  // is registered (e.g. reorder's catalog), build the provider now. The
+  // enriched tree `discoverConfigs` just walked is cached, so the preparer is
+  // cheap. Resolving here — the single shared entry point for both the build
+  // step and the in-sync check — keeps the emitted comments byte-identical.
+  let annotations = resolveOriginAnnotations(opts.originAnnotations);
+  if (!annotations && defaultOriginAnnotationsPreparer) {
+    annotations = await defaultOriginAnnotationsPreparer(opts.root);
+  }
 
   for (const { hierarchyPath, descriptor } of configs) {
     const relPath = `${hierarchyPath}/${descriptor.name}.origin.jsonc`;
-    result.set(relPath, renderOriginJsonc(descriptor));
+    result.set(relPath, renderOriginJsonc(descriptor, hierarchyPath, annotations));
   }
 
   return result;
@@ -140,6 +229,7 @@ export async function renderConfigOriginContent(opts: {
 
 export async function generateConfigOrigins(opts: {
   root: string;
+  originAnnotations?: OriginAnnotationsProvider;
 }): Promise<void> {
   const rendered = await renderConfigOriginContent(opts);
   const configDir = join(opts.root, "config");

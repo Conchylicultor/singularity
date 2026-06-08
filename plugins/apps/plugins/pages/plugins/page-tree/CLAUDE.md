@@ -6,6 +6,7 @@
 
 - Description: Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
 - Web:
+  - Slots: `PageDetail.Section`, `PageTree.RowActions`
   - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`, `PageTree.RowActions` → `DeletePageAction`
   - Exports: Values: `PageDetail`, `PageTree`
 

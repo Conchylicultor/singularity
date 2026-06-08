@@ -6,6 +6,7 @@
 
 - Description: App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.
 - Web:
+  - Slots: `WorkflowsApp.Sidebar`, `WorkflowsApp.Toolbar`
   - Contributes: `Apps.App` "Workflows" → `WorkflowsLayout`
   - Uses: `apps.Apps`
   - Exports: Values: `WorkflowsApp`

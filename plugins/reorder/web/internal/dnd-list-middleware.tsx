@@ -15,21 +15,23 @@ import {
   type DragEndEvent,
 } from "@dnd-kit/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { RenderSlotSubIdContext } from "@plugins/primitives/plugins/slot-render/web";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import { reorderGroupsResource } from "@plugins/reorder/plugins/groups/core";
-import { reorderPrefsResource } from "../../shared/resource";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import type { ReorderDirective } from "../../shared/directive";
+import { reorderDescriptors } from "./descriptors";
 import { useEditMode } from "./edit-mode-store";
 import { ReorderGroupBox } from "./group-box";
 import {
-  computeReorderState,
+  applyDirective,
   contributionKey,
   contributionLabel,
   entryKey,
   isGroupEntry,
   isSpacer,
-  SPACER_PREFIX,
   type SpacerItem,
   type TopLevelEntry,
 } from "./sorting";
@@ -73,9 +75,24 @@ export function ReorderListMiddleware({
   renderItem: (contribution: Contribution) => ReactNode;
   children: ReactNode;
 }) {
+  // `storageId` collapses `slotId[:subId]` to the base `slotId` for config:
+  // sub-instances of a render slot share one directive (subIds aren't known at
+  // build time). The descriptor is looked up by the base `slotId`.
+  const descriptor = reorderDescriptors.get(slotId);
+
+  // No descriptor (runtime-only render slot, `reorder:false`, or unresolved id)
+  // → render naturally with no reorder applied. The branch is stable for a
+  // given mount (slotId is a prop), so the hook split is safe.
+  if (!descriptor) {
+    return (
+      <>{contributions.map((c) => renderItem(c))}</>
+    );
+  }
+
   return (
     <ReorderListMiddlewareInner
       slotId={slotId}
+      descriptor={descriptor}
       contributions={contributions}
       renderItem={renderItem}
     />
@@ -84,10 +101,12 @@ export function ReorderListMiddleware({
 
 function ReorderListMiddlewareInner({
   slotId,
+  descriptor,
   contributions,
   renderItem,
 }: {
   slotId: string;
+  descriptor: ConfigDescriptor;
   contributions: Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
 }) {
@@ -108,25 +127,30 @@ function ReorderListMiddlewareInner({
     );
   }, []);
 
-  const rankResult = useResource(reorderPrefsResource, {
-    slotId: storageId,
-  });
+  // `useConfig` on a generically-typed descriptor returns a loose record;
+  // treat it as a possibly-partial directive and fill defaults defensively.
+  const directiveRaw = useConfig(descriptor) as unknown as Partial<ReorderDirective>;
+  const directive = useMemo<ReorderDirective>(
+    () => ({
+      order: directiveRaw.order ?? [],
+      hidden: directiveRaw.hidden ?? [],
+    }),
+    [directiveRaw],
+  );
+  const setConfig = useSetConfig(descriptor);
+
+  // Groups stay DB-backed (untouched by the config migration).
   const groupsResult = useResource(reorderGroupsResource, {
     slotId: storageId,
   });
-
-  const rankMap = useMemo(
-    () => rankResult.pending ? {} : rankResult.data,
-    [rankResult],
-  );
   const groupsData = useMemo(
     () => groupsResult.pending ? { groups: [], members: [] } : groupsResult.data,
     [groupsResult],
   );
 
   const state = useMemo(
-    () => computeReorderState(contributions, rankMap, groupsData),
-    [contributions, rankMap, groupsData],
+    () => applyDirective(contributions, directive, groupsData),
+    [contributions, directive, groupsData],
   );
 
   const hiddenItems = useMemo(
@@ -142,14 +166,38 @@ function ReorderListMiddlewareInner({
 
   const entriesRef = useRef(state.entries);
   entriesRef.current = state.entries;
-  const rankMapRef = useRef(rankMap);
-  rankMapRef.current = rankMap;
+  const directiveRef = useRef(directive);
+  directiveRef.current = directive;
   const membershipMapRef = useRef(state.membershipMap);
   membershipMapRef.current = state.membershipMap;
   const groupsDataRef = useRef(groupsData);
   groupsDataRef.current = groupsData;
   const groupedEntriesRef = useRef(state.groupedEntries);
   groupedEntriesRef.current = state.groupedEntries;
+  const setConfigRef = useRef(setConfig);
+  setConfigRef.current = setConfig;
+
+  // --- Hide / restore (config-backed) ---------------------------------------
+
+  const hideItem = useCallback((key: string) => {
+    const hidden = directiveRef.current.hidden;
+    if (hidden.includes(key)) return;
+    setConfigRef.current("hidden", [...hidden, key]);
+  }, []);
+
+  const restoreItem = useCallback((key: string) => {
+    const hidden = directiveRef.current.hidden;
+    if (!hidden.includes(key)) return;
+    setConfigRef.current(
+      "hidden",
+      hidden.filter((k) => k !== key),
+    );
+  }, []);
+
+  const hideItemRef = useRef(hideItem);
+  hideItemRef.current = hideItem;
+  const restoreItemRef = useRef(restoreItem);
+  restoreItemRef.current = restoreItem;
 
   // --- Drag handlers ---------------------------------------------------------
 
@@ -174,56 +222,20 @@ function ReorderListMiddlewareInner({
       )
         return;
 
-      const rm = rankMapRef.current;
-      const patch = (cId: string, rank: Rank) =>
-        void fetch(`/api/reorder/${storageId}`, {
-          method: "PATCH",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ contributionId: cId, rank: String(rank) }),
-        });
-
-      const siblings = list.filter((x) => {
-        if (entryKey(x) === draggedKey) return false;
-        if (isSpacer(x)) return true;
-        if ((x as Record<string, unknown>).excludeFromReorder) return false;
-        return true;
-      });
-
-      const hasUnranked = siblings.some(
-        (x) => !rm[entryKey(x)]?.rank,
+      // Reorder over the current visible (non-excluded) ordering, then persist
+      // the full visible order as the new directive `order`.
+      const reorderable = list.filter(
+        (x) => !(x as Record<string, unknown>).excludeFromReorder,
       );
-      if (hasUnranked) {
-        let prevR: Rank | null = null;
-        for (const item of siblings) {
-          const existing = rm[entryKey(item)]?.rank ?? null;
-          if (existing) {
-            prevR = existing;
-          } else {
-            const newR = Rank.between(prevR, null);
-            prevR = newR;
-            patch(entryKey(item), newR);
-            rm[entryKey(item)] = { ...rm[entryKey(item)], rank: newR };
-          }
-        }
-      }
+      const fromIdx = reorderable.findIndex((x) => entryKey(x) === draggedKey);
+      const toIdx = reorderable.findIndex((x) => entryKey(x) === overKey);
+      if (fromIdx < 0 || toIdx < 0) return;
 
-      const tIdx = siblings.findIndex((x) => entryKey(x) === overKey);
-      if (tIdx < 0) return;
+      const next = reorderable.slice();
+      const [moved] = next.splice(fromIdx, 1);
+      next.splice(toIdx, 0, moved!);
 
-      const movingDown = draggedIdx < overIdx;
-      const prev = movingDown ? siblings[tIdx]! : (siblings[tIdx - 1] ?? null);
-      const next = movingDown ? (siblings[tIdx + 1] ?? null) : siblings[tIdx]!;
-
-      const prevRank = prev ? (rm[entryKey(prev)]?.rank ?? null) : null;
-      const nextRank = next ? (rm[entryKey(next)]?.rank ?? null) : null;
-
-      let newRank: Rank;
-      try {
-        newRank = Rank.between(prevRank, nextRank);
-      } catch {
-        return;
-      }
-
+      // If the dragged item was inside a group, pull it out (groups are DB-backed).
       const membership = membershipMapRef.current.get(draggedKey);
       if (membership) {
         void fetch(
@@ -232,7 +244,7 @@ function ReorderListMiddlewareInner({
         );
       }
 
-      patch(draggedKey, newRank);
+      setConfigRef.current("order", next.map((x) => entryKey(x)));
     },
     [storageId],
   );
@@ -302,7 +314,6 @@ function ReorderListMiddlewareInner({
       if (overId.startsWith("group-zone:")) return;
 
       const ge = groupedEntriesRef.current;
-      const rm = rankMapRef.current;
 
       const draggedIdx = ge.findIndex(
         (e) => isGroupEntry(e) && e.group.id === groupId,
@@ -348,10 +359,12 @@ function ReorderListMiddlewareInner({
         ? (siblings[targetIdx + 1] ?? null)
         : siblings[targetIdx];
 
+      // Only groups carry a DB rank; ungrouped items have none, so a group
+      // reordered next to an ungrouped item slots between adjacent group ranks.
       const entryRank = (entry: TopLevelEntry | null | undefined): Rank | null => {
         if (!entry) return null;
         if (isGroupEntry(entry)) return entry.group.rank;
-        return rm[entryKey(entry as Contribution | SpacerItem)]?.rank ?? null;
+        return null;
       };
 
       let newRank: Rank;
@@ -442,35 +455,6 @@ function ReorderListMiddlewareInner({
     [],
   );
 
-  // --- Spacer / group helpers ------------------------------------------------
-
-  function addSpacer() {
-    const rm = rankMapRef.current;
-    const items = entriesRef.current;
-    const patch = (cId: string, rank: Rank) =>
-      void fetch(`/api/reorder/${storageId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ contributionId: cId, rank: String(rank) }),
-      });
-
-    let prevR: Rank | null = null;
-    for (const item of items) {
-      if (isSpacer(item)) continue;
-      const existing = rm[entryKey(item)]?.rank ?? null;
-      if (existing) {
-        prevR = existing;
-      } else {
-        const newR = Rank.between(prevR, null);
-        prevR = newR;
-        patch(entryKey(item), newR);
-      }
-    }
-
-    const spacerRank = Rank.between(prevR, null);
-    patch(`${SPACER_PREFIX}${crypto.randomUUID()}`, spacerRank);
-  }
-
   function addGroup() {
     void fetch(`/api/reorder/${storageId}/groups`, {
       method: "POST",
@@ -482,8 +466,9 @@ function ReorderListMiddlewareInner({
   const ctxValue: ReorderAreaCtxValue = {
     storageId,
     hiddenItems,
-    addSpacer,
     addGroup,
+    onHide: (key) => hideItemRef.current(key),
+    onRestore: (key) => restoreItemRef.current(key),
     dragInProgress: false,
     orientation,
   };
@@ -531,7 +516,6 @@ function ReorderListMiddlewareInner({
                       <SpacerReorderItem
                         key={member.id}
                         itemKey={member.id}
-                        storageId={storageId}
                       />
                     );
                   }
@@ -545,7 +529,6 @@ function ReorderListMiddlewareInner({
               <SpacerReorderItem
                 key={entry.id}
                 itemKey={entry.id}
-                storageId={storageId}
               />
             );
           }
@@ -553,10 +536,9 @@ function ReorderListMiddlewareInner({
         })}
         {editMode && (
           <RestoreButton
-            storageId={storageId}
             hiddenItems={hiddenItems}
-            addSpacer={addSpacer}
             addGroup={addGroup}
+            onRestore={(key) => restoreItemRef.current(key)}
           />
         )}
       </SortableList>

@@ -28,6 +28,7 @@
   - **`plugins-doc-in-sync`**
   - **`plugins-have-claudemd`**
   - **`plugins-registry-in-sync`**
+  - **`reorderable-slots-in-sync`**
   - **`snapshot-chain-intact`**
   - **`typescript`**
 

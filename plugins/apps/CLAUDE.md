@@ -7,9 +7,11 @@
 - Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
 - Load-bearing: yes
 - Web:
+  - Slots: `Apps.App`
   - Contributes: `Core.Root` → `AppsLayout`
   - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
+  - Slot contributors: `shell`
   - Imported by: `app-cards`, `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.

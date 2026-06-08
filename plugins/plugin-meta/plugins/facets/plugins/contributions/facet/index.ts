@@ -68,8 +68,20 @@ export default createFacet<ContributionsFacetData>({
         }
         if (!def) continue;
 
+        // `_pluginId` is stamped onto each contribution only at runtime by
+        // PluginProvider; the raw barrel export doesn't carry it. The
+        // contributions belong to the plugin whose barrel we imported, so the
+        // plugin's own `id` (when present) is the authoritative `_pluginId`. Fall
+        // back to a per-contribution `_pluginId` if one happens to be present.
+        const defPluginId = typeof def.id === "string" ? (def.id as string) : undefined;
+
         const rawContributions = def.contributions as
-          | Array<Record<string, unknown> & { _slotId?: string; _doc?: { label?: string; detail?: string } }>
+          | Array<Record<string, unknown> & {
+              _slotId?: string;
+              _pluginId?: string;
+              id?: string;
+              _doc?: { label?: string; detail?: string };
+            }>
           | undefined;
         if (!rawContributions) continue;
 
@@ -83,6 +95,8 @@ export default createFacet<ContributionsFacetData>({
             // slotDisplayName filled in by relate()
             componentName,
             doc: c._doc ?? {},
+            id: typeof c.id === "string" ? c.id : undefined,
+            pluginId: c._pluginId ?? defPluginId,
           });
         }
       }

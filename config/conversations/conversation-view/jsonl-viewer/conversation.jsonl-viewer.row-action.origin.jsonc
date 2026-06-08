@@ -1,0 +1,13 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - fork-session  — fork-session
+  // - timestamp  — timestamp
+  // - raw-json  — raw-json
+  // - stop-reason  — stop-reason
+  // - markdown-toggle  — markdown-toggle
+  // - copy-assistant-text  — copy-assistant-text
+  // - copy-tool-result  — copy-tool-result
+  "order": [],
+  "hidden": []
+}

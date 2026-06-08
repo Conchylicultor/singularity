@@ -1,0 +1,13 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - header  — header
+  // - description  — description
+  // - events  — events
+  // - dependencies  — dependencies
+  // - dependents  — dependents
+  // - attachments  — attachments
+  // - graph  — graph
+  "order": [],
+  "hidden": []
+}

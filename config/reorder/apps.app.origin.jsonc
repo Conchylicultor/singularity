@@ -1,0 +1,14 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - agent-manager  — Agent Manager
+  // - deploy  — Deploy
+  // - sonata  — Sonata
+  // - workflows  — Workflows
+  // - forge  — Forge
+  // - file-explorer  — File Explorer
+  // - pages  — Pages
+  // - debug  — Debug
+  "order": [],
+  "hidden": []
+}

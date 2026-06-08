@@ -1,0 +1,11 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - boot  — boot
+  // - runtime  — runtime
+  // - push  — push
+  // - build  — build
+  // - stats  — stats
+  "order": [],
+  "hidden": []
+}

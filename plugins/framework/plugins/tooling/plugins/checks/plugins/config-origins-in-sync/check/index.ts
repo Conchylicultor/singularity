@@ -25,6 +25,10 @@ const check: Check = {
   async run() {
     const root = await getRoot();
     const configDir = join(root, "config");
+    // `renderConfigOriginContent` resolves origin annotations through codegen's
+    // shared default provider (see `setDefaultOriginAnnotations`), so the check
+    // injects the exact same comment lines the build wrote into committed
+    // origins. With no provider registered this is byte-identical to before.
     const expected = await renderConfigOriginContent({ root });
 
     for (const [relPath, content] of expected) {

@@ -1,0 +1,16 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - conversations-recover  — Recovery
+  // - events-test  — Events Test
+  // - backup  — Backup
+  // - claude-cli-calls  — Claude CLI Calls
+  // - broadcasts  — Broadcasts
+  // - memory  — Memory
+  // - worktree-cleanup  — Worktree Cleanup
+  // - logs  — Logs
+  // - profiling  — Profiling
+  // - queue  — Queue
+  "order": [],
+  "hidden": []
+}

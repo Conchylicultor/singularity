@@ -1,0 +1,11 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - foreign-keys  — foreign-keys
+  // - sample-rows  — sample-rows
+  // - row-count  — row-count
+  // - columns  — columns
+  // - indexes  — indexes
+  "order": [],
+  "hidden": []
+}

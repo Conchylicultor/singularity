@@ -1,0 +1,20 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - health  — health
+  // - contributions  — contributions
+  // - resources  — resources
+  // - exports  — exports
+  // - db-schema  — db-schema
+  // - commands  — commands
+  // - cross-refs  — cross-refs
+  // - structure  — structure
+  // - slots  — slots
+  // - routes  — routes
+  // - registrations  — registrations
+  // - sub-plugins  — sub-plugins
+  // - runtimes  — runtimes
+  // - source-path  — source-path
+  "order": [],
+  "hidden": []
+}

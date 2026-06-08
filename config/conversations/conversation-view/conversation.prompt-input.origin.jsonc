@@ -1,0 +1,7 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - prompt-input  — prompt-input
+  "order": [],
+  "hidden": []
+}

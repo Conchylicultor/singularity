@@ -14,8 +14,11 @@ import { useEditMode } from "./edit-mode-store";
 export type ReorderAreaCtxValue = {
   storageId: string;
   hiddenItems: Array<{ key: string; label: string }>;
-  addSpacer: () => void;
   addGroup: () => void;
+  /** Hide a contribution by `entryKey` (writes the config directive). */
+  onHide: (key: string) => void;
+  /** Restore a hidden contribution by `entryKey`. */
+  onRestore: (key: string) => void;
   dragInProgress: boolean;
   orientation: "horizontal" | "vertical";
 };
@@ -51,14 +54,12 @@ export function GroupingZone({ itemKey }: { itemKey: string }) {
 
 export function SortableReorderItem({
   itemKey,
-  storageId,
   editMode,
   label,
   wrapperClassName,
   children,
 }: {
   itemKey: string;
-  storageId: string;
   editMode: boolean;
   label: string;
   wrapperClassName?: string;
@@ -87,11 +88,7 @@ export function SortableReorderItem({
 
   function handleHide(e: React.MouseEvent) {
     e.stopPropagation();
-    void fetch(`/api/reorder/${storageId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contributionId: itemKey, hidden: true }),
-    });
+    ctx?.onHide(itemKey);
   }
 
   return (
@@ -148,24 +145,18 @@ export function SortableReorderItem({
 
 // --- Spacer reorder item -----------------------------------------------------
 
+// Spacers are deferred (a follow-up task). The directive model never produces
+// one, so this renders only the inert spacer slot; the in-edit-mode handle and
+// delete affordance are removed until spacers land.
 export function SpacerReorderItem({
   itemKey,
-  storageId,
 }: {
   itemKey: string;
-  storageId: string;
 }) {
   const editMode = useEditMode();
 
   if (!editMode) {
     return <div className="flex-1" />;
-  }
-
-  function handleDelete(e: React.MouseEvent) {
-    e.stopPropagation();
-    void fetch(`/api/reorder/${storageId}/${itemKey}`, {
-      method: "DELETE",
-    });
   }
 
   return (
@@ -180,14 +171,6 @@ export function SpacerReorderItem({
           <span className="text-[10px] text-muted-foreground/60 select-none">
             ⇔
           </span>
-          <button
-            className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
-            onPointerDown={(e) => e.stopPropagation()}
-            onClick={handleDelete}
-            aria-label="Remove spacer"
-          >
-            <MdClose className="size-2.5" />
-          </button>
         </div>
       )}
     </SortableItem>
@@ -197,25 +180,19 @@ export function SpacerReorderItem({
 // --- Restore button ----------------------------------------------------------
 
 export function RestoreButton({
-  storageId,
   hiddenItems,
-  addSpacer,
   addGroup,
+  onRestore,
 }: {
-  storageId: string;
   hiddenItems: Array<{ key: string; label: string }>;
-  addSpacer: () => void;
   addGroup: () => void;
+  onRestore: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
   const hasHidden = hiddenItems.length > 0;
 
   function handleRestore(contributionId: string) {
-    void fetch(`/api/reorder/${storageId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ contributionId, hidden: false }),
-    });
+    onRestore(contributionId);
   }
 
   return (
@@ -269,17 +246,6 @@ export function RestoreButton({
             }}
           >
             Add Group
-          </Row>
-          <Row
-            size="sm"
-            hover="accent"
-            icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
-            onClick={() => {
-              addSpacer();
-              setOpen(false);
-            }}
-          >
-            Add Spacer
           </Row>
         </div>
 

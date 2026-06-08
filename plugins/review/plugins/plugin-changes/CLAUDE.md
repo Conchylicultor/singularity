@@ -6,7 +6,7 @@
 
 - Description: Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
 - Web:
-  - Slots: `PluginChanges.DiffRenderer`
+  - Slots: `PluginChanges.Section`, `PluginChanges.DiffRenderer`
   - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
   - Uses: `review.ReviewSlots`
   - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`

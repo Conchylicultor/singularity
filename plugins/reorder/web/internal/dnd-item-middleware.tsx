@@ -32,7 +32,6 @@ export function ReorderItemMiddleware({
   return (
     <SortableReorderItem
       itemKey={key}
-      storageId={ctx.storageId}
       editMode={editMode}
       label={label}
       wrapperClassName={wrapperClassName}

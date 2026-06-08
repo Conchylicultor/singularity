@@ -426,6 +426,9 @@
     "plugins/config_v2/plugins/fields/plugins/secret": {
       "name": "@singularity/plugin-config_v2-fields-secret",
     },
+    "plugins/config_v2/plugins/fields/plugins/string-list": {
+      "name": "@singularity/plugin-config_v2-fields-string-list",
+    },
     "plugins/config_v2/plugins/settings": {
       "name": "@singularity/plugin-config_v2-settings",
     },
@@ -1206,6 +1209,10 @@
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-registry-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync",
+      "version": "0.0.1",
+    },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-reorderable-slots-in-sync",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact": {
@@ -2847,6 +2854,8 @@
 
     "@singularity/plugin-config_v2-fields-secret": ["@singularity/plugin-config_v2-fields-secret@workspace:plugins/config_v2/plugins/fields/plugins/secret"],
 
+    "@singularity/plugin-config_v2-fields-string-list": ["@singularity/plugin-config_v2-fields-string-list@workspace:plugins/config_v2/plugins/fields/plugins/string-list"],
+
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
@@ -3220,6 +3229,8 @@
     "@singularity/plugin-framework-tooling-checks-plugins-have-claudemd": ["@singularity/plugin-framework-tooling-checks-plugins-have-claudemd@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-have-claudemd"],
 
     "@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync": ["@singularity/plugin-framework-tooling-checks-plugins-registry-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/plugins-registry-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-reorderable-slots-in-sync": ["@singularity/plugin-framework-tooling-checks-reorderable-slots-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/reorderable-slots-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact": ["@singularity/plugin-framework-tooling-checks-snapshot-chain-intact@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact"],
 

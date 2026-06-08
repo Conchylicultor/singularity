@@ -1,0 +1,13 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - config-v2  — Config
+  // - tasks  — Tasks
+  // - accounts  — Accounts
+  // - agents  — Agents
+  // - conversations  — Conversations
+  // - code-explorer  — Explorer
+  // - stats  — Stats
+  "order": [],
+  "hidden": []
+}

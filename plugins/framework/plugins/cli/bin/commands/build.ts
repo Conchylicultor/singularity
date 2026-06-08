@@ -5,7 +5,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs, generateReorderableSlots } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
@@ -740,6 +740,17 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("pluginDocs", "build:validation", "generate plugin docs");
       console.log("Generating plugins doc...");
       await generatePluginDocs({ root });
+      endSpan();
+
+      // 4a'. Generate the reorderable-slots manifest from the slots facet.
+      // Must run AFTER plugin docs (which builds the enriched tree this reuses)
+      // and BEFORE config origins: reorder registers one config_v2 directive per
+      // slot, and importing the codegen barrel also installs the per-slot
+      // contribution catalog as the default origin-annotations preparer so the
+      // config origins below carry the catalog comments.
+      endSpan = buildProfilerStart("reorderableSlots", "build:codegen", "reorderable slots manifest");
+      console.log("Generating reorderable-slots manifest...");
+      await generateReorderableSlots({ root });
       endSpan();
 
       // 4b. Generate config origin files from defineConfig contributions

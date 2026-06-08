@@ -1,12 +1,4 @@
-export {
-  ReorderSlotPrefsSchema,
-  reorderPrefsResource,
-} from "./resource";
-export type { ReorderSlotPrefs } from "./resource";
-export {
-  getSlot,
-  patchSlot,
-  deleteContribution,
-  patchSlotBodySchema,
-} from "./endpoints";
-export type { PatchSlotBody } from "./endpoints";
+export { reorderDirectiveDescriptor } from "./directive";
+export type { ReorderDirective } from "./directive";
+export { reorderableSlots } from "./reorderable-slots.generated";
+export type { ReorderableSlot } from "./reorderable-slots.generated";

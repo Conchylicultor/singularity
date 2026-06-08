@@ -1,0 +1,10 @@
+// @hash 2936705f08f1
+{
+  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
+  // - audio  — Audio
+  // - chord-readout  — Current chord
+  // - chord-grid-editor  — Chord Grid
+  // - track-mixer  — Tracks
+  "order": [],
+  "hidden": []
+}

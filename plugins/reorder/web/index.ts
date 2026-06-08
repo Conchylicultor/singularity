@@ -5,6 +5,7 @@ import {
 } from "@plugins/primitives/plugins/slot-render/web";
 import { ReorderListMiddleware } from "./internal/dnd-list-middleware";
 import { ReorderItemMiddleware } from "./internal/dnd-item-middleware";
+import { reorderConfigContributions } from "./internal/config-registrations";
 import "./styles.css";
 
 export {
@@ -32,5 +33,9 @@ export default {
       },
     },
   ],
-  contributions: [],
+  // One config_v2 directive per reorderable slot, registered under the slot's
+  // DEFINING plugin (via `pluginId`). The descriptor instances are the
+  // SAME objects the middleware passes to `useConfig`/`useSetConfig` (reference
+  // identity matters — both import the shared `descriptors` map).
+  contributions: reorderConfigContributions,
 } satisfies PluginDefinition;
