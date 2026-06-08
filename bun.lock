@@ -1335,6 +1335,14 @@
       "name": "@singularity/plugin-layouts",
       "version": "0.0.1",
     },
+    "plugins/layouts/plugins/full-pane": {
+      "name": "@singularity/plugin-layouts-full-pane",
+      "version": "0.0.1",
+    },
+    "plugins/layouts/plugins/host": {
+      "name": "@singularity/plugin-layouts-host",
+      "version": "0.0.1",
+    },
     "plugins/layouts/plugins/miller": {
       "name": "@singularity/plugin-layouts-miller",
       "version": "0.0.1",
@@ -3242,6 +3250,10 @@
     "@singularity/plugin-infra-worktree": ["@singularity/plugin-infra-worktree@workspace:plugins/infra/plugins/worktree"],
 
     "@singularity/plugin-layouts": ["@singularity/plugin-layouts@workspace:plugins/layouts"],
+
+    "@singularity/plugin-layouts-full-pane": ["@singularity/plugin-layouts-full-pane@workspace:plugins/layouts/plugins/full-pane"],
+
+    "@singularity/plugin-layouts-host": ["@singularity/plugin-layouts-host@workspace:plugins/layouts/plugins/host"],
 
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 

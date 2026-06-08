@@ -1,15 +1,13 @@
-import { useCallback, useContext, useLayoutEffect, useMemo, useRef } from "react";
+import { useCallback, useContext, useLayoutEffect, useRef } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
   getChain,
+  type PaneMatch,
   PaneBasePathContext,
   PaneInstanceContext,
   PaneMatchContext,
   reorderChain,
-  setBasePath,
-  useIndexMatch,
-  useMatchForChain,
-  useSyncPaneRegistry,
+  usePaneRoute,
 } from "@plugins/primitives/plugins/pane/web";
 import {
   SortableItem,
@@ -17,22 +15,15 @@ import {
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Column } from "./column";
 
-export function MillerColumns() {
+export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   const basePath = useContext(PaneBasePathContext);
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry
-  useMemo(() => { setBasePath(basePath); }, [basePath]);
 
-  // Must run before useMatchForChain so the matcher sees the current
-  // contribution set on first render. Must run AFTER setBasePath so that
-  // the chain store sees the correct base path on initial load.
-  useSyncPaneRegistry();
-
-  // The opened chain is purely URL-derived (empty at a bare app root). When it
-  // is empty, fall back to the active app's index/landing pane. Apps with no
-  // `appPath`-scoped index render nothing (empty main area).
-  const chainMatch = useMatchForChain();
-  const indexMatch = useIndexMatch(basePath);
-  const match = chainMatch ?? indexMatch;
+  // Always run the self-resolve hooks to keep hook order stable; it is cheap
+  // and idempotent. When a `match` prop is supplied (by the mixing host) we use
+  // it instead and skip the `PaneMatchContext` provider, since the host has
+  // already provided both the resolved match and the context.
+  const selfMatch = usePaneRoute(basePath);
+  const match = provided ?? selfMatch;
 
   const ref = useRef<HTMLDivElement>(null);
   const lastLength = useRef(0);
@@ -60,51 +51,58 @@ export function MillerColumns() {
   // nowhere to drag it, so suppress the drag handle (and its grab cursor).
   const canReorder = match.chain.length > 1;
 
-  return (
-    <PaneMatchContext.Provider value={match}>
-      <PluginErrorBoundary slot="layouts.miller" label={basePath}>
-        <div ref={ref} className="flex h-full overflow-x-auto">
-          <SortableList
-            items={itemIds}
-            onMove={handleMove}
-            orientation="horizontal"
-          >
-            {match.chain.map((entry, i) => {
-              const isLast = i === match.chain.length - 1;
-              return (
-                <SortableItem
-                  key={entry.instanceId}
-                  id={String(entry.instanceId)}
-                  handle
-                  disabled={!canReorder}
-                  className={(state) =>
-                    `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
-                  }
-                >
-                  {(state) => (
-                    <PaneInstanceContext.Provider value={entry.instanceId}>
-                      {/* Per-column boundary: a crash inside one pane is
-                          contained to that column; sibling panes survive.
-                          The outer boundary remains as a backstop for the
-                          row scaffolding (SortableList, drag). */}
-                      <PluginErrorBoundary
-                        slot="layouts.miller"
-                        label={entry.pane.id}
-                      >
-                        <Column
-                          entry={entry}
-                          isLast={isLast}
-                          dragHandleProps={canReorder ? state.handleProps : undefined}
-                        />
-                      </PluginErrorBoundary>
-                    </PaneInstanceContext.Provider>
-                  )}
-                </SortableItem>
-              );
-            })}
-          </SortableList>
-        </div>
-      </PluginErrorBoundary>
-    </PaneMatchContext.Provider>
+  const body = (
+    <PluginErrorBoundary slot="layouts.miller" label={basePath}>
+      <div ref={ref} className="flex h-full overflow-x-auto">
+        <SortableList
+          items={itemIds}
+          onMove={handleMove}
+          orientation="horizontal"
+        >
+          {match.chain.map((entry, i) => {
+            const isLast = i === match.chain.length - 1;
+            return (
+              <SortableItem
+                key={entry.instanceId}
+                id={String(entry.instanceId)}
+                handle
+                disabled={!canReorder}
+                className={(state) =>
+                  `flex h-full${isLast ? " min-w-[200px] flex-1" : " shrink-0"}${state.isDragging ? " opacity-50" : ""}`
+                }
+              >
+                {(state) => (
+                  <PaneInstanceContext.Provider value={entry.instanceId}>
+                    {/* Per-column boundary: a crash inside one pane is
+                        contained to that column; sibling panes survive.
+                        The outer boundary remains as a backstop for the
+                        row scaffolding (SortableList, drag). */}
+                    <PluginErrorBoundary
+                      slot="layouts.miller"
+                      label={entry.pane.id}
+                    >
+                      <Column
+                        entry={entry}
+                        isLast={isLast}
+                        dragHandleProps={canReorder ? state.handleProps : undefined}
+                      />
+                    </PluginErrorBoundary>
+                  </PaneInstanceContext.Provider>
+                )}
+              </SortableItem>
+            );
+          })}
+        </SortableList>
+      </div>
+    </PluginErrorBoundary>
+  );
+
+  // Standalone: provide the resolved match as context. Under the mixing host
+  // (`match` prop supplied) the host already provides it — wrapping again would
+  // be redundant, so render the body directly.
+  return provided ? (
+    body
+  ) : (
+    <PaneMatchContext.Provider value={match}>{body}</PaneMatchContext.Provider>
   );
 }

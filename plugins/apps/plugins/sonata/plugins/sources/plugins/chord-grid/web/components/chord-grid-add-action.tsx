@@ -48,7 +48,7 @@ export function ChordGridAddAction() {
           },
         },
       );
-      await openSong(song);
+      openSong(song);
     } finally {
       setCreating(false);
     }

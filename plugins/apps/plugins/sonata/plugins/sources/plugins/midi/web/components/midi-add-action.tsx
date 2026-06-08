@@ -45,7 +45,7 @@ export function MidiAddAction() {
           },
         },
       );
-      await openSong(song);
+      openSong(song);
     } finally {
       setImporting(false);
     }

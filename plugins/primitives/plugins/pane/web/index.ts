@@ -16,11 +16,13 @@ export {
   useMatchForPath,
   usePathname,
   useSyncPaneRegistry,
+  usePaneRoute,
   parseUrl,
   buildChainUrl,
   getChain,
   reorderChain,
   restoreChain,
+  clearChain,
   openPane,
   useOpenPane,
 } from "./pane";

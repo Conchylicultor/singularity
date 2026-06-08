@@ -416,6 +416,18 @@ export function restoreChain(
   setChain(chain);
 }
 
+/**
+ * Navigate to the EMPTY route — the only public way to do so. `restoreChain`
+ * refuses an empty array and `setChain` is module-internal, so full-pane apps
+ * had no way to go "back to index" (e.g. ← Library). `setChain([])` builds URL
+ * "/" (→ the app root via applyBasePath), pushes history, and notifies; the
+ * empty chain then re-resolves to the index pane via `useIndexMatch`.
+ */
+export function clearChain(): void {
+  if (typeof window === "undefined") return;
+  setChain([]);
+}
+
 export function syncChainFromUrl(pathname: string): void {
   const parsed = parseUrl(pathname);
   const newChain = parsed ?? [];
@@ -991,6 +1003,25 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the registry; registry itself is a module-level mutable Map read inside.
   }, [basePath, contributions]);
+}
+
+/**
+ * Shared renderer preamble. Every layout renderer (Miller columns, full-pane,
+ * …) repeats the same sequence to turn the active app's basePath into a route
+ * match: set the base path (synchronous side-effect), sync the registry, then
+ * return the URL-derived chain match or fall back to the index pane. Exposing
+ * it here keeps renderers thin and stops them copy-pasting this hook order
+ * (which must stay stable). Mirrors MillerColumns exactly.
+ */
+export function usePaneRoute(basePath: string): PaneMatch | null {
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry, mirrors MillerColumns/PaneOverlayHost
+  useMemo(() => {
+    setBasePath(basePath);
+  }, [basePath]);
+  useSyncPaneRegistry();
+  const chain = useMatchForChain();
+  const index = useIndexMatch(basePath);
+  return chain ?? index;
 }
 
 // ---------------------------------------------------------------------------

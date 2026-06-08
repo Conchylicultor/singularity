@@ -34,7 +34,7 @@ export function ChordGridEditorSection() {
 
   // Debounced server persistence. We treat the context (rawById + currentSongTitle)
   // as the source of truth and sync the server eventually — never on the fresh
-  // load that `openPlayer` triggers (which bumps `songOpenEpoch`), only on edits.
+  // load that opening a song triggers (which bumps `songOpenEpoch`), only on edits.
   const seededEpoch = useRef(songOpenEpoch);
   useEffect(() => {
     if (!currentSongId || rawValue === undefined) return;

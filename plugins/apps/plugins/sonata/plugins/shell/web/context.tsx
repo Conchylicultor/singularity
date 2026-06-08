@@ -20,7 +20,6 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Sonata } from "./slots";
-import { publishSonataTransport } from "./transport-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -71,22 +70,18 @@ export interface SonataContextValue {
    * transport cursor all share one consistent timeline.
    */
   score: Score;
-  /**
-   * The app's navigation view. `"library"` is the landing surface (the song
-   * gallery, contributed via `Sonata.Home`); `"player"` is the streamlined
-   * playback chrome for the current song.
-   */
-  view: "library" | "player";
   /** Title of the song currently open in the player (null on the library). */
   currentSongTitle: string | null;
   /** Id of the song currently open in the player (null on the library). Lets
    *  player-scoped effects attribute a play to a specific song. */
   currentSongId: string | null;
   /**
-   * Monotonic counter bumped on every `openPlayer` call — including reopening the
-   * *same* song. Effects that should fire once per open (e.g. recording a play on
-   * the first Play press) key their "already handled" guard on this so a fresh
-   * open re-arms them while pause→resume within one open does not.
+   * Monotonic counter bumped on every `setCurrentSong` call — including reopening
+   * the *same* song. Effects that should fire once per open (e.g. recording a play
+   * on the first Play press) key their "already handled" guard on this so a fresh
+   * open re-arms them while pause→resume within one open does not. Each player
+   * open is a fresh `mode:"root"` pane instance, so the player surface's mount
+   * effect calls `setCurrentSong` exactly once per open.
    */
   songOpenEpoch: number;
   /** Playhead position in quarter-note beats. */
@@ -139,11 +134,27 @@ export interface SonataContextValue {
    * complete set of persisted per-source inputs in one shot.
    */
   setRawMap: (rawMap: Record<string, unknown>) => void;
-  /** Open the player on a song (sets current id/title, `view="player"`, bumps
-   *  `songOpenEpoch`). */
-  openPlayer: (song: { id: string; title: string }) => void;
-  /** Return to the library: stops playback, then `view="library"`. */
-  backToLibrary: () => void;
+  /**
+   * Mark a song as the one currently open: sets `currentSongId`/`currentSongTitle`
+   * and bumps `songOpenEpoch` (re-arms once-per-open effects, even for the same
+   * song). Called by the player surface on mount — each open is a fresh
+   * `mode:"root"` pane instance, so this fires exactly once per open.
+   */
+  setCurrentSong: (song: { id: string; title: string }) => void;
+  /**
+   * Clear the open-song state (nulls `currentSongId`/`currentSongTitle`). Called
+   * by the player surface on unmount so library-state effects don't mis-attribute
+   * a play to a song that is no longer on screen.
+   */
+  clearCurrentSong: () => void;
+  /**
+   * Toggle play/pause from the current cursor. Stable; the player surface
+   * publishes it to the global transport bus while mounted, so the gate on
+   * "player on screen" is implicit (the bus is empty on the library).
+   */
+  togglePlay: () => void;
+  /** Nudge the playback tempo scale by `delta` (e.g. +0.1 = 10% faster). */
+  nudgeTempo: (delta: number) => void;
   /** Move the playhead (e.g. scrub / seek). */
   setCursorBeat: (beat: number) => void;
   /** Nudge the playhead by `deltaBeat` beats, clamped to [0, end]; re-anchors playback. */
@@ -182,8 +193,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
   const analyzers = Sonata.Analyzer.useContributions();
 
-  // Navigation: the app lands on the library and switches into the player.
-  const [view, setView] = useState<"library" | "player">("library");
+  // Open-song state. Navigation itself is URL-driven via the pane router (the
+  // library index pane and the player pane); this only tracks which song the
+  // player surface currently has on screen, so player-scoped effects can
+  // attribute playback to it.
   const [currentSongTitle, setCurrentSongTitle] = useState<string | null>(null);
   const [currentSongId, setCurrentSongId] = useState<string | null>(null);
   const [songOpenEpoch, setSongOpenEpoch] = useState(0);
@@ -309,10 +322,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   isPlayingRef.current = isPlaying;
   const tempoScaleRef = useRef(tempoScale);
   tempoScaleRef.current = tempoScale;
-  // Mirror the nav view so the published (stable) transport callbacks can gate
-  // on it without re-publishing — keyboard shortcuts must only drive the player.
-  const viewRef = useRef(view);
-  viewRef.current = view;
 
   // Anchor the transport at `beat` against the active clock's `now()`. Used at
   // play, on every clock swap, and on seek / tempo change so they all compose.
@@ -351,20 +360,23 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setIsPlaying(true);
   }, []);
 
-  // Navigation actions. Opening a song switches to the player; the existing
-  // `useEffect([baseScore])` auto-stops + rewinds when its raw input changes.
-  const openPlayer = useCallback((song: { id: string; title: string }) => {
+  // Open-song lifecycle. The player surface calls `setCurrentSong` on mount —
+  // each open is a fresh `mode:"root"` pane instance, so this fires once per open
+  // and the epoch bump re-arms once-per-open effects (even for the same song).
+  // The existing `useEffect([baseScore])` auto-stops + rewinds when raw changes.
+  const setCurrentSong = useCallback((song: { id: string; title: string }) => {
     setCurrentSongId(song.id);
     setCurrentSongTitle(song.title);
     // Bump every open (even the same song) so once-per-open effects re-arm.
     setSongOpenEpoch((n) => n + 1);
-    setView("player");
   }, []);
 
-  const backToLibrary = useCallback(() => {
-    stop();
-    setView("library");
-  }, [stop]);
+  // The player surface calls this on unmount so library-state effects don't
+  // mis-attribute playback to a song that is no longer on screen.
+  const clearCurrentSong = useCallback(() => {
+    setCurrentSongId(null);
+    setCurrentSongTitle(null);
+  }, []);
 
   // Absolute seek — the primitive the progression bar drives. Clamps to the
   // score span and re-anchors so the audio/cursor stay glued while playing.
@@ -460,22 +472,18 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // while playing. `reanchor` is stable.
   }, [isPlaying, reanchor]);
 
-  // Publish the transport to the module-level bus so global keyboard shortcuts
-  // (which run outside React) can drive the active Sonata. Stable callbacks +
-  // refs mean we publish once on mount and clear on unmount.
-  useEffect(() => {
-    publishSonataTransport({
-      // Gate transport on the player view so global Space/arrows don't start
-      // playback while the user is on the library landing surface.
-      togglePlay: () => {
-        if (viewRef.current !== "player") return;
-        isPlayingRef.current ? stop() : play();
-      },
-      seekBy,
-      nudgeTempo: (delta) => setTempoScale(tempoScaleRef.current + delta),
-    });
-    return () => publishSonataTransport(null);
-  }, [play, stop, seekBy, setTempoScale]);
+  // Stable transport verbs the player surface publishes to the module-level bus
+  // (for out-of-React global keyboard shortcuts) while it is mounted. Publishing
+  // only from the player makes the "player on screen" gate implicit — the bus is
+  // empty on the library, so Space/arrows are inert there with no `view` check.
+  const togglePlay = useCallback(() => {
+    isPlayingRef.current ? stop() : play();
+  }, [play, stop]);
+
+  const nudgeTempo = useCallback(
+    (delta: number) => setTempoScale(tempoScaleRef.current + delta),
+    [setTempoScale],
+  );
 
   const loadedSourceIds = useMemo(
     () => Object.keys(rawById).filter((id) => rawById[id] !== undefined),
@@ -500,7 +508,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const value = useMemo<SonataContextValue>(
     () => ({
       score,
-      view,
       currentSongTitle,
       currentSongId,
       songOpenEpoch,
@@ -519,8 +526,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSourceRaw,
       renameCurrentSong,
       setRawMap,
-      openPlayer,
-      backToLibrary,
+      setCurrentSong,
+      clearCurrentSong,
+      togglePlay,
+      nudgeTempo,
       setCursorBeat,
       seekBy,
       seekTo,
@@ -531,7 +540,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }),
     [
       score,
-      view,
       currentSongTitle,
       currentSongId,
       songOpenEpoch,
@@ -548,8 +556,10 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setSourceRaw,
       renameCurrentSong,
       setRawMap,
-      openPlayer,
-      backToLibrary,
+      setCurrentSong,
+      clearCurrentSong,
+      togglePlay,
+      nudgeTempo,
       seekBy,
       seekTo,
       setTempoScale,
