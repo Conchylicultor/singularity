@@ -54,7 +54,7 @@ export function DropAndExitItem({
     <DropdownMenuItem
       variant={variant}
       disabled={disabled}
-      onSelect={() => mutate({ params: { id: conversation.id } })}
+      onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <Icon className="size-4" />
       {label}

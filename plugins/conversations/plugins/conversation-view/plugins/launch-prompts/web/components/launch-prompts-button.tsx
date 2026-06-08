@@ -65,7 +65,7 @@ export function LaunchPromptsButton({
         {prompts.map((item) => (
           <DropdownMenuItem
             key={item.id}
-            onSelect={() => void launch(item)}
+            onClick={() => void launch(item)}
             className="flex items-center justify-between gap-6"
           >
             <span>{item.title}</span>

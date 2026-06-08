@@ -22,7 +22,7 @@ export function ExitItem({
   return (
     <DropdownMenuItem
       disabled={disabled}
-      onSelect={() => mutate({ params: { id: conversation.id } })}
+      onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <MdLogout className="size-4" />
       {isPending ? "Exiting…" : "Exit"}

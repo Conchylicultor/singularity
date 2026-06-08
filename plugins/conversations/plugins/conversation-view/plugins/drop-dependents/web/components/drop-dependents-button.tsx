@@ -45,7 +45,7 @@ export function DropDependentsItem({
     <DropdownMenuItem
       variant="destructive"
       disabled={disabled}
-      onSelect={() => mutate({ params: { id: conversation.id } })}
+      onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <MdDeleteSweep className="size-4" />
       {isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Exit`}

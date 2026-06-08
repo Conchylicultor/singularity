@@ -22,7 +22,7 @@ export function HoldAndExitItem({
   return (
     <DropdownMenuItem
       disabled={disabled}
-      onSelect={() => mutate({ params: { id: conversation.id } })}
+      onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <MdPauseCircle className="size-4" />
       {isPending ? "Holding…" : "Hold & Exit"}
