@@ -7,7 +7,6 @@ import { checkBroadcasts } from "../broadcasts";
 import { createPushProfiler, type PushProfiler } from "../push-profiler";
 import { withHostSlot } from "../host-semaphore";
 import { markWorktreeOpStart, setWorktreeOpPhase, clearWorktreeOp, writePushHolder, clearPushHolder, PUSH_LOCK_PATH } from "@plugins/infra/plugins/worktree/server";
-import { computeAffectedFiles } from "../eslint-affected";
 
 async function run(
   cmd: string[],
@@ -36,18 +35,10 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 }
 
 // Spawns a fresh process so checks see the post-rebase code on disk,
-// not the stale module cache from process start.
-//
-// `scopeEnv` controls the eslint check's candidate set (the check's per-file
-// closure cache provides soundness and cross-run reuse regardless of scope):
-//   - undefined → env var UNSET → the check considers the full lintable set (the
-//     complete type-aware gate). CRITICAL: this must be *unset*, never an empty
-//     string — an empty SINGULARITY_ESLINT_SCOPE means "skip" in the check.
-//   - a (possibly empty) newline list → consider exactly the affected set; the
-//     closure cache then re-lints only those whose dependency closure changed.
-//     An empty list means nothing lint-relevant changed → the check
-//     short-circuits to ok.
-async function runChecksSubprocess(root: string, scopeEnv: string | undefined): Promise<boolean> {
+// not the stale module cache from process start. The eslint check always
+// considers the full lintable set; its per-file closure cache decides what
+// actually re-lints, so there is no scope env to thread through.
+async function runChecksSubprocess(root: string): Promise<boolean> {
   const env: Record<string, string> = {
     ...process.env,
     // The parent push process already holds the reserved push slot (see
@@ -56,9 +47,6 @@ async function runChecksSubprocess(root: string, scopeEnv: string | undefined): 
     // deadlock, since this parent holds it and is awaiting the child here.
     SINGULARITY_HOST_SLOT_HELD: "1",
   };
-  if (scopeEnv !== undefined) {
-    env.SINGULARITY_ESLINT_SCOPE = scopeEnv;
-  }
   const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,
     env,
@@ -78,7 +66,6 @@ async function runChecksSubprocess(root: string, scopeEnv: string | undefined): 
 async function runChecksUnderPushSlot(
   root: string,
   profiler: PushProfiler,
-  scopeEnv: string | undefined,
 ): Promise<boolean> {
   profiler.stepStart("slot-wait");
   return withHostSlot(
@@ -86,35 +73,12 @@ async function runChecksUnderPushSlot(
     async () => {
       profiler.stepStart("checks");
       console.log("Running checks...");
-      const ok = await runChecksSubprocess(root, scopeEnv);
+      const ok = await runChecksSubprocess(root);
       profiler.stepEnd("checks");
       return ok;
     },
     { onAcquired: () => profiler.stepEnd("slot-wait") },
   );
-}
-
-// Decide the eslint surface for this push and emit visibility (a zero-width
-// profiler step + a console line) so the push Gantt shows which path ran.
-// Returns the scope env to thread into the check subprocess: undefined → the
-// full lintable set; a newline list → the affected set (closure-cached).
-async function resolveEslintScope(
-  root: string,
-  onMain: boolean,
-  profiler: PushProfiler,
-): Promise<string | undefined> {
-  const affected = onMain ? null : await computeAffectedFiles(root);
-  if (affected === null) {
-    profiler.stepStart("lint-full");
-    profiler.stepEnd("lint-full");
-    const reason = onMain ? "on main" : "lint infra changed / undeterminable";
-    console.log(`ESLint: full repo (${reason})`);
-    return undefined;
-  }
-  profiler.stepStart("lint-scoped");
-  profiler.stepEnd("lint-scoped");
-  console.log(`ESLint: affected set → ${affected.length} file(s)`);
-  return affected.join("\n");
 }
 
 async function getWorktreeRoot(): Promise<string> {
@@ -430,10 +394,7 @@ export function registerPush(program: Command) {
             await postRebaseNormalize(fromMainRoot, pushId);
             profiler.stepEnd("normalize");
 
-            // onMain is true on this path → full lint (the gate that seeds the
-            // canonical cache stays complete).
-            const scopeEnv = await resolveEslintScope(fromMainRoot, onMain, profiler);
-            const ok = await runChecksUnderPushSlot(fromMainRoot, profiler, scopeEnv);
+            const ok = await runChecksUnderPushSlot(fromMainRoot, profiler);
             if (!ok) {
               console.error(
                 "Checks failed after rebase. Fix the issue and re-run ./singularity push " +
@@ -542,12 +503,7 @@ export function registerPush(program: Command) {
           //    Spawned as a subprocess so the check code comes from the rebased
           //    tree, not the (potentially stale) module cache of this process.
           const root = await getWorktreeRoot();
-          // Affected-set scope (worktree path, not on main): lint the changed
-          // files + everything that transitively imports them; null → full lint
-          // when correctness requires it (lint infra/config/deps/ambient or
-          // undeterminable).
-          const scopeEnv = await resolveEslintScope(root, onMain, profiler);
-          const ok = await runChecksUnderPushSlot(root, profiler, scopeEnv);
+          const ok = await runChecksUnderPushSlot(root, profiler);
           if (!ok) {
             console.error(
               `Checks failed after rebasing ${branch} onto main. ` +

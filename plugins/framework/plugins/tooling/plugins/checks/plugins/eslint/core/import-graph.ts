@@ -237,15 +237,3 @@ export function buildImportGraphs(root: string): ImportGraphs {
   }
   return { files, forward, reverse };
 }
-
-/**
- * Build the REVERSE import adjacency map over every linted .ts/.tsx file:
- * Map<importeeRelPath, Set<importerRelPath>>. An entry `A → {B, C}` means B and
- * C statically import A (directly), so a change to A type-affects B and C.
- *
- * Thin wrapper over buildImportGraphs for callers that only need the reverse
- * map (the cli affected-set scoping).
- */
-export function buildReverseImportGraph(root: string): Map<string, Set<string>> {
-  return buildImportGraphs(root).reverse;
-}

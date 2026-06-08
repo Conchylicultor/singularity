@@ -1,6 +1,5 @@
 export {
   buildImportGraphs,
-  buildReverseImportGraph,
   findLintFiles,
   isLintable,
   resolveSpecifier,

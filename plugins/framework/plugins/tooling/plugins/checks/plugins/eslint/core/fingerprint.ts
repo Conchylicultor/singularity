@@ -22,10 +22,10 @@ export interface FingerprintResult {
   perFile: Map<string, string>; // relpath -> closureFingerprint
 }
 
-// Mirror eslint-affected's isForceFull triggers: the files whose change can
-// alter the lint result of *any* file. These form the global config component,
-// so a config/rule/tsconfig/deps/ambient change flips every per-file
-// fingerprint at once (replacing the old mtime-based bustCacheIfStale).
+// The "force-full" trigger files: those whose change can alter the lint result
+// of *any* file. These form the global config component, so a
+// config/rule/tsconfig/deps/ambient change flips every per-file fingerprint at
+// once (replacing the old mtime-based bustCacheIfStale).
 const IGNORED_DIR_NAMES = new Set(["node_modules", "dist", ".git"]);
 
 function isGlobalTrigger(rel: string): boolean {

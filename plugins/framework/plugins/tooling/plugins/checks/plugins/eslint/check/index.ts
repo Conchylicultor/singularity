@@ -1,4 +1,3 @@
-import { createHash } from "crypto";
 import {
   buildImportGraphs,
   computeClosureFingerprints,
@@ -10,7 +9,6 @@ type Check = {
   id: string;
   description: string;
   run(): Promise<CheckResult>;
-  cacheSignature?(): string | null;
 };
 
 async function getRoot(): Promise<string> {
@@ -21,50 +19,23 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// `./singularity build` and `./singularity push` set SINGULARITY_ESLINT_SCOPE to
-// a newline-separated list of the branch's affected .ts/.tsx files (changed +
-// transitive importers, already filtered against the config's ignore globs) so a
-// scoped run lints only the affected set instead of all ~2k files. Unset —
-// `./singularity check` and main builds — means the full lintable set. The
-// closure cache (keyed on each file's content + its transitive forward-import
-// closure + global config) then skips every file whose closure is unchanged, so
-// the scope env is only a candidate-narrowing fast path: correctness comes from
-// the fingerprint, not the scope. Defined-but-empty means nothing lint-relevant
-// changed (skip).
-function eslintScope(): string[] | null {
-  const raw = process.env.SINGULARITY_ESLINT_SCOPE;
-  if (raw === undefined) return null;
-  return raw.split("\n").map((s) => s.trim()).filter(Boolean);
-}
-
 const check: Check = {
   id: "eslint",
   description: "ESLint rules pass (global + plugin-contributed)",
-  // The eslint surface is parameterized by its scope env, so the outer
-  // check-cache key folds it in: a scoped affected-set run and a full run are
-  // different candidate sets over the same tree. The per-file closure cache (not
-  // this signature) carries cross-run/worktree reuse; this only keeps a full run
-  // and a scoped run from aliasing each other's outer check-cache entry.
-  cacheSignature() {
-    const scope = eslintScope();
-    if (scope === null) return "scope=full";
-    if (scope.length === 0) return "scope=empty";
-    return `scope=list:${createHash("sha256").update([...scope].sort().join("\n")).digest("hex")}`;
-  },
   async run() {
     const root = await getRoot();
-    const scope = eslintScope();
-    if (scope !== null && scope.length === 0) return { ok: true };
 
-    // Build the import graph once; the candidate set is the affected scope (when
-    // provided) or every lintable file. Then fingerprint each candidate on its
-    // full dependency closure and skip the ones whose closure already PASSed.
+    // One path for build, push, and check: fingerprint every lintable file on its
+    // full dependency closure, then lint only the ones whose closure changed. The
+    // per-file closure cache (keyed on each file's content + transitive forward
+    // import closure + global config) carries soundness and cross-run/worktree
+    // reuse, so there is no git-diff candidate narrowing — the full set is cheap
+    // because everything but a changed closure is a cache hit.
     const graphs = buildImportGraphs(root);
-    const candidates = scope ?? graphs.files;
-    const { perFile } = computeClosureFingerprints(root, graphs, candidates);
+    const { perFile } = computeClosureFingerprints(root, graphs, graphs.files);
 
     const cache = openEslintClosureCache();
-    const toLint = candidates.filter((f) => {
+    const toLint = graphs.files.filter((f) => {
       const fp = perFile.get(f);
       return !fp || !cache.has(f, fp); // unreadable fingerprint → lint to be safe
     });
