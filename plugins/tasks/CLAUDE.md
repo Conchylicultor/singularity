@@ -16,7 +16,7 @@
 - Web:
   - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `patchTask`, `setAutoStart`, `useTask`
 - Cross-plugin:
-  - Endpoint callers: `dependencies`, `endpoints`
+  - Endpoint callers: `dependencies`
 - Sub-plugins:
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
   - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.

@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -18,15 +20,18 @@ const check: Check = {
     "useResource is generic — casting its `data` result hides type mismatches and is never necessary",
   async run() {
     const root = await getRoot();
+    // strings: true — this detects a code construct (an `as T` cast) that must
+    // never be matched inside a string literal.
+    const matches = await grepCode({
+      root,
+      pattern: new RegExp(CAST_PATTERN),
+      grepArg: CAST_PATTERN,
+      maskStrings: true,
+    });
 
-    const proc = Bun.spawn(
-      ["git", "grep", "-nE", CAST_PATTERN, "--", "*.ts", "*.tsx"],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    if (matches.length === 0) return { ok: true };
 
-    const offenders = out.split("\n").filter(Boolean);
+    const offenders = matches.map((m) => `${m.path}:${m.line}:${m.text}`);
 
     return {
       ok: false,

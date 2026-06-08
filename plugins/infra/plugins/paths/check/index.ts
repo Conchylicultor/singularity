@@ -1,5 +1,11 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
 
 async function getRoot(): Promise<string> {
   const proc = Bun.spawn(["git", "rev-parse", "--show-toplevel"], {
@@ -50,26 +56,21 @@ const check: Check = {
     const offenders: string[] = [];
 
     for (const pattern of PATTERNS) {
-      const proc = Bun.spawn(
-        ["git", "grep", "-nF", "--", pattern, "*.ts", "*.tsx"],
-        { cwd: root, stdout: "pipe", stderr: "pipe" },
-      );
-      const out = (await new Response(proc.stdout).text()).trim();
-      if (!out) continue;
+      const matches = await grepCode({
+        root,
+        pattern: new RegExp(escapeRegExp(pattern)),
+        grepArg: pattern,
+        fixed: true,
+        maskStrings: false,
+      });
 
-      for (const line of out.split("\n")) {
+      for (const m of matches) {
+        const line = `${m.path}:${m.line}:${m.text}`;
         if (seen.has(line)) continue;
         seen.add(line);
 
-        const path = line.split(":", 1)[0]!;
-        if (ALLOWED_PATHS.includes(path)) continue;
-        if (path.startsWith("research/")) continue;
-
-        // Skip single-line comments and JSDoc lines.
-        const content = line.split(":").slice(2).join(":").trimStart();
-        if (content.startsWith("//")) continue;
-        if (content.startsWith("*")) continue;
-        if (content.startsWith("#!")) continue;
+        if (ALLOWED_PATHS.includes(m.path)) continue;
+        if (m.path.startsWith("research/")) continue;
 
         offenders.push(line);
       }

@@ -12,6 +12,7 @@ import {
   readIfExists,
   stripTypes,
   matchBracket,
+  maskSource,
   walkFiles,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type RouteDef, type RoutesData, routesFacetDef } from "../core";
@@ -122,8 +123,11 @@ export default createFacet<RoutesData>({
       }
       const hit = new Set<string>();
       for (const f of files) {
-        const src = readIfExists(f);
-        if (!src) continue;
+        const raw = readIfExists(f);
+        if (!raw) continue;
+        // Mask comments/regex (keep URL string literals) so a commented or
+        // documented `/api/<prefix>` doesn't register a phantom endpoint caller.
+        const src = maskSource(raw, { strings: false });
         re.lastIndex = 0;
         let m: RegExpExecArray | null;
         while ((m = re.exec(src))) hit.add(m[1]!);

@@ -11,6 +11,7 @@ import type {
 import {
   parseBarrelExports,
   readIfExists,
+  maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { type ExportedSymbol, type ExportsData, exportsFacetDef } from "../core";
@@ -23,8 +24,11 @@ export default createFacet<ExportsData>({
 
   extract(ctx) {
     const parse = (runtime: Runtime): ExportedSymbol[] => {
-      const src = readIfExists(join(ctx.dir, runtime, "index.ts"));
-      if (!src) return [];
+      const raw = readIfExists(join(ctx.dir, runtime, "index.ts"));
+      if (!raw) return [];
+      // Mask comments/regex (keep export-name structure) so a commented-out
+      // `export default` / `export const X` can't register a phantom symbol.
+      const src = maskSource(raw, { strings: false });
       return parseBarrelExports(src).map(({ name, kind }) => ({ name, kind, consumers: [] }));
     };
     return {

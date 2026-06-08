@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { findMarkerCalls, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
@@ -55,7 +56,8 @@ function findCoreBarrels(pluginsRoot: string): string[] {
   return out;
 }
 
-const DEFINE_RE = /defineCollectedDir\(\s*["']([^"']+)["']\s*\)/g;
+// First positional string argument of a `defineCollectedDir("<dir>")` call.
+const FIRST_STRING_ARG_RE = /^\s*["']([^"']+)["']/;
 
 // Synchronous: this does only blocking `readdirSync`/`readFileSync`/`existsSync`
 // I/O. Keeping it sync (rather than async-by-signature) lets callers — notably
@@ -83,12 +85,14 @@ export function discoverCollectedDirs(
       if (!entry.isFile() || !entry.name.endsWith(".ts")) continue;
       const filePath = join(coreDir, entry.name);
       const src = readFileSync(filePath, "utf8");
+      // Fast-path: skip files that can't contain the marker. Correctness still
+      // comes from `findMarkerCalls`, which ignores comment/string/regex matches.
       if (!src.includes("defineCollectedDir")) continue;
-      DEFINE_RE.lastIndex = 0;
-      let m: RegExpExecArray | null;
-      while ((m = DEFINE_RE.exec(src))) {
+      for (const call of findMarkerCalls(src, "defineCollectedDir")) {
+        const arg = FIRST_STRING_ARG_RE.exec(call.argsText);
+        if (!arg) continue;
         out.push({
-          dir: m[1]!,
+          dir: arg[1]!,
           _brand: "CollectedDirDef",
           ownerDir: dirname(coreDir),
         });
@@ -122,7 +126,9 @@ interface CollectedRawEntry {
 }
 
 function hasDefaultExport(file: string): boolean {
-  const src = readFileSync(file, "utf8");
+  // Mask comments/regex (keep string interiors) so a commented-out `export
+  // default` can't make an entryless barrel look like an entry.
+  const src = maskSource(readFileSync(file, "utf8"), { strings: false });
   return (
     /(^|\n)\s*export\s+default\b/.test(src) ||
     /(^|\n)\s*export\s*\{[^}]*\bdefault\b[^}]*\}/.test(src)
@@ -177,7 +183,9 @@ function collectImportPrefixes(pluginDir: string, dir: string, entryPrefixes: Se
   walkTsFiles(subDir, files);
   const prefixes = new Set<string>();
   for (const f of files) {
-    const src = readFileSync(f, "utf8");
+    // Mask comments/regex (keep import path strings) so a commented-out import
+    // can't register a phantom dependency edge.
+    const src = maskSource(readFileSync(f, "utf8"), { strings: false });
     let m: RegExpExecArray | null;
     IMPORT_FROM_RE.lastIndex = 0;
     while ((m = IMPORT_FROM_RE.exec(src))) {

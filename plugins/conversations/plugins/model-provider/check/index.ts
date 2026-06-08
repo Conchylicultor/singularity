@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -20,28 +22,21 @@ const check: Check = {
     "Claude model CLI flags (claude-opus-*, claude-sonnet-*, claude-haiku-*) must be resolved through the model-provider registry, never hardcoded",
   async run() {
     const root = await getRoot();
-    const proc = Bun.spawn(
-      [
-        "git",
-        "grep",
-        "-nE",
-        "claude-(opus|sonnet|haiku)-[0-9]",
-        "--",
-        "*.ts",
-        "*.tsx",
-      ],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
-
-    const offenders = out.split("\n").filter((line) => {
-      const path = line.split(":", 1)[0]!;
-      if (ALLOWED_PATHS.some((p) => path === p || path.startsWith(p)))
-        return false;
-      if (path.startsWith("research/")) return false;
-      return true;
+    const matches = await grepCode({
+      root,
+      pattern: /claude-(opus|sonnet|haiku)-[0-9]/,
+      grepArg: "claude-(opus|sonnet|haiku)-[0-9]",
+      maskStrings: false,
     });
+
+    const offenders = matches
+      .filter((m) => {
+        if (ALLOWED_PATHS.some((p) => m.path === p || m.path.startsWith(p)))
+          return false;
+        if (m.path.startsWith("research/")) return false;
+        return true;
+      })
+      .map((m) => `${m.path}:${m.line}:${m.text}`);
 
     if (offenders.length === 0) return { ok: true };
 

@@ -10,6 +10,8 @@ import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
   readIfExists,
   stripTypes,
+  findMarkerCalls,
+  maskSource,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type DbSchemaFacetData, dbSchemaFacetDef } from "../core";
 
@@ -50,6 +52,10 @@ interface RawExtRef {
   extName: string;
 }
 
+// `defineExtension(ParentVar, "name")` — the first positional arg is the parent
+// table variable, the second a string literal name.
+const EXTENSION_ARGS_RE = /^\s*([A-Za-z_$][\w$]*)\s*,\s*"([^"]+)"/;
+
 function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
   const out: RawExtRef[] = [];
   for (const f of dbFiles) {
@@ -57,12 +63,12 @@ function parseEntityExtensionCalls(dbFiles: string[]): RawExtRef[] {
     if (!raw || !raw.includes("defineExtension")) continue;
     const src = stripTypes(raw);
     const imports = parseImports(src);
-    const re = /\bdefineExtension\s*\(\s*([A-Za-z_$][\w$]*)\s*,\s*"([^"]+)"/g;
-    let m: RegExpExecArray | null;
-    while ((m = re.exec(src))) {
-      const imp = imports.get(m[1]!);
+    for (const call of findMarkerCalls(src, "defineExtension")) {
+      const args = EXTENSION_ARGS_RE.exec(call.argsText);
+      if (!args) continue;
+      const imp = imports.get(args[1]!);
       if (!imp) continue;
-      out.push({ parentVarName: imp.original, parentModule: imp.module, extName: m[2]! });
+      out.push({ parentVarName: imp.original, parentModule: imp.module, extName: args[2]! });
     }
   }
   return out;
@@ -99,7 +105,10 @@ function findDbFiles(pluginDir: string): string[] {
         walk(full);
       } else if (e.name.endsWith(".ts") && e.name !== "index.ts") {
         const byName = /schema|tables?/.test(e.name.replace(/\.ts$/, ""));
-        const src = byName ? null : readIfExists(full);
+        // Mask comments + string interiors so a commented or stringified
+        // `pgTable(` / `pgView(` doesn't misclassify a non-schema file.
+        const raw = byName ? null : readIfExists(full);
+        const src = raw === null ? null : maskSource(raw, { strings: true });
         const byContent = !byName && !!src && (src.includes("pgTable(") || src.includes("pgView("));
         if (byName || byContent) results.push(full);
       }

@@ -15,9 +15,15 @@ const createRule = ESLintUtils.RuleCreator(
  *   - bare JSX `className="… <class> …"` → string `Literal`
  *   - inside `cn("… <class> …", …)` and template literals → `Literal` +
  *     `TemplateElement`
- * Rather than special-case each call site we visit every string `Literal` and
- * every `TemplateElement` and test its text against an anchored regex. That is
- * robust to however the class string is assembled.
+ *
+ * Crucially we only inspect strings that live in a *class-name context* — the
+ * value of a `className`/`class` JSX attribute, or an argument to a `cn(...)` /
+ * `clsx(...)` class-builder call. Scanning *every* string literal in the file
+ * (as an earlier version did) produced false positives: a doc string, comment-
+ * as-string, or test fixture that merely *mentions* `text-[10px]` would trip the
+ * rule. The class-name scope mirrors the sibling `no-adhoc-*` rules
+ * (`primitives/control-size`, `primitives/badge`, `primitives/row`), which use
+ * the same `collectClassNodes` walk to harvest only class-name strings.
  */
 
 // Two unit branches captured separately so the existing px fixer path is
@@ -48,6 +54,49 @@ const FIX_REM: Record<string, string> = {
   "0.6875": "text-2xs",
   "0.75": "text-xs",
 };
+
+/** JSX attribute names whose value is a class-name string. */
+const CLASS_ATTRS = new Set(["className", "class"]);
+/** Class-builder calls whose string arguments are class-name strings. */
+const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
+
+/**
+ * Recursively collect the string-bearing nodes (`Literal` / `TemplateElement`)
+ * reachable from a class-name value subtree, into `out`. Mirrors the
+ * `collectTokens` structural-recursion the sibling `no-adhoc-*` rules use, but
+ * collects the *nodes* (not split tokens) so the caller keeps each string's
+ * exact source range for the auto-fixer.
+ *
+ * Handles the shapes a class-name realistically takes: a bare string literal, a
+ * `JSXExpressionContainer` wrapping a template literal, a `cn(...)`/`clsx(...)`
+ * call, ternaries/logical expressions, and arbitrary nesting thereof. The walk
+ * is structural (visit every child node) rather than shape-specific, so it is
+ * robust to however the class string is assembled — and, because it starts only
+ * from class-name contexts, it never inspects unrelated string literals.
+ */
+function collectClassNodes(
+  node: TSESTree.Node | null | undefined,
+  out: TSESTree.Node[],
+): void {
+  if (!node) return;
+  if (node.type === "Literal" || node.type === "TemplateElement") {
+    out.push(node);
+    return;
+  }
+  for (const key of Object.keys(node)) {
+    if (key === "parent") continue;
+    const value = (node as unknown as Record<string, unknown>)[key];
+    if (Array.isArray(value)) {
+      for (const child of value) {
+        if (child && typeof child === "object" && "type" in child) {
+          collectClassNodes(child as TSESTree.Node, out);
+        }
+      }
+    } else if (value && typeof value === "object" && "type" in value) {
+      collectClassNodes(value as TSESTree.Node, out);
+    }
+  }
+}
 
 export default createRule({
   name: "no-arbitrary-font-size",
@@ -109,20 +158,44 @@ export default createRule({
       }
     }
 
-    return {
-      Literal(node) {
+    /**
+     * Run `check()` on a string-bearing node harvested from a class-name
+     * context, preserving the exact source-offset math the fixer relies on.
+     */
+    function checkClassNode(node: TSESTree.Node) {
+      if (node.type === "Literal") {
         if (typeof node.value !== "string") return;
         // A string literal's raw text is `"…"` / `'…'`; the value starts one
         // char in (after the opening quote). Escapes would desync value vs raw
         // offsets, but Tailwind class strings contain none, and a misaligned
         // fix would simply not apply cleanly — never corrupt unrelated source.
         check(node, node.value, node.range[0] + 1);
-      },
-      TemplateElement(node) {
+      } else if (node.type === "TemplateElement") {
         // Template chunks expose `.raw` with its exact source; the raw text of a
         // TemplateElement starts one char after the element's range start
         // (after the opening `` ` `` or `}`).
         check(node, node.value.raw, node.range[0] + 1);
+      }
+    }
+
+    return {
+      // className / class attribute values — `className="…"`,
+      // `className={`…`}`, `className={cn(…)}`, etc.
+      JSXAttribute(node) {
+        if (node.name.type !== "JSXIdentifier" || !CLASS_ATTRS.has(node.name.name)) return;
+        const nodes: TSESTree.Node[] = [];
+        collectClassNodes(node.value, nodes);
+        for (const n of nodes) checkClassNode(n);
+      },
+      // Class-builder calls — `cn(...)`, `clsx(...)`, … — wherever they appear
+      // (a `const cls = cn("text-[12px]")` assigned outside JSX still counts).
+      CallExpression(node) {
+        if (node.callee.type !== "Identifier" || !CLASS_BUILDERS.has(node.callee.name)) {
+          return;
+        }
+        const nodes: TSESTree.Node[] = [];
+        for (const arg of node.arguments) collectClassNodes(arg, nodes);
+        for (const n of nodes) checkClassNode(n);
       },
     };
   },

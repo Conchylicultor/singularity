@@ -6,7 +6,7 @@ import {
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { walkFiles, readIfExists } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { walkFiles, readIfExists, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type CrossRefsData, crossRefsFacetDef } from "../core";
 
 const RUNTIMES = ["server", "central", "web", "core", "shared"] as const;
@@ -27,8 +27,11 @@ function parseApiUses(runtimeDir: string, selfName: string, runtime: Runtime): s
   const sideRe = /import\s*["']([^"']+)["']/g;
 
   for (const f of files) {
-    const src = readIfExists(f);
-    if (!src) continue;
+    const raw = readIfExists(f);
+    if (!raw) continue;
+    // Mask comments/regex (keep import path strings) so a commented-out import
+    // doesn't register a phantom cross-plugin use.
+    const src = maskSource(raw, { strings: false });
     let m: RegExpExecArray | null;
     while ((m = namedRe.exec(src))) {
       const mod = m[3]!;

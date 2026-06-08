@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -32,23 +34,18 @@ const check: Check = {
     "Non-plugin code may only import from `@plugins/*/core` (public API). Other plugin runtimes (web, server, shared) are off-limits.",
   async run() {
     const root = await getRoot();
-    const proc = Bun.spawn(
-      [
-        "git",
-        "grep",
-        "-En",
-        "--",
-        `(from|require|export \\* from) ['"][^'""]*(\/plugins\/|@singularity\/plugin-|@plugins\/)`,
-        "*.ts",
-        "*.tsx",
-      ],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    // git grep narrows candidate files (same broad import shape as before); then
+    // grepCode re-scans masked source with PLUGIN_IMPORT_RE (the source of truth).
+    // strings: false — the offending value lives in the import path string.
+    const matches = await grepCode({
+      root,
+      pattern: PLUGIN_IMPORT_RE,
+      grepArg: `(from|require|export \\* from) ['"][^'""]*(\/plugins\/|@singularity\/plugin-|@plugins\/)`,
+      maskStrings: false,
+    });
 
-    const offenders = out
-      .split("\n")
+    const offenders = matches
+      .map((m) => `${m.path}:${m.line}:${m.text}`)
       .filter((line) => !ALLOWED_DIRS.some((dir) => line.startsWith(dir)))
       .filter((line) => !COMPOSITION_ROOTS.some((f) => line.startsWith(f + ":")))
       .filter((line) => PLUGIN_IMPORT_RE.test(line))

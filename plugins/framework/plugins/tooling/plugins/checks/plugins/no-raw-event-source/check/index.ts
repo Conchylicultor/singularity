@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -21,29 +23,21 @@ const check: Check = {
     "SSE streams must go through the shared ReconnectingEventSource primitive (not raw `new EventSource`)",
   async run() {
     const root = await getRoot();
-    const proc = Bun.spawn(
-      [
-        "git",
-        "grep",
-        "-n",
-        "--",
-        "new EventSource(",
-        "*.ts",
-        "*.tsx",
-      ],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    const matches = await grepCode({
+      root,
+      pattern: /new EventSource\(/,
+      grepArg: "new EventSource(",
+      fixed: true,
+      maskStrings: true,
+    });
 
-    const offenders = out
-      .split("\n")
-      .filter((line) => {
-        const path = line.split(":", 1)[0]!;
-        if (ALLOWED_PATHS.some((p) => path.startsWith(p))) return false;
-        if (path.startsWith("research/")) return false;
+    const offenders = matches
+      .filter((m) => {
+        if (ALLOWED_PATHS.some((p) => m.path.startsWith(p))) return false;
+        if (m.path.startsWith("research/")) return false;
         return true;
-      });
+      })
+      .map((m) => `${m.path}:${m.line}:${m.text}`);
 
     if (offenders.length === 0) return { ok: true };
 

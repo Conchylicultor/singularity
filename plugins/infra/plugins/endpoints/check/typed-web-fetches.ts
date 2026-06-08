@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -33,29 +35,22 @@ const check: Check = {
     // Match direct fetch() calls and local wrappers (jsonFetch, postJson)
     // with a literal /api/ URL. The (<[^>]*>)? handles TS generic params
     // like jsonFetch<T>("/api/...").
-    const proc = Bun.spawn(
-      [
-        "git",
-        "grep",
-        "-cE",
-        '(fetch|jsonFetch|postJson)(<[^>]*>)?\\(["\'`]/api/',
-        "--",
-        "*.ts",
-        "*.tsx",
-      ],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    const matches = await grepCode({
+      root,
+      pattern: /(fetch|jsonFetch|postJson)(<[^>]*>)?\(["'`]\/api\//,
+      grepArg: '(fetch|jsonFetch|postJson)(<[^>]*>)?\\(["\'`]/api/',
+      maskStrings: false,
+    });
+
+    // Reproduce `git grep -c`: count matching lines per file.
+    const counts = new Map<string, number>();
+    for (const m of matches) {
+      counts.set(m.path, (counts.get(m.path) ?? 0) + 1);
+    }
 
     const offenders: string[] = [];
 
-    for (const line of out.split("\n")) {
-      const sep = line.lastIndexOf(":");
-      if (sep === -1) continue;
-      const path = line.slice(0, sep);
-      const count = parseInt(line.slice(sep + 1), 10);
-
+    for (const [path, count] of counts) {
       if (!path.includes("/web/")) continue;
 
       const allowed = ALLOWED.get(path) ?? 0;

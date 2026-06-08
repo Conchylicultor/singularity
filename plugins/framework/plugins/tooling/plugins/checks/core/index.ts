@@ -7,3 +7,5 @@ export type { TscTarget } from "./discover";
 export { computeTreeHash } from "./tree-hash";
 export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
+export { grepCode } from "./grep-code";
+export type { CodeMatch } from "./grep-code";

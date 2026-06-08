@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -22,29 +24,27 @@ const COLOR_PATTERNS = [
   `(bg|text|border|ring|outline|fill|stroke|from|via|to|shadow|caret|accent|divide|decoration)-\\[(#|oklch|rgb|hsl)`,
 ];
 
+// One alternation covering all three forms — used both as the git grep narrowing
+// arg and as the JS source-of-truth pattern run on masked source.
+const COLOR_ALTERNATION = COLOR_PATTERNS.map((p) => `(${p})`).join("|");
+
 const check: Check = {
   id: "no-hardcoded-colors",
   description:
     "Hardcoded colors are banned: use semantic tokens (success/warning/info/destructive) or the categorical palette",
   async run() {
     const root = await getRoot();
-    const proc = Bun.spawn(
-      [
-        "git",
-        "grep",
-        "-E",
-        "-n",
-        ...COLOR_PATTERNS.flatMap((p) => ["-e", p]),
-        "--",
-        ":(glob)plugins/**/*.ts",
-        ":(glob)plugins/**/*.tsx",
-      ],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    const matches = await grepCode({
+      root,
+      pattern: new RegExp(COLOR_ALTERNATION),
+      grepArg: COLOR_ALTERNATION,
+      maskStrings: false,
+      pathspecs: [":(glob)plugins/**/*.ts", ":(glob)plugins/**/*.tsx"],
+    });
 
-    const offenders = out.split("\n");
+    if (matches.length === 0) return { ok: true };
+
+    const offenders = matches.map((m) => `${m.path}:${m.line}:${m.text}`);
 
     return {
       ok: false,

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { join, relative, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import type { Check, CheckResult } from "@plugins/framework/plugins/tooling/core";
 import type { BoundaryConfig } from "./types";
 import { buildZoneMap } from "./resolve";
@@ -66,60 +67,10 @@ function safeRead(path: string): string | null {
   }
 }
 
-function stripComments(src: string): string {
-  let out = "";
-  let i = 0;
-  const n = src.length;
-  while (i < n) {
-    const c = src[i]!;
-    const next = src[i + 1];
-    if (c === "/" && next === "/") {
-      while (i < n && src[i] !== "\n") {
-        out += src[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      continue;
-    }
-    if (c === "/" && next === "*") {
-      out += "  ";
-      i += 2;
-      while (i < n && !(src[i] === "*" && src[i + 1] === "/")) {
-        out += src[i] === "\n" ? "\n" : " ";
-        i++;
-      }
-      if (i < n) {
-        out += "  ";
-        i += 2;
-      }
-      continue;
-    }
-    if (c === '"' || c === "'" || c === "`") {
-      const quote = c;
-      out += c;
-      i++;
-      while (i < n && src[i] !== quote) {
-        if (src[i] === "\\" && i + 1 < n) {
-          out += src[i]! + src[i + 1]!;
-          i += 2;
-          continue;
-        }
-        out += src[i];
-        i++;
-      }
-      if (i < n) {
-        out += src[i];
-        i++;
-      }
-      continue;
-    }
-    out += c;
-    i++;
-  }
-  return out;
-}
-
 function extractCrossZoneImports(rawSrc: string): string[] {
-  const src = stripComments(rawSrc);
+  // Mask comments + regex literals; keep string interiors so import-path strings
+  // (`from "@plugins/…"`) are still matched, while a commented-out import is not.
+  const src = maskSource(rawSrc, { strings: false });
   const results: string[] = [];
 
   const withFromRe =

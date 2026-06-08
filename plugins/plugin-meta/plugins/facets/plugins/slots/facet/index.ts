@@ -5,6 +5,7 @@ import {
 import {
   readIfExists,
   stripTypes,
+  maskSource,
   parseDefineGroup,
   matchBracket,
 } from "@plugins/plugin-meta/plugins/parse-utils/core";
@@ -113,7 +114,10 @@ export default createFacet<SlotDef[]>({
 
     const src = readIfExists(join(ctx.dir, "web", "slots.ts"));
     if (src) {
-      const stripped = stripTypes(src);
+      // stripTypes drops comments on the happy path; masking comments/regex
+      // (keeping slot-id strings) additionally defends the transpile-failure
+      // fallback so a commented `defineSlot("x")` is never parsed as a real slot.
+      const stripped = maskSource(stripTypes(src), { strings: false });
       // Render slots first: they read the `reorder` flag and `defineSlot` would
       // not match `defineRenderSlot` calls anyway (distinct builder name).
       slots.push(...parseRenderSlots(stripped));

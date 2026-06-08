@@ -7,7 +7,7 @@ import {
   type ExtractContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
 import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
-import { readIfExists, stripTypes } from "@plugins/plugin-meta/plugins/parse-utils/core";
+import { readIfExists, stripTypes, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   type Contribution,
   type ContributionsFacetData,
@@ -30,7 +30,10 @@ export default createFacet<ContributionsFacetData>({
     const staticContributions: Contribution[] = [];
     const webIndex = readIfExists(join(ctx.dir, "web", "index.ts"));
     if (webIndex) {
-      const webSrc = stripTypes(webIndex);
+      // stripTypes drops comments on the happy path; masking comments/regex
+      // (keeping slot/prop strings) additionally defends the transpile-failure
+      // fallback so a commented contribution call is never parsed as real.
+      const webSrc = maskSource(stripTypes(webIndex), { strings: false });
       const paneDefs = parsePaneDefinitions(join(ctx.dir, "web"));
       const block = extractContributionsBlock(webSrc);
       if (block !== null) {

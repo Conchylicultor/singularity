@@ -1,6 +1,7 @@
 import { existsSync, readFileSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -38,7 +39,9 @@ const check: Check = {
         const barrel = join(node.dir, runtime, "index.ts");
         if (!existsSync(barrel)) continue;
 
-        const src = readFileSync(barrel, "utf8");
+        // Mask comments + regex literals (keep string interiors) so a default-export
+        // shape mentioned in a comment can't be mistaken for a real barrel default.
+        const src = maskSource(readFileSync(barrel, "utf8"), { strings: false });
         const rel = relative(root, barrel);
 
         if (!ANY_DEFAULT_RE.test(src)) {

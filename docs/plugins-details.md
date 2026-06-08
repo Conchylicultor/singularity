@@ -1547,7 +1547,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Loose top-level files: `boundary-config.ts`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
-            - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
+            - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
           - Plugins:
             - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
@@ -1683,8 +1683,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/jobs`, `POST /api/jobs/:id/retry`, `DELETE /api/jobs/:id`
       - Core:
         - Exports: Types: `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listJobs`, `retryJob`
-      - Cross-plugin:
-        - Endpoint callers: `conversations`, `fork`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Server:
         - Exports: Types: `McpTool`, `McpToolContext`, `McpToolResult`; Values: `Mcp`
@@ -1961,7 +1959,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `PluginChanges.DiffRenderer` "Structure"
     - **`parse-utils`**
       - Core:
-        - Exports: Types: `BarrelExport`; Values: `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
+        - Exports: Types: `BarrelExport`, `MarkerCall`; Values: `findMarkerCalls`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
@@ -2378,7 +2376,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `patchTask`, `setAutoStart`, `useTask`
   - Cross-plugin:
-    - Endpoint callers: `dependencies`, `endpoints`
+    - Endpoint callers: `dependencies`
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
       - Web:

@@ -1,3 +1,5 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
@@ -15,14 +17,16 @@ const check: Check = {
     "Plugin server files must import from `@server/` alias, not relative `../../server/src/` paths",
   async run() {
     const root = await getRoot();
-    const proc = Bun.spawn(
-      ["git", "grep", "-rn", "-E", `from ['"](\\.\\./)+plugins/framework/plugins/server-core/core/`, "--", "plugins/"],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    // strings: false — the offending value lives in the import path string.
+    const matches = await grepCode({
+      root,
+      pattern: /from ['"](\.\.\/)+plugins\/framework\/plugins\/server-core\/core\//,
+      grepArg: `from ['"](\\.\\./)+plugins/framework/plugins/server-core/core/`,
+      maskStrings: false,
+      pathspecs: ["plugins/"],
+    });
 
-    const offenders = out.split("\n").filter(Boolean);
+    const offenders = matches.map((m) => `${m.path}:${m.line}:${m.text}`);
     if (offenders.length === 0) return { ok: true };
 
     return {

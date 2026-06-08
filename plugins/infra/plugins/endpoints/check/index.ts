@@ -1,3 +1,4 @@
+import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import typedWebFetches from "./typed-web-fetches";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
@@ -22,37 +23,26 @@ const typedHandlers: Check = {
   async run() {
     const root = await getRoot();
 
-    const proc = Bun.spawn(
-      [
-        "git",
-        "grep",
-        "-nE",
-        '"(GET|POST|PUT|PATCH|DELETE) /[^"]*"[ ]*:',
-        "--",
-        "*.ts",
-      ],
-      { cwd: root, stdout: "pipe", stderr: "pipe" },
-    );
-    const out = (await new Response(proc.stdout).text()).trim();
-    if (!out) return { ok: true };
+    const matches = await grepCode({
+      root,
+      pattern: /"(GET|POST|PUT|PATCH|DELETE) \/[^"]*"[ ]*:/,
+      grepArg: '"(GET|POST|PUT|PATCH|DELETE) /[^"]*"[ ]*:',
+      maskStrings: false,
+      pathspecs: ["*.ts"],
+    });
 
     const offenders: string[] = [];
-    for (const line of out.split("\n")) {
-      const path = line.split(":", 1)[0]!;
-
+    for (const m of matches) {
       if (
-        !path.startsWith("plugins/") ||
-        (!path.includes("/server/index.ts") &&
-          !path.includes("/central/index.ts"))
+        !m.path.startsWith("plugins/") ||
+        (!m.path.includes("/server/index.ts") &&
+          !m.path.includes("/central/index.ts"))
       )
         continue;
 
-      const content = line.split(":").slice(2).join(":").trimStart();
-      if (content.startsWith("//") || content.startsWith("*")) continue;
+      if (ALLOWED.has(m.path)) continue;
 
-      if (ALLOWED.has(path)) continue;
-
-      offenders.push(line);
+      offenders.push(`${m.path}:${m.line}:${m.text}`);
     }
 
     if (offenders.length === 0) return { ok: true };
