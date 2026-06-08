@@ -476,8 +476,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
   - Shared:
     - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
-  - Cross-plugin:
-    - Endpoint callers: `build-profiling`
   - Plugins:
     - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
       - Web:
@@ -522,8 +520,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
     - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
+    - Routes: `GET /api/code/:worktree/tree`, `GET /api/code/:worktree/file`, `GET /api/code/:worktree/diff`, `GET /api/code/:worktree/image`, `GET /api/code/:worktree/push`, `GET /api/code/:worktree/commit`
   - Cross-plugin:
     - Imported by: `file-resolve`, `plugin-changes`
+    - Endpoint callers: `commits-graph`, `diff`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`
+  - Core:
+    - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
   - Shared:
     - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
   - Plugins:
@@ -613,7 +615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Cross-plugin:
     - Imported by: `agents`, `ask-user-question`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `exit-menu`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `op-status`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
-    - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch-prompts`, `prompt-input`, `resume`, `transcript-api`
+    - Endpoint callers: `allow-monitor`, `prompt-input`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Web:
@@ -688,7 +690,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getEditedFiles`
             - Resources: `edited-files` (invalidate)
           - Core:
-            - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `editedFilesResource`
+            - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`
           - Web:
             - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
           - Plugins:
@@ -1028,7 +1030,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`conversations-view`** — Sidebar list of all conversations.
       - Web:
         - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-        - Uses: `conversations.GonePageSchema`, `conversations.useConversations`, `shell.Shell`
+        - Uses: `conversations.useConversations`, `shell.Shell`
         - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
@@ -1640,8 +1642,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/events/emissions`, `GET /api/events/triggers`, `DELETE /api/events/triggers/:id`, `PATCH /api/events/triggers/:id`
       - Core:
         - Exports: Types: `EmissionRow`, `EmissionsPayload`, `PatchTriggerBody`, `TriggerRow`, `TriggersPayload`; Values: `deleteTriggerEndpoint`, `EmissionRowSchema`, `EmissionsPayloadSchema`, `eventEmissionsResource`, `eventTriggersResource`, `listEmissions`, `listTriggers`, `patchTriggerBodySchema`, `patchTriggerEndpoint`, `TriggerRowSchema`, `TriggersPayloadSchema`
-      - Cross-plugin:
-        - Endpoint callers: `queue`
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
       - Server:
         - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`
@@ -1661,7 +1661,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listJobs`, `retryJob`
       - Cross-plugin:
-        - Endpoint callers: `conversations`, `fork`, `queue`
+        - Endpoint callers: `conversations`, `fork`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Server:
         - Exports: Types: `McpTool`, `McpToolContext`, `McpToolResult`; Values: `Mcp`
@@ -1960,8 +1960,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
       - Server:
         - Routes: `GET /api/plugin-view/tree`
-      - Cross-plugin:
-        - Endpoint callers: `catalog`, `plugin-link`, `publish`
       - Plugins:
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Web:
@@ -2223,8 +2221,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `POST /api/reorder/:slotId/groups`, `PATCH /api/reorder/groups/:id`, `DELETE /api/reorder/groups/:id`, `POST /api/reorder/groups/:id/members`, `DELETE /api/reorder/:slotId/groups/members/:contributionId`
       - Core:
         - Exports: Types: `AddMembersBody`, `CreateGroupBody`, `DeleteGroupBody`, `PatchGroupBody`, `ReorderGroup`, `ReorderGroupMember`, `ReorderGroupsPayload`; Values: `addMembers`, `addMembersBodySchema`, `createGroup`, `createGroupBodySchema`, `deleteGroup`, `deleteGroupBodySchema`, `patchGroup`, `patchGroupBodySchema`, `removeMemberEndpoint`, `ReorderGroupMemberSchema`, `ReorderGroupSchema`, `ReorderGroupsPayloadSchema`, `reorderGroupsResource`
-      - Cross-plugin:
-        - Endpoint callers: `reorder`
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Web:
@@ -2356,7 +2352,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `patchTask`, `setAutoStart`, `useTask`
   - Cross-plugin:
-    - Endpoint callers: `dependencies`, `endpoints`, `task`, `task-dependencies`, `task-events`, `task-graph`, `task-list`, `tree`
+    - Endpoint callers: `dependencies`, `endpoints`
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
       - Web:
