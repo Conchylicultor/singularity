@@ -1,6 +1,7 @@
 import { existsSync } from "fs";
 import { join, relative } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   registerBarrelStubs,
   importBarrel,
@@ -9,23 +10,18 @@ import {
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
-// A config descriptor is stored under `${pluginId}/${descriptor.name}.jsonc`,
+// A config descriptor is stored under `${asPath(pluginId)}/${descriptor.name}.jsonc`,
 // where `pluginId` is the contribution's explicit `pluginId` override (a plugin
 // can plant a descriptor under ANOTHER plugin's hierarchy — e.g. reorder) else
-// the registering plugin's own loader-injected id. The barrel carries no
-// runtime `_pluginId`, so the node's own id is the fallback. A node's id is the
-// slash-separated tree path (`shell/action-bar`); `node.hierarchyId` is the
-// same path dot-separated (`shell.action-bar`), so swap the separator.
-function nodeId(hierarchyId: string): string {
-  return hierarchyId.split(".").join("/");
-}
-
+// the registering plugin's own loader-injected id (the node's own dotted `id`).
+// Both are dotted `PluginId`s; the on-disk store path is the slash form, so
+// mirror `registry.ts` exactly by converting through `asPath`.
 function storePathFor(
   override: string | undefined,
   fallbackId: string,
   descriptorName: string,
 ): string {
-  return `${override ?? fallbackId}/${descriptorName}.jsonc`;
+  return `${asPath(asPluginId(override ?? fallbackId))}/${descriptorName}.jsonc`;
 }
 
 async function getRoot(): Promise<string> {
@@ -58,7 +54,7 @@ const check: Check = {
     const serverPaths = new Set<string>();
 
     for (const node of tree.byDir.values()) {
-      const fallbackId = nodeId(node.hierarchyId);
+      const fallbackId = node.id;
 
       const webIndex = join(node.dir, "web", "index.ts");
       if (existsSync(webIndex)) {
