@@ -1,5 +1,5 @@
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
-import { stringListFieldType } from "../../core";
+import { stringListFieldType } from "@plugins/fields/plugins/string-list/core";
 import { useEffect, useRef, useState } from "react";
 
 function useLocalValue(incoming: string) {

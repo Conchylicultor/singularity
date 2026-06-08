@@ -3,7 +3,7 @@ import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import {
   stringListField,
   type StringListFieldDef,
-} from "@plugins/config_v2/plugins/fields/plugins/string-list/core";
+} from "@plugins/fields/plugins/string-list/plugins/config/core";
 
 /**
  * A reorder directive governs the top-level order and visibility of a single

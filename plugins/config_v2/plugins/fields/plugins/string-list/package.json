@@ -1,5 +1,0 @@
-{
-  "name": "@singularity/plugin-config_v2-fields-string-list",
-  "private": true,
-  "description": "Plain string-array field type for config_v2."
-}

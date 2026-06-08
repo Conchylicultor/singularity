@@ -546,7 +546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Boot`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
   - Cross-plugin:
-    - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `config-link`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `local`, `model-provider`, `notion`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `reorder`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `string-list`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+    - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `config-link`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `local`, `model-provider`, `notion`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `reorder`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
   - Server:
@@ -559,13 +559,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
       - Web:
         - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
-      - Plugins:
-        - **`string-list`** — Plain string-array field type.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `StringListFieldDef`; Values: `stringListField`, `stringListFieldType`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
@@ -1276,8 +1269,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `text`
-    - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `text`
+    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `string-list`, `text`
+    - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `string-list`, `text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
@@ -1493,6 +1486,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `ConfigV2SecretMeta`, `SecretFieldDef`; Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`
           - Central:
             - Exports: Values: `readSecretConfig`
+    - **`string-list`** — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "string-list"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `stringListFieldType`, `stringListIdentity`
+      - Plugins:
+        - **`config`** — String-list field type: config-render capability (one-item-per-line textarea for config-v2.fields.renderer) plus the stringListField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
+            - Exports: Types: `StringListFieldDef`; Values: `stringListField`
     - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "text"

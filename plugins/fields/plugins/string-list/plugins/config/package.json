@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-string-list-config",
+  "version": "0.0.1",
+  "private": true,
+  "description": "String-list field type: config-render capability (one-item-per-line textarea) plus the stringListField factory.",
+  "singularity": {
+    "collapsed": true
+  }
+}

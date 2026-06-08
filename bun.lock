@@ -417,9 +417,6 @@
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
     },
-    "plugins/config_v2/plugins/fields/plugins/string-list": {
-      "name": "@singularity/plugin-config_v2-fields-string-list",
-    },
     "plugins/config_v2/plugins/settings": {
       "name": "@singularity/plugin-config_v2-settings",
     },
@@ -1068,6 +1065,14 @@
     },
     "plugins/fields/plugins/secret/plugins/config": {
       "name": "@singularity/plugin-fields-secret-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/string-list": {
+      "name": "@singularity/plugin-fields-string-list",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/string-list/plugins/config": {
+      "name": "@singularity/plugin-fields-string-list-config",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/text": {
@@ -2895,8 +2900,6 @@
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
-    "@singularity/plugin-config_v2-fields-string-list": ["@singularity/plugin-config_v2-fields-string-list@workspace:plugins/config_v2/plugins/fields/plugins/string-list"],
-
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
@@ -3214,6 +3217,10 @@
     "@singularity/plugin-fields-secret": ["@singularity/plugin-fields-secret@workspace:plugins/fields/plugins/secret"],
 
     "@singularity/plugin-fields-secret-config": ["@singularity/plugin-fields-secret-config@workspace:plugins/fields/plugins/secret/plugins/config"],
+
+    "@singularity/plugin-fields-string-list": ["@singularity/plugin-fields-string-list@workspace:plugins/fields/plugins/string-list"],
+
+    "@singularity/plugin-fields-string-list-config": ["@singularity/plugin-fields-string-list-config@workspace:plugins/fields/plugins/string-list/plugins/config"],
 
     "@singularity/plugin-fields-text": ["@singularity/plugin-fields-text@workspace:plugins/fields/plugins/text"],
 
