@@ -38,10 +38,6 @@ export async function setAutoStart(
   });
 }
 
-export async function deleteTask(id: string): Promise<void> {
-  await fetch(`/api/tasks/${id}`, { method: "DELETE" });
-}
-
 export function useTask(id: string | null | undefined): TaskListItem | null {
   const result = useResource(tasksResource);
   if (!id || result.pending) return null;

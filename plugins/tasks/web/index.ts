@@ -3,7 +3,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 export {
   patchTask,
   setAutoStart,
-  deleteTask,
   useTask,
 } from "./client";
 export type { TaskPatch, AutoStartModel } from "./client";

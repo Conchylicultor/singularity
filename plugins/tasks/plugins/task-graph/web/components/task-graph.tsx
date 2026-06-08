@@ -18,6 +18,7 @@ import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
 import { cn } from "@/lib/utils";
@@ -197,16 +198,18 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
   const [hovered, setHovered] = useState(false);
   const [deleting, setDeleting] = useState(false);
 
+  // "Delete" is a soft drop — marks the task dropped (reversible), never
+  // removing the row. Tasks are never hard-deleted.
   const handleDelete = useCallback(
     (e: React.MouseEvent) => {
       e.stopPropagation();
-      if (hasChildren || deleting) return;
+      if (deleting) return;
       setDeleting(true);
-      void fetch(`/api/tasks/${task.id}`, { method: "DELETE" }).finally(() => {
+      void patchTask(task.id, { drop: true }).finally(() => {
         setDeleting(false);
       });
     },
-    [task.id, hasChildren, deleting],
+    [task.id, deleting],
   );
 
   return (

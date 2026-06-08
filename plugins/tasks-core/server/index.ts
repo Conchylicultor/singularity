@@ -102,7 +102,6 @@ export {
   createTask,
   updateTask,
   updateTaskTitle,
-  deleteTask,
   dropTaskTree,
   addTaskDependency,
   removeTaskDependency,

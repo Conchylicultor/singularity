@@ -11,7 +11,7 @@
 - Server:
   - Uses: `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
 - Cross-plugin:
-  - Imported by: `auto-start`, `dependencies`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-header`, `task-list`, `tasks-panel`, `tree`
+  - Imported by: `auto-start`, `dependencies`, `side-task`, `task-dependencies`, `task-description`, `task-detail`, `task-graph`, `task-header`, `task-list`, `tasks-panel`, `tree`
 - Shared:
   - Exports: Values: `getTasksCumulative`, `getTasksDaily`
 

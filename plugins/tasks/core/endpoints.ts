@@ -84,10 +84,6 @@ export const updateTask = defineEndpoint({
   body: UpdateTaskBodySchema,
 });
 
-export const deleteTask = defineEndpoint({
-  route: "DELETE /api/tasks/:id",
-});
-
 export const getTaskAttachments = defineEndpoint({
   route: "GET /api/tasks/:id/attachments",
 });

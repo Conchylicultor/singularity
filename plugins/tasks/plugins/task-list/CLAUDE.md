@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
   - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-  - Uses: `tasks.deleteTask`, `tasks.patchTask`
+  - Uses: `tasks.patchTask`
   - Exports: Types: `TaskViewProps`; Values: `Tasks`
 - Cross-plugin:
   - Slot contributors: `auto-start`, `recent`, `tree`
