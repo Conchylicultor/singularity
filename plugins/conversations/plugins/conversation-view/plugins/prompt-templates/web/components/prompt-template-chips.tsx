@@ -129,15 +129,17 @@ export function FloatingTemplateChips({
       )}
       <FloatingAction
         variant="ghost"
-        panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-40"
+        panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-56"
       >
         <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
         <FloatingActionFadeIn className="flex flex-col items-start gap-1">
-          <ConfigGearButton
-            descriptor={promptTemplatesConfig}
-            label="Configure: Prompt templates"
-          />
-          <div className="flex flex-wrap items-center gap-1">
+          <div className="self-end">
+            <ConfigGearButton
+              descriptor={promptTemplatesConfig}
+              label="Configure: Prompt templates"
+            />
+          </div>
+          <div className="flex max-h-40 flex-wrap items-center gap-1 overflow-y-auto">
             {templates.map((t) => (
               <TemplateChip
                 key={t.id}
