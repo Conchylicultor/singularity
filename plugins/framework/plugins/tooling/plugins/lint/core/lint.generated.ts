@@ -17,6 +17,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/web-core", hierarchyPath: "framework/web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/badge", hierarchyPath: "primitives/badge", loader: () => import("@plugins/primitives/plugins/badge/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/control-size", hierarchyPath: "primitives/control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/data-table", hierarchyPath: "primitives/data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/row", hierarchyPath: "primitives/row", loader: () => import("@plugins/primitives/plugins/row/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/typography", hierarchyPath: "ui/tokens/typography", loader: () => import("@plugins/ui/plugins/tokens/plugins/typography/lint"), dependsOn: [] },
 ];

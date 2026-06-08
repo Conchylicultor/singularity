@@ -19,7 +19,7 @@ const columns: ColumnDef<TableRow>[] = [
   {
     id: "name",
     header: "SQL Name",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.name,
     cell: (row) => (
       <code className="truncate font-mono text-foreground">{row.name}</code>

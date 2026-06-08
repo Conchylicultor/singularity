@@ -45,7 +45,7 @@ const columns: ColumnDef<RouteRow>[] = [
   {
     id: "method",
     header: "Method",
-    width: "w-12 shrink-0",
+    width: "3rem",
     value: (row) => row.method,
     cell: (row) => (
       <span
@@ -61,7 +61,7 @@ const columns: ColumnDef<RouteRow>[] = [
   {
     id: "path",
     header: "Path",
-    width: "flex-1 min-w-0",
+    width: "minmax(0,1fr)",
     value: (row) => row.path,
     cell: (row) => (
       <code className="truncate font-mono text-foreground">{row.path}</code>
