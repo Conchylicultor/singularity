@@ -582,7 +582,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Cross-plugin:
     - Imported by: `agents`, `ask-user-question`, `attempt-view`, `code-explorer`, `code-review`, `commits-graph`, `conv`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversation-view`, `conversations-recover`, `conversations-view`, `dependencies`, `dependent-count`, `docs-button`, `drop-and-exit`, `drop-dependents`, `exit`, `exit-menu`, `file-changes`, `file-path`, `fork-session`, `grouped`, `history`, `hold-and-exit`, `improve`, `markdown-extensions`, `model`, `new-child-task`, `op-status`, `open-app`, `prompt-input`, `prompt-templates`, `push-and-exit`, `push-profiling`, `queue`, `read`, `resume`, `review`, `runtime-api`, `runtime-tmux`, `status`, `summary`, `task`, `task-header`, `task-title`, `tasks`, `tasks-panel`, `terminal-pane`, `turn-summary`, `user-text`, `vscode`, `welcome`
-    - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch-prompts`, `prompt-input`, `push-and-exit`, `resume`, `transcript-api`
+    - Endpoint callers: `allow-monitor`, `conversations-recover`, `conversations-view`, `launch-prompts`, `prompt-input`, `resume`, `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Web:
@@ -703,7 +703,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useConversation`, `conversations.useConversations`, `notifications.toast`
           - Server:
             - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
-          - Shared:
+            - Routes: `POST /api/conversations/:id/drop-and-exit`
+          - Core:
             - Exports: Values: `dropAndExit`
         - **`drop-dependents`** — Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
           - Web:
@@ -719,7 +720,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useConversation`, `notifications.toast`
           - Server:
             - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`
-          - Shared:
+            - Routes: `POST /api/conversations/:id/exit`
+          - Core:
             - Exports: Values: `exitConversation`
         - **`exit-menu`** — Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.
           - Web:
@@ -946,9 +948,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Server:
             - Uses: `conversations.resumeConversation`, `tasks-core.notifyConversationsChanged`
+            - Routes: `POST /api/conversations/:id/resume`
           - Web:
             - Uses: `conversations.useConversation`, `notifications.toast`
-          - Shared:
+          - Core:
             - Exports: Values: `resumeConversationEndpoint`
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
           - Web:
