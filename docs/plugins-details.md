@@ -224,7 +224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume and aggregate load status.
               - Web:
-                - Contributes: `Sonata.Section` "Audio" → `AudioPanel`
+                - Contributes: `Sonata.Effect` "audio-engine" → `AudioEngine`, `Sonata.Section` "Audio" → `AudioPanel`
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
                 - Contributes: `Sonata.Instrument` "Acoustic Piano"
