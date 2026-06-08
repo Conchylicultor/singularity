@@ -22,6 +22,7 @@ export interface PushEntry {
 
 export interface BuildEntry {
   worktree: string;
+  buildId: string | null;
   startMs: number;
   durationMs: number;
   success: boolean;
@@ -48,6 +49,10 @@ export interface PushGanttProps {
     worktree: string,
     conversationId: string | null,
   ) => void;
+  /** Open the detail pane for a single push event (bar click). */
+  onPushClick?: (push: PushEntry) => void;
+  /** Open the detail pane for a single build event (bar click). Only fired when the build has a buildId. */
+  onBuildClick?: (build: BuildEntry) => void;
 }
 
 // ── Visual language ─────────────────────────────────────────────────────────
@@ -118,6 +123,8 @@ export function PushGantt({
   title = "Push & Build",
   highlightWorktree,
   onWorktreeClick,
+  onPushClick,
+  onBuildClick,
 }: PushGanttProps): ReactElement {
   const [hovered, setHovered] = useState<Span | null>(null);
 
@@ -133,6 +140,8 @@ export function PushGantt({
               setHovered={setHovered}
               highlighted={group.worktree === highlightWorktree}
               onWorktreeClick={onWorktreeClick}
+              onPushClick={onPushClick}
+              onBuildClick={onBuildClick}
             />
           ))}
         </div>
@@ -151,6 +160,8 @@ function PushAttemptRow({
   setHovered,
   highlighted,
   onWorktreeClick,
+  onPushClick,
+  onBuildClick,
 }: {
   group: WorktreeGroup;
   hovered: Span | null;
@@ -160,6 +171,8 @@ function PushAttemptRow({
     worktree: string,
     conversationId: string | null,
   ) => void;
+  onPushClick?: (push: PushEntry) => void;
+  onBuildClick?: (build: BuildEntry) => void;
 }): ReactElement {
   const { toLeftPct, toWidthPct, totalMs } = useGanttContainerContext();
 
@@ -226,6 +239,7 @@ function PushAttemptRow({
                 TYPE_FILL.build,
                 STATUS_TREATMENT[status],
                 isBuildHovered ? "opacity-100" : "opacity-40",
+                onBuildClick && build.buildId && "cursor-pointer",
               )}
               style={{
                 left: toLeftPct(build.startMs, totalMs),
@@ -235,6 +249,21 @@ function PushAttemptRow({
               }}
               onMouseEnter={() => setHovered(buildSpan)}
               onMouseLeave={() => setHovered(null)}
+              // Stop the pointerdown reaching GanttContainer's drag-zoom, which
+              // would setPointerCapture and retarget the click off this bar.
+              onPointerDown={
+                onBuildClick && build.buildId
+                  ? (e) => e.stopPropagation()
+                  : undefined
+              }
+              onClick={
+                onBuildClick && build.buildId
+                  ? (e) => {
+                      e.stopPropagation();
+                      onBuildClick(build);
+                    }
+                  : undefined
+              }
             />
           );
         })}
@@ -261,6 +290,7 @@ function PushAttemptRow({
                   TYPE_FILL.push,
                   STATUS_TREATMENT[status],
                   isMarkerHovered ? "opacity-100" : "opacity-70",
+                  onPushClick && "cursor-pointer",
                 )}
                 style={{
                   left: toLeftPct(push.startMs, totalMs),
@@ -268,6 +298,17 @@ function PushAttemptRow({
                 }}
                 onMouseEnter={() => setHovered(markerSpan)}
                 onMouseLeave={() => setHovered(null)}
+                onPointerDown={
+                  onPushClick ? (e) => e.stopPropagation() : undefined
+                }
+                onClick={
+                  onPushClick
+                    ? (e) => {
+                        e.stopPropagation();
+                        onPushClick(push);
+                      }
+                    : undefined
+                }
               />
             );
           }
@@ -304,6 +345,7 @@ function PushAttemptRow({
                     // by the push outcome that follows it.
                     TYPE_FILL.wait,
                     isWaitHovered ? "opacity-100" : "opacity-50",
+                    onPushClick && "cursor-pointer",
                   )}
                   style={{
                     left: toLeftPct(push.startMs, totalMs),
@@ -311,6 +353,17 @@ function PushAttemptRow({
                   }}
                   onMouseEnter={() => setHovered(waitSpan)}
                   onMouseLeave={() => setHovered(null)}
+                  onPointerDown={
+                    onPushClick ? (e) => e.stopPropagation() : undefined
+                  }
+                  onClick={
+                    onPushClick
+                      ? (e) => {
+                          e.stopPropagation();
+                          onPushClick(push);
+                        }
+                      : undefined
+                  }
                 />
               )}
               <div
@@ -320,6 +373,7 @@ function PushAttemptRow({
                   STATUS_TREATMENT[status],
                   push.waitMs > 0 ? "rounded-r" : "rounded",
                   isPushHovered ? "opacity-100" : "opacity-70",
+                  onPushClick && "cursor-pointer",
                 )}
                 style={{
                   left: toLeftPct(push.startMs + push.waitMs, totalMs),
@@ -327,6 +381,17 @@ function PushAttemptRow({
                 }}
                 onMouseEnter={() => setHovered(pushSpan)}
                 onMouseLeave={() => setHovered(null)}
+                onPointerDown={
+                  onPushClick ? (e) => e.stopPropagation() : undefined
+                }
+                onClick={
+                  onPushClick
+                    ? (e) => {
+                        e.stopPropagation();
+                        onPushClick(push);
+                      }
+                    : undefined
+                }
               />
             </span>
           );

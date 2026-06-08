@@ -8,8 +8,9 @@ Push contention profiling sub-plugin for Debug > Profiling. Reads `~/.singularit
 
 - Description: Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
 - Web:
-  - Contributes: `Profiling.Section` → `PushSection`
+  - Contributes: `Profiling.Section` → `PushSection`, `Pane.Register` "debug-profiling-push-detail"
   - Uses: `attempt-view.attemptPane`
+  - Exports: Values: `pushDetailPane`
 - Shared:
   - Exports: Values: `getPushProfiling`
 - Sub-plugins:

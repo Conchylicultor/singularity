@@ -2,15 +2,17 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
 import { handlePushProfiling } from "./internal/handle-push-profiling";
+import { handlePushDetail } from "./internal/handle-push-detail";
 import { finalizeOrphanedBuilds } from "./internal/read-build-log";
 import { finalizeOrphanedPushes } from "./internal/read-contention";
-import { getPushProfiling } from "../shared/endpoints";
+import { getPushProfiling, getPushDetail } from "../shared/endpoints";
 
 export default {
   name: "Push Profiling",
   description: "Push contention profiling data endpoint.",
   httpRoutes: {
     [getPushProfiling.route]: handlePushProfiling,
+    [getPushDetail.route]: handlePushDetail,
   },
   // Reconcile orphaned build-log and push-contention records (builds/pushes
   // hard-killed before their CLI could write a terminal record). Both are single

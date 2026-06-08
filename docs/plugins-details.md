@@ -1192,15 +1192,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBootProfiling`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
           - Web:
-            - Contributes: `Profiling.Section` → `BuildSection`
+            - Contributes: `Profiling.Section` → `BuildSection`, `Pane.Register` "debug-profiling-build-detail"
+            - Exports: Values: `buildProfileDetailPane`
           - Cross-plugin:
             - Imported by: `build-commits`, `build-fix`, `build-info`, `build-logs`, `build-profiling`
           - Shared:
             - Exports: Values: `getBuildProfiling`
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
           - Web:
-            - Contributes: `Profiling.Section` → `PushSection`
+            - Contributes: `Profiling.Section` → `PushSection`, `Pane.Register` "debug-profiling-push-detail"
             - Uses: `attempt-view.attemptPane`
+            - Exports: Values: `pushDetailPane`
           - Shared:
             - Exports: Values: `getPushProfiling`
           - Plugins:
@@ -2016,7 +2018,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Pane.Register`
         - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePathname`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
+        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `file-pane`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Web:
         - Exports: Values: `useDraft`

@@ -17,6 +17,7 @@ interface PushEntry {
 
 interface BuildEntry {
   worktree: string;
+  buildId: string | null;
   startMs: number;
   durationMs: number;
   success: boolean;
@@ -170,6 +171,7 @@ export const handlePushProfiling = implement(
 
       getGroup(wt).builds.push({
         worktree: record.worktree,
+        buildId: record.buildId,
         startMs: buildOffset,
         durationMs: record.totalMs,
         success: record.success,

@@ -6,6 +6,8 @@ export interface BuildLogRecord {
   phase: "started" | "completed";
   worktree: string;
   branch: string;
+  /** Build id (build-profile file key), from SINGULARITY_BUILD_ID. null for manual CLI builds. */
+  buildId: string | null;
   startedAt: string;
   completedAt: string | null;
   totalMs: number;

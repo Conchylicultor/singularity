@@ -6,7 +6,8 @@
 
 - Description: Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
 - Web:
-  - Contributes: `Profiling.Section` → `BuildSection`
+  - Contributes: `Profiling.Section` → `BuildSection`, `Pane.Register` "debug-profiling-build-detail"
+  - Exports: Values: `buildProfileDetailPane`
 - Cross-plugin:
   - Imported by: `build-commits`, `build-fix`, `build-info`, `build-logs`, `build-profiling`
 - Shared:

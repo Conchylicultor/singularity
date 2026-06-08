@@ -7,6 +7,8 @@ import {
   PushGantt,
   type PushData,
 } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
+import { pushDetailPane } from "@plugins/debug/plugins/profiling/plugins/push/web";
+import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
 import { convPushProfilingPane } from "../panes";
 
 const PUSH_PROFILING_PATH = "/api/debug/profiling/push";
@@ -54,6 +56,17 @@ export function PushProfilingPaneBody() {
       groups={data.groups}
       totalMs={data.totalMs}
       highlightWorktree={attemptId}
+      onPushClick={(push) =>
+        openPane(pushDetailPane, { pushId: push.pushId }, { mode: "push" })
+      }
+      onBuildClick={(build) => {
+        if (!build.buildId) return;
+        openPane(
+          buildProfileDetailPane,
+          { worktree: build.worktree, buildId: build.buildId },
+          { mode: "push" },
+        );
+      }}
       onWorktreeClick={(worktree, conversationId) => {
         if (conversationId != null) {
           openPane(

@@ -1,0 +1,53 @@
+import { readFileSync } from "node:fs";
+import { join } from "node:path";
+import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
+import { getBuildRunProfileByWorktree } from "../../shared/endpoints";
+
+interface BuildProfile {
+  spans: Array<{
+    id: string;
+    phase: string;
+    label: string;
+    startMs: number;
+    durationMs: number;
+  }>;
+  totalDurationMs: number;
+}
+
+// Defensive: these come from URL params and are joined into a filesystem path.
+function sanitize(s: string): string {
+  return s.replace(/[^a-zA-Z0-9._-]/g, "");
+}
+
+function readProfile(worktree: string, buildId: string): BuildProfile | null {
+  const name = sanitize(worktree);
+  const id = sanitize(buildId);
+  if (!name || !id) return null;
+  const filename = `build-profile-${id}.json`;
+  const worktreesDir = join(SINGULARITY_DIR, "worktrees");
+  for (const path of [
+    join(worktreesDir, name, filename),
+    join(worktreesDir, `${name}-${filename}`),
+  ]) {
+    try {
+      return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
+    } catch {
+      continue;
+    }
+  }
+  return null;
+}
+
+export const handleBuildDetail = implement(
+  getBuildRunProfileByWorktree,
+  ({ params }) => {
+    const { worktree, buildId } = params;
+    if (!worktree || !buildId) throw new HttpError(400, "Missing params");
+    const profile = readProfile(worktree, buildId);
+    return {
+      spans: profile?.spans ?? [],
+      totalMs: profile?.totalDurationMs ?? 0,
+    };
+  },
+);

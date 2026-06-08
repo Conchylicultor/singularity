@@ -6,6 +6,7 @@ interface RawBuildLogRecord {
   phase?: "started" | "completed";
   worktree: string;
   branch: string;
+  buildId?: string | null;
   startedAt: string;
   completedAt: string | null;
   totalMs: number;
@@ -22,6 +23,7 @@ interface RawBuildLogRecord {
 export interface BuildLogRecord {
   worktree: string;
   branch: string;
+  buildId: string | null;
   startedAt: string;
   completedAt: string | null;
   totalMs: number;
@@ -95,6 +97,7 @@ export function readBuildLogRecords(): BuildLogRecord[] {
       merged.push({
         worktree: r.worktree,
         branch: r.branch,
+        buildId: r.buildId ?? null,
         startedAt: r.startedAt,
         completedAt: r.completedAt,
         totalMs: r.totalMs,
@@ -109,6 +112,7 @@ export function readBuildLogRecords(): BuildLogRecord[] {
     merged.push({
       worktree: r.worktree,
       branch: r.branch,
+      buildId: r.buildId ?? null,
       startedAt: r.startedAt,
       completedAt: null,
       totalMs: 0,
@@ -143,6 +147,7 @@ export function finalizeOrphanedBuilds(
       phase: "completed",
       worktree: o.worktree,
       branch: o.branch,
+      buildId: o.buildId ?? null,
       startedAt: o.startedAt,
       completedAt: null,
       totalMs: 0,
