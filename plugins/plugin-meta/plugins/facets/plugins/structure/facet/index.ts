@@ -6,13 +6,17 @@ import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import { readIfExists } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import { type StructureFacetData, structureFacetDef } from "../core";
 
-// `extract` is synchronous (the facet pipeline calls it without `await`), but
-// classifying folders needs the repo's standard-folder set, exposed via an
-// async-by-signature helper that internally does only synchronous fs reads. We
-// resolve it once at module load via top-level await; `loadFacets()` awaits each
-// facet module's loader, so STD is always ready before `extract` runs.
+// Classifying folders needs the repo's standard-folder set. `standardPluginDirs`
+// is synchronous (pure fs reads), so we resolve it lazily on first `extract` and
+// memoize — no module-load work, and crucially no top-level await. A top-level
+// await here would suspend this dynamically-imported facet mid-evaluation inside
+// the facets ⇄ codegen import cycle, which surfaced as a TDZ crash
+// ("Cannot access 'default' before initialization") in loadFacets().
 // standardPluginDirs resolves `<root>/plugins` internally, so pass the repo root.
-const STD = await standardPluginDirs(dirname(PLUGINS_DIR));
+let std: Set<string> | undefined;
+function standardDirs(): Set<string> {
+  return (std ??= standardPluginDirs(dirname(PLUGINS_DIR)));
+}
 
 /** Read a directory's entries, yielding [] if it is unreadable. */
 function readEntries(dir: string): Dirent[] {
@@ -48,6 +52,7 @@ export default createFacet<StructureFacetData>({
   def: structureFacetDef,
 
   extract(ctx) {
+    const STD = standardDirs();
     const entries = readEntries(ctx.dir);
     const folders = entries
       .filter((e) => e.isDirectory() && !isIgnoredDir(e.name))

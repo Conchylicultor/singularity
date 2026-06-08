@@ -91,7 +91,7 @@ const check: Check = {
 
     // The set of standard plugin folder names is derived generically (collected-dir
     // registry + fixed structural conventions), not hardcoded here. R11 uses it.
-    const known = await standardPluginDirs(root);
+    const known = standardPluginDirs(root);
 
     // Composition roots (the SPA bootstrap / CLI entry) self-declare via the
     // package.json `singularity.compositionRoot` marker. They are exempt from

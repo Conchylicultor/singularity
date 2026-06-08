@@ -53,9 +53,15 @@ function findCoreBarrels(pluginsRoot: string): string[] {
 
 const DEFINE_RE = /defineCollectedDir\(\s*["']([^"']+)["']\s*\)/g;
 
-export async function discoverCollectedDirs(
+// Synchronous: this does only blocking `readdirSync`/`readFileSync`/`existsSync`
+// I/O. Keeping it sync (rather than async-by-signature) lets callers — notably
+// the structure facet's `extract`, which the facet pipeline invokes without
+// `await` — consume it without a top-level await. A top-level await here would
+// suspend the facet module mid-evaluation inside the facets ⇄ codegen import
+// cycle, surfacing as a TDZ crash ("Cannot access 'default' before initialization").
+export function discoverCollectedDirs(
   root: string,
-): Promise<DiscoveredCollectedDir[]> {
+): DiscoveredCollectedDir[] {
   const pluginsRoot = resolve(root, "plugins");
   const coreBarrels = findCoreBarrels(pluginsRoot);
   const out: DiscoveredCollectedDir[] = [];
@@ -96,8 +102,8 @@ export async function discoverCollectedDirs(
 //   2. A fixed set of stable structural conventions (core, shared, plugins, bin,
 //      scripts) that are not runtime/collected-dir types and never grow when a
 //      new such type is added — so listing them here is not the friction.
-export async function standardPluginDirs(root: string): Promise<Set<string>> {
-  const collected = (await discoverCollectedDirs(root)).map((d) => d.dir);
+export function standardPluginDirs(root: string): Set<string> {
+  const collected = discoverCollectedDirs(root).map((d) => d.dir);
   return new Set([...collected, "core", "shared", "plugins", "bin", "scripts"]);
 }
 
@@ -258,7 +264,7 @@ export function collectedDirRegistryPath(
 export async function generatePluginRegistry(opts: {
   root: string;
 }): Promise<void> {
-  const defs = await discoverCollectedDirs(opts.root);
+  const defs = discoverCollectedDirs(opts.root);
   for (const def of defs) {
     const file = collectedDirRegistryPath(def);
     const next = await renderCollectedDirRegistry({ root: opts.root, def });

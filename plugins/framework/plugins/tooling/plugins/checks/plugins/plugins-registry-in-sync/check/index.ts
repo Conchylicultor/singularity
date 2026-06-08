@@ -23,7 +23,7 @@ const check: Check = {
     "All collected dir registries (web, server, central, check, lint, ...) match the current plugin source",
   async run() {
     const root = await getRoot();
-    const defs = await discoverCollectedDirs(root);
+    const defs = discoverCollectedDirs(root);
     for (const def of defs) {
       const file = collectedDirRegistryPath(def);
       const rel = relative(root, file);
