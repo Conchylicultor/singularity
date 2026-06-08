@@ -14,7 +14,7 @@ export function AppRail({
   activeAppId: string | undefined;
 }) {
   return (
-    <div className="relative z-20 flex w-10 shrink-0 flex-col items-center gap-1 border-r bg-background pt-3">
+    <div className="relative z-nav flex w-10 shrink-0 flex-col items-center gap-1 border-r bg-background pt-3">
       <Apps.App.Render>
         {(app) => (
           <WithTooltip content={app.tooltip} side="right">

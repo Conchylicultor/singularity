@@ -183,7 +183,7 @@ function FileSectionBlock({
 
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="sticky top-0 z-[2] gap-2 border-b border-border bg-muted/60 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur hover:bg-muted">
+      <CollapsibleTrigger className="sticky top-0 z-raised gap-2 border-b border-border bg-muted/60 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur hover:bg-muted">
         <CollapsibleChevron className="size-3.5" />
         <span>{label}</span>
         <span>·</span>
@@ -224,7 +224,7 @@ function ToolbarRow({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-0 z-10 flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
+    <div className="sticky top-0 z-raised flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
       <div className="flex items-center gap-2 text-sm font-medium">
         <span className="tabular-nums">{count} files</span>
         <span className="text-success tabular-nums">
@@ -247,5 +247,5 @@ function ToolbarRow({
 }
 
 function Body({ children }: { children: React.ReactNode }) {
-  return <div className="min-h-0 flex-1 overflow-auto">{children}</div>;
+  return <div className="min-h-0 flex-1 overflow-auto isolate">{children}</div>;
 }

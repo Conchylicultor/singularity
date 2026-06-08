@@ -146,7 +146,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
     <div className="px-3 py-1">
       <div className="group relative overflow-hidden rounded bg-muted">
         {/* Hover/focus toolbar: language picker + copy. */}
-        <div className="absolute top-1 right-1 z-10 flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        <div className="absolute top-1 right-1 z-raised flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <Select items={langItems} value={language ?? PLAIN} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"

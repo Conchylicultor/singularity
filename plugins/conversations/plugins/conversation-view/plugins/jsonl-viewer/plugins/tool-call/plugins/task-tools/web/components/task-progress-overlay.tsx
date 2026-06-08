@@ -48,7 +48,7 @@ export function TaskProgressOverlay() {
   if (!shouldShow || dismissed) return null;
 
   return (
-    <div className="absolute inset-x-0 bottom-10 z-10 flex justify-center pointer-events-none">
+    <div className="absolute inset-x-0 bottom-10 z-float flex justify-center pointer-events-none">
       <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
         <div className="flex items-center px-3 py-2">
           <span className="tabular-nums text-xs text-muted-foreground">

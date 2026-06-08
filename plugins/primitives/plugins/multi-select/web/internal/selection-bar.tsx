@@ -14,7 +14,7 @@ export function SelectionBar({
   const { selectedCount, isActive, selectAll, clearAll } = useMultiSelect();
 
   return (
-    <div className="sticky top-0 z-30 h-0 w-full">
+    <div className="sticky top-0 z-float h-0 w-full">
       <div
         className={cn(
           "absolute top-1 left-1/2 -translate-x-1/2",

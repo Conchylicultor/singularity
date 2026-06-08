@@ -71,7 +71,7 @@ function SectionHeader({
 }) {
   return (
     <div
-      className="group/header sticky z-20 flex items-center gap-0.5 rounded-md bg-sidebar px-1 py-1"
+      className="group/header sticky z-nav flex items-center gap-0.5 rounded-md bg-sidebar px-1 py-1"
       style={{ top: stickyTop }}
     >
       <button
@@ -337,7 +337,7 @@ export function QueueView({
   const goneTop = nextTop;
 
   return (
-    <div className="flex flex-col">
+    <div className="flex flex-col isolate">
       {/* Queue */}
       <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
       {queueExpanded && !conv.pending && waitingGroups.length === 0 && (
@@ -355,7 +355,7 @@ export function QueueView({
         >
           {/* Pinned top item */}
           {pinnedCluster && (
-            <div className="sticky z-10 bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
+            <div className="sticky z-raised bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
               <SidebarMenu>
                 <QueueRow
                   conv={pinnedCluster.selected}
@@ -596,7 +596,7 @@ function QueueRow({
       <div
         ref={beforeDrop.setNodeRef}
         className={cn(
-          "absolute -top-1 left-0 right-0 z-10 h-2",
+          "absolute -top-1 left-0 right-0 z-raised h-2",
           dragInProgress && beforeDrop.isOver && "bg-primary/40",
         )}
       />
@@ -665,7 +665,7 @@ function QueueRow({
       <div
         ref={afterDrop.setNodeRef}
         className={cn(
-          "absolute -bottom-1 left-0 right-0 z-10 h-2",
+          "absolute -bottom-1 left-0 right-0 z-raised h-2",
           dragInProgress && afterDrop.isOver && "bg-primary/40",
         )}
       />

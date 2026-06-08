@@ -44,7 +44,7 @@ export function GroupingZone({ itemKey }: { itemKey: string }) {
     <div
       ref={setNodeRef}
       className={cn(
-        "absolute z-10 rounded transition-colors",
+        "absolute z-raised rounded transition-colors",
         isHorizontal
           ? "inset-y-0 left-[42.5%] right-[42.5%]"
           : "inset-x-0 top-[42.5%] bottom-[42.5%]",
@@ -114,7 +114,7 @@ export function SortableReorderItem({
         <>
           {editMode && (
             <button
-              className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
+              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={handleHide}
               aria-label="Hide item"
@@ -182,7 +182,7 @@ export function SpacerReorderItem({
             ⇔
           </span>
           <button
-            className="absolute -top-1.5 -right-1.5 z-10 flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleDelete}
             aria-label="Remove spacer"

@@ -156,7 +156,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
         return (
           <div
             key={k.pitch}
-            className={`absolute top-0 z-10 flex items-end justify-center rounded-b-sm border pb-0.5 ${
+            className={`absolute top-0 z-raised flex items-end justify-center rounded-b-sm border pb-0.5 ${
               lit ? "bg-primary" : ""
             }`}
             style={{

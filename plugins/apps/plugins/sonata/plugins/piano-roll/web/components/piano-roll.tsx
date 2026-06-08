@@ -320,7 +320,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         return (
         <div
           key={note.id}
-          className="absolute z-10"
+          className="absolute z-raised"
           style={{
             left: rect.x,
             top: rect.y,
@@ -424,7 +424,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         {/* Playback now-line: where falling notes land on the keyboard. Screen-
             anchored, so it sits OUTSIDE the scroll layer (and above it). */}
         <div
-          className="pointer-events-none absolute left-0 z-20 h-0.5 bg-primary"
+          className="pointer-events-none absolute left-0 z-raised h-0.5 bg-primary"
           style={{ top: lane.height, width: lane.width }}
         />
 

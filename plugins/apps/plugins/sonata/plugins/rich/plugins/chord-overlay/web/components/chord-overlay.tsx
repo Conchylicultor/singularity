@@ -27,7 +27,7 @@ export function ChordOverlay({
   if (!beatToY) return null; // defensive: host only mounts us with time-axis.
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 left-0 z-30 w-12">
+    <div className="pointer-events-none absolute inset-y-0 left-0 z-float w-12">
       {annotations.map((a, i) => {
         const data = a.data as ChordData;
         const y = beatToY(a.start);

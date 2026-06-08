@@ -70,7 +70,7 @@ export function ReviewFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className={`sticky top-0 z-[1] flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 ${LEVEL_BG[level]}`}
+        className={`sticky top-0 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 ${LEVEL_BG[level]}`}
         aria-expanded={expanded}
         title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
       >

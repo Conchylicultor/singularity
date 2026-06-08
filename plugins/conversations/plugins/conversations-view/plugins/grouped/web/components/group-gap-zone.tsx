@@ -18,7 +18,7 @@ export function GroupGapZone({
   if (!visible) return null;
 
   return (
-    <div ref={setNodeRef} className={cn("relative z-10 h-4 -my-2")}>
+    <div ref={setNodeRef} className={cn("relative z-raised h-4 -my-2")}>
       {isOver && (
         <div className="absolute inset-x-2 top-1/2 h-0.5 -translate-y-1/2 rounded bg-primary" />
       )}

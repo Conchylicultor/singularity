@@ -148,7 +148,7 @@ export function PushGantt({
       </GanttContainer>
       <SpanDetail
         span={hovered}
-        className="sticky bottom-0 z-10 backdrop-blur-sm"
+        className="sticky bottom-0 z-raised backdrop-blur-sm"
       />
     </div>
   );

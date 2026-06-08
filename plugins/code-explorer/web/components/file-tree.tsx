@@ -139,7 +139,7 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
 
   return (
     <div className="text-sm">
-      <div className="sticky top-0 z-10 border-b bg-background p-1.5">
+      <div className="sticky top-0 z-raised border-b bg-background p-1.5">
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}

@@ -121,7 +121,7 @@ function CommitFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className="sticky top-0 z-[1] flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left text-sm hover:bg-muted/80"
+        className="sticky top-0 z-raised flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left text-sm hover:bg-muted/80"
         aria-expanded={expanded}
       >
         <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />

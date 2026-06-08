@@ -19,7 +19,7 @@ import { MillerColumns } from "./miller-columns";
  * `openPane` from a global action never throws "Unknown pane". When a pane is
  * present it renders MillerColumns in an opaque, absolutely-positioned overlay;
  * otherwise it renders nothing and the host app stays fully interactive. The
- * overlay sits below the floating action bar (`z-50`), so the action that
+ * overlay sits below the floating action bar (`z-popover`), so the action that
  * opened the pane remains reachable to toggle it closed. The host's container
  * must be positioned (`relative`).
  */
@@ -36,7 +36,7 @@ export function PaneOverlayHost() {
   if (!hasPane) return null;
 
   return (
-    <div className="absolute inset-0 z-40 bg-background">
+    <div className="absolute inset-0 z-overlay bg-background">
       <MillerColumns />
     </div>
   );

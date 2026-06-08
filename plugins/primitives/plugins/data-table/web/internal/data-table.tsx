@@ -40,7 +40,7 @@ export function DataTable<TRow>({
 
   return (
     <div className="grid gap-x-2" style={{ gridTemplateColumns: template }}>
-      <div className="sticky top-0 z-10 col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
+      <div className="sticky top-0 z-raised col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {columns.map((col) => {
           const sortable = !!col.value;
           const active = sortState?.columnId === col.id;

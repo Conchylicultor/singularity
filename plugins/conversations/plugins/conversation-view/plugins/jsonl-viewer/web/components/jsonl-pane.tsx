@@ -82,8 +82,8 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
       <div
         className={
           expanded
-            ? "z-10 bg-background pb-0.5"
-            : "sticky top-0 z-20 bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
+            ? "z-raised bg-background pb-0.5"
+            : "sticky top-0 z-nav bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
         }
       >
         {children}
@@ -208,7 +208,7 @@ export function JsonlPane({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="relative min-h-0 flex-1">
+      <div className="relative min-h-0 flex-1 isolate">
         <div
           ref={sticky.scrollRef}
           data-pane-scroll
@@ -240,7 +240,7 @@ export function JsonlPane({
           )}
         </div>
         {totals && (
-          <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-10">
+          <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-raised">
             <div className="mx-auto flex max-w-reading justify-end px-3">
               <Badge
                 colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
@@ -255,7 +255,7 @@ export function JsonlPane({
         <JsonlViewer.Overlay.Render />
         <JumpToBottomButton
           handle={sticky}
-          className="absolute bottom-12 right-4 z-20"
+          className="absolute bottom-12 right-4 z-nav"
         />
       </div>
       {children}

@@ -623,7 +623,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
             </div>
             {marquee && (
               <div
-                className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-0 rounded border"
+                className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded border"
                 style={{ top: marquee.top, height: marquee.height }}
               />
             )}
