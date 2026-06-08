@@ -1,0 +1,16 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { TableDetail } from "@plugins/apps/plugins/studio/plugins/contributions/plugins/tables/web";
+import { RowCountSection } from "./components/row-count-section";
+
+export default {
+  name: "Studio: Contributions / Tables / Row Count",
+  description:
+    "Live row count section (estimated from pg_stat_user_tables) in the table detail view.",
+  contributions: [
+    TableDetail.Section({
+      id: "row-count",
+      label: "Row Count",
+      component: RowCountSection,
+    }),
+  ],
+} satisfies PluginDefinition;

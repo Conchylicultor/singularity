@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-forge-publish-expand-collapse",
-  "description": "Expand/collapse all descendants button in the publish plugin tree row.",
-  "private": true,
-  "version": "0.0.1"
-}

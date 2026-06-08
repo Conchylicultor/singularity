@@ -15,7 +15,7 @@ parsing helpers (`parseDefineGroup`, `stripTypes`, `readIfExists`) come from
 - Core:
   - Exports: Types: `CommandDef`; Values: `commandsFacetDef`, `commandsToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin commands table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin commands table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin commands section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the commands facet (PR review).
 

@@ -113,82 +113,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Apps.App` "File Explorer" → `FileExplorerLayout`
             - Uses: `apps.Apps`
             - Exports: Values: `FileExplorer`
-    - **`forge`** — Forge app — plugin graph inspection and publish workflows.
-      - Plugins:
-        - **`catalog`** — Central view of all plugin contributions aggregated by type.
-          - Web:
-            - Slots: `Catalog.FacetTable`
-            - Contributes: `Pane.Register` "catalog", `Forge.Sidebar` "Catalog" → `component`
-            - Exports: Types: `CatalogFacetTable`, `FacetTableEntry`; Values: `Catalog`, `defineFacetTable`, `PluginChip`
-          - Plugins:
-            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the catalog's Tables tab.
-              - Web:
-                - Contributes: `Pane.Register` "table-detail"
-                - Exports: Values: `TableDetail`, `tableDetailPane`
-              - Plugins:
-                - **`columns`** — Table column definitions section in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "columns" → `ColumnsSection`
-                  - Server:
-                    - Uses: `database.db`
-                  - Shared:
-                    - Exports: Values: `getTableColumns`
-                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
-                  - Server:
-                    - Uses: `database.db`
-                  - Shared:
-                    - Exports: Values: `getTableForeignKeys`
-                - **`indexes`** — Table indexes section in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "indexes" → `IndexesSection`
-                  - Server:
-                    - Uses: `database.db`
-                  - Shared:
-                    - Exports: Values: `getTableIndexes`
-                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "row-count" → `RowCountSection`
-                  - Server:
-                    - Uses: `database.db`
-                  - Shared:
-                    - Exports: Values: `getTableRowCount`
-                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
-                  - Web:
-                    - Contributes: `TableDetail.Section` "sample-rows" → `SampleRowsSection`
-                  - Server:
-                    - Uses: `database.db`
-                  - Shared:
-                    - Exports: Values: `getTableSampleRows`
-        - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
-          - Web:
-            - Slots: `Publish.TreeRowBadge`
-            - Contributes: `Pane.Register` "publish", `Forge.Sidebar` "Publish" → `component`
-            - Exports: Types: `TreeRowBadgeContribution`; Values: `Publish`, `usePluginTree`
-          - Cross-plugin:
-            - Slot contributors: `child-count`, `collapsed`, `expand-collapse`, `load-bearing`
-          - Plugins:
-            - **`child-count`** — Recursive child count badge in the publish plugin tree row.
-              - Web:
-                - Contributes: `Publish.TreeRowBadge` "child-count" → `ChildCountBadge`
-            - **`collapsed`** — Collapsed badge in the publish plugin tree row.
-              - Web:
-                - Contributes: `Publish.TreeRowBadge` "collapsed" → `CollapsedBadge`
-            - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
-              - Web:
-                - Contributes: `Publish.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
-            - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
-              - Web:
-                - Contributes: `Publish.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
-        - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
-          - Web:
-            - Slots: `Forge.Sidebar`, `Forge.Toolbar`
-            - Contributes: `Apps.App` "Forge" → `ForgeLayout`
-            - Uses: `apps.Apps`
-            - Exports: Values: `Forge`
-          - Cross-plugin:
-            - Slot contributors: `catalog`, `publish`
     - **`home`** — Home — app launcher and entry point.
       - Plugins:
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
@@ -346,6 +270,82 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to Sonata.Toolbar.
           - Web:
             - Contributes: `Sonata.Toolbar` "playback" → `PlaybackControls`
+    - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
+      - Plugins:
+        - **`contributions`** — Central view of all plugin contributions aggregated by type.
+          - Web:
+            - Slots: `Contributions.FacetTable`
+            - Contributes: `Pane.Register` "contributions", `Studio.Sidebar` "Contributions" → `component`
+            - Exports: Types: `ContributionsFacetTable`, `FacetTableEntry`; Values: `Contributions`, `defineFacetTable`, `PluginChip`
+          - Plugins:
+            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
+              - Web:
+                - Contributes: `Pane.Register` "table-detail"
+                - Exports: Values: `TableDetail`, `tableDetailPane`
+              - Plugins:
+                - **`columns`** — Table column definitions section in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "columns" → `ColumnsSection`
+                  - Server:
+                    - Uses: `database.db`
+                  - Shared:
+                    - Exports: Values: `getTableColumns`
+                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
+                  - Server:
+                    - Uses: `database.db`
+                  - Shared:
+                    - Exports: Values: `getTableForeignKeys`
+                - **`indexes`** — Table indexes section in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "indexes" → `IndexesSection`
+                  - Server:
+                    - Uses: `database.db`
+                  - Shared:
+                    - Exports: Values: `getTableIndexes`
+                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "row-count" → `RowCountSection`
+                  - Server:
+                    - Uses: `database.db`
+                  - Shared:
+                    - Exports: Values: `getTableRowCount`
+                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
+                  - Web:
+                    - Contributes: `TableDetail.Section` "sample-rows" → `SampleRowsSection`
+                  - Server:
+                    - Uses: `database.db`
+                  - Shared:
+                    - Exports: Values: `getTableSampleRows`
+        - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
+          - Web:
+            - Slots: `Explorer.TreeRowBadge`
+            - Contributes: `Pane.Register` "explorer", `Studio.Sidebar` "Explorer" → `component`
+            - Exports: Types: `TreeRowBadgeContribution`; Values: `Explorer`, `usePluginTree`
+          - Cross-plugin:
+            - Slot contributors: `child-count`, `collapsed`, `expand-collapse`, `load-bearing`
+          - Plugins:
+            - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "child-count" → `ChildCountBadge`
+            - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "collapsed" → `CollapsedBadge`
+            - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "expand-collapse" → `ExpandCollapseButton`
+            - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
+              - Web:
+                - Contributes: `Explorer.TreeRowBadge` "load-bearing" → `LoadBearingBadge`
+        - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
+          - Web:
+            - Slots: `Studio.Sidebar`, `Studio.Toolbar`
+            - Contributes: `Apps.App` "Studio" → `StudioLayout`
+            - Uses: `apps.Apps`
+            - Exports: Values: `Studio`
+          - Cross-plugin:
+            - Slot contributors: `contributions`, `explorer`
     - **`workflows`** — Workflows app.
       - Plugins:
         - **`engine`** — Core engine infrastructure. Defines the Workflows.StepType slot. Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.
@@ -1807,9 +1807,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `CommandDef`; Values: `commandsFacetDef`, `commandsToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin commands table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin commands table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Commands"
+                - Contributes: `Contributions.FacetTable` "Commands"
             - **`render-detail`** — Per-plugin commands section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "commands" → `CommandsDetailSection`
@@ -1820,9 +1820,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionId`, `contributionsFacetDef`, `contributionsToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin contributions table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Contributions"
+                - Contributes: `Contributions.FacetTable` "Contributions"
             - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
@@ -1833,9 +1833,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `CrossRefsData`; Values: `crossRefsFacetDef`, `crossRefsToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin cross-refs table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Cross-refs"
+                - Contributes: `Contributions.FacetTable` "Cross-refs"
             - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "cross-refs" → `CrossRefsDetailSection`
@@ -1846,9 +1846,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`, `dbSchemaToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin tables table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Tables"
+                - Contributes: `Contributions.FacetTable` "Tables"
             - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "db-schema" → `DbSchemaDetailSection`
@@ -1859,9 +1859,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `ExportedSymbol`, `ExportsData`; Values: `exportsFacetDef`, `exportsToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin exports table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Exports"
+                - Contributes: `Contributions.FacetTable` "Exports"
             - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "exports" → `ExportsDetailSection`
@@ -1872,9 +1872,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `DocMetaRegistration`; Values: `registrationsFacetDef`, `registrationsToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin registrations table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Registrations"
+                - Contributes: `Contributions.FacetTable` "Registrations"
             - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "registrations" → `RegistrationsDetailSection`
@@ -1885,9 +1885,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `ResourceDef`, `ResourceFacetData`; Values: `resourcesFacetDef`, `resourcesToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin resources table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Resources"
+                - Contributes: `Contributions.FacetTable` "Resources"
             - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "resources" → `ResourcesDetailSection`
@@ -1898,9 +1898,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`, `routesToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin routes table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Routes"
+                - Contributes: `Contributions.FacetTable` "Routes"
             - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "routes" → `RoutesDetailSection`
@@ -1911,9 +1911,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `SlotDef`; Values: `slotsFacetDef`, `slotsToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin slots table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin slots table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Slots"
+                - Contributes: `Contributions.FacetTable` "Slots"
             - **`render-detail`** — Per-plugin slots section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "slots" → `SlotsDetailSection`
@@ -1924,9 +1924,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `StructureFacetData`; Values: `structureFacetDef`, `structureToComparable`
           - Plugins:
-            - **`render-catalog`** — Aggregated cross-plugin structure-anomaly table in the Forge catalog.
+            - **`render-contributions`** — Aggregated cross-plugin structure-anomaly table in the Studio Contributions view.
               - Web:
-                - Contributes: `Catalog.FacetTable` "Structure"
+                - Contributes: `Contributions.FacetTable` "Structure"
             - **`render-detail`** — Per-plugin structure section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "structure" → `StructureDetailSection`
@@ -2099,7 +2099,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Pane.Register`
         - Exports: Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePathname`, `useRoute`, `useSyncPaneRegistry`
       - Cross-plugin:
-        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `file-pane`, `library`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
+        - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `contributions`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `explorer`, `file-pane`, `library`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `push`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Web:
         - Exports: Values: `useDraft`

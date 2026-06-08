@@ -24,7 +24,7 @@ function appMatchesPath(appPath: string, pathname: string): boolean {
 
 /**
  * The registered app whose `path` best matches the current pathname
- * (longest path wins, so `/forge` beats `/` for `/forge/foo`). Shared by the
+ * (longest path wins, so `/studio` beats `/` for `/studio/foo`). Shared by the
  * app switcher layout and any consumer that needs to know the active app
  * (e.g. the floating bar, which hides on the app that hosts the toolbar).
  */

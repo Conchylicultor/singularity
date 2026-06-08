@@ -17,7 +17,7 @@ This facet is the single source of truth for route metadata.
 - Core:
   - Exports: Types: `RouteDef`, `RoutesData`; Values: `routesFacetDef`, `routesToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin routes table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the routes facet (PR review).
 

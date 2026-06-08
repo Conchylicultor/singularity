@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-contributions",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Aggregated cross-plugin tables table in the Studio Contributions view."
+}

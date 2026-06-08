@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-forge-publish",
-  "description": "Sidebar entry and filterable tree pane for pre-publish plugin review.",
-  "private": true,
-  "version": "0.0.1"
-}

@@ -1,0 +1,9 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Contributions } from "@plugins/apps/plugins/studio/plugins/contributions/web";
+import { commandsFacetTable } from "./commands-facet-table";
+
+export default {
+  name: "Commands: Contributions Table",
+  description: "Aggregated cross-plugin commands table in the Studio Contributions view.",
+  contributions: [Contributions.FacetTable(commandsFacetTable)],
+} satisfies PluginDefinition;

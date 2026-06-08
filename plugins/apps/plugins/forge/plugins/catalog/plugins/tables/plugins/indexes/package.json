@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-forge-catalog-tables-indexes",
-  "description": "Table indexes section in the table detail view.",
-  "private": true,
-  "version": "0.0.1"
-}

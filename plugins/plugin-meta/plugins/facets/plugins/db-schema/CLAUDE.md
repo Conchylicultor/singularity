@@ -13,7 +13,7 @@ Part of the unified facet-based docgen pipeline. See `research/2026-05-20-global
 - Core:
   - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`, `dbSchemaToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin tables table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the db-schema facet (PR review).
 

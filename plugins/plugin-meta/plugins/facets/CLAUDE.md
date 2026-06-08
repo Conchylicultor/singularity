@@ -3,8 +3,8 @@
 A **facet** is a self-contained slice of plugin metadata (exports, slots,
 commands, routes, resources, db-schema, cross-refs, contributions,
 registrations). Each facet runs against every plugin and produces structured
-data consumed by four surfaces: **doc** (markdown), **detail** (Forge plugin
-pane), **diff** (PR review), and **catalog** (Forge aggregated tables).
+data consumed by four surfaces: **doc** (markdown), **detail** (Studio plugin
+pane), **diff** (PR review), and **contributions** (Studio aggregated tables).
 
 ## Mental model: separate by *runtime*, not by "rendering"
 
@@ -19,19 +19,19 @@ identical to the web/server/core split used everywhere else in the repo:
   `loadCollectedDir` helper (`@plugins/framework/plugins/tooling/plugins/collected-dir/core`),
   the same uniform discovery substrate every collected runtime uses (`facet`,
   `check`, `web`, `server`, …) — each marked by `defineCollectedDir("<runtime>")`.
-- `plugins/render-{diff,detail,catalog}/web/` — **browser** React renderers,
+- `plugins/render-{diff,detail,contributions}/web/` — **browser** React renderers,
   discovered by web slots.
 
 `renderDoc` lives on the facet (not in a render sub-plugin) because doc rendering
 is a build-time string operation, co-located with the facet's other build-time
-ops. Diff/detail/catalog are browser React. Same data, different runtimes,
+ops. Diff/detail/contributions are browser React. Same data, different runtimes,
 different homes — this is coherence, not asymmetry.
 
 ## Generic collection API
 
 The facets plugin exposes a **generic API** (`loadFacets`, `getFacet`,
-`DocFact`). The four rendering/doc consumers (docgen, Forge detail, Forge
-catalog, PR diff) use only this generic API — they iterate over collected
+`DocFact`). The four rendering/doc consumers (docgen, Studio detail, Studio
+contributions, PR diff) use only this generic API — they iterate over collected
 facets/renderers and call `renderDoc()` / `getFacet()` / the render slot, never
 importing or naming an individual facet sub-plugin. A consumer may read
 `node.facets[id]` only via an `id` carried by a *contribution* (e.g.
@@ -71,8 +71,8 @@ Adding a facet = adding one folder subtree; no consumer changes.
    toComparable }` to `review.plugin-changes.diff-renderer`.
 4. `plugins/render-detail/web/` — contribute a `PluginView.Section` whose Section
    `id` **must equal the facet id**; read `node.facets[id]`.
-5. `plugins/render-catalog/web/` — contribute a `Catalog.FacetTable { facetId,
-   label, columns, rows }` to `catalog.facet-table`.
+5. `plugins/render-contributions/web/` — contribute a `Contributions.FacetTable {
+   facetId, label, columns, rows }` to `contributions.facet-table`.
 
 Run `./singularity build`; the `facets:render-complete` check (`facets/check/`)
 fails the build unless every facet covers all three render slots with a matching
@@ -90,52 +90,52 @@ See `plugins/commands/` for the reference implementation.
 - Sub-plugins:
   - **`commands`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin commands table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin commands table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin commands section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the commands facet (PR review).
   - **`contributions`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin contributions table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the contributions facet (PR review).
   - **`cross-refs`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin cross-refs table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the cross-refs facet (PR review).
   - **`db-schema`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin tables table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin db-schema section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the db-schema facet (PR review).
   - **`exports`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin exports table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the exports facet (PR review).
   - **`registrations`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin registrations table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the registrations facet (PR review).
   - **`resources`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin resources table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the resources facet (PR review).
   - **`routes`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin routes table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin routes table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin routes section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the routes facet (PR review).
   - **`slots`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin slots table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin slots table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin slots section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the slots facet (PR review).
   - **`structure`**
     - Plugins:
-      - **`render-catalog`** — Aggregated cross-plugin structure-anomaly table in the Forge catalog.
+      - **`render-contributions`** — Aggregated cross-plugin structure-anomaly table in the Studio Contributions view.
       - **`render-detail`** — Per-plugin structure section in the plugin detail pane.
       - **`render-diff`** — Diff renderer for the structure facet (PR review).
 

@@ -15,7 +15,7 @@ export interface PluginNode {
   /**
    * Per-facet extracted data, keyed by facet id (e.g. "exports", "routes").
    * The sole metadata surface: every consumer reads `node.facets[facetId]` via an
-   * id carried by its own contribution (DiffRenderer/PluginView.Section/Catalog.FacetTable),
+   * id carried by its own contribution (DiffRenderer/PluginView.Section/Contributions.FacetTable),
    * never a hardcoded literal. The tree endpoint always populates it.
    */
   facets: Record<string, unknown>;

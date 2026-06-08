@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-plugin-meta-facets-structure-render-catalog",
-  "version": "0.0.1",
-  "private": true,
-  "description": "Aggregated cross-plugin structure-anomaly table in the Forge catalog."
-}

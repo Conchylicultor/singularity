@@ -12,9 +12,9 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // The three browser render surfaces every facet must cover. Each entry is a
 // stable web-slot id (the registry key) owned by a consumer plugin. A
-// contribution names its facet via `facetId` (diff/catalog, explicit field) or
-// `id` (detail sections carry the facet id as their section id). Only the
-// explicit `facetId` surfaces (diff/catalog) get orphan detection —
+// contribution names its facet via `facetId` (diff/contributions, explicit
+// field) or `id` (detail sections carry the facet id as their section id). Only
+// the explicit `facetId` surfaces (diff/contributions) get orphan detection —
 // `plugin-view.section` is a generic slot that may host non-facet sections.
 const RENDER_SURFACES = [
   {
@@ -30,8 +30,8 @@ const RENDER_SURFACES = [
     explicit: false,
   },
   {
-    surface: "catalog",
-    slotId: "catalog.facet-table",
+    surface: "contributions",
+    slotId: "contributions.facet-table",
     facetKey: "facetId" as const,
     explicit: true,
   },
@@ -48,7 +48,7 @@ async function getRoot(): Promise<string> {
 const check: Check = {
   id: "facets:render-complete",
   description:
-    "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, catalog) with a matching facet id",
+    "Every facet from loadFacets() has a render contributor in each web render slot (diff, detail, contributions) with a matching facet id",
   async run() {
     const root = await getRoot();
     const pluginsRoot = join(root, "plugins");
@@ -128,7 +128,7 @@ const check: Check = {
     return {
       ok: false,
       message: parts.join("\n\n"),
-      hint: "Add the missing render-{diff,detail,catalog}/web sub-plugin under the facet's folder (see plugins/plugin-meta/plugins/facets/CLAUDE.md), or fix the facetId/section id.",
+      hint: "Add the missing render-{diff,detail,contributions}/web sub-plugin under the facet's folder (see plugins/plugin-meta/plugins/facets/CLAUDE.md), or fix the facetId/section id.",
     };
   },
 };

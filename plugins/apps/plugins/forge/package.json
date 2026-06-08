@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-forge",
-  "description": "Forge app — plugin graph inspection and publish workflows.",
-  "private": true,
-  "version": "0.0.1"
-}

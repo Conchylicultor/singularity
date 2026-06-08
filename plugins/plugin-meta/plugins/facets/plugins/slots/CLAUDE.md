@@ -15,7 +15,7 @@ web slot. `toComparable` (the diff projection) lives in `core/`.
 - Core:
   - Exports: Types: `SlotDef`; Values: `slotsFacetDef`, `slotsToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin slots table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin slots table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin slots section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the slots facet (PR review).
 

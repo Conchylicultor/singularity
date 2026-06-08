@@ -16,24 +16,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
-    - **`forge`** — Forge app — plugin graph inspection and publish workflows.
-      - Plugins:
-        - **`catalog`** — Central view of all plugin contributions aggregated by type.
-          - Plugins:
-            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the catalog's Tables tab.
-              - Plugins:
-                - **`columns`** — Table column definitions section in the table detail view.
-                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
-                - **`indexes`** — Table indexes section in the table detail view.
-                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
-                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
-        - **`publish`** — Sidebar entry and filterable tree pane for pre-publish plugin review.
-          - Plugins:
-            - **`child-count`** — Recursive child count badge in the publish plugin tree row.
-            - **`collapsed`** — Collapsed badge in the publish plugin tree row.
-            - **`expand-collapse`** — Expand/collapse all descendants button in the publish plugin tree row.
-            - **`load-bearing`** — Load-bearing badge in the publish plugin tree row.
-        - **`shell`** — App shell for Forge. Registers the /forge app entry and defines Forge.Sidebar/Toolbar slots.
     - **`home`** — Home — app launcher and entry point.
       - Plugins:
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
@@ -43,6 +25,24 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
     - **`sonata`** [28 sub-plugins] — Sonata — extensible piano and music app.
+    - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
+      - Plugins:
+        - **`contributions`** — Central view of all plugin contributions aggregated by type.
+          - Plugins:
+            - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
+              - Plugins:
+                - **`columns`** — Table column definitions section in the table detail view.
+                - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
+                - **`indexes`** — Table indexes section in the table detail view.
+                - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
+                - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
+        - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
+          - Plugins:
+            - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
+            - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
+            - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
+            - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
+        - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.

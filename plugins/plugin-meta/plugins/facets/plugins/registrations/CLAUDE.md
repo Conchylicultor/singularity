@@ -16,7 +16,7 @@ No `relate()` — registrations have no cross-plugin relationships.
 - Core:
   - Exports: Types: `DocMetaRegistration`; Values: `registrationsFacetDef`, `registrationsToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin registrations table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin registrations section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the registrations facet (PR review).
 

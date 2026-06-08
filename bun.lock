@@ -115,62 +115,6 @@
       "name": "@singularity/plugin-apps-file-explorer-shell",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/forge": {
-      "name": "@singularity/plugin-apps-forge",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog": {
-      "name": "@singularity/plugin-apps-forge-catalog",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables": {
-      "name": "@singularity/plugin-apps-forge-catalog-tables",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns": {
-      "name": "@singularity/plugin-apps-forge-catalog-tables-columns",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/foreign-keys": {
-      "name": "@singularity/plugin-apps-forge-catalog-tables-foreign-keys",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/indexes": {
-      "name": "@singularity/plugin-apps-forge-catalog-tables-indexes",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/row-count": {
-      "name": "@singularity/plugin-apps-forge-catalog-tables-row-count",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows": {
-      "name": "@singularity/plugin-apps-forge-catalog-tables-sample-rows",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/publish": {
-      "name": "@singularity/plugin-apps-forge-publish",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/publish/plugins/child-count": {
-      "name": "@singularity/plugin-apps-forge-publish-child-count",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/publish/plugins/collapsed": {
-      "name": "@singularity/plugin-apps-forge-publish-collapsed",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/publish/plugins/expand-collapse": {
-      "name": "@singularity/plugin-apps-forge-publish-expand-collapse",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/publish/plugins/load-bearing": {
-      "name": "@singularity/plugin-apps-forge-publish-load-bearing",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/forge/plugins/shell": {
-      "name": "@singularity/plugin-apps-forge-shell",
-      "version": "0.0.1",
-    },
     "plugins/apps/plugins/home": {
       "name": "@singularity/plugin-apps-home",
       "version": "0.0.1",
@@ -318,6 +262,62 @@
     },
     "plugins/apps/plugins/sonata/plugins/transport-bar": {
       "name": "@singularity/plugin-apps-sonata-transport-bar",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio": {
+      "name": "@singularity/plugin-apps-studio",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions": {
+      "name": "@singularity/plugin-apps-studio-contributions",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables": {
+      "name": "@singularity/plugin-apps-studio-contributions-tables",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns": {
+      "name": "@singularity/plugin-apps-studio-contributions-tables-columns",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys": {
+      "name": "@singularity/plugin-apps-studio-contributions-tables-foreign-keys",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes": {
+      "name": "@singularity/plugin-apps-studio-contributions-tables-indexes",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count": {
+      "name": "@singularity/plugin-apps-studio-contributions-tables-row-count",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows": {
+      "name": "@singularity/plugin-apps-studio-contributions-tables-sample-rows",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/explorer": {
+      "name": "@singularity/plugin-apps-studio-explorer",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/child-count": {
+      "name": "@singularity/plugin-apps-studio-explorer-child-count",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed": {
+      "name": "@singularity/plugin-apps-studio-explorer-collapsed",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse": {
+      "name": "@singularity/plugin-apps-studio-explorer-expand-collapse",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing": {
+      "name": "@singularity/plugin-apps-studio-explorer-load-bearing",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/shell": {
+      "name": "@singularity/plugin-apps-studio-shell",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/workflows": {
@@ -1446,8 +1446,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-commands",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-commands-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-commands-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail": {
@@ -1462,8 +1462,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-contributions",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-contributions-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-contributions-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-detail": {
@@ -1478,8 +1478,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-cross-refs",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-cross-refs-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-detail": {
@@ -1494,8 +1494,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-db-schema",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-db-schema-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail": {
@@ -1510,8 +1510,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-exports",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-exports-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-exports-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-detail": {
@@ -1526,8 +1526,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-registrations",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-registrations-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-registrations-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-detail": {
@@ -1542,8 +1542,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-resources",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-resources-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-resources-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-detail": {
@@ -1558,8 +1558,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-routes",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-routes-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-routes-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-detail": {
@@ -1574,8 +1574,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-slots",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-slots-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-slots-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-detail": {
@@ -1590,8 +1590,8 @@
       "name": "@singularity/plugin-plugin-meta-facets-structure",
       "version": "0.0.1",
     },
-    "plugins/plugin-meta/plugins/facets/plugins/structure/plugins/render-catalog": {
-      "name": "@singularity/plugin-plugin-meta-facets-structure-render-catalog",
+    "plugins/plugin-meta/plugins/facets/plugins/structure/plugins/render-contributions": {
+      "name": "@singularity/plugin-plugin-meta-facets-structure-render-contributions",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets/plugins/structure/plugins/render-detail": {
@@ -2724,34 +2724,6 @@
 
     "@singularity/plugin-apps-file-explorer-shell": ["@singularity/plugin-apps-file-explorer-shell@workspace:plugins/apps/plugins/file-explorer/plugins/shell"],
 
-    "@singularity/plugin-apps-forge": ["@singularity/plugin-apps-forge@workspace:plugins/apps/plugins/forge"],
-
-    "@singularity/plugin-apps-forge-catalog": ["@singularity/plugin-apps-forge-catalog@workspace:plugins/apps/plugins/forge/plugins/catalog"],
-
-    "@singularity/plugin-apps-forge-catalog-tables": ["@singularity/plugin-apps-forge-catalog-tables@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables"],
-
-    "@singularity/plugin-apps-forge-catalog-tables-columns": ["@singularity/plugin-apps-forge-catalog-tables-columns@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/columns"],
-
-    "@singularity/plugin-apps-forge-catalog-tables-foreign-keys": ["@singularity/plugin-apps-forge-catalog-tables-foreign-keys@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/foreign-keys"],
-
-    "@singularity/plugin-apps-forge-catalog-tables-indexes": ["@singularity/plugin-apps-forge-catalog-tables-indexes@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/indexes"],
-
-    "@singularity/plugin-apps-forge-catalog-tables-row-count": ["@singularity/plugin-apps-forge-catalog-tables-row-count@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/row-count"],
-
-    "@singularity/plugin-apps-forge-catalog-tables-sample-rows": ["@singularity/plugin-apps-forge-catalog-tables-sample-rows@workspace:plugins/apps/plugins/forge/plugins/catalog/plugins/tables/plugins/sample-rows"],
-
-    "@singularity/plugin-apps-forge-publish": ["@singularity/plugin-apps-forge-publish@workspace:plugins/apps/plugins/forge/plugins/publish"],
-
-    "@singularity/plugin-apps-forge-publish-child-count": ["@singularity/plugin-apps-forge-publish-child-count@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/child-count"],
-
-    "@singularity/plugin-apps-forge-publish-collapsed": ["@singularity/plugin-apps-forge-publish-collapsed@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/collapsed"],
-
-    "@singularity/plugin-apps-forge-publish-expand-collapse": ["@singularity/plugin-apps-forge-publish-expand-collapse@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/expand-collapse"],
-
-    "@singularity/plugin-apps-forge-publish-load-bearing": ["@singularity/plugin-apps-forge-publish-load-bearing@workspace:plugins/apps/plugins/forge/plugins/publish/plugins/load-bearing"],
-
-    "@singularity/plugin-apps-forge-shell": ["@singularity/plugin-apps-forge-shell@workspace:plugins/apps/plugins/forge/plugins/shell"],
-
     "@singularity/plugin-apps-home": ["@singularity/plugin-apps-home@workspace:plugins/apps/plugins/home"],
 
     "@singularity/plugin-apps-home-app-cards": ["@singularity/plugin-apps-home-app-cards@workspace:plugins/apps/plugins/home/plugins/app-cards"],
@@ -2821,6 +2793,34 @@
     "@singularity/plugin-apps-sonata-track-mixer": ["@singularity/plugin-apps-sonata-track-mixer@workspace:plugins/apps/plugins/sonata/plugins/track-mixer"],
 
     "@singularity/plugin-apps-sonata-transport-bar": ["@singularity/plugin-apps-sonata-transport-bar@workspace:plugins/apps/plugins/sonata/plugins/transport-bar"],
+
+    "@singularity/plugin-apps-studio": ["@singularity/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
+
+    "@singularity/plugin-apps-studio-contributions": ["@singularity/plugin-apps-studio-contributions@workspace:plugins/apps/plugins/studio/plugins/contributions"],
+
+    "@singularity/plugin-apps-studio-contributions-tables": ["@singularity/plugin-apps-studio-contributions-tables@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables"],
+
+    "@singularity/plugin-apps-studio-contributions-tables-columns": ["@singularity/plugin-apps-studio-contributions-tables-columns@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns"],
+
+    "@singularity/plugin-apps-studio-contributions-tables-foreign-keys": ["@singularity/plugin-apps-studio-contributions-tables-foreign-keys@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys"],
+
+    "@singularity/plugin-apps-studio-contributions-tables-indexes": ["@singularity/plugin-apps-studio-contributions-tables-indexes@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes"],
+
+    "@singularity/plugin-apps-studio-contributions-tables-row-count": ["@singularity/plugin-apps-studio-contributions-tables-row-count@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count"],
+
+    "@singularity/plugin-apps-studio-contributions-tables-sample-rows": ["@singularity/plugin-apps-studio-contributions-tables-sample-rows@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows"],
+
+    "@singularity/plugin-apps-studio-explorer": ["@singularity/plugin-apps-studio-explorer@workspace:plugins/apps/plugins/studio/plugins/explorer"],
+
+    "@singularity/plugin-apps-studio-explorer-child-count": ["@singularity/plugin-apps-studio-explorer-child-count@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/child-count"],
+
+    "@singularity/plugin-apps-studio-explorer-collapsed": ["@singularity/plugin-apps-studio-explorer-collapsed@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/collapsed"],
+
+    "@singularity/plugin-apps-studio-explorer-expand-collapse": ["@singularity/plugin-apps-studio-explorer-expand-collapse@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse"],
+
+    "@singularity/plugin-apps-studio-explorer-load-bearing": ["@singularity/plugin-apps-studio-explorer-load-bearing@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing"],
+
+    "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 
@@ -3352,7 +3352,7 @@
 
     "@singularity/plugin-plugin-meta-facets-commands": ["@singularity/plugin-plugin-meta-facets-commands@workspace:plugins/plugin-meta/plugins/facets/plugins/commands"],
 
-    "@singularity/plugin-plugin-meta-facets-commands-render-catalog": ["@singularity/plugin-plugin-meta-facets-commands-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-commands-render-contributions": ["@singularity/plugin-plugin-meta-facets-commands-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-commands-render-detail": ["@singularity/plugin-plugin-meta-facets-commands-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/commands/plugins/render-detail"],
 
@@ -3360,7 +3360,7 @@
 
     "@singularity/plugin-plugin-meta-facets-contributions": ["@singularity/plugin-plugin-meta-facets-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions"],
 
-    "@singularity/plugin-plugin-meta-facets-contributions-render-catalog": ["@singularity/plugin-plugin-meta-facets-contributions-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-contributions-render-contributions": ["@singularity/plugin-plugin-meta-facets-contributions-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-contributions-render-detail": ["@singularity/plugin-plugin-meta-facets-contributions-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/contributions/plugins/render-detail"],
 
@@ -3368,7 +3368,7 @@
 
     "@singularity/plugin-plugin-meta-facets-cross-refs": ["@singularity/plugin-plugin-meta-facets-cross-refs@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs"],
 
-    "@singularity/plugin-plugin-meta-facets-cross-refs-render-catalog": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-cross-refs-render-contributions": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-cross-refs-render-detail": ["@singularity/plugin-plugin-meta-facets-cross-refs-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/cross-refs/plugins/render-detail"],
 
@@ -3376,7 +3376,7 @@
 
     "@singularity/plugin-plugin-meta-facets-db-schema": ["@singularity/plugin-plugin-meta-facets-db-schema@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema"],
 
-    "@singularity/plugin-plugin-meta-facets-db-schema-render-catalog": ["@singularity/plugin-plugin-meta-facets-db-schema-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-db-schema-render-contributions": ["@singularity/plugin-plugin-meta-facets-db-schema-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-db-schema-render-detail": ["@singularity/plugin-plugin-meta-facets-db-schema-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/db-schema/plugins/render-detail"],
 
@@ -3384,7 +3384,7 @@
 
     "@singularity/plugin-plugin-meta-facets-exports": ["@singularity/plugin-plugin-meta-facets-exports@workspace:plugins/plugin-meta/plugins/facets/plugins/exports"],
 
-    "@singularity/plugin-plugin-meta-facets-exports-render-catalog": ["@singularity/plugin-plugin-meta-facets-exports-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-exports-render-contributions": ["@singularity/plugin-plugin-meta-facets-exports-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-exports-render-detail": ["@singularity/plugin-plugin-meta-facets-exports-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/exports/plugins/render-detail"],
 
@@ -3392,7 +3392,7 @@
 
     "@singularity/plugin-plugin-meta-facets-registrations": ["@singularity/plugin-plugin-meta-facets-registrations@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations"],
 
-    "@singularity/plugin-plugin-meta-facets-registrations-render-catalog": ["@singularity/plugin-plugin-meta-facets-registrations-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-registrations-render-contributions": ["@singularity/plugin-plugin-meta-facets-registrations-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-registrations-render-detail": ["@singularity/plugin-plugin-meta-facets-registrations-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/registrations/plugins/render-detail"],
 
@@ -3400,7 +3400,7 @@
 
     "@singularity/plugin-plugin-meta-facets-resources": ["@singularity/plugin-plugin-meta-facets-resources@workspace:plugins/plugin-meta/plugins/facets/plugins/resources"],
 
-    "@singularity/plugin-plugin-meta-facets-resources-render-catalog": ["@singularity/plugin-plugin-meta-facets-resources-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-resources-render-contributions": ["@singularity/plugin-plugin-meta-facets-resources-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-resources-render-detail": ["@singularity/plugin-plugin-meta-facets-resources-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/resources/plugins/render-detail"],
 
@@ -3408,7 +3408,7 @@
 
     "@singularity/plugin-plugin-meta-facets-routes": ["@singularity/plugin-plugin-meta-facets-routes@workspace:plugins/plugin-meta/plugins/facets/plugins/routes"],
 
-    "@singularity/plugin-plugin-meta-facets-routes-render-catalog": ["@singularity/plugin-plugin-meta-facets-routes-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-routes-render-contributions": ["@singularity/plugin-plugin-meta-facets-routes-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-routes-render-detail": ["@singularity/plugin-plugin-meta-facets-routes-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/routes/plugins/render-detail"],
 
@@ -3416,7 +3416,7 @@
 
     "@singularity/plugin-plugin-meta-facets-slots": ["@singularity/plugin-plugin-meta-facets-slots@workspace:plugins/plugin-meta/plugins/facets/plugins/slots"],
 
-    "@singularity/plugin-plugin-meta-facets-slots-render-catalog": ["@singularity/plugin-plugin-meta-facets-slots-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-slots-render-contributions": ["@singularity/plugin-plugin-meta-facets-slots-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-slots-render-detail": ["@singularity/plugin-plugin-meta-facets-slots-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/slots/plugins/render-detail"],
 
@@ -3424,7 +3424,7 @@
 
     "@singularity/plugin-plugin-meta-facets-structure": ["@singularity/plugin-plugin-meta-facets-structure@workspace:plugins/plugin-meta/plugins/facets/plugins/structure"],
 
-    "@singularity/plugin-plugin-meta-facets-structure-render-catalog": ["@singularity/plugin-plugin-meta-facets-structure-render-catalog@workspace:plugins/plugin-meta/plugins/facets/plugins/structure/plugins/render-catalog"],
+    "@singularity/plugin-plugin-meta-facets-structure-render-contributions": ["@singularity/plugin-plugin-meta-facets-structure-render-contributions@workspace:plugins/plugin-meta/plugins/facets/plugins/structure/plugins/render-contributions"],
 
     "@singularity/plugin-plugin-meta-facets-structure-render-detail": ["@singularity/plugin-plugin-meta-facets-structure-render-detail@workspace:plugins/plugin-meta/plugins/facets/plugins/structure/plugins/render-detail"],
 

@@ -1,0 +1,9 @@
+import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { Contributions } from "@plugins/apps/plugins/studio/plugins/contributions/web";
+import { routesFacetTable } from "./routes-facet-table";
+
+export default {
+  name: "Routes: Contributions Table",
+  description: "Aggregated cross-plugin routes table in the Studio Contributions view.",
+  contributions: [Contributions.FacetTable(routesFacetTable)],
+} satisfies PluginDefinition;

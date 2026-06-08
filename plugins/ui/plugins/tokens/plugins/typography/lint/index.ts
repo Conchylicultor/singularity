@@ -18,13 +18,13 @@ export default {
     // land as `error` without a blocking 277-file sweep. New code is blocked
     // immediately; legacy burns down one allowlist entry at a time.
     "no-arbitrary-font-size": [
-      "plugins/apps/plugins/forge/plugins/catalog/plugins/tables/web/components/tables-table.tsx",
-      "plugins/apps/plugins/forge/plugins/catalog/web/components/catalog-view.tsx",
-      "plugins/apps/plugins/forge/plugins/catalog/web/components/categories/resources-table.tsx",
-      "plugins/apps/plugins/forge/plugins/catalog/web/components/categories/routes-table.tsx",
-      "plugins/apps/plugins/forge/plugins/catalog/web/components/categories/slots-table.tsx",
-      "plugins/apps/plugins/forge/plugins/catalog/web/components/plugin-chip.tsx",
-      "plugins/apps/plugins/forge/plugins/publish/plugins/child-count/web/components/child-count-badge.tsx",
+      "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/web/components/tables-table.tsx",
+      "plugins/apps/plugins/studio/plugins/contributions/web/components/catalog-view.tsx",
+      "plugins/apps/plugins/studio/plugins/contributions/web/components/categories/resources-table.tsx",
+      "plugins/apps/plugins/studio/plugins/contributions/web/components/categories/routes-table.tsx",
+      "plugins/apps/plugins/studio/plugins/contributions/web/components/categories/slots-table.tsx",
+      "plugins/apps/plugins/studio/plugins/contributions/web/components/plugin-chip.tsx",
+      "plugins/apps/plugins/studio/plugins/explorer/plugins/child-count/web/components/child-count-badge.tsx",
       "plugins/apps/plugins/sonata/plugins/audio/plugins/engine/web/components/audio-panel.tsx",
       "plugins/apps/plugins/sonata/plugins/piano-keyboard/web/components/piano-keyboard.tsx",
       "plugins/apps/plugins/sonata/plugins/piano-roll/web/components/piano-roll.tsx",

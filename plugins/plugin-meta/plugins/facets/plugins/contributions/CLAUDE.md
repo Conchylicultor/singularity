@@ -24,7 +24,7 @@ shared `contributionId` helper live in `core/`.
 - Core:
   - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionId`, `contributionsFacetDef`, `contributionsToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin contributions table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the contributions facet (PR review).
 

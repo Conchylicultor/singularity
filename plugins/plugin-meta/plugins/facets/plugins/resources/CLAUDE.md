@@ -14,7 +14,7 @@ central: ResourceDef[] }`.
 - Core:
   - Exports: Types: `ResourceDef`, `ResourceFacetData`; Values: `resourcesFacetDef`, `resourcesToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin resources table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin resources table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin resources section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the resources facet (PR review).
 

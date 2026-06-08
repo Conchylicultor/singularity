@@ -13,7 +13,7 @@ each exported symbol by reading cross-plugin import data from the cross-refs fac
 - Core:
   - Exports: Types: `ExportedSymbol`, `ExportsData`; Values: `exportsFacetDef`, `exportsToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin exports table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin exports section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the exports facet (PR review).
 

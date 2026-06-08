@@ -4,10 +4,10 @@
   // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
   // - agent-manager  — Agent Manager
   // - home  — Home
+  // - studio  — Studio
   // - deploy  — Deploy
   // - sonata  — Sonata
   // - workflows  — Workflows
-  // - forge  — Forge
   // - file-explorer  — File Explorer
   // - pages  — Pages
   // - debug  — Debug

@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-apps-forge-catalog-tables-foreign-keys",
-  "description": "FK relationships section (outgoing and incoming) in the table detail view.",
-  "private": true,
-  "version": "0.0.1"
-}

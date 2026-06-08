@@ -23,7 +23,7 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
 - Core:
   - Exports: Types: `CrossRefsData`; Values: `crossRefsFacetDef`, `crossRefsToComparable`
 - Sub-plugins:
-  - **`render-catalog`** — Aggregated cross-plugin cross-refs table in the Forge catalog.
+  - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.
   - **`render-diff`** — Diff renderer for the cross-refs facet (PR review).
 

@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-plugin-meta-facets-exports-render-catalog",
-  "description": "Aggregated cross-plugin exports table in the Forge catalog.",
-  "private": true,
-  "version": "0.0.1"
-}
