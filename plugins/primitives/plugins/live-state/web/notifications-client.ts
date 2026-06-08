@@ -191,7 +191,18 @@ export class NotificationsClient {
       } catch {
         return;
       }
-      this.handleServerMessage(channel, msg);
+      try {
+        this.handleServerMessage(channel, msg);
+      } catch (err) {
+        // A schema.parse failure would otherwise silently leave the cache at
+        // its empty default. Re-throw asynchronously so the global browser
+        // crash reporter observes it as an uncaught error — without importing
+        // the crashes plugin (live-state ← crashes would be an import cycle)
+        // and without breaking the WS loop for subsequent messages.
+        queueMicrotask(() => {
+          throw err;
+        });
+      }
     };
     return channel;
   }

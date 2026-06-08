@@ -31,7 +31,10 @@ parsed against that schema **twice**, by design:
   at both write paths: `useResource`'s `queryFn` HTTP fallback
   (`web/use-resource.ts`) and the WS push path in
   `NotificationsClient.applyUpdate` (a key→schema registry populated as
-  `useResource` calls `observe`).
+  `useResource` calls `observe`). A parse failure on the WS push path is no
+  longer swallowed: the `onmessage` handler re-throws it asynchronously
+  (`queueMicrotask`) so it surfaces as an uncaught browser error the crashes
+  plugin reports, rather than silently leaving the cache at its empty default.
 
 This makes the TS type and the runtime shape impossible to drift: types like
 `Date` that don't survive `JSON.parse` are coerced (`z.coerce.date()`) on the
