@@ -21,8 +21,8 @@ const columns: ColumnDef<StructureRow>[] = [
     id: "plugin",
     header: "Plugin",
     width: "minmax(12rem,1.2fr)",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
   {
     id: "folders",
@@ -99,13 +99,13 @@ export const structureFacetTable = defineFacetTable<StructureRow>({
   icon: MdRuleFolder,
   columns,
   rows,
-  rowKey: (r) => r.plugin.hierarchyId,
+  rowKey: (r) => r.plugin.id,
   // Clicking a row opens that plugin's detail pane, where the migrated Structure
   // section shows the same anomalies in context.
   onRowClick: (r, { openPane }) =>
     openPane(
       pluginViewPane,
-      { pluginId: r.plugin.hierarchyId },
+      { pluginId: r.plugin.id },
       { mode: "push" },
     ),
 });

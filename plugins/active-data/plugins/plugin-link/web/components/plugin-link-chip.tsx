@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { MdWidgets } from "react-icons/md";
+import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import type { PluginNode, PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -18,8 +19,8 @@ function indexNodes(
   index: PluginIndex = { byId: new Map(), bySegment: new Map() },
 ): PluginIndex {
   for (const node of nodes) {
-    index.byId.set(node.hierarchyId, node);
-    const seg = node.hierarchyId.split(".").pop()!;
+    index.byId.set(node.id, node);
+    const seg = pluginIdSegments(node.id).pop()!;
     const arr = index.bySegment.get(seg);
     if (arr) arr.push(node);
     else index.bySegment.set(seg, [node]);
@@ -67,7 +68,7 @@ export function PluginLinkChip({
     );
   }
 
-  const resolvedId = node.hierarchyId;
+  const resolvedId = node.id;
 
   return (
     <LinkChip

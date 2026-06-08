@@ -7,21 +7,21 @@
 
 export interface CollectedEntry {
   pluginPath: string;
-  hierarchyPath: string;
+  id: string;
   loader: () => Promise<{ default: unknown }>;
   dependsOn: string[];
 }
 
 export const lintEntries: CollectedEntry[] = [
-  { pluginPath: "debug/plugins/logs", hierarchyPath: "debug/logs", loader: () => import("@plugins/debug/plugins/logs/lint"), dependsOn: [] },
-  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/icon-safety", hierarchyPath: "framework/tooling/lint/icon-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/lint"), dependsOn: [] },
-  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", hierarchyPath: "framework/tooling/lint/promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
-  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", hierarchyPath: "framework/tooling/lint/reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },
-  { pluginPath: "framework/plugins/web-core", hierarchyPath: "framework/web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/badge", hierarchyPath: "primitives/badge", loader: () => import("@plugins/primitives/plugins/badge/lint"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/control-size", hierarchyPath: "primitives/control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/data-table", hierarchyPath: "primitives/data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/row", hierarchyPath: "primitives/row", loader: () => import("@plugins/primitives/plugins/row/lint"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/z-layers", hierarchyPath: "primitives/z-layers", loader: () => import("@plugins/primitives/plugins/z-layers/lint"), dependsOn: [] },
-  { pluginPath: "ui/plugins/tokens/plugins/typography", hierarchyPath: "ui/tokens/typography", loader: () => import("@plugins/ui/plugins/tokens/plugins/typography/lint"), dependsOn: [] },
+  { pluginPath: "debug/plugins/logs", id: "debug.logs", loader: () => import("@plugins/debug/plugins/logs/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/icon-safety", id: "framework.tooling.lint.icon-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", id: "framework.tooling.lint.promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", id: "framework.tooling.lint.reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/badge", id: "primitives.badge", loader: () => import("@plugins/primitives/plugins/badge/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/control-size", id: "primitives.control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/row", id: "primitives.row", loader: () => import("@plugins/primitives/plugins/row/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/z-layers", id: "primitives.z-layers", loader: () => import("@plugins/primitives/plugins/z-layers/lint"), dependsOn: [] },
+  { pluginPath: "ui/plugins/tokens/plugins/typography", id: "ui.tokens.typography", loader: () => import("@plugins/ui/plugins/tokens/plugins/typography/lint"), dependsOn: [] },
 ];

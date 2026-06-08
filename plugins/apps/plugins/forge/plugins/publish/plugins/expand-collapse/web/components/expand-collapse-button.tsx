@@ -5,7 +5,7 @@ import { usePluginTree } from "@plugins/apps/plugins/forge/plugins/publish/web";
 function collectSubtreeIds(node: PluginNode): string[] {
   const ids: string[] = [];
   if (node.children.length > 0) {
-    ids.push(node.hierarchyId);
+    ids.push(node.id);
     for (const child of node.children) {
       ids.push(...collectSubtreeIds(child));
     }

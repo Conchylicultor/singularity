@@ -44,8 +44,8 @@ const columns: ColumnDef<ResourceRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
 ];
 
@@ -69,5 +69,5 @@ export const resourcesFacetTable = defineFacetTable<ResourceRow>({
   icon: MdStorage,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.runtime}:${r.key}`,
+  rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.key}`,
 });

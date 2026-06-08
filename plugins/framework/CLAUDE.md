@@ -8,6 +8,7 @@
 - Sub-plugins:
   - **`central-core`**
   - **`cli`**
+  - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
   - **`resource-runtime`**
   - **`server-core`**
   - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen

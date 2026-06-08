@@ -1,4 +1,5 @@
 import { ConfigV2 } from "@plugins/config_v2/server";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { reorderDirectiveDescriptor } from "../../shared/directive";
 import { reorderableSlots } from "../../shared/reorderable-slots.generated";
 
@@ -13,6 +14,6 @@ import { reorderableSlots } from "../../shared/reorderable-slots.generated";
 export const reorderConfigRegistrations = reorderableSlots.map((s) =>
   ConfigV2.Register({
     descriptor: reorderDirectiveDescriptor(s.slotId),
-    pluginId: s.pluginId,
+    pluginId: asPluginId(s.pluginId),
   }),
 );

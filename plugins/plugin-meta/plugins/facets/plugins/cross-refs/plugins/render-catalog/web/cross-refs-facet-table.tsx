@@ -35,8 +35,8 @@ const columns: ColumnDef<CrossRefRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
 ];
 
@@ -61,5 +61,5 @@ export const crossRefsFacetTable = defineFacetTable<CrossRefRow>({
   icon: MdCallSplit,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.runtime}:${r.used}`,
+  rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.used}`,
 });

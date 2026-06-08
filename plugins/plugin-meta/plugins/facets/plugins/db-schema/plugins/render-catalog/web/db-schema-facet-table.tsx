@@ -36,8 +36,8 @@ const columns: ColumnDef<TableRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
 ];
 
@@ -58,13 +58,13 @@ export const dbSchemaFacetTable = defineFacetTable<TableRow>({
   icon: MdTableChart,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.name}`,
+  rowKey: (r) => `${r.plugin.id}:${r.name}`,
   // Clicking a table opens its live-SQL detail pane (columns, FKs, indexes,
   // row count, sample rows) owned by `catalog/plugins/tables`.
   onRowClick: (r, { openPane }) =>
     openPane(
       tableDetailPane,
-      { tableName: r.name, pluginId: r.plugin.hierarchyId },
+      { tableName: r.name, pluginId: r.plugin.id },
       { mode: "push" },
     ),
 });

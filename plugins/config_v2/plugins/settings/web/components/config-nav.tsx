@@ -14,9 +14,6 @@ import type { ConfigTreeNode as ConfigTreeNodeData } from "../internal/prune-con
 import { ConfigTreeNode } from "./config-tree-node";
 import { ConfigNavRow } from "./config-nav-row";
 
-const hierarchyIdOf = (reg: ConfigRegistration) =>
-  reg.pluginId.split("/").join(".");
-
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
@@ -38,13 +35,14 @@ export function ConfigNav() {
     accessor,
   });
 
-  const byHierarchyId = useMemo(() => {
+  // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
+  // equals `PluginNode.id`, so no slash→dot bridging is needed.
+  const byPluginId = useMemo(() => {
     const m = new Map<string, ConfigRegistration[]>();
     for (const reg of registrations) {
-      const id = hierarchyIdOf(reg);
-      const list = m.get(id);
+      const list = m.get(reg.pluginId);
       if (list) list.push(reg);
-      else m.set(id, [reg]);
+      else m.set(reg.pluginId, [reg]);
     }
     return m;
   }, [registrations]);
@@ -52,12 +50,12 @@ export function ConfigNav() {
   const tree = useMemo<ConfigTreeNodeData[]>(() => {
     if (!payload) return [];
     const matched = new Set<string>();
-    const pruned = pruneConfigTree(payload.plugins, byHierarchyId, matched);
+    const pruned = pruneConfigTree(payload.plugins, byPluginId, matched);
 
     // Defensive: a config registration should always map to a plugin-tree node
     // (both derive from the same plugin set). If one doesn't, surface it loudly
     // and still render it so the settings page is never silently lost.
-    const orphans = registrations.filter((r) => !matched.has(hierarchyIdOf(r)));
+    const orphans = registrations.filter((r) => !matched.has(r.pluginId));
     if (orphans.length > 0) {
       console.warn(
         "[config] registrations missing from plugin tree:",
@@ -65,10 +63,9 @@ export function ConfigNav() {
       );
       const byOrphanId = new Map<string, ConfigRegistration[]>();
       for (const reg of orphans) {
-        const id = hierarchyIdOf(reg);
-        const list = byOrphanId.get(id);
+        const list = byOrphanId.get(reg.pluginId);
         if (list) list.push(reg);
-        else byOrphanId.set(id, [reg]);
+        else byOrphanId.set(reg.pluginId, [reg]);
       }
       for (const orphanRegs of byOrphanId.values()) {
         const [reg] = orphanRegs;
@@ -76,7 +73,7 @@ export function ConfigNav() {
         const node: PluginNode = {
           path: reg.pluginId,
           name: reg.pluginName,
-          hierarchyId: hierarchyIdOf(reg),
+          id: reg.pluginId,
           loadBearing: false,
           collapsed: false,
           runtimes: { web: true, server: false, central: false },
@@ -87,7 +84,7 @@ export function ConfigNav() {
       }
     }
     return pruned;
-  }, [payload, byHierarchyId, registrations]);
+  }, [payload, byPluginId, registrations]);
 
   const handleToggle = useCallback((id: string, open: boolean) => {
     setCollapsed((prev) => {
@@ -142,7 +139,7 @@ export function ConfigNav() {
         ) : (
           tree.map((item) => (
             <ConfigTreeNode
-              key={item.node.hierarchyId}
+              key={item.node.id}
               item={item}
               depth={0}
               collapsed={collapsed}

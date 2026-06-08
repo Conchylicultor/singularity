@@ -1100,6 +1100,10 @@
         "typescript": "~5.8.3",
       },
     },
+    "plugins/framework/plugins/plugin-id": {
+      "name": "@singularity/plugin-framework-plugin-id",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/resource-runtime": {
       "name": "@singularity/plugin-framework-resource-runtime",
       "version": "0.0.1",
@@ -3197,6 +3201,8 @@
     "@singularity/plugin-framework-central-core": ["@singularity/plugin-framework-central-core@workspace:plugins/framework/plugins/central-core"],
 
     "@singularity/plugin-framework-cli": ["@singularity/plugin-framework-cli@workspace:plugins/framework/plugins/cli"],
+
+    "@singularity/plugin-framework-plugin-id": ["@singularity/plugin-framework-plugin-id@workspace:plugins/framework/plugins/plugin-id"],
 
     "@singularity/plugin-framework-resource-runtime": ["@singularity/plugin-framework-resource-runtime@workspace:plugins/framework/plugins/resource-runtime"],
 

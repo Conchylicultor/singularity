@@ -7,15 +7,15 @@
 
 export interface CollectedEntry {
   pluginPath: string;
-  hierarchyPath: string;
+  id: string;
   loader: () => Promise<{ default: unknown }>;
   dependsOn: string[];
 }
 
 export const centralEntries: CollectedEntry[] = [
-  { pluginPath: "auth", hierarchyPath: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/secrets"] },
-  { pluginPath: "auth/plugins/google", hierarchyPath: "auth/google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "config_v2/plugins/fields/plugins/secret"] },
-  { pluginPath: "auth/plugins/notion", hierarchyPath: "auth/notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "config_v2/plugins/fields/plugins/secret"] },
-  { pluginPath: "config_v2/plugins/fields/plugins/secret", hierarchyPath: "config_v2/fields/secret", loader: () => import("@plugins/config_v2/plugins/fields/plugins/secret/central"), dependsOn: ["infra/plugins/secrets"] },
-  { pluginPath: "infra/plugins/secrets", hierarchyPath: "infra/secrets", loader: () => import("@plugins/infra/plugins/secrets/central"), dependsOn: [] },
+  { pluginPath: "auth", id: "auth", loader: () => import("@plugins/auth/central"), dependsOn: ["infra/plugins/secrets"] },
+  { pluginPath: "auth/plugins/google", id: "auth.google", loader: () => import("@plugins/auth/plugins/google/central"), dependsOn: ["auth", "config_v2/plugins/fields/plugins/secret"] },
+  { pluginPath: "auth/plugins/notion", id: "auth.notion", loader: () => import("@plugins/auth/plugins/notion/central"), dependsOn: ["auth", "config_v2/plugins/fields/plugins/secret"] },
+  { pluginPath: "config_v2/plugins/fields/plugins/secret", id: "config_v2.fields.secret", loader: () => import("@plugins/config_v2/plugins/fields/plugins/secret/central"), dependsOn: ["infra/plugins/secrets"] },
+  { pluginPath: "infra/plugins/secrets", id: "infra.secrets", loader: () => import("@plugins/infra/plugins/secrets/central"), dependsOn: [] },
 ];

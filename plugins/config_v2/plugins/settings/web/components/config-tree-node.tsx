@@ -80,12 +80,12 @@ export function ConfigTreeNode({
 }: ConfigTreeNodeProps) {
   const { node, registrations, children } = item;
   const hasChildNodes = children.length > 0;
-  const isOpen = !collapsed.has(node.hierarchyId);
-  const toggle = () => onToggle(node.hierarchyId, !isOpen);
+  const isOpen = !collapsed.has(node.id);
+  const toggle = () => onToggle(node.id, !isOpen);
 
   const childNodeRows = children.map((child) => (
     <ConfigTreeNode
-      key={child.node.hierarchyId}
+      key={child.node.id}
       item={child}
       depth={depth + 1}
       collapsed={collapsed}

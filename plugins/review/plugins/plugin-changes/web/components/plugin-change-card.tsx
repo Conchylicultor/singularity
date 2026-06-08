@@ -26,7 +26,7 @@ export function PluginChangeCard({
           <MdExpandMore className="size-4 text-muted-foreground shrink-0" />
         )}
         <span className="text-sm font-medium truncate">
-          {plugin.hierarchyId}
+          {plugin.pluginId}
         </span>
         <Badge
           size="sm"

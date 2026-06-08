@@ -18,25 +18,26 @@ export interface ConfigTreeNode {
  * one config-bearing plugin. A node is kept iff it declares config itself or
  * any descendant does.
  *
- * `byHierarchyId` maps a node's dotted `hierarchyId` to the registrations it
- * declares — the caller builds it from `reg.pluginId.replaceAll("/", ".")`,
- * which equals `PluginNode.hierarchyId` since both derive from the same plugin
- * hierarchy. A plugin may declare more than one config, hence an array.
+ * `byPluginId` maps a node's canonical DOT-form plugin id to the registrations
+ * it declares — the caller builds it straight from `reg.pluginId`, which is
+ * already dot and equals `PluginNode.id` since both derive from the same plugin
+ * hierarchy (no slash→dot bridging). A plugin may declare more than one config,
+ * hence an array.
  *
- * `matched` (optional) collects the hierarchyIds that were placed into the
- * pruned tree, so the caller can detect registrations with no matching node.
+ * `matched` (optional) collects the plugin ids that were placed into the pruned
+ * tree, so the caller can detect registrations with no matching node.
  */
 export function pruneConfigTree(
   roots: PluginNode[],
-  byHierarchyId: Map<string, ConfigRegistration[]>,
+  byPluginId: Map<string, ConfigRegistration[]>,
   matched?: Set<string>,
 ): ConfigTreeNode[] {
   const out: ConfigTreeNode[] = [];
   for (const node of roots) {
-    const children = pruneConfigTree(node.children, byHierarchyId, matched);
-    const registrations = byHierarchyId.get(node.hierarchyId) ?? [];
+    const children = pruneConfigTree(node.children, byPluginId, matched);
+    const registrations = byPluginId.get(node.id) ?? [];
     if (registrations.length > 0 || children.length > 0) {
-      if (registrations.length > 0) matched?.add(node.hierarchyId);
+      if (registrations.length > 0) matched?.add(node.id);
       out.push({ node, registrations, children });
     }
   }

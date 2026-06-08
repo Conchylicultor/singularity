@@ -1,5 +1,6 @@
 import type { WsData, HttpHandler, WsHandler, CentralPluginDefinition, LoadedCentralPlugin } from "@plugins/framework/plugins/central-core/core";
 import { notificationsWsHandler, handleResourceHttp } from "@plugins/framework/plugins/central-core/core";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { centralEntries } from "../core/central.generated";
 import { topoSortPlugins } from "./topo";
 
@@ -19,14 +20,14 @@ for (let i = 0; i < loadResults.length; i++) {
   // `id` is derived from the unique hierarchy path, never authored. The guard
   // is structurally unreachable but fails loud if codegen ever produces a
   // collision, rather than letting topo sort silently drop a plugin.
-  if (seenIds.has(e.hierarchyPath)) {
+  if (seenIds.has(e.id)) {
     throw new Error(
-      `[plugin] duplicate derived plugin id "${e.hierarchyPath}" (${e.pluginPath})`,
+      `[plugin] duplicate derived plugin id "${e.id}" (${e.pluginPath})`,
     );
   }
-  seenIds.add(e.hierarchyPath);
+  seenIds.add(e.id);
   const plugin = r.value.default as LoadedCentralPlugin;
-  plugin.id = e.hierarchyPath;
+  plugin.id = asPluginId(e.id);
   byPath.set(e.pluginPath, plugin);
 }
 for (const e of centralEntries) {

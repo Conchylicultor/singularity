@@ -12,7 +12,7 @@ export interface PluginChangedFile {
 }
 
 export interface PluginChangeDiff {
-  hierarchyId: string;
+  pluginId: string;
   name: string;
   path: string;
   status: "added" | "modified";

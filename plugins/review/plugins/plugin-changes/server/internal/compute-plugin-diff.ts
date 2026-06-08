@@ -60,7 +60,7 @@ export async function computePluginChanges(
     const main = mainNodes.get(pluginPath) ?? null;
 
     const diff: PluginChangeDiff = {
-      hierarchyId: current.hierarchyId,
+      pluginId: current.id,
       name: current.name,
       path: pluginPath,
       status: main ? "modified" : "added",
@@ -83,6 +83,6 @@ export async function computePluginChanges(
     diffs.push(diff);
   }
 
-  diffs.sort((a, b) => a.hierarchyId.localeCompare(b.hierarchyId));
+  diffs.sort((a, b) => a.pluginId.localeCompare(b.pluginId));
   return diffs;
 }

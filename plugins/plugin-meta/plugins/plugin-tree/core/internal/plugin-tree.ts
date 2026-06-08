@@ -5,6 +5,7 @@ import {
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
 import { loadFacets, setFacet, type Facet } from "@plugins/plugin-meta/plugins/facets/core";
+import { asPluginId, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
 export {
   readIfExists,
   stripTypes,
@@ -30,7 +31,7 @@ export interface PluginNode {
   dir: string;
   path: string;
   name: string;
-  hierarchyId: string;
+  id: PluginId;
   description?: string;
   descriptions: Partial<Record<Runtime, string>>;
   loadBearing: boolean;
@@ -195,7 +196,7 @@ function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
       dir,
       path,
       name: basename(dir),
-      hierarchyId: "",
+      id: asPluginId(""),
       description,
       descriptions,
       loadBearing,
@@ -214,10 +215,10 @@ function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
 
 // ── Tree assembly ───────────────────────────────────────────────────
 
-function computeHierarchyIds(nodes: PluginNode[], parentId: string): void {
+function computeIds(nodes: PluginNode[], parentId: string): void {
   for (const node of nodes) {
-    node.hierarchyId = parentId ? `${parentId}.${node.name}` : node.name;
-    computeHierarchyIds(node.children, node.hierarchyId);
+    node.id = asPluginId(parentId ? `${parentId}.${node.name}` : node.name);
+    computeIds(node.children, node.id);
   }
 }
 
@@ -264,7 +265,7 @@ export async function buildPluginTree(
   };
   sortRec(roots);
 
-  computeHierarchyIds(roots, "");
+  computeIds(roots, "");
 
   const tree: PluginTree = { pluginsRoot, byDir, roots, facets: [] };
 

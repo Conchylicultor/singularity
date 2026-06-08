@@ -49,8 +49,8 @@ const columns: ColumnDef<RegistrationRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
 ];
 
@@ -76,5 +76,5 @@ export const registrationsFacetTable = defineFacetTable<RegistrationRow>({
   icon: MdAppRegistration,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.runtime}:${r.name}`,
+  rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.name}`,
 });

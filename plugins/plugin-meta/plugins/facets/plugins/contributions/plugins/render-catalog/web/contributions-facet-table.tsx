@@ -43,8 +43,8 @@ const columns: ColumnDef<ContributionRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
 ];
 
@@ -65,5 +65,5 @@ export const contributionsFacetTable = defineFacetTable<ContributionRow>({
   icon: MdLayers,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.slot}:${r.id ?? ""}`,
+  rowKey: (r) => `${r.plugin.id}:${r.slot}:${r.id ?? ""}`,
 });

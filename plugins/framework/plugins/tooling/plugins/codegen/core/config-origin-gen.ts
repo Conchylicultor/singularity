@@ -9,6 +9,7 @@ import {
   registerBarrelStubs,
   importBarrel,
 } from "@plugins/plugin-meta/plugins/barrel-import/core";
+import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 interface DiscoveredConfig {
   hierarchyPath: string;
@@ -61,11 +62,12 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
       if (isConfigDescriptor(contrib.descriptor)) {
         // An explicit `pluginId` on the registration wins over the node the
         // descriptor was discovered in — this lets a plugin register a descriptor
-        // that belongs under a *different* defining plugin's tree.
+        // that belongs under a *different* defining plugin's tree. The override is
+        // a dotted PluginId; config files live under the slash path, via asPath.
         const explicit =
           typeof contrib.pluginId === "string" ? contrib.pluginId : undefined;
-        const hierarchyPath = explicit ?? node.hierarchyId.replace(/\./g, "/");
-        results.push({ hierarchyPath, descriptor: contrib.descriptor });
+        const id = explicit ? asPluginId(explicit) : node.id;
+        results.push({ hierarchyPath: asPath(id), descriptor: contrib.descriptor });
       }
     }
   }

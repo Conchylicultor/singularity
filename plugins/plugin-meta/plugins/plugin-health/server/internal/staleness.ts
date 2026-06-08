@@ -1,10 +1,6 @@
 import { GIT } from "@plugins/infra/plugins/paths/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 
-export function pluginIdToPath(pluginId: string): string {
-  return pluginId.split(".").join("/plugins/");
-}
-
 export async function commitsSince(
   commitHash: string,
   pluginPath: string,

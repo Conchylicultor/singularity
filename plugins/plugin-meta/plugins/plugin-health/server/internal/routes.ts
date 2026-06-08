@@ -1,4 +1,5 @@
 import { eq } from "drizzle-orm";
+import { asFsPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { _tasks } from "@plugins/tasks-core/server";
@@ -9,7 +10,6 @@ import {
 } from "../../core/endpoints";
 import { _pluginHealthReviews, healthReviewExt } from "./tables";
 import {
-  pluginIdToPath,
   commitsSince,
   apiChangedSince,
 } from "./staleness";
@@ -33,7 +33,7 @@ export const handleGetStaleness = implement(getPluginStaleness, async ({ params 
     .from(_pluginHealthReviews)
     .where(eq(_pluginHealthReviews.pluginId, pluginId));
 
-  const pluginPath = pluginIdToPath(pluginId);
+  const pluginPath = asFsPath(asPluginId(pluginId));
   return Promise.all(
     reviews.map(async (r) => ({
       axis: r.axis,

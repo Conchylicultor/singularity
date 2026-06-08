@@ -75,7 +75,7 @@ async function collectReorderableSlots(
       if (slot.kind !== "render") continue;
       if (slot.reorder === false) continue;
       if (definingPath.has(slot.slotId)) continue;
-      definingPath.set(slot.slotId, node.hierarchyId.replace(/\./g, "/"));
+      definingPath.set(slot.slotId, node.id);
     }
   }
 

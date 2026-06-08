@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type { PluginNode, PluginTreePayload } from "./types";
 
 // Recursive plugin node. `facets` is left loose (z.record of z.unknown) — each
@@ -10,7 +11,7 @@ const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
   z.object({
     path: z.string(),
     name: z.string(),
-    hierarchyId: z.string(),
+    id: z.custom<PluginId>((v) => typeof v === "string"),
     description: z.string().optional(),
     loadBearing: z.boolean(),
     collapsed: z.boolean(),

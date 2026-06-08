@@ -40,8 +40,8 @@ function healthColor(
 export function HealthSection({ node }: { node: PluginNode }) {
   const reviewsResult = useResource(pluginHealthReviewsDescriptor);
   const reviews = useMemo(
-    () => reviewsResult.pending ? [] : reviewsResult.data.filter((r) => r.pluginId === node.hierarchyId),
-    [reviewsResult, node.hierarchyId],
+    () => reviewsResult.pending ? [] : reviewsResult.data.filter((r) => r.pluginId === node.id),
+    [reviewsResult, node.id],
   );
 
   const [enriched, setEnriched] = useState<ReviewWithMeta[]>([]);
@@ -58,7 +58,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
       const [stalenessRes, ...taskResults] = await Promise.all([
         // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
         fetch(
-          `/api/plugin-health/staleness/${encodeURIComponent(node.hierarchyId)}`,
+          `/api/plugin-health/staleness/${encodeURIComponent(node.id)}`,
         ).then((r) => r.json() as Promise<PluginStaleness[]>),
         ...reviews.map((r) =>
           // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
@@ -90,7 +90,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
     return () => {
       cancelled = true;
     };
-  }, [reviews, node.hierarchyId]);
+  }, [reviews, node.id]);
 
   if (reviews.length === 0) return null;
 

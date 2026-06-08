@@ -36,10 +36,10 @@ export function buildZoneMap(
 
     if (z.discover === "plugin-tree" && pluginTree) {
       for (const node of pluginTree.byDir.values()) {
-        const zoneName = `${z.name}.${node.hierarchyId}`;
+        const zoneName = `${z.name}.${node.id}`;
         allZones.add(zoneName);
-        pluginHierarchyToZone.set(node.hierarchyId, zoneName);
-        pluginRelPathToHierarchy.set(node.path, node.hierarchyId);
+        pluginHierarchyToZone.set(node.id, zoneName);
+        pluginRelPathToHierarchy.set(node.path, node.id);
       }
     }
   }
@@ -59,13 +59,13 @@ export function buildZoneMap(
       const rest = norm.slice(pluginDirPrefix.length);
       for (const pluginPath of sortedPluginPaths) {
         if (rest.startsWith(pluginPath + "/") || rest === pluginPath) {
-          const hierarchyId = pluginRelPathToHierarchy.get(pluginPath)!;
+          const id = pluginRelPathToHierarchy.get(pluginPath)!;
           const afterPlugin = rest.slice(pluginPath.length + 1);
           const rtSegment = afterPlugin.split("/")[0];
           if (rtSegment && runtimes.has(rtSegment)) {
-            return { zone: `${pluginZoneName}.${hierarchyId}`, runtime: rtSegment };
+            return { zone: `${pluginZoneName}.${id}`, runtime: rtSegment };
           }
-          return { zone: `${pluginZoneName}.${hierarchyId}`, runtime: null };
+          return { zone: `${pluginZoneName}.${id}`, runtime: null };
         }
       }
       return null;

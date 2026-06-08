@@ -24,7 +24,7 @@ export const handleTree = implement(getPluginTree, async () => {
     return {
       path: node.path,
       name: node.name,
-      hierarchyId: node.hierarchyId,
+      id: node.id,
       description: node.description,
       loadBearing: node.loadBearing,
       collapsed: node.collapsed,

@@ -1,4 +1,5 @@
 import { MdBolt } from "react-icons/md";
+import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { PluginNode } from "../../core/types";
@@ -19,7 +20,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
     );
   }
 
-  const trail = node.hierarchyId.split(".");
+  const trail = pluginIdSegments(node.id);
 
   return (
     <div className="h-full overflow-y-auto">

@@ -78,8 +78,8 @@ const columns: ColumnDef<RouteRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
   {
     id: "callers",
@@ -111,5 +111,5 @@ export const routesFacetTable = defineFacetTable<RouteRow>({
   icon: MdAltRoute,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.runtime}:${r.method} ${r.path}`,
+  rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.method} ${r.path}`,
 });

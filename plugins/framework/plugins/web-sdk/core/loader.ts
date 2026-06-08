@@ -1,8 +1,9 @@
 import type { LoadedPlugin, PluginDefinition } from "./types";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 export interface PluginEntry {
   pluginPath: string;
-  hierarchyPath?: string;
+  id?: string;
   loader: () => Promise<{ default: unknown }>;
 }
 
@@ -28,7 +29,7 @@ export async function loadPlugins(
       // duplicate guard is structurally unreachable (directory paths can't
       // collide) but fails loud if codegen ever regresses, rather than letting
       // one plugin silently drop the other during topo sort.
-      const id = entry.hierarchyPath ?? entry.pluginPath;
+      const id = asPluginId(entry.id!);
       if (seenIds.has(id)) {
         throw new Error(
           `[plugin] duplicate derived plugin id "${id}" (${entry.pluginPath}) — two plugins resolve to the same hierarchy path`,

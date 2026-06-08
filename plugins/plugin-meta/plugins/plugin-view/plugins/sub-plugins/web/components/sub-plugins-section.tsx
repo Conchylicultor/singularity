@@ -28,7 +28,7 @@ export function SubPluginsSection({ node }: { node: PluginNode }) {
     >
       <div className="-mx-2 flex flex-col">
         {directChildren.map((c) => (
-          <PluginTreeNode key={c.hierarchyId} node={c} depth={0} />
+          <PluginTreeNode key={c.id} node={c} depth={0} />
         ))}
       </div>
     </Section>
@@ -69,7 +69,7 @@ function PluginTreeNode({
         indent={depth * 16 + 8}
         icon={chevronIcon}
         onClick={() =>
-          openPane(pluginViewPane, { pluginId: node.hierarchyId }, { mode: "swap" })
+          openPane(pluginViewPane, { pluginId: node.id }, { mode: "swap" })
         }
         className="min-h-7 cursor-pointer"
       >
@@ -80,7 +80,7 @@ function PluginTreeNode({
       </Row>
       {expanded &&
         node.children.map((c) => (
-          <PluginTreeNode key={c.hierarchyId} node={c} depth={depth + 1} />
+          <PluginTreeNode key={c.id} node={c} depth={depth + 1} />
         ))}
     </>
   );

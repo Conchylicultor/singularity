@@ -18,6 +18,7 @@ import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
+import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 interface CacheEntry {
   scopeId: string;
@@ -242,6 +243,10 @@ export async function initRegistry(): Promise<void> {
       const { descriptor } = contribution;
       // An explicit `pluginId` lets a plugin register a descriptor under a
       // *different* plugin's config tree; default to the registering plugin's own id.
+      // Both are the canonical DOT-form PluginId. The on-disk store layout is slash
+      // (`config/<slash>/`), so convert dot→slash here at the single boundary — the
+      // resulting `hierarchyPath` value flows unchanged through every downstream
+      // reader (registerDescriptorPath, getHierarchyPath, userScopedDir, scope-fork).
       const pluginId = contribution.pluginId ?? contribution._pluginId;
       if (!pluginId) {
         console.warn(
@@ -249,13 +254,14 @@ export async function initRegistry(): Promise<void> {
         );
         continue;
       }
+      const hierarchyPath = asPath(asPluginId(pluginId));
 
-      const storePath = `${pluginId}/${descriptor.name}.jsonc`;
-      registerDescriptorPath(storePath, descriptor, pluginId);
+      const storePath = `${hierarchyPath}/${descriptor.name}.jsonc`;
+      registerDescriptorPath(storePath, descriptor, hierarchyPath);
 
       // Register only the BASE entry per descriptor (as today). Scoped entries are
       // created on demand by ensureScopeEntry once a fork writes their files.
-      await buildEntry(descriptor, pluginId, storePath, BASE_SCOPE);
+      await buildEntry(descriptor, hierarchyPath, storePath, BASE_SCOPE);
     }
 
     // Rehydrate forked scoped entries from disk. Scoped (per-app) entries are

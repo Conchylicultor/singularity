@@ -22,7 +22,7 @@ type TreeState =
 
 function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
   for (const node of nodes) {
-    map.set(node.hierarchyId, node);
+    map.set(node.id, node);
     indexNodes(node.children, map);
   }
   return map;

@@ -12,7 +12,7 @@ function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
   function walk(ns: PluginNode[]) {
     for (const n of ns) {
       if (n.children.length > 0) {
-        set.add(n.hierarchyId);
+        set.add(n.id);
         walk(n.children);
       }
     }
@@ -24,7 +24,7 @@ function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
 function collectSubtreeIds(node: PluginNode): string[] {
   const ids: string[] = [];
   if (node.children.length > 0) {
-    ids.push(node.hierarchyId);
+    ids.push(node.id);
     for (const child of node.children) {
       ids.push(...collectSubtreeIds(child));
     }
@@ -35,7 +35,7 @@ function collectSubtreeIds(node: PluginNode): string[] {
 interface PluginTreeProps {
   plugins: PluginNode[];
   selected: string | null;
-  onSelect: (hierarchyId: string) => void;
+  onSelect: (pluginId: string) => void;
 }
 
 export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
@@ -71,7 +71,7 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
         ? new Set<string>(
             collectAllIds(
               filtered,
-              (n) => n.hierarchyId,
+              (n) => n.id,
               (n) => n.children,
             ),
           )
@@ -126,7 +126,7 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
         <div className="flex-1 min-h-0 overflow-y-auto py-1">
           {filtered.map((p) => (
             <TreeRow
-              key={p.hierarchyId}
+              key={p.id}
               node={p}
               depth={0}
               selected={selected}
@@ -153,8 +153,8 @@ interface TreeRowProps {
 
 function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
   const { expanded, toggle } = usePluginTree();
-  const isOpen = expanded.has(node.hierarchyId);
-  const isSelected = node.hierarchyId === selected;
+  const isOpen = expanded.has(node.id);
+  const isSelected = node.id === selected;
   const hasChildren = node.children.length > 0;
 
   return (
@@ -162,11 +162,11 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
       <div
         role="button"
         tabIndex={0}
-        onClick={() => onSelect(node.hierarchyId)}
+        onClick={() => onSelect(node.id)}
         onKeyDown={(e) => {
           if (e.key === "Enter" || e.key === " ") {
             e.preventDefault();
-            onSelect(node.hierarchyId);
+            onSelect(node.id);
           }
         }}
         className={cn(
@@ -182,7 +182,7 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
             type="button"
             onClick={(e) => {
               e.stopPropagation();
-              toggle(node.hierarchyId);
+              toggle(node.id);
             }}
             aria-label={isOpen ? "Collapse" : "Expand"}
             className="inline-flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted-foreground/10"
@@ -214,7 +214,7 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
         hasChildren &&
         node.children.map((c) => (
           <TreeRow
-            key={c.hierarchyId}
+            key={c.id}
             node={c}
             depth={depth + 1}
             selected={selected}

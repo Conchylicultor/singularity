@@ -1,4 +1,4 @@
-export type PluginId = string;
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 /**
  * Auto-documentable metadata attached to contributions and registration tokens.
@@ -16,7 +16,7 @@ export type Contribution = {
   _slotId: string;
   /**
    * Injected by PluginProvider from the enclosing plugin's `id` — the
-   * slash-form hierarchy path (e.g. `conversations/conversation-view`).
+   * dotted plugin id (e.g. `conversations.conversation-view`).
    */
   _pluginId?: PluginId;
   _pluginName?: string;
@@ -77,8 +77,8 @@ export interface PluginDefinition {
 
 /**
  * A plugin as it exists at runtime: the authored shape plus the loader-injected
- * identity. `id` is the plugin's slash-form hierarchy path (e.g.
- * `conversations/conversation-view/jsonl-viewer`), guaranteed unique because
+ * identity. `id` is the plugin's dotted plugin id (e.g.
+ * `conversations.conversation-view.jsonl-viewer`), guaranteed unique because
  * directory paths cannot collide. All framework readers (topo sort,
  * register/contribution tagging) operate on this type, so `p.id` is always a
  * defined string with no optionality. `dependsOn` is narrowed to other loaded

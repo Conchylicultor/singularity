@@ -13,6 +13,7 @@
 
 export interface CollectedEntry {
   pluginPath: string;
+  id: string;
   loader: () => Promise<{ default: unknown }>;
   dependsOn: string[];
 }

@@ -1,4 +1,5 @@
 import { ConfigV2 } from "@plugins/config_v2/web";
+import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { reorderDescriptorEntries } from "./descriptors";
 
 /**
@@ -11,5 +12,5 @@ import { reorderDescriptorEntries } from "./descriptors";
  * barrel-purity rule.
  */
 export const reorderConfigContributions = reorderDescriptorEntries.map((e) =>
-  ConfigV2.WebRegister({ descriptor: e.descriptor, pluginId: e.pluginId }),
+  ConfigV2.WebRegister({ descriptor: e.descriptor, pluginId: asPluginId(e.pluginId) }),
 );

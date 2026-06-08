@@ -30,7 +30,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ActiveData.Tag` "(?<!\/)conv-\d+-[a-z0-9]{4}(?![/.])\b" → `ConvChip`
         - Uses: `active-data.ActiveData`, `conversations.useConversationById`
         - Exports: Values: `ConvChip`
-    - **`plugin-link`** — Renders plugin hierarchy IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's hierarchyId (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
+    - **`plugin-link`** — Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
       - Web:
         - Contributes: `ActiveData.Tag` "(?<!\/)[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*(?![/.])\b" → `PluginLinkChip`, `Pane.Register` "plugin-conv-side"
         - Uses: `active-data.ActiveData`
@@ -1502,6 +1502,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `CentralPluginDefinition`, `DependsOnEntry`, `HttpHandler`, `LoadedCentralPlugin`, `Registration`, `Resource`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `WsData`, `WsHandler`; Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
     - **`cli`**
+    - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
+      - Core:
+        - Exports: Types: `PluginId`; Values: `asFsPath`, `asPath`, `asPluginId`, `pluginIdSegments`
     - **`resource-runtime`**
       - Core:
         - Exports: Types: `DependsOnEntry`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `createResourceRuntime`
@@ -1569,7 +1572,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
-        - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
+        - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
 
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Web:

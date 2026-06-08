@@ -15,7 +15,7 @@ component via `GET /api/plugin-view/tree` (cached 60 s, TanStack Query key
 
 ## Plugin reference
 
-- Description: Renders plugin hierarchy IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's hierarchyId (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
+- Description: Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.
 - Web:
   - Contributes: `ActiveData.Tag` "(?<!\/)[a-z][a-z0-9-]*(?:\.[a-z][a-z0-9-]*)*(?![/.])\b" → `PluginLinkChip`, `Pane.Register` "plugin-conv-side"
   - Uses: `active-data.ActiveData`

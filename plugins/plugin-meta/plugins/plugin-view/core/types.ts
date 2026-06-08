@@ -1,10 +1,12 @@
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+
 export interface PluginNode {
   /** Path relative to plugins/, e.g. "active-data/plugins/conv". */
   path: string;
   /** Last-segment leaf name, e.g. "conv". */
   name: string;
-  /** Dotted hierarchy id, e.g. "active-data.conv". */
-  hierarchyId: string;
+  /** Dotted plugin id, e.g. "active-data.conv". */
+  id: PluginId;
   description?: string;
   loadBearing: boolean;
   collapsed: boolean;

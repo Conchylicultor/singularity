@@ -112,7 +112,7 @@ export function standardPluginDirs(root: string): Set<string> {
 interface CollectedRawEntry {
   pluginPath: string;
   importPath: string;
-  hierarchyPath: string;
+  id: string;
 }
 
 function hasDefaultExport(file: string): boolean {
@@ -134,7 +134,7 @@ async function collectEntries(root: string, dir: string): Promise<CollectedRawEn
     entries.push({
       pluginPath: node.path,
       importPath: `@plugins/${node.path}/${dir}`,
-      hierarchyPath: node.hierarchyId.split(".").join("/"),
+      id: node.id,
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));
@@ -233,7 +233,7 @@ export async function renderCollectedDirRegistry(opts: {
   lines.push("");
   lines.push("export interface CollectedEntry {");
   lines.push("  pluginPath: string;");
-  lines.push("  hierarchyPath: string;");
+  lines.push("  id: string;");
   lines.push("  loader: () => Promise<{ default: unknown }>;");
   lines.push("  dependsOn: string[];");
   lines.push("}");
@@ -245,7 +245,7 @@ export async function renderCollectedDirRegistry(opts: {
       ? `[${entryDeps.map((d) => JSON.stringify(d)).join(", ")}]`
       : "[]";
     lines.push(
-      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, hierarchyPath: ${JSON.stringify(e.hierarchyPath)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral} },`,
+      `  { pluginPath: ${JSON.stringify(e.pluginPath)}, id: ${JSON.stringify(e.id)}, loader: () => import(${JSON.stringify(e.importPath)}), dependsOn: ${depsLiteral} },`,
     );
   }
   lines.push("];");

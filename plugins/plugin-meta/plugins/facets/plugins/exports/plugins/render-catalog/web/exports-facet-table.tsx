@@ -44,8 +44,8 @@ const columns: ColumnDef<ExportRow>[] = [
   {
     id: "plugin",
     header: "Plugin",
-    value: (row) => row.plugin.hierarchyId,
-    cell: (row) => <PluginChip hierarchyId={row.plugin.hierarchyId} />,
+    value: (row) => row.plugin.id,
+    cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
   {
     id: "consumers",
@@ -86,5 +86,5 @@ export const exportsFacetTable = defineFacetTable<ExportRow>({
   icon: MdOutput,
   columns,
   rows,
-  rowKey: (r) => `${r.plugin.hierarchyId}:${r.runtime}:${r.name}`,
+  rowKey: (r) => `${r.plugin.id}:${r.runtime}:${r.name}`,
 });

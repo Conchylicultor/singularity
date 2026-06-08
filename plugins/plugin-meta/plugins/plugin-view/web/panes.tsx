@@ -49,7 +49,7 @@ function PluginViewBody() {
     if (state.kind !== "ok") return new Map<string, PluginNode>();
     const map = new Map<string, PluginNode>();
     function visit(n: PluginNode) {
-      map.set(n.hierarchyId, n);
+      map.set(n.id, n);
       for (const c of n.children) visit(c);
     }
     for (const p of state.data.plugins) visit(p);
