@@ -45,7 +45,8 @@ function readRawRecords(): RawBuildLogRecord[] {
   let raw: string;
   try {
     raw = readFileSync(BUILD_LOG_FILE, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
 

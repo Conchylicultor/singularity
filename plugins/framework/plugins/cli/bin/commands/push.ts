@@ -108,7 +108,8 @@ function findClaudeMdConflicts(root: string): string[] {
     let entries: string[];
     try {
       entries = readdirSync(dir);
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
       return;
     }
     for (const e of entries) {
@@ -116,7 +117,8 @@ function findClaudeMdConflicts(root: string): string[] {
       let st;
       try {
         st = statSync(full);
-      } catch {
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
         continue;
       }
       if (st.isDirectory()) {

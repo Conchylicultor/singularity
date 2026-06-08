@@ -69,6 +69,7 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
       if (check.cacheSignature) {
         try {
           sig = check.cacheSignature();
+        // eslint-disable-next-line promise-safety/no-bare-catch -- cacheSignature() failure of any kind safely degrades to uncached; propagating would abort the check run, which is a worse outcome than skipping the cache
         } catch {
           sig = null;
         }

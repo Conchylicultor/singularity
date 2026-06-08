@@ -26,7 +26,8 @@ export async function rewindLastUserTurn(path: string): Promise<string | null> {
   let obj: Record<string, unknown>;
   try {
     obj = JSON.parse(lines[lastIdx]!);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return null;
   }
 
@@ -66,7 +67,8 @@ export async function readTurns(
     let obj: Record<string, unknown>;
     try {
       obj = JSON.parse(line);
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       continue;
     }
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;

@@ -22,7 +22,9 @@ async function loadKeychainModule(): Promise<any | null> {
   if (keychainModule !== undefined) return keychainModule;
   try {
     keychainModule = await import("@napi-rs/keyring");
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "MODULE_NOT_FOUND" && code !== "ERR_MODULE_NOT_FOUND") throw err;
     keychainModule = null;
   }
   return keychainModule;

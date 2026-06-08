@@ -25,7 +25,11 @@ function readBuildRunLogs(buildId: string): BuildLogsFile | null {
   ]) {
     try {
       return JSON.parse(readFileSync(path, "utf-8")) as BuildLogsFile;
-    } catch {
+    } catch (err) {
+      if (
+        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+        !(err instanceof SyntaxError)
+      ) throw err;
       continue;
     }
   }

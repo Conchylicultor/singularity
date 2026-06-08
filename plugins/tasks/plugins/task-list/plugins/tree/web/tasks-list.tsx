@@ -35,13 +35,9 @@ type Task = TreeItem & {
 async function createTaskRow(args: {
   parentId: string | null;
   rank?: Rank;
-}): Promise<string | null> {
-  try {
-    const task = await fetchEndpoint(createTask, {}, { body: { folderId: args.parentId, rank: args.rank?.toString() } });
-    return task.id;
-  } catch {
-    return null;
-  }
+}): Promise<string> {
+  const task = await fetchEndpoint(createTask, {}, { body: { folderId: args.parentId, rank: args.rank?.toString() } });
+  return task.id;
 }
 
 function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {

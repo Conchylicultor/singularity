@@ -110,6 +110,7 @@ export function computeDrop<T extends Node>(
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
         rank: Rank.between(last?.rank ?? null, null),
       };
+    // eslint-disable-next-line promise-safety/no-bare-catch -- Rank.between throws a plain Error on rank exhaustion/corruption; returning null aborts the DnD drop, which is the correct signal for an impossible drop position
     } catch {
       return null;
     }
@@ -136,6 +137,7 @@ export function computeDrop<T extends Node>(
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       rank: Rank.between(target.rank, next?.rank ?? null),
     };
+  // eslint-disable-next-line promise-safety/no-bare-catch -- Rank.between throws a plain Error on rank exhaustion/corruption; returning null aborts the DnD drop, which is the correct signal for an impossible drop position
   } catch {
     return null;
   }

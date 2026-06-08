@@ -120,7 +120,8 @@ export class SharedWebSocket {
     let ws: WebSocket;
     try {
       ws = new WebSocket(absUrl);
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       this.scheduleReconnect();
       return;
     }

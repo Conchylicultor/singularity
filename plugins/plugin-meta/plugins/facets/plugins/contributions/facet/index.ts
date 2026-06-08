@@ -63,7 +63,8 @@ export default createFacet<ContributionsFacetData>({
         let def: Record<string, unknown> | undefined;
         try {
           def = mod.default as Record<string, unknown> | undefined;
-        } catch {
+        } catch (err) {
+          if (!(err instanceof TypeError)) throw err;
           continue;
         }
         if (!def) continue;

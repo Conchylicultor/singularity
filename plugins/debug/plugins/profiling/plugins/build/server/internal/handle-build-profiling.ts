@@ -25,7 +25,12 @@ function readBuildProfile(): BuildProfile | null {
   ]) {
     try {
       return JSON.parse(readFileSync(path, "utf-8")) as BuildProfile;
-    } catch {
+    } catch (err) {
+      if (
+        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+        !(err instanceof SyntaxError)
+      )
+        throw err;
       continue;
     }
   }

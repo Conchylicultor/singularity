@@ -10,7 +10,8 @@ function parseResult(event: ToolRendererProps["event"]): TaskListResult | null {
   try {
     const parsed = JSON.parse(event.result.content);
     return Array.isArray(parsed) ? parsed : null;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return null;
   }
 }

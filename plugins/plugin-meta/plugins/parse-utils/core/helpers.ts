@@ -19,7 +19,8 @@ const transpiler = new Bun.Transpiler({ loader: "ts" });
 export function stripTypes(src: string): string {
   try {
     return transpiler.transformSync(src);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError) && !(err instanceof TypeError)) throw err;
     return src;
   }
 }
@@ -145,7 +146,8 @@ export function walkFiles(dir: string, out: string[]): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code == null) throw err;
     return;
   }
   for (const e of entries) {

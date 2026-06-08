@@ -42,7 +42,8 @@ export function readAndClearBuffer(): BufferedCrash[] {
   let raw: string;
   try {
     raw = readFileSync(file, "utf8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
   const crashes: BufferedCrash[] = [];

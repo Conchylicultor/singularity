@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { conversationsResource, getConversation } from "@plugins/conversations/core";
@@ -22,8 +22,9 @@ function useResolveConversation({ convId }: { convId: string }) {
       try {
         await fetchEndpoint(getConversation, { id: convId });
         return true;
-      } catch {
-        return false;
+      } catch (err) {
+        if (err instanceof EndpointError && err.status === 404) return false;
+        throw err;
       }
     },
     enabled: needsFallback,

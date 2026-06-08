@@ -50,7 +50,8 @@ export function implement<
         let raw: unknown;
         try {
           raw = await req.json();
-        } catch {
+        } catch (err) {
+          if (!(err instanceof SyntaxError)) throw err;
           return new Response("Invalid JSON body", { status: 400 });
         }
         const result = _endpoint.bodySchema.safeParse(raw);

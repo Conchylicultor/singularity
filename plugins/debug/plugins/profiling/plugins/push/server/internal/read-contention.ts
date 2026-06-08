@@ -66,7 +66,8 @@ function readRawRecords(): RawPushRecord[] {
   let raw: string;
   try {
     raw = readFileSync(CONTENTION_FILE, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
 

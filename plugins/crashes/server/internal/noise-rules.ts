@@ -22,6 +22,7 @@ export function isNoiseCrash(input: CrashNoiseInput): boolean {
   return CrashNoiseRule.getContributions().some((rule) => {
     try {
       return rule.matches(input);
+    // eslint-disable-next-line promise-safety/no-bare-catch -- this runs inside the crash pipeline itself; propagating any error here would break crash reporting, which is worse than swallowing a buggy noise-rule match
     } catch {
       return false; // a buggy rule must never break the crash pipeline (itself the error path)
     }

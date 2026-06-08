@@ -89,7 +89,8 @@ function findDbFiles(pluginDir: string): string[] {
     let entries;
     try {
       entries = readdirSync(d, { withFileTypes: true });
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code == null) throw err;
       return;
     }
     for (const e of entries) {

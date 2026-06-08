@@ -27,14 +27,16 @@ async function postJson<T>(path: string, body: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(url, init);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err;
     // One retry, then surface as offline. Mirrors the previous unix-socket
     // client's behavior — "central is unreachable" is the failure mode that
     // matters; transient blips collapse into one retry.
     await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     try {
       res = await fetch(url, init);
-    } catch {
+    } catch (retryErr) {
+      if (!(retryErr instanceof TypeError)) throw retryErr;
       throw new SecretsMainOfflineError();
     }
   }

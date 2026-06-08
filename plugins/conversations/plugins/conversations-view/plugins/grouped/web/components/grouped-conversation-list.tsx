@@ -195,7 +195,8 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   const [ungroupedExpanded, setUngroupedExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(UNGROUPED_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });
@@ -213,7 +214,8 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
   const [goneExpanded, setGoneExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(GONE_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });

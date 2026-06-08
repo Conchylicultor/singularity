@@ -397,12 +397,7 @@ function ReorderListMiddlewareInner({
         return null;
       };
 
-      let newRank: Rank;
-      try {
-        newRank = Rank.between(entryRank(prev), entryRank(next));
-      } catch {
-        return;
-      }
+      const newRank = Rank.between(entryRank(prev), entryRank(next));
 
       void fetchEndpoint(patchGroup, { id: groupId }, {
         body: { slotId: storageId, rank: newRank },

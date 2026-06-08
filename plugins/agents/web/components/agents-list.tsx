@@ -59,7 +59,7 @@ function randomFrom<T>(arr: readonly T[]): T {
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   if (!raw) return null;
-  try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
+  try { return JSON.parse(raw) as SvgNode[]; } catch (err) { if (!(err instanceof SyntaxError)) throw err; return null; }
 }
 
 async function createAgentRow(args: {
@@ -76,8 +76,8 @@ async function createAgentRow(args: {
       },
     });
     return agent.id;
-  } catch {
-    return null;
+  } catch (err) {
+    throw err;
   }
 }
 

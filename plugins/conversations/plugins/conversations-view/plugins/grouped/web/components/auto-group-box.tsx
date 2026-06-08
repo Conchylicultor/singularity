@@ -23,7 +23,8 @@ export function AutoGroupBox({
   const [collapsed, setCollapsed] = useState<boolean>(() => {
     try {
       return localStorage.getItem(`auto-group:collapsed:${clusterKey}`) === "1";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return false;
     }
   });

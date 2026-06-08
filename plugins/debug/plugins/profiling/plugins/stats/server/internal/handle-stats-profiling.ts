@@ -74,7 +74,8 @@ export const handleStatsProfiling = implement(getStatsProfiling, async () => {
         const fetchDuration = performance.now() - t0 - fetchStart;
         const serverTimingHeader = res.headers.get("Server-Timing");
         return { ep, fetchStart, fetchDuration, serverTimingHeader };
-      } catch {
+      } catch (err) {
+        if (!(err instanceof TypeError)) throw err;
         const fetchDuration = performance.now() - t0 - fetchStart;
         return { ep, fetchStart, fetchDuration, serverTimingHeader: null };
       }

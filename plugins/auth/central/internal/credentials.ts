@@ -3,7 +3,7 @@ import type {
   AuthProviderDescriptor,
   ResolvedCredentials,
 } from "@plugins/auth/core";
-import { AuthCredentialsMissingError } from "@plugins/auth/core";
+import { AuthCredentialsMissingError, AuthError } from "@plugins/auth/core";
 
 const envAccessor: AuthEnvAccessor = {
   get(key: string): string | undefined {
@@ -63,7 +63,8 @@ export async function tryResolveCredentials(
 ): Promise<ResolvedCredentials | null> {
   try {
     return await resolveCredentials(descriptor);
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof AuthError) return null;
+    throw err;
   }
 }

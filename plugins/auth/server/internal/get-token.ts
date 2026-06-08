@@ -25,11 +25,13 @@ export async function getTokenFromCentral(
   let res: Response;
   try {
     res = await fetch(url, init);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err;
     await new Promise((r) => setTimeout(r, RETRY_DELAY_MS));
     try {
       res = await fetch(url, init);
-    } catch {
+    } catch (retryErr) {
+      if (!(retryErr instanceof TypeError)) throw retryErr;
       throw new AuthCentralOfflineError();
     }
   }

@@ -13,7 +13,8 @@ function walkPluginTree(root: string): string[] {
     let entries;
     try {
       entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code == null) throw err;
       return;
     }
     for (const e of entries) {

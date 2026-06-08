@@ -28,7 +28,8 @@ export const wsHandler: WsHandler = {
     let parsed: ClientMessage;
     try {
       parsed = JSON.parse(msg);
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       return;
     }
 

@@ -43,7 +43,9 @@ async function fetchFileContent(
     if (!res.ok) return null;
     const body = (await res.json()) as { content?: string };
     return body.content ?? null;
-  } catch {
+  } catch (err) {
+    // Network errors are expected (offline, deleted file, server restarting)
+    if (!(err instanceof TypeError)) throw err;
     return null;
   }
 }

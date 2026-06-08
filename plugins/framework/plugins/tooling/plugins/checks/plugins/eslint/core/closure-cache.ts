@@ -74,7 +74,8 @@ function prune(): void {
     let mtimeMs: number;
     try {
       mtimeMs = statSync(path).mtimeMs;
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue; // entry vanished underneath us — nothing to prune
     }
     if (now - mtimeMs > MAX_AGE_MS) {

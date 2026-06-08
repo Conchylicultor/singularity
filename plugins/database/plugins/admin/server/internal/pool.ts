@@ -23,7 +23,9 @@ function readConn(): ConnConfig {
       port: Number(process.env.PGPORT ?? raw.connection?.port ?? 5432),
       user: process.env.PGUSER ?? raw.connection?.user ?? process.env.USER ?? "postgres",
     };
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && !(err instanceof SyntaxError)) throw err;
     return {
       host: process.env.PGHOST ?? "localhost",
       port: Number(process.env.PGPORT ?? 5432),

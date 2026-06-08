@@ -26,6 +26,7 @@ export async function report(body: CrashReport): Promise<CrashReportResult | nul
     });
     if (!r.ok) return null;
     return (await r.json()) as CrashReportResult;
+  // eslint-disable-next-line promise-safety/no-bare-catch -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself
   } catch {
     return null;
   }

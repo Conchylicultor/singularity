@@ -37,7 +37,8 @@ function walkLintFiles(root: string, dir: string, out: string[]): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return;
   }
   for (const e of entries) {
@@ -66,7 +67,8 @@ export function safeRead(absPath: string): string | null {
   try {
     if (!statSync(absPath).isFile()) return null;
     return readFileSync(absPath, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return null;
   }
 }

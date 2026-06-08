@@ -166,7 +166,8 @@ async function classifyProjects(
   let dirs: string[];
   try {
     dirs = await readdir(CLAUDE_PROJECTS_DIR);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return out;
   }
   const tail = `-${repoBasename}`;
@@ -206,7 +207,8 @@ async function walkPerSession({
   let dirs: string[];
   try {
     dirs = await readdir(CLAUDE_PROJECTS_DIR);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
 
@@ -218,7 +220,8 @@ async function walkPerSession({
       let files: string[];
       try {
         files = await readdir(join(CLAUDE_PROJECTS_DIR, projectDir));
-      } catch {
+      } catch (err) {
+        if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
         return;
       }
       for (const f of files) {
@@ -274,7 +277,8 @@ async function aggregateOneFile(o: AggOpts): Promise<PerSession | null> {
     };
     try {
       obj = JSON.parse(line);
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       continue;
     }
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard; parsed JSON may have any shape

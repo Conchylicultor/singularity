@@ -8,7 +8,7 @@ import { cn } from "@/lib/utils";
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   if (!raw) return null;
-  try { return JSON.parse(raw) as SvgNode[]; } catch { return null; }
+  try { return JSON.parse(raw) as SvgNode[]; } catch (err) { if (!(err instanceof SyntaxError)) throw err; return null; }
 }
 
 export function AgentAvatarTitlePrefix() {

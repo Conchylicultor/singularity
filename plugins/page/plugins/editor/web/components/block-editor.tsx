@@ -258,7 +258,8 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
       if (json) {
         try {
           forest = JSON.parse(json) as SerializedBlock[];
-        } catch {
+        } catch (err) {
+          if (!(err instanceof SyntaxError)) throw err;
           return;
         }
       } else {

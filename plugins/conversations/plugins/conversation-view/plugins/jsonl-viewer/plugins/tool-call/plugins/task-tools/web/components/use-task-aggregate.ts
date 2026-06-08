@@ -25,7 +25,8 @@ function parseResultContent(event: ToolCallEvent): Record<string, unknown> | nul
   if (!event.result?.content || event.result.isError) return null;
   try {
     return JSON.parse(event.result.content);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return null;
   }
 }

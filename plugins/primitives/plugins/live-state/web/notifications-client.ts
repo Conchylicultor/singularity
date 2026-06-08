@@ -188,7 +188,8 @@ export class NotificationsClient {
       let msg: ServerMsg;
       try {
         msg = JSON.parse(ev.data);
-      } catch {
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
         return;
       }
       try {

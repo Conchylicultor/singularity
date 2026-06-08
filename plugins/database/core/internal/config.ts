@@ -42,7 +42,9 @@ export function readDatabaseConfig(): DatabaseConfig {
     const raw = readFileSync(CONFIG_PATH, "utf-8");
     cached = JSON.parse(raw) as DatabaseConfig;
     return cached;
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && !(err instanceof SyntaxError)) throw err;
     cached = SYSTEM_PG_DEFAULTS;
     return cached;
   }

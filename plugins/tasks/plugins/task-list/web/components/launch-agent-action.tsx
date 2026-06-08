@@ -8,6 +8,7 @@ export function LaunchAgentAction({ taskId }: { taskId: string }) {
     try {
       const task = await fetchEndpoint(getTask, { id: taskId });
       return { taskId, prompt: buildTaskPrompt(task) };
+    // eslint-disable-next-line promise-safety/no-bare-catch -- fetching task details is best-effort prompt enrichment; any failure (404, network, 500) has the same correct fallback: launch with taskId only and no pre-populated prompt
     } catch {
       return { taskId };
     }

@@ -157,6 +157,7 @@ export function useTreeRow<T extends TreeItem>(
     let rank: Rank;
     try {
       rank = Rank.between(node.rank, next?.rank ?? null);
+    // eslint-disable-next-line promise-safety/no-bare-catch -- Rank.between throws a plain Error when neighbor rank is invalid/exhausted; fallback to open-ended insertion after node is the correct recovery
     } catch {
       rank = Rank.between(node.rank, null);
     }

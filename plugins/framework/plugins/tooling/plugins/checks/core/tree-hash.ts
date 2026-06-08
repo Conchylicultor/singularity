@@ -50,6 +50,7 @@ export async function computeTreeHash(root: string): Promise<string | null> {
     const wt = await git(root, ["write-tree"], env);
     if (wt.code !== 0) return null;
     return /^[0-9a-f]{40,64}$/.test(wt.stdout) ? wt.stdout : null;
+  // eslint-disable-next-line promise-safety/no-bare-catch -- explicit fail-open contract: any error (no git, spawn failure, permissions) safely returns null so checks still run uncached; propagating would break every check in non-git environments
   } catch {
     // Any failure (not a git repo, spawn error, etc.) → degrade to uncached.
     return null;

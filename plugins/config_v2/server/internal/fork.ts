@@ -7,7 +7,8 @@ export async function forkConfig(targetWorktree: string): Promise<void> {
   const targetDir = join(SINGULARITY_DIR, "config", targetWorktree);
   try {
     await stat(sourceDir);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return;
   }
   await cp(sourceDir, targetDir, { recursive: true });

@@ -23,7 +23,8 @@ export function GroupedView({
   const [showSystem, setShowSystem] = useState<boolean>(() => {
     try {
       return localStorage.getItem(SHOW_SYSTEM_KEY) === "1";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return false;
     }
   });

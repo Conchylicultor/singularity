@@ -9,7 +9,8 @@ let input: unknown = {};
 if (raw.trim()) {
   try {
     input = JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     // malformed input — allow (don't block tool use on parse failure)
     process.exit(0);
   }

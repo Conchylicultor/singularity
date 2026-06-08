@@ -27,7 +27,9 @@ function findCoreBarrels(pluginsRoot: string): string[] {
     let entries;
     try {
       entries = readdirSync(dir, { withFileTypes: true });
-    } catch {
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
       return;
     }
     for (const e of entries) {
@@ -38,7 +40,9 @@ function findCoreBarrels(pluginsRoot: string): string[] {
         let children;
         try {
           children = readdirSync(join(dir, e.name), { withFileTypes: true });
-        } catch {
+        } catch (err) {
+          const code = (err as NodeJS.ErrnoException).code;
+          if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
           continue;
         }
         for (const c of children) {
@@ -70,7 +74,9 @@ export function discoverCollectedDirs(
     let coreFiles;
     try {
       coreFiles = readdirSync(coreDir, { withFileTypes: true });
-    } catch {
+    } catch (err) {
+      const code = (err as NodeJS.ErrnoException).code;
+      if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
       continue;
     }
     for (const entry of coreFiles) {
@@ -147,7 +153,9 @@ function walkTsFiles(dir: string, out: string[]): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOENT" && code !== "EACCES" && code !== "ENOTDIR") throw err;
     return;
   }
   for (const e of entries) {

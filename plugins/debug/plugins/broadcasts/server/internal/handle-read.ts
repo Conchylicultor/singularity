@@ -15,7 +15,11 @@ export const handleRead = implement(getBroadcasts, async () => {
     const raw = await readFile(path, "utf-8");
     const entries = JSON.parse(raw) as BroadcastEntry[];
     return { ok: true as const, entries, path };
-  } catch {
+  } catch (err) {
+    if (
+      (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+      !(err instanceof SyntaxError)
+    ) throw err;
     return { ok: true as const, entries: [] as BroadcastEntry[], path };
   }
 });

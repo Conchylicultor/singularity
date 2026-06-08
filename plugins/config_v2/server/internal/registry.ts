@@ -501,7 +501,8 @@ export function getRawFileContent(storePath: string, scopeId?: string): { origin
   const readRaw = (path: string): string | null => {
     try {
       return readFileSync(path, "utf-8");
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       return null;
     }
   };

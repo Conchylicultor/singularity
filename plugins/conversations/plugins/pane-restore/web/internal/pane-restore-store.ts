@@ -26,8 +26,9 @@ export function loadRouteForConversation(convId: string): SavedSlot[] | null {
       return null;
     }
     return envelope.v;
-  } catch {
-    return null;
+  } catch (err) {
+    if (err instanceof SyntaxError || (err instanceof DOMException)) return null;
+    throw err;
   }
 }
 

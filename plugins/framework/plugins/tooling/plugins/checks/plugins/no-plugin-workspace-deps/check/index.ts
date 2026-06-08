@@ -35,7 +35,8 @@ const check: Check = {
       try {
         const text = await Bun.file(`${root}/${file}`).text();
         json = JSON.parse(text);
-      } catch {
+      } catch (err) {
+        if (!(err instanceof SyntaxError) && (err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
         continue;
       }
       for (const section of ["dependencies", "devDependencies"] as const) {

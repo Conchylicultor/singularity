@@ -26,7 +26,8 @@ function readFromStorage<T>(sKey: string, fallback: T, ttl: number): T {
       return fallback;
     }
     return envelope.v;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return fallback;
   }
 }

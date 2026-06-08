@@ -176,7 +176,8 @@ export function QueueView({
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(WORKING_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });
@@ -194,7 +195,8 @@ export function QueueView({
   const [queueExpanded, setQueueExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(QUEUE_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });
@@ -212,7 +214,8 @@ export function QueueView({
   const [unrankedExpanded, setUnrankedExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(UNRANKED_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });
@@ -230,7 +233,8 @@ export function QueueView({
   const [disconnectedExpanded, setDisconnectedExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(DISCONNECTED_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });
@@ -248,7 +252,8 @@ export function QueueView({
   const [goneExpanded, setGoneExpanded] = useState<boolean>(() => {
     try {
       return localStorage.getItem(GONE_EXPANDED_KEY) !== "0";
-    } catch {
+    } catch (err) {
+      if (!(err instanceof DOMException)) throw err;
       return true;
     }
   });

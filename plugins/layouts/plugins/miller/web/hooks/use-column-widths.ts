@@ -14,7 +14,8 @@ const LS_KEY = (id: string) => `miller.width.${id}`;
 export function hasStoredWidth(paneId: string): boolean {
   try {
     return localStorage.getItem(LS_KEY(paneId)) !== null;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof DOMException)) throw err;
     return false;
   }
 }
@@ -23,7 +24,8 @@ function readStored(paneId: string): number | undefined {
   try {
     const v = localStorage.getItem(LS_KEY(paneId));
     return v != null ? Number(v) : undefined;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof DOMException)) throw err;
     return undefined;
   }
 }

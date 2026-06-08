@@ -41,16 +41,20 @@ async function discoverConfigs(root: string): Promise<DiscoveredConfig[]> {
     let mod: Record<string, unknown>;
     try {
       mod = await importBarrel(barrelPath);
-    } catch {
-      continue;
+    } catch (err) {
+      // A server barrel that fails to import is a real defect — silently
+      // skipping it would drop its config origins from generation and the
+      // breakage would only surface later as a mysterious missing-config. Fail
+      // loudly with the offending path.
+      throw new Error(
+        `Failed to import server barrel for config-origin discovery: ${barrelPath}`,
+        { cause: err },
+      );
     }
 
-    let def: Record<string, unknown> | undefined;
-    try {
-      def = mod.default as Record<string, unknown> | undefined;
-    } catch {
-      continue;
-    }
+    // Reading `.default` off the imported module record cannot throw, so no
+    // guard is needed — a missing default is simply `undefined`.
+    const def = mod.default as Record<string, unknown> | undefined;
     if (!def) continue;
 
     const contributions = def.contributions as unknown[] | undefined;

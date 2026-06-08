@@ -744,7 +744,8 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       let msg: unknown;
       try {
         msg = JSON.parse(typeof raw === "string" ? raw : raw.toString());
-      } catch {
+      } catch (err) {
+        if (!(err instanceof SyntaxError)) throw err;
         return;
       }
       if (!msg || typeof msg !== "object") return;

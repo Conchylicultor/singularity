@@ -4,7 +4,8 @@ import { ToolCallCard } from "./tool-call-card";
 function formatJson(value: unknown): string {
   try {
     return JSON.stringify(value, null, 2);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof TypeError)) throw err;
     return String(value);
   }
 }

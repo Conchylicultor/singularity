@@ -32,7 +32,8 @@ function parseMigrationAnswers(raw: string): MigrationAnswer[] {
   let parsed: unknown;
   try {
     parsed = JSON.parse(raw);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     console.error(
       `Error: --migration-answers is not valid JSON.\n` +
         `Expected: '[{"action":"create"},{"action":"rename","from":"old_name"}]'\n`,
@@ -152,7 +153,8 @@ async function acquireBuildLock(lockPath: string): Promise<() => void> {
       if (m) {
         try {
           process.kill(parseInt(m[1]!, 10), 0);
-        } catch {
+        } catch (err) {
+          if ((err as NodeJS.ErrnoException).code !== "ESRCH") throw err;
           try {
             await unlink(lockPath);
           // eslint-disable-next-line promise-safety/no-bare-catch
@@ -382,7 +384,9 @@ async function databaseReady(name: string): Promise<boolean> {
     await c.connect();
     const r = await c.query("SELECT 1 FROM pg_database WHERE datname = $1", [name]);
     return (r.rowCount ?? 0) > 0;
-  } catch {
+  } catch (err) {
+    // Any pg connection / query error means the DB is not ready yet.
+    if (!(err instanceof Error)) throw err;
     return false;
   } finally {
     try {
@@ -1015,7 +1019,9 @@ export function registerBuild(program: Command) {
         } else {
           console.warn(`Backend restart returned ${resp.status}`);
         }
-      } catch {
+      } catch (err) {
+        // Gateway not running (TypeError/connection refused) or request timed out (DOMException AbortError)
+        if (!(err instanceof TypeError) && !(err instanceof DOMException)) throw err;
         // Gateway not running — that's fine, backend will start on first request
         gatewayUp = false;
         console.log("Gateway not reachable, skipping backend restart");

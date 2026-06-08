@@ -22,6 +22,7 @@ export function registerEndpointErrorReporter(fn: Reporter | null): void {
 export function reportEndpointError(info: EndpointErrorInfo): void {
   try {
     reporter?.(info);
+    // eslint-disable-next-line promise-safety/no-bare-catch -- reporter is a user-supplied callback on the error path; any error it throws must be suppressed to prevent cascading failures during error handling
   } catch {
     // Reporting must never throw — we're already on the error path.
     return undefined;

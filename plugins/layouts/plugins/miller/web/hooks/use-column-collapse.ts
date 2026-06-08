@@ -18,7 +18,8 @@ function read(paneId: string): boolean {
   let v = false;
   try {
     v = sessionStorage.getItem(KEY(paneId)) === "true";
-  } catch {
+  } catch (err) {
+    if (!(err instanceof DOMException)) throw err;
     v = false;
   }
   collapseState.set(paneId, v);

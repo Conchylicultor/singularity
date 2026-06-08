@@ -42,7 +42,8 @@ function walkSourceFiles(dir: string, out: string[]) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code == null) throw err;
     return;
   }
   for (const e of entries) {
@@ -59,7 +60,8 @@ function safeRead(path: string): string | null {
   try {
     if (!statSync(path).isFile()) return null;
     return readFileSync(path, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code == null) throw err;
     return null;
   }
 }

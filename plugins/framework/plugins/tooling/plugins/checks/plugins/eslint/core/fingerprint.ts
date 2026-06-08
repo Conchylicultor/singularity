@@ -49,7 +49,8 @@ function walkGlobalTriggers(root: string, dir: string, out: string[]): void {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return;
   }
   for (const e of entries) {

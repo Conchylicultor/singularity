@@ -35,7 +35,10 @@ function extractTaskNotifications(text: string, at: string, out: JsonlEvent[]): 
       if (inner && typeof inner === "object") {
         parsed = inner as Record<string, unknown>;
       }
-    } catch {
+    } catch (err) {
+      // fast-xml-parser throws generic Error instances on malformed XML;
+      // re-throw anything that is not a standard Error (unexpected runtime throw)
+      if (!(err instanceof Error)) throw err;
       continue;
     }
 
@@ -106,7 +109,9 @@ async function pushTextWithImages(text: string, at: string, out: JsonlEvent[]): 
       } else {
         segments.push({ kind: "text", value: m[0] });
       }
-    } catch {
+    } catch (err) {
+      if (!(err instanceof Error) || !("code" in err)) throw err;
+      // File system error (ENOENT, EACCES, etc.) — treat as missing image; render as text
       segments.push({ kind: "text", value: m[0] });
     }
 
@@ -208,7 +213,8 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
     let obj: Record<string, unknown>;
     try {
       obj = JSON.parse(line);
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       continue;
     }
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;

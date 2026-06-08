@@ -13,7 +13,8 @@ function libpqEnv(): Record<string, string> {
   let config: { connection: { host: string; port: number; user: string } };
   try {
     config = JSON.parse(readFileSync(DATABASE_CONFIG_PATH, "utf-8"));
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && !(err instanceof SyntaxError)) throw err;
     config = {
       connection: { host: "localhost", port: 5432, user: process.env.USER ?? "postgres" },
     };

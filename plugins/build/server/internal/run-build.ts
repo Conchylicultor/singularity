@@ -80,7 +80,11 @@ function resolveOrphanExitCode(buildId: string): number {
       const steps = parsed.steps ?? [];
       if (steps.length === 0) return -1;
       return steps.every((s) => s.success) ? 0 : 1;
-    } catch {
+    } catch (err) {
+      if (
+        (err as NodeJS.ErrnoException).code !== "ENOENT" &&
+        !(err instanceof SyntaxError)
+      ) throw err;
       continue;
     }
   }

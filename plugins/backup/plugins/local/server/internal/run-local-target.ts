@@ -18,7 +18,8 @@ export async function runLocalTarget(
   let entries: string[];
   try {
     entries = await readdir(BACKUPS_DIR);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return { targetId: "local", ok: true, detail: archive.archivePath };
   }
 

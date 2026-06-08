@@ -25,7 +25,8 @@ const check: Check = {
     let generated: string;
     try {
       generated = readFileSync(GENERATED_PATH, "utf-8");
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       return {
         ok: false,
         message: "icon-svg-map.generated.ts does not exist",

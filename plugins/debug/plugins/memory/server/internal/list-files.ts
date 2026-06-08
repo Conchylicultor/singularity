@@ -30,7 +30,8 @@ export const listFiles = implement(listMemoryFiles, async () => {
   let names: string[];
   try {
     names = await readdir(dir);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return { ok: true, files: [], dir };
   }
   const files: MemoryFile[] = names

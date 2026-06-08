@@ -13,7 +13,8 @@ export async function handleGet(
 
   try {
     await stat(row.diskPath);
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return new Response("file missing on disk", { status: 410 });
   }
 

@@ -19,7 +19,8 @@ function loadState(path: string): State {
   if (!existsSync(path)) return { command: "", count: 0 };
   try {
     return JSON.parse(readFileSync(path, "utf8")) as State;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError) && (err as NodeJS.ErrnoException).code == null) throw err;
     return { command: "", count: 0 };
   }
 }

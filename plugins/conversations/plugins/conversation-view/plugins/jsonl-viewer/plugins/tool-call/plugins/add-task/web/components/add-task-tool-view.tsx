@@ -30,7 +30,8 @@ function parseResult(event: ToolRendererProps["event"]): AddTaskResult | null {
   if (!event.result?.content) return null;
   try {
     return JSON.parse(event.result.content);
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return null;
   }
 }

@@ -21,7 +21,8 @@ function readPid(): number | null {
   try {
     const n = parseInt(readFileSync(PID_FILE, "utf-8").trim(), 10);
     return isNaN(n) ? null : n;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return null;
   }
 }
@@ -30,8 +31,11 @@ function isRunning(pid: number): boolean {
   try {
     process.kill(pid, 0);
     return true;
-  } catch {
-    return false;
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code === "EPERM") return true; // process exists but we can't signal it
+    if (code === "ESRCH") return false; // process does not exist
+    throw err;
   }
 }
 
@@ -41,6 +45,7 @@ async function isGatewayListening(): Promise<boolean> {
       signal: AbortSignal.timeout(1000),
     });
     return resp.ok;
+    // eslint-disable-next-line promise-safety/no-bare-catch -- any network error (connection refused, timeout, DNS) means the gateway is not listening; propagating would misrepresent a probe failure as a fatal error
   } catch {
     return false;
   }

@@ -101,7 +101,8 @@ export function setWorktreeOpPhase(slug: string, op: WorktreeOp, phase: Worktree
   let parsed: Record<string, unknown>;
   try {
     parsed = JSON.parse(raw) as Record<string, unknown>;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return;
   }
   writeFileSync(path, JSON.stringify({ ...parsed, phase }));
@@ -118,7 +119,9 @@ function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
   let parsed: { op?: unknown; pid?: unknown; startedAt?: unknown; phase?: unknown };
   try {
     parsed = JSON.parse(readFileSync(path, "utf8")) as typeof parsed;
-  } catch {
+  } catch (err) {
+    // Expected: fs errors (ENOENT, EACCES, etc.) or garbled JSON (SyntaxError).
+    if ((err as NodeJS.ErrnoException).code == null && !(err instanceof SyntaxError)) throw err;
     // Unreadable/garbage marker — reclaim it.
     rmSync(path, { force: true });
     return null;
@@ -171,7 +174,8 @@ export function listActiveWorktreeOps(): WorktreeOpInfo[] {
     let files: string[];
     try {
       files = readdirSync(opsDir(slug));
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue; // Not a worktree-with-ops dir; skip.
     }
     for (const f of files) {
@@ -239,7 +243,8 @@ export function pushLockHeld(lockPath: string = PUSH_LOCK_PATH): boolean {
   let fd: number;
   try {
     fd = openSync(lockPath, "a");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return false;
   }
   try {
@@ -264,7 +269,8 @@ export function readPushHolder(path: string = PUSH_HOLDER_PATH): PushHolder | nu
   let parsed: Partial<PushHolder>;
   try {
     parsed = JSON.parse(readFileSync(path, "utf8")) as Partial<PushHolder>;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code == null && !(err instanceof SyntaxError)) throw err;
     return null; // absent or unparseable
   }
   if (

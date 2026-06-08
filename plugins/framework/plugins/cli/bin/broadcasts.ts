@@ -17,7 +17,8 @@ async function gitOutput(args: string[]): Promise<string | null> {
     const out = await new Response(proc.stdout).text();
     const code = await proc.exited;
     return code === 0 ? out.trim() : null;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
     return null;
   }
 }
@@ -32,7 +33,8 @@ async function isAncestor(
       { stdout: "pipe", stderr: "pipe" },
     );
     return (await proc.exited) === 0;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES") throw err;
     return false;
   }
 }
@@ -66,7 +68,8 @@ export async function checkBroadcasts(command: BroadcastCommand): Promise<void> 
     const parsed = JSON.parse(raw);
     if (!Array.isArray(parsed)) return;
     entries = parsed;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return;
   }
 

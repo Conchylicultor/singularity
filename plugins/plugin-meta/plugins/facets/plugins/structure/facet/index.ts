@@ -22,7 +22,8 @@ function standardDirs(): Set<string> {
 function readEntries(dir: string): Dirent[] {
   try {
     return readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code == null) throw err;
     return [];
   }
 }
@@ -43,7 +44,8 @@ function readCompositionRoot(dir: string): boolean {
   if (!src) return false;
   try {
     return JSON.parse(src).singularity?.compositionRoot === true;
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     return false;
   }
 }

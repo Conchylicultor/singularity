@@ -19,7 +19,8 @@ async function dirExists(path: string): Promise<boolean> {
   try {
     await stat(path);
     return true;
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return false;
   }
 }
@@ -47,6 +48,7 @@ async function getGitHygiene(
     const isDirty = statusOut.split("\n").some((l) => l.length > 0 && !l.startsWith("#"));
 
     return { unpushedCount, isDirty };
+  // eslint-disable-next-line promise-safety/no-bare-catch -- git spawn can fail for many reasons (binary missing, worktree deleted mid-flight, not a git repo); all map to the same conservative safe default (assume dirty = not safe to delete), so every error is correctly handled here
   } catch {
     return { unpushedCount: 0, isDirty: true };
   }

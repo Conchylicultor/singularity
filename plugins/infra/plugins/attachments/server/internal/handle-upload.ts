@@ -16,7 +16,8 @@ export async function handleUpload(req: Request): Promise<Response> {
   let form: FormData;
   try {
     form = await req.formData();
-  } catch {
+  } catch (err) {
+    if (!(err instanceof TypeError) && !(err instanceof SyntaxError)) throw err;
     return new Response("invalid multipart body", { status: 400 });
   }
 

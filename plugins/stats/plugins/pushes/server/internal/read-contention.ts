@@ -33,7 +33,8 @@ export function readContentionRecords(): PushContentionRecord[] {
   let raw: string;
   try {
     raw = readFileSync(CONTENTION_FILE, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
   const records: PushContentionRecord[] = [];
@@ -43,7 +44,8 @@ export function readContentionRecords(): PushContentionRecord[] {
     let record: PushContentionRecord;
     try {
       record = JSON.parse(trimmed) as PushContentionRecord;
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       continue;
     }
     // Keep only terminal records — one per completed push. The in-flight phases

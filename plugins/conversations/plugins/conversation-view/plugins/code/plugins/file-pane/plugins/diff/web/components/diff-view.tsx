@@ -266,7 +266,8 @@ export function DiffView({
     if (state.kind !== "ok" || state.diff.length === 0) return [];
     try {
       return parseDiff(state.diff);
-    } catch {
+    } catch (err) {
+      if (!(err instanceof Error)) throw err;
       return [];
     }
   }, [state]);
@@ -305,7 +306,9 @@ export function DiffView({
           const body = await fetchEndpoint(getFileContent, { worktree }, { query: { path: basePath, ref } });
           fileContentRef.current = body.content;
           setTotalLines(fileContentRef.current.split("\n").length);
-        } catch {
+        } catch (err) {
+          // Expand is best-effort: network errors and 404/413 (deleted or large file) are expected
+          if (!(err instanceof Error)) throw err;
           return;
         }
       }

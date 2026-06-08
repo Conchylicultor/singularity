@@ -90,7 +90,8 @@ export async function fetchEndpoint<
     let errorBody: unknown;
     try {
       errorBody = await res.json();
-    } catch {
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
       errorBody = await res.text().catch(() => null);
     }
     reportEndpointError({ route: endpoint.route, status: res.status, body: errorBody });

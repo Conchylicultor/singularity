@@ -387,7 +387,8 @@ function walkSourceFiles(dir: string, out: string[]) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return;
   }
   for (const e of entries) {
@@ -406,7 +407,8 @@ function safeRead(path: string): string | null {
   try {
     if (!statSync(path).isFile()) return null;
     return readFileSync(path, "utf-8");
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return null;
   }
 }
@@ -443,7 +445,8 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
   let data: { name?: unknown };
   try {
     data = JSON.parse(readFileSync(pkgPath, "utf-8"));
-  } catch {
+  } catch (err) {
+    if (!(err instanceof SyntaxError)) throw err;
     violations.push({
       rule: "package",
       file: relPkg,
@@ -486,7 +489,8 @@ function checkUnknownDirs(
   let entries;
   try {
     entries = readdirSync(p.absPath, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return;
   }
   for (const e of entries) {
@@ -511,7 +515,8 @@ function dirContainsTsFiles(dir: string): boolean {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT" && (err as NodeJS.ErrnoException).code !== "EACCES" && (err as NodeJS.ErrnoException).code !== "ENOTDIR") throw err;
     return false;
   }
   for (const e of entries) {

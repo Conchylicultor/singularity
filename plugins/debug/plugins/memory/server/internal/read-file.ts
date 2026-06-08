@@ -20,7 +20,8 @@ export const readMemoryFile = implement(readMemoryFileEndpoint, async ({ params 
   try {
     const content = await readFile(join(dir, name), "utf-8");
     return { ok: true, content };
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     throw new HttpError(404, "File not found");
   }
 });

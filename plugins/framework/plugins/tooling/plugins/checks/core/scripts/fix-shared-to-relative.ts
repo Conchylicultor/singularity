@@ -27,7 +27,8 @@ function walkTs(dir: string, out: string[]) {
   let entries;
   try {
     entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
+  } catch (err) {
+    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return;
   }
   for (const e of entries) {
@@ -156,7 +157,8 @@ for (const barrel of barrels) {
     let content: string;
     try {
       content = readFileSync(srcFile, "utf-8");
-    } catch {
+    } catch (err) {
+      if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
       continue;
     }
     // Check alias barrel import: @plugins/<plugin>/shared" (not @plugins/<plugin>/shared/)

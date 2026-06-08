@@ -45,6 +45,7 @@ async function getTableNames(file: string): Promise<string[]> {
         return [];
       })
       .filter(Boolean);
+  // eslint-disable-next-line promise-safety/no-bare-catch -- best-effort pg_restore introspection; any failure (spawn error, parse error) safely degrades to empty table list
   } catch {
     return [];
   }

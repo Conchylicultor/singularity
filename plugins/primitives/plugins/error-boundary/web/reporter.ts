@@ -25,6 +25,7 @@ export function callReporter(
 ): Promise<unknown> | unknown | void {
   try {
     return reporter?.(report);
+    // eslint-disable-next-line promise-safety/no-bare-catch -- reporter is the crash handler; propagating its own error would cause infinite recursion or an unhandled exception inside the error boundary catch path
   } catch {
     return undefined;
   }
