@@ -1,5 +1,6 @@
 import {
   closeSync,
+  type Dirent,
   mkdirSync,
   openSync,
   readdirSync,
@@ -162,15 +163,20 @@ export function isWorktreeOpActive(slug: string): boolean {
 // Every live op marker across all worktrees, parsed into WorktreeOpInfo. Reaps
 // dead/garbage markers as it scans, like isWorktreeOpActive.
 export function listActiveWorktreeOps(): WorktreeOpInfo[] {
-  let slugs: string[];
+  let entries: Dirent[];
   try {
-    slugs = readdirSync(worktreesDir());
+    entries = readdirSync(worktreesDir(), { withFileTypes: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") return [];
     throw err;
   }
   const out: WorktreeOpInfo[] = [];
-  for (const slug of slugs) {
+  for (const entry of entries) {
+    // worktreesDir() holds both worktree directories AND per-worktree gateway
+    // registration files (`<slug>.json`); only directories carry an ops/ subdir,
+    // so descending into a `.json` file would throw ENOTDIR. Skip non-dirs.
+    if (!entry.isDirectory()) continue;
+    const slug = entry.name;
     let files: string[];
     try {
       files = readdirSync(opsDir(slug));

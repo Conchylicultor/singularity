@@ -1,3 +1,4 @@
+import type { Dirent } from "node:fs";
 import { readdir } from "node:fs/promises";
 import { basename, join } from "node:path";
 import { isNotNull } from "drizzle-orm";
@@ -204,13 +205,16 @@ async function walkPerSession({
     projectTotal.set(proj, p);
   }
 
-  let dirs: string[];
+  let entries: Dirent[];
   try {
-    dirs = await readdir(CLAUDE_PROJECTS_DIR);
+    entries = await readdir(CLAUDE_PROJECTS_DIR, { withFileTypes: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
     return [];
   }
+  // Skip non-directory entries (e.g. a stray .DS_Store): only project
+  // directories hold session .jsonl files, and readdir'ing a file throws ENOTDIR.
+  const dirs = entries.filter((e) => e.isDirectory()).map((e) => e.name);
 
   // Flatten (projectDir, fileName) pairs, then read all files in parallel.
   const tasks: Promise<PerSession | null>[] = [];
