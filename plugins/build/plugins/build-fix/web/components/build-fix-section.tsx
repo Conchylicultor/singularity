@@ -3,6 +3,7 @@ import { Button } from "@/components/ui/button";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { toast } from "@plugins/notifications/web";
 import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
@@ -46,6 +47,16 @@ function BuildFixButton({ runId, run }: { runId: string; run: BuildRun }) {
       placeholder="Extra context (optional) — e.g. what changed, suspected cause…"
       align="start"
       width="w-[480px]"
+      openAfterLaunch={false}
+      onLaunched={(conv) => {
+        toast({
+          type: "build",
+          title: "Investigating build failure",
+          description: "Agent launched in the background — open it from here or the bell.",
+          variant: "info",
+          linkTo: `/c/${conv.id}`,
+        });
+      }}
       getRequest={(userText) => {
         const failedSteps = logs?.steps.filter((s) => !s.success) ?? [];
         const errorText = failedSteps

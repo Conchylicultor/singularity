@@ -13,6 +13,12 @@ export type LaunchAgentPopoverProps = {
   align?: "start" | "end";
   width?: string;
   disabled?: boolean;
+  /**
+   * Whether to open the freshly created conversation in a pane. Defaults to
+   * `true`. Pass `false` to launch in the background — the caller typically
+   * surfaces a confirmation toast via `onLaunched` instead.
+   */
+  openAfterLaunch?: boolean;
   onLaunched?: (conversation: Conversation) => void;
 };
 
@@ -25,6 +31,7 @@ export function LaunchAgentPopover({
   align = "start",
   width = "w-[420px]",
   disabled,
+  openAfterLaunch = true,
   onLaunched,
 }: LaunchAgentPopoverProps) {
   const [open, setOpen] = useState(false);
@@ -52,6 +59,7 @@ export function LaunchAgentPopover({
       <LaunchControl
         size="sm"
         disabled={disabled}
+        openAfterLaunch={openAfterLaunch}
         getRequest={() => getRequest(text)}
         onLaunched={(conv) => {
           setOpen(false);
