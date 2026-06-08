@@ -1468,6 +1468,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `CentralPluginDefinition`, `DependsOnEntry`, `HttpHandler`, `LoadedCentralPlugin`, `Registration`, `Resource`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `WsData`, `WsHandler`; Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
     - **`cli`**
+    - **`resource-runtime`**
+      - Core:
+        - Exports: Types: `DependsOnEntry`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `createResourceRuntime`
     - **`server-core`**
       - Core:
         - Exports: Types: `DependsOnEntry`, `HttpHandler`, `LoadedServerPlugin`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`; Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `markServerReady`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`

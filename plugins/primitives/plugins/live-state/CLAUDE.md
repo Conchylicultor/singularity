@@ -18,9 +18,10 @@ Every resource **must** declare a `schema` (Zod) — it is required on
 `defineResource` (both runtimes) and guarded at registration. The payload is
 parsed against that schema **twice**, by design:
 
-- **On the server, at load time** — the single chokepoint (`timedLoad` in
-  server-core, `loadValidated` in central-core) parses the loader output before
-  any broadcast or HTTP response. A payload that violates its schema throws
+- **On the server, at load time** — the single chokepoint (`timedLoad` in the
+  shared `@plugins/framework/plugins/resource-runtime/core`, which now backs both
+  the server and central channels) parses the loader output before any broadcast
+  or HTTP response. A payload that violates its schema throws
   there and is handled by the existing loader-failure path (reported + the send
   skipped / a `sub-error` returned) rather than shipping a malformed value. This
   is the single structural guarantee that every live-state payload matches its

@@ -50,6 +50,12 @@ a `createResourceRuntime({ wrapLoad, reportError, declare })` factory in a new
 resource, so by the design doc's own criterion it is premature, and folding a
 load-bearing refactor into this schema change muddies both. Deferred to a task.
 
+> **Update (done):** the unification has since landed. Both runtimes now
+> instantiate one shared `createResourceRuntime` factory in
+> `plugins/framework/plugins/resource-runtime/core`, with server-core/central-core
+> kept as thin facades. See
+> `research/2026-06-08-global-unify-live-state-resource-runtime.md`.
+
 ## Changes
 
 ### 1. `plugins/framework/plugins/server-core/core/resources.ts`

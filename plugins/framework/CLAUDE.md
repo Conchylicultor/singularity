@@ -8,6 +8,7 @@
 - Sub-plugins:
   - **`central-core`**
   - **`cli`**
+  - **`resource-runtime`**
   - **`server-core`**
   - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
   - **`web-core`**
