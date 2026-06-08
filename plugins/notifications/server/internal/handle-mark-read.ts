@@ -11,5 +11,4 @@ export const handleMarkAllRead = implement(markAllNotificationsRead, async () =>
     .set({ read: true })
     .where(and(eq(_notifications.dismissed, false), eq(_notifications.read, false)));
   notificationsResource.notify();
-  return { ok: true };
 });

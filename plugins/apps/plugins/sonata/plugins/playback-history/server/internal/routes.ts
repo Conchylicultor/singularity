@@ -21,5 +21,4 @@ export const handleRecordPlay = implement(recordPlay, async ({ params }) => {
       },
     });
   playbackHistoryLiveResource.notify();
-  return { ok: true };
 });

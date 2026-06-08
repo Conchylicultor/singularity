@@ -19,4 +19,8 @@ export const getBuildProfiling = defineEndpoint({
 
 export const getBuildRunProfileByWorktree = defineEndpoint({
   route: "GET /api/debug/profiling/build/:worktree/:buildId",
+  response: z.object({
+    spans: z.array(SpanSchema),
+    totalMs: z.number(),
+  }),
 });

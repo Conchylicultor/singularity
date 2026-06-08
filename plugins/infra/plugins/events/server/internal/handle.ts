@@ -35,7 +35,6 @@ export const handleDeleteTrigger = implement(
     if (!params.id) throw new HttpError(400, "id required");
     await deleteTrigger(params.id);
     eventTriggersResource.notify();
-    return { ok: true };
   },
 );
 
@@ -52,6 +51,5 @@ export const handlePatchTrigger = implement(
         .where(eq((table as any).id as AnyPgColumn, params.id));
     }
     eventTriggersResource.notify();
-    return { ok: true };
   },
 );

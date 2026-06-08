@@ -14,6 +14,4 @@ export const handleHoldAndExit = implement(holdAndExit, async ({ params }) => {
   await markConversationClosed(params.id);
   await deleteConversation(params.id);
   notifyConversationsChanged();
-
-  return { ok: true };
 });

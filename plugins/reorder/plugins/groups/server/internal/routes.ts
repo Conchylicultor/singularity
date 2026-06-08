@@ -28,7 +28,6 @@ export const handlePatchGroup = implement(
     const { slotId, ...patch } = body;
     const ok = await updateGroup(params.id, slotId, patch);
     if (!ok) throw new HttpError(404, "Not found");
-    return { ok: true };
   },
 );
 
@@ -37,7 +36,6 @@ export const handleDeleteGroup = implement(
   async ({ params, body }) => {
     const ok = await deleteGroup(params.id, body.slotId);
     if (!ok) throw new HttpError(404, "Not found");
-    return { ok: true };
   },
 );
 
@@ -45,7 +43,6 @@ export const handleAddMembers = implement(
   addMembersEndpoint,
   async ({ params, body }) => {
     await addMembersToGroup(params.id, body.slotId, body.contributionIds);
-    return { ok: true };
   },
 );
 
@@ -54,6 +51,5 @@ export const handleRemoveMember = implement(
   async ({ params }) => {
     const ok = await removeMember(params.slotId, params.contributionId);
     if (!ok) throw new HttpError(404, "Not a member of any group");
-    return { ok: true };
   },
 );

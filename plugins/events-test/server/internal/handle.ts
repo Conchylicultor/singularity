@@ -32,7 +32,6 @@ export const handleEmit = implement(emitEventsTest, async ({ body }) => {
     userId: body.userId,
     message: body.message ?? "hello",
   });
-  return { ok: true };
 });
 
 // Exercises the Layer-1 `.enqueue()` path: no trigger row is involved, the
@@ -50,7 +49,6 @@ export const handleLog = implement(getEventsTestLog, () => {
 
 export const handleReset = implement(resetEventsTest, () => {
   resetLog();
-  return { ok: true };
 });
 
 // Poll graphile_worker.jobs until no jobs for the shared jobs.run task are
@@ -80,12 +78,10 @@ export const handleDeleteTrigger = implement(deleteEventsTestTrigger, async ({ p
   const { id } = params;
   if (!id) throw new HttpError(400, "id required");
   await deleteTrigger(id);
-  return { ok: true };
 });
 
 export const handleDeleteTargeting = implement(deleteEventsTestTargeting, async ({ body }) => {
   await deleteTriggersFor(logPing, { label: body.label });
-  return { ok: true };
 });
 
 export const handleListTriggers = implement(listEventsTestTriggers, async () => {

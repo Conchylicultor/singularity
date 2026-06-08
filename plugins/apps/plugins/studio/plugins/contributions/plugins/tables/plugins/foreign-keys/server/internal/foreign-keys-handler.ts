@@ -14,7 +14,12 @@ export const handleGetForeignKeys = implement(getTableForeignKeys, async ({ para
   }
 
   const [outgoingResult, incomingResult] = await Promise.all([
-    db.execute(
+    db.execute<{
+      constraint_name: string;
+      column_name: string;
+      foreign_table: string;
+      foreign_column: string;
+    }>(
       sql`SELECT tc.constraint_name, kcu.column_name,
              ccu.table_name AS foreign_table, ccu.column_name AS foreign_column
         FROM information_schema.table_constraints tc
@@ -26,7 +31,12 @@ export const handleGetForeignKeys = implement(getTableForeignKeys, async ({ para
          AND tc.table_name = ${tableName}
        ORDER BY tc.constraint_name, kcu.column_name`,
     ),
-    db.execute(
+    db.execute<{
+      constraint_name: string;
+      source_table: string;
+      source_column: string;
+      target_column: string;
+    }>(
       sql`SELECT tc.constraint_name, tc.table_name AS source_table, kcu.column_name AS source_column,
              ccu.column_name AS target_column
         FROM information_schema.table_constraints tc

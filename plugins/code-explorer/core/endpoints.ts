@@ -18,6 +18,7 @@ export const getFileContent = defineEndpoint({
 
 export const getFileDiff = defineEndpoint({
   route: "GET /api/code/:worktree/diff",
+  response: z.object({ diff: z.string() }),
 });
 
 // Returns binary image data — not wrapped with implement()
@@ -37,4 +38,9 @@ export const getPushFiles = defineEndpoint({
 
 export const getCommitFiles = defineEndpoint({
   route: "GET /api/code/:worktree/commit",
+  response: z.object({
+    files: z.array(EditedFileSchema),
+    baseSha: z.string(),
+    headSha: z.string(),
+  }),
 });

@@ -22,5 +22,4 @@ export const handleDemote = implement(demoteQueue, async ({ body }) => {
   });
 
   queueRanksResource.notify();
-  return { ok: true };
 });

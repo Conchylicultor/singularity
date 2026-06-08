@@ -21,5 +21,4 @@ export const handleRerank = implement(rerankQueue, async ({ body }) => {
   });
 
   queueRanksResource.notify();
-  return { ok: true };
 });

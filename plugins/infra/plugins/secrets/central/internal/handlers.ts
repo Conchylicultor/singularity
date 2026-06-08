@@ -23,12 +23,10 @@ export const handleGet = implement(secretsGet, async ({ body }) => {
 
 export const handleSet = implement(secretsSet, async ({ body }) => {
   await setLocal(body.namespace, body.key, body.value);
-  return { ok: true };
 });
 
 export const handleDelete = implement(secretsDelete, async ({ body }) => {
   await deleteLocal(body.namespace, body.key);
-  return { ok: true };
 });
 
 export const handleHas = implement(secretsHas, async ({ body }) => {

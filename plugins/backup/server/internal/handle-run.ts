@@ -4,5 +4,5 @@ import { backupRunJob } from "./backup-job";
 
 export const handleRun = implement(runBackup, async () => {
   const { jobId } = await backupRunJob.enqueue({ trigger: "manual" });
-  return { ok: true, jobId };
+  return { ok: true as const, jobId };
 });

@@ -7,7 +7,6 @@ export const handleResume = implement(resumeConversationEndpoint, async ({ param
   try {
     await resumeConversation(params.id);
     notifyConversationsChanged();
-    return { ok: true };
   } catch (err) {
     const msg = err instanceof Error ? err.message : String(err);
     throw new HttpError(409, msg);

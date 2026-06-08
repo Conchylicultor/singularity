@@ -10,5 +10,4 @@ import { pushAndExitConfig } from "../../shared/config";
 // surfaces an immediate inject failure to the clicking tab as a toast.
 export const handleStart = implement(startPushAndExit, async ({ params }) => {
   await sendTurn(params.id, getConfig(pushAndExitConfig).prompt);
-  return { ok: true };
 });

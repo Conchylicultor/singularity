@@ -19,6 +19,7 @@ const SecretListBodySchema = z.object({
 export const secretsGet = defineEndpoint({
   route: "POST /api/secrets/get",
   body: SecretRefBodySchema,
+  response: z.object({ value: z.string().nullable() }),
 });
 
 export const secretsSet = defineEndpoint({
@@ -34,14 +35,20 @@ export const secretsDelete = defineEndpoint({
 export const secretsHas = defineEndpoint({
   route: "POST /api/secrets/has",
   body: SecretRefBodySchema,
+  response: z.object({ has: z.boolean() }),
 });
 
 export const secretsMeta = defineEndpoint({
   route: "POST /api/secrets/meta",
   body: SecretRefBodySchema,
+  response: z.object({
+    set: z.boolean(),
+    updatedAt: z.number().optional(),
+  }),
 });
 
 export const secretsList = defineEndpoint({
   route: "POST /api/secrets/list",
   body: SecretListBodySchema,
+  response: z.object({ keys: z.array(z.string()) }),
 });

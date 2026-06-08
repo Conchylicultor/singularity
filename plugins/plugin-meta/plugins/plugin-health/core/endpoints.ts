@@ -1,9 +1,14 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
-import { PluginStalenessSchema, ReviewTaskSummarySchema } from "./schemas";
+import {
+  PluginHealthReviewSchema,
+  PluginStalenessSchema,
+  ReviewTaskSummarySchema,
+} from "./schemas";
 
 export const getPluginHealthReviews = defineEndpoint({
   route: "GET /api/plugin-health/reviews",
+  response: z.array(PluginHealthReviewSchema),
 });
 
 export const getPluginStaleness = defineEndpoint({

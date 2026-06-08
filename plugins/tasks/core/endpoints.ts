@@ -56,7 +56,7 @@ export type AddDependencyBody = z.infer<typeof AddDependencyBodySchema>;
 
 // Wire-format response schema: plain JSON types (no Rank class, no Date class).
 // Consumers that need the rich domain types should parse via TaskSchema locally.
-const TaskResponseSchema = z.object({
+export const TaskResponseSchema = z.object({
   id: z.string(),
   title: z.string(),
   description: z.string().nullable(),
@@ -79,6 +79,7 @@ const TaskResponseSchema = z.object({
 
 export const listTasks = defineEndpoint({
   route: "GET /api/tasks",
+  response: z.array(TaskResponseSchema),
 });
 
 export const createTask = defineEndpoint({
@@ -107,10 +108,20 @@ export const getTask = defineEndpoint({
 export const updateTask = defineEndpoint({
   route: "PATCH /api/tasks/:id",
   body: UpdateTaskBodySchema,
+  response: TaskResponseSchema,
+});
+
+export const TaskAttachmentSchema = z.object({
+  id: z.string(),
+  filename: z.string(),
+  mime: z.string(),
+  size: z.number(),
+  createdAt: dateString(),
 });
 
 export const getTaskAttachments = defineEndpoint({
   route: "GET /api/tasks/:id/attachments",
+  response: z.array(TaskAttachmentSchema),
 });
 
 export const setTaskAutoStart = defineEndpoint({

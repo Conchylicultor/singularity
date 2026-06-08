@@ -6,11 +6,9 @@ import { conversationNotesResource } from "./resource";
 export const handleUpsertNote = implement(upsertNote, async ({ params, body }) => {
   await conversationNotes.upsert(params.conversationId, { notes: body.notes });
   conversationNotesResource.notify();
-  return { ok: true };
 });
 
 export const handleDeleteNote = implement(deleteNote, async ({ params }) => {
   await conversationNotes.delete(params.conversationId);
   conversationNotesResource.notify();
-  return { ok: true };
 });

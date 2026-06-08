@@ -2,6 +2,8 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { ServerSchema } from "./schemas";
 
+const ServerRowSchema = ServerSchema.omit({ sshKeyConfigured: true });
+
 export const CreateServerBodySchema = z.object({
   name: z.string().optional(),
   host: z.string(),
@@ -22,6 +24,7 @@ export type UpdateServerBody = z.infer<typeof UpdateServerBodySchema>;
 
 export const listServers = defineEndpoint({
   route: "GET /api/deploy/servers",
+  response: z.array(ServerSchema),
 });
 
 export const createServer = defineEndpoint({
@@ -32,11 +35,13 @@ export const createServer = defineEndpoint({
 
 export const getServer = defineEndpoint({
   route: "GET /api/deploy/servers/:id",
+  response: ServerSchema,
 });
 
 export const updateServer = defineEndpoint({
   route: "PATCH /api/deploy/servers/:id",
   body: UpdateServerBodySchema,
+  response: ServerRowSchema,
 });
 
 export const deleteServer = defineEndpoint({

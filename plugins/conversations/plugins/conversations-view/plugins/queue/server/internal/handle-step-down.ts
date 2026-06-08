@@ -30,5 +30,4 @@ export const handleStepDown = implement(stepDownQueue, async ({ body }) => {
   });
 
   queueRanksResource.notify();
-  return { ok: true };
 });

@@ -13,5 +13,4 @@ export const handleDismiss = implement(dismissNotification, async ({ params }) =
     .set({ dismissed: true })
     .where(eq(_notifications.id, id));
   notificationsResource.notify();
-  return { ok: true };
 });

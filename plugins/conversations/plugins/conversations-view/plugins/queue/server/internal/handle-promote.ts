@@ -26,5 +26,4 @@ export const handlePromote = implement(promoteQueue, async ({ body }) => {
   });
 
   queueRanksResource.notify();
-  return { ok: true };
 });

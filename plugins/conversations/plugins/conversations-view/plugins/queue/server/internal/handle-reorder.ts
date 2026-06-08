@@ -8,7 +8,7 @@ import { cascadeBlockedDependents } from "./cascade-blocked";
 
 export const handleReorder = implement(reorderQueue, async ({ body }) => {
   const { conversationId, targetId, zone } = body;
-  if (conversationId === targetId) return { ok: true };
+  if (conversationId === targetId) return;
 
   await db.transaction(async (tx) => {
     await lockDeck(tx);
@@ -20,5 +20,4 @@ export const handleReorder = implement(reorderQueue, async ({ body }) => {
   });
 
   queueRanksResource.notify();
-  return { ok: true };
 });

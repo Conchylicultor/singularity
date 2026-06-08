@@ -30,6 +30,7 @@ export type AddMembersBody = z.infer<typeof addMembersBodySchema>;
 export const createGroup = defineEndpoint({
   route: "POST /api/reorder/:slotId/groups",
   body: createGroupBodySchema,
+  response: z.object({ id: z.string() }),
 });
 
 export const patchGroup = defineEndpoint({

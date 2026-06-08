@@ -9,5 +9,4 @@ export const handleDelete = implement(deleteConversationEndpoint, async ({ query
   }
   await deleteConversation(query.name);
   await deleteConversationRow(query.name);
-  return { ok: true };
 });

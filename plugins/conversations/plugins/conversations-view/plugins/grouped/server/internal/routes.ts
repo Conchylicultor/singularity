@@ -22,22 +22,18 @@ export const handleCreateGroup = implement(createConversationGroup, async ({ bod
 export const handlePatchGroup = implement(patchConversationGroup, async ({ params, body }) => {
   const ok = await updateGroup(params.id, body);
   if (!ok) throw new HttpError(404, "Not found");
-  return { ok: true };
 });
 
 export const handleDeleteGroup = implement(deleteConversationGroup, async ({ params }) => {
   const ok = await deleteGroup(params.id);
   if (!ok) throw new HttpError(404, "Not found");
-  return { ok: true };
 });
 
 export const handleAddMember = implement(addConversationGroupMembers, async ({ params, body }) => {
   await addMembersToGroup(params.id, body.conversationIds);
-  return { ok: true };
 });
 
 export const handleRemoveMember = implement(removeConversationGroupMember, async ({ params }) => {
   const ok = await removeMember(params.conversationId);
   if (!ok) throw new HttpError(404, "Not a member of any group");
-  return { ok: true };
 });

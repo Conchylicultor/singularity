@@ -41,30 +41,33 @@ export const getPushProfiling = defineEndpoint({
   }),
 });
 
-export interface PushStep {
-  name: string;
-  startMs: number;
-  durationMs: number;
-}
+export const PushStepSchema = z.object({
+  name: z.string(),
+  startMs: z.number(),
+  durationMs: z.number(),
+});
+export type PushStep = z.infer<typeof PushStepSchema>;
 
-export interface PushDetail {
-  pushId: string;
-  branch: string;
-  outcome: string;
-  mode: "worktree" | "from-main";
-  conversationId: string | null;
-  startedAt: string;
-  lockRequestedAt: string;
-  lockAcquiredAt: string;
-  completedAt: string | null;
-  preLockMs: number;
-  waitMs: number;
-  holdMs: number;
-  totalMs: number;
-  interrupted: boolean;
-  steps: PushStep[];
-}
+export const PushDetailSchema = z.object({
+  pushId: z.string(),
+  branch: z.string(),
+  outcome: z.string(),
+  mode: z.enum(["worktree", "from-main"]),
+  conversationId: z.string().nullable(),
+  startedAt: z.string(),
+  lockRequestedAt: z.string(),
+  lockAcquiredAt: z.string(),
+  completedAt: z.string().nullable(),
+  preLockMs: z.number(),
+  waitMs: z.number(),
+  holdMs: z.number(),
+  totalMs: z.number(),
+  interrupted: z.boolean(),
+  steps: z.array(PushStepSchema),
+});
+export type PushDetail = z.infer<typeof PushDetailSchema>;
 
 export const getPushDetail = defineEndpoint({
   route: "GET /api/debug/profiling/push/:pushId",
+  response: PushDetailSchema,
 });

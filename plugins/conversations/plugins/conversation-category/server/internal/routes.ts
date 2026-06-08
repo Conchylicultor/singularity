@@ -41,12 +41,9 @@ export const handleSetCategory = implement(setConversationCategory, async ({ par
     source: "manual",
   });
   conversationCategoriesResource.notify();
-
-  return { ok: true };
 });
 
 export const handleClearCategory = implement(clearConversationCategory, async ({ params }) => {
   await conversationCategory.delete(params.conversationId);
   conversationCategoriesResource.notify();
-  return { ok: true };
 });

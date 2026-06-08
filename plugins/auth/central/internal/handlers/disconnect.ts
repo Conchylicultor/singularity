@@ -5,5 +5,4 @@ import { disconnectAccount } from "../actions";
 /** POST /api/auth/disconnect/:provider */
 export const handleDisconnect = implement(disconnect, async ({ params, body }) => {
   await disconnectAccount(params.provider, body.accountId);
-  return { ok: true };
 });

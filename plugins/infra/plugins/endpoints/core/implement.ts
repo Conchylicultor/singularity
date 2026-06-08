@@ -27,8 +27,6 @@ type JsonCompat<T> =
   T extends object ? { [K in keyof T]: JsonCompat<T[K]> } :
   T;
 
-type ImplementReturn<T> = [T] extends [void] ? unknown : JsonCompat<T>;
-
 export function implement<
   Route extends string,
   TParams,
@@ -42,7 +40,7 @@ export function implement<
     body: TBody;
     query: TQuery;
     req: Request;
-  }) => Promise<ImplementReturn<TResponse>> | ImplementReturn<TResponse>,
+  }) => Promise<JsonCompat<TResponse>> | JsonCompat<TResponse>,
 ): HttpHandler {
   return async (req: Request, params: Record<string, string>) => {
     try {

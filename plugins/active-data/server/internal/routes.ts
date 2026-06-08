@@ -39,7 +39,6 @@ export const handlePutBinding = implement(putBinding, async ({ params, body }) =
     });
 
   activeDataBindingsResource.notify({ conversationId: params.conversationId });
-  return { ok: true };
 });
 
 export const handleDeleteBinding = implement(deleteBinding, async ({ params }) => {
@@ -57,5 +56,4 @@ export const handleDeleteBinding = implement(deleteBinding, async ({ params }) =
     );
 
   activeDataBindingsResource.notify({ conversationId: params.conversationId });
-  return { ok: true };
 });

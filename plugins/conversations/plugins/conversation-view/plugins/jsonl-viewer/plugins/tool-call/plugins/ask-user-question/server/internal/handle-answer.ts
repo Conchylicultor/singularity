@@ -6,5 +6,4 @@ export const handleAnswer = implement(answerAskUserQuestion, async ({ params, bo
   // Dismiss the AskUserQuestion form, wait for it to clear, then send the
   // answers as a turn — all atomic inside answerPrompt() (see its contract).
   await answerPrompt(params.id, body.text);
-  return { ok: true };
 });

@@ -42,6 +42,4 @@ export const handlePostTurn = implement(postConversationTurn, async ({ params, b
       text: body.text,
     });
   }
-
-  return { ok: true, attachmentIds };
 });

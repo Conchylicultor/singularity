@@ -41,6 +41,7 @@ export type DeleteConversationQuery = z.infer<typeof DeleteConversationQuerySche
 
 export const listConversations = defineEndpoint({
   route: "GET /api/conversations",
+  response: z.array(ConversationSchema),
 });
 
 export const listGoneConversations = defineEndpoint({
@@ -78,9 +79,20 @@ export const stopConversation = defineEndpoint({
   response: z.object({ ok: z.boolean(), rewindText: z.string().nullable() }),
 });
 
+const TurnSchema = z.object({
+  at: z.string(),
+  role: z.enum(["user", "assistant"]),
+  text: z.string(),
+  stopReason: z.string().optional(),
+  messageId: z.string().optional(),
+});
+
 export const listConversationTurns = defineEndpoint({
   route: "GET /api/conversations/:id/turns",
   query: ListTurnsQuerySchema,
+  response: z.object({
+    turns: z.array(TurnSchema),
+  }),
 });
 
 export const closeConversation = defineEndpoint({

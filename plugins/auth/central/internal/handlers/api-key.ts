@@ -9,7 +9,7 @@ import { setApiKey } from "../actions";
 export const handleSetApiKey = implement(setApiKeyEndpoint, async ({ params, body }) => {
   try {
     const identity = await setApiKey(params.provider, body.apiKey);
-    return { ok: true, identity };
+    return { ok: true as const, identity };
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }

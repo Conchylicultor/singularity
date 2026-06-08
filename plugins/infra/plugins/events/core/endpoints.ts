@@ -1,12 +1,15 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { EmissionsPayloadSchema, TriggersPayloadSchema } from "./resources";
 
 export const listEmissions = defineEndpoint({
   route: "GET /api/events/emissions",
+  response: EmissionsPayloadSchema,
 });
 
 export const listTriggers = defineEndpoint({
   route: "GET /api/events/triggers",
+  response: TriggersPayloadSchema,
 });
 
 export const deleteTriggerEndpoint = defineEndpoint({

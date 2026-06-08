@@ -14,7 +14,15 @@ export const CrashReportBodySchema = z.object({
 });
 export type CrashReportBody = z.infer<typeof CrashReportBodySchema>;
 
+export const CrashReportResultSchema = z.object({
+  taskId: z.string().nullable(),
+  wasNew: z.boolean(),
+  crashLoop: z.boolean(),
+});
+export type CrashReportResult = z.infer<typeof CrashReportResultSchema>;
+
 export const reportCrash = defineEndpoint({
   route: "POST /api/crashes",
   body: CrashReportBodySchema,
+  response: CrashReportResultSchema,
 });

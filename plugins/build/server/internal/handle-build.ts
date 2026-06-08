@@ -4,5 +4,4 @@ import { triggerBuild } from "./run-build";
 
 export const handleBuild = implement(triggerBuildEndpoint, () => {
   triggerBuild("manual");
-  return { ok: true };
 });

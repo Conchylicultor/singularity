@@ -23,7 +23,6 @@ export const handleRetryJob = implement(retryJob, async ({ params }) => {
   const utils = await getWorkerUtils();
   await utils.rescheduleJobs([params.id], { attempts: 0, runAt: new Date() });
   jobsListResource.notify();
-  return { ok: true };
 });
 
 export const handleCancelJob = implement(cancelJob, async ({ params }) => {
@@ -31,5 +30,4 @@ export const handleCancelJob = implement(cancelJob, async ({ params }) => {
   const utils = await getWorkerUtils();
   await utils.completeJobs([params.id]);
   jobsListResource.notify();
-  return { ok: true };
 });

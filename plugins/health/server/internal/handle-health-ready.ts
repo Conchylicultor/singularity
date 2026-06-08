@@ -4,5 +4,5 @@ import { getHealthReady } from "../../shared/endpoints";
 
 export const handleHealthReady = implement(getHealthReady, () => {
   if (!isServerReady()) throw new HttpError(503, "server not ready");
-  return { ready: true };
+  return { ready: true as const };
 });

@@ -11,5 +11,4 @@ export const handleDismissAll = implement(dismissAllNotifications, async () => {
     .set({ dismissed: true })
     .where(eq(_notifications.dismissed, false));
   notificationsResource.notify();
-  return { ok: true };
 });
