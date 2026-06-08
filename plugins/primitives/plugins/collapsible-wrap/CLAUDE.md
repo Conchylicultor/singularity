@@ -25,7 +25,7 @@ and rows 2+ spill DOWN over the content below.
 For the spill to escape `PaneChrome`'s fixed-height band, the host must opt the band into
 `overflow-visible` via **`<PaneChrome headerSpill>`** (default is `overflow-hidden`, clipped).
 This is the deliberate, sanctioned home for "a header that can reveal overflow" — the chrome
-owns the band, so the chrome grants the spill. The expanded box is lifted (`z-50`) so the
+owns the band, so the chrome grants the spill. The expanded box is lifted (`z-popover`) so the
 spilled rows paint over the body. Because a `max-height`-clamped box's own background can't
 paint overflowing content, a measured absolute **backdrop** (sized to the box's full
 `scrollHeight`) draws the popover panel behind the spilled rows.

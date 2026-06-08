@@ -161,7 +161,7 @@ export function CollapsibleWrap({
   // ResizeObserver, and oscillating row 1 between two positions. Keeping it a
   // sibling of `wrapRef` breaks that feedback path by construction.
   const wrapBox = (
-    <div className={cn("relative min-w-0 flex-1", expanded && "z-50")}>
+    <div className={cn("relative min-w-0 flex-1", expanded && "z-popover")}>
       {showBackdrop && (
         <div
           aria-hidden
