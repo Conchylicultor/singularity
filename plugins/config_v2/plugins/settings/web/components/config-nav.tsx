@@ -82,9 +82,6 @@ export function ConfigNav() {
           runtimes: { web: true, server: false, central: false },
           children: [],
           facets: {},
-          compositionRoot: false,
-          folders: [],
-          looseFiles: [],
         };
         pruned.push({ node, registrations: orphanRegs, children: [] });
       }

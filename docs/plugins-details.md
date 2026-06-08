@@ -1140,6 +1140,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`migrations`** — DDL lifecycle: migration runner and SQL files.
       - Server:
         - Exports: Values: `runMigrations`
+      - Structure:
+        - Non-standard folders: `data/`
+        - Loose top-level files: `drizzle.config.ts`
     - **`pgbouncer`** — PgBouncer connection pooler for the embedded Postgres cluster. Provides path constants for connection routing.
       - Server:
         - Exports: Values: `PGBOUNCER_PORT`, `PGBOUNCER_SOCKET_DIR`
@@ -1475,6 +1478,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
             - Exports: Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`; Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `runtimeNames`, `zone`
+          - Structure:
+            - Loose top-level files: `boundary-config.ts`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
@@ -1514,6 +1519,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Values: `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
     - **`web-core`**
+      - Structure:
+        - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
+        - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
         - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
@@ -1864,6 +1872,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-diff`** — Diff renderer for the slots facet (PR review).
               - Web:
                 - Contributes: `PluginChanges.DiffRenderer` "Slots"
+        - **`structure`**
+          - Core:
+            - Exports: Types: `StructureFacetData`; Values: `structureFacetDef`, `structureToComparable`
+          - Plugins:
+            - **`render-catalog`** — Aggregated cross-plugin structure-anomaly table in the Forge catalog.
+              - Web:
+                - Contributes: `Catalog.FacetTable` "Structure"
+            - **`render-detail`** — Per-plugin structure section in the plugin detail pane.
+              - Web:
+                - Contributes: `PluginViewSlots.Section` "structure" → `StructureDetailSection`
+            - **`render-diff`** — Diff renderer for the structure facet (PR review).
+              - Web:
+                - Contributes: `PluginChanges.DiffRenderer` "Structure"
     - **`parse-utils`**
       - Core:
         - Exports: Types: `BarrelExport`; Values: `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
@@ -1900,9 +1921,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "source-path" → `SourcePathSection`
-        - **`structure`** — Flags non-standard folders, stray top-level source files, and composition roots in the plugin detail pane.
-          - Web:
-            - Contributes: `PluginViewSlots.Section` "structure" → `StructureSection`
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "sub-plugins" → `SubPluginsSection`

@@ -21,9 +21,6 @@ const pluginNodeSchema: z.ZodType<PluginNode> = z.lazy(() =>
     }),
     children: z.array(pluginNodeSchema),
     facets: z.record(z.string(), z.unknown()),
-    compositionRoot: z.boolean(),
-    folders: z.array(z.object({ name: z.string(), standard: z.boolean() })),
-    looseFiles: z.array(z.string()),
   }),
 );
 
