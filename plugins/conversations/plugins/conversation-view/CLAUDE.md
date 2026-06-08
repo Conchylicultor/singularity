@@ -35,6 +35,7 @@
   - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
   - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
   - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
+  - **`push-counter`**
   - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
   - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
   - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).

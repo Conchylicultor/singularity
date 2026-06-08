@@ -19,6 +19,7 @@ export {
   discoverCollectedDirs,
   generatePluginRegistry,
   renderCollectedDirRegistry,
+  standardPluginDirs,
   type DiscoveredCollectedDir,
 } from "./plugin-registry-gen";
 

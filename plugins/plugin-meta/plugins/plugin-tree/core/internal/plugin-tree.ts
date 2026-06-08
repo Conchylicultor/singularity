@@ -35,6 +35,7 @@ export interface PluginNode {
   descriptions: Partial<Record<Runtime, string>>;
   loadBearing: boolean;
   collapsed: boolean;
+  compositionRoot: boolean;
   runtimes: Record<Runtime, boolean>;
   children: PluginNode[];
   facets: Record<string, unknown>;
@@ -49,24 +50,20 @@ export interface PluginTree {
 
 // ── Walk ────────────────────────────────────────────────────────────
 
+// Non-source noise skipped at every plugin position: node_modules and dot-dirs.
+// This is a stable denylist that never grows — unlike the old content gate, every
+// other directory at a plugin position is a plugin, irrespective of its contents.
+function isWalkable(name: string): boolean {
+  return name !== "node_modules" && !name.startsWith(".");
+}
+
 function findAllPluginDirs(pluginsRoot: string): string[] {
   const out: string[] = [];
   function walk(dir: string, depth: number) {
     if (depth > 10) return;
-    const hasWeb = existsSync(join(dir, "web", "index.ts"));
-    const hasServer = existsSync(join(dir, "server", "index.ts"));
-    const hasCentral = existsSync(join(dir, "central", "index.ts"));
-    const hasShared = existsSync(join(dir, "shared", "index.ts"));
-    const hasCore = existsSync(join(dir, "core", "index.ts"));
-    const hasCheck = existsSync(join(dir, "check", "index.ts"));
-    const hasLint = existsSync(join(dir, "lint", "index.ts"));
-    const hasFacet = existsSync(join(dir, "facet", "index.ts"));
-    const hasBarrel = hasWeb || hasServer || hasCentral || hasShared || hasCore || hasCheck || hasLint || hasFacet;
-    const isUmbrella =
-      !hasBarrel &&
-      existsSync(join(dir, "plugins")) &&
-      readdirSync(join(dir, "plugins"), { withFileTypes: true }).some((e) => e.isDirectory());
-    if ((hasBarrel || isUmbrella) && dir !== pluginsRoot) out.push(dir);
+    // Purely positional: any directory visited here (other than the root itself)
+    // sits at a plugin position, so it is a plugin.
+    if (dir !== pluginsRoot) out.push(dir);
 
     let entries;
     try {
@@ -76,12 +73,13 @@ function findAllPluginDirs(pluginsRoot: string): string[] {
     }
     for (const e of entries) {
       if (!e.isDirectory()) continue;
+      if (!isWalkable(e.name)) continue;
       if (dir === pluginsRoot) walk(join(dir, e.name), depth + 1);
       else if (e.name === "plugins") {
         const sub = join(dir, e.name);
         const childEntries = readdirSync(sub, { withFileTypes: true });
         for (const c of childEntries) {
-          if (c.isDirectory()) walk(join(sub, c.name), depth + 1);
+          if (c.isDirectory() && isWalkable(c.name)) walk(join(sub, c.name), depth + 1);
         }
       }
     }
@@ -134,12 +132,15 @@ function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
     (webSrc ? parseBoolField(webSrc, "collapsed") : false) ||
     (serverSrc ? parseBoolField(serverSrc, "collapsed") : false) ||
     (centralSrc ? parseBoolField(centralSrc, "collapsed") : false);
-  if (!collapsed) {
+  // Read package.json once for both the collapsed and compositionRoot markers.
+  let compositionRoot = false;
+  {
     const pkgSrc = readIfExists(join(dir, "package.json"));
     if (pkgSrc) {
       try {
         const pkg = JSON.parse(pkgSrc);
         if (pkg.singularity?.collapsed === true) collapsed = true;
+        if (pkg.singularity?.compositionRoot === true) compositionRoot = true;
       // eslint-disable-next-line promise-safety/no-bare-catch
       } catch {}
     }
@@ -165,6 +166,7 @@ function collectCoreFields(dir: string, pluginsRoot: string): CollectedPlugin {
       descriptions,
       loadBearing,
       collapsed,
+      compositionRoot,
       runtimes: {
         web: !!webIndex,
         server: !!serverIndex,

@@ -17,6 +17,22 @@ export interface PluginNode {
    * never a hardcoded literal. The tree endpoint always populates it.
    */
   facets: Record<string, unknown>;
+  /**
+   * Self-declared SPA/CLI bootstrap root (`package.json` `singularity.compositionRoot`),
+   * exempt from structural conformance (no barrel / non-standard package name is fine).
+   */
+  compositionRoot: boolean;
+  /**
+   * The plugin's immediate sub-directories, each tagged whether it is a
+   * recognized/standard plugin folder (runtime, collected-dir, or a fixed
+   * structural folder like `core`/`shared`/`plugins`/`bin`/`scripts`).
+   */
+  folders: { name: string; standard: boolean }[];
+  /**
+   * Top-level `.ts`/`.tsx` files sitting directly in the plugin dir — source that
+   * should normally live inside a runtime folder rather than at the plugin root.
+   */
+  looseFiles: string[];
 }
 
 export interface PluginTreePayload {

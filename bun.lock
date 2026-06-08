@@ -1568,6 +1568,10 @@
       "name": "@singularity/plugin-plugin-meta-plugin-view-source-path",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-view/plugins/structure": {
+      "name": "@singularity/plugin-plugin-meta-plugin-view-structure",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins": {
       "name": "@singularity/plugin-plugin-meta-plugin-view-sub-plugins",
       "version": "0.0.1",
@@ -3345,6 +3349,8 @@
     "@singularity/plugin-plugin-meta-plugin-view-runtimes": ["@singularity/plugin-plugin-meta-plugin-view-runtimes@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/runtimes"],
 
     "@singularity/plugin-plugin-meta-plugin-view-source-path": ["@singularity/plugin-plugin-meta-plugin-view-source-path@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/source-path"],
+
+    "@singularity/plugin-plugin-meta-plugin-view-structure": ["@singularity/plugin-plugin-meta-plugin-view-structure@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/structure"],
 
     "@singularity/plugin-plugin-meta-plugin-view-sub-plugins": ["@singularity/plugin-plugin-meta-plugin-view-sub-plugins@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/sub-plugins"],
 

@@ -1,6 +1,7 @@
 import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -33,18 +34,6 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
 
 const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
 
-// Every top-level subdirectory inside a plugin must be one of these.
-// Anything else (typos like "serrver/", ad-hoc folders like "utils/") is flagged.
-const KNOWN_PLUGIN_DIRS = new Set([
-  ...VALID_RUNTIMES,
-  "plugins",
-  "lint",
-  "check",
-  "facet",
-  "scripts",
-  "bin",
-]);
-
 const PUSH_BACK_HINT =
   "Do NOT work around these violations by editing `plugin-boundaries.ts`, expanding the skip list, " +
   "or adding ad-hoc exceptions. Plugin module boundaries are load-bearing infrastructure. " +
@@ -70,6 +59,8 @@ interface PluginDir {
   absPath: string;
   /** Last path segment, e.g. "conversation-view". */
   name: string;
+  /** Self-declared composition root (package.json `singularity.compositionRoot`). */
+  compositionRoot: boolean;
 }
 
 interface Violation {
@@ -93,21 +84,31 @@ const check: Check = {
       relPath: node.path,
       absPath: node.dir,
       name: node.name,
+      compositionRoot: node.compositionRoot,
     }));
     const pluginSet = new Set(plugins.map((p) => p.relPath));
     const skippedSet = new Set(SKIPPED_PLUGINS);
     const violations: Violation[] = [];
 
+    // The set of standard plugin folder names is derived generically (collected-dir
+    // registry + fixed structural conventions), not hardcoded here. R11 uses it.
+    const known = await standardPluginDirs(root);
+
+    // Composition roots (the SPA bootstrap / CLI entry) self-declare via the
+    // package.json `singularity.compositionRoot` marker. They are exempt from
+    // structural conformance (R1 package naming, R3 required barrel, R11 unknown
+    // dirs) but still subject to the per-file import grammar (R4–R12).
+
     // R1: package.json naming
     for (const p of plugins) {
-      if (skippedSet.has(p.relPath)) continue;
+      if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
       checkPackageNaming(p, violations);
     }
 
     // R11: reject unrecognized top-level directories inside plugin folders
     for (const p of plugins) {
-      if (skippedSet.has(p.relPath)) continue;
-      checkUnknownDirs(p, plugins, violations);
+      if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
+      checkUnknownDirs(p, plugins, known, violations);
     }
 
     // R3: barrel purity + existence for every runtime folder
@@ -115,7 +116,7 @@ const check: Check = {
     // central is optional (not all plugins target the central runtime).
     // shared/ is excluded — it uses relative imports, not barrels.
     for (const p of plugins) {
-      if (skippedSet.has(p.relPath)) continue;
+      if (skippedSet.has(p.relPath) || p.compositionRoot) continue;
       for (const runtime of ["web", "server", "central", "core"] as const) {
         const runtimeDir = join(p.absPath, runtime);
         if (!existsSync(runtimeDir)) continue;
@@ -470,7 +471,12 @@ function checkPackageNaming(p: PluginDir, violations: Violation[]) {
 // R11: unknown directories
 // ============================================================================
 
-function checkUnknownDirs(p: PluginDir, allPlugins: PluginDir[], violations: Violation[]) {
+function checkUnknownDirs(
+  p: PluginDir,
+  allPlugins: PluginDir[],
+  known: Set<string>,
+  violations: Violation[],
+) {
   // Child plugins live at `<plugin>/plugins/<child>` — their names appear as
   // direct subdirs of `<plugin>/plugins/`, not of `<plugin>/` itself, so they
   // won't trigger false positives here.
@@ -491,7 +497,7 @@ function checkUnknownDirs(p: PluginDir, allPlugins: PluginDir[], violations: Vio
   }
   for (const e of entries) {
     if (!e.isDirectory()) continue;
-    if (KNOWN_PLUGIN_DIRS.has(e.name)) continue;
+    if (known.has(e.name)) continue;
     if (e.name === "node_modules") continue;
     if (e.name.startsWith(".")) continue;
     if (childPluginNames.has(e.name)) continue;
@@ -502,7 +508,7 @@ function checkUnknownDirs(p: PluginDir, allPlugins: PluginDir[], violations: Vio
       rule: "unknown-dir",
       file: `plugins/${p.relPath}/${e.name}/`,
       message: `unrecognized directory \`${e.name}/\` contains TypeScript files but is not a recognized zone`,
-      fix: `plugin code must live in one of: ${[...KNOWN_PLUGIN_DIRS].join(", ")}. If this is a typo, rename it. If it's private shared code, use \`shared/\`.`,
+      fix: `plugin code must live in one of: ${[...known].join(", ")}. If this is a typo, rename it. If it's private shared code, use \`shared/\`.`,
     });
   }
 }

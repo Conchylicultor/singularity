@@ -86,6 +86,21 @@ export async function discoverCollectedDirs(
   return out;
 }
 
+// ── Standard plugin folders ────────────────────────────────────────
+
+// The set of directory names considered "standard" inside a plugin. Two parts:
+//   1. The collected-dir / runtime names (web, server, central, facet, check,
+//      lint, …) discovered generically via `defineCollectedDir`. This part
+//      AUTO-GROWS — registering a new runtime or collected-dir type adds its
+//      folder name here with zero edits, which is the friction being removed.
+//   2. A fixed set of stable structural conventions (core, shared, plugins, bin,
+//      scripts) that are not runtime/collected-dir types and never grow when a
+//      new such type is added — so listing them here is not the friction.
+export async function standardPluginDirs(root: string): Promise<Set<string>> {
+  const collected = (await discoverCollectedDirs(root)).map((d) => d.dir);
+  return new Set([...collected, "core", "shared", "plugins", "bin", "scripts"]);
+}
+
 // ── Entry collection ───────────────────────────────────────────────
 
 interface CollectedRawEntry {
@@ -113,7 +128,7 @@ async function collectEntries(root: string, dir: string): Promise<CollectedRawEn
     entries.push({
       pluginPath: node.path,
       importPath: `@plugins/${node.path}/${dir}`,
-      hierarchyPath: node.hierarchyId.replaceAll(".", "/"),
+      hierarchyPath: node.hierarchyId.split(".").join("/"),
     });
   }
   entries.sort((a, b) => a.importPath.localeCompare(b.importPath));

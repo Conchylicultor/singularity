@@ -934,6 +934,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Resources: `push-and-exit` (push)
           - Shared:
             - Exports: Types: `JobState`; Values: `cancelPushAndExit`, `pushAndExitConfig`, `pushAndExitResource`, `startPushAndExit`
+        - **`push-counter`**
         - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
           - Web:
             - Contributes: `Pane.Register` "conv-push-profiling", `Conversation.ActionBar` → `PushProfilingButton`
@@ -1450,6 +1451,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`central-core`**
       - Core:
         - Exports: Types: `CentralPluginDefinition`, `DependsOnEntry`, `HttpHandler`, `LoadedCentralPlugin`, `Registration`, `Resource`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `WsData`, `WsHandler`; Values: `centralCollectedDir`, `defineResource`, `handleResourceHttp`, `notificationsWsHandler`
+    - **`cli`**
     - **`server-core`**
       - Core:
         - Exports: Types: `DependsOnEntry`, `HttpHandler`, `LoadedServerPlugin`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`; Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `markServerReady`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
@@ -1489,13 +1491,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`
-            - Exports: Types: `CollectedDirDef`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `PluginNode`, `PluginTree`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`
+            - Exports: Types: `CollectedDirDef`, `DiscoveredCollectedDir`, `GenerateDocsOptions`, `PluginNode`, `PluginTree`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `defineCollectedDir`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `isCollectedDirDef`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `standardPluginDirs`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
           - Core:
             - Exports: Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`; Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
             - Exports: Values: `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
+    - **`web-core`**
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:
         - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginId`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
@@ -1876,6 +1879,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "source-path" → `SourcePathSection`
+        - **`structure`** — Flags non-standard folders, stray top-level source files, and composition roots in the plugin detail pane.
+          - Web:
+            - Contributes: `PluginViewSlots.Section` "structure" → `StructureSection`
         - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "sub-plugins" → `SubPluginsSection`
