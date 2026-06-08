@@ -1,25 +1,8 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
-import { DocumentSchema, BlockSchema } from "./schemas";
+import { BlockSchema } from "./schemas";
 import { SerializedBlockSchema } from "./serialized-block";
-
-export const CreateDocumentBodySchema = z.object({
-  title: z.string().optional(),
-  parentId: z.string().nullable().optional(),
-  rank: RankSchema.optional(),
-  icon: z.string().nullable().optional(),
-});
-export type CreateDocumentBody = z.infer<typeof CreateDocumentBodySchema>;
-
-export const UpdateDocumentBodySchema = z.object({
-  title: z.string().optional(),
-  parentId: z.string().nullable().optional(),
-  rank: RankSchema.optional(),
-  expanded: z.boolean().optional(),
-  icon: z.string().nullable().optional(),
-});
-export type UpdateDocumentBody = z.infer<typeof UpdateDocumentBodySchema>;
 
 export const CreateBlockBodySchema = z.object({
   parentId: z.string().nullable().optional(),
@@ -82,44 +65,28 @@ export const PasteBlocksBodySchema = z.object({
   blocks: z.array(SerializedBlockSchema),
   /** Insert after this block (same parent), or at the start of `parentId`. */
   afterId: z.string().nullable(),
-  /** Target parent; null = document top level. Ignored when `afterId` is set. */
+  /** Target parent; null = page top level. Ignored when `afterId` is set. */
   parentId: z.string().nullable().optional(),
 });
 export type PasteBlocksBody = z.infer<typeof PasteBlocksBodySchema>;
 
-export const listDocuments = defineEndpoint({
-  route: "GET /api/documents",
-  response: z.array(DocumentSchema),
-});
-
-export const createDocument = defineEndpoint({
-  route: "POST /api/documents",
-  body: CreateDocumentBodySchema,
-  response: DocumentSchema,
-});
-
-export const getDocument = defineEndpoint({
-  route: "GET /api/documents/:id",
-  response: DocumentSchema,
-});
-
-export const updateDocument = defineEndpoint({
-  route: "PATCH /api/documents/:id",
-  body: UpdateDocumentBodySchema,
-  response: DocumentSchema,
-});
-
-export const deleteDocument = defineEndpoint({
-  route: "DELETE /api/documents/:id",
-});
-
-export const listBlocks = defineEndpoint({
-  route: "GET /api/documents/:documentId/blocks",
+// Pages are blocks of `type="page"`, ordered by rank (sidebar tree built by
+// `parentId`).
+export const listPages = defineEndpoint({
+  route: "GET /api/pages",
   response: z.array(BlockSchema),
 });
 
+// A page's content: non-page blocks scoped by `pageId`, ordered by rank.
+export const listBlocks = defineEndpoint({
+  route: "GET /api/pages/:pageId/blocks",
+  response: z.array(BlockSchema),
+});
+
+// Create any block. A top-level page = `{ parentId: null, type: "page", data:
+// { title, icon } }`. The server computes `pageId` from the parent.
 export const createBlock = defineEndpoint({
-  route: "POST /api/documents/:documentId/blocks",
+  route: "POST /api/blocks",
   body: CreateBlockBodySchema,
   response: BlockSchema,
 });
@@ -162,25 +129,25 @@ export const outdentBlock = defineEndpoint({
 });
 
 export const bulkDeleteBlocks = defineEndpoint({
-  route: "POST /api/documents/:documentId/blocks/bulk-delete",
+  route: "POST /api/pages/:pageId/blocks/bulk-delete",
   body: BulkDeleteBlocksBodySchema,
   response: z.object({ deleted: z.number() }),
 });
 
 export const bulkMoveBlocks = defineEndpoint({
-  route: "POST /api/documents/:documentId/blocks/bulk-move",
+  route: "POST /api/pages/:pageId/blocks/bulk-move",
   body: BulkMoveBlocksBodySchema,
   response: z.array(BlockSchema),
 });
 
 export const bulkDuplicateBlocks = defineEndpoint({
-  route: "POST /api/documents/:documentId/blocks/bulk-duplicate",
+  route: "POST /api/pages/:pageId/blocks/bulk-duplicate",
   body: BulkDuplicateBlocksBodySchema,
   response: z.object({ rootIds: z.array(z.string()) }),
 });
 
 export const pasteBlocks = defineEndpoint({
-  route: "POST /api/documents/:documentId/blocks/paste",
+  route: "POST /api/pages/:pageId/blocks/paste",
   body: PasteBlocksBodySchema,
   response: z.object({ rootIds: z.array(z.string()) }),
 });

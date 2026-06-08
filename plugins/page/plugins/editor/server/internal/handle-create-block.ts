@@ -5,19 +5,11 @@ import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
-import { _documents, _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
-import { blocksChanged } from "./tables-events";
+import { _blocks } from "./tables";
+import { computePageId } from "./page-id";
+import { notifyBlockChange } from "./notify";
 
-export const handleCreateBlock = implement(createBlock, async ({ params, body }) => {
-  const [doc] = await db
-    .select({ id: _documents.id })
-    .from(_documents)
-    .where(eq(_documents.id, params.documentId))
-    .limit(1);
-  // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!doc) throw new HttpError(404, "Document not found");
-
+export const handleCreateBlock = implement(createBlock, async ({ body }) => {
   const id = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
   let parentId = body.parentId ?? null;
   let rank;
@@ -40,13 +32,7 @@ export const handleCreateBlock = implement(createBlock, async ({ params, body })
     const [nextSibling] = await db
       .select()
       .from(_blocks)
-      .where(
-        and(
-          eq(_blocks.documentId, params.documentId),
-          parentFilter,
-          gt(_blocks.rank, after.rank),
-        ),
-      )
+      .where(and(parentFilter, gt(_blocks.rank, after.rank)))
       .orderBy(asc(_blocks.rank))
       .limit(1);
 
@@ -59,9 +45,11 @@ export const handleCreateBlock = implement(createBlock, async ({ params, body })
     rank = body.rank
       ?? await nextRankUnder(_blocks, _blocks.parentId, parentId);
   }
+
+  const pageId = await computePageId(parentId);
   await db.insert(_blocks).values({
     id,
-    documentId: params.documentId,
+    pageId,
     parentId,
     type: body.type,
     data: body.data ?? {},
@@ -73,8 +61,7 @@ export const handleCreateBlock = implement(createBlock, async ({ params, body })
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_blocks.id, parentId));
   }
-  blocksLiveResource.notify({ documentId: params.documentId });
-  await blocksChanged.emit({ documentId: params.documentId });
+  await notifyBlockChange({ pageId, type: body.type });
   const [row] = await db
     .select()
     .from(_blocks)

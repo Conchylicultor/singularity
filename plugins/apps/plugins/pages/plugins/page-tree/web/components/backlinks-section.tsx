@@ -3,13 +3,13 @@ import { Backlinks } from "@plugins/page/plugins/links/web";
 import { pageDetailPane } from "../panes";
 
 // "Linked from" section contributed into PageDetail.Section. The slot passes
-// `{ documentId }`; navigation is injected so the pure Backlinks domain
+// `{ pageId }`; navigation is injected so the pure Backlinks domain
 // component stays decoupled from this app's panes.
-export function BacklinksSection({ documentId }: { documentId: string }) {
+export function BacklinksSection({ pageId }: { pageId: string }) {
   const openPane = useOpenPane();
   return (
     <Backlinks
-      documentId={documentId}
+      documentId={pageId}
       onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
     />
   );

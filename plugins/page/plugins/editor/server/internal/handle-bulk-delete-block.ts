@@ -11,19 +11,19 @@ export const handleBulkDeleteBlock = implement(
   async ({ params, body }) => {
     if (body.ids.length === 0) return { deleted: 0 };
     // A single DELETE..IN is atomic; FK cascade removes any descendants that
-    // weren't themselves listed. Scoped to the document so stray ids can't
-    // touch another doc.
+    // weren't themselves listed. Scoped to the page so stray ids can't touch
+    // another page.
     const deleted = await db
       .delete(_blocks)
       .where(
         and(
-          eq(_blocks.documentId, params.documentId),
+          eq(_blocks.pageId, params.pageId),
           inArray(_blocks.id, body.ids),
         ),
       )
       .returning({ id: _blocks.id });
-    blocksLiveResource.notify({ documentId: params.documentId });
-    await blocksChanged.emit({ documentId: params.documentId });
+    blocksLiveResource.notify({ pageId: params.pageId });
+    await blocksChanged.emit({ pageId: params.pageId });
     return { deleted: deleted.length };
   },
 );

@@ -9,10 +9,10 @@ export default {
     "Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.",
   register: [reconcileImageAttachmentsJob],
   contributions: [
-    // Reconcile a document's image-block links whenever its blocks change.
-    // Declared (not imperatively bound) so syncTriggerContributions makes it
-    // idempotent across reboots. Match-any on documentId — the per-emit
-    // documentId reaches the job via the event payload.
+    // Reconcile a page's image-block links whenever its blocks change. Declared
+    // (not imperatively bound) so syncTriggerContributions makes it idempotent
+    // across reboots. Match-any on pageId — the per-emit pageId reaches the job
+    // via the event payload.
     Trigger({ on: blocksChanged, do: reconcileImageAttachmentsJob, with: {}, oneShot: false }),
   ],
 } satisfies ServerPluginDefinition;

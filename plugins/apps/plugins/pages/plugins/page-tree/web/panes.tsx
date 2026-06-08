@@ -2,7 +2,7 @@ import { type ReactElement, useMemo } from "react";
 import { MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { documentsResource } from "@plugins/page/plugins/editor/core";
+import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
 import { PageDetail } from "./slots";
@@ -25,7 +25,7 @@ export const pagesRootPane = Pane.define({
 });
 
 function useResolvePage({ pageId }: { pageId: string }) {
-  const result = useResource(documentsResource);
+  const result = useResource(pagesResource);
   if (result.pending) return { pending: true, found: false };
   return { pending: false, found: result.data.some((d) => d.id === pageId) };
 }
@@ -56,7 +56,7 @@ function PagesRoot(): ReactElement {
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
-  const result = useResource(documentsResource);
+  const result = useResource(pagesResource);
   const page = useMemo(
     () =>
       result.pending ? undefined : result.data.find((d) => d.id === pageId),
@@ -64,15 +64,15 @@ function PageDetailBody(): ReactElement {
   );
 
   return (
-    <PaneChrome pane={pageDetailPane} title={page?.title}>
+    <PaneChrome pane={pageDetailPane} title={page ? pageData(page).title : undefined}>
       <div className="flex flex-col gap-4 p-4">
         <PageHeader pageId={pageId} />
         <BlockEditor
-          documentId={pageId}
+          pageId={pageId}
           onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
         />
         <PageDetail.Section.Render>
-          {(s) => <s.component documentId={pageId} />}
+          {(s) => <s.component pageId={pageId} />}
         </PageDetail.Section.Render>
       </div>
     </PaneChrome>

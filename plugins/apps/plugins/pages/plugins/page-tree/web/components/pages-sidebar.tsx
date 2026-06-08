@@ -13,21 +13,24 @@ import {
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
-  documentsResource,
-  updateDocument,
-  type Document,
+  pagesResource,
+  updateBlock,
+  moveBlock,
+  pageData,
+  type Block,
 } from "@plugins/page/plugins/editor/core";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
 
-// `Document` already carries the tree-shaped fields (id, parentId, rank,
-// expanded) plus title + icon, so it satisfies TreeItem directly with no
-// projection.
-type PageRowData = Document;
+// A page is a `type="page"` block. It carries the tree-shaped fields (id,
+// parentId, rank, expanded) directly, so it satisfies TreeItem with no
+// projection; title + icon are read out of `data` via `pageData`.
+type PageRowData = Block;
 
 function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }) {
-  const { mutateAsync: rename } = useEndpointMutation(updateDocument);
+  const { mutateAsync: rename } = useEndpointMutation(updateBlock);
+  const { title, icon } = pageData(node);
   return (
     <RowChrome
       node={node}
@@ -38,18 +41,21 @@ function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }
       ]}
       actions={
         <PageTree.RowActions.Render>
-          {(a) => <a.component pageId={node.id} title={node.title} />}
+          {(a) => <a.component pageId={node.id} title={title} />}
         </PageTree.RowActions.Render>
       }
     >
       <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center text-sm">
-        {node.icon ? node.icon : <MdDescription className="size-4" />}
+        {icon ? icon : <MdDescription className="size-4" />}
       </span>
       <RenameInput
         nodeId={node.id}
-        value={node.title}
+        value={title}
         onCommit={async (next) => {
-          await rename({ params: { id: node.id }, body: { title: next } });
+          await rename({
+            params: { id: node.id },
+            body: { data: { ...pageData(node), title: next } },
+          });
         }}
       />
     </RowChrome>
@@ -57,7 +63,7 @@ function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }
 }
 
 export function PagesSidebar() {
-  const result = useResource(documentsResource);
+  const result = useResource(pagesResource);
   const openPane = useOpenPane();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
 
@@ -73,14 +79,14 @@ export function PagesSidebar() {
 
   const onToggleExpanded = useCallback(
     (id: string, next: boolean) =>
-      void fetchEndpoint(updateDocument, { id }, { body: { expanded: next } }),
+      void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
     [],
   );
 
   const onMove = useCallback(
     (id: string, dest: { parentId: string | null; rank: Rank }) =>
       void fetchEndpoint(
-        updateDocument,
+        moveBlock,
         { id },
         { body: { parentId: dest.parentId, rank: dest.rank } },
       ),
@@ -109,9 +115,9 @@ export function PagesSidebar() {
             onMove={onMove}
             onCreate={onCreate}
             Row={PageRow}
-            dragOverlay={(p) => p.title || "Untitled"}
+            dragOverlay={(p) => pageData(p).title || "Untitled"}
             addLabel="New Page"
-            toolbar={{ search: { accessor: (p) => p.title } }}
+            toolbar={{ search: { accessor: (p) => pageData(p).title } }}
           />
         )}
       </div>

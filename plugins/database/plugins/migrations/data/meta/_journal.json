@@ -1,937 +1,951 @@
 {
-  "version": "7",
-  "dialect": "postgresql",
-  "entries": [
-    {
-      "version": "7",
-      "when": 1776081399000,
-      "tag": "20260413_115639_fa0debdd__volatile_orphan",
-      "hash": "fa0debdd",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776089080000,
-      "tag": "20260413_140440_80202aa3__conversations_and_pushes",
-      "hash": "80202aa3",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776103745000,
-      "tag": "20260413_180905_30e2b38e__drop_worktree_column",
-      "hash": "30e2b38e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776106241000,
-      "tag": "20260413_185041_c5cc4283__add_worktree_path",
-      "hash": "c5cc4283",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776108517000,
-      "tag": "20260413_192837_6f61b7c1__remove_db_smoketest",
-      "hash": "6f61b7c1",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776112899000,
-      "tag": "20260413_204139_091d5f7a__timestamps_with_tz",
-      "hash": "091d5f7a",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776142997000,
-      "tag": "20260414_050317_6fc4016b__conversations_runtime_and_session_id",
-      "hash": "6fc4016b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776187758000,
-      "tag": "20260414_172918_46925941__tasks",
-      "hash": "46925941",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776199497000,
-      "tag": "20260414_204457_e1c27056__tasks_status",
-      "hash": "e1c27056",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776202620000,
-      "tag": "20260414_213700_2624d0ed__add_task_expanded",
-      "hash": "2624d0ed",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776232703000,
-      "tag": "20260415_055823_dafedbaa__active_tracking",
-      "hash": "dafedbaa",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776256896000,
-      "tag": "20260415_124136_813d9830__add_push_tracking",
-      "hash": "813d9830",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776355264000,
-      "tag": "20260416_160104_050c75af__tasks_schema_v2",
-      "hash": "050c75af",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776358556000,
-      "tag": "20260416_165556_cb3b7e1d__schema_split_internal",
-      "hash": "cb3b7e1d",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776362678000,
-      "tag": "20260416_180438_16616814__add_conversation_model",
-      "hash": "16616814",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776382875000,
-      "tag": "20260416_234115_aa1d645a__add_task_id_to_conversations_view",
-      "hash": "aa1d645a",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776386249000,
-      "tag": "20260417_003729_8af313f8__add_task_held_status",
-      "hash": "8af313f8",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776411538000,
-      "tag": "20260417_073858_eec5e46d__add_spawned_by",
-      "hash": "eec5e46d",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776427200000,
-      "tag": "20260417_120000_6d466d3e__backfill_untitled_task_titles",
-      "hash": "6d466d3e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776427500000,
-      "tag": "20260417_120500_996ffe6e__backfill_untitled_conversation_tasks",
-      "hash": "996ffe6e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776429892000,
-      "tag": "20260417_124452_66316dff__add_task_rank",
-      "hash": "66316dff",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776438144000,
-      "tag": "20260417_150224_26b713bb__add_task_author",
-      "hash": "26b713bb",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776515251000,
-      "tag": "20260418_122731_2fe80704__add_agents",
-      "hash": "2fe80704",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776518034000,
-      "tag": "20260418_131354_e585fbd6__task_need_action_status",
-      "hash": "e585fbd6",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776519674000,
-      "tag": "20260418_134114_d8da9e66__add_config_table",
-      "hash": "d8da9e66",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776557775000,
-      "tag": "20260419_001615_f8b9aa91__stats_commits_excluded_path_state",
-      "hash": "f8b9aa91",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776599663000,
-      "tag": "20260419_115423_97d022db__rank_collate_c",
-      "hash": "97d022db",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776604384000,
-      "tag": "20260419_131304_156b5729__add_task_dependencies",
-      "hash": "156b5729",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776775097000,
-      "tag": "20260421_123817_4d324a02__add_quick_prompts_table",
-      "hash": "4d324a02",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776781530000,
-      "tag": "20260421_142530_06ac885b__use_rank_text_domain",
-      "hash": "06ac885b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776786125000,
-      "tag": "20260421_154205_187ad994__add_crashes",
-      "hash": "187ad994",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1776944176000,
-      "tag": "20260423_113616_9812227f__events_v1",
-      "hash": "9812227f",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777022524000,
-      "tag": "20260424_092204_f637b03b__add_attachments",
-      "hash": "f637b03b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777022804000,
-      "tag": "20260424_092644_66958274__add_improve_config",
-      "hash": "66958274",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777038145000,
-      "tag": "20260424_134225_ba7d51eb__attachments_fk_link_tables",
-      "hash": "ba7d51eb",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777038600000,
-      "tag": "20260424_135000_601d102d__rename_action_to_job",
-      "hash": "601d102d",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777046354000,
-      "tag": "20260424_155914_1261ec2c__add_pushes_landed_triggers",
-      "hash": "1261ec2c",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777046989000,
-      "tag": "20260424_160949_f10e0c05__push_and_exit_jobs",
-      "hash": "f10e0c05",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777049068000,
-      "tag": "20260424_164428_14d075cc__add_event_emissions",
-      "hash": "14d075cc",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777057738000,
-      "tag": "20260424_190858_58d58ab2__durable_jobs_ctx_step",
-      "hash": "58d58ab2",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777240567000,
-      "tag": "20260426_215607_24e8a0b8__conversation_created_event",
-      "hash": "24e8a0b8",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777241120000,
-      "tag": "20260426_220520_3f979a4a__yak_shaving_nodes",
-      "hash": "3f979a4a",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777244790000,
-      "tag": "20260426_230630_52210bfc__conversation_kind",
-      "hash": "52210bfc",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777319119000,
-      "tag": "20260427_194519_46a1a533__yak_shaving_categories",
-      "hash": "46a1a533",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777377570000,
-      "tag": "20260428_115930_dacd04e3__conversation_summaries",
-      "hash": "dacd04e3",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777401145000,
-      "tag": "20260428_183225_8256aca7__add_task_auto_start_and_status_event",
-      "hash": "8256aca7",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777490496000,
-      "tag": "20260429_192136_1a8a9094__remove_yak_shaving",
-      "hash": "1a8a9094",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777495591000,
-      "tag": "20260429_204631_d701ee2b__add_conversation_groups",
-      "hash": "d701ee2b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777504289000,
-      "tag": "20260429_231129_5a5215da__unified_paste_images",
-      "hash": "5a5215da",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777507388000,
-      "tag": "20260430_000308_3b5aa79b__conversation_category",
-      "hash": "3b5aa79b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777544612000,
-      "tag": "20260430_102332_753b0a82__add_category_colors",
-      "hash": "753b0a82",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777553371000,
-      "tag": "20260430_124931_3f19f567__add_turn_summaries",
-      "hash": "3f19f567",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777582590000,
-      "tag": "20260430_205630_939b541c__add_improve_pending_groups",
-      "hash": "939b541c",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777584099000,
-      "tag": "20260430_212139_bdc3e46b__claude_cli_calls",
-      "hash": "bdc3e46b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777587305000,
-      "tag": "20260430_221505_9681b3c2__add_conversation_progress",
-      "hash": "9681b3c2",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777590670000,
-      "tag": "20260430_231110_6596f940__refactor_progress_heuristic",
-      "hash": "6596f940",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777621313000,
-      "tag": "20260501_074153_33c240b2__add_launch_prompts",
-      "hash": "33c240b2",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777653955000,
-      "tag": "20260501_164555_f92ab6d7__add_conversation_rank",
-      "hash": "f92ab6d7",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777659748000,
-      "tag": "20260501_182228_2a407315__add_improve_pending_queue_top",
-      "hash": "2a407315",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777686989000,
-      "tag": "20260502_015629_7f74503d__active_data_bindings",
-      "hash": "7f74503d",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777690131000,
-      "tag": "20260502_024851_d39d2983__merged_20260502_0248",
-      "hash": "d39d2983",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777714622000,
-      "tag": "20260502_093702_39c5a4e0__add_agent_auto_launch",
-      "hash": "39c5a4e0",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777741031000,
-      "tag": "20260502_165711_e5ba066f__reorder_prefs",
-      "hash": "e5ba066f",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777757654000,
-      "tag": "20260502_213414_2775c859__move_agent_auto_launch_to_extension",
-      "hash": "2775c859",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777798800000,
-      "tag": "20260503_090000_39283cb0__migrate_category_to_extension",
-      "hash": "39283cb0",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777824561000,
-      "tag": "20260503_160921_301b81af__git_watcher_ref_advanced",
-      "hash": "301b81af",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777825848000,
-      "tag": "20260503_163048_e5339d4b__move_conversation_rank_to_extension",
-      "hash": "e5339d4b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777828545000,
-      "tag": "20260503_171545_9ab5c74b__migrate_turn_summaries_to_ext",
-      "hash": "9ab5c74b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777830612000,
-      "tag": "20260503_175012_f5749cd1__move_auto_start_to_extension",
-      "hash": "f5749cd1",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777832936000,
-      "tag": "20260503_182856_a0e4e8e1__move_conv_progress_to_ext",
-      "hash": "a0e4e8e1",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777847003000,
-      "tag": "20260503_222323_2a407315__add_improve_pending_queue_top",
-      "hash": "2a407315",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777847747000,
-      "tag": "20260503_223547_6917477c__remove_improve_pending_queue_top",
-      "hash": "6917477c",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1777996734000,
-      "tag": "20260505_155854_b447e2cb__add_deploy_servers",
-      "hash": "b447e2cb",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778020303000,
-      "tag": "20260505_223143_21e4fc55__reorder_prefs_hidden",
-      "hash": "21e4fc55",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778055940000,
-      "tag": "20260506_082540_9ec71fe8__merged_20260506_0825",
-      "hash": "9ec71fe8",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778078612000,
-      "tag": "20260506_144332_0996f40e__add_conversation_notes",
-      "hash": "0996f40e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778080123000,
-      "tag": "20260506_150843_d44d9969__merged_20260506_1508",
-      "hash": "d44d9969",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778141505000,
-      "tag": "20260507_081145_d24f17b4__completed_takes_precedence_over_dropped",
-      "hash": "d24f17b4",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778160247000,
-      "tag": "20260507_132407_86aa7566__add_waiting_for",
-      "hash": "86aa7566",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778185438000,
-      "tag": "20260507_202358_da11cc6d__add_notifications_table",
-      "hash": "da11cc6d",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778187136000,
-      "tag": "20260507_205216_2c7afe13__build_runs",
-      "hash": "2c7afe13",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778440197000,
-      "tag": "20260510_190957_31be266e__decouple_done_from_gone",
-      "hash": "31be266e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778508604000,
-      "tag": "20260511_141004_c347aa93__add_prompt_templates",
-      "hash": "c347aa93",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778536519000,
-      "tag": "20260511_215519_f83d579b__add_reorder_groups",
-      "hash": "f83d579b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778606637000,
-      "tag": "20260512_172357_ee0ec451__add_queue_state",
-      "hash": "ee0ec451",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778607930000,
-      "tag": "20260512_174530_a400d0b3__task_status_active_overrides_dropped",
-      "hash": "a400d0b3",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778609763000,
-      "tag": "20260512_181603_2623faba__merged_20260512_1816",
-      "hash": "2623faba",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778620657000,
-      "tag": "20260512_211737_17a17f5b__add_close_requested",
-      "hash": "17a17f5b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778622720000,
-      "tag": "20260512_215200_f7b59bbc__add_task_auto_start_fk",
-      "hash": "f7b59bbc",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778624456000,
-      "tag": "20260512_222056_f7be4bb3__merged_20260512_2220",
-      "hash": "f7be4bb3",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778682101000,
-      "tag": "20260513_142141_53737344__add_avatar_svg_nodes",
-      "hash": "53737344",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778691301000,
-      "tag": "20260513_165501_84da52fc__fix_task_blocked_status_priority",
-      "hash": "84da52fc",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778691605000,
-      "tag": "20260513_170005_824133e8__fix_task_blocked_status_priority",
-      "hash": "824133e8",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778705035000,
-      "tag": "20260513_204355_20a1fa3f__review_sections",
-      "hash": "20a1fa3f",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778748219000,
-      "tag": "20260514_084339_3115170c__add_prompt_template_use_count",
-      "hash": "3115170c",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778768940000,
-      "tag": "20260514_142900_1c96ba03__add_backup_runs",
-      "hash": "1c96ba03",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778861108000,
-      "tag": "20260515_160508_725915cf__add_workflow_engine_tables",
-      "hash": "725915cf",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778868702000,
-      "tag": "20260515_181142_b3cc75fa__dag_schema",
-      "hash": "b3cc75fa",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1778968244000,
-      "tag": "20260516_215044_5ae5d7e3__dag_workflow_columns",
-      "hash": "5ae5d7e3",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779107391000,
-      "tag": "20260518_122951_4bc753a5__remove_quick_prompts",
-      "hash": "4bc753a5",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779299657000,
-      "tag": "20260520_175417_d5575a29__remove_push_and_exit_jobs",
-      "hash": "d5575a29",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779441481000,
-      "tag": "20260522_091801_1da8cc8e__drop_category_colors_table",
-      "hash": "1da8cc8e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779547958000,
-      "tag": "20260523_145238_346ac79a__drop_config_v1_tables",
-      "hash": "346ac79a",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779557145000,
-      "tag": "20260523_172545_0d77603b__drop_config_v1",
-      "hash": "0d77603b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779711040000,
-      "tag": "20260525_121040_dfa84fdf__tweakcn_themes",
-      "hash": "dfa84fdf",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1779727586000,
-      "tag": "20260525_164626_4e267d5e__page_editor_init",
-      "hash": "4e267d5e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780300288000,
-      "tag": "20260601_075128_f92210eb__conversation_model_default_opus_4_8",
-      "hash": "f92210eb",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780318800000,
-      "tag": "20260601_130000_b4c0f111__backfill_conversation_model_aliases",
-      "hash": "b4c0f111",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780328185000,
-      "tag": "20260601_153625_fd75d9b0__add_build_run_pid",
-      "hash": "fd75d9b0",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780352634000,
-      "tag": "20260601_222354_4e6a27df__backfill_avatar_icon_aliases",
-      "hash": "4e6a27df",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780394914000,
-      "tag": "20260602_100834_81debd65__drop_agent_auto_launch",
-      "hash": "81debd65",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780402109000,
-      "tag": "20260602_120829_914cd45e__merged_20260602_1208",
-      "hash": "914cd45e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780404676000,
-      "tag": "20260602_125116_23c28b54__rename_task_parent_to_folder",
-      "hash": "23c28b54",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780499327000,
-      "tag": "20260603_150847_c72bb218__reorder_plugin_id_path_rename",
-      "hash": "c72bb218",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780506526000,
-      "tag": "20260603_170846_1c26dd87__pages_tree",
-      "hash": "1c26dd87",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780509413000,
-      "tag": "20260603_175653_7dc2a0b8__page_links",
-      "hash": "7dc2a0b8",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780509734000,
-      "tag": "20260603_180214_afc6a809__page_blocks_changed_trigger",
-      "hash": "afc6a809",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780580632000,
-      "tag": "20260604_134352_892eeb1b__view_correlation_indexes",
-      "hash": "892eeb1b",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780583731000,
-      "tag": "20260604_143531_ac8ba782__tasks_v_precompute_completion",
-      "hash": "ac8ba782",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780614221000,
-      "tag": "20260604_230341_fae42ac5__add_page_blocks_attachments",
-      "hash": "fae42ac5",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780649810000,
-      "tag": "20260605_085650_ecf94351__backfill_claude_cli_call_haiku_alias",
-      "hash": "ecf94351",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780654464000,
-      "tag": "20260605_101424_9197b3d6__merged_20260605_1014",
-      "hash": "9197b3d6",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780654832000,
-      "tag": "20260605_102032_6515b031__merged_20260605_1020",
-      "hash": "6515b031",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780655837000,
-      "tag": "20260605_103717_b24ddd06__merged_20260605_1037",
-      "hash": "b24ddd06",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780662456000,
-      "tag": "20260605_122736_130658a9__sonata_playback_and_track_count",
-      "hash": "130658a9",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780667662000,
-      "tag": "20260605_135422_7795f97c__sonata_song_source_owned_midi",
-      "hash": "7795f97c",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780680496000,
-      "tag": "20260605_172816_eb90ba5e__add_conversation_preprompt",
-      "hash": "eb90ba5e",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780743856000,
-      "tag": "20260606_110416_1fa00d21__add_preprompt_icon",
-      "hash": "1fa00d21",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780819417000,
-      "tag": "20260607_080337_2494f99c__build_runs_inflight_unique",
-      "hash": "2494f99c",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780822807000,
-      "tag": "20260607_090007_4157a2a2__add_sonata_chord_grid_ext",
-      "hash": "4157a2a2",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780847954000,
-      "tag": "20260607_155914_a271fcd9__add_sonata_track_view",
-      "hash": "a271fcd9",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780851771000,
-      "tag": "20260607_170251_d0abe97f__merged_20260607_1702",
-      "hash": "d0abe97f",
-      "breakpoints": true
-    },
-    {
-      "version": "7",
-      "when": 1780854524000,
-      "tag": "20260607_174844_7e167ec5__add_track_instrument",
-      "hash": "7e167ec5",
-      "breakpoints": true
-    }
-  ]
+ "version": "7",
+ "dialect": "postgresql",
+ "entries": [
+  {
+   "version": "7",
+   "when": 1776081399000,
+   "tag": "20260413_115639_fa0debdd__volatile_orphan",
+   "hash": "fa0debdd",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776089080000,
+   "tag": "20260413_140440_80202aa3__conversations_and_pushes",
+   "hash": "80202aa3",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776103745000,
+   "tag": "20260413_180905_30e2b38e__drop_worktree_column",
+   "hash": "30e2b38e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776106241000,
+   "tag": "20260413_185041_c5cc4283__add_worktree_path",
+   "hash": "c5cc4283",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776108517000,
+   "tag": "20260413_192837_6f61b7c1__remove_db_smoketest",
+   "hash": "6f61b7c1",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776112899000,
+   "tag": "20260413_204139_091d5f7a__timestamps_with_tz",
+   "hash": "091d5f7a",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776142997000,
+   "tag": "20260414_050317_6fc4016b__conversations_runtime_and_session_id",
+   "hash": "6fc4016b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776187758000,
+   "tag": "20260414_172918_46925941__tasks",
+   "hash": "46925941",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776199497000,
+   "tag": "20260414_204457_e1c27056__tasks_status",
+   "hash": "e1c27056",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776202620000,
+   "tag": "20260414_213700_2624d0ed__add_task_expanded",
+   "hash": "2624d0ed",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776232703000,
+   "tag": "20260415_055823_dafedbaa__active_tracking",
+   "hash": "dafedbaa",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776256896000,
+   "tag": "20260415_124136_813d9830__add_push_tracking",
+   "hash": "813d9830",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776355264000,
+   "tag": "20260416_160104_050c75af__tasks_schema_v2",
+   "hash": "050c75af",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776358556000,
+   "tag": "20260416_165556_cb3b7e1d__schema_split_internal",
+   "hash": "cb3b7e1d",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776362678000,
+   "tag": "20260416_180438_16616814__add_conversation_model",
+   "hash": "16616814",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776382875000,
+   "tag": "20260416_234115_aa1d645a__add_task_id_to_conversations_view",
+   "hash": "aa1d645a",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776386249000,
+   "tag": "20260417_003729_8af313f8__add_task_held_status",
+   "hash": "8af313f8",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776411538000,
+   "tag": "20260417_073858_eec5e46d__add_spawned_by",
+   "hash": "eec5e46d",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776427200000,
+   "tag": "20260417_120000_6d466d3e__backfill_untitled_task_titles",
+   "hash": "6d466d3e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776427500000,
+   "tag": "20260417_120500_996ffe6e__backfill_untitled_conversation_tasks",
+   "hash": "996ffe6e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776429892000,
+   "tag": "20260417_124452_66316dff__add_task_rank",
+   "hash": "66316dff",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776438144000,
+   "tag": "20260417_150224_26b713bb__add_task_author",
+   "hash": "26b713bb",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776515251000,
+   "tag": "20260418_122731_2fe80704__add_agents",
+   "hash": "2fe80704",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776518034000,
+   "tag": "20260418_131354_e585fbd6__task_need_action_status",
+   "hash": "e585fbd6",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776519674000,
+   "tag": "20260418_134114_d8da9e66__add_config_table",
+   "hash": "d8da9e66",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776557775000,
+   "tag": "20260419_001615_f8b9aa91__stats_commits_excluded_path_state",
+   "hash": "f8b9aa91",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776599663000,
+   "tag": "20260419_115423_97d022db__rank_collate_c",
+   "hash": "97d022db",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776604384000,
+   "tag": "20260419_131304_156b5729__add_task_dependencies",
+   "hash": "156b5729",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776775097000,
+   "tag": "20260421_123817_4d324a02__add_quick_prompts_table",
+   "hash": "4d324a02",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776781530000,
+   "tag": "20260421_142530_06ac885b__use_rank_text_domain",
+   "hash": "06ac885b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776786125000,
+   "tag": "20260421_154205_187ad994__add_crashes",
+   "hash": "187ad994",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1776944176000,
+   "tag": "20260423_113616_9812227f__events_v1",
+   "hash": "9812227f",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777022524000,
+   "tag": "20260424_092204_f637b03b__add_attachments",
+   "hash": "f637b03b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777022804000,
+   "tag": "20260424_092644_66958274__add_improve_config",
+   "hash": "66958274",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777038145000,
+   "tag": "20260424_134225_ba7d51eb__attachments_fk_link_tables",
+   "hash": "ba7d51eb",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777038600000,
+   "tag": "20260424_135000_601d102d__rename_action_to_job",
+   "hash": "601d102d",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777046354000,
+   "tag": "20260424_155914_1261ec2c__add_pushes_landed_triggers",
+   "hash": "1261ec2c",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777046989000,
+   "tag": "20260424_160949_f10e0c05__push_and_exit_jobs",
+   "hash": "f10e0c05",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777049068000,
+   "tag": "20260424_164428_14d075cc__add_event_emissions",
+   "hash": "14d075cc",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777057738000,
+   "tag": "20260424_190858_58d58ab2__durable_jobs_ctx_step",
+   "hash": "58d58ab2",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777240567000,
+   "tag": "20260426_215607_24e8a0b8__conversation_created_event",
+   "hash": "24e8a0b8",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777241120000,
+   "tag": "20260426_220520_3f979a4a__yak_shaving_nodes",
+   "hash": "3f979a4a",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777244790000,
+   "tag": "20260426_230630_52210bfc__conversation_kind",
+   "hash": "52210bfc",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777319119000,
+   "tag": "20260427_194519_46a1a533__yak_shaving_categories",
+   "hash": "46a1a533",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777377570000,
+   "tag": "20260428_115930_dacd04e3__conversation_summaries",
+   "hash": "dacd04e3",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777401145000,
+   "tag": "20260428_183225_8256aca7__add_task_auto_start_and_status_event",
+   "hash": "8256aca7",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777490496000,
+   "tag": "20260429_192136_1a8a9094__remove_yak_shaving",
+   "hash": "1a8a9094",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777495591000,
+   "tag": "20260429_204631_d701ee2b__add_conversation_groups",
+   "hash": "d701ee2b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777504289000,
+   "tag": "20260429_231129_5a5215da__unified_paste_images",
+   "hash": "5a5215da",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777507388000,
+   "tag": "20260430_000308_3b5aa79b__conversation_category",
+   "hash": "3b5aa79b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777544612000,
+   "tag": "20260430_102332_753b0a82__add_category_colors",
+   "hash": "753b0a82",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777553371000,
+   "tag": "20260430_124931_3f19f567__add_turn_summaries",
+   "hash": "3f19f567",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777582590000,
+   "tag": "20260430_205630_939b541c__add_improve_pending_groups",
+   "hash": "939b541c",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777584099000,
+   "tag": "20260430_212139_bdc3e46b__claude_cli_calls",
+   "hash": "bdc3e46b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777587305000,
+   "tag": "20260430_221505_9681b3c2__add_conversation_progress",
+   "hash": "9681b3c2",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777590670000,
+   "tag": "20260430_231110_6596f940__refactor_progress_heuristic",
+   "hash": "6596f940",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777621313000,
+   "tag": "20260501_074153_33c240b2__add_launch_prompts",
+   "hash": "33c240b2",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777653955000,
+   "tag": "20260501_164555_f92ab6d7__add_conversation_rank",
+   "hash": "f92ab6d7",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777659748000,
+   "tag": "20260501_182228_2a407315__add_improve_pending_queue_top",
+   "hash": "2a407315",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777686989000,
+   "tag": "20260502_015629_7f74503d__active_data_bindings",
+   "hash": "7f74503d",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777690131000,
+   "tag": "20260502_024851_d39d2983__merged_20260502_0248",
+   "hash": "d39d2983",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777714622000,
+   "tag": "20260502_093702_39c5a4e0__add_agent_auto_launch",
+   "hash": "39c5a4e0",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777741031000,
+   "tag": "20260502_165711_e5ba066f__reorder_prefs",
+   "hash": "e5ba066f",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777757654000,
+   "tag": "20260502_213414_2775c859__move_agent_auto_launch_to_extension",
+   "hash": "2775c859",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777798800000,
+   "tag": "20260503_090000_39283cb0__migrate_category_to_extension",
+   "hash": "39283cb0",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777824561000,
+   "tag": "20260503_160921_301b81af__git_watcher_ref_advanced",
+   "hash": "301b81af",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777825848000,
+   "tag": "20260503_163048_e5339d4b__move_conversation_rank_to_extension",
+   "hash": "e5339d4b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777828545000,
+   "tag": "20260503_171545_9ab5c74b__migrate_turn_summaries_to_ext",
+   "hash": "9ab5c74b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777830612000,
+   "tag": "20260503_175012_f5749cd1__move_auto_start_to_extension",
+   "hash": "f5749cd1",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777832936000,
+   "tag": "20260503_182856_a0e4e8e1__move_conv_progress_to_ext",
+   "hash": "a0e4e8e1",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777847003000,
+   "tag": "20260503_222323_2a407315__add_improve_pending_queue_top",
+   "hash": "2a407315",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777847747000,
+   "tag": "20260503_223547_6917477c__remove_improve_pending_queue_top",
+   "hash": "6917477c",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1777996734000,
+   "tag": "20260505_155854_b447e2cb__add_deploy_servers",
+   "hash": "b447e2cb",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778020303000,
+   "tag": "20260505_223143_21e4fc55__reorder_prefs_hidden",
+   "hash": "21e4fc55",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778055940000,
+   "tag": "20260506_082540_9ec71fe8__merged_20260506_0825",
+   "hash": "9ec71fe8",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778078612000,
+   "tag": "20260506_144332_0996f40e__add_conversation_notes",
+   "hash": "0996f40e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778080123000,
+   "tag": "20260506_150843_d44d9969__merged_20260506_1508",
+   "hash": "d44d9969",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778141505000,
+   "tag": "20260507_081145_d24f17b4__completed_takes_precedence_over_dropped",
+   "hash": "d24f17b4",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778160247000,
+   "tag": "20260507_132407_86aa7566__add_waiting_for",
+   "hash": "86aa7566",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778185438000,
+   "tag": "20260507_202358_da11cc6d__add_notifications_table",
+   "hash": "da11cc6d",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778187136000,
+   "tag": "20260507_205216_2c7afe13__build_runs",
+   "hash": "2c7afe13",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778440197000,
+   "tag": "20260510_190957_31be266e__decouple_done_from_gone",
+   "hash": "31be266e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778508604000,
+   "tag": "20260511_141004_c347aa93__add_prompt_templates",
+   "hash": "c347aa93",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778536519000,
+   "tag": "20260511_215519_f83d579b__add_reorder_groups",
+   "hash": "f83d579b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778606637000,
+   "tag": "20260512_172357_ee0ec451__add_queue_state",
+   "hash": "ee0ec451",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778607930000,
+   "tag": "20260512_174530_a400d0b3__task_status_active_overrides_dropped",
+   "hash": "a400d0b3",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778609763000,
+   "tag": "20260512_181603_2623faba__merged_20260512_1816",
+   "hash": "2623faba",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778620657000,
+   "tag": "20260512_211737_17a17f5b__add_close_requested",
+   "hash": "17a17f5b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778622720000,
+   "tag": "20260512_215200_f7b59bbc__add_task_auto_start_fk",
+   "hash": "f7b59bbc",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778624456000,
+   "tag": "20260512_222056_f7be4bb3__merged_20260512_2220",
+   "hash": "f7be4bb3",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778682101000,
+   "tag": "20260513_142141_53737344__add_avatar_svg_nodes",
+   "hash": "53737344",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778691301000,
+   "tag": "20260513_165501_84da52fc__fix_task_blocked_status_priority",
+   "hash": "84da52fc",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778691605000,
+   "tag": "20260513_170005_824133e8__fix_task_blocked_status_priority",
+   "hash": "824133e8",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778705035000,
+   "tag": "20260513_204355_20a1fa3f__review_sections",
+   "hash": "20a1fa3f",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778748219000,
+   "tag": "20260514_084339_3115170c__add_prompt_template_use_count",
+   "hash": "3115170c",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778768940000,
+   "tag": "20260514_142900_1c96ba03__add_backup_runs",
+   "hash": "1c96ba03",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778861108000,
+   "tag": "20260515_160508_725915cf__add_workflow_engine_tables",
+   "hash": "725915cf",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778868702000,
+   "tag": "20260515_181142_b3cc75fa__dag_schema",
+   "hash": "b3cc75fa",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1778968244000,
+   "tag": "20260516_215044_5ae5d7e3__dag_workflow_columns",
+   "hash": "5ae5d7e3",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779107391000,
+   "tag": "20260518_122951_4bc753a5__remove_quick_prompts",
+   "hash": "4bc753a5",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779299657000,
+   "tag": "20260520_175417_d5575a29__remove_push_and_exit_jobs",
+   "hash": "d5575a29",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779441481000,
+   "tag": "20260522_091801_1da8cc8e__drop_category_colors_table",
+   "hash": "1da8cc8e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779547958000,
+   "tag": "20260523_145238_346ac79a__drop_config_v1_tables",
+   "hash": "346ac79a",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779557145000,
+   "tag": "20260523_172545_0d77603b__drop_config_v1",
+   "hash": "0d77603b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779711040000,
+   "tag": "20260525_121040_dfa84fdf__tweakcn_themes",
+   "hash": "dfa84fdf",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1779727586000,
+   "tag": "20260525_164626_4e267d5e__page_editor_init",
+   "hash": "4e267d5e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780300288000,
+   "tag": "20260601_075128_f92210eb__conversation_model_default_opus_4_8",
+   "hash": "f92210eb",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780318800000,
+   "tag": "20260601_130000_b4c0f111__backfill_conversation_model_aliases",
+   "hash": "b4c0f111",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780328185000,
+   "tag": "20260601_153625_fd75d9b0__add_build_run_pid",
+   "hash": "fd75d9b0",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780352634000,
+   "tag": "20260601_222354_4e6a27df__backfill_avatar_icon_aliases",
+   "hash": "4e6a27df",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780394914000,
+   "tag": "20260602_100834_81debd65__drop_agent_auto_launch",
+   "hash": "81debd65",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780402109000,
+   "tag": "20260602_120829_914cd45e__merged_20260602_1208",
+   "hash": "914cd45e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780404676000,
+   "tag": "20260602_125116_23c28b54__rename_task_parent_to_folder",
+   "hash": "23c28b54",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780499327000,
+   "tag": "20260603_150847_c72bb218__reorder_plugin_id_path_rename",
+   "hash": "c72bb218",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780506526000,
+   "tag": "20260603_170846_1c26dd87__pages_tree",
+   "hash": "1c26dd87",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780509413000,
+   "tag": "20260603_175653_7dc2a0b8__page_links",
+   "hash": "7dc2a0b8",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780509734000,
+   "tag": "20260603_180214_afc6a809__page_blocks_changed_trigger",
+   "hash": "afc6a809",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780580632000,
+   "tag": "20260604_134352_892eeb1b__view_correlation_indexes",
+   "hash": "892eeb1b",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780583731000,
+   "tag": "20260604_143531_ac8ba782__tasks_v_precompute_completion",
+   "hash": "ac8ba782",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780614221000,
+   "tag": "20260604_230341_fae42ac5__add_page_blocks_attachments",
+   "hash": "fae42ac5",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780649810000,
+   "tag": "20260605_085650_ecf94351__backfill_claude_cli_call_haiku_alias",
+   "hash": "ecf94351",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780654464000,
+   "tag": "20260605_101424_9197b3d6__merged_20260605_1014",
+   "hash": "9197b3d6",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780654832000,
+   "tag": "20260605_102032_6515b031__merged_20260605_1020",
+   "hash": "6515b031",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780655837000,
+   "tag": "20260605_103717_b24ddd06__merged_20260605_1037",
+   "hash": "b24ddd06",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780662456000,
+   "tag": "20260605_122736_130658a9__sonata_playback_and_track_count",
+   "hash": "130658a9",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780667662000,
+   "tag": "20260605_135422_7795f97c__sonata_song_source_owned_midi",
+   "hash": "7795f97c",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780680496000,
+   "tag": "20260605_172816_eb90ba5e__add_conversation_preprompt",
+   "hash": "eb90ba5e",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780743856000,
+   "tag": "20260606_110416_1fa00d21__add_preprompt_icon",
+   "hash": "1fa00d21",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780819417000,
+   "tag": "20260607_080337_2494f99c__build_runs_inflight_unique",
+   "hash": "2494f99c",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780822807000,
+   "tag": "20260607_090007_4157a2a2__add_sonata_chord_grid_ext",
+   "hash": "4157a2a2",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780847954000,
+   "tag": "20260607_155914_a271fcd9__add_sonata_track_view",
+   "hash": "a271fcd9",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780851771000,
+   "tag": "20260607_170251_d0abe97f__merged_20260607_1702",
+   "hash": "d0abe97f",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780854524000,
+   "tag": "20260607_174844_7e167ec5__add_track_instrument",
+   "hash": "7e167ec5",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780854936000,
+   "tag": "20260607_175536_801d68ca__wipe_page_data",
+   "hash": "801d68ca",
+   "breakpoints": true
+  },
+  {
+   "version": "7",
+   "when": 1780923753000,
+   "tag": "20260608_130233_88cd6cd2__unify_page_documents_blocks",
+   "hash": "88cd6cd2",
+   "breakpoints": true
+  }
+ ]
 }

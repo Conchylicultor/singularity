@@ -5,8 +5,8 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { splitBlock } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
-import { blocksChanged } from "./tables-events";
+import { computePageId } from "./page-id";
+import { notifyBlockChange } from "./notify";
 
 export const handleSplitBlock = implement(splitBlock, async ({ params, body }) => {
   const [block] = await db
@@ -57,13 +57,7 @@ export const handleSplitBlock = implement(splitBlock, async ({ params, body }) =
     const [nextSibling] = await db
       .select()
       .from(_blocks)
-      .where(
-        and(
-          eq(_blocks.documentId, block.documentId),
-          parentFilter,
-          gt(_blocks.rank, block.rank),
-        ),
-      )
+      .where(and(parentFilter, gt(_blocks.rank, block.rank)))
       .orderBy(asc(_blocks.rank))
       .limit(1);
 
@@ -77,17 +71,17 @@ export const handleSplitBlock = implement(splitBlock, async ({ params, body }) =
   }
 
   const newId = `block-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+  const newPageId = await computePageId(newParentId);
   await db.insert(_blocks).values({
     id: newId,
-    documentId: block.documentId,
+    pageId: newPageId,
     parentId: newParentId,
     type: newType,
     data: { ...data, text: afterText },
     rank: newRank.toJSON(),
   });
 
-  blocksLiveResource.notify({ documentId: block.documentId });
-  await blocksChanged.emit({ documentId: block.documentId });
+  await notifyBlockChange({ pageId: block.pageId, type: block.type });
 
   const [origRow] = await db
     .select()

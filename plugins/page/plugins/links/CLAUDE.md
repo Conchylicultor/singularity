@@ -8,7 +8,7 @@
 - Server:
   - Uses: `database.db`
   - DB schema: `plugins/page/plugins/links/server/internal/tables.ts`
-  - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexDocument`
+  - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexPage`
   - Register: `defineJob('page.links.reindex')`
 - Core:
   - Exports: Types: `BacklinkRow`; Values: `BacklinkRowSchema`, `backlinksResource`

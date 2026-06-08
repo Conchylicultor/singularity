@@ -5,12 +5,12 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { documentsResource, type Document } from "@plugins/page/plugins/editor/core";
+import { pagesResource, pageData, type Block } from "@plugins/page/plugins/editor/core";
 import { useBlockEditor, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { pageLinkBlock } from "../../core";
 
-// A small page-picker popover: filterable list of documents fed by the live
-// documentsResource. Selecting a page invokes `onSelect(pageId)`.
+// A small page-picker popover: filterable list of pages fed by the live
+// pagesResource. Selecting a page invokes `onSelect(pageId)`.
 function PagePicker({
   trigger,
   onSelect,
@@ -20,13 +20,15 @@ function PagePicker({
 }) {
   const [open, setOpen] = useState(false);
   const [query, setQuery] = useState("");
-  const result = useResource(documentsResource);
+  const result = useResource(pagesResource);
 
   const filtered = useMemo(() => {
-    const docs = result.pending ? [] : result.data;
+    const pages = result.pending ? [] : result.data;
     const q = query.trim().toLowerCase();
-    if (!q) return docs;
-    return docs.filter((d) => (d.title || "Untitled").toLowerCase().includes(q));
+    if (!q) return pages;
+    return pages.filter((d) =>
+      (pageData(d).title || "Untitled").toLowerCase().includes(q),
+    );
   }, [result, query]);
 
   return (
@@ -49,18 +51,20 @@ function PagePicker({
               <Placeholder>No pages found</Placeholder>
             </li>
           ) : (
-            filtered.map((doc) => (
-              <li key={doc.id}>
+            filtered.map((page) => (
+              <li key={page.id}>
                 <Row
                   hover="muted"
                   onClick={() => {
-                    onSelect(doc.id);
+                    onSelect(page.id);
                     setOpen(false);
                     setQuery("");
                   }}
-                  icon={<PageIcon doc={doc} />}
+                  icon={<PageIcon page={page} />}
                 >
-                  <span className="truncate">{doc.title || "Untitled"}</span>
+                  <span className="truncate">
+                    {pageData(page).title || "Untitled"}
+                  </span>
                 </Row>
               </li>
             ))
@@ -71,10 +75,10 @@ function PagePicker({
   );
 }
 
-function PageIcon({ doc }: { doc: Document }) {
+function PageIcon({ page }: { page: Block }) {
   return (
     <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-      {doc.icon ?? <MdDescription className="size-4" />}
+      {pageData(page).icon ?? <MdDescription className="size-4" />}
     </span>
   );
 }
@@ -82,12 +86,13 @@ function PageIcon({ doc }: { doc: Document }) {
 export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const { pageId } = pageLinkBlock.parse(block.data);
   const { onOpenPage } = useBlockEditor();
-  const result = useResource(documentsResource);
+  const result = useResource(pagesResource);
 
   const target = useMemo(
     () => (result.pending ? undefined : result.data.find((d) => d.id === pageId)),
     [result, pageId],
   );
+  const targetData = target ? pageData(target) : undefined;
 
   // Freshly inserted (empty) block: render the picker affordance.
   if (pageId === "") {
@@ -136,12 +141,12 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         onClick={() => onOpenPage?.(pageId)}
         icon={
           <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-            {target?.icon ?? <MdLink className="size-4" />}
+            {targetData?.icon ?? <MdLink className="size-4" />}
           </span>
         }
       >
         <span className="truncate font-medium underline-offset-2 hover:underline">
-          {target?.title || "Untitled"}
+          {targetData?.title || "Untitled"}
         </span>
       </Row>
     </div>

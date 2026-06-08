@@ -2,22 +2,23 @@ import { eq } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { db } from "@plugins/database/server";
+import { PAGE_BLOCK_TYPE } from "../../core/schemas";
 import type { SerializedBlock } from "../../core/serialized-block";
 import { _blocks } from "./tables";
 
 export type BlockRow = typeof _blocks.$inferSelect;
 
-/** Load every block of a document (raw rows, rank as the stored string). */
-export async function loadDocBlocks(
-  documentId: string,
+/** Load every content block of a page (raw rows, rank as the stored string). */
+export async function loadPageBlocks(
+  pageId: string,
   executor: RankExecutor = db,
 ): Promise<BlockRow[]> {
-  return executor.select().from(_blocks).where(eq(_blocks.documentId, documentId));
+  return executor.select().from(_blocks).where(eq(_blocks.pageId, pageId));
 }
 
 /**
  * Build a portable `SerializedBlock` for a block and its descendants, reading
- * the (already-loaded) document rows. Children are ordered by rank.
+ * the (already-loaded) page rows. Children are ordered by rank.
  */
 export function serializeSubtree(rows: BlockRow[], rootId: string): SerializedBlock {
   const root = rows.find((r) => r.id === rootId);
@@ -41,17 +42,22 @@ export function serializeSubtree(rows: BlockRow[], rootId: string): SerializedBl
  * which keeps keys short since siblings are self-contained. Recursive. Does not
  * notify/emit — the caller does so once after the surrounding transaction.
  * Returns the new top-level ids in order.
+ *
+ * `pageId` is the resolved page scope for the inserted top-level nodes (their
+ * nearest `type="page"` ancestor, i.e. `computePageId(parentId)`). Children
+ * inherit it, except under a `type="page"` node, whose descendants are scoped to
+ * that node's own id.
  */
 export async function insertForest(
   executor: RankExecutor,
   args: {
-    documentId: string;
+    pageId: string | null;
     parentId: string | null;
     rootRanks: Rank[];
     forest: SerializedBlock[];
   },
 ): Promise<{ rootIds: string[] }> {
-  const { documentId, parentId, rootRanks, forest } = args;
+  const { pageId, parentId, rootRanks, forest } = args;
   const rootIds: string[] = [];
   for (let i = 0; i < forest.length; i++) {
     const node = forest[i]!;
@@ -59,7 +65,7 @@ export async function insertForest(
     rootIds.push(id);
     await executor.insert(_blocks).values({
       id,
-      documentId,
+      pageId,
       parentId,
       type: node.type,
       data: node.data ?? {},
@@ -68,7 +74,8 @@ export async function insertForest(
     });
     if (node.children.length > 0) {
       await insertForest(executor, {
-        documentId,
+        // Children of a page node are scoped to that page; otherwise inherit.
+        pageId: node.type === PAGE_BLOCK_TYPE ? id : pageId,
         parentId: id,
         rootRanks: Rank.nBetween(null, null, node.children.length),
         forest: node.children,

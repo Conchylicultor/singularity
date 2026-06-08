@@ -12,14 +12,15 @@ import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
-import { loadDocBlocks, rankWindow } from "./forest";
+import { recomputePageIdSubtree } from "./page-id";
+import { loadPageBlocks, rankWindow } from "./forest";
 
 export const handleBulkMoveBlock = implement(
   bulkMoveBlocks,
   async ({ params, body }) => {
     if (body.ids.length === 0) return [];
 
-    const rows = await loadDocBlocks(params.documentId);
+    const rows = await loadPageBlocks(params.pageId);
     const moving = new Set(body.ids);
     const roots = selectionRoots(rows, moving);
     if (roots.length === 0) return [];
@@ -64,12 +65,17 @@ export const handleBulkMoveBlock = implement(
           .set({ expanded: true, updatedAt: new Date() })
           .where(eq(_blocks.id, body.parentId));
       }
+      // Reparenting can move subtrees into a different page; recompute each.
+      for (const root of roots) await recomputePageIdSubtree(root, tx);
     });
 
-    blocksLiveResource.notify({ documentId: params.documentId });
-    await blocksChanged.emit({ documentId: params.documentId });
+    blocksLiveResource.notify({ pageId: params.pageId });
+    await blocksChanged.emit({ pageId: params.pageId });
 
-    const moved = await db.select().from(_blocks).where(eq(_blocks.documentId, params.documentId));
+    const moved = await db
+      .select()
+      .from(_blocks)
+      .where(eq(_blocks.pageId, params.pageId));
     return moved
       .filter((r) => roots.includes(r.id))
       .map((r) => BlockSchema.parse(r));

@@ -5,8 +5,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { mergeBlocks } from "../../core/endpoints";
 import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
-import { blocksChanged } from "./tables-events";
+import { notifyBlockChange } from "./notify";
 
 export const handleMergeBlocks = implement(mergeBlocks, async ({ params }) => {
   const [block] = await db
@@ -23,13 +22,7 @@ export const handleMergeBlocks = implement(mergeBlocks, async ({ params }) => {
   const [prevSibling] = await db
     .select()
     .from(_blocks)
-    .where(
-      and(
-        eq(_blocks.documentId, block.documentId),
-        parentFilter,
-        lt(_blocks.rank, block.rank),
-      ),
-    )
+    .where(and(parentFilter, lt(_blocks.rank, block.rank)))
     .orderBy(desc(_blocks.rank))
     .limit(1);
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
@@ -67,8 +60,7 @@ export const handleMergeBlocks = implement(mergeBlocks, async ({ params }) => {
 
   await db.delete(_blocks).where(eq(_blocks.id, block.id));
 
-  blocksLiveResource.notify({ documentId: block.documentId });
-  await blocksChanged.emit({ documentId: block.documentId });
+  await notifyBlockChange({ pageId: block.pageId, type: block.type });
 
   const [row] = await db
     .select()

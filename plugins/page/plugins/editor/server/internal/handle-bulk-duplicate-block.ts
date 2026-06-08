@@ -6,7 +6,8 @@ import { bulkDuplicateBlocks } from "../../core/endpoints";
 import { _blocks } from "./tables";
 import { blocksLiveResource } from "./resources";
 import { blocksChanged } from "./tables-events";
-import { insertForest, loadDocBlocks, rankWindow, serializeSubtree } from "./forest";
+import { computePageId } from "./page-id";
+import { insertForest, loadPageBlocks, rankWindow, serializeSubtree } from "./forest";
 
 const EMPTY = new Set<string>();
 
@@ -15,7 +16,7 @@ export const handleBulkDuplicateBlock = implement(
   async ({ params, body }) => {
     if (body.ids.length === 0) return { rootIds: [] };
 
-    const rows = await loadDocBlocks(params.documentId);
+    const rows = await loadPageBlocks(params.pageId);
     const roots = selectionRoots(rows, new Set(body.ids));
     if (roots.length === 0) return { rootIds: [] };
 
@@ -28,8 +29,9 @@ export const handleBulkDuplicateBlock = implement(
         // sibling. The window is computed from the original rows (clones aren't
         // in `rows`), so duplicating adjacent siblings never collides.
         const [prev, next] = rankWindow(rows, root.parentId, root.id, EMPTY);
+        const pageId = await computePageId(root.parentId, tx);
         const { rootIds: created } = await insertForest(tx, {
-          documentId: params.documentId,
+          pageId,
           parentId: root.parentId,
           rootRanks: Rank.nBetween(prev, next, 1),
           forest: [serializeSubtree(rows, rootId)],
@@ -38,8 +40,8 @@ export const handleBulkDuplicateBlock = implement(
       }
     });
 
-    blocksLiveResource.notify({ documentId: params.documentId });
-    await blocksChanged.emit({ documentId: params.documentId });
+    blocksLiveResource.notify({ pageId: params.pageId });
+    await blocksChanged.emit({ pageId: params.pageId });
     return { rootIds };
   },
 );

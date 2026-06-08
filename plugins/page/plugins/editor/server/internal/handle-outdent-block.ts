@@ -3,10 +3,9 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { outdentBlock } from "../../core/endpoints";
-import { BlockSchema } from "../../core/schemas";
+import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
 import { _blocks } from "./tables";
-import { blocksLiveResource } from "./resources";
-import { blocksChanged } from "./tables-events";
+import { notifyBlockChange } from "./notify";
 
 export const handleOutdentBlock = implement(outdentBlock, async ({ params }) => {
   const [block] = await db
@@ -29,19 +28,19 @@ export const handleOutdentBlock = implement(outdentBlock, async ({ params }) => 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!parent) throw new HttpError(404, "Parent block not found");
 
+  // Content's top level is "directly under the page". Outdenting past that would
+  // escape the page into its parent's content — disallow.
+  if (parent.type === PAGE_BLOCK_TYPE) {
+    throw new HttpError(400, "Already at top level");
+  }
+
   const grandparentFilter = parent.parentId === null
     ? isNull(_blocks.parentId)
     : eq(_blocks.parentId, parent.parentId!);
   const [nextSiblingOfParent] = await db
     .select()
     .from(_blocks)
-    .where(
-      and(
-        eq(_blocks.documentId, block.documentId),
-        grandparentFilter,
-        gt(_blocks.rank, parent.rank),
-      ),
-    )
+    .where(and(grandparentFilter, gt(_blocks.rank, parent.rank)))
     .orderBy(asc(_blocks.rank))
     .limit(1);
 
@@ -56,8 +55,8 @@ export const handleOutdentBlock = implement(outdentBlock, async ({ params }) => 
     .set({ parentId: parent.parentId, rank: newRank.toJSON(), updatedAt: new Date() })
     .where(eq(_blocks.id, params.id));
 
-  blocksLiveResource.notify({ documentId: block.documentId });
-  await blocksChanged.emit({ documentId: block.documentId });
+  // The grandparent is within the same page, so pageId is unchanged.
+  await notifyBlockChange({ pageId: block.pageId, type: block.type });
 
   const [row] = await db
     .select()

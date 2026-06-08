@@ -1,10 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { handleListDocuments } from "./internal/handle-list-documents";
-import { handleCreateDocument } from "./internal/handle-create-document";
-import { handleGetDocument } from "./internal/handle-get-document";
-import { handleUpdateDocument } from "./internal/handle-update-document";
-import { handleDeleteDocument } from "./internal/handle-delete-document";
+import { handleListPages } from "./internal/handle-list-pages";
 import { handleListBlocks } from "./internal/handle-list-blocks";
 import { handleCreateBlock } from "./internal/handle-create-block";
 import { handleUpdateBlock } from "./internal/handle-update-block";
@@ -18,14 +14,10 @@ import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
 import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
 import { handlePasteBlock } from "./internal/handle-paste-block";
-import { documentsLiveResource, blocksLiveResource } from "./internal/resources";
+import { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 import { blocksChanged } from "./internal/tables-events";
 import {
-  listDocuments,
-  createDocument,
-  getDocument,
-  updateDocument,
-  deleteDocument,
+  listPages,
   listBlocks,
   createBlock,
   updateBlock,
@@ -41,24 +33,20 @@ import {
   pasteBlocks,
 } from "../core/endpoints";
 
-export { _documents, _blocks } from "./internal/tables";
-export { documentsLiveResource, blocksLiveResource } from "./internal/resources";
+export { _blocks } from "./internal/tables";
+export { pagesLiveResource, blocksLiveResource } from "./internal/resources";
 export { blocksChanged } from "./internal/tables-events";
 export type { BlocksChangedPayload } from "./internal/tables-events";
-export { DocumentLifecycle } from "./internal/document-hooks";
-export type { DocumentDeleteHook } from "./internal/document-hooks";
-export { DocumentSchema, BlockSchema } from "../core/schemas";
-export type { Document, Block } from "../core/schemas";
+export { BlockLifecycle } from "./internal/document-hooks";
+export type { BlockDeleteHook } from "./internal/document-hooks";
+export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/schemas";
+export type { Block, PageData } from "../core/schemas";
 
 export default {
   name: "Page Editor",
   description: "Block-based document editor — tables, routes, and live state.",
   httpRoutes: {
-    [listDocuments.route]: handleListDocuments,
-    [createDocument.route]: handleCreateDocument,
-    [getDocument.route]: handleGetDocument,
-    [updateDocument.route]: handleUpdateDocument,
-    [deleteDocument.route]: handleDeleteDocument,
+    [listPages.route]: handleListPages,
     [listBlocks.route]: handleListBlocks,
     [createBlock.route]: handleCreateBlock,
     [updateBlock.route]: handleUpdateBlock,
@@ -75,7 +63,7 @@ export default {
   },
   register: [blocksChanged],
   contributions: [
-    Resource.Declare(documentsLiveResource),
+    Resource.Declare(pagesLiveResource),
     Resource.Declare(blocksLiveResource),
   ],
 } satisfies ServerPluginDefinition;

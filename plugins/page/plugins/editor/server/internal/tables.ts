@@ -9,35 +9,22 @@ import {
 } from "drizzle-orm/pg-core";
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 
-export const _documents = pgTable(
-  "page_documents",
-  {
-    id: text("id").primaryKey(),
-    title: text("title").notNull(),
-    parentId: text("parent_id").references((): AnyPgColumn => _documents.id, {
-      onDelete: "cascade",
-    }),
-    // `rank` is notNull (mirrors page_blocks). Safe for a fresh auto-generated
-    // migration with no manual backfill: page_documents is empty in every DB
-    // (the debug doc is created lazily, never seeded), so `ADD COLUMN rank
-    // rank_text NOT NULL` has no existing rows to violate. Every document
-    // mutation handler (create + ensure-debug) always populates it.
-    rank: rankText("rank").notNull(),
-    expanded: boolean("expanded").notNull().default(true),
-    icon: text("icon"),
-    createdAt: timestamp("created_at", { withTimezone: true }).defaultNow().notNull(),
-    updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
-  },
-  (t) => [index("page_documents_parent_rank_idx").on(t.parentId, t.rank)],
-);
-
+// One uniform tree of blocks. A "page" is just a block of `type="page"` whose
+// payload (`{ title, icon }`) lives in `data` like every other block type —
+// there is no separate page table. `parentId` is the single adjacency list
+// (pages and content share it); root pages have `parentId = null`.
+//
+// `pageId` is the denormalized nearest `type="page"` ancestor (maintained on
+// insert + reparent via computePageId / recomputePageIdSubtree). It scopes a
+// page's content cheaply and partitions the blocks live resource. It is a
+// nullable self-FK: a page row at the tree root has `pageId = null`.
 export const _blocks = pgTable(
   "page_blocks",
   {
     id: text("id").primaryKey(),
-    documentId: text("document_id")
-      .notNull()
-      .references(() => _documents.id, { onDelete: "cascade" }),
+    pageId: text("page_id").references((): AnyPgColumn => _blocks.id, {
+      onDelete: "cascade",
+    }),
     parentId: text("parent_id").references((): AnyPgColumn => _blocks.id, {
       onDelete: "cascade",
     }),
@@ -49,7 +36,7 @@ export const _blocks = pgTable(
     updatedAt: timestamp("updated_at", { withTimezone: true }).defaultNow().notNull(),
   },
   (t) => [
-    index("page_blocks_doc_parent_rank_idx").on(t.documentId, t.parentId, t.rank),
-    index("page_blocks_document_id_idx").on(t.documentId),
+    index("page_blocks_page_parent_rank_idx").on(t.pageId, t.parentId, t.rank),
+    index("page_blocks_page_id_idx").on(t.pageId),
   ],
 );

@@ -1,14 +1,10 @@
-export { DocumentSchema, BlockSchema } from "./schemas";
-export type { Document, Block } from "./schemas";
+export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "./schemas";
+export type { Block, PageData } from "./schemas";
 
-export { documentsResource, blocksResource } from "./resources";
+export { pagesResource, blocksResource } from "./resources";
 
 export {
-  listDocuments,
-  createDocument,
-  getDocument,
-  updateDocument,
-  deleteDocument,
+  listPages,
   listBlocks,
   createBlock,
   updateBlock,
@@ -22,8 +18,6 @@ export {
   bulkMoveBlocks,
   bulkDuplicateBlocks,
   pasteBlocks,
-  CreateDocumentBodySchema,
-  UpdateDocumentBodySchema,
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
@@ -34,8 +28,6 @@ export {
   PasteBlocksBodySchema,
 } from "./endpoints";
 export type {
-  CreateDocumentBody,
-  UpdateDocumentBody,
   CreateBlockBody,
   UpdateBlockBody,
   MoveBlockBody,

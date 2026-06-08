@@ -1,31 +1,36 @@
-import { asc, eq } from "drizzle-orm";
+import { and, asc, eq, ne } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { DocumentSchema, BlockSchema } from "../../core/schemas";
-import { documentsResource, blocksResource } from "../../core/resources";
-import type { Document, Block } from "../../core/schemas";
-import { _documents, _blocks } from "./tables";
+import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { pagesResource, blocksResource } from "../../core/resources";
+import type { Block } from "../../core/schemas";
+import { _blocks } from "./tables";
 
-export const documentsLiveResource = defineResource<Document[]>({
-  key: documentsResource.key,
+// All pages (`type="page"` blocks), ordered by rank. The sidebar tree is built
+// from these by `parentId`.
+export const pagesLiveResource = defineResource<Block[]>({
+  key: pagesResource.key,
   mode: "push",
-  schema: z.array(DocumentSchema),
+  schema: z.array(BlockSchema),
   loader: async () =>
     db
       .select()
-      .from(_documents)
-      .orderBy(asc(_documents.rank), asc(_documents.createdAt)) as unknown as Promise<Document[]>,
+      .from(_blocks)
+      .where(eq(_blocks.type, PAGE_BLOCK_TYPE))
+      .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });
 
-export const blocksLiveResource = defineResource<Block[], { documentId: string }>({
+// A page's content: non-page blocks scoped by `pageId`. The `type <> 'page'`
+// filter keeps sub-pages out of the content editor (substrate-only UX).
+export const blocksLiveResource = defineResource<Block[], { pageId: string }>({
   key: blocksResource.key,
   mode: "push",
   schema: z.array(BlockSchema),
-  loader: async ({ documentId }) =>
+  loader: async ({ pageId }) =>
     db
       .select()
       .from(_blocks)
-      .where(eq(_blocks.documentId, documentId))
+      .where(and(eq(_blocks.pageId, pageId), ne(_blocks.type, PAGE_BLOCK_TYPE)))
       .orderBy(asc(_blocks.rank), asc(_blocks.createdAt)) as unknown as Promise<Block[]>,
 });

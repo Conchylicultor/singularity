@@ -3,8 +3,8 @@ import { MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
-  documentsResource,
-  deleteDocument,
+  pagesResource,
+  deleteBlock,
 } from "@plugins/page/plugins/editor/core";
 import {
   Dialog,
@@ -27,8 +27,8 @@ export function DeletePageAction({
   title: string;
 }) {
   const [open, setOpen] = useState(false);
-  const result = useResource(documentsResource);
-  const { mutateAsync } = useEndpointMutation(deleteDocument);
+  const result = useResource(pagesResource);
+  const { mutateAsync } = useEndpointMutation(deleteBlock);
 
   const descendantCount = result.pending
     ? 0

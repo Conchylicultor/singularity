@@ -83,10 +83,10 @@ function rowAtPointer(y: number): { id: string; zone: DropZone } | null {
 }
 
 export function BlockEditor({
-  documentId,
+  pageId,
   onOpenPage,
 }: {
-  documentId: string;
+  pageId: string;
   /**
    * Optional navigation callback for link/mention block renderers. Decoupled
    * from any host app's pane (mirrors file-links' `onFileOpen`); the host wires
@@ -95,15 +95,15 @@ export function BlockEditor({
   onOpenPage?: (pageId: string) => void;
 }) {
   return (
-    <BlockEditorProvider documentId={documentId} onOpenPage={onOpenPage}>
+    <BlockEditorProvider pageId={pageId} onOpenPage={onOpenPage}>
       <BlockEditorInner />
     </BlockEditorProvider>
   );
 }
 
 function BlockEditorInner() {
-  const { documentId, setFlatOrder, setRows } = useBlockEditor();
-  const result = useResource(blocksResource, { documentId });
+  const { pageId, setFlatOrder, setRows } = useBlockEditor();
+  const result = useResource(blocksResource, { pageId });
 
   const { rows, flat } = useMemo(() => {
     if (result.pending) {
@@ -592,7 +592,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
             tabIndex={-1}
             role="listbox"
             aria-multiselectable
-            aria-label="Document blocks"
+            aria-label="Page blocks"
             onKeyDown={onKeyDown}
             onCopy={onCopy}
             onCut={onCut}

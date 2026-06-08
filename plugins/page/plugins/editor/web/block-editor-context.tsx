@@ -28,13 +28,13 @@ import {
 import type { BlockEditorAPI } from "./types";
 
 interface BlockEditorContextValue {
-  documentId: string;
+  pageId: string;
   focusedBlockId: string | null;
   setFocusedBlockId: (id: string | null) => void;
   registerFocusHandle: (id: string, handle: { focus: () => void }) => () => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
   setFlatOrder: (blocks: Block[]) => void;
-  /** All blocks of the document (incl. collapsed), kept current for bulk ops. */
+  /** All blocks of the page (incl. collapsed), kept current for bulk ops. */
   setRows: (blocks: Block[]) => void;
   rowsRef: MutableRefObject<Block[]>;
   /** Focus a block's text editor by id (defers until it mounts if needed). */
@@ -54,7 +54,7 @@ interface BlockEditorContextValue {
     parentId?: string | null;
   }) => Promise<string[]>;
   /**
-   * Create a block of the given type at the end of the document and focus it
+   * Create a block of the given type at the end of the page and focus it
    * once the live resource re-renders the list.
    */
   insert: (type: string, data: unknown) => void;
@@ -75,11 +75,11 @@ export function useBlockEditor(): BlockEditorContextValue {
 }
 
 export function BlockEditorProvider({
-  documentId,
+  pageId,
   onOpenPage,
   children,
 }: {
-  documentId: string;
+  pageId: string;
   onOpenPage?: (pageId: string) => void;
   children: ReactNode;
 }) {
@@ -120,17 +120,17 @@ export function BlockEditorProvider({
   const bulkDelete = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return;
-      void fetchEndpoint(bulkDeleteBlocks, { documentId }, { body: { ids } });
+      void fetchEndpoint(bulkDeleteBlocks, { pageId }, { body: { ids } });
     },
-    [documentId],
+    [pageId],
   );
 
   const bulkMove = useCallback(
     (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
       if (args.ids.length === 0) return;
-      void fetchEndpoint(bulkMoveBlocks, { documentId }, { body: args });
+      void fetchEndpoint(bulkMoveBlocks, { pageId }, { body: args });
     },
-    [documentId],
+    [pageId],
   );
 
   const bulkDuplicate = useCallback(
@@ -138,12 +138,12 @@ export function BlockEditorProvider({
       if (ids.length === 0) return [];
       const { rootIds } = await fetchEndpoint(
         bulkDuplicateBlocks,
-        { documentId },
+        { pageId },
         { body: { ids } },
       );
       return rootIds;
     },
-    [documentId],
+    [pageId],
   );
 
   const paste = useCallback(
@@ -155,12 +155,12 @@ export function BlockEditorProvider({
       if (args.blocks.length === 0) return [];
       const { rootIds } = await fetchEndpoint(
         pasteBlocks,
-        { documentId },
+        { pageId },
         { body: { ...args, parentId: args.parentId ?? null } },
       );
       return rootIds;
     },
-    [documentId],
+    [pageId],
   );
 
   const move = useCallback(
@@ -174,16 +174,18 @@ export function BlockEditorProvider({
     [],
   );
 
-  // Insert a new block at the end of the document. Omitting `rank` lets the
-  // server append it after the last existing block. Once the live resource
-  // re-renders and the new block registers its focus handle, focus it.
+  // Insert a new block at the end of the page. Top-level page content is
+  // parented to the page block (`parentId: pageId`), since `computePageId(null)`
+  // is null. Omitting `rank` lets the server append it after the last existing
+  // sibling. Once the live resource re-renders and the new block registers its
+  // focus handle, focus it.
   const insert = useCallback(
     (type: string, data: unknown) => {
       void (async () => {
         const created = await fetchEndpoint(
           createBlock,
-          { documentId },
-          { body: { type, data } },
+          {},
+          { body: { parentId: pageId, type, data } },
         );
         pendingFocusRef.current = created.id;
         const handle = focusHandlesRef.current.get(created.id);
@@ -193,7 +195,7 @@ export function BlockEditorProvider({
         }
       })();
     },
-    [documentId],
+    [pageId],
   );
 
   const makeBlockAPI = useCallback(
@@ -211,7 +213,7 @@ export function BlockEditorProvider({
         void (async () => {
           const created = await fetchEndpoint(
             createBlock,
-            { documentId },
+            {},
             { body: { type, data, afterId: blockId } },
           );
           pendingFocusRef.current = created.id;
@@ -293,13 +295,13 @@ export function BlockEditorProvider({
         setFocusedBlockId(blockId);
       },
     }),
-    [documentId],
+    [],
   );
 
   return (
     <BlockEditorContext.Provider
       value={{
-        documentId,
+        pageId,
         focusedBlockId,
         setFocusedBlockId,
         registerFocusHandle,
