@@ -1,2 +1,2 @@
-function defineCollectedDir(dir: string) { return { dir, _brand: "CollectedDirDef" as const }; }
+import { defineCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 export const webCollectedDir = defineCollectedDir("web");

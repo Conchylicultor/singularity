@@ -45,10 +45,13 @@ interface PluginContribution {
 
 const contributions: PluginContribution[] = [];
 {
-  // ESLint loads this config via jiti, which does NOT resolve the `@plugins/*`
-  // tsconfig path alias. lintEntries[].loader() imports through that alias, so it
-  // throws here ("Cannot find module @plugins/…"). Import each barrel by absolute
-  // path instead — using the entry's pluginPath under the plugins/ root.
+  // The `lint/` collected dir cannot use the shared `loadCollectedDir` helper
+  // (`@plugins/framework/plugins/tooling/plugins/collected-dir/core`) the way
+  // `loadFacets`/`loadAllChecks` do: ESLint loads this config via jiti, which does
+  // NOT resolve the `@plugins/*` tsconfig path alias, so neither the helper import
+  // nor lintEntries[].loader() (both alias-based) would resolve here. We also want
+  // throw-on-failure semantics, not the helper's warn-and-skip. So import each
+  // barrel by absolute path instead — using the entry's pluginPath under plugins/.
   const results = await Promise.allSettled(
     lintEntries.map((e) =>
       import(pathToFileURL(join(here, "plugins", e.pluginPath, "lint", "index.ts")).href),

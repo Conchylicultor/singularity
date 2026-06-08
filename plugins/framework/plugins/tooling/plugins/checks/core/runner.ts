@@ -1,3 +1,4 @@
+import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import type { Check, CheckResult } from "./types";
 import { computeTreeHash } from "./tree-hash";
 import { openCheckCache } from "./cache";
@@ -22,27 +23,11 @@ function isCheck(value: unknown): value is Check {
 
 async function loadAllChecks(): Promise<Check[]> {
   const { checkEntries } = await import("./check.generated");
-  const results = await Promise.allSettled(
-    checkEntries.map((e: { pluginPath: string; loader: () => Promise<{ default: unknown }> }) => e.loader()),
-  );
-  const out: Check[] = [];
-  const seenIds = new Set<string>();
-  for (let i = 0; i < results.length; i++) {
-    const r = results[i]!;
-    const e = checkEntries[i]!;
-    if (r.status === "rejected") {
-      console.warn(`[check] failed: ${e.pluginPath}`, r.reason);
-      continue;
-    }
-    const exported = (r.value as { default?: unknown }).default;
-    const checks = Array.isArray(exported) ? exported : exported ? [exported] : [];
-    for (const c of checks) {
-      if (!isCheck(c) || seenIds.has(c.id)) continue;
-      seenIds.add(c.id);
-      out.push(c);
-    }
-  }
-  return out;
+  return loadCollectedDir<Check>(checkEntries, {
+    isItem: isCheck,
+    dedupeKey: (c) => c.id,
+    label: "check",
+  });
 }
 
 export async function listAllChecks(): Promise<Check[]> {

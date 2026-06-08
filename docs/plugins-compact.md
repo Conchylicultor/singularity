@@ -113,6 +113,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
         - **`checks`** [23 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** — Plugin doc generation and registry codegen
+        - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Plugins:

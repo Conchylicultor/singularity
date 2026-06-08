@@ -133,12 +133,13 @@ Every call must carry a `// UNSAFE: <reason>` comment. Import from
 
 ### Registering a plugin
 
-Add it to `web/src/plugins.ts`:
-
-```typescript
-import myPlugin from "@plugins/my-plugin/web";
-export const plugins: PluginDefinition[] = [shellPlugin, myPlugin];
-```
+Nothing to register by hand. Create the plugin's `web/index.ts` with a default
+export and run `./singularity build` — codegen walks the plugin tree and
+regenerates the registry (`core/web.generated.ts`, a `CollectedEntry[]` of
+`() => import(...)` loaders with `dependsOn` inferred from import statements). The
+`plugins-registry-in-sync` check fails on drift. This is the same discovery
+substrate every runtime uses (`server`, `central`, `check`, `lint`, `facet`) —
+each marks itself with `defineCollectedDir("<runtime>")` in its `core/`.
 
 ## Bootstrap Flow
 
@@ -258,9 +259,13 @@ plugins/
         └── start.ts      # e.g. DB lifecycle, future: server bootstrap, CLI entry points
 
 web/src/
-├── plugins.ts            # Hardcoded plugin registry (static imports)
 └── App.tsx               # PluginProvider + RootRenderer
 ```
+
+> The web plugin registry is **not** hand-maintained. It is codegen'd to
+> `plugins/framework/plugins/web-sdk/core/web.generated.ts` (a `CollectedEntry[]`
+> of dynamic-import loaders) on every `./singularity build`, drift-checked by
+> `plugins-registry-in-sync`.
 
 ## Path Aliases
 
@@ -284,7 +289,7 @@ Empty regions are not rendered (collapsed). Most plugins will contribute to thes
 1. Create `plugins/{name}/web/index.ts`
 2. Import slots from the plugins you want to extend (e.g., `Shell` from `@plugins/shell/web`)
 3. Export a default `PluginDefinition` with contributions
-4. Register it in `web/src/plugins.ts`
+4. Run `./singularity build` — the plugin is discovered and added to the generated registry automatically (no manual registration)
 5. Optionally define your own slots in `plugins/{name}/web/slots.ts` for other plugins to extend
 
 ## Styling

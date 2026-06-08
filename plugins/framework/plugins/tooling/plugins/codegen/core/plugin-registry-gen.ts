@@ -1,7 +1,7 @@
 import { existsSync, readdirSync, readFileSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import type { CollectedDirDef } from "./collected-dir";
+import type { CollectedDirDef } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 
 export interface DiscoveredCollectedDir extends CollectedDirDef {
   ownerDir: string;

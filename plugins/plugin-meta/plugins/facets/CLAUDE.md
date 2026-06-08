@@ -15,7 +15,10 @@ identical to the web/server/core split used everywhere else in the repo:
   Runtime-agnostic; importable from either build-time or the browser.
 - `facet/` — **build-time** operations (`extract`, `relate`, `renderDoc`),
   discovered by `loadFacets()` (dynamic import; runs inside `./singularity build`,
-  browser-less).
+  browser-less). `loadFacets()` is a thin wrapper over the shared
+  `loadCollectedDir` helper (`@plugins/framework/plugins/tooling/plugins/collected-dir/core`),
+  the same uniform discovery substrate every collected runtime uses (`facet`,
+  `check`, `web`, `server`, …) — each marked by `defineCollectedDir("<runtime>")`.
 - `plugins/render-{diff,detail,catalog}/web/` — **browser** React renderers,
   discovered by web slots.
 

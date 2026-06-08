@@ -23,7 +23,10 @@ export {
   type DiscoveredCollectedDir,
 } from "./plugin-registry-gen";
 
-export { defineCollectedDir, isCollectedDirDef, type CollectedDirDef } from "./collected-dir";
+// defineCollectedDir / CollectedDirDef / isCollectedDirDef now live in the
+// dependency-free leaf @plugins/framework/plugins/tooling/plugins/collected-dir/core
+// (the runtimes import the marker from there without forming a cycle through
+// plugin-tree/facets, which codegen depends on).
 
 export {
   generateConfigOrigins,
