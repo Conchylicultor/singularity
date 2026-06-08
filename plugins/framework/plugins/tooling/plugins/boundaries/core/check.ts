@@ -165,7 +165,12 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const pluginsRoot = join(root, "plugins");
 
       const pluginTree = existsSync(pluginsRoot) ? await buildPluginTree(pluginsRoot, { skipBarrelImport: true }) : null;
-      const zoneMap = buildZoneMap(root, config.zones, pluginTree);
+      const zoneMap = buildZoneMap(
+        root,
+        config.zones,
+        pluginTree,
+        new Set(Object.keys(config.runtimes)),
+      );
 
       const rtExceptions = new Set<string>();
       for (const expr of config.runtimeExceptions ?? []) {

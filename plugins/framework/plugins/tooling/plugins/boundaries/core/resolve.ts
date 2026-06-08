@@ -2,8 +2,6 @@ import { sep } from "path";
 import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import type { ZoneDefinition } from "./types";
 
-const RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
-
 export interface ResolvedZone {
   zone: string;
   runtime: string | null;
@@ -24,6 +22,7 @@ export function buildZoneMap(
   _root: string,
   zones: ZoneDefinition[],
   pluginTree: PluginTree | null,
+  runtimes: ReadonlySet<string>,
 ): ZoneMap {
   const allZones = new Set<string>();
   const entries: ZoneEntry[] = [];
@@ -63,7 +62,7 @@ export function buildZoneMap(
           const hierarchyId = pluginRelPathToHierarchy.get(pluginPath)!;
           const afterPlugin = rest.slice(pluginPath.length + 1);
           const rtSegment = afterPlugin.split("/")[0];
-          if (rtSegment && RUNTIMES.has(rtSegment)) {
+          if (rtSegment && runtimes.has(rtSegment)) {
             return { zone: `${pluginZoneName}.${hierarchyId}`, runtime: rtSegment };
           }
           return { zone: `${pluginZoneName}.${hierarchyId}`, runtime: null };
@@ -100,7 +99,7 @@ export function buildZoneMap(
       if (!bestHierarchy) return null;
 
       const remaining = parts.slice(bestLen);
-      if (remaining.length > 0 && RUNTIMES.has(remaining[0]!)) {
+      if (remaining.length > 0 && runtimes.has(remaining[0]!)) {
         return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: remaining[0]! };
       }
       return { zone: `${pluginZoneName}.${bestHierarchy}`, runtime: null };

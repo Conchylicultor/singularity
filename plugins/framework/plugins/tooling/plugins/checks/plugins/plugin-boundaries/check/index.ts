@@ -2,6 +2,7 @@ import { existsSync, readdirSync, readFileSync, statSync } from "fs";
 import { dirname, join, relative, resolve, sep } from "path";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { standardPluginDirs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { runtimeNames } from "@plugins/framework/plugins/tooling/plugins/boundaries/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -31,8 +32,6 @@ const FRAMEWORK_FILES: ReadonlySet<string> = new Set([
   "plugins/framework/plugins/web-core/web/App.tsx",
   "plugins/framework/plugins/web-core/web/__tests__/plugin-render.test.tsx",
 ]);
-
-const VALID_RUNTIMES = new Set(["web", "server", "central", "core", "shared"]);
 
 const PUSH_BACK_HINT =
   "Do NOT work around these violations by editing `plugin-boundaries.ts`, expanding the skip list, " +
@@ -278,7 +277,7 @@ const check: Check = {
         }
 
         // R4: grammar — the import must end at `<runtime>`, nothing deeper.
-        if (!frameworkExempt && (!VALID_RUNTIMES.has(resolved.suffixHead) || resolved.tail !== "")) {
+        if (!frameworkExempt && (!runtimeNames.has(resolved.suffixHead) || resolved.tail !== "")) {
           violations.push({
             rule: "grammar",
             file: relFile,
@@ -344,18 +343,13 @@ const check: Check = {
 function runtimeForPath(
   relFile: string,
   pluginSet: Set<string>,
-): "web" | "server" | "central" | "core" | "shared" | null {
+): string | null {
   const norm = relFile.split(sep).join("/");
   const pluginPath = pluginForPath(relFile, pluginSet);
   if (!pluginPath) return null;
   const afterPlugin = norm.slice(`plugins/${pluginPath}/`.length);
   const segment = afterPlugin.split("/")[0];
-  if (segment === "web") return "web";
-  if (segment === "server") return "server";
-  if (segment === "central") return "central";
-  if (segment === "core") return "core";
-  if (segment === "shared") return "shared";
-  return null;
+  return segment && runtimeNames.has(segment) ? segment : null;
 }
 
 /** Return the relative plugin path that owns `relFile`, or null if the file lives outside `plugins/`. */
@@ -570,7 +564,7 @@ function checkBarrelPurity(
           const rest = specifier.slice("@plugins/".length);
           const segments = rest.split("/");
           const lastSeg = segments[segments.length - 1]!;
-          if (VALID_RUNTIMES.has(lastSeg)) {
+          if (runtimeNames.has(lastSeg)) {
             const specPluginPath = segments.slice(0, -1).join("/");
             const exceptionKey = `${pluginPath}/${runtime} -> ${specifier}`;
             if (specPluginPath !== pluginPath && !REEXPORT_EXCEPTIONS.has(exceptionKey)) {

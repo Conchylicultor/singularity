@@ -1470,7 +1470,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
           - Core:
-            - Exports: Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`; Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `zone`
+            - Exports: Types: `AllowEdge`, `BoundaryConfig`, `DenyEdge`, `Edge`, `RuntimeName`, `ZoneDefinition`; Values: `allow`, `boundaryRulesCheck`, `createBoundaryCheck`, `defineBoundaries`, `deny`, `runtimeNames`, `zone`
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
