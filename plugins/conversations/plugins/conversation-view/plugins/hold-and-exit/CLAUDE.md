@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Toolbar button that marks the task as held and closes the conversation.
+- Description: Exit-menu entry that marks the task as held and closes the conversation.
 - Web:
-  - Contributes: `Conversation.PromptBar` "Exit" → `HoldAndExitButton`
+  - Contributes: `ExitMenu.Item` "hold-and-exit" → `HoldAndExitItem`
   - Uses: `conversations.useConversation`, `notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`

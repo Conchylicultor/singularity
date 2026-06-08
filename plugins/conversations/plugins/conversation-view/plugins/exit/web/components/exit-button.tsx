@@ -3,10 +3,10 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
-import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { exitConversation } from "../../shared";
 
-export function ExitButton({
+export function ExitItem({
   conversation,
 }: {
   conversation: ConversationRecord;
@@ -20,15 +20,12 @@ export function ExitButton({
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   return (
-    <Button
-      variant="outline"
-      size="icon-sm"
-      title={isPending ? "Exiting…" : "Exit"}
-      aria-label="Exit"
+    <DropdownMenuItem
       disabled={disabled}
-      onClick={() => mutate({ params: { id: conversation.id } })}
+      onSelect={() => mutate({ params: { id: conversation.id } })}
     >
-      <MdLogout className="size-3.5" />
-    </Button>
+      <MdLogout className="size-4" />
+      {isPending ? "Exiting…" : "Exit"}
+    </DropdownMenuItem>
   );
 }

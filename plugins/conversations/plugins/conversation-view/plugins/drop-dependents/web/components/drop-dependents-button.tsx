@@ -6,10 +6,10 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
 import { tasksResource, countTransitiveDependents } from "@plugins/tasks/core";
-import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { dropDependents } from "../../shared";
 
-export function DropDependentsButton({
+export function DropDependentsItem({
   conversation,
 }: {
   conversation: ConversationRecord;
@@ -42,15 +42,13 @@ export function DropDependentsButton({
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   return (
-    <Button
-      variant="outline"
-      size="icon-sm"
-      title={isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Exit`}
-      aria-label={`Drop task and ${dependentCount} dependents and exit`}
+    <DropdownMenuItem
+      variant="destructive"
       disabled={disabled}
-      onClick={() => mutate({ params: { id: conversation.id } })}
+      onSelect={() => mutate({ params: { id: conversation.id } })}
     >
-      <MdDeleteSweep className="size-3.5" />
-    </Button>
+      <MdDeleteSweep className="size-4" />
+      {isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Exit`}
+    </DropdownMenuItem>
   );
 }

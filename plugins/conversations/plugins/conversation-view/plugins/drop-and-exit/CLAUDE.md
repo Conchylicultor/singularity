@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Toolbar button that marks the top task as dropped and closes the conversation.
+- Description: Exit-menu entry that marks the top task as dropped and closes the conversation.
 - Web:
-  - Contributes: `Conversation.PromptBar` "Exit" → `DropAndExitButton`
+  - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
   - Uses: `conversations.useConversation`, `conversations.useConversations`, `notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`

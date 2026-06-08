@@ -6,10 +6,10 @@ import { useConversation, useConversations } from "@plugins/conversations/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
-import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { dropAndExit } from "../../shared";
 
-export function DropAndExitButton({
+export function DropAndExitItem({
   conversation,
 }: {
   conversation: ConversationRecord;
@@ -44,46 +44,20 @@ export function DropAndExitButton({
 
   if (conv.pending) return null;
 
-  if (hasPush) {
-    return (
-      <Button
-        variant="outline"
-        size="icon-sm"
-        title={isPending ? "Completing…" : "Complete & Exit"}
-        aria-label="Complete & Exit"
-        disabled={disabled}
-        onClick={() => mutate({ params: { id: conversation.id } })}
-      >
-        <MdCheckCircle className="size-3.5" />
-      </Button>
-    );
-  }
-
-  if (hasOtherActive) {
-    return (
-      <Button
-        variant="outline"
-        size="icon-sm"
-        title={isPending ? "Closing…" : "Exit"}
-        aria-label="Exit"
-        disabled={disabled}
-        onClick={() => mutate({ params: { id: conversation.id } })}
-      >
-        <MdExitToApp className="size-3.5" />
-      </Button>
-    );
-  }
+  const { Icon, label, variant } = hasPush
+    ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Exit", variant: "default" as const }
+    : hasOtherActive
+      ? { Icon: MdExitToApp, label: isPending ? "Closing…" : "Exit", variant: "default" as const }
+      : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Exit", variant: "destructive" as const };
 
   return (
-    <Button
-      variant="outline"
-      size="icon-sm"
-      title={isPending ? "Dropping…" : "Drop & Exit"}
-      aria-label="Drop & Exit"
+    <DropdownMenuItem
+      variant={variant}
       disabled={disabled}
-      onClick={() => mutate({ params: { id: conversation.id } })}
+      onSelect={() => mutate({ params: { id: conversation.id } })}
     >
-      <MdDeleteForever className="size-3.5" />
-    </Button>
+      <Icon className="size-4" />
+      {label}
+    </DropdownMenuItem>
   );
 }

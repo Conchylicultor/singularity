@@ -3,10 +3,10 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
-import { Button } from "@/components/ui/button";
+import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { holdAndExit } from "../../shared";
 
-export function HoldAndExitButton({
+export function HoldAndExitItem({
   conversation,
 }: {
   conversation: ConversationRecord;
@@ -20,15 +20,12 @@ export function HoldAndExitButton({
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
 
   return (
-    <Button
-      variant="outline"
-      size="icon-sm"
-      title={isPending ? "Holding…" : "Hold & Exit"}
-      aria-label="Hold & Exit"
+    <DropdownMenuItem
       disabled={disabled}
-      onClick={() => mutate({ params: { id: conversation.id } })}
+      onSelect={() => mutate({ params: { id: conversation.id } })}
     >
-      <MdPauseCircle className="size-3.5" />
-    </Button>
+      <MdPauseCircle className="size-4" />
+      {isPending ? "Holding…" : "Hold & Exit"}
+    </DropdownMenuItem>
   );
 }

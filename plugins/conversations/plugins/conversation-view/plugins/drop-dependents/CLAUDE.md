@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Prompt-bar button that drops the task and all its transitive dependents, then closes the conversation.
+- Description: Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
 - Web:
-  - Contributes: `Conversation.PromptBar` "Exit" → `DropDependentsButton`
+  - Contributes: `ExitMenu.Item` "drop-dependents" → `DropDependentsItem`
   - Uses: `conversations.useConversation`, `notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.dropTaskTree`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`

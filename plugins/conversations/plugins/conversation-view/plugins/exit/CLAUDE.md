@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Toolbar button that closes the conversation without changing any task state.
+- Description: Exit-menu entry that closes the conversation without changing any task state.
 - Web:
-  - Contributes: `Conversation.PromptBar` "Exit" → `ExitButton`
+  - Contributes: `ExitMenu.Item` "exit" → `ExitItem`
   - Uses: `conversations.useConversation`, `notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`

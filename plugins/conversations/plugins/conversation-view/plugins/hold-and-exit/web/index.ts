@@ -1,10 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
-import { HoldAndExitButton } from "./components/hold-and-exit-button";
+import { ExitMenu } from "@plugins/conversations/plugins/conversation-view/plugins/exit-menu/web";
+import { HoldAndExitItem } from "./components/hold-and-exit-button";
 
 export default {
   name: "Conversation: Hold & Exit",
   description:
-    "Toolbar button that marks the task as held and closes the conversation.",
-  contributions: [Conversation.PromptBar({ id: "hold-and-exit", component: HoldAndExitButton, section: "Exit", sectionOrder: 2 })],
+    "Exit-menu entry that marks the task as held and closes the conversation.",
+  contributions: [ExitMenu.Item({ id: "hold-and-exit", component: HoldAndExitItem, order: 0 })],
 } satisfies PluginDefinition;
