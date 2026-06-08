@@ -6,7 +6,6 @@ import {
 } from "@plugins/conversations/server";
 import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
 import { recordNotification } from "@plugins/notifications/server";
-import { clearJob } from "./state";
 
 const FINALIZE_TIMEOUT_MS = 60_000;
 
@@ -31,8 +30,7 @@ export const exitCleanFinalizeJob = defineJob({
       notifyConversationsChanged();
       // Server-side terminus of the clean push-and-exit flow: persist the
       // "pushed and closed" notification exactly once (the client used to fire
-      // this toast from a per-tab effect, duplicating the row per open tab) and
-      // tear down the in-memory job so no tab needs to DELETE it.
+      // this toast from a per-tab effect, duplicating the row per open tab).
       await recordNotification({
         type: "conversation",
         title: "Pushed and closed",
@@ -40,7 +38,6 @@ export const exitCleanFinalizeJob = defineJob({
         variant: "success",
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
-      clearJob(conversationId);
     });
   },
 });

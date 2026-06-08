@@ -931,9 +931,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
             - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
-            - Resources: `push-and-exit` (push)
           - Shared:
-            - Exports: Types: `JobState`; Values: `cancelPushAndExit`, `pushAndExitConfig`, `pushAndExitResource`, `startPushAndExit`
+            - Exports: Values: `pushAndExitConfig`, `startPushAndExit`
         - **`push-counter`**
         - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
           - Web:

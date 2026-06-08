@@ -1,8 +1,8 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useMemo, useRef, useState } from "react";
 import { MdDeleteForever, MdLogout, MdPlayArrow, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversations, useConversation, useConversationById } from "@plugins/conversations/web";
-import { isActiveStatus, hasLiveProcess } from "@plugins/conversations/core";
+import { isActiveStatus } from "@plugins/conversations/core";
 import { toast } from "@plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -10,10 +10,6 @@ import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { Button } from "@/components/ui/button";
-import {
-  pushAndExitResource,
-  type JobState,
-} from "../../shared/resources";
 
 type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
 
@@ -21,21 +17,6 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const live = useConversation(convId) ?? conversation;
-  const jobsResult = useResource(pushAndExitResource);
-  const job = jobsResult.pending ? undefined : (jobsResult.data[convId] as JobState | undefined);
-  const [pending, setPending] = useState(false);
-
-  useEffect(() => {
-    if (job) setPending(false);
-  }, [job]);
-
-  useEffect(() => {
-    if (!pending) return;
-    const timer = setTimeout(() => setPending(false), 10_000);
-    return () => clearTimeout(timer);
-  }, [pending]);
-
-  const busy = pending || job?.status === "running";
 
   const [draft, setDraft, clearDraft] = useDraft("conversation:prompt", "", { scope: convId });
   const [sending, setSending] = useState(false);
@@ -75,30 +56,14 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
   }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation, convId, live]);
 
-  // Sanctioned idempotent client cleanup: if the conversation's process is no
-  // longer live while a job is still marked busy, DELETE the stale job row.
-  // `clearJob`/handle-cancel is an idempotent Map delete, so duplicate DELETEs
-  // across open tabs are harmless. The terminal "clean"/"error" transitions are
-  // now handled entirely server-side (notification + clearJob), so this is the
-  // only remaining client-side teardown.
-  useEffect(() => {
-    if (!busy || !live) return;
-    if (hasLiveProcess(live.status)) return;
-    // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- idempotent client cleanup; duplicate DELETEs are harmless no-ops server-side.
-    void fetch(
-      `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
-      { method: "DELETE" },
-    );
-  }, [busy, live, convId]);
-
   if (!conversation || !live) return null;
 
   const hasSession = !!live.claudeSessionId;
   const disabled = mode === "restore"
-    ? busy || !hasSession
+    ? !hasSession
     : mode === "stop"
       ? stopping
-      : busy || sending || live.status === "starting";
+      : sending || live.status === "starting";
 
   async function onClick() {
     if (disabled) return;
@@ -184,18 +149,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         setStopping(false);
       }
     } else if (mode === "push-and-exit") {
-      setPending(true);
       try {
         const res = await fetch(
           `/api/conversations/${encodeURIComponent(convId)}/push-and-exit`,
           { method: "POST" },
         );
-        if (!res.ok && res.status !== 409) {
-          setPending(false);
-          throw new Error(`HTTP ${res.status}`);
-        }
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
       } catch (err) {
-        setPending(false);
         toast({
           type: "conversation",
           description: `Push & Exit failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -253,9 +213,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           : mode === "go"
             ? "Go"
             : mode === "push-and-exit"
-              ? busy
-                ? "Pushing…"
-                : "Push & Exit"
+              ? "Push & Exit"
               : mode === "exit"
                 ? "Exit"
                 : "Drop & Exit";
@@ -293,7 +251,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       onClick={onClick}
       className={buttonClass}
     >
-      <Icon className={`size-3.5 ${busy ? "animate-pulse" : ""}`} />
+      <Icon className="size-3.5" />
       {label}
     </Button>
   );
