@@ -12,6 +12,25 @@ seed the cache **before render** with `hydrateResource(resource, params, value)`
 If you ever add a genuinely suspending read (`React.lazy`, `useSuspenseQuery`),
 it has **no ambient boundary** — you must wrap it in your own `<Suspense>`.
 
+## One socket per origin, shared across tabs
+
+The `NotificationsClient` talks to the server over a `SharedWebSocket`: a single
+tab is elected leader and owns the real socket; every received frame is
+broadcast to **all** tabs (and dispatched to the leader itself). So a given
+tab's `handleServerMessage` runs for **every** server frame — including pushes
+for resources only *other* tabs subscribed to.
+
+The load-bearing consequence: a tab must apply a frame only for `(key, params)`
+it holds a **live local subscription** for. `handleServerMessage` gates on the
+local sub `entry` (`channel.subs.get(id)`) before dispatching to
+`applyUpdate`/`applyDelta`/`applyInvalidate`, and that same gate carries the
+version guard + bump. Because `observe()` registers the schema (and `keyOf`)
+together with the sub entry, a present entry guarantees the schema is
+registered — so the apply paths can parse safely. Dropping the gate reintroduces
+the "no schema registered for key=…" crash whenever one tab observes a resource
+(e.g. the config sidebar's `config-v2.conflicts`) and another tab, mounted on a
+page that never observes it, receives the broadcast push.
+
 ## Resource schemas
 
 Every resource **must** declare a `schema` (Zod) — it is required on

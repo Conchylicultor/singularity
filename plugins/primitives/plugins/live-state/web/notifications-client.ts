@@ -234,31 +234,42 @@ export class NotificationsClient {
       console.error(`[notifications] sub-error key=${msg.key} reason=${msg.reason}`);
       return;
     }
+
+    // Every remaining kind (sub-ack/update/delta/invalidate) carries (key,
+    // params) and targets a subscription. The shared socket broadcasts *every*
+    // server frame to *every* tab (see SharedWebSocket) — so this tab also
+    // receives frames for subscriptions only other tabs made. Apply a frame
+    // only when THIS tab holds a live subscription for it: a present `entry`
+    // means observe() ran here, which registered the schema/keyOf the apply*
+    // methods rely on. Without this gate a frame for another tab's resource
+    // reaches applyUpdate with no schema registered and throws. The version
+    // guard + bump also live here, deduped across all three apply paths.
+    const id = `${msg.key}\0${paramsKey(msg.params)}`;
+    const entry = channel.subs.get(id);
+    if (!entry) return;
+    if (msg.version <= entry.version) return;
+    entry.version = msg.version;
+
     if (msg.kind === "sub-ack" || msg.kind === "update") {
-      this.applyUpdate(channel, msg.key, msg.params, msg.value, msg.version);
+      this.applyUpdate(msg.key, msg.params, msg.value);
       return;
     }
     if (msg.kind === "delta") {
-      this.applyDelta(channel, msg.key, msg.params, msg.upserts, msg.order, msg.version);
+      this.applyDelta(channel, msg.key, msg.params, msg.upserts, msg.order);
       return;
     }
     // Only remaining case: "invalidate"
-    this.applyInvalidate(channel, msg.key, msg.params, msg.version);
+    this.applyInvalidate(msg.key, msg.params);
   }
 
   private applyUpdate(
-    channel: SocketChannel,
     key: string,
     params: ResourceParams,
     value: unknown,
-    version: number,
   ): void {
-    const id = `${key}\0${paramsKey(params)}`;
-    const entry = channel.subs.get(id);
-    if (entry) {
-      if (version <= entry.version) return;
-      entry.version = version;
-    }
+    // Invariant: handleServerMessage only reaches here for a (key) this tab
+    // observes, and observe() registers the schema alongside the sub entry — so
+    // a missing schema means that contract was violated.
     const schema = this.schemas.get(key);
     if (!schema) {
       throw new Error(
@@ -283,14 +294,7 @@ export class NotificationsClient {
     params: ResourceParams,
     upserts: [string, unknown][],
     order: string[] | undefined,
-    version: number,
   ): void {
-    const id = `${key}\0${paramsKey(params)}`;
-    const entry = channel.subs.get(id);
-    if (entry) {
-      if (version <= entry.version) return;
-      entry.version = version;
-    }
     const queryKey = queryKeyFor(key, params);
     // Base-presence guard (load-bearing): never apply a delta onto a missing
     // base. If the cache has no value yet, force a fresh full snapshot.
@@ -337,18 +341,7 @@ export class NotificationsClient {
     });
   }
 
-  private applyInvalidate(
-    channel: SocketChannel,
-    key: string,
-    params: ResourceParams,
-    version: number,
-  ): void {
-    const id = `${key}\0${paramsKey(params)}`;
-    const entry = channel.subs.get(id);
-    if (entry) {
-      if (version <= entry.version) return;
-      entry.version = version;
-    }
+  private applyInvalidate(key: string, params: ResourceParams): void {
     void this.queryClient.invalidateQueries({ queryKey: queryKeyFor(key, params) });
   }
 }
