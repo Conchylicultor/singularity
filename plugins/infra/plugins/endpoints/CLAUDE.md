@@ -113,7 +113,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - Description: Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
 - Load-bearing: yes
 - Core:
-  - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
+  - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
 - Web:
   - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
 - Server:

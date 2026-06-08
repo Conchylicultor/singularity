@@ -1,1 +1,2 @@
-export { runBackup, listBackupRuns } from "./endpoints";
+export { runBackup, listBackupRuns, BackupRunSchema } from "./endpoints";
+export type { BackupRun } from "./endpoints";

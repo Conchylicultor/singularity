@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState } from "react";
 import {
   MdBackup,
   MdCheckCircle,
@@ -10,18 +10,9 @@ import {
   MdFolder,
 } from "react-icons/md";
 import { Button } from "@/components/ui/button";
-import type { BackupManifest, BackupTargetResult } from "@plugins/backup/core";
-
-interface BackupRun {
-  id: string;
-  trigger: string;
-  startedAt: string;
-  finishedAt: string | null;
-  status: string;
-  archiveSizeBytes: number | null;
-  manifest: BackupManifest | null;
-  targetResults: BackupTargetResult[] | null;
-}
+import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import type { BackupTargetResult } from "@plugins/backup/core";
+import { listBackupRuns, runBackup, type BackupRun } from "../../shared/endpoints";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024) return `${bytes} B`;
@@ -111,31 +102,10 @@ function BackupRunRow({ run }: { run: BackupRun }) {
 }
 
 export function BackupPanel() {
-  const [loading, setLoading] = useState(false);
-  const [runs, setRuns] = useState<BackupRun[] | null>(null);
-
-  const loadRuns = useCallback(async () => {
-    const res = await fetch("/api/backup/runs");
-    const data = (await res.json()) as BackupRun[];
-    setRuns(data);
-  }, []);
-
-  useEffect(() => {
-    void loadRuns();
-  }, [loadRuns]);
-
-  const runBackup = async () => {
-    setLoading(true);
-    try {
-      await fetch("/api/backup/run", { method: "POST" });
-      // Poll briefly since the job runs async
-      setTimeout(() => void loadRuns(), 2000);
-      setTimeout(() => void loadRuns(), 5000);
-      setTimeout(() => void loadRuns(), 10000);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { data: runs, isLoading } = useEndpoint(listBackupRuns, {});
+  const { mutate: triggerBackup, isPending } = useEndpointMutation(runBackup, {
+    invalidates: [listBackupRuns],
+  });
 
   return (
     <div className="p-6 max-w-2xl space-y-6">
@@ -147,18 +117,18 @@ export function BackupPanel() {
           </p>
         </div>
 
-        <Button onClick={runBackup} disabled={loading}>
+        <Button onClick={() => triggerBackup({})} disabled={isPending}>
           <MdBackup className="size-4 mr-2" />
-          {loading ? "Starting backup…" : "Run Backup Now"}
+          {isPending ? "Starting backup…" : "Run Backup Now"}
         </Button>
 
         <div className="space-y-3">
           <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
             Backup History
           </h3>
-          {runs === null ? (
+          {isLoading ? (
             <p className="text-sm text-muted-foreground">Loading…</p>
-          ) : runs.length === 0 ? (
+          ) : !runs || runs.length === 0 ? (
             <p className="text-sm text-muted-foreground">
               No backups yet. Click above to create one.
             </p>

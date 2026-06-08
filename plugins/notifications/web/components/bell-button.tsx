@@ -1,12 +1,14 @@
 import { useEffect, useRef, useState } from "react";
 import { MdNotifications, MdNotificationsNone } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
+import { dismissNotification, dismissAllNotifications, markAllNotificationsRead } from "../../shared/endpoints";
 import type { Notification } from "../../shared/schema";
 
 const VARIANT_BORDER: Record<Notification["variant"], string> = {
@@ -130,13 +132,11 @@ export function BellButton() {
   }, [data]);
 
   function dismiss(id: string) {
-    void fetch(`/api/notifications/${encodeURIComponent(id)}/dismiss`, {
-      method: "POST",
-    });
+    void fetchEndpoint(dismissNotification, { id });
   }
 
   function dismissAll() {
-    void fetch("/api/notifications/dismiss-all", { method: "POST" });
+    void fetchEndpoint(dismissAllNotifications, {});
   }
 
   const hadUnreadRef = useRef(false);
@@ -145,7 +145,7 @@ export function BellButton() {
     if (next) {
       hadUnreadRef.current = unreadCount > 0;
     } else if (hadUnreadRef.current) {
-      void fetch("/api/notifications/mark-all-read", { method: "POST" });
+      void fetchEndpoint(markAllNotificationsRead, {});
       hadUnreadRef.current = false;
     }
     setOpen(next);

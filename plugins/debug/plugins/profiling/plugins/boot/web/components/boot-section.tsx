@@ -3,14 +3,10 @@ import {
   GanttSection,
   groupByPhase,
   useProfilingContext,
-  type Span,
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
-
-interface BootData {
-  spans: Span[];
-  totalMs: number;
-}
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getBootProfiling, type ProfilingData } from "../../shared/endpoints";
 
 const PHASE_ORDER = [
   "register",
@@ -32,13 +28,11 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
 
 export function BootSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
-  const [data, setData] = useState<BootData | null>(null);
+  const [data, setData] = useState<ProfilingData | null>(null);
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/debug/profiling/boot");
-      if (!res.ok) return;
-      setData((await res.json()) as BootData);
+      setData(await fetchEndpoint(getBootProfiling, {}));
     // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // debug tool — silent on fetch errors

@@ -445,7 +445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
   - Shared:
-    - Exports: Values: `listBackupRuns`, `runBackup`
+    - Exports: Types: `BackupRun`; Values: `BackupRunSchema`, `listBackupRuns`, `runBackup`
   - Plugins:
     - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
       - Web:
@@ -1577,7 +1577,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `shell.ShellCommands`
     - Exports: Values: `getHealth`, `waitForRestart`
   - Shared:
-    - Exports: Types: `HealthResponse`; Values: `getHealth`
+    - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
 
 - **`improve`**
   - Web:
@@ -1617,7 +1617,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ClaudeCliCall`; Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
     - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
       - Core:
-        - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
+        - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
       - Web:
         - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:

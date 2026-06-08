@@ -209,6 +209,67 @@ Same pattern works unchanged — `CentralPluginDefinition` uses the same `HttpHa
 - **If no cross-plugin callers exist**: `shared/endpoints.ts` is acceptable (agents, config)
 - The endpoint file imports the plugin's existing Zod schemas (`shared/schemas.ts` or `core/`)
 
+## Migration gotchas (validated 2026-05-18)
+
+Batch validation on 8 plugins (notifications, auto-launch/toggle, notes, stats/commits, health, profiling/boot, backup, broadcasts) surfaced these issues:
+
+### 1. Most endpoint definitions lack response schemas
+
+~80% of existing endpoint defs have no `response:` field. Without it, `fetchEndpoint` returns `void` — data is discarded. Every endpoint where the client reads the response **must** have a response schema before the web side can migrate. This is the single largest cost of the full sweep.
+
+Void mutations (POST/PATCH/DELETE that ignore the response) need no schema changes.
+
+### 2. Drizzle Date → Zod string (`dateString()` + `ImplementReturn` widening)
+
+Drizzle `timestamp` columns return JS `Date` objects, but Zod response schemas use `z.string()` for the JSON wire format. `implement()` constrains the handler return type against the schema, so TypeScript rejects `Date` where `string` is expected.
+
+**Fix (shipped):**
+- `dateString()` helper in `endpoints/core` — semantic alias for `z.string()` that marks a field as a serialized timestamp.
+- `ImplementReturn<T>` widened via `JsonCompat<T>` — recursively allows `Date` wherever `string` appears in the response type, since `Response.json()` serializes `Date → ISO string`.
+
+```typescript
+// In response schemas:
+export const BackupRunSchema = z.object({
+  startedAt: dateString(),          // ← instead of z.string()
+  finishedAt: dateString().nullable(),
+});
+
+// Handlers return Drizzle rows directly — no .toISOString() mapping needed:
+export const handleList = implement(listBackupRuns, async () => {
+  return await db.select().from(_backupRuns).limit(50);
+});
+```
+
+### 3. Literal types require `as const` in server handlers
+
+`return { ok: true }` infers as `{ ok: boolean }`, not `{ ok: true }`. Schemas using `z.literal(true)` fail the type check. Handlers need `as const`:
+
+```typescript
+return { ok: true as const };
+```
+
+### 4. `useEndpoint` vs `fetchEndpoint` for externally-triggered refetch
+
+`useEndpoint` keys on `[route, params, query]`. Components that refetch via external triggers (e.g. profiling's `refreshKey` context) can't inject that into the query key. Use imperative `fetchEndpoint` inside `useEffect` instead.
+
+### 5. Derived data from `useEndpoint` needs `useMemo`
+
+`data?.entries ?? []` creates a new array reference each render, triggering `react-hooks/exhaustive-deps` warnings when used in `useCallback` dependencies. Wrap in `useMemo`:
+
+```typescript
+const entries = useMemo(() => data?.entries ?? [], [data]);
+```
+
+### 6. `useEndpointMutation.invalidates` fires once, not polling
+
+The backup panel originally polled (setTimeout at 2s/5s/10s) after triggering an async job. `invalidates` triggers one refetch on success. Async jobs need live-state WS push for real-time updates, not query invalidation.
+
+### 7. Special-case endpoints to skip or defer
+
+- `crashes` — needs `keepalive: true` which `fetchEndpoint` doesn't support
+- `debug/worktree-cleanup` — streaming DELETE response (`res.body.getReader()`)
+- `screenshot` — binary blob POST (`content-type: image/png`)
+
 ## Migration strategy
 
 **Phase 1** — Ship the primitive + one reference migration:
@@ -222,6 +283,12 @@ Same pattern works unchanged — `CentralPluginDefinition` uses the same `HttpHa
 - `config` / `config_v2`
 
 **Phase 3** — Remaining plugins migrate incrementally. Old hand-written handlers continue working indefinitely.
+
+**Web-side migration order** (recommended):
+1. Start with void mutations — zero schema changes, quickest wins (~50% of remaining calls)
+2. Batch response schema additions as a precursor pass before migrating web consumers
+3. Use `dateString()` for all Drizzle timestamp columns in response schemas
+4. Skip special cases (streaming, binary, keepalive) until last
 
 ## Key files to create/modify
 

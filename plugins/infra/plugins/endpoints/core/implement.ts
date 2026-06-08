@@ -15,7 +15,16 @@ type HttpHandler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
-type ImplementReturn<T> = [T] extends [void] ? unknown : T;
+// Widen string → string | Date recursively so handlers can return Drizzle
+// `timestamp` columns (Date) where the Zod response schema says `string`.
+// Response.json() serialises Date → ISO string, so the wire format is correct.
+type JsonCompat<T> =
+  T extends string ? T | Date :
+  T extends (infer U)[] ? JsonCompat<U>[] :
+  T extends object ? { [K in keyof T]: JsonCompat<T[K]> } :
+  T;
+
+type ImplementReturn<T> = [T] extends [void] ? unknown : JsonCompat<T>;
 
 export function implement<
   Route extends string,

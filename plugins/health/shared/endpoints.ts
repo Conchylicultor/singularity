@@ -1,7 +1,9 @@
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { HealthResponseSchema } from "./protocol";
 
 export const getHealth = defineEndpoint({
   route: "GET /api/health",
+  response: HealthResponseSchema,
 });
 
 // Readiness probe: 200 only once the `onReadyBlocking` barrier has completed

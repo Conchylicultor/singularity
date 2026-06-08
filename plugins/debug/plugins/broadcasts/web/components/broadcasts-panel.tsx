@@ -1,22 +1,17 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useCallback, useMemo } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Button } from "@/components/ui/button";
+import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  getBroadcasts,
+  writeBroadcasts,
+  type BroadcastEntry,
+} from "../../shared/endpoints";
 
-type BroadcastSeverity = "error" | "warning" | "info";
+type BroadcastSeverity = BroadcastEntry["severity"];
 type BroadcastCommand = "build" | "push" | "check";
-
-interface BroadcastEntry {
-  severity: BroadcastSeverity;
-  message: string;
-  since?: string;
-  until?: string;
-  commands?: BroadcastCommand[];
-}
-
-type ReadResponse = { ok: true; entries: BroadcastEntry[]; path: string };
-type WriteResponse = { ok: true } | { ok: false; error: string };
 
 const SEVERITY_STYLES: Record<BroadcastSeverity, string> = {
   error: "bg-destructive/10 text-destructive",
@@ -37,48 +32,25 @@ function defaultForm() {
 }
 
 export function BroadcastsPanel() {
-  const [entries, setEntries] = useState<BroadcastEntry[]>([]);
-  const [filePath, setFilePath] = useState("");
-  const [loading, setLoading] = useState(true);
+  const { data, isLoading, refetch } = useEndpoint(getBroadcasts, {});
+  const entries = useMemo(() => data?.entries ?? [], [data]);
+  const filePath = data?.path ?? "";
+
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
   const [showForm, setShowForm] = useState(false);
   const [form, setForm] = useState(defaultForm);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const res = await fetch("/api/debug/broadcasts");
-      const data = (await res.json()) as ReadResponse;
-      setEntries(data.entries);
-      setFilePath(data.path);
-    } catch (e) {
-      setError(String(e));
-    } finally {
-      setLoading(false);
-    }
-  }, []);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
-
   const save = useCallback(async (updated: BroadcastEntry[]): Promise<boolean> => {
     setSaving(true);
     setError(null);
     try {
-      const res = await fetch("/api/debug/broadcasts", {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ entries: updated }),
-      });
-      const data = (await res.json()) as WriteResponse;
-      if (!data.ok) {
-        setError("error" in data ? data.error : "Save failed");
+      const result = await fetchEndpoint(writeBroadcasts, {}, { body: { entries: updated } });
+      if (!result.ok) {
+        setError("error" in result ? result.error : "Save failed");
         return false;
       }
-      setEntries(updated);
+      void refetch();
       return true;
     } catch (e) {
       setError(String(e));
@@ -86,7 +58,7 @@ export function BroadcastsPanel() {
     } finally {
       setSaving(false);
     }
-  }, []);
+  }, [refetch]);
 
   const handleDelete = useCallback(
     async (index: number) => {
@@ -140,7 +112,7 @@ export function BroadcastsPanel() {
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => void load()}
+            onClick={() => void refetch()}
             title="Refresh"
           >
             <MdRefresh className="size-4" />
@@ -263,7 +235,7 @@ export function BroadcastsPanel() {
 
       {/* Entry list */}
       <div className="flex-1 overflow-y-auto">
-        {loading ? (
+        {isLoading ? (
           <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
             Loading…
           </div>

@@ -12,5 +12,5 @@ async function broadcastsPath(): Promise<string> {
 export const handleWrite = implement(writeBroadcasts, async ({ body }) => {
   const path = await broadcastsPath();
   await writeFile(path, JSON.stringify(body.entries, null, 2) + "\n", "utf-8");
-  return { ok: true };
+  return { ok: true as const };
 });

@@ -19,7 +19,7 @@
 - Core:
   - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
 - Shared:
-  - Exports: Values: `listBackupRuns`, `runBackup`
+  - Exports: Types: `BackupRun`; Values: `BackupRunSchema`, `listBackupRuns`, `runBackup`
 - Sub-plugins:
   - **`google-drive`** — Config UI for Google Drive backup target. Uploads backup archives to Google Drive.
   - **`local`** — Config UI for local backup target. Stores backup archives on the local filesystem.

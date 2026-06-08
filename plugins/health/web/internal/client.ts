@@ -1,11 +1,11 @@
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { HealthResponse } from "../../shared/protocol";
+import { getHealth as getHealthEndpoint } from "../../shared/endpoints";
 
 export async function getHealth(signal?: AbortSignal): Promise<HealthResponse | null> {
   try {
-    const res = await fetch("/api/health", { signal });
-    if (!res.ok) return null;
-    return (await res.json()) as HealthResponse;
+    return await fetchEndpoint(getHealthEndpoint, {}, { signal });
   } catch {
     return null;
   }
