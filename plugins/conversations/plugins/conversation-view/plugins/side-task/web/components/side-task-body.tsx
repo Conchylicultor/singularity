@@ -8,8 +8,8 @@ import { taskSidePane } from "../panes";
 export function SideTaskBody() {
   const { taskId } = taskSidePane.useParams();
   const { convId: inputConvId } = taskSidePane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId ?? "";
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId ?? "";
   const task = useTask(taskId);
   const openPane = useOpenPane();
   const navigate = useCallback(

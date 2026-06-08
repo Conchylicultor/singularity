@@ -13,7 +13,7 @@ import { ConfigFieldRow } from "./config-field-row";
 import { ConflictDiff } from "./conflict-diff";
 
 export function ConfigDetail() {
-  const configPath = configDetailPane.useChainEntry()?.params.configPath;
+  const configPath = configDetailPane.useRouteEntry()?.params.configPath;
   const registrations = useConfigRegistrations();
 
   const registration = registrations.find(

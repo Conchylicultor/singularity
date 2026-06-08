@@ -37,7 +37,7 @@ export const taskDetailPane = Pane.define({
 
 function TasksRoot(): ReactElement {
   const openPane = useOpenPane();
-  const selectedId = taskDetailPane.useChainEntry()?.params.taskId;
+  const selectedId = taskDetailPane.useRouteEntry()?.params.taskId;
 
   return (
     <Tasks.Host

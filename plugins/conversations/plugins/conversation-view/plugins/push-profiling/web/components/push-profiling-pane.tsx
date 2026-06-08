@@ -15,8 +15,8 @@ const PUSH_PROFILING_PATH = "/api/debug/profiling/push";
 
 export function PushProfilingPaneBody() {
   const { convId: inputConvId } = convPushProfilingPane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const attemptId = conversation?.attemptId;
 

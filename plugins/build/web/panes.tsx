@@ -20,7 +20,7 @@ export const buildDetailPane = Pane.define({
 
 function BuildPaneBody(): ReactElement {
   const openPane = useOpenPane();
-  const selectedRunId = buildDetailPane.useChainEntry()?.params.runId;
+  const selectedRunId = buildDetailPane.useRouteEntry()?.params.runId;
 
   return (
     <PaneChrome pane={buildPane} title="Build">

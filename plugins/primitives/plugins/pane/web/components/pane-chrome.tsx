@@ -105,7 +105,7 @@ function chromeTitle(pane: PaneObject<any, any>, match: PaneMatch | null): React
   const chrome = pane._internal.chrome;
   if (chrome.title === undefined) return null;
   if (typeof chrome.title === "string") return chrome.title;
-  const entry = match?.chain.find((e) => e.pane === pane._internal);
+  const entry = match?.panes.find((e) => e.pane === pane._internal);
   if (!entry) return null;
   return chrome.title(entry.fullParams);
 }

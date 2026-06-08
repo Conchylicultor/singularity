@@ -5,8 +5,8 @@ import { FileTreeView } from "./file-tree-view";
 
 export function ConvFileTreeBody() {
   const { convId: inputConvId } = convFileTreePane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const conversation = useConversationById(convId ?? null);
   if (!conversation) return null;
   return (

@@ -1,0 +1,229 @@
+# Pane substrate: route-neutral vocabulary rename
+
+## Context
+
+The shared pane substrate (`plugins/primitives/plugins/pane`) names its general
+route concept with Miller-columns vocabulary: `currentChain`, `useMatchForChain`,
+`getChain`, `PaneMatch.chain`, "leaf", etc. When the pane primitive was born, Miller
+columns was the *only* renderer, so the columns metaphor and the route substrate were
+one and the same.
+
+That is no longer true. **Full-pane** now exists as a peer renderer (paints only the
+active pane, no columns, no leaf), and layout is renderer-owned via the `layouts/host`
+dispatcher. The columns metaphor now leaks into what should be a layout-agnostic
+substrate: a full-pane app has no "chain of columns" and no "leaf", yet its renderer is
+forced to speak that vocabulary.
+
+**Goal:** rename the substrate's route concept to layout-neutral terms so that
+"chain / columns / leaf" survives **only inside the Miller renderer**
+(`plugins/layouts/plugins/miller`), which legitimately owns the columns metaphor. Pure
+rename — **no behavior change**.
+
+## Naming map
+
+### Substrate internals — `plugins/primitives/plugins/pane/web/pane.ts`
+
+| Old | New |
+|---|---|
+| `currentChain` (module `let`, `PaneSlot[]` store) | `currentRoute` |
+| `chainListeners` | `routeListeners` |
+| `notifyChainListeners` | `notifyRouteListeners` |
+| `subscribeChain` | `subscribeRoute` |
+| `getChainSnapshot` | `getRouteSnapshot` |
+| `useChain` (internal hook → raw `PaneSlot[]`) | `useRouteSlots` |
+| `setChain` | `setRoute` |
+| `chainsEqual` | `routesEqual` |
+| `resolveChain` | `resolveRoute` |
+| `chainStable` (local in resolve) | `routeStable` |
+| `syncChainFromUrl` | `syncRouteFromUrl` |
+| `history.state` key `{ chain }` (write @374, read @548–550) | `{ route }` |
+
+### Substrate public API (barrel `web/index.ts` + `pane.ts`)
+
+| Old | New | External consumers |
+|---|---|---|
+| `getChain` | `getRoute` | 1 (pane-restore) + Miller |
+| `buildChainUrl` | `buildRouteUrl` | none (substrate-only) |
+| `reorderChain` | `reorderRoute` | Miller only |
+| `restoreChain` | `restoreRoute` | 1 (conversations-view) |
+| `clearChain` | `clearRoute` | 1 (sonata library) |
+| `useMatchForChain` | `useRoute` | Miller (`pane-overlay-host`) |
+| `useMatchForPath` (`@deprecated`, **0 consumers**) | **delete** | — |
+| `PaneMatch.chain` (field) | `PaneMatch.panes` | full-pane, host, Miller |
+| `MatchEntry` (type) | **keep** (already neutral) | Miller |
+| `PaneChainEntry` (type) | `PaneRouteEntry` | none external |
+| `PaneObject.useChainEntry()` | `PaneObject.useRouteEntry()` | **~34 call sites / 31 files** |
+| `PaneObject.useChainEntries()` | `PaneObject.useRouteEntries()` | 3 call sites |
+
+Note `PaneMatch` keeps its name (it is the resolved match); only its field renames.
+The internal resolved-entry type `MatchEntry` keeps its name (no chain/columns/leaf in
+it). Store stays `currentRoute: PaneSlot[]` (raw slots) — distinct from `match.panes`
+(resolved `MatchEntry[]`), so "route" is never overloaded.
+
+### Persisted string keys (confirmed: rename both)
+
+- `pane-restore-store.ts` `LS_PREFIX = "miller.chain."` → `"route.restore."`.
+  One-time effect: pane-restore state saved under the old prefix is orphaned on first
+  load after deploy and regenerates naturally. No migration code.
+- `history.state` key `chain` → `route` (above). Back/forward on history entries
+  written *before* deploy fall through the `state?.route` guard to the existing
+  `syncRouteFromUrl(pathname)` URL-reparse fallback — works, transient.
+
+### "leaf" → "current pane"
+
+Only appears in prose/comments (no symbol). Replace "leaf" with "current pane".
+Miller's own `isLast` local variable (its leaf-column concept) **stays** — it is not
+imported from the substrate.
+
+## Files to change
+
+### 1. Substrate (the rename source)
+- `plugins/primitives/plugins/pane/web/pane.ts` — all identifiers above + comment prose
+  (`chain store`→`route store`, `leaf`→`current pane`). Keep `MillerColumns` *component*
+  name references (it's the real component name); only retire chain/columns/leaf used as
+  the route *concept*.
+- `plugins/primitives/plugins/pane/web/index.ts` — barrel re-export list (rename entries,
+  drop `useMatchForChain`/`useMatchForPath`, add `useRoute`; rename `getChain`,
+  `buildChainUrl`, `reorderChain`, `restoreChain`, `clearChain`, `PaneChainEntry`).
+- `plugins/primitives/plugins/pane/web/pane.ts` `PaneObject` interface + `makePaneObject`
+  impl — `useChainEntry`/`useChainEntries` → `useRouteEntry`/`useRouteEntries`,
+  `PaneChainEntry` → `PaneRouteEntry`.
+- `plugins/primitives/plugins/pane/web/components/pane-chrome.tsx` — `match?.chain.find(…)`
+  → `match?.panes.find(…)`.
+- `plugins/primitives/plugins/pane/CLAUDE.md` — prose: "chain store"→"route store",
+  the "Query the chain" section + `useChainEntry`/`useChainEntries` examples → new names,
+  "root on the left, leaf on the right" → describe route order, export list in the
+  autogen block (regenerated by build, but update prose).
+
+### 2. Miller renderer — update calls to renamed substrate symbols only (keep internal columns vocab)
+- `plugins/layouts/plugins/miller/web/components/miller-columns.tsx` — `getChain`→`getRoute`,
+  `reorderChain`→`reorderRoute`, `match.chain`→`match.panes`. Keep `isLast`, `Column`,
+  drag logic, `miller.*` storage keys.
+- `plugins/layouts/plugins/miller/web/components/pane-overlay-host.tsx` —
+  `useMatchForChain`→`useRoute`.
+- `plugins/layouts/plugins/miller/web/components/column.tsx` &
+  `collapsed-bar.tsx` — `MatchEntry` import unchanged (kept).
+
+### 3. Peer renderers
+- `plugins/layouts/plugins/full-pane/web/components/full-pane.tsx` — `match?.chain`
+  → `match?.panes` (lines 31–32) + comment `match.chain.at(-1)`→`match.panes.at(-1)`,
+  "leaf"→"current pane".
+- `plugins/layouts/plugins/host/web/components/pane-layout-host.tsx` — `match?.chain`
+  → `match?.panes` (lines 32–33).
+- `plugins/layouts/plugins/full-pane/CLAUDE.md`, `plugins/layouts/plugins/host/CLAUDE.md` —
+  `match.chain`→`match.panes`, `leaf`→`current pane`, `clearChain()`→`clearRoute()`.
+
+### 4. Direct function-import consumers
+- `plugins/conversations/plugins/pane-restore/web/internal/pane-restore-store.ts` —
+  `getChain`→`getRoute`; `LS_PREFIX` value → `"route.restore."`.
+- `plugins/conversations/plugins/pane-restore/CLAUDE.md` — "miller pane chain"→"route".
+- `plugins/conversations/plugins/conversations-view/web/components/conversation-list.tsx` —
+  `restoreChain`→`restoreRoute`.
+- `plugins/apps/plugins/sonata/plugins/library/web/panes.tsx` — `clearChain`→`clearRoute`.
+- `plugins/apps/plugins/sonata/plugins/library/CLAUDE.md` — `clearChain()`→`clearRoute()`.
+
+### 5. Method-call consumers — `useChainEntry`/`useChainEntries` → `useRouteEntry`/`useRouteEntries`
+Mechanical rename across **31 files** (~34 + 3 call sites). Full list (from
+`rg '\buseChainEntr(y|ies)\b'`):
+`plugins/agents/web/panes.tsx`, `plugins/agents/web/components/agent-launches.tsx`,
+`plugins/build/web/panes.tsx`, `plugins/review/web/panes.tsx`,
+`plugins/conversations/plugins/summary/web/components/summary-pane.tsx`,
+`plugins/code-explorer/web/components/conv-file-tree-body.tsx`,
+`plugins/active-data/plugins/plugin-link/web/components/plugin-link-chip.tsx`,
+`plugins/active-data/plugins/task-link/web/components/task-link-chip.tsx`,
+`plugins/active-data/plugins/task/web/components/task-card.tsx`,
+`plugins/apps/plugins/pages/plugins/page-tree/web/components/pages-sidebar.tsx`,
+`plugins/apps/plugins/forge/plugins/publish/web/components/publish-view.tsx`,
+`plugins/apps/plugins/deploy/plugins/servers/web/components/servers-list.tsx`,
+`plugins/attempt-view/web/components/attempt-pane.tsx`,
+`plugins/config_v2/plugins/settings/web/components/config-nav.tsx`,
+`plugins/config_v2/plugins/settings/web/components/config-detail.tsx`,
+`plugins/tasks/plugins/task-detail/web/panes.tsx`,
+`plugins/tasks/plugins/task-events/web/components/task-events.tsx`,
+and the conversation-view subtree:
+`markdown-extensions/web/internal/{file-links,img,code}-enhancer.tsx`,
+`jsonl-viewer/.../workflow/web/components/{workflow-tool-view,workflow-node-pane}.tsx`,
+`jsonl-viewer/.../agent/web/components/{agent-report-pane,agent-tool-view}.tsx`,
+`side-task/web/components/side-task-body.tsx`,
+`commits-graph/web/components/commits-graph-body.tsx`,
+`commits-graph/web/panes.tsx`,
+`push-profiling/web/components/push-profiling-pane.tsx`,
+`terminal-pane/web/components/terminal-pane-body.tsx`,
+`code/plugins/file-pane/web/file-peek-pane.tsx`,
+`code/plugins/docs-button/web/components/docs-pane.tsx`.
+
+### 6. Autogenerated docs — do NOT hand-edit
+`docs/plugins-details.md` / `docs/plugins-compact.md` export lists regenerate via
+`./singularity build` (codegen) and are verified by the `plugins-doc-in-sync` check.
+Just run the build; do not edit by hand.
+
+## Execution approach
+
+Pure mechanical rename. Recommended order:
+1. Rename inside the substrate (`pane.ts`, `index.ts`, `pane-chrome.tsx`) — define the
+   new names. Delete the unused deprecated `useMatchForPath`.
+2. Update the three renderers (Miller, full-pane, host).
+3. Update direct-import consumers (pane-restore + `LS_PREFIX`, conversations-view, sonata).
+4. Sweep the `useChainEntry`/`useChainEntries` → `useRouteEntry`/`useRouteEntries` call
+   sites (word-boundary find/replace; method names are unique enough to be safe).
+5. Update the hand-written CLAUDE.md prose.
+
+Identifiers (`getChain`, `restoreChain`, `clearChain`, `reorderChain`, `useMatchForChain`,
+`useChainEntry`, `useChainEntries`, `buildChainUrl`, `PaneChainEntry`) are globally unique
+strings — a repo-wide word-boundary replace (excluding the autogen docs) is safe. The
+only context-sensitive edit is `.chain`→`.panes`, which must be scoped to `PaneMatch`
+accesses (`match.chain` / `match?.chain` in the renderers + pane-chrome); do those by
+hand, not blanket replace.
+
+## Verification
+
+1. `./singularity build` — typechecks, runs ESLint (incl. boundary + promise-safety),
+   regenerates the autogen doc blocks, restarts the server. Must pass clean.
+2. `./singularity check` — confirms `plugins-doc-in-sync`, `migrations-in-sync`, `eslint`,
+   `plugin-boundaries` all green.
+3. Residual-vocabulary sweep — confirm chain/columns/leaf as the *route concept* survives
+   only in Miller:
+   ```bash
+   rg -n '\b(getChain|restoreChain|clearChain|reorderChain|useMatchForChain|useChainEntr|buildChainUrl|PaneChainEntry|currentChain|resolveChain)\b' \
+     --glob '!plugins/layouts/plugins/miller/**' --glob '!docs/**' -g '*.ts' -g '*.tsx'
+   # expect: no hits
+   rg -n '\.chain\b' --glob '!plugins/layouts/plugins/miller/**' -g '*.ts' -g '*.tsx'
+   # expect: no PaneMatch.chain hits (unrelated .chain on other types, if any, are fine)
+   ```
+4. Behavioral smoke test (no behavior should change) via Playwright against
+   `http://<worktree>.localhost:9000`:
+   - Open a task → conversation; confirm the pane opens (exercises `useRouteEntry`).
+   - Browser back/forward across a few panes (exercises `history.state` `{ route }`
+     read/write + the pre-deploy URL-reparse fallback).
+   - Sonata library "← Library" back button (exercises `clearRoute`).
+   - Re-open a recently navigated conversation (exercises `restoreRoute` + new
+     `route.restore.` localStorage prefix).
+   - Miller drag-reorder a column (exercises `reorderRoute`).
+
+## Linearity is intentionally untouched (the deeper, separate concern)
+
+After the rename, `currentRoute` is still a **linear** `PaneSlot[]` — an ordered path
+from a root pane to the current one. This is *not* a hidden Miller leak: the ordered
+root→current path is intrinsic to nested URL routing and is consumed identically by every
+renderer (full-pane reads `route.at(-1)`; Miller paints each element as a column; a future
+tab-bar would tab across them). Param accumulation (`fullParams`, root→current) is
+URL-nesting semantics, not a columns concept. "Route" correctly names this shared concept;
+the retired words "chain/columns/leaf" were the leak (they implied the columns *visual*).
+
+The one genuinely unexamined assumption is **linearity itself**: a route is a single
+ordered path, not a tree. True tabs / splits / grids (multiple simultaneously-active
+sibling panes) would need a route *tree* with the active path derived — the deferred
+*"Layout tree"* item in `pane/CLAUDE.md`. That is a **behavior change**, deliberately out
+of scope here; this rename neither fixes nor entrenches it (a tree still has a legitimate
+ordered active-path that is a "route"). Tracked as a separate follow-up task.
+
+The renderer-specific hint `pane.width` ("default column width") also stays — optional
+metadata the substrate exposes generically; Miller interprets it, full-pane ignores it.
+
+## Out of scope / explicitly preserved
+- Miller-internal columns vocabulary: `isLast`, `Column`, `CollapsedBar`,
+  `useColumnCollapse`/`useColumnWidth`/`useColumnMaximize`, `miller.collapse.*` /
+  `miller.width.*` storage keys, drag logic. All stay.
+- `MillerColumns` component-name references in substrate comments (it is the actual
+  component name) — kept; only the chain/columns/leaf *route concept* is retired.
+- No DB, schema, or server changes. Frontend-only.

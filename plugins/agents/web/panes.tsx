@@ -53,8 +53,8 @@ export const agentSidePane = Pane.define({
 });
 
 function AgentsRoot(): ReactElement {
-  const selectedUserId = agentDetailPane.useChainEntry()?.params.id;
-  const selectedSystemId = systemAgentDetailPane.useChainEntry()?.params.systemId;
+  const selectedUserId = agentDetailPane.useRouteEntry()?.params.id;
+  const selectedSystemId = systemAgentDetailPane.useRouteEntry()?.params.systemId;
 
   return (
     <div className="h-full overflow-auto p-4">

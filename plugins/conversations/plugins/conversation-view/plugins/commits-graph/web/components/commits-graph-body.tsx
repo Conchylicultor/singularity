@@ -15,8 +15,8 @@ const BEHIND_COLOR = "color-mix(in srgb, var(--muted-foreground) 50%, transparen
 export function CommitsGraphBody() {
   const openPane = useOpenPane();
   const { convId: inputConvId } = convCommitsGraphPane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const result = useResource(commitsGraphResource, {
     attemptId: conversation?.attemptId ?? "",

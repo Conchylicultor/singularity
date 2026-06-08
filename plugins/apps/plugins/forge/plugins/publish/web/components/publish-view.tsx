@@ -14,7 +14,7 @@ export function PublishView() {
 
   const openPane = useOpenPane();
   const selectedId =
-    pluginViewPane.useChainEntry()?.params.pluginId ?? null;
+    pluginViewPane.useRouteEntry()?.params.pluginId ?? null;
 
   useEffect(() => {
     let cancelled = false;

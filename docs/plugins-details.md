@@ -1033,9 +1033,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `resolveCliFlag`
       - Core:
         - Exports: Types: `ConversationModel`, `ModelMeta`, `ModelTier`; Values: `cliFlagFor`, `ConversationModelSchema`, `currentModelForTier`, `DEFAULT_MODEL`, `idForCliName`, `MODEL_REGISTRY`, `MODEL_TIERS`, `modelDisplayLabel`, `normalizeModel`, `registerModelCorruptionReporter`, `reportUnknownModel`, `SELECTABLE_MODELS`, `StoredModelSchema`
-    - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
+    - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
       - Web:
-        - Exports: Values: `loadChainForConversation`
+        - Exports: Values: `loadRouteForConversation`
     - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
       - Web:
         - Contributes: `ConfigV2.WebRegister`
@@ -2047,7 +2047,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
-        - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `clearChain`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePathname`, `useSyncPaneRegistry`
+        - Exports: Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePathname`, `useRoute`, `useSyncPaneRegistry`
       - Cross-plugin:
         - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `file-pane`, `library`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.

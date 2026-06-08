@@ -2,7 +2,7 @@ import { useContext, useMemo } from "react";
 import {
   PaneBasePathContext,
   setBasePath,
-  useMatchForChain,
+  useRoute,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
 import { MillerColumns } from "./miller-columns";
@@ -31,8 +31,8 @@ export function PaneOverlayHost() {
   }, [basePath]);
   useSyncPaneRegistry();
 
-  const match = useMatchForChain();
-  const hasPane = !!match && match.chain.length > 0;
+  const match = useRoute();
+  const hasPane = !!match && match.panes.length > 0;
   if (!hasPane) return null;
 
   return (

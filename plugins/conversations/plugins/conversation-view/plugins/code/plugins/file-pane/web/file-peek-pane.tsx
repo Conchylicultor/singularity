@@ -21,7 +21,7 @@ export const filePeekPane = Pane.define({
 
 function FilePeekPaneBody() {
   const openPane = useOpenPane();
-  const convId = conversationPane.useChainEntry()?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
 
   const { worktree, filePath: rawFilePath } = filePeekPane.useParams();
 

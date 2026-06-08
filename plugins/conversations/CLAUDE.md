@@ -97,7 +97,7 @@
       - **`history`** — All conversations in historical order of creation.
       - **`queue`** — Stable-rank global priority queue of conversations awaiting user input. Ranks seeded once on creation (newest first); pinned top conversation is the user's current focus. Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.
   - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
-  - **`pane-restore`** — Saves and restores the miller pane chain per conversation using localStorage.
+  - **`pane-restore`** — Saves and restores the pane route per conversation using localStorage.
   - **`preprompts`** — Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt. Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.
   - **`runtime-api`** — Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).
   - **`runtime-tmux`** — Runs Claude CLI sessions inside tmux panes.

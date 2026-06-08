@@ -19,7 +19,7 @@ them without a `shell → library` import that would cycle with the existing
   the global bus while mounted.
 
 `useOpenSong` opens the player with `openPane(sonataPlayerPane, { songId },
-{ mode: "root", input: { title } })`. The ← Library button calls `clearChain()`
+{ mode: "root", input: { title } })`. The ← Library button calls `clearRoute()`
 (empty route → the index pane), which also works for deep-linked players. The
 shell mounts `<FullPane/>`, which paints the active pane full-surface.
 

@@ -9,7 +9,7 @@ import { ServerStatusBadge } from "./server-status-badge";
 export function ServersList() {
   const serversResult = useResource(serversResource);
   const openPane = useOpenPane();
-  const selectedId = serverDetailPane.useChainEntry()?.params.serverId;
+  const selectedId = serverDetailPane.useRouteEntry()?.params.serverId;
 
   if (serversResult.pending) return <Placeholder>Loading…</Placeholder>;
 

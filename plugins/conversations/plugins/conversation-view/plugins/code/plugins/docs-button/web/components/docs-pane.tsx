@@ -13,8 +13,8 @@ type DocFile = EditedFile & { worktree: string };
 
 export function DocsPane() {
   const { convId: inputConvId } = convDocsPane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const conversation = useConversationById(convId ?? null);
   if (!conversation) return null;
   return <DocsPaneInner convId={conversation.id} attemptId={conversation.attemptId} />;

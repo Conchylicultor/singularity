@@ -17,8 +17,8 @@ export const convReviewPane = Pane.define({
 
 function ConvReviewBody() {
   const { convId: inputConvId } = convReviewPane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const [source, setSource] = useState<Source>({ kind: "working" });
 

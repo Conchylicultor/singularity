@@ -22,9 +22,9 @@ function isExternalUrl(src: string): boolean {
 }
 
 export function ImgEnhancer({ children }: { children: ReactNode }) {
-  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
+  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
   const conversation = useConversationById(convId);
-  const taskEntry = taskDetailPane.useChainEntry();
+  const taskEntry = taskDetailPane.useRouteEntry();
   const openPane = useOpenPane();
   const worktree = conversation?.attemptId ?? (taskEntry ? "main" : undefined);
 

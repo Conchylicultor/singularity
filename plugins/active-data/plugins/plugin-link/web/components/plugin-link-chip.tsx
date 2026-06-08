@@ -35,7 +35,7 @@ export function PluginLinkChip({
   attrs: Record<string, string>;
 }) {
   const id = content.trim();
-  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
+  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
   const openPane = useOpenPane();
 
   const { data } = useQuery<PluginTreePayload>({

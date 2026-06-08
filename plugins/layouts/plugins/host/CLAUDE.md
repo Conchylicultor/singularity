@@ -18,7 +18,7 @@ function MyAppSurface() {
 ```
 
 The host resolves the route once (`usePaneRoute`), looks at the **active pane**
-(`match.chain.at(-1)`), and renders `<FullPane/>` if that pane is in `full`,
+(`match.panes.at(-1)`), and renders `<FullPane/>` if that pane is in `full`,
 otherwise `<MillerColumns/>`. It provides `PaneMatchContext` and passes the
 resolved `match` to whichever renderer it picks, so the inner renderer skips its
 own self-resolve — the registry is synced exactly once per frame.

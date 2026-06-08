@@ -1,13 +1,14 @@
 # Pane
 
 The unified pane primitive. One pane = one URL segment + one component.
-The runtime source of truth is the **chain store** (`currentChain:
+The runtime source of truth is the **route store** (`currentRoute:
 PaneSlot[]`), not the URL. The URL is derived for deep linking; on
-navigation the chain is persisted in `history.state` so back/forward
-works without re-parsing. The layout renderer (currently Miller columns)
-arranges the chain as a horizontal sequence of columns. Each pane is
-self-contained: it receives `input` from its opener and self-fetches
-any data it needs.
+navigation the route is persisted in `history.state` so back/forward
+works without re-parsing. A layout renderer maps the route to a visible
+arrangement — Miller columns paints each pane as a column; Full-pane
+paints only the current pane. The route itself is layout-agnostic. Each
+pane is self-contained: it receives `input` from its opener and
+self-fetches any data it needs.
 
 Design rationale lives in:
 
@@ -15,7 +16,7 @@ Design rationale lives in:
 - `research/2026-04-23-global-unified-pane-manager-v3.md` — refinements
   (`.open()` takes full params; `useParams()` is own-only; prefix matching).
 - `research/2026-04-30-plugins-miller-columns.md` — layout renderer.
-- `research/2026-05-15-global-remove-after-pane-state.md` — chain-first
+- `research/2026-05-15-global-remove-after-pane-state.md` — route-first
   architecture, `after:` removal, `input`/`useInput()`, `defaultAncestors`.
 
 ## Define a pane
@@ -66,10 +67,10 @@ Rules:
 - `id` is a stable string; used for slot keys and debug output.
 - `defaultAncestors` (optional) — a hint for `openPane` when no caller
   context exists. When a pane is opened via `.open()` or `openPane()`
-  without being inside an existing chain, the runtime prepends the listed
-  ancestors to build a complete chain. This is purely a convenience for
+  without being inside an existing route, the runtime prepends the listed
+  ancestors to build a complete route. This is purely a convenience for
   "open from scratch" — it does NOT constrain where the pane can appear.
-  Any pane can appear at any position in the chain.
+  Any pane can appear at any position in the route.
 - `segment` is the pane's own URL fragment (no leading slash). Supports
   `:param` and `:rest*` (wildcard). Omit for "no URL segment of my own".
   **Segments with params must have a static prefix** (e.g. `t/:taskId`,
@@ -96,21 +97,21 @@ function TaskDetail() {
 pane's `segment`, not any inherited from ancestors. Reading an ancestor's
 params is explicit: `ancestorPane.useParams()`.
 
-## Query the chain from outside a pane
+## Query the route from outside a pane
 
-Use `useChainEntry()` / `useChainEntries()` to check whether a pane
-is present in the current chain and read its params — without reaching
+Use `useRouteEntry()` / `useRouteEntries()` to check whether a pane
+is present in the current route and read its params — without reaching
 into `_internal` or importing `usePaneMatch()`:
 
 ```tsx
 // Single entry (first match, or null if absent):
-const selectedId = taskDetailPane.useChainEntry()?.params.taskId;
+const selectedId = taskDetailPane.useRouteEntry()?.params.taskId;
 
 // Boolean presence check:
-const isOpen = addServerPane.useChainEntry() !== null;
+const isOpen = addServerPane.useRouteEntry() !== null;
 
 // Multiple instances (e.g. conversationPane can appear more than once):
-const convEntries = conversationPane.useChainEntries();
+const convEntries = conversationPane.useRouteEntries();
 const lastConv = convEntries.at(-1);
 ```
 
@@ -121,9 +122,9 @@ specific instance you found.
 ## Input
 
 Panes can receive non-URL state at creation time via `input`. Input is
-persisted in `history.state` alongside the chain, so it survives
+persisted in `history.state` alongside the route, so it survives
 back/forward navigation and doesn't depend on the opener pane remaining
-in the chain.
+in the route.
 
 ```ts
 export const myPane = Pane.define({
@@ -168,7 +169,7 @@ opener). The canonical data should still be fetched by the pane itself
 ### `useOpenPane` — caller-aware navigation
 
 Inside a pane component, `useOpenPane()` returns a function that knows
-the caller's position in the chain:
+the caller's position in the route:
 
 ```tsx
 const openPane = useOpenPane();
@@ -181,7 +182,7 @@ openPane(attemptPane, { attemptId }, { mode: "push", side: "left" });
 ```
 
 Modes:
-- `"root"` — replace the entire chain with a fresh one rooted at target.
+- `"root"` — replace the entire route with a fresh one rooted at target.
 - `"push"` — insert target relative to the caller. `side: "right"`
   (default) appends after the caller, truncating siblings to the right.
   `side: "left"` inserts before the caller (skipped if already an ancestor).
@@ -311,23 +312,24 @@ renders directly inside its column with no chrome wrapper.
 
 ## Router
 
-The **chain store** is the single source of truth at runtime. Navigation
-APIs (`openPane`, `pane.open()`, `restoreChain`) mutate the chain
+The **route store** is the single source of truth at runtime. Navigation
+APIs (`openPane`, `pane.open()`, `restoreRoute`) mutate the route
 directly. Each mutation:
 
-1. Updates `currentChain` (the in-memory `PaneSlot[]`).
-2. Derives the URL via `buildChainUrl()`.
+1. Updates `currentRoute` (the in-memory `PaneSlot[]`).
+2. Derives the URL via `buildRouteUrl()`.
 3. Pushes (or replaces) a `history.state` entry containing the
-   serialized chain (paneId, params, input per slot).
+   serialized route (paneId, params, input per slot).
 
-On `popstate` (back/forward), the chain is restored from
+On `popstate` (back/forward), the route is restored from
 `history.state` — no URL re-parsing needed. URL parsing (`parseUrl`)
 is only a fallback for initial page load and shared deep links.
 
-The shell mounts a layout renderer once (currently `<MillerColumns/>`
-from `@plugins/layouts/plugins/miller/web`). The renderer reads the
-chain via `useMatchForChain()` and arranges it as a horizontal sequence
-of columns — root on the left, leaf on the right.
+The shell mounts a layout renderer once (e.g. `<MillerColumns/>` from
+`@plugins/layouts/plugins/miller/web`, or `<FullPane/>`). The renderer
+reads the route via `useRoute()` and maps it to its arrangement — Miller
+lays the panes out as columns, root on the left and current pane on the
+right; Full-pane shows only the current pane (`match.panes.at(-1)`).
 
 The router rebuilds its lookup table from the
 `Pane.Register` contribution list synchronously on every render via
@@ -350,7 +352,7 @@ See "Open questions" in the design doc.
 - Load-bearing: yes
 - Web:
   - Slots: `Pane.Register`
-  - Exports: Types: `InferParams`, `MatchEntry`, `PaneChainEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildChainUrl`, `clearChain`, `getBasePath`, `getChain`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderChain`, `restoreChain`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useMatchForChain`, `useMatchForPath`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePathname`, `useSyncPaneRegistry`
+  - Exports: Types: `InferParams`, `MatchEntry`, `PaneChromeConfig`, `PaneInternal`, `PaneMatch`, `PaneObject`, `PaneOpenMode`, `PaneRouteEntry`, `PaneSlot`, `PaneToggleOpts`, `ResolveHook`, `TypeMarker`; Values: `buildRouteUrl`, `clearRoute`, `getBasePath`, `getRoute`, `openPane`, `Pane`, `PaneActionsSlot`, `PaneBasePathContext`, `PaneChrome`, `PaneIconAction`, `PaneInstanceContext`, `PaneLayoutContext`, `PaneMatchContext`, `PaneResolveGuard`, `parseUrl`, `reorderRoute`, `restoreRoute`, `setBasePath`, `stripBasePath`, `type`, `useCurrentPane`, `useIndexMatch`, `useOpenPane`, `usePaneMatch`, `usePaneRoute`, `usePathname`, `useRoute`, `useSyncPaneRegistry`
 - Cross-plugin:
   - Slot contributors: `agent`, `agents`, `attempt-view`, `auth`, `backup`, `broadcasts`, `build`, `catalog`, `claude-cli-calls`, `code-explorer`, `commits-graph`, `conversation-view`, `conversations-recover`, `crashes`, `docs-button`, `events-test`, `file-pane`, `library`, `logs`, `memory`, `page-tree`, `plugin-link`, `plugin-view`, `profiling`, `publish`, `push`, `push-profiling`, `queue`, `review`, `screenshot`, `servers`, `settings`, `setup-wizard`, `side-task`, `stats`, `summary`, `tables`, `task-detail`, `tasks-panel`, `terminal-pane`, `theme-customizer`, `welcome`, `workflow`, `worktree-cleanup`
 

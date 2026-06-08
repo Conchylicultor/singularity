@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { loadChainForConversation } from "@plugins/conversations/plugins/pane-restore/web";
-import { restoreChain, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { loadRouteForConversation } from "@plugins/conversations/plugins/pane-restore/web";
+import { restoreRoute, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { ConversationsView } from "../slots";
 
@@ -33,9 +33,9 @@ export function ConversationList() {
   };
 
   const navigate = (id: string) => {
-    const saved = loadChainForConversation(id);
+    const saved = loadRouteForConversation(id);
     if (saved && saved.length > 1) {
-      restoreChain(saved);
+      restoreRoute(saved);
     } else {
       openPane(conversationPane, { convId: id }, { mode: "root" });
     }

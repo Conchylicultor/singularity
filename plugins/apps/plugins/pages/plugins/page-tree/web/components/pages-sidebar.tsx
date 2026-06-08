@@ -59,7 +59,7 @@ function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }
 export function PagesSidebar() {
   const result = useResource(documentsResource);
   const openPane = useOpenPane();
-  const selectedId = pageDetailPane.useChainEntry()?.params.pageId;
+  const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
 
   const rows = useMemo<PageRowData[]>(
     () => (result.pending ? [] : result.data),

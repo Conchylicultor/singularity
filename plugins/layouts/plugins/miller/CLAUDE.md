@@ -2,7 +2,7 @@
 
 Miller-columns renderer for the pane chain. Replaces `<PaneRouter/>` at the
 shell's main mount: instead of mounting only the root pane and relying on
-nested `<Outlet/>` calls, Miller maps `match.chain` to a flat row of
+nested `<Outlet/>` calls, Miller maps `match.panes` to a flat row of
 columns. Walking deeper in the URL appends a column on the right; closing
 a pane removes the rightmost column.
 

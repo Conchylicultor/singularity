@@ -1,12 +1,12 @@
-import { getChain } from "@plugins/primitives/plugins/pane/web";
+import { getRoute } from "@plugins/primitives/plugins/pane/web";
 
-const LS_PREFIX = "miller.chain.";
+const LS_PREFIX = "route.restore.";
 const TTL = 30 * 24 * 60 * 60 * 1000;
 
 type SavedSlot = { paneId: string; params: Record<string, string>; input?: Record<string, string> };
 type Envelope = { v: SavedSlot[]; ts: number };
 
-export function saveChainForConversation(convId: string, slots: SavedSlot[]): void {
+export function saveRouteForConversation(convId: string, slots: SavedSlot[]): void {
   try {
     const envelope: Envelope = { v: slots, ts: Date.now() };
     localStorage.setItem(LS_PREFIX + convId, JSON.stringify(envelope));
@@ -16,7 +16,7 @@ export function saveChainForConversation(convId: string, slots: SavedSlot[]): vo
   }
 }
 
-export function loadChainForConversation(convId: string): SavedSlot[] | null {
+export function loadRouteForConversation(convId: string): SavedSlot[] | null {
   try {
     const raw = localStorage.getItem(LS_PREFIX + convId);
     if (!raw) return null;
@@ -37,12 +37,12 @@ function handleNavigation(): void {
   if (saveTimer !== null) clearTimeout(saveTimer);
   saveTimer = setTimeout(() => {
     saveTimer = null;
-    const chain = getChain();
-    if (chain.length === 0 || chain[0]?.paneId !== "conversation") return;
-    const convId = chain[0]?.params.convId;
+    const route = getRoute();
+    if (route.length === 0 || route[0]?.paneId !== "conversation") return;
+    const convId = route[0]?.params.convId;
     if (!convId) return;
-    const slots: SavedSlot[] = chain.map((s) => ({ paneId: s.paneId, params: s.params, input: s.input }));
-    saveChainForConversation(convId, slots);
+    const slots: SavedSlot[] = route.map((s) => ({ paneId: s.paneId, params: s.params, input: s.input }));
+    saveRouteForConversation(convId, slots);
   }, 50);
 }
 

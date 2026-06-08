@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useState } from "react";
 import {
   Pane,
-  clearChain,
+  clearRoute,
   type,
 } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -154,7 +154,7 @@ function SonataPlayerSurface(): ReactElement {
       {/* Toolbar: back-to-library + title, display picker, transport. */}
       <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border px-6 py-3">
         <div className="flex items-center gap-2">
-          <Button variant="outline" size="xs" onClick={() => clearChain()}>
+          <Button variant="outline" size="xs" onClick={() => clearRoute()}>
             ← Library
           </Button>
           <span className="text-sm font-semibold text-foreground">

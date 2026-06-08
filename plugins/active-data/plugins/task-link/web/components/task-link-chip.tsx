@@ -23,7 +23,7 @@ const TASK_STATUS_DOT: Record<TaskStatus, string> = {
 export function TaskLinkChip({ content }: { content: string; attrs: Record<string, string> }) {
   const taskId = content.trim();
   const result = useResource(tasksResource);
-  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
+  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
   const openPane = useOpenPane();
   const task = useMemo(
     () => (result.pending ? null : result.data.find((t) => t.id === taskId) ?? null),

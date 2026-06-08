@@ -85,7 +85,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const { graph, status } = useWorkflowTrace(script, input.args);
 
   const openPane = useOpenPane();
-  const convId = conversationPane.useChainEntry()?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
   const openNode = (nodeId: string) => {
     openPane(
       workflowNodePane,

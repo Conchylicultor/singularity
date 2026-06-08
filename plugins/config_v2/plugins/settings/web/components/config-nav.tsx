@@ -98,7 +98,7 @@ export function ConfigNav() {
     });
   }, []);
 
-  const selectedPath = configDetailPane.useChainEntry()?.params.configPath;
+  const selectedPath = configDetailPane.useRouteEntry()?.params.configPath;
 
   const handleSelect = useCallback(
     (reg: ConfigRegistration) => {

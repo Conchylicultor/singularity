@@ -21,7 +21,7 @@ function formatDate(value: Date | string): string {
 export function AgentLaunches({ agentId }: { agentId: string }) {
   const launchesQ = useResource(agentLaunchesResource);
   const openPane = useOpenPane();
-  const convEntry = conversationPane.useChainEntry();
+  const convEntry = conversationPane.useRouteEntry();
   const activeConvId = convEntry?.params.convId;
 
   const launches = useMemo(() => {

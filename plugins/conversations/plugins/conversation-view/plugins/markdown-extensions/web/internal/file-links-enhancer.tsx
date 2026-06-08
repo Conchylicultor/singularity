@@ -15,12 +15,12 @@ import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/p
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 export function FileLinksEnhancer({ children }: { children: ReactNode }) {
-  const convId = conversationPane.useChainEntry()?.params.convId ?? null;
+  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
   const conversation = useConversationById(convId);
-  const taskEntry = taskDetailPane.useChainEntry();
+  const taskEntry = taskDetailPane.useRouteEntry();
   const openPane = useOpenPane();
 
-  const peekWorktree = filePeekPane.useChainEntry()?.params.worktree;
+  const peekWorktree = filePeekPane.useRouteEntry()?.params.worktree;
 
   const worktree = conversation?.attemptId ?? (taskEntry ? "main" : peekWorktree);
 

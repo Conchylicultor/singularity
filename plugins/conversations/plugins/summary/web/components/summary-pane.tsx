@@ -19,8 +19,8 @@ const PENDING_TIMEOUT_MS = 5 * 60 * 1000;
 
 export function SummaryPane() {
   const { convId: inputConvId } = convSummaryPane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const summariesResult = useResource(conversationSummariesResource);
   const summaries: ConversationSummary[] | undefined =
     summariesResult.pending ? undefined : summariesResult.data[convId ?? ""];

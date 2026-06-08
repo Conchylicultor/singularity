@@ -89,7 +89,7 @@ export interface PaneChromeConfig<Params> {
   close?: boolean;
   /**
    * Show a promote button that detaches this pane from its ancestors and
-   * makes it the root of a fresh chain. Defaults to `true`; only shown
+   * makes it the root of a fresh route. Defaults to `true`; only shown
    * when `depth > 0`. Set to `false` for panes that should never be
    * promoted (e.g. compact side-panels with their own expand action).
    */
@@ -116,13 +116,13 @@ export interface PaneInternal {
   id: string;
   /** Default ancestors to prepend when opening this pane from scratch (no caller context). */
   defaultAncestors: Array<{ id: string }>;
-  /** Own URL segment (no leading slash). Used by the chain URL parser/builder. */
+  /** Own URL segment (no leading slash). Used by the route URL parser/builder. */
   segment: string;
   /**
    * Marks this pane as the index/landing pane for the app whose `Apps.App`
    * `path` equals this value (e.g. "/pages", or "/" for the agent-manager).
    * Only meaningful for root-segment panes ("" / "/"). At a bare app root the
-   * chain is empty; `useIndexMatch` resolves the index pane whose `appPath`
+   * route is empty; `useIndexMatch` resolves the index pane whose `appPath`
    * matches the active app's basePath and MillerColumns renders it. There is
    * no global fallback — an app without an `appPath`-scoped index shows an
    * empty main area at its bare root.
@@ -202,18 +202,18 @@ export interface MatchEntry {
   pane: PaneInternal;
   /** Own-only params (only `:name`s from this pane's `segment`). */
   params: Record<string, string>;
-  /** All params accumulated from the chain root up to and including this pane. */
+  /** All params accumulated from the route root up to and including this pane. */
   fullParams: Record<string, string>;
   /** Caller-provided input data, persisted in the slot (not in the URL). */
   input: Record<string, string>;
 }
 
 export interface PaneMatch {
-  chain: MatchEntry[];
+  panes: MatchEntry[];
 }
 
 // ---------------------------------------------------------------------------
-// Chain-based URL parser + builder.
+// Route-based URL parser + builder.
 // ---------------------------------------------------------------------------
 
 function segmentParamNames(segment: string): string[] {
@@ -269,7 +269,7 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
   const urlSegments = normalized ? normalized.split("/") : [];
 
   let cursor = 0;
-  const chain: PaneSlot[] = [];
+  const route: PaneSlot[] = [];
 
   while (cursor < urlSegments.length) {
     let bestMatch: {
@@ -288,24 +288,24 @@ export function parseUrl(pathname: string): PaneSlot[] | null {
 
     if (!bestMatch) return null;
 
-    chain.push(createSlot(bestMatch.pane.id, bestMatch.params));
+    route.push(createSlot(bestMatch.pane.id, bestMatch.params));
     cursor += bestMatch.consumed;
   }
 
-  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY chain.
+  // A bare app root (basePath-stripped pathname is "/") yields an EMPTY route.
   // The index/landing pane is NOT injected here: it is a main-area-renderer
   // concern, resolved by `useIndexMatch` (see below) and rendered only by
-  // MillerColumns. Keeping it out of the chain store means an overlay host
+  // MillerColumns. Keeping it out of the route store means an overlay host
   // (e.g. Sonata's PaneOverlayHost) sees "nothing opened" at a bare root and
   // renders no overlay, instead of inheriting another app's index pane.
-  return chain.length > 0 ? chain : null;
+  return route.length > 0 ? route : null;
 }
 
-export function buildChainUrl(chain: PaneSlot[]): string {
-  if (chain.length === 0) return "/";
+export function buildRouteUrl(route: PaneSlot[]): string {
+  if (route.length === 0) return "/";
 
   const parts: string[] = [];
-  for (const slot of chain) {
+  for (const slot of route) {
     const pane = registry.get(slot.paneId);
     if (!pane) throw new Error(`Unknown pane: ${slot.paneId}`);
     if (!pane.segment || pane.segment === "/" || pane.segment === "") continue;
@@ -336,47 +336,47 @@ export function buildChainUrl(chain: PaneSlot[]): string {
 }
 
 // ---------------------------------------------------------------------------
-// Layout chain store — the primary source of truth for what's on screen.
+// Layout route store — the primary source of truth for what's on screen.
 // ---------------------------------------------------------------------------
 
-let currentChain: PaneSlot[] = [];
-const chainListeners = new Set<() => void>();
+let currentRoute: PaneSlot[] = [];
+const routeListeners = new Set<() => void>();
 
-export function getChain(): PaneSlot[] {
-  return currentChain;
+export function getRoute(): PaneSlot[] {
+  return currentRoute;
 }
 
-function notifyChainListeners(): void {
-  for (const fn of chainListeners) fn();
+function notifyRouteListeners(): void {
+  for (const fn of routeListeners) fn();
 }
 
-function subscribeChain(cb: () => void): () => void {
-  chainListeners.add(cb);
-  return () => chainListeners.delete(cb);
+function subscribeRoute(cb: () => void): () => void {
+  routeListeners.add(cb);
+  return () => routeListeners.delete(cb);
 }
 
-function getChainSnapshot(): PaneSlot[] {
-  return currentChain;
+function getRouteSnapshot(): PaneSlot[] {
+  return currentRoute;
 }
 
-function useChain(): PaneSlot[] {
-  return useSyncExternalStore(subscribeChain, getChainSnapshot, () => []);
+function useRouteSlots(): PaneSlot[] {
+  return useSyncExternalStore(subscribeRoute, getRouteSnapshot, () => []);
 }
 
-function setChain(chain: PaneSlot[], replace = false): void {
-  currentChain = chain;
-  notifyChainListeners();
-  const url = buildChainUrl(chain);
-  const serialized = chain.map(s => ({ paneId: s.paneId, params: s.params, input: s.input, uuid: s.uuid }));
+function setRoute(route: PaneSlot[], replace = false): void {
+  currentRoute = route;
+  notifyRouteListeners();
+  const url = buildRouteUrl(route);
+  const serialized = route.map(s => ({ paneId: s.paneId, params: s.params, input: s.input, uuid: s.uuid }));
   const fullUrl = applyBasePath(url);
   if (fullUrl === window.location.pathname && replace) return;
   const method = replace ? "replaceState" : "pushState";
-  window.history[method]({ chain: serialized }, "", fullUrl);
+  window.history[method]({ route: serialized }, "", fullUrl);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
 }
 
-function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
+function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   if (a.length !== b.length) return false;
   for (let i = 0; i < a.length; i++) {
     if (a[i]!.paneId !== b[i]!.paneId) return false;
@@ -396,57 +396,57 @@ function chainsEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
   return true;
 }
 
-export function reorderChain(fromIndex: number, toIndex: number): void {
+export function reorderRoute(fromIndex: number, toIndex: number): void {
   if (typeof window === "undefined") return;
-  const chain = [...currentChain];
-  if (fromIndex < 0 || fromIndex >= chain.length) return;
-  if (toIndex < 0 || toIndex >= chain.length) return;
+  const route = [...currentRoute];
+  if (fromIndex < 0 || fromIndex >= route.length) return;
+  if (toIndex < 0 || toIndex >= route.length) return;
   if (fromIndex === toIndex) return;
-  const [item] = chain.splice(fromIndex, 1);
-  chain.splice(toIndex, 0, item!);
-  setChain(chain);
+  const [item] = route.splice(fromIndex, 1);
+  route.splice(toIndex, 0, item!);
+  setRoute(route);
 }
 
-export function restoreChain(
+export function restoreRoute(
   slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
 ): void {
   if (typeof window === "undefined") return;
-  const chain: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
-  if (chain.length === 0) return;
-  setChain(chain);
+  const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
+  if (route.length === 0) return;
+  setRoute(route);
 }
 
 /**
- * Navigate to the EMPTY route — the only public way to do so. `restoreChain`
- * refuses an empty array and `setChain` is module-internal, so full-pane apps
- * had no way to go "back to index" (e.g. ← Library). `setChain([])` builds URL
+ * Navigate to the EMPTY route — the only public way to do so. `restoreRoute`
+ * refuses an empty array and `setRoute` is module-internal, so full-pane apps
+ * had no way to go "back to index" (e.g. ← Library). `setRoute([])` builds URL
  * "/" (→ the app root via applyBasePath), pushes history, and notifies; the
- * empty chain then re-resolves to the index pane via `useIndexMatch`.
+ * empty route then re-resolves to the index pane via `useIndexMatch`.
  */
-export function clearChain(): void {
+export function clearRoute(): void {
   if (typeof window === "undefined") return;
-  setChain([]);
+  setRoute([]);
 }
 
-export function syncChainFromUrl(pathname: string): void {
+export function syncRouteFromUrl(pathname: string): void {
   const parsed = parseUrl(pathname);
-  const newChain = parsed ?? [];
-  if (chainsEqual(currentChain, newChain)) return;
-  currentChain = newChain;
-  notifyChainListeners();
+  const newRoute = parsed ?? [];
+  if (routesEqual(currentRoute, newRoute)) return;
+  currentRoute = newRoute;
+  notifyRouteListeners();
 }
 
 let prevResolvedByUuid = new Map<string, MatchEntry>();
 
-function resolveChain(chain: PaneSlot[]): PaneMatch | null {
-  if (chain.length === 0) {
+function resolveRoute(route: PaneSlot[]): PaneMatch | null {
+  if (route.length === 0) {
     prevResolvedByUuid = new Map();
     return null;
   }
   const entries: MatchEntry[] = [];
   const accumulated: Record<string, string> = {};
-  let chainStable = true;
-  for (const slot of chain) {
+  let routeStable = true;
+  for (const slot of route) {
     const pane = registry.get(slot.paneId);
     if (!pane) {
       prevResolvedByUuid = new Map();
@@ -454,10 +454,10 @@ function resolveChain(chain: PaneSlot[]): PaneMatch | null {
     }
     Object.assign(accumulated, slot.params);
     const prev = prevResolvedByUuid.get(slot.uuid);
-    if (chainStable && prev && prev.pane === pane) {
+    if (routeStable && prev && prev.pane === pane) {
       entries.push(prev);
     } else {
-      chainStable = false;
+      routeStable = false;
       entries.push({
         instanceId: slot.instanceId,
         uuid: slot.uuid,
@@ -469,7 +469,7 @@ function resolveChain(chain: PaneSlot[]): PaneMatch | null {
     }
   }
   prevResolvedByUuid = new Map(entries.map(e => [e.uuid, e]));
-  return { chain: entries };
+  return { panes: entries };
 }
 
 function extractOwnParams(
@@ -499,7 +499,7 @@ export function useCurrentPane(): PaneInternal | null {
   const match = useContext(PaneMatchContext);
   const instanceId = useContext(PaneInstanceContext);
   if (!match || instanceId === undefined) return null;
-  return match.chain.find(e => e.instanceId === instanceId)?.pane ?? null;
+  return match.panes.find(e => e.instanceId === instanceId)?.pane ?? null;
 }
 
 // ---------------------------------------------------------------------------
@@ -540,20 +540,20 @@ function applyBasePath(rawUrl: string): string {
 }
 
 // ---------------------------------------------------------------------------
-// URL → chain sync (module-level listener, outside React render).
+// URL → route sync (module-level listener, outside React render).
 // ---------------------------------------------------------------------------
 
 function handleLocationChange(): void {
   if (typeof window === "undefined") return;
-  const state = window.history.state as { chain?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string>; uuid?: string }> } | null;
-  if (state?.chain) {
-    const newChain = state.chain.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
-    if (chainsEqual(currentChain, newChain)) return;
-    currentChain = newChain;
-    notifyChainListeners();
+  const state = window.history.state as { route?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string>; uuid?: string }> } | null;
+  if (state?.route) {
+    const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
+    if (routesEqual(currentRoute, newRoute)) return;
+    currentRoute = newRoute;
+    notifyRouteListeners();
   } else {
     const pathname = stripBasePath(window.location.pathname, currentBasePath);
-    syncChainFromUrl(pathname);
+    syncRouteFromUrl(pathname);
   }
 }
 
@@ -600,7 +600,7 @@ export interface PaneToggleOpts {
   input?: Record<string, string>;
 }
 
-export interface PaneChainEntry<OwnParams = Record<string, string>> {
+export interface PaneRouteEntry<OwnParams = Record<string, string>> {
   instanceId: number;
   uuid: string;
   params: OwnParams;
@@ -617,20 +617,20 @@ export interface PaneObject<
   useParams(): OwnParams;
   /** Read the caller-provided input data for this pane (persisted in the slot, not in the URL). */
   useInput(): Input;
-  /** Find this pane in the current chain. Returns its params or null if absent. */
-  useChainEntry(): PaneChainEntry<OwnParams> | null;
-  /** Find all instances of this pane in the current chain (for panes that can appear multiple times). */
-  useChainEntries(): PaneChainEntry<OwnParams>[];
+  /** Find this pane in the current route. Returns its params or null if absent. */
+  useRouteEntry(): PaneRouteEntry<OwnParams> | null;
+  /** Find all instances of this pane in the current route (for panes that can appear multiple times). */
+  useRouteEntries(): PaneRouteEntry<OwnParams>[];
   close(instanceId: number): void;
-  /** Remove this pane from the chain while preserving its children. */
+  /** Remove this pane from the route while preserving its children. */
   unwrap(instanceId: number): void;
-  /** Detach from ancestors and make this pane the root of a fresh chain. */
+  /** Detach from ancestors and make this pane the root of a fresh route. */
   promote(instanceId: number): void;
-  /** Hook: returns a bound close function for the current instance, or null if root/not in chain. */
+  /** Hook: returns a bound close function for the current instance, or null if root/not in route. */
   useClose(): (() => void) | null;
-  /** Hook: returns a bound promote function for the current instance, or null if root/not in chain. */
+  /** Hook: returns a bound promote function for the current instance, or null if root/not in route. */
   usePromote(): (() => void) | null;
-  /** Hook: toggle this pane open/closed relative to the caller's position in the chain. */
+  /** Hook: toggle this pane open/closed relative to the caller's position in the route. */
   useToggle(
     params: FullParams,
     opts?: PaneToggleOpts,
@@ -654,13 +654,13 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       );
     }
     if (instanceId !== undefined) {
-      const entry = match.chain.find(e => e.instanceId === instanceId);
+      const entry = match.panes.find(e => e.instanceId === instanceId);
       if (entry?.pane === internal) return entry.params;
     }
-    const entry = match.chain.find((e) => e.pane === internal);
+    const entry = match.panes.find((e) => e.pane === internal);
     if (!entry) {
       throw new Error(
-        `Pane "${internal.id}".useParams() called but pane is not in the current match chain.`,
+        `Pane "${internal.id}".useParams() called but pane is not in the current match route.`,
       );
     }
     return entry.params;
@@ -671,58 +671,58 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     const instanceId = useContext(PaneInstanceContext);
     if (!match) return {};
     if (instanceId !== undefined) {
-      const entry = match.chain.find(e => e.instanceId === instanceId);
+      const entry = match.panes.find(e => e.instanceId === instanceId);
       if (entry?.pane === internal) return entry.input;
     }
-    const entry = match.chain.find(e => e.pane === internal);
+    const entry = match.panes.find(e => e.pane === internal);
     return entry?.input ?? {};
   }
 
-  function useChainEntry(): PaneChainEntry | null {
+  function useRouteEntry(): PaneRouteEntry | null {
     const match = useContext(PaneMatchContext);
     if (!match) return null;
-    const entry = match.chain.find((e) => e.pane === internal);
+    const entry = match.panes.find((e) => e.pane === internal);
     if (!entry) return null;
     return { instanceId: entry.instanceId, uuid: entry.uuid, params: entry.params, fullParams: entry.fullParams, input: entry.input };
   }
 
-  function useChainEntries(): PaneChainEntry[] {
+  function useRouteEntries(): PaneRouteEntry[] {
     const match = useContext(PaneMatchContext);
     if (!match) return [];
-    return match.chain
+    return match.panes
       .filter((e) => e.pane === internal)
       .map((e) => ({ instanceId: e.instanceId, uuid: e.uuid, params: e.params, fullParams: e.fullParams, input: e.input }));
   }
 
   function close(instanceId: number): void {
     if (typeof window === "undefined") return;
-    const chain = getChain();
-    const idx = chain.findIndex((s) => s.instanceId === instanceId);
+    const route = getRoute();
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx <= 0) return;
-    const newChain = chain.slice(0, idx);
+    const newRoute = route.slice(0, idx);
     const replace = internal.chrome.enabled && !internal.chrome.history;
-    setChain(newChain, replace);
+    setRoute(newRoute, replace);
   }
 
   function unwrap(instanceId: number): void {
     if (typeof window === "undefined") return;
-    const chain = getChain();
-    const idx = chain.findIndex((s) => s.instanceId === instanceId);
+    const route = getRoute();
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
-    const newChain = [...chain.slice(0, idx), ...chain.slice(idx + 1)];
-    setChain(newChain);
+    const newRoute = [...route.slice(0, idx), ...route.slice(idx + 1)];
+    setRoute(newRoute);
   }
 
   function promote(instanceId: number): void {
     if (typeof window === "undefined") return;
-    const chain = getChain();
-    const idx = chain.findIndex((s) => s.instanceId === instanceId);
+    const route = getRoute();
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
     if (idx < 0) return;
     const fullParams: Record<string, string> = {};
     for (let i = 0; i <= idx; i++) {
-      Object.assign(fullParams, chain[i]!.params);
+      Object.assign(fullParams, route[i]!.params);
     }
-    openPaneImpl(internal, fullParams, { root: true, input: chain[idx]!.input });
+    openPaneImpl(internal, fullParams, { root: true, input: route[idx]!.input });
   }
 
   function back(): void {
@@ -735,25 +735,25 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
   function useClose(): (() => void) | null {
     const instanceId = useContext(PaneInstanceContext);
-    const chain = useChain();
+    const route = useRouteSlots();
     return useMemo(() => {
       if (instanceId === undefined) return null;
-      const idx = chain.findIndex((s) => s.instanceId === instanceId);
+      const idx = route.findIndex((s) => s.instanceId === instanceId);
       if (idx <= 0) return null;
       return () => close(instanceId);
-    }, [instanceId, chain]);
+    }, [instanceId, route]);
   }
 
   function usePromote(): (() => void) | null {
     const instanceId = useContext(PaneInstanceContext);
-    const chain = useChain();
+    const route = useRouteSlots();
     return useMemo(() => {
       if (instanceId === undefined) return null;
-      const idx = chain.findIndex((s) => s.instanceId === instanceId);
+      const idx = route.findIndex((s) => s.instanceId === instanceId);
       if (idx < 0) return null;
       if (idx === 0) return null;
       return () => promote(instanceId);
-    }, [instanceId, chain]);
+    }, [instanceId, route]);
   }
 
   function useToggle(
@@ -761,7 +761,7 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     opts?: PaneToggleOpts,
   ): { isOpen: boolean; toggle: () => void } {
     const callerInstanceId = useContext(PaneInstanceContext);
-    const chain = useChain();
+    const route = useRouteSlots();
     const openPaneFn = useOpenPane();
     const paramsRef = useRef(params);
     paramsRef.current = params;
@@ -775,11 +775,11 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
 
     const callerIndex =
       callerInstanceId !== undefined
-        ? chain.findIndex((s) => s.instanceId === callerInstanceId)
+        ? route.findIndex((s) => s.instanceId === callerInstanceId)
         : -1;
     const searchFrom = callerIndex >= 0 ? callerIndex + 1 : 0;
     const targetSlot =
-      chain.slice(searchFrom).find((s) => s.paneId === internal.id) ?? null;
+      route.slice(searchFrom).find((s) => s.paneId === internal.id) ?? null;
     const isOpen = targetSlot !== null;
 
     const toggle = useCallback(() => {
@@ -801,8 +801,8 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     id: internal.id,
     useParams,
     useInput,
-    useChainEntry,
-    useChainEntries,
+    useRouteEntry,
+    useRouteEntries,
     close,
     unwrap,
     promote,
@@ -937,35 +937,32 @@ export function useSyncPaneRegistry(): void {
       seen.add(internal.id);
       registry.set(internal.id, internal);
     }
-    // Re-sync the chain from the current URL now that the registry is
+    // Re-sync the route from the current URL now that the registry is
     // populated. On initial load the module-level handleLocationChange()
-    // runs before any panes are registered, so the chain stays empty
+    // runs before any panes are registered, so the route stays empty
     // until this re-sync.
     handleLocationChange();
   }, [contributions]);
 }
 
 // ---------------------------------------------------------------------------
-// Memoized match used by MillerColumns.
+// Memoized resolved-route match, consumed by every layout renderer.
 // ---------------------------------------------------------------------------
 
-export function useMatchForChain(): PaneMatch | null {
-  const chain = useChain();
-  return useMemo(() => resolveChain(chain), [chain]);
+export function useRoute(): PaneMatch | null {
+  const route = useRouteSlots();
+  return useMemo(() => resolveRoute(route), [route]);
 }
 
-/** @deprecated Use useMatchForChain */
-export const useMatchForPath = (_pathname: string) => useMatchForChain();
-
 // ---------------------------------------------------------------------------
-// Index/landing pane resolution. Separate from the opened chain: the chain is
+// Index/landing pane resolution. Separate from the opened route: the route is
 // purely URL-derived (empty at a bare app root), while the index pane is a
 // main-area concern resolved here and rendered only by the main-area renderer
 // (MillerColumns). Overlay hosts ignore it, so a bare root means "no overlay".
 // ---------------------------------------------------------------------------
 
 // Stable instanceId per index pane id, so the index pane keeps the same React
-// key/identity across renders (no remount). Distinct from chain slot ids.
+// key/identity across renders (no remount). Distinct from route slot ids.
 const indexInstanceIds = new Map<string, number>();
 function indexInstanceIdFor(paneId: string): number {
   let id = indexInstanceIds.get(paneId);
@@ -998,7 +995,7 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
         fullParams: {},
         input: {},
       };
-      return { chain: [entry] };
+      return { panes: [entry] };
     }
     return null;
     // eslint-disable-next-line react-hooks/exhaustive-deps -- `contributions` identity tracks the registry; registry itself is a module-level mutable Map read inside.
@@ -1009,7 +1006,7 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
  * Shared renderer preamble. Every layout renderer (Miller columns, full-pane,
  * …) repeats the same sequence to turn the active app's basePath into a route
  * match: set the base path (synchronous side-effect), sync the registry, then
- * return the URL-derived chain match or fall back to the index pane. Exposing
+ * return the URL-derived route match or fall back to the index pane. Exposing
  * it here keeps renderers thin and stops them copy-pasting this hook order
  * (which must stay stable). Mirrors MillerColumns exactly.
  */
@@ -1019,9 +1016,9 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
     setBasePath(basePath);
   }, [basePath]);
   useSyncPaneRegistry();
-  const chain = useMatchForChain();
+  const route = useRoute();
   const index = useIndexMatch(basePath);
-  return chain ?? index;
+  return route ?? index;
 }
 
 // ---------------------------------------------------------------------------
@@ -1034,14 +1031,14 @@ function openPaneImpl(
   opts?: { root?: boolean; input?: Record<string, string> },
 ): void {
   const replace = internal.chrome.enabled && !internal.chrome.history;
-  const chain = getChain();
+  const route = getRoute();
   const ownParams = extractOwnParams(internal, params);
   const input = opts?.input ?? {};
 
   if (!opts?.root) {
-    const existingIdx = chain.findIndex((s) => s.paneId === internal.id);
+    const existingIdx = route.findIndex((s) => s.paneId === internal.id);
     if (existingIdx >= 0) {
-      const existing = chain[existingIdx]!;
+      const existing = route[existingIdx]!;
       const sameParams =
         Object.keys(ownParams).length === Object.keys(existing.params).length &&
         Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
@@ -1049,26 +1046,26 @@ function openPaneImpl(
         Object.keys(input).length === Object.keys(existing.input).length &&
         Object.keys(input).every((k) => input[k] === existing.input[k]);
       if (sameParams && sameInput) return;
-      const newChain = chain.slice(0, existingIdx + 1);
-      newChain[existingIdx] = createSlot(internal.id, ownParams, input);
-      setChain(newChain, replace);
+      const newRoute = route.slice(0, existingIdx + 1);
+      newRoute[existingIdx] = createSlot(internal.id, ownParams, input);
+      setRoute(newRoute, replace);
       return;
     }
   }
 
-  // Build fresh chain from defaultAncestors
+  // Build fresh route from defaultAncestors
   const ancestorSlots: PaneSlot[] = [];
   for (const ancestor of internal.defaultAncestors) {
     const ancestorInternal = registry.get(ancestor.id);
     if (!ancestorInternal) continue;
-    // Inherit params from existing chain if available
-    const existingSlot = chain.find(s => s.paneId === ancestor.id);
+    // Inherit params from existing route if available
+    const existingSlot = route.find(s => s.paneId === ancestor.id);
     const ancestorParams = existingSlot
       ? existingSlot.params
       : extractOwnParams(ancestorInternal, params);
     ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
   }
-  setChain([...ancestorSlots, createSlot(internal.id, ownParams, input)], replace);
+  setRoute([...ancestorSlots, createSlot(internal.id, ownParams, input)], replace);
 }
 
 export type PaneOpenMode = "root" | "push" | "swap";
@@ -1107,8 +1104,8 @@ export function useOpenPane(): (
         return;
       }
 
-      const currentChain = getChain();
-      const callerIndex = currentChain.findIndex(
+      const currentRoute = getRoute();
+      const callerIndex = currentRoute.findIndex(
         (s) => s.instanceId === callerInstanceId,
       );
       if (callerIndex < 0) {
@@ -1116,17 +1113,17 @@ export function useOpenPane(): (
         return;
       }
 
-      const callerPaneId = currentChain[callerIndex]!.paneId;
+      const callerPaneId = currentRoute[callerIndex]!.paneId;
       const ownParams = extractOwnParams(targetInternal, params);
       const replace =
         targetInternal.chrome.enabled && !targetInternal.chrome.history;
 
       // swap: update the caller's slot in-place (same column), truncating
       // children. Used when internal navigation within a pane wants to swap
-      // which entity is shown without growing the chain (e.g. clicking a
+      // which entity is shown without growing the route (e.g. clicking a
       // dependency chip switches the task detail to a different task).
       if (opts.mode === "swap" && targetInternal.id === callerPaneId) {
-        const existing = currentChain[callerIndex]!;
+        const existing = currentRoute[callerIndex]!;
         const sameParams =
           Object.keys(ownParams).length === Object.keys(existing.params).length &&
           Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
@@ -1134,33 +1131,33 @@ export function useOpenPane(): (
           Object.keys(input).length === Object.keys(existing.input).length &&
           Object.keys(input).every((k) => input[k] === existing.input[k]);
         if (sameParams && sameInput) return;
-        const newChain = currentChain.slice(0, callerIndex + 1);
-        newChain[callerIndex] = createSlot(targetInternal.id, ownParams, input);
-        setChain(newChain, replace);
+        const newRoute = currentRoute.slice(0, callerIndex + 1);
+        newRoute[callerIndex] = createSlot(targetInternal.id, ownParams, input);
+        setRoute(newRoute, replace);
         return;
       }
 
       if (opts.side === "left") {
-        const alreadyAncestor = currentChain
+        const alreadyAncestor = currentRoute
           .slice(0, callerIndex)
           .some((s) => s.paneId === targetInternal.id);
         if (!alreadyAncestor) {
-          const newChain = [
-            ...currentChain.slice(0, callerIndex),
+          const newRoute = [
+            ...currentRoute.slice(0, callerIndex),
             createSlot(targetInternal.id, ownParams, input),
-            ...currentChain.slice(callerIndex),
+            ...currentRoute.slice(callerIndex),
           ];
-          setChain(newChain, replace);
+          setRoute(newRoute, replace);
           return;
         }
       }
 
       // push right (default): truncate after caller, append target
-      const newChain = [
-        ...currentChain.slice(0, callerIndex + 1),
+      const newRoute = [
+        ...currentRoute.slice(0, callerIndex + 1),
         createSlot(targetInternal.id, ownParams, input),
       ];
-      setChain(newChain, replace);
+      setRoute(newRoute, replace);
     },
     [callerInstanceId],
   );

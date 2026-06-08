@@ -45,7 +45,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
   const result = event.result;
 
   const openPane = useOpenPane();
-  const convId = conversationPane.useChainEntry()?.params.convId;
+  const convId = conversationPane.useRouteEntry()?.params.convId;
 
   const openReport = (e: React.MouseEvent | React.KeyboardEvent) => {
     e.stopPropagation();

@@ -1,8 +1,8 @@
 # layouts
 
 Umbrella for layout renderers — plugins that decide *how* the matched pane
-chain is composed on screen. The pane primitive resolves a URL to an
-ordered chain of panes; a layout plugin maps that chain to a visible
+route is composed on screen. The pane primitive resolves a URL to an
+ordered route of panes; a layout plugin maps that route to a visible
 arrangement (columns, tabs, grid, overlays, …).
 
 Only one layout is mounted at a time. The shell wires it in by importing

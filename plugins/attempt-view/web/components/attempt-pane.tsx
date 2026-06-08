@@ -114,8 +114,8 @@ export function AttemptPane() {
   const { attemptId } = attemptPane.useParams();
   const result = useResource(attemptsResource);
   const openPane = useOpenPane();
-  const selectedConvId = conversationPane.useChainEntry()?.params.convId;
-  const convEntries = conversationPane.useChainEntries();
+  const selectedConvId = conversationPane.useRouteEntry()?.params.convId;
+  const convEntries = conversationPane.useRouteEntries();
   const convInstanceId = convEntries[convEntries.length - 1]?.instanceId;
 
   if (result.pending) return <Placeholder>Loading…</Placeholder>;

@@ -153,7 +153,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   const openPane = useOpenPane();
   // Find the last conversationPane in the chain — if there are multiple
   // (host + nested), the last one is the one the user opened from here.
-  const convEntries = conversationPane.useChainEntries();
+  const convEntries = conversationPane.useRouteEntries();
   const activeConvEntry = convEntries.length > 1
     ? convEntries[convEntries.length - 1]!
     : null;

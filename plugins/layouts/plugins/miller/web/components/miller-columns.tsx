@@ -1,12 +1,12 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
-  getChain,
+  getRoute,
   type PaneMatch,
   PaneBasePathContext,
   PaneInstanceContext,
   PaneMatchContext,
-  reorderChain,
+  reorderRoute,
   usePaneRoute,
 } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -28,28 +28,28 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   const ref = useRef<HTMLDivElement>(null);
   const lastLength = useRef(0);
   useLayoutEffect(() => {
-    const len = match?.chain.length ?? 0;
+    const len = match?.panes.length ?? 0;
     if (ref.current && len > lastLength.current) {
       ref.current.scrollLeft = ref.current.scrollWidth;
     }
     lastLength.current = len;
-  }, [match?.chain.length]);
+  }, [match?.panes.length]);
 
   const handleMove = useCallback((activeId: string, overId: string) => {
-    const chain = getChain();
+    const chain = getRoute();
     const fromIdx = chain.findIndex((s) => String(s.instanceId) === activeId);
     const toIdx = chain.findIndex((s) => String(s.instanceId) === overId);
     if (fromIdx >= 0 && toIdx >= 0) {
-      reorderChain(fromIdx, toIdx);
+      reorderRoute(fromIdx, toIdx);
     }
   }, []);
 
   if (!match) return null;
 
-  const itemIds = match.chain.map((e) => String(e.instanceId));
+  const itemIds = match.panes.map((e) => String(e.instanceId));
   // Reordering only makes sense with 2+ columns. With a single pane there is
   // nowhere to drag it, so suppress the drag handle (and its grab cursor).
-  const canReorder = match.chain.length > 1;
+  const canReorder = match.panes.length > 1;
 
   const body = (
     <PluginErrorBoundary slot="layouts.miller" label={basePath}>
@@ -59,8 +59,8 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
           onMove={handleMove}
           orientation="horizontal"
         >
-          {match.chain.map((entry, i) => {
-            const isLast = i === match.chain.length - 1;
+          {match.panes.map((entry, i) => {
+            const isLast = i === match.panes.length - 1;
             return (
               <SortableItem
                 key={entry.instanceId}

@@ -1,20 +1,20 @@
 # full-pane
 
 Full-surface renderer for the pane route. A peer to `miller`: where Miller
-paints the whole `match.chain` as a horizontal stack of columns, Full-pane
-paints **only the active pane** (`match.chain.at(-1)`) filling the entire
-surface. There are no columns, no ancestors, no leaf — just "the current
-screen."
+paints the whole `match.panes` as a horizontal stack of columns, Full-pane
+paints **only the active pane** (`match.panes.at(-1)`) filling the entire
+surface. There are no columns and no ancestors on screen — just "the
+current screen."
 
 ## Mental model: the screen stack
 
 Full-pane is the layout for **screen-stack** navigation. Apps drive it with
 `mode:"root"` opens: each open *replaces* the route with a single pane and
 pushes a browser-history entry, so the route is always depth-1 and the active
-pane *is* the screen. Back/forward is plain browser history; `clearChain()`
+pane *is* the screen. Back/forward is plain browser history; `clearRoute()`
 returns to the app's index pane (empty route → index).
 
-Because the route is depth-1, there is no chain to arrange — the renderer reads
+Because the route is depth-1, there is no column stack to arrange — the renderer reads
 the active pane and renders it through `PaneResolveGuard`, which honors
 `chrome:false` and gates on `resolve().found` (loading / not-found) just like
 Miller. No new async machinery.

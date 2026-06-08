@@ -12,7 +12,7 @@ import {
 
 /**
  * Full-surface layout renderer: paints only the **active pane**
- * (`match.chain.at(-1)`) filling the whole surface — no columns, no
+ * (`match.panes.at(-1)`) filling the whole surface — no columns, no
  * ancestors. The screen-stack navigation model: each `mode:"root"` open
  * replaces the route with a single pane, so the active pane *is* the screen.
  *
@@ -28,8 +28,8 @@ export function FullPane({ match: provided }: { match?: PaneMatch }) {
   const match = provided ?? selfMatch;
   // Active pane = last entry. Index access (not Array.at) — the web-core
   // tsconfig lib predates ES2022.
-  const chain = match?.chain;
-  const active = chain && chain.length > 0 ? chain[chain.length - 1] : undefined;
+  const panes = match?.panes;
+  const active = panes && panes.length > 0 ? panes[panes.length - 1] : undefined;
   if (!active) return null;
   const body = (
     <PaneInstanceContext.Provider value={active.instanceId}>

@@ -32,8 +32,8 @@ function ConvCommitsGraphBody() {
 
 function ConvCommitDiffBody() {
   const { convId: inputConvId } = convCommitDiffPane.useInput();
-  const chainEntry = conversationPane.useChainEntry();
-  const convId = inputConvId ?? chainEntry?.params.convId;
+  const routeEntry = conversationPane.useRouteEntry();
+  const convId = inputConvId ?? routeEntry?.params.convId;
   const conversation = useConversationById(convId ?? null);
   const { sha } = convCommitDiffPane.useParams();
   if (!conversation) return null;
