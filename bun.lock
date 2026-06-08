@@ -892,10 +892,6 @@
       "name": "@singularity/plugin-debug-logs",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/logs-mcp": {
-      "name": "@singularity/plugin-debug-logs-mcp",
-      "version": "0.0.1",
-    },
     "plugins/debug/plugins/memory": {
       "name": "@singularity/plugin-debug-memory",
       "version": "0.0.1",
@@ -3099,8 +3095,6 @@
     "@singularity/plugin-debug-crashes": ["@singularity/plugin-debug-crashes@workspace:plugins/debug/plugins/crashes"],
 
     "@singularity/plugin-debug-logs": ["@singularity/plugin-debug-logs@workspace:plugins/debug/plugins/logs"],
-
-    "@singularity/plugin-debug-logs-mcp": ["@singularity/plugin-debug-logs-mcp@workspace:plugins/debug/plugins/logs-mcp"],
 
     "@singularity/plugin-debug-memory": ["@singularity/plugin-debug-memory@workspace:plugins/debug/plugins/memory"],
 

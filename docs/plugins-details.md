@@ -1215,10 +1215,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Exports: Types: `LogChannel`, `LogStream`; Values: `listChannels`, `Log`, `readChannelEntries`
         - Routes: `GET /api/logs/channels`, `POST /api/logs/emit`, `/ws/logs (WS)`
-    - **`logs-mcp`** — MCP tool for agents to read persisted browser/server log channels for a worktree.
-      - Server:
-        - Uses: `tasks-core.getConversation`
-        - Register: `mcpTool('read_logs')`
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
       - Web:
         - Contributes: `Pane.Register` "debug-memory", `DebugApp.Sidebar` "Memory" → `component`
@@ -2449,7 +2445,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Register: `defineTriggerEvent('pushes.landed')`, `defineTriggerEvent('tasks.statusChanged')`
     - Resources: `attempts` (keyed), `pushes` (push)
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `logs-mcp`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-preprompt`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
+    - Imported by: `active-data`, `agents`, `allow-monitor`, `ask-user-question`, `auto-start`, `code`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `conversations-recover`, `cost`, `crashes`, `drop-and-exit`, `drop-dependents`, `exit`, `grouped`, `hold-and-exit`, `improve`, `jsonl-viewer`, `notes`, `plugin-changes`, `plugin-health`, `push-and-exit`, `query`, `queue`, `resume`, `summary`, `task-preprompt`, `task-title`, `tasks`, `transcript-api`, `transcript-retention`, `transcript-watcher`, `turn-summary`, `worktree-cleanup`
     - Extended by: `conversation-category` (table `conversations_ext_category`), `notes` (table `conversations_ext_notes`), `conversation-preprompt` (table `conversations_ext_preprompt`), `conversation-progress` (table `conversations_ext_progress`), `queue` (table `conversations_ext_queue`), `turn-summary` (table `conversations_ext_turn_summary`), `auto-start` (table `tasks_ext_auto_start`), `plugin-health` (table `tasks_ext_health_review`), `task-preprompt` (table `tasks_ext_preprompt`)
   - Core:
     - Exports: Types: `Attempt`, `AttemptStatus`, `AttemptWithConversations`, `Conversation`, `ConversationKind`, `ConversationListPayload`, `ConversationStatus`, `ConversationSummary`, `Push`, `Task`, `TaskListItem`, `TaskStatus`; Values: `AttemptSchema`, `AttemptStatusSchema`, `AttemptWithConversationsSchema`, `buildTaskPrompt`, `ConversationKindSchema`, `ConversationSchema`, `conversationsResource`, `ConversationStatusSchema`, `ConversationSummarySchema`, `PushSchema`, `TaskListItemSchema`, `TaskSchema`, `TaskStatusSchema`

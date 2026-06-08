@@ -82,7 +82,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
     - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
     - **`logs`** — System logs pane, opened from the Debug sidebar.
-    - **`logs-mcp`** — MCP tool for agents to read persisted browser/server log channels for a worktree.
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Plugins:
