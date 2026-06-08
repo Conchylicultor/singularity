@@ -25,7 +25,11 @@ export function registerCheck(program: Command) {
       // A direct `./singularity check` is a build-pool job.
       const kind: HostSlotKind = process.env.SINGULARITY_HOST_SLOT_HELD ? "exempt" : "build";
       const ok = await withHostSlot(kind, () =>
-        runChecks(checks.length > 0 ? checks : undefined, { noCache: opts.cache === false }),
+        runChecks(checks.length > 0 ? checks : undefined, {
+          noCache: opts.cache === false,
+          log: (line, stream) =>
+            stream === "stderr" ? console.error(line) : console.log(line),
+        }),
       );
       if (!ok) process.exit(1);
     });

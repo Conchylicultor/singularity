@@ -36,12 +36,12 @@ export async function listAllChecks(): Promise<Check[]> {
 
 export interface RunChecksOptions {
   onCheckDone?: (id: string, durationMs: number, wallStartMs: number) => void;
-  log?: (line: string, stream: "stdout" | "stderr") => void;
+  log: (line: string, stream: "stdout" | "stderr") => void;
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
 }
 
-export async function runChecks(ids?: string[], options?: RunChecksOptions): Promise<boolean> {
+export async function runChecks(ids: string[] | undefined, options: RunChecksOptions): Promise<boolean> {
   const all = await listAllChecks();
 
   const selected = ids && ids.length > 0
@@ -90,8 +90,7 @@ export async function runChecks(ids?: string[], options?: RunChecksOptions): Pro
     }),
   );
 
-  const log = options?.log ?? ((line: string, stream: "stdout" | "stderr") =>
-    stream === "stderr" ? console.error(line) : console.log(line));
+  const log = options.log;
 
   const MAX_MESSAGE_LINES = 100;
 

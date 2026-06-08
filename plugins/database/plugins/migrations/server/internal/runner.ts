@@ -2,6 +2,9 @@ import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
+import { Log } from "@plugins/debug/plugins/logs/server";
+
+const log = Log.channel("migrations", { persist: true });
 
 const MIGRATION_RE = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
 
@@ -51,15 +54,16 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
   const onDiskHashes = new Set(migrations.map((m) => m.hash));
   for (const h of appliedHashes) {
     if (!onDiskHashes.has(h)) {
-      console.warn(
+      log.publish(
         `[migrate] applied hash ${h} has no matching file on disk — DB may have drifted`,
+        "stderr",
       );
     }
   }
 
   for (const m of migrations) {
     if (appliedHashes.has(m.hash)) continue;
-    console.log(`[migrate] applying ${m.file}`);
+    log.publish(`[migrate] applying ${m.file}`);
     await db.transaction(async (tx) => {
       await tx.execute(drizzleSql.raw(m.sqlText));
       await tx.execute(

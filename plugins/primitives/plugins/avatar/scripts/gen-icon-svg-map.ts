@@ -4,16 +4,16 @@
  * covering all Material Design icons + curated aliases. Run manually when
  * react-icons version or icon-metadata.json changes.
  *
- * Usage: bun run plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts
+ * Usage: bun run plugins/primitives/plugins/avatar/scripts/gen-icon-svg-map.ts
  */
 import { createHash } from "crypto";
 import { readFileSync, writeFileSync } from "fs";
 import { dirname, join, resolve } from "path";
 
 const HERE = dirname(new URL(import.meta.url).pathname);
-const WEB_INTERNAL = resolve(HERE, "../../web/internal");
+const WEB_INTERNAL = resolve(HERE, "../web/internal");
 const METADATA_PATH = join(WEB_INTERNAL, "icon-metadata.json");
-const OUTPUT_PATH = join(HERE, "icon-svg-map.generated.ts");
+const OUTPUT_PATH = resolve(HERE, "../server/internal/icon-svg-map.generated.ts");
 
 interface SvgNode {
   tag: string;

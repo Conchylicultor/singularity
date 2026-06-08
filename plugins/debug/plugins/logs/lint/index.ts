@@ -36,25 +36,19 @@ export default {
    */
   ignores: {
     "no-console-log": [
-      // scripts/ are standalone boot/CLI processes where console *is* the
-      // logger. Permanent exemption.
+      // scripts/ — standalone, run-manually processes where console *is* the
+      // logger (e.g. one-shot codegen). Permanent exemption.
       "**/scripts/**/*.{ts,tsx}",
-      // Temporary allowlist — these predate the rule going repo-wide. Migrate
-      // them to the structured logger, then delete each entry below.
-      // Tracked in task task-1780402997403-waght7.
-      "plugins/database/plugins/migrations/server/internal/runner.ts",
-      "plugins/framework/plugins/central-core/bin/index.ts",
-      "plugins/framework/plugins/cli/bin/broadcasts.ts",
-      "plugins/framework/plugins/cli/bin/commands/build.ts",
-      "plugins/framework/plugins/cli/bin/commands/check.ts",
-      "plugins/framework/plugins/cli/bin/commands/push.ts",
-      "plugins/framework/plugins/cli/bin/commands/start.ts",
-      "plugins/framework/plugins/cli/bin/git/register-merge-drivers.ts",
-      "plugins/framework/plugins/cli/bin/migrations.ts",
-      "plugins/framework/plugins/server-core/bin/index.ts",
-      "plugins/framework/plugins/tooling/plugins/checks/core/runner.ts",
-      "plugins/infra/plugins/secrets/central/internal/boot.ts",
-      "plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts",
+      // bin/ — process entrypoints. CLI commands print to the developer's
+      // terminal (the agent-visible channel — agents run `./singularity …` and
+      // read stdout); the server/central daemon entrypoints are boot bootstrap
+      // code whose stdout/stderr the gateway captures to
+      // ~/.singularity/logs/<name>.log. console is the right sink for all of them.
+      "**/bin/**/*.{ts,tsx}",
+      // central/ — the host-wide central runtime. The per-worktree `logs` plugin
+      // (which serves the Logs pane + read_logs JSONL) does not run there, so
+      // console — captured to ~/.singularity/logs/central.log — is the sink.
+      "**/central/**/*.{ts,tsx}",
     ],
   },
 };
