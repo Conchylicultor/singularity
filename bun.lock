@@ -411,6 +411,9 @@
     "plugins/config_v2": {
       "name": "@singularity/plugin-config_v2",
     },
+    "plugins/config_v2/plugins/config-link": {
+      "name": "@singularity/plugin-config_v2-config-link",
+    },
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
     },
@@ -2809,6 +2812,8 @@
     "@singularity/plugin-collections": ["@singularity/plugin-collections@workspace:plugins/collections"],
 
     "@singularity/plugin-config_v2": ["@singularity/plugin-config_v2@workspace:plugins/config_v2"],
+
+    "@singularity/plugin-config_v2-config-link": ["@singularity/plugin-config_v2-config-link@workspace:plugins/config_v2/plugins/config-link"],
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 

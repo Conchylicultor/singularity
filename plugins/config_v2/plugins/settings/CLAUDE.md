@@ -8,7 +8,7 @@
 - Web:
   - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
   - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `shell.Shell`
-  - Exports: Values: `configNavPane`
+  - Exports: Values: `configDetailPane`, `configNavPane`
 - Server:
   - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
   - Routes: `POST /api/config-v2/reset-field`, `POST /api/config-v2/acknowledge-conflict`, `POST /api/config-v2/delete-override`, `GET /api/config-v2/raw-file`

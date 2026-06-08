@@ -1,7 +1,8 @@
 import { useState } from "react";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
+import { prepromptsConfig } from "@plugins/conversations/plugins/preprompts/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationPreprompt } from "../internal/hooks";
 import { PrepromptIcon } from "./preprompt-icon";
@@ -31,9 +32,10 @@ export function PrepromptChip() {
       }
       contentClassName="w-80 p-2"
     >
-      <SectionLabel className="px-1 pb-1 text-3xs">
-        Preprompt instructions
-      </SectionLabel>
+      <ConfigPopoverHeader
+        label="Preprompt instructions"
+        descriptor={prepromptsConfig}
+      />
       <div
         className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-1 text-xs text-muted-foreground"
         aria-label="Preprompt instructions"

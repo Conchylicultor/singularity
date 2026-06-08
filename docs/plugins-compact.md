@@ -59,7 +59,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`collections`** — Typed collection primitive: defineCollection for managed user-editable lists.
 
-- **`config_v2`** [5 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
+- **`config_v2`** [6 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
 - **`conversations`** [load-bearing] [92 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 

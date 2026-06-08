@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -82,9 +82,10 @@ export function CategoryChipToolbar() {
       }
       contentClassName="w-56 p-1"
     >
-        <SectionLabel className="px-2 py-1 text-3xs">
-          Set category
-        </SectionLabel>
+        <ConfigPopoverHeader
+          label="Set category"
+          descriptor={conversationCategoryConfig}
+        />
         <ul className="space-y-px">
           {categories.map((c) => {
             const selected = c === category;

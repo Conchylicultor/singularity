@@ -8,6 +8,7 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
+import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useConversationById } from "@plugins/conversations/web";
@@ -131,17 +132,23 @@ export function FloatingTemplateChips({
         panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-40"
       >
         <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
-        <FloatingActionFadeIn className="flex flex-wrap items-center gap-1">
-          {templates.map((t) => (
-            <TemplateChip
-              key={t.id}
-              template={t}
-              insertText={insertText}
-              onSend={(tpl) => void sendTemplate(tpl)}
-              canSend={canSend}
-              sending={sendingId === t.id}
-            />
-          ))}
+        <FloatingActionFadeIn className="flex flex-col items-start gap-1">
+          <ConfigGearButton
+            descriptor={promptTemplatesConfig}
+            label="Configure: Prompt templates"
+          />
+          <div className="flex flex-wrap items-center gap-1">
+            {templates.map((t) => (
+              <TemplateChip
+                key={t.id}
+                template={t}
+                insertText={insertText}
+                onSend={(tpl) => void sendTemplate(tpl)}
+                canSend={canSend}
+                sending={sendingId === t.id}
+              />
+            ))}
+          </div>
         </FloatingActionFadeIn>
       </FloatingAction>
     </div>

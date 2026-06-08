@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { prepromptsConfig } from "../shared/config";
 
+export { prepromptsConfig } from "../shared/config";
 export { PrepromptSelect } from "./components/preprompt-select";
 export type { PrepromptSelectProps } from "./components/preprompt-select";
 export { PrepromptGlyph } from "./components/preprompt-glyph";
