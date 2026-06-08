@@ -5,6 +5,7 @@ import { configV2Resource } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/config_v2/core";
 import { useScopeForked } from "./use-scope-forked";
 import { storePathOf } from "./store-path";
+import { useKnownServerPaths } from "./server-paths";
 
 export function useConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -20,6 +21,22 @@ export function useConfig<F extends FieldsRecord>(
     throw new Error(
       `[config-v2] useConfig: descriptor "${descriptor.name}" has no web registration. ` +
         `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,
+    );
+  }
+
+  // Defense-in-depth against the silent half-registration: a descriptor
+  // registered on web but missing the matching server ConfigV2.Register is
+  // absent from the boot snapshot, so its resource stays pending and the read
+  // below would silently fall through to `descriptor.defaults`. Once boot has
+  // completed (known !== null) we know the full server-registered set, so a
+  // missing path is a hard error rather than a silent degrade. While still
+  // booting (known === null) we proceed; the defaults race fallback covers it.
+  const known = useKnownServerPaths();
+  if (known !== null && !known.has(path)) {
+    throw new Error(
+      `[config-v2] useConfig: descriptor "${descriptor.name}" is registered on web ` +
+        `(storePath "${path}") but the server has no matching ConfigV2.Register — ` +
+        `add ConfigV2.Register({ descriptor }) to the plugin's server/index.ts.`,
     );
   }
 
