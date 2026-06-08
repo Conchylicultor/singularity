@@ -12,8 +12,11 @@
  * The CLI runs ESLint via `plugins/framework/plugins/tooling/plugins/checks/core/eslint.ts`
  * (`./singularity check --eslint`); there's no separate npm script to keep in sync.
  *
- * Global lint rules (promise-safety, etc.) live in `plugins/framework/plugins/tooling/plugins/lint/core/` and are
- * registered in baseConfigs below — they apply to all `**\/*.{ts,tsx}` files.
+ * The custom global lint rules (promise-safety, icon-safety, reactive-server-io)
+ * live in their own `plugins/framework/plugins/tooling/plugins/lint/plugins/<name>/`
+ * plugins and are auto-registered by the contribution loop below — exactly like
+ * any other plugin-contributed rule. baseConfigs only configures the parser and
+ * third-party/built-in rules (`@typescript-eslint`, `react-hooks`, `eqeqeq`, …).
  */
 
 import { dirname, join } from "path";
@@ -22,11 +25,6 @@ import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
 import type { ESLint, Linter } from "eslint";
 import reactHooks from "eslint-plugin-react-hooks";
-import {
-  iconSafetyRules,
-  promiseSafetyRules,
-  reactiveServerIoRules,
-} from "./plugins/framework/plugins/tooling/plugins/lint/core";
 import { lintEntries } from "./plugins/framework/plugins/tooling/plugins/lint/core/lint.generated";
 
 const here = dirname(fileURLToPath(import.meta.url));
@@ -99,9 +97,6 @@ const baseConfigs: Linter.Config[] = [
     },
     plugins: {
       "@typescript-eslint": tsPlugin as unknown as ESLint.Plugin,
-      "icon-safety": { rules: iconSafetyRules } as unknown as ESLint.Plugin,
-      "promise-safety": { rules: promiseSafetyRules } as unknown as ESLint.Plugin,
-      "reactive-server-io": { rules: reactiveServerIoRules } as unknown as ESLint.Plugin,
       "react-hooks": reactHooks as unknown as ESLint.Plugin,
     },
     rules: {
@@ -114,10 +109,6 @@ const baseConfigs: Linter.Config[] = [
         allowConstantLoopConditions: true,
       }],
       "@typescript-eslint/await-thenable": "error",
-      "icon-safety/no-lucide-react": "error",
-      "promise-safety/no-floating-promises": "error",
-      "promise-safety/no-bare-catch": "error",
-      "reactive-server-io/no-reactive-server-io": "error",
       "react-hooks/rules-of-hooks": "error",
       "react-hooks/exhaustive-deps": "error",
       "no-constant-binary-expression": "error",

@@ -1559,7 +1559,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `AllowVerdict`, `DenyVerdict`, `FileHint`, `Guard`, `GuardContext`, `ToolMatcher`, `Verdict`; Values: `createContext`, `defineGuard`, `GUARDS`, `parseShell`
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Core:
-            - Exports: Values: `findPluginDirs`, `iconSafetyRules`, `lintCollectedDir`, `promiseSafetyRules`, `reactiveServerIoRules`
+            - Exports: Values: `findPluginDirs`, `lintCollectedDir`
+          - Plugins:
+            - **`icon-safety`** — icon-safety lint rules: no-lucide-react
+            - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
+            - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
     - **`web-core`**
       - Structure:
         - Loose top-level files: `vite.config.ts`, `vitest.config.ts`

@@ -115,6 +115,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
+          - Plugins:
+            - **`icon-safety`** — icon-safety lint rules: no-lucide-react
+            - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
+            - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
     - **`web-core`**
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 

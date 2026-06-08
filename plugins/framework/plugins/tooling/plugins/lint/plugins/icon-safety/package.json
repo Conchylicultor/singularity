@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-icon-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "icon-safety lint rules: no-lucide-react"
+}

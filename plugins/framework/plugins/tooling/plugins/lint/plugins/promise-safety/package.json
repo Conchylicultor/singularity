@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-promise-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "promise-safety lint rules: no-floating-promises, no-bare-catch"
+}

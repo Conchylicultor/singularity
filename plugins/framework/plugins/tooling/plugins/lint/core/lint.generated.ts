@@ -14,6 +14,9 @@ export interface CollectedEntry {
 
 export const lintEntries: CollectedEntry[] = [
   { pluginPath: "debug/plugins/logs", hierarchyPath: "debug/logs", loader: () => import("@plugins/debug/plugins/logs/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/icon-safety", hierarchyPath: "framework/tooling/lint/icon-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", hierarchyPath: "framework/tooling/lint/promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
+  { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", hierarchyPath: "framework/tooling/lint/reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/web-core", hierarchyPath: "framework/web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/badge", hierarchyPath: "primitives/badge", loader: () => import("@plugins/primitives/plugins/badge/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/control-size", hierarchyPath: "primitives/control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
