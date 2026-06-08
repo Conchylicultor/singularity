@@ -1475,6 +1475,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`conversation-trailer`**
             - **`data-migration-dml-only`**
             - **`eslint`**
+              - Core:
+                - Exports: Types: `EslintClosureCache`, `FingerprintResult`, `ImportGraphs`; Values: `buildImportGraphs`, `buildReverseImportGraph`, `computeClosureFingerprints`, `findLintFiles`, `globalConfigFingerprint`, `isLintable`, `openEslintClosureCache`, `resolveSpecifier`, `safeRead`
             - **`migration-hashes-unique`**
             - **`migrations-in-sync`**
             - **`no-hardcoded-colors`**

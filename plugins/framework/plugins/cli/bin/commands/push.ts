@@ -38,13 +38,14 @@ async function exec(cmd: string[], cwd?: string): Promise<void> {
 // Spawns a fresh process so checks see the post-rebase code on disk,
 // not the stale module cache from process start.
 //
-// `scopeEnv` controls the eslint check's lint surface:
-//   - undefined → env var UNSET → the check runs a full `eslint .` (the
+// `scopeEnv` controls the eslint check's candidate set (the check's per-file
+// closure cache provides soundness and cross-run reuse regardless of scope):
+//   - undefined → env var UNSET → the check considers the full lintable set (the
 //     complete type-aware gate). CRITICAL: this must be *unset*, never an empty
 //     string — an empty SINGULARITY_ESLINT_SCOPE means "skip" in the check.
-//   - a (possibly empty) newline list → lint exactly the affected set, FRESH
-//     (no content cache) so unchanged dependents are re-evaluated, not served
-//     stale. An empty list means nothing lint-relevant changed → the check
+//   - a (possibly empty) newline list → consider exactly the affected set; the
+//     closure cache then re-lints only those whose dependency closure changed.
+//     An empty list means nothing lint-relevant changed → the check
 //     short-circuits to ok.
 async function runChecksSubprocess(root: string, scopeEnv: string | undefined): Promise<boolean> {
   const env: Record<string, string> = {
@@ -57,7 +58,6 @@ async function runChecksSubprocess(root: string, scopeEnv: string | undefined): 
   };
   if (scopeEnv !== undefined) {
     env.SINGULARITY_ESLINT_SCOPE = scopeEnv;
-    env.SINGULARITY_ESLINT_NO_CACHE = "1";
   }
   const proc = Bun.spawn(["bun", "plugins/framework/plugins/cli/bin/index.ts", "check"], {
     cwd: root,
@@ -96,8 +96,8 @@ async function runChecksUnderPushSlot(
 
 // Decide the eslint surface for this push and emit visibility (a zero-width
 // profiler step + a console line) so the push Gantt shows which path ran.
-// Returns the scope env to thread into the check subprocess: undefined → full
-// `eslint .`; a newline list → the affected set, linted fresh.
+// Returns the scope env to thread into the check subprocess: undefined → the
+// full lintable set; a newline list → the affected set (closure-cached).
 async function resolveEslintScope(
   root: string,
   onMain: boolean,

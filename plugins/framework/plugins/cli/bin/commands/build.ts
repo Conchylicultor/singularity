@@ -5,7 +5,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { computeEslintScope } from "../eslint-affected";
+import { computeAffectedFiles } from "../eslint-affected";
 import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
@@ -766,12 +766,16 @@ export function registerBuild(program: Command) {
 
       console.log("Running checks, type-checking, and building frontend in parallel...");
 
-      // Scope the eslint check to this branch's diff (non-main builds only —
-      // main builds run the full lint so the cache they seed stays complete for
-      // future worktrees). On failure to determine the scope we leave the env
-      // var unset, which falls back to a full `eslint .`.
+      // Scope the eslint check to this branch's *affected set* (changed files +
+      // their transitive importers) on non-main builds — the same sound set push
+      // lints, so a build PASS is reusable by push. The per-file closure cache
+      // makes this cheap: only files whose dependency closure actually changed
+      // get re-linted; the affected set is just a candidate-narrowing fast path.
+      // On failure to determine the affected set (or a force-full trigger) the
+      // env var stays unset → the full lintable set, still served from the cache.
+      // Main builds run the full set so the cache they seed stays complete.
       if (branch !== "main") {
-        const scope = await computeEslintScope(root);
+        const scope = await computeAffectedFiles(root);
         if (scope !== null) process.env.SINGULARITY_ESLINT_SCOPE = scope.join("\n");
       }
 

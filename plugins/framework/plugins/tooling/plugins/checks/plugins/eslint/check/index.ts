@@ -1,6 +1,9 @@
 import { createHash } from "crypto";
-import { existsSync, readdirSync, statSync, unlinkSync } from "fs";
-import { join } from "path";
+import {
+  buildImportGraphs,
+  computeClosureFingerprints,
+  openEslintClosureCache,
+} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/eslint/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = {
@@ -18,84 +21,16 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-function newestMtimeMs(dir: string): number {
-  let max = 0;
-  let entries;
-  try {
-    entries = readdirSync(dir, { withFileTypes: true });
-  } catch {
-    return 0;
-  }
-  for (const e of entries) {
-    const full = join(dir, e.name);
-    if (e.isDirectory()) {
-      max = Math.max(max, newestMtimeMs(full));
-    } else if (e.name.endsWith(".ts")) {
-      max = Math.max(max, statSync(full).mtimeMs);
-    }
-  }
-  return max;
-}
-
-function bustCacheIfStale(root: string, cacheLocation: string): void {
-  if (!existsSync(cacheLocation)) return;
-  const cacheMtime = statSync(cacheLocation).mtimeMs;
-
-  const lintSourceDirs = [
-    join(root, "plugins", "framework", "plugins", "tooling", "plugins", "lint", "core"),
-    ...findPluginLintDirs(root),
-  ];
-  const configFile = join(root, "eslint.config.ts");
-
-  let newestSource = 0;
-  if (existsSync(configFile)) {
-    newestSource = Math.max(newestSource, statSync(configFile).mtimeMs);
-  }
-  for (const dir of lintSourceDirs) {
-    newestSource = Math.max(newestSource, newestMtimeMs(dir));
-  }
-
-  if (newestSource > cacheMtime) {
-    unlinkSync(cacheLocation);
-  }
-}
-
-function findPluginLintDirs(root: string): string[] {
-  const pluginsRoot = join(root, "plugins");
-  const dirs: string[] = [];
-  function walk(dir: string, depth: number) {
-    if (depth > 10) return;
-    const lintDir = join(dir, "lint");
-    if (existsSync(join(lintDir, "index.ts"))) dirs.push(lintDir);
-    const nested = join(dir, "plugins");
-    let entries;
-    try {
-      entries = readdirSync(nested, { withFileTypes: true });
-    } catch {
-      return;
-    }
-    for (const e of entries) {
-      if (e.isDirectory()) walk(join(nested, e.name), depth + 1);
-    }
-  }
-  let entries;
-  try {
-    entries = readdirSync(pluginsRoot, { withFileTypes: true });
-  } catch {
-    return dirs;
-  }
-  for (const e of entries) {
-    if (e.isDirectory()) walk(join(pluginsRoot, e.name), 0);
-  }
-  return dirs;
-}
-
-// `./singularity build` sets SINGULARITY_ESLINT_SCOPE to a newline-separated
-// list of the branch's changed .ts/.tsx files (already filtered against the
-// config's ignore globs) so a cold first build lints only the diff instead of
-// all ~2k files (~10 min → seconds). Unset — push, `./singularity check`, and
-// main builds — means a full-repo lint, preserving the complete type-aware gate.
-// Defined-but-empty means nothing lint-relevant changed (skip).
+// `./singularity build` and `./singularity push` set SINGULARITY_ESLINT_SCOPE to
+// a newline-separated list of the branch's affected .ts/.tsx files (changed +
+// transitive importers, already filtered against the config's ignore globs) so a
+// scoped run lints only the affected set instead of all ~2k files. Unset —
+// `./singularity check` and main builds — means the full lintable set. The
+// closure cache (keyed on each file's content + its transitive forward-import
+// closure + global config) then skips every file whose closure is unchanged, so
+// the scope env is only a candidate-narrowing fast path: correctness comes from
+// the fingerprint, not the scope. Defined-but-empty means nothing lint-relevant
+// changed (skip).
 function eslintScope(): string[] | null {
   const raw = process.env.SINGULARITY_ESLINT_SCOPE;
   if (raw === undefined) return null;
@@ -105,39 +40,41 @@ function eslintScope(): string[] | null {
 const check: Check = {
   id: "eslint",
   description: "ESLint rules pass (global + plugin-contributed)",
-  // The eslint surface is parameterized by its scope env, so the cache key must
-  // fold it in: build's cached diff-scope, push's FRESH affected-set, and a
-  // full `eslint .` are different (and differently-strong) checks over the same
-  // tree — they must get distinct keys and never alias each other.
+  // The eslint surface is parameterized by its scope env, so the outer
+  // check-cache key folds it in: a scoped affected-set run and a full run are
+  // different candidate sets over the same tree. The per-file closure cache (not
+  // this signature) carries cross-run/worktree reuse; this only keeps a full run
+  // and a scoped run from aliasing each other's outer check-cache entry.
   cacheSignature() {
     const scope = eslintScope();
     if (scope === null) return "scope=full";
     if (scope.length === 0) return "scope=empty";
-    const noCache = process.env.SINGULARITY_ESLINT_NO_CACHE === "1" ? "fresh" : "cached";
-    const files = createHash("sha256").update([...scope].sort().join("\n")).digest("hex");
-    return `scope=list:${noCache}:${files}`;
+    return `scope=list:${createHash("sha256").update([...scope].sort().join("\n")).digest("hex")}`;
   },
   async run() {
     const root = await getRoot();
     const scope = eslintScope();
     if (scope !== null && scope.length === 0) return { ok: true };
-    const targets = scope ?? ["."];
-    // The push affected-set run sets SINGULARITY_ESLINT_NO_CACHE=1 to lint the
-    // explicit list FRESH: it re-evaluates unchanged dependents (their content
-    // is unchanged, so a content-keyed `--cache` would return a stale result —
-    // exactly the cross-file gap the affected set exists to close). Build's
-    // scoped run leaves this unset → stays cached (build is non-authoritative).
-    const noCache = process.env.SINGULARITY_ESLINT_NO_CACHE === "1";
-    // Scoped (build) runs use a separate cache file: ESLint's `--cache` prunes
-    // entries for files outside the current run, so a scoped run would shrink
-    // the canonical full-repo cache that push / `./singularity check` depend on.
-    const cacheLocation = join(root, ".cache", scope !== null ? "eslint-scoped" : "eslint");
-    const cacheArgs = noCache
-      ? []
-      : ["--cache", "--cache-location", cacheLocation, "--cache-strategy", "content"];
-    if (!noCache) bustCacheIfStale(root, cacheLocation);
+
+    // Build the import graph once; the candidate set is the affected scope (when
+    // provided) or every lintable file. Then fingerprint each candidate on its
+    // full dependency closure and skip the ones whose closure already PASSed.
+    const graphs = buildImportGraphs(root);
+    const candidates = scope ?? graphs.files;
+    const { perFile } = computeClosureFingerprints(root, graphs, candidates);
+
+    const cache = openEslintClosureCache();
+    const toLint = candidates.filter((f) => {
+      const fp = perFile.get(f);
+      return !fp || !cache.has(f, fp); // unreadable fingerprint → lint to be safe
+    });
+    if (toLint.length === 0) return { ok: true };
+
+    // Lint the not-yet-cached set with NO native --cache: the closure cache
+    // above already does the (sound, cross-file) caching, and eslint's
+    // content-`--cache` would be unsound for type-aware rules.
     const proc = Bun.spawn(
-      [process.execPath, "x", "eslint", ...targets, "--quiet", ...cacheArgs],
+      [process.execPath, "x", "eslint", ...toLint, "--quiet"],
       {
         cwd: root,
         stdout: "pipe",
@@ -149,7 +86,16 @@ const check: Check = {
       new Response(proc.stderr).text(),
       proc.exited,
     ]);
-    if (exitCode === 0) return { ok: true };
+    if (exitCode === 0) {
+      // Record a PASS per linted file keyed on its closure fingerprint.
+      for (const f of toLint) {
+        const fp = perFile.get(f);
+        if (fp) cache.record(f, fp);
+      }
+      return { ok: true };
+    }
+    // Failure: a batch exit can't attribute violations per file, so record
+    // NOTHING — conservative (re-lints the batch next time, never a false PASS).
     const combined = [stdout.trim(), stderr.trim()].filter(Boolean).join("\n").trim();
     return {
       ok: false,
