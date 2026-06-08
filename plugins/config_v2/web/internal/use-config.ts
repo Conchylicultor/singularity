@@ -4,6 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2Resource } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/config_v2/core";
 import { useScopeForked } from "./use-scope-forked";
+import { storePathOf } from "./store-path";
 
 export function useConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -14,13 +15,13 @@ export function useConfig<F extends FieldsRecord>(
 
   const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
-  if (!reg?._pluginId) {
+  const path = reg ? storePathOf(reg) : null;
+  if (!path) {
     throw new Error(
       `[config-v2] useConfig: descriptor "${descriptor.name}" has no web registration. ` +
         `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,
     );
   }
-  const path = `${reg._pluginId}/${descriptor.name}.jsonc`;
 
   // Non-suspending. The global value is hydrated into the cache at boot (see the
   // config boot task), so it is never `pending` on first paint — that replaces

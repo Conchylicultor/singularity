@@ -3,6 +3,7 @@ import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField } from "../../core";
 import type { ConfigDescriptor, FieldsRecord } from "../../core";
+import { storePathOf } from "./store-path";
 
 export function useSetConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -13,12 +14,9 @@ export function useSetConfig<F extends FieldsRecord>(
 
   const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
   const reg = registrations.find((c) => c.descriptor === descriptor);
-  const pluginId = (reg?.pluginId as string | undefined) ?? reg?._pluginId;
-  const storePath = pluginId
-    ? `${pluginId}/${descriptor.name}.jsonc`
-    : null;
+  const storePath = reg ? storePathOf(reg) : null;
 
-  if (!pluginId) {
+  if (!storePath) {
     throw new Error(
       `[config-v2] useSetConfig: descriptor "${descriptor.name}" has no web registration. ` +
         `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,
@@ -32,7 +30,7 @@ export function useSetConfig<F extends FieldsRecord>(
       void fetchEndpoint(
         setConfigField,
         {},
-        { body: scopeId ? { storePath: storePath!, key, value, scopeId } : { storePath: storePath!, key, value } },
+        { body: scopeId ? { storePath, key, value, scopeId } : { storePath, key, value } },
       );
     },
     [storePath, scopeId],

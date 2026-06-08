@@ -1,6 +1,7 @@
 import { useContext, useMemo } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import { storePathOf } from "./store-path";
 
 export interface ConfigRegistration {
   descriptor: ConfigDescriptor;
@@ -18,18 +19,12 @@ export function useConfigRegistrations(): ConfigRegistration[] {
     () =>
       (raw ?? [])
         .filter((c) => c._pluginId && c._pluginName)
-        .map((c) => {
-          // The descriptor is stored under its explicit `pluginId` override when
-          // present, else the registering plugin's own id.
-          const storePluginId =
-            ((c.pluginId as string | undefined) ?? c._pluginId) as string;
-          return {
-            descriptor: c.descriptor as ConfigDescriptor,
-            pluginId: c._pluginId as string,
-            pluginName: c._pluginName as string,
-            storePath: `${storePluginId}/${(c.descriptor as ConfigDescriptor).name}.jsonc`,
-          };
-        }),
+        .map((c) => ({
+          descriptor: c.descriptor as ConfigDescriptor,
+          pluginId: c._pluginId as string,
+          pluginName: c._pluginName as string,
+          storePath: storePathOf(c)!,
+        })),
     [raw],
   );
 }
