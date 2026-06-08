@@ -12,6 +12,16 @@ export {
   BlockTypeList,
 } from "./components/block-type-list";
 export { BlockTypeMenu } from "./components/block-type-menu";
+export {
+  registerBlockTextExtension,
+  getBlockTextExtensions,
+} from "./internal/block-text-extensions";
+export type {
+  BlockTextExtension,
+  BlockTextPluginProps,
+} from "./internal/block-text-extensions";
+export { usePageOptions, PageOptionsList } from "./components/page-options";
+export type { PageOption } from "./components/page-options";
 
 export default {
   name: "Page Editor",

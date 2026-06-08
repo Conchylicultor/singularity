@@ -1,35 +1,36 @@
 import { useMemo, useState } from "react";
-import { MdDescription, MdLink } from "react-icons/md";
+import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { pagesResource, pageData, type Block } from "@plugins/page/plugins/editor/core";
-import { useBlockEditor, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
+import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
+import {
+  useBlockEditor,
+  usePageOptions,
+  PageOptionsList,
+  type BlockRendererProps,
+} from "@plugins/page/plugins/editor/web";
 import { pageLinkBlock } from "../../core";
 
 // A small page-picker popover: filterable list of pages fed by the live
-// pagesResource. Selecting a page invokes `onSelect(pageId)`.
+// pagesResource (via the shared usePageOptions/PageOptionsList). Selecting a page
+// invokes `onSelect(pageId)`. `autoOpen` opens it on mount so inserting the block
+// is a single step (no extra click to reveal the picker).
 function PagePicker({
   trigger,
   onSelect,
+  autoOpen,
 }: {
   trigger: React.ReactElement;
   onSelect: (pageId: string) => void;
+  autoOpen?: boolean;
 }) {
-  const [open, setOpen] = useState(false);
+  const [open, setOpen] = useState(autoOpen ?? false);
   const [query, setQuery] = useState("");
-  const result = useResource(pagesResource);
-
-  const filtered = useMemo(() => {
-    const pages = result.pending ? [] : result.data;
-    const q = query.trim().toLowerCase();
-    if (!q) return pages;
-    return pages.filter((d) =>
-      (pageData(d).title || "Untitled").toLowerCase().includes(q),
-    );
-  }, [result, query]);
+  const [activeIndex, setActiveIndex] = useState(0);
+  const options = usePageOptions(query);
 
   return (
     <InlinePopover
@@ -45,41 +46,20 @@ function PagePicker({
           value={query}
           onChange={(e) => setQuery(e.target.value)}
         />
-        <ul className="flex max-h-64 flex-col gap-0.5 overflow-y-auto">
-          {filtered.length === 0 ? (
-            <li className="px-2 py-1">
-              <Placeholder>No pages found</Placeholder>
-            </li>
-          ) : (
-            filtered.map((page) => (
-              <li key={page.id}>
-                <Row
-                  hover="muted"
-                  onClick={() => {
-                    onSelect(page.id);
-                    setOpen(false);
-                    setQuery("");
-                  }}
-                  icon={<PageIcon page={page} />}
-                >
-                  <span className="truncate">
-                    {pageData(page).title || "Untitled"}
-                  </span>
-                </Row>
-              </li>
-            ))
-          )}
-        </ul>
+        <div className="max-h-64 overflow-y-auto">
+          <PageOptionsList
+            options={options}
+            activeIndex={activeIndex}
+            onHoverIndex={setActiveIndex}
+            onSelect={(id) => {
+              onSelect(id);
+              setOpen(false);
+              setQuery("");
+            }}
+          />
+        </div>
       </div>
     </InlinePopover>
-  );
-}
-
-function PageIcon({ page }: { page: Block }) {
-  return (
-    <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-      {pageData(page).icon ?? <MdDescription className="size-4" />}
-    </span>
   );
 }
 
@@ -94,11 +74,12 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   );
   const targetData = target ? pageData(target) : undefined;
 
-  // Freshly inserted (empty) block: render the picker affordance.
+  // Freshly inserted (empty) block: render the picker affordance, opened.
   if (pageId === "") {
     return (
       <div className="px-3 py-1">
         <PagePicker
+          autoOpen
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
             <Row

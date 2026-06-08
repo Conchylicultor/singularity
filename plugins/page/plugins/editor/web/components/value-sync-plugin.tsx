@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
-import { $createParagraphNode, $createTextNode, $getRoot } from "lexical";
+import { $createParagraphNode, $getRoot } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { appendLineNodes, serializeBlockText } from "../internal/block-text-extensions";
 
 export function ValueSyncPlugin({
   value,
@@ -24,9 +25,7 @@ export function ValueSyncPlugin({
       const lines = value.split("\n");
       for (const line of lines) {
         const paragraph = $createParagraphNode();
-        if (line.length > 0) {
-          paragraph.append($createTextNode(line));
-        }
+        appendLineNodes(paragraph, line);
         root.append(paragraph);
       }
     });
@@ -40,12 +39,10 @@ export function ValueSyncPlugin({
     return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
       if (selfWriteRef.current) return;
       if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
-      editor.getEditorState().read(() => {
-        const text = $getRoot().getTextContent();
-        if (text === lastSerializedRef.current) return;
-        lastSerializedRef.current = text;
-        onChangeRef.current(text);
-      });
+      const text = serializeBlockText(editor);
+      if (text === lastSerializedRef.current) return;
+      lastSerializedRef.current = text;
+      onChangeRef.current(text);
     });
   }, [editor]);
 

@@ -17,11 +17,14 @@ import { _pageLinks } from "./tables";
 // 5. Notify `backlinksResource` for every affected target (old ∪ new) so
 //    those pages' panels refresh live.
 export async function reindexPage(pageId: string): Promise<void> {
-  // type → extract, built fresh each call so newly-registered extractors are
-  // always honored. `getContributions()` reads the populated server registry.
+  // Built fresh each call so newly-registered extractors are always honored.
+  // `getContributions()` reads the populated server registry. Typed extractors
+  // run on their matching block type; global (type-less) ones run on every block.
   const extractors = new Map<string, (data: unknown) => string[]>();
+  const globalExtractors: ((data: unknown) => string[])[] = [];
   for (const c of PageLinks.Extractor.getContributions()) {
-    extractors.set(c.type, c.extract);
+    if (c.type === undefined) globalExtractors.push(c.extract);
+    else extractors.set(c.type, c.extract);
   }
 
   const blocks = await db
@@ -30,12 +33,15 @@ export async function reindexPage(pageId: string): Promise<void> {
     .where(eq(_blocks.pageId, pageId));
 
   const targets = new Set<string>();
-  for (const block of blocks) {
-    const extract = extractors.get(block.type);
-    if (!extract) continue;
-    for (const id of extract(block.data)) {
+  const collect = (extract: (data: unknown) => string[], data: unknown) => {
+    for (const id of extract(data)) {
       if (id && id !== pageId) targets.add(id);
     }
+  };
+  for (const block of blocks) {
+    const extract = extractors.get(block.type);
+    if (extract) collect(extract, block.data);
+    for (const g of globalExtractors) collect(g, block.data);
   }
 
   // Validate targets against pages — drop links to non-existent / non-page ids.

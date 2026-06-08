@@ -15,6 +15,7 @@ import { ValueSyncPlugin } from "./value-sync-plugin";
 import { KeyboardPlugin } from "./keyboard-plugin";
 import { SlashMenuPlugin } from "./slash-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
+import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditor | null> }) {
   const [editor] = useLexicalComposerContext();
@@ -72,7 +73,10 @@ export function BlockTextEditor({
     () => ({
       namespace: `block-text-${block.id}`,
       theme: { paragraph: "m-0" },
-      nodes: [],
+      // Custom inline nodes (e.g. inline page links) contributed via
+      // registerBlockTextExtension. Registered at app bootstrap, so present
+      // before any block editor mounts.
+      nodes: blockTextNodes(),
       onError: console.error,
     }),
     [block.id],
@@ -114,6 +118,11 @@ export function BlockTextEditor({
           <KeyboardPlugin blockId={block.id} editor={editor} splitOptions={splitOptions} />
           <SlashMenuPlugin block={block} editor={editor} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
+          {getBlockTextExtensions().map((ext) =>
+            ext.Plugin ? (
+              <ext.Plugin key={ext.id} block={block} editor={editor} />
+            ) : null,
+          )}
           <EditorRefPlugin editorRef={lexicalEditorRef} />
         </div>
       </div>

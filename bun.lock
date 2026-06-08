@@ -1410,6 +1410,14 @@
       "name": "@singularity/plugin-page-image",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/inline-page-link": {
+      "name": "@singularity/plugin-page-inline-page-link",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/page/plugins/links": {
       "name": "@singularity/plugin-page-links",
       "version": "0.0.1",
@@ -3333,6 +3341,8 @@
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 
     "@singularity/plugin-page-image": ["@singularity/plugin-page-image@workspace:plugins/page/plugins/image"],
+
+    "@singularity/plugin-page-inline-page-link": ["@singularity/plugin-page-inline-page-link@workspace:plugins/page/plugins/inline-page-link"],
 
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
 

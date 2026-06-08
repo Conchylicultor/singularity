@@ -1,0 +1,10 @@
+{
+  "name": "@singularity/plugin-page-inline-page-link",
+  "description": "Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "lexical": "^0.44.0",
+    "@lexical/react": "^0.44.0"
+  }
+}
