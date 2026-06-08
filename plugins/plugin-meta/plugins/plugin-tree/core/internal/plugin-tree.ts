@@ -57,13 +57,47 @@ function isWalkable(name: string): boolean {
   return name !== "node_modules" && !name.startsWith(".");
 }
 
+/**
+ * A directory at a plugin position is a real plugin only if it holds source
+ * content — at least one regular file somewhere under it (excluding the
+ * `node_modules`/dot-dir noise `isWalkable` already skips).
+ *
+ * This guards against *hollow shells*: when a plugin is relocated, `git mv`
+ * removes its tracked files but leaves behind the untracked `node_modules/`
+ * directory git never tracked. The leftover dir lingers on disk in long-lived
+ * checkouts (notably the `main` worktree where `./singularity build` runs) while
+ * being absent from freshly-created worktrees. Without this gate the purely
+ * positional walk resurrects each such shell as a phantom plugin, so discovery —
+ * and every check/codegen step built on it — diverges between a clean worktree
+ * and a cruft-laden one. That non-determinism is exactly how a branch can pass
+ * `push` checks yet break `main`'s build.
+ *
+ * The gate stays positional (it keys on "is this a hollow shell", never on a
+ * specific marker file like package.json), so a freshly authored, not-yet-
+ * committed plugin — whose real `.ts` files count as content — is still found.
+ */
+function hasPluginContent(dir: string): boolean {
+  let entries;
+  try {
+    entries = readdirSync(dir, { withFileTypes: true });
+  } catch {
+    return false;
+  }
+  for (const e of entries) {
+    if (e.isFile()) return true;
+    if (e.isDirectory() && isWalkable(e.name) && hasPluginContent(join(dir, e.name))) return true;
+  }
+  return false;
+}
+
 function findAllPluginDirs(pluginsRoot: string): string[] {
   const out: string[] = [];
   function walk(dir: string, depth: number) {
     if (depth > 10) return;
     // Purely positional: any directory visited here (other than the root itself)
-    // sits at a plugin position, so it is a plugin.
-    if (dir !== pluginsRoot) out.push(dir);
+    // sits at a plugin position, so it is a plugin — provided it actually holds
+    // source content and isn't a hollow shell left behind by a relocation.
+    if (dir !== pluginsRoot && hasPluginContent(dir)) out.push(dir);
 
     let entries;
     try {
