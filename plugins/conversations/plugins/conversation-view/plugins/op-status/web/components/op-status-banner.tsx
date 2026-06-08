@@ -74,6 +74,7 @@ function waitedMs(op: WorktreeOp): number | null {
 
 function summaryLabel(op: WorktreeOp): string {
   if (op.op === "build") return "Build in progress";
+  if (op.op === "check") return "Check in progress";
   return op.phase === "waiting-for-lock" ? "Push queued — waiting for lock" : "Push in progress";
 }
 
@@ -90,12 +91,15 @@ interface OpRow {
 }
 
 // Build the ordered view: the global push queue first (lock holder, then the
-// waiting pushes in request order), then the independent builds.
+// waiting pushes in request order), then the independent builds and checks,
+// which serialize per-worktree and don't contend on the global push lock.
 function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
   const pushes = ops.filter((o) => o.op === "push");
   const running = pushes.filter((o) => o.phase === "running").sort(byStartedAt);
   const waiting = pushes.filter((o) => o.phase === "waiting-for-lock").sort(byStartedAt);
-  const builds = ops.filter((o) => o.op === "build").sort(byStartedAt);
+  const unqueued = ops
+    .filter((o) => o.op === "build" || o.op === "check")
+    .sort(byStartedAt);
 
   const queue = [...running, ...waiting];
   const pushRows: OpRow[] = queue.map((op, i) => ({
@@ -103,12 +107,12 @@ function buildRows(ops: WorktreeOp[], selfSlug: string): OpRow[] {
     queuePos: i + 1,
     isSelf: op.slug === selfSlug,
   }));
-  const buildRows: OpRow[] = builds.map((op) => ({
+  const unqueuedRows: OpRow[] = unqueued.map((op) => ({
     op,
     queuePos: null,
     isSelf: op.slug === selfSlug,
   }));
-  return [...pushRows, ...buildRows];
+  return [...pushRows, ...unqueuedRows];
 }
 
 function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: number }) {
@@ -117,7 +121,13 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
   const elapsed = formatElapsed(now - phaseStartedAt(op));
   const waited = waitedMs(op);
   const phaseText =
-    op.op === "build" ? "Building" : waiting ? "Waiting for lock" : "Pushing";
+    op.op === "build"
+      ? "Building"
+      : op.op === "check"
+        ? "Checking"
+        : waiting
+          ? "Waiting for lock"
+          : "Pushing";
 
   return (
     <div

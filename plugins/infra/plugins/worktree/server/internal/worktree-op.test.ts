@@ -21,6 +21,9 @@ function pushMarker(slug: string): WorktreeOpInfo {
 function buildMarker(slug: string): WorktreeOpInfo {
   return { slug, op: "build", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
 }
+function checkMarker(slug: string): WorktreeOpInfo {
+  return { slug, op: "check", startedAt: "2026-06-07T00:00:00.000Z", phase: "running", runningAt: null };
+}
 function holder(slug: string, pid = 1234, pushId = "p-1"): PushHolder {
   return { slug, pid, pushId, acquiredAt: "2026-06-07T00:00:00.000Z" };
 }
@@ -85,6 +88,16 @@ test("build markers pass through untouched (no lock contention)", () => {
     lockHeld: () => true,
   });
   expect(phaseOf(out, "A")).toBe("running"); // build unchanged
+  expect(phaseOf(out, "B")).toBe("running"); // push is the holder
+});
+
+test("check markers pass through untouched (no lock contention)", () => {
+  const out = derivePushPhases([checkMarker("A"), pushMarker("B")], holder("B"), {
+    isAlive: alive,
+    lockHeld: () => true,
+  });
+  expect(out.find((m) => m.slug === "A")?.op).toBe("check"); // op preserved
+  expect(phaseOf(out, "A")).toBe("running"); // check unchanged
   expect(phaseOf(out, "B")).toBe("running"); // push is the holder
 });
 

@@ -1,9 +1,18 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { resolveActiveWorktreeOps } from "@plugins/infra/plugins/worktree/server";
+import {
+  resolveActiveWorktreeOps,
+  type WorktreeOp,
+} from "@plugins/infra/plugins/worktree/server";
 import {
   WorktreeOpsPayloadSchema,
   type WorktreeOpsPayload,
 } from "../../shared";
+
+// Per-slug precedence when a worktree somehow has more than one live marker.
+// A real worktree runs one op at a time, so this is a safety tiebreak: a push
+// (global-lock-contended, highest stakes) outranks a check, which outranks a
+// build.
+const OP_RANK: Record<WorktreeOp, number> = { push: 2, check: 1, build: 0 };
 
 export const worktreeOpsResource = defineResource<WorktreeOpsPayload>({
   key: "worktree-ops",
@@ -16,9 +25,10 @@ export const worktreeOpsResource = defineResource<WorktreeOpsPayload>({
   loader: () => {
     const out: WorktreeOpsPayload = {};
     for (const info of resolveActiveWorktreeOps()) {
-      // At most one op per worktree slug; push wins over build if both run.
+      // At most one op per worktree slug; highest-precedence op wins if several
+      // somehow run at once (push > check > build).
       const existing = out[info.slug];
-      if (!existing || (existing.op !== "push" && info.op === "push")) {
+      if (!existing || OP_RANK[info.op] > OP_RANK[existing.op]) {
         out[info.slug] = info;
       }
     }

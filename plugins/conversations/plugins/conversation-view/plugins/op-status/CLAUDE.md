@@ -1,23 +1,27 @@
 # op-status
 
 Surfaces the worktree's in-flight long-running operation — `Build in progress`,
-`Push in progress`, or `Push queued — waiting for lock` — in two places:
+`Push in progress`, `Push queued — waiting for lock`, or `Check in progress` —
+in two places:
 
 - a **banner** above the prompt input (with a live-ticking elapsed timer), and
-- a compact **sidebar row chip** (`Building` / `Pushing` / `Waiting`) so a
-  build/push is visible from the conversation list without opening the
-  conversation.
+- a compact **sidebar row chip** (`Building` / `Pushing` / `Waiting` /
+  `Checking`) so a build/push/check is visible from the conversation list
+  without opening the conversation.
 
-Fills the gap where a build/push (or a push stuck behind the global push lock)
-was indistinguishable from the agent merely "working".
+Fills the gap where a build/push/check (or a push stuck behind the global push
+lock) was indistinguishable from the agent merely "working".
 
 ## How it works
 
-- The build/push CLI write a per-worktree op marker at
-  `~/.singularity/worktrees/<slug>/ops/{build,push}.json` (owned by the
+- The build/push/check CLI write a per-worktree op marker at
+  `~/.singularity/worktrees/<slug>/ops/{build,push,check}.json` (owned by the
   `worktree` primitive). The push marker carries a `phase`:
   `waiting-for-lock` while it queues for the global push lock, flipped to
-  `running` the instant the lock is granted. Builds only ever write `running`.
+  `running` the instant the lock is granted. Builds and checks only ever write
+  `running`. The `check` marker is written **only by a direct
+  `./singularity check`** — a check nested inside build/push is already covered
+  by that op's marker, so it writes none.
 - This plugin's server watches that marker tree with `createFileWatcher`
   (mirrors `@plugins/infra/git-watcher`) and pushes the full
   `{ slug → op }` map to the `worktree-ops` live-state resource on every
@@ -31,15 +35,15 @@ was indistinguishable from the agent merely "working".
   conversation → `worktreePath` → slug (the shared `slugOf` helper) and reads
   the same `worktree-ops` resource. It renders nothing for idle worktrees and a
   single **muted icon** otherwise — no chip, no label: the distinct icon (wrench
-  = building, up-arrow = pushing, hourglass = waiting), not color or text,
-  carries the state, with a tooltip for the full phrasing. Keeps the dense list
-  row quiet.
+  = building, up-arrow = pushing, hourglass = waiting, flask = checking), not
+  color or text, carries the state, with a tooltip for the full phrasing. Keeps
+  the dense list row quiet.
 - The banner is a toggle: clicking it expands a list of **every** in-flight op
   across all worktrees (the resource already carries the full `{ slug → op }`
   map). The list reconstructs the global push-lock queue — the running push that
   holds the lock is `#1`, the `waiting-for-lock` pushes follow in request order
-  (`startedAt`) — then lists builds, which serialize per-worktree and don't
-  contend on the global lock so they carry no queue position. The current
+  (`startedAt`) — then lists builds and checks, which serialize per-worktree and
+  don't contend on the global lock so they carry no queue position. The current
   worktree's row is highlighted. Each row resolves its worktree slug (the
   attempt id) to a human conversation title via the live `conversations`
   resource — in the agent-manager that's the full main-DB set, so this stays a

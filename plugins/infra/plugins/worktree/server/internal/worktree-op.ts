@@ -12,16 +12,22 @@ import { join } from "node:path";
 import { dlopen } from "bun:ffi";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";
 
-// A per-worktree, crash-safe marker for a long-running operation (build, push)
-// that will eventually finish and resume the agent. The conversation status
-// poller treats a tmux pane in the CLI "shell" state as `working` ONLY while one
-// of these markers is live for its worktree — every other never-ending
+// A per-worktree, crash-safe marker for a long-running operation (build, push,
+// check) that will eventually finish and resume the agent. The conversation
+// status poller treats a tmux pane in the CLI "shell" state as `working` ONLY
+// while one of these markers is live for its worktree — every other never-ending
 // background shell (dev server, `tail -f`, a build whose completion marker never
 // matched) falls through to the idle/waiting reading instead of looking busy
 // forever. Markers are keyed on the worktree directory basename, which the
-// writers (`./singularity build` / `push`, via `basename(getWorktreeRoot())`)
-// and the reader (runtime-tmux, via `basename(worktreePath)`) all agree on.
-export type WorktreeOp = "build" | "push";
+// writers (`./singularity build` / `push` / `check`, via
+// `basename(getWorktreeRoot())`) and the reader (runtime-tmux, via
+// `basename(worktreePath)`) all agree on.
+export type WorktreeOp = "build" | "push" | "check";
+
+// The closed set of known op types, for validating a marker's self-reported op
+// when reading it back (a marker written by an older/garbage writer that names
+// an unknown op falls back to "build").
+const KNOWN_OPS: readonly WorktreeOp[] = ["build", "push", "check"];
 
 // A push is written up-front in the "waiting-for-lock" phase (before it requests
 // the global push lock) and flipped to "running" the moment the lock is granted,
@@ -123,7 +129,7 @@ function readLiveMarker(slug: string, path: string): WorktreeOpInfo | null {
   }
   return {
     slug,
-    op: parsed.op === "push" ? "push" : "build",
+    op: KNOWN_OPS.includes(parsed.op as WorktreeOp) ? (parsed.op as WorktreeOp) : "build",
     startedAt: typeof parsed.startedAt === "string" ? parsed.startedAt : new Date(0).toISOString(),
     // Back-compat: markers written before the phase field default to "running".
     phase: parsed.phase === "waiting-for-lock" ? "waiting-for-lock" : "running",

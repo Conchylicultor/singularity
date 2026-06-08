@@ -1,4 +1,4 @@
-import { MdBuild, MdHourglassEmpty, MdUpload } from "react-icons/md";
+import { MdBuild, MdHourglassEmpty, MdScience, MdUpload } from "react-icons/md";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useWorktreeOp } from "../internal/use-worktree-op";
@@ -18,12 +18,15 @@ function displayFor(op: WorktreeOp): OpDisplay {
   if (op.op === "build") {
     return { icon: MdBuild, title: "Build in progress" };
   }
+  if (op.op === "check") {
+    return { icon: MdScience, title: "Checks running" };
+  }
   return { icon: MdUpload, title: "Push in progress" };
 }
 
 // Sidebar row indicator surfacing a worktree's in-flight long-running op (build
-// / push / push-waiting-for-lock) as a single muted icon. Renders nothing when
-// the worktree is idle, so ordinary "working" rows stay unadorned.
+// / push / push-waiting-for-lock / check) as a single muted icon. Renders
+// nothing when the worktree is idle, so ordinary "working" rows stay unadorned.
 export function OpStatusChip({ conv }: { conv: ConversationItemConv }) {
   const op = useWorktreeOp(conv.id);
   if (!op) return null;

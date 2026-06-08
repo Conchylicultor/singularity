@@ -3,7 +3,7 @@ import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core"
 
 export const WorktreeOpSchema = z.object({
   slug: z.string(),
-  op: z.enum(["build", "push"]),
+  op: z.enum(["build", "push", "check"]),
   startedAt: z.string(),
   phase: z.enum(["waiting-for-lock", "running"]),
   // When a push is running, the instant the push lock was granted (waiting →
