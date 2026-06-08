@@ -248,6 +248,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `database.db`
             - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
             - Exports: Values: `playbackHistoryLiveResource`, `songPlayback`
+        - **`primitives`** — Umbrella for Sonata-local client primitives.
+          - Plugins:
+            - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
+              - Core:
+                - Exports: Types: `VelocityTracker`; Values: `createVelocityTracker`, `flingPosition`, `flingRest`, `flingVelocity`
+              - Web:
+                - Exports: Types: `InertialDragConfig`, `InertialDragHandle`; Values: `useInertialDrag`
         - **`progress`** — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
           - Plugins:
             - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().

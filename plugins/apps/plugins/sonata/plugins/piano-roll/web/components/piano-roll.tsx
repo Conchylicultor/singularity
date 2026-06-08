@@ -5,11 +5,14 @@ import {
   bars,
   buildTempoIndex,
   makeKeySpeller,
+  scoreEndBeat,
   type KeyLane,
   type Score,
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import {
   useTrackColorMap,
   useHiddenTrackIds,
@@ -226,6 +229,44 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // not rebuilt every frame (the projection already built its own internally).
   const tempo = useMemo(() => buildTempoIndex(score), [score]);
 
+  // --- Drag-to-scrub with momentum: the lane behaves like a movable surface. --
+  // Grabbing the roll and dragging maps pointer travel 1:1 onto the scroll
+  // offset, so the content follows the finger: drag DOWN advances time (future
+  // notes fall toward the now-line), drag UP rewinds. A flick on release coasts
+  // under exponential friction and settles. We drive the shared absolute
+  // `seekTo`, the same primitive the progression-bar scrubber uses, so audio +
+  // cursor stay glued. The offset's time term is
+  // `seconds(cursor) * PX_PER_SECOND * tempoScale`, so a 1-pixel drag equals
+  // `1 / (PX_PER_SECOND * tempoScale)` authored-seconds of travel — hence
+  // `unitsPerPixel`. The physics (friction, momentum) lives in the reusable
+  // inertial-drag primitive; this site only maps pixels↔seconds and bridges the
+  // transport (pause on grab, restore the pre-drag play state once motion ends).
+  const { seekTo, isPlaying, play, stop } = useSonata();
+  const hasNotes = score.notes.length > 0;
+  const pxPerSecond = PX_PER_SECOND * tempoScale;
+  const endSeconds = tempo.beatToSeconds(scoreEndBeat(score));
+  const wasPlaying = useRef(false);
+
+  const { handlers, phase } = useInertialDrag({
+    axis: "y",
+    unitsPerPixel: 1 / pxPerSecond,
+    bounds: [0, endSeconds],
+    origin: () => tempo.beatToSeconds(cursorBeat),
+    onScrub: (sec) => seekTo(tempo.secondsToBeat(sec)),
+    onGrab: () => {
+      if (isPlaying) {
+        wasPlaying.current = true;
+        stop();
+      }
+    },
+    onSettle: () => {
+      if (wasPlaying.current) {
+        wasPlaying.current = false;
+        play();
+      }
+    },
+  });
+
   // Per-track view-state: hidden tracks are dropped from the roll entirely;
   // every drawn note is tinted by its track's effective color (palette default
   // or user override). Both come from the track-mixer's reactive rollup, so a
@@ -354,7 +395,18 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
           ScrollLayer applies the per-frame scroll as one translateY. Pitch is
           the fixed full keyboard across the width, so notes align
           column-for-key with the keyboard below. */}
-      <div ref={laneRef} className="relative min-h-0 flex-1 overflow-hidden">
+      <div
+        ref={laneRef}
+        {...(hasNotes ? handlers : null)}
+        className={cn(
+          "relative min-h-0 flex-1 touch-none select-none overflow-hidden",
+          hasNotes
+            ? phase === "idle"
+              ? "cursor-grab"
+              : "cursor-grabbing"
+            : null,
+        )}
+      >
         {/* Octave separators: screen-anchored vertical lines at each C boundary.
             Placed before the scroll layer in DOM so falling notes paint above
             the grid; outside it because pitch is the fixed horizontal axis. */}

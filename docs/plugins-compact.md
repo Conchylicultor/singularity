@@ -42,7 +42,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
-    - **`sonata`** [26 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [28 sub-plugins] — Sonata — extensible piano and music app.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
