@@ -60,7 +60,7 @@ Drag-reorder computes the new full visible order and `setConfig("order", entryKe
 ### Caveats
 
 - **subId collapses to slot scope.** `storageId = slotId[:subId]` is used for groups, but the config directive is keyed by the base `slotId` only — subIds aren't known at build. Sub-instances of one render slot therefore **share a single directive** (order/hidden apply to all instances). Intended.
-- **Spacers are temporarily unsupported.** The directive model has no spacer concept (deferred to a follow-up). The add-spacer affordance is removed; the `SpacerItem` type machinery is kept inert until spacers land.
+- **Spacers are directive tokens.** A spacer is a synthetic `__spacer__<id>` string in the `order` array (never in `hidden`, never in a group). The edit-mode "Add Spacer" affordance materializes the current order and appends a `__spacer__<uuid>` token; the spacer's × button filters it back out. `applyDirective` walks `order` and emits a blank draggable gap per token, de-duplicating repeated tokens on read. Agents can hand-author gaps by inserting a `__spacer__<id>` string into a committed `order` array.
 - **Groups stay DB-backed.** The `groups` sub-plugin is unchanged — group membership and group rank still live in Postgres and use `Rank`. Only top-level order/hidden moved to config.
 
 ## Edit mode

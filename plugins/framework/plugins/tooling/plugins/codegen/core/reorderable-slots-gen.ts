@@ -152,6 +152,7 @@ function buildOriginAnnotationsProvider(
     if (!items || items.length === 0) return [];
     const lines: string[] = [
       "Available items in this slot (reorder via the `order` array, hide via `hidden`):",
+      'Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.',
     ];
     for (const item of items) {
       lines.push(`- ${item.entryKey}  — ${item.label}`);

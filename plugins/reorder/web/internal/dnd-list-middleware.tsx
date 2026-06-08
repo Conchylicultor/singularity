@@ -32,6 +32,7 @@ import {
   entryKey,
   isGroupEntry,
   isSpacer,
+  SPACER_PREFIX,
   type SpacerItem,
   type TopLevelEntry,
 } from "./sorting";
@@ -201,6 +202,32 @@ function ReorderListMiddlewareInner({
   const restoreItemRef = useRef(restoreItem);
   restoreItemRef.current = restoreItem;
 
+  // --- Spacers (config-backed) ----------------------------------------------
+
+  const addSpacer = useCallback(() => {
+    // Materialize the current full visible order so the spacer lands at the
+    // visual end, not after only the explicitly-ordered items.
+    const tokens = entriesRef.current.map((x) => entryKey(x));
+    setConfigRef.current("order", [
+      ...tokens,
+      `${SPACER_PREFIX}${crypto.randomUUID()}`,
+    ]);
+  }, []);
+
+  const deleteSpacer = useCallback((token: string) => {
+    // Filter the persisted order only — never materialize (would bloat the
+    // directive by promoting every natural-order item).
+    setConfigRef.current(
+      "order",
+      directiveRef.current.order.filter((t) => t !== token),
+    );
+  }, []);
+
+  const addSpacerRef = useRef(addSpacer);
+  addSpacerRef.current = addSpacer;
+  const deleteSpacerRef = useRef(deleteSpacer);
+  deleteSpacerRef.current = deleteSpacer;
+
   // --- Drag handlers ---------------------------------------------------------
 
   const onDrop = useCallback(
@@ -238,7 +265,10 @@ function ReorderListMiddlewareInner({
       next.splice(toIdx, 0, moved!);
 
       // If the dragged item was inside a group, pull it out (groups are DB-backed).
-      const membership = membershipMapRef.current.get(draggedKey);
+      // Spacers are never in a group, so skip the membership pull for them.
+      const membership = isSpacer(dragged)
+        ? undefined
+        : membershipMapRef.current.get(draggedKey);
       if (membership) {
         void fetch(
           `/api/reorder/${storageId}/groups/members/${draggedKey}`,
@@ -469,8 +499,10 @@ function ReorderListMiddlewareInner({
     storageId,
     hiddenItems,
     addGroup,
+    addSpacer: () => addSpacerRef.current(),
     onHide: (key) => hideItemRef.current(key),
     onRestore: (key) => restoreItemRef.current(key),
+    onDeleteSpacer: (token) => deleteSpacerRef.current(token),
     dragInProgress: false,
     orientation,
   };
@@ -541,6 +573,7 @@ function ReorderListMiddlewareInner({
           <RestoreButton
             hiddenItems={hiddenItems}
             addGroup={addGroup}
+            addSpacer={() => addSpacerRef.current()}
             onRestore={(key) => restoreItemRef.current(key)}
           />
         )}
