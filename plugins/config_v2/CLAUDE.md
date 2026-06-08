@@ -10,7 +10,7 @@ import { defineConfig } from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { avatarField } from "@plugins/fields/plugins/avatar/plugins/config/core";
-import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
+import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 
 export const myConfig = defineConfig("my-plugin", {
   fields: {
@@ -115,7 +115,7 @@ Adding a field to an existing config (including a `listField` item or `objectFie
   - Contributes: `Core.Boot`
   - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
 - Cross-plugin:
-  - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `config-link`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `reorder`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `string-list`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+  - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `config-link`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `local`, `model-provider`, `notion`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `reorder`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `string-list`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
 - Core:
   - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
 - Server:
@@ -124,9 +124,6 @@ Adding a field to an existing config (including a `listField` item or `objectFie
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
     - Plugins:
-      - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
-      - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
-      - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
       - **`string-list`** — Plain string-array field type.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
 

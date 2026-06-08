@@ -1,5 +1,5 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import { secretField } from "@plugins/config_v2/plugins/fields/plugins/secret/core";
+import { secretField } from "@plugins/fields/plugins/secret/plugins/config/core";
 
 export const notionAuthConfig = defineConfig({
   name: "auth-notion",

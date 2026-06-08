@@ -4,7 +4,7 @@ import {
   type AuthIdentity,
   type AuthProviderDescriptor,
 } from "@plugins/auth/core";
-import { readSecretConfig } from "@plugins/config_v2/plugins/fields/plugins/secret/central";
+import { readSecretConfig } from "@plugins/fields/plugins/secret/plugins/config/central";
 import { notionAuthConfig } from "../../shared";
 
 interface NotionMe {

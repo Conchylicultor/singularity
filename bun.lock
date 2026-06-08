@@ -417,15 +417,6 @@
     "plugins/config_v2/plugins/fields": {
       "name": "@singularity/plugin-config_v2-fields",
     },
-    "plugins/config_v2/plugins/fields/plugins/list": {
-      "name": "@singularity/plugin-config_v2-fields-list",
-    },
-    "plugins/config_v2/plugins/fields/plugins/object": {
-      "name": "@singularity/plugin-config_v2-fields-object",
-    },
-    "plugins/config_v2/plugins/fields/plugins/secret": {
-      "name": "@singularity/plugin-config_v2-fields-secret",
-    },
     "plugins/config_v2/plugins/fields/plugins/string-list": {
       "name": "@singularity/plugin-config_v2-fields-string-list",
     },
@@ -1035,6 +1026,14 @@
       "name": "@singularity/plugin-fields-int-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/list": {
+      "name": "@singularity/plugin-fields-list",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/list/plugins/config": {
+      "name": "@singularity/plugin-fields-list-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/multiline-text": {
       "name": "@singularity/plugin-fields-multiline-text",
       "version": "0.0.1",
@@ -1053,6 +1052,22 @@
     },
     "plugins/fields/plugins/number/plugins/table": {
       "name": "@singularity/plugin-fields-number-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/object": {
+      "name": "@singularity/plugin-fields-object",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/object/plugins/config": {
+      "name": "@singularity/plugin-fields-object-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/secret": {
+      "name": "@singularity/plugin-fields-secret",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/secret/plugins/config": {
+      "name": "@singularity/plugin-fields-secret-config",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/text": {
@@ -2880,12 +2895,6 @@
 
     "@singularity/plugin-config_v2-fields": ["@singularity/plugin-config_v2-fields@workspace:plugins/config_v2/plugins/fields"],
 
-    "@singularity/plugin-config_v2-fields-list": ["@singularity/plugin-config_v2-fields-list@workspace:plugins/config_v2/plugins/fields/plugins/list"],
-
-    "@singularity/plugin-config_v2-fields-object": ["@singularity/plugin-config_v2-fields-object@workspace:plugins/config_v2/plugins/fields/plugins/object"],
-
-    "@singularity/plugin-config_v2-fields-secret": ["@singularity/plugin-config_v2-fields-secret@workspace:plugins/config_v2/plugins/fields/plugins/secret"],
-
     "@singularity/plugin-config_v2-fields-string-list": ["@singularity/plugin-config_v2-fields-string-list@workspace:plugins/config_v2/plugins/fields/plugins/string-list"],
 
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
@@ -3184,6 +3193,10 @@
 
     "@singularity/plugin-fields-int-config": ["@singularity/plugin-fields-int-config@workspace:plugins/fields/plugins/int/plugins/config"],
 
+    "@singularity/plugin-fields-list": ["@singularity/plugin-fields-list@workspace:plugins/fields/plugins/list"],
+
+    "@singularity/plugin-fields-list-config": ["@singularity/plugin-fields-list-config@workspace:plugins/fields/plugins/list/plugins/config"],
+
     "@singularity/plugin-fields-multiline-text": ["@singularity/plugin-fields-multiline-text@workspace:plugins/fields/plugins/multiline-text"],
 
     "@singularity/plugin-fields-multiline-text-config": ["@singularity/plugin-fields-multiline-text-config@workspace:plugins/fields/plugins/multiline-text/plugins/config"],
@@ -3193,6 +3206,14 @@
     "@singularity/plugin-fields-number-filter": ["@singularity/plugin-fields-number-filter@workspace:plugins/fields/plugins/number/plugins/filter"],
 
     "@singularity/plugin-fields-number-table": ["@singularity/plugin-fields-number-table@workspace:plugins/fields/plugins/number/plugins/table"],
+
+    "@singularity/plugin-fields-object": ["@singularity/plugin-fields-object@workspace:plugins/fields/plugins/object"],
+
+    "@singularity/plugin-fields-object-config": ["@singularity/plugin-fields-object-config@workspace:plugins/fields/plugins/object/plugins/config"],
+
+    "@singularity/plugin-fields-secret": ["@singularity/plugin-fields-secret@workspace:plugins/fields/plugins/secret"],
+
+    "@singularity/plugin-fields-secret-config": ["@singularity/plugin-fields-secret-config@workspace:plugins/fields/plugins/secret/plugins/config"],
 
     "@singularity/plugin-fields-text": ["@singularity/plugin-fields-text@workspace:plugins/fields/plugins/text"],
 

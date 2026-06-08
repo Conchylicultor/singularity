@@ -54,7 +54,7 @@ The provider's `central/internal/register.ts` runs at module init and calls `reg
 
 ## Credentials
 
-OAuth client credentials (`clientId`, `clientSecret`) are user-supplied via the Settings pane. Both use `secretField()` from config_v2, which stores values in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }`. Provider descriptors read them via `readSecretConfig()` from `@plugins/config_v2/plugins/fields/plugins/secret/central`.
+OAuth client credentials (`clientId`, `clientSecret`) are user-supplied via the Settings pane. Both use `secretField()` from config_v2, which stores values in the central secrets store under `{ namespace: "config-fields", key: "auth-<provider>.<field>" }`. Provider descriptors read them via `readSecretConfig()` from `@plugins/fields/plugins/secret/plugins/config/central`.
 
 Env-var overrides for developers:
 - `SINGULARITY_AUTH_<PROVIDER>_CLIENT_ID`

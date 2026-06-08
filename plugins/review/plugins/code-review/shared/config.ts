@@ -1,6 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
-import { listField } from "@plugins/config_v2/plugins/fields/plugins/list/core";
+import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
 
 export const reviewConfig = defineConfig({
   fields: {

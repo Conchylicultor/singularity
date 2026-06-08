@@ -1,6 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { enumField } from "@plugins/fields/plugins/enum/plugins/config/core";
-import { objectField } from "@plugins/config_v2/plugins/fields/plugins/object/core";
+import { objectField } from "@plugins/fields/plugins/object/plugins/config/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 import { DEFAULT_MODEL, MODEL_REGISTRY, SELECTABLE_MODELS } from "../core";
 

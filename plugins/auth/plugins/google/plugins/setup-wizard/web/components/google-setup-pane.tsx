@@ -11,7 +11,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
-import { configV2SecretMetaResource } from "@plugins/config_v2/plugins/fields/plugins/secret/core";
+import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";

@@ -546,7 +546,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Contributes: `Core.Boot`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
   - Cross-plugin:
-    - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `config-link`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `list`, `local`, `model-provider`, `notion`, `object`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `reorder`, `secret`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `string-list`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
+    - Imported by: `backup`, `build`, `categorical`, `chart`, `code-review`, `codegen`, `color-adjust`, `color-palette`, `commits`, `community-browser`, `config`, `config-link`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `google`, `google-drive`, `google-fonts`, `launch-prompts`, `local`, `model-provider`, `notion`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `reorder`, `segmented-progress-bar`, `settings`, `setup-wizard`, `shadow`, `shape`, `sidebar-palette`, `string-list`, `theme`, `theme-customizer`, `theme-engine`, `turn-summary`, `typography`
   - Core:
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `defineFieldType`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
   - Server:
@@ -560,28 +560,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
       - Plugins:
-        - **`list`** — Sortable list field type with stable UUID identity and fractional-index ordering.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`, `config_v2.fieldSchemaWithDefault`
-            - Exports: Types: `ListFieldDef`, `ListItem`; Values: `isListFieldDef`, `listField`, `listFieldType`
-        - **`object`** — Object field type: fixed-structure named sub-fields grouped into a single value.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.defineFieldType`, `config_v2.fieldSchemaWithDefault`
-            - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`, `objectFieldType`
-        - **`secret`** — Secret field type: encrypted storage with set/not-set metadata. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
-          - Server:
-            - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.defineFieldType`
-            - Exports: Types: `ConfigV2SecretMeta`, `SecretFieldDef`; Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`, `secretFieldType`
-          - Central:
-            - Exports: Values: `readSecretConfig`
         - **`string-list`** — Plain string-array field type.
           - Web:
             - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
@@ -1298,8 +1276,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
-    - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `multiline-text`, `number`, `text`
+    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `text`
+    - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
@@ -1442,6 +1420,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`
             - Exports: Types: `IntFieldDef`; Values: `intField`
+    - **`list`** — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "list"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Types: `ListItem`; Values: `listFieldType`, `listIdentity`
+      - Plugins:
+        - **`config`** — List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.fieldSchemaWithDefault`
+            - Exports: Types: `ListFieldDef`; Values: `isListFieldDef`, `listField`
     - **`multiline-text`** — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
       - Web:
         - Contributes: `Fields.Identity` "multiline-text"
@@ -1470,6 +1462,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`table`** — Number field type: data-view table cell (read-only numeric cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "number" → `NumberCell`
+    - **`object`** — Object field type: identity only. The config-render capability and the objectField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "object"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `objectFieldType`, `objectIdentity`
+      - Plugins:
+        - **`config`** — Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldType`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `config_v2.fieldSchemaWithDefault`
+            - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
+    - **`secret`** — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
+      - Web:
+        - Contributes: `Fields.Identity` "secret"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `secretFieldType`, `secretIdentity`
+      - Plugins:
+        - **`config`** — Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "secret" → `SecretRenderer`
+          - Server:
+            - Uses: `config_v2.getAllDescriptors`, `config_v2.hasFieldStorageProvider`, `config_v2.registerFieldStorageProvider`
+          - Core:
+            - Exports: Types: `ConfigV2SecretMeta`, `SecretFieldDef`; Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`
+          - Central:
+            - Exports: Values: `readSecretConfig`
     - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "text"
