@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.
+- Description: Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
 - Web:
   - Exports: Types: `AppShellSidebarItem`, `AppShellToolbarItem`; Values: `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
 

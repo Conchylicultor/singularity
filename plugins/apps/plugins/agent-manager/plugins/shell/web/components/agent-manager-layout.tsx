@@ -1,3 +1,4 @@
+import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Shell } from "@plugins/shell/web";
 
@@ -23,6 +24,8 @@ export function AgentManagerLayout() {
           </span>
         </a>
       }
-    />
+    >
+      <MillerColumns />
+    </AppShellLayout>
   );
 }

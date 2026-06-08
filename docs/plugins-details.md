@@ -1969,7 +1969,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:
-    - **`app-shell`** — Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.
+    - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
       - Web:
         - Exports: Types: `AppShellSidebarItem`, `AppShellToolbarItem`; Values: `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.

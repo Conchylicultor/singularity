@@ -8,7 +8,9 @@ import { AddServerForm } from "./components/add-server-form";
 
 export const serversRootPane = Pane.define({
   id: "deploy-servers",
-  segment: "deploy",
+  // Empty segment + `appPath` makes this the Deploy app's index pane: bare /deploy.
+  segment: "",
+  appPath: "/deploy",
   component: ServersRoot,
   chrome: false,
   width: 320,

@@ -11,6 +11,6 @@ export { SidebarPaneSection } from "./components/sidebar-pane-section";
 export default {
   name: "App Shell",
   description:
-    "Reusable sidebar + toolbar + miller-columns layout. Apps instantiate with their own slot set.",
+    "Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.",
   contributions: [],
 } satisfies PluginDefinition;
