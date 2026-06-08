@@ -23,6 +23,8 @@ export {
 
 export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
 
-// No `satisfies ServerPluginDefinition` — this barrel is transitively imported
-// by secrets/central, whose tsconfig lacks the @server alias.
-export default { id: "paths", name: "Paths" };
+import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+
+export default {
+  name: "Paths",
+} satisfies ServerPluginDefinition;

@@ -1,10 +1,5 @@
-import { homedir } from "node:os";
 import { join } from "node:path";
-
-// Mirrors @plugins/infra/plugins/paths/server.SINGULARITY_DIR; we don't
-// import that barrel here because shared/ must avoid runtime-specific
-// imports. Constants are pure so the duplication is harmless.
-const SINGULARITY_DIR = join(homedir(), ".singularity");
+import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/core";
 
 export const PG_PORT = 5433;
 export const PG_USER = "singularity";

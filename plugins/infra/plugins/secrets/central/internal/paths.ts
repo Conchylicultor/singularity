@@ -6,4 +6,4 @@ export {
   LEGACY_AUTH_DIR,
   LEGACY_AUTH_BLOB,
   LEGACY_AUTH_KEY,
-} from "@plugins/infra/plugins/paths/server";
+} from "@plugins/infra/plugins/paths/core";
