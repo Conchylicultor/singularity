@@ -161,7 +161,7 @@ export function SlashMenuPlugin({
   if (!open || filtered.length === 0) return null;
 
   return (
-    <div className="bg-popover absolute left-0 top-full z-50 mt-1 w-56 rounded-md border p-1 shadow-md">
+    <div className="bg-popover absolute left-0 top-full z-popover mt-1 w-56 rounded-md border p-1 shadow-md">
       <BlockTypeList
         blocks={filtered}
         activeIndex={activeIndex}

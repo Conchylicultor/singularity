@@ -197,7 +197,7 @@ function JobsTab() {
 function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
   return (
     <div
-      className="fixed inset-0 z-50 flex justify-end bg-black/30"
+      className="fixed inset-0 z-popover flex justify-end bg-black/30"
       onClick={onClose}
     >
       <div
@@ -321,7 +321,7 @@ function EmissionDrawer({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-50 flex justify-end bg-black/30" onClick={onClose}>
+    <div className="fixed inset-0 z-popover flex justify-end bg-black/30" onClick={onClose}>
       <div
         className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
         onClick={(e) => e.stopPropagation()}

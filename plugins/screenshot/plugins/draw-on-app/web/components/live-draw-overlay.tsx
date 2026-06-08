@@ -48,7 +48,7 @@ export function LiveDrawOverlay({
   const natural = { w: viewport.w, h: viewport.h };
 
   return (
-    <div className="fixed inset-0 z-[60]">
+    <div className="fixed inset-0 z-draw">
       <DrawCanvas
         displayed={displayed}
         natural={natural}

@@ -1866,6 +1866,10 @@
       "name": "@singularity/plugin-primitives-truncating-text",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/z-layers": {
+      "name": "@singularity/plugin-primitives-z-layers",
+      "version": "0.0.1",
+    },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
       "version": "0.0.1",
@@ -3549,6 +3553,8 @@
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
 
     "@singularity/plugin-primitives-truncating-text": ["@singularity/plugin-primitives-truncating-text@workspace:plugins/primitives/plugins/truncating-text"],
+
+    "@singularity/plugin-primitives-z-layers": ["@singularity/plugin-primitives-z-layers@workspace:plugins/primitives/plugins/z-layers"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

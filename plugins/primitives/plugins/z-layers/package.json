@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-z-layers",
+  "description": "Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).",
+  "private": true,
+  "version": "0.0.1"
+}

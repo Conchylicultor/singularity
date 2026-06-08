@@ -37,7 +37,7 @@ export function FloatingBar() {
 
   return (
     <FloatingAction
-      className="fixed top-2 right-3 z-50"
+      className="fixed top-2 right-3"
       anchor="top-right"
       variant="ghost"
       panelClassName="items-center"

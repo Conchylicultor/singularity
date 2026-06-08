@@ -16,6 +16,17 @@
     --text-2xs--line-height: 1rem;
     --text-3xs: 0.625rem;
     --text-3xs--line-height: 0.875rem;
+    /* Semantic z-layer scale — structural, NOT runtime-themeable, so it lives in
+       the static @theme block (not :root/.dark). One ordered ladder for every
+       stacking decision; consume via the z-* @utility classes below. */
+    --z-base:    0;
+    --z-raised:  10;   /* sticky headers, hover chrome, drag handles            */
+    --z-nav:     20;   /* persistent app chrome: sidebar, app-rail, pane header  */
+    --z-float:   30;   /* in-pane floating widgets: selection bar, message TOC   */
+    --z-overlay: 40;   /* full-pane bespoke overlays                             */
+    --z-popover: 50;   /* portaled floating layers: floating-action, lightboxes  */
+    --z-draw:    60;   /* draw-on-app full-screen capture overlay                */
+    --z-max:     9999; /* critical banners / dev frame                          */
 }
 
 @theme inline {
@@ -264,7 +275,7 @@
     inset: 0;
     border: 3px solid oklch(0.55 0.25 27);
     pointer-events: none;
-    z-index: 9999;
+    z-index: var(--z-max);
 }
 
 /* Centralized focus-ring treatment — the single source of truth for the
@@ -306,6 +317,19 @@
 @utility control-icon-sm { height: var(--control-height-sm); width: var(--control-height-sm); }
 @utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); }
 @utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); }
+
+/* Semantic z-layer utilities — the single source of truth for stacking order.
+ * Values come from the static --z-* scale in @theme above (structural, not
+ * runtime-themeable). The `no-adhoc-zindex` lint rule (z-layers plugin) bans raw
+ * `z-<n>`/`z-[…]` so every stacking decision routes through this named ladder. */
+@utility z-base    { z-index: var(--z-base); }
+@utility z-raised  { z-index: var(--z-raised); }
+@utility z-nav     { z-index: var(--z-nav); }
+@utility z-float   { z-index: var(--z-float); }
+@utility z-overlay { z-index: var(--z-overlay); }
+@utility z-popover { z-index: var(--z-popover); }
+@utility z-draw    { z-index: var(--z-draw); }
+@utility z-max     { z-index: var(--z-max); }
 
 @layer base {
   * {
