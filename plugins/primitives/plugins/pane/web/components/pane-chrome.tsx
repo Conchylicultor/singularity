@@ -31,6 +31,15 @@ interface PaneChromeProps {
    * right-side actions elsewhere (e.g. inside the content area).
    */
   hideRightActions?: boolean;
+  /**
+   * When true, the header band uses `overflow-visible` instead of the default
+   * `overflow-hidden`, letting a title-area child (e.g. `CollapsibleWrap`)
+   * spill its expanded rows DOWN over the content below without being clipped
+   * by the fixed-height band. Opt in only for panes whose header can reveal
+   * overflow; the band stays `h-10` so row 1 and the rest of the chrome are
+   * unaffected. Default false (clip — today's behavior for every other pane).
+   */
+  headerSpill?: boolean;
   children: ReactNode;
 }
 
@@ -42,7 +51,7 @@ interface PaneChromeProps {
  * fully custom header layout can opt out (`chrome: false` in `Pane.define`)
  * and compose the pieces (`<PaneActionsSlot/>`) themselves.
  */
-export function PaneChrome({ pane, title, actions, hideRightActions, children }: PaneChromeProps) {
+export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill, children }: PaneChromeProps) {
   const chrome = pane._internal.chrome;
   const match = useContext(PaneMatchContext);
   const fallbackTitle = chromeTitle(pane, match);
@@ -54,7 +63,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, children }:
   return (
     <div className="flex h-full flex-col">
       <div
-        className={`flex h-10 min-w-0 items-center gap-2 overflow-hidden border-b px-2${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
+        className={`flex h-10 min-w-0 items-center gap-2 ${headerSpill ? "overflow-visible" : "overflow-hidden"} border-b px-2${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >

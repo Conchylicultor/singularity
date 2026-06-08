@@ -13,6 +13,8 @@ export {
   setEditMode,
   useEditMode,
 } from "./internal/edit-mode-store";
+export { ReorderLayoutContext } from "./internal/reorder-layout";
+export type { ReorderLayout } from "./internal/reorder-layout";
 
 export default {
   name: "Reorder",

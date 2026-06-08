@@ -41,6 +41,7 @@ import {
   ReorderAreaContext,
   type ReorderAreaCtxValue,
 } from "./dnd-components";
+import { ReorderLayoutContext } from "./reorder-layout";
 
 const DRAG_GROUP_PREFIX = "reorder-drag-group-";
 
@@ -113,6 +114,7 @@ function ReorderListMiddlewareInner({
   const subId = useContext(RenderSlotSubIdContext);
   const storageId = subId ? `${slotId}:${subId}` : slotId;
   const editMode = useEditMode();
+  const injected = useContext(ReorderLayoutContext);
 
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
@@ -500,6 +502,7 @@ function ReorderListMiddlewareInner({
         disabled={!editMode}
         collisionDetection={reorderCollisionDetection}
         orientation={orientation}
+        strategy={injected?.strategy}
       >
         {state.groupedEntries.map((entry) => {
           if (isGroupEntry(entry)) {

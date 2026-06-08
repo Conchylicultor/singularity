@@ -13,6 +13,7 @@ import {
   SortableContext,
   verticalListSortingStrategy,
   horizontalListSortingStrategy,
+  type SortingStrategy,
 } from "@dnd-kit/sortable";
 
 export interface SortableListProps {
@@ -22,6 +23,12 @@ export interface SortableListProps {
   disabled?: boolean;
   collisionDetection?: CollisionDetection;
   orientation?: "horizontal" | "vertical";
+  /**
+   * Explicit dnd-kit sorting strategy. When omitted, falls back to the
+   * `orientation` mapping (horizontal/vertical list strategy). An explicit
+   * strategy (e.g. `rectSortingStrategy` for 2-D wrap layouts) wins.
+   */
+  strategy?: SortingStrategy;
   children: ReactNode;
 }
 
@@ -32,8 +39,14 @@ export function SortableList({
   disabled,
   collisionDetection,
   orientation,
+  strategy,
   children,
 }: SortableListProps) {
+  const resolvedStrategy =
+    strategy ??
+    (orientation === "horizontal"
+      ? horizontalListSortingStrategy
+      : verticalListSortingStrategy);
   const sensors = useSensors(
     useSensor(PointerSensor, { activationConstraint: { distance: 4 } }),
   );
@@ -67,14 +80,7 @@ export function SortableList({
       }}
       onDragCancel={() => setActiveId(null)}
     >
-      <SortableContext
-        items={effectiveItems}
-        strategy={
-          orientation === "horizontal"
-            ? horizontalListSortingStrategy
-            : verticalListSortingStrategy
-        }
-      >
+      <SortableContext items={effectiveItems} strategy={resolvedStrategy}>
         {children}
       </SortableContext>
       {overlay && (

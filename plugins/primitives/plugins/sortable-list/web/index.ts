@@ -7,6 +7,8 @@ export type {
   SortableItemProps,
   SortableItemState,
 } from "./internal/sortable-item";
+export { rectSortingStrategy } from "./internal/strategies";
+export type { SortingStrategy } from "./internal/strategies";
 
 export default {
   name: "Sortable List",

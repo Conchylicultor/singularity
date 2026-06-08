@@ -1642,6 +1642,10 @@
       "name": "@singularity/plugin-primitives-collapsible",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/collapsible-wrap": {
+      "name": "@singularity/plugin-primitives-collapsible-wrap",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/color-picker": {
       "name": "@singularity/plugin-primitives-color-picker",
       "version": "0.0.1",
@@ -3425,6 +3429,8 @@
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
+
+    "@singularity/plugin-primitives-collapsible-wrap": ["@singularity/plugin-primitives-collapsible-wrap@workspace:plugins/primitives/plugins/collapsible-wrap"],
 
     "@singularity/plugin-primitives-color-picker": ["@singularity/plugin-primitives-color-picker@workspace:plugins/primitives/plugins/color-picker"],
 
