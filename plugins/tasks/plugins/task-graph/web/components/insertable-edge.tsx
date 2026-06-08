@@ -6,6 +6,8 @@ import {
   type Edge,
   type EdgeProps,
 } from "@xyflow/react";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { removeTaskDependency, insertTaskBetween } from "@plugins/tasks/core";
 
 export type InsertableEdgeData = {
   sourceTaskId: string;
@@ -46,10 +48,7 @@ export function InsertableEdge({
       if (!data || deleting) return;
       setDeleting(true);
       try {
-        await fetch(
-          `/api/tasks/${data.targetTaskId}/dependencies/${data.sourceTaskId}`,
-          { method: "DELETE" },
-        );
+        await fetchEndpoint(removeTaskDependency, { id: data.targetTaskId, depId: data.sourceTaskId });
       } finally {
         setDeleting(false);
       }
@@ -63,18 +62,13 @@ export function InsertableEdge({
       if (!data || inserting) return;
       setInserting(true);
       try {
-        const res = await fetch("/api/tasks/insert-between", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
+        const newTask = await fetchEndpoint(insertTaskBetween, {}, {
+          body: {
             sourceTaskId: data.sourceTaskId,
             targetTaskId: data.targetTaskId,
             targetFolderId: data.targetFolderId,
-          }),
+          },
         });
-        if (!res.ok) return;
-        const newTask = (await res.json()) as { id: string };
-
         data.onNavigate(newTask.id);
       } finally {
         setInserting(false);

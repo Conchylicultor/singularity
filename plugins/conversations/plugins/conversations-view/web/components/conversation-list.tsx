@@ -3,6 +3,8 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { loadRouteForConversation } from "@plugins/conversations/plugins/pane-restore/web";
 import { restoreRoute, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { closeConversation } from "@plugins/conversations/core";
 import { ConversationsView } from "../slots";
 
 function activeIdFromPath(pathname: string): string | null {
@@ -27,9 +29,9 @@ export function ConversationList() {
     };
   }, []);
 
-  const closeConversation = async (id: string, e: React.MouseEvent) => {
+  const handleCloseConversation = async (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/conversations/${id}/close`, { method: "POST" });
+    await fetchEndpoint(closeConversation, { id });
   };
 
   const navigate = (id: string) => {
@@ -46,7 +48,7 @@ export function ConversationList() {
     <ConversationsView.Host
       activeId={activeId}
       onNavigate={navigate}
-      onCloseConversation={closeConversation}
+      onCloseConversation={handleCloseConversation}
       header={<LaunchControl variant="outline" size="sm" className="w-full" />}
     />
   );

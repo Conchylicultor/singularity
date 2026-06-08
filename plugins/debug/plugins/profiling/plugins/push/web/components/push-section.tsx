@@ -8,7 +8,9 @@ import {
   type PushData,
 } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { pushDetailPane } from "../panes";
+import { getPushProfiling } from "../../shared/endpoints";
 
 export function PushSection(): ReactElement | null {
   const { refreshKey } = useProfilingContext();
@@ -17,9 +19,7 @@ export function PushSection(): ReactElement | null {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/debug/profiling/push");
-      if (!res.ok) return;
-      setData((await res.json()) as PushData);
+      setData(await fetchEndpoint(getPushProfiling, {}));
     } catch (err) {
       if (err instanceof TypeError) return;
       throw err;

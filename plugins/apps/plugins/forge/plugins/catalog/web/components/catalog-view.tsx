@@ -1,20 +1,16 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo, useState } from "react";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type {
   PluginNode,
-  PluginTreePayload,
 } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Catalog } from "../slots";
 import type { FacetTableEntry } from "../facet-table";
-
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "ok"; data: PluginTreePayload }
-  | { kind: "error"; message: string };
 
 /** Flatten the plugin tree into one entry per plugin carrying its slice of a facet. */
 function facetEntries(plugins: PluginNode[], facetId: string): FacetTableEntry[] {
@@ -29,7 +25,7 @@ function facetEntries(plugins: PluginNode[], facetId: string): FacetTableEntry[]
 }
 
 export function CatalogView() {
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const { data: treeData, isLoading, error } = useEndpoint(getPluginTree, {});
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [filter, setFilter] = useState("");
   const openPane = useOpenPane();
@@ -41,32 +37,7 @@ export function CatalogView() {
     [tables],
   );
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/plugin-view/tree")
-      .then(async (res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({
-            kind: "error",
-            message: text || `Failed to load (${res.status})`,
-          });
-          return;
-        }
-        const data = (await res.json()) as PluginTreePayload;
-        setState({ kind: "ok", data });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setState({ kind: "error", message: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  const plugins = state.kind === "ok" ? state.data.plugins : null;
+  const plugins = treeData?.plugins ?? null;
 
   // Project every facet's rows once per tree load so tab badges and the active
   // table share the same computation.
@@ -79,18 +50,18 @@ export function CatalogView() {
     return map;
   }, [plugins, sortedTables]);
 
-  if (state.kind === "loading") {
+  if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         Loading…
       </div>
     );
   }
-  if (state.kind === "error") {
+  if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm">
         <span className="font-medium text-foreground">Failed to load</span>
-        <span className="text-muted-foreground">{state.message}</span>
+        <span className="text-muted-foreground">{String(error)}</span>
       </div>
     );
   }

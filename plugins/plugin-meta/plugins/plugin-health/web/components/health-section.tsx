@@ -5,6 +5,8 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getPluginStaleness, getPluginHealthTasks } from "../../core/endpoints";
 import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
 import type { PluginStaleness, ReviewTaskSummary } from "../../core";
 
@@ -57,14 +59,10 @@ export function HealthSection({ node }: { node: PluginNode }) {
     void (async () => {
       const [stalenessRes, ...taskResults] = await Promise.all([
         // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
-        fetch(
-          `/api/plugin-health/staleness/${encodeURIComponent(node.id)}`,
-        ).then((r) => r.json() as Promise<PluginStaleness[]>),
+        fetchEndpoint(getPluginStaleness, { pluginId: node.id }),
         ...reviews.map((r) =>
           // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
-          fetch(`/api/plugin-health/tasks/${encodeURIComponent(r.id)}`).then(
-            (res) => res.json() as Promise<ReviewTaskSummary[]>,
-          ),
+          fetchEndpoint(getPluginHealthTasks, { reviewId: r.id }),
         ),
       ]);
 
@@ -72,7 +70,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
       if (cancelled) return;
 
       const stalenessMap = new Map(
-        (stalenessRes as PluginStaleness[]).map((s) => [s.axis, s]),
+        stalenessRes.map((s) => [s.axis, s]),
       );
 
       setEnriched(

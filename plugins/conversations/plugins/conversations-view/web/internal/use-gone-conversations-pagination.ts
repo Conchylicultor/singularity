@@ -1,8 +1,9 @@
-import { GonePageSchema } from "@plugins/conversations/web";
 import {
   useCursorPagination,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { Conversation } from "@plugins/tasks-core/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { listGoneConversations } from "@plugins/conversations/core";
 
 const PAGE_SIZE = 20;
 
@@ -26,10 +27,7 @@ export function useGoneConversationsPagination({
   return useCursorPagination({
     queryKey: ["conversations-gone-paginated"],
     fetchPage: async (before, limit) => {
-      const params = new URLSearchParams({ before, limit: String(limit) });
-      const res = await fetch(`/api/conversations/gone?${params}`);
-      if (!res.ok) throw new Error("Failed to fetch gone conversations");
-      return GonePageSchema.parse(await res.json());
+      return await fetchEndpoint(listGoneConversations, {}, { query: { before, limit: String(limit) } });
     },
     cursor,
     enabled: hasMoreGone,

@@ -5,46 +5,21 @@ import {
   ResizablePanel,
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getCodeTree } from "../../shared/endpoints";
 import { FileTree } from "./file-tree";
-
-type TreeState =
-  | { kind: "loading" }
-  | { kind: "ok"; files: string[] }
-  | { kind: "error"; message: string };
 
 interface FileTreeViewProps {
   worktree: string;
 }
 
 export function FileTreeView({ worktree }: FileTreeViewProps) {
-  const [state, setState] = useState<TreeState>({ kind: "loading" });
+  const { data: treeData, isLoading, error } = useEndpoint(getCodeTree, { worktree });
   const [selectedPath, setSelectedPath] = useState<string>("");
 
+  // Reset selection when worktree changes
   useEffect(() => {
-    let cancelled = false;
-    setState({ kind: "loading" });
     setSelectedPath("");
-    fetch(`/api/code/${encodeURIComponent(worktree)}/tree`)
-      .then(async (res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({
-            kind: "error",
-            message: text || `Failed to load tree (${res.status})`,
-          });
-          return;
-        }
-        const body = (await res.json()) as { files: string[] };
-        setState({ kind: "ok", files: body.files });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setState({ kind: "error", message: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
   }, [worktree]);
 
   return (
@@ -55,21 +30,21 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
     >
       <ResizablePanel id="tree" defaultSize={25} minSize={15}>
         <div className="h-full min-h-0 overflow-auto border-r">
-          {state.kind === "loading" ? (
+          {isLoading ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               Loading…
             </div>
-          ) : state.kind === "error" ? (
+          ) : error ? (
             <div className="px-3 py-2 text-sm text-destructive">
-              {state.message}
+              {String(error)}
             </div>
-          ) : state.files.length === 0 ? (
+          ) : !treeData || treeData.files.length === 0 ? (
             <div className="px-3 py-2 text-sm text-muted-foreground">
               No files.
             </div>
           ) : (
             <FileTree
-              files={state.files}
+              files={treeData.files}
               selectedPath={selectedPath}
               onSelect={setSelectedPath}
             />

@@ -10,7 +10,7 @@
   - Exports: Values: `getEditedFiles`
   - Resources: `edited-files` (invalidate)
 - Core:
-  - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `editedFilesResource`
+  - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`
 - Web:
   - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Sub-plugins:

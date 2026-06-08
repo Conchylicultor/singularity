@@ -2,20 +2,16 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { z } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
-import { conversationsResource } from "@plugins/conversations/core";
-import { ConversationSchema, type Conversation } from "@plugins/tasks-core/core";
+import { conversationsResource, listGoneConversations } from "@plugins/conversations/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { restoreBatch } from "../../shared/endpoints";
+import type { Conversation } from "@plugins/tasks-core/core";
 
 const GONE_PAGE_SIZE = 50;
 const QUERY_KEY = ["conversations-recover", "recent-closed"];
-
-const GonePageSchema = z.object({
-  items: z.array(ConversationSchema),
-  hasMore: z.boolean(),
-});
 
 const CLUSTER_WINDOW_MS = 1000;
 
@@ -46,8 +42,6 @@ function formatTime(date: Date): string {
   });
 }
 
-type RestoreResult = { id: string; ok: true } | { id: string; ok: false; error: string };
-
 export function RecoveryView() {
   const resource = useResource(conversationsResource);
   const queryClient = useQueryClient();
@@ -57,11 +51,8 @@ export function RecoveryView() {
     queryKey: QUERY_KEY,
     queryFn: async (): Promise<Conversation[]> => {
       const before = new Date().toISOString();
-      const res = await fetch(
-        `/api/conversations/gone?before=${encodeURIComponent(before)}&limit=${GONE_PAGE_SIZE}`,
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      return GonePageSchema.parse(await res.json()).items;
+      const data = await fetchEndpoint(listGoneConversations, {}, { query: { before, limit: String(GONE_PAGE_SIZE) } });
+      return data.items;
     },
     placeholderData: (prev) => prev,
   });
@@ -108,12 +99,7 @@ export function RecoveryView() {
         return next;
       });
       try {
-        const res = await fetch("/api/conversations-recover/restore-batch", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ ids }),
-        });
-        const data = (await res.json()) as { results: RestoreResult[] };
+        const data = await fetchEndpoint(restoreBatch, {}, { body: { ids } });
         setRowErrors((prev) => {
           const next = new Map(prev);
           for (const r of data.results) {

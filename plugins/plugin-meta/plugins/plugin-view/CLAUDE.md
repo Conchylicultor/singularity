@@ -20,8 +20,6 @@ sibling plugins (e.g. publish's tree component).
   - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
 - Server:
   - Routes: `GET /api/plugin-view/tree`
-- Cross-plugin:
-  - Endpoint callers: `catalog`, `plugin-link`, `publish`
 - Sub-plugins:
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.

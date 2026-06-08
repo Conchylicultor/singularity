@@ -7,7 +7,7 @@
 - Description: Sidebar list of all conversations.
 - Web:
   - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - Uses: `conversations.GonePageSchema`, `conversations.useConversations`, `shell.Shell`
+  - Uses: `conversations.useConversations`, `shell.Shell`
   - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
 - Sub-plugins:
   - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.

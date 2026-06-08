@@ -1,65 +1,35 @@
-import { useEffect, useState } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import type { PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { PluginTree } from "./plugin-tree";
 
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "ok"; data: PluginTreePayload }
-  | { kind: "error"; message: string };
-
 export function PublishView() {
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
+  const { data: treeData, isLoading, error } = useEndpoint(getPluginTree, {});
 
   const openPane = useOpenPane();
   const selectedId =
     pluginViewPane.useRouteEntry()?.params.pluginId ?? null;
 
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/plugin-view/tree")
-      .then(async (res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({
-            kind: "error",
-            message: text || `Failed to load (${res.status})`,
-          });
-          return;
-        }
-        const data = (await res.json()) as PluginTreePayload;
-        setState({ kind: "ok", data });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setState({ kind: "error", message: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-
-  if (state.kind === "loading") {
+  if (isLoading) {
     return (
       <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
         Loading plugin tree…
       </div>
     );
   }
-  if (state.kind === "error") {
+  if (error) {
     return (
       <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm">
         <span className="font-medium text-foreground">
           Failed to load plugin tree
         </span>
-        <span className="text-muted-foreground">{state.message}</span>
+        <span className="text-muted-foreground">{String(error)}</span>
       </div>
     );
   }
 
-  const { plugins, totals } = state.data;
+  const { plugins, totals } = treeData!;
 
   return (
     <div className="flex h-full min-h-0 flex-col">

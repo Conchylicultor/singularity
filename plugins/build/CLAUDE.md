@@ -20,8 +20,6 @@
   - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
 - Shared:
   - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
-- Cross-plugin:
-  - Endpoint callers: `build-profiling`
 - Sub-plugins:
   - **`build-commits`** — Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
   - **`build-fix`** — Launch-agent button in the build detail pane for failed builds.

@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
+import { ServerSchema } from "./schemas";
 
 export const CreateServerBodySchema = z.object({
   name: z.string().optional(),
@@ -26,6 +27,7 @@ export const listServers = defineEndpoint({
 export const createServer = defineEndpoint({
   route: "POST /api/deploy/servers",
   body: CreateServerBodySchema,
+  response: ServerSchema,
 });
 
 export const getServer = defineEndpoint({

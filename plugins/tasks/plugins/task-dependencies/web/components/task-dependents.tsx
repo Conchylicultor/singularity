@@ -1,12 +1,13 @@
 import { useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem, removeTaskDependency } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 
@@ -56,9 +57,7 @@ function DependentChip({
   const open = () => openPane(taskDetailPane, { taskId: dependentId }, { mode: "swap" });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/tasks/${dependentId}/dependencies/${taskId}`, {
-      method: "DELETE",
-    });
+    await fetchEndpoint(removeTaskDependency, { id: dependentId, depId: taskId });
   };
 
   return (

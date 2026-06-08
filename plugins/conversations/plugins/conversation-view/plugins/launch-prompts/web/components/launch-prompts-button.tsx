@@ -4,6 +4,8 @@ import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/notifications/web";
+import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { createConversation } from "@plugins/conversations/core";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -29,21 +31,18 @@ export function LaunchPromptsButton({
     if (launching) return;
     setLaunching(true);
     try {
-      const res = await fetch("/api/conversations", {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
+      await fetchEndpoint(createConversation, {}, {
+        body: {
           model: item.model,
           prompt: item.prompt,
           attemptId: conversation.attemptId,
-        }),
+        },
       });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
       toast({ type: "conversation", description: `Launched: ${item.title}` });
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Failed to launch: ${err instanceof Error ? err.message : String(err)}`,
+        description: `Failed to launch: ${getEndpointErrorMessage(err)}`,
         variant: "error",
       });
     } finally {

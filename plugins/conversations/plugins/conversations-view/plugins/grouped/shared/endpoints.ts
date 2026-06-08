@@ -10,6 +10,7 @@ const CreateGroupBodySchema = z.object({
 export const createConversationGroup = defineEndpoint({
   route: "POST /api/conversation-groups",
   body: CreateGroupBodySchema,
+  response: z.object({ id: z.string() }),
 });
 
 const PatchGroupBodySchema = z.object({

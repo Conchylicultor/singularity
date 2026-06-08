@@ -1,17 +1,23 @@
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@/components/ui/button";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import {
+  tasksResource,
+  type TaskListItem,
+  addTaskDependency,
+  removeTaskDependency,
+  type TaskChainTarget,
+} from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import type { TaskChainTarget } from "@plugins/tasks/core";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
@@ -38,11 +44,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
 
   const addFolderAsDep = useCallback(async () => {
     if (!folderCandidate) return;
-    await fetch(`/api/tasks/${taskId}/dependencies`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ dependsOnTaskId: folderCandidate.id }),
-    });
+    await fetchEndpoint(addTaskDependency, { id: taskId }, { body: { dependsOnTaskId: folderCandidate.id } });
   }, [taskId, folderCandidate]);
 
   if (!task) return null;
@@ -109,9 +111,7 @@ function DepChip({
   const open = () => openPane(taskDetailPane, { taskId: depId }, { mode: "swap" });
   const remove = async (e: React.MouseEvent) => {
     e.stopPropagation();
-    await fetch(`/api/tasks/${taskId}/dependencies/${depId}`, {
-      method: "DELETE",
-    });
+    await fetchEndpoint(removeTaskDependency, { id: taskId, depId });
   };
 
   return (

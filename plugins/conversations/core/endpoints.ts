@@ -46,10 +46,15 @@ export const listConversations = defineEndpoint({
 export const listGoneConversations = defineEndpoint({
   route: "GET /api/conversations/gone",
   query: ListGoneQuerySchema,
+  response: z.object({
+    items: z.array(ConversationSchema),
+    hasMore: z.boolean(),
+  }),
 });
 
 export const getConversation = defineEndpoint({
   route: "GET /api/conversations/:id",
+  response: ConversationSchema,
 });
 
 export const createConversation = defineEndpoint({

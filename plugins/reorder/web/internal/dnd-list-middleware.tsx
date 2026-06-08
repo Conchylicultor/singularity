@@ -19,7 +19,14 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { RenderSlotSubIdContext } from "@plugins/primitives/plugins/slot-render/web";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
-import { reorderGroupsResource } from "@plugins/reorder/plugins/groups/core";
+import {
+  reorderGroupsResource,
+  createGroup,
+  patchGroup,
+  addMembers,
+  removeMemberEndpoint,
+} from "@plugins/reorder/plugins/groups/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ReorderDirective } from "../../shared/directive";
 import { reorderDescriptors } from "./descriptors";
@@ -270,10 +277,10 @@ function ReorderListMiddlewareInner({
         ? undefined
         : membershipMapRef.current.get(draggedKey);
       if (membership) {
-        void fetch(
-          `/api/reorder/${storageId}/groups/members/${draggedKey}`,
-          { method: "DELETE" },
-        );
+        void fetchEndpoint(removeMemberEndpoint, {
+          slotId: storageId,
+          contributionId: draggedKey,
+        });
       }
 
       setConfigRef.current("order", next.map((x) => entryKey(x)));
@@ -293,26 +300,19 @@ function ReorderListMiddlewareInner({
 
       const targetMembership = membershipMapRef.current.get(targetKey);
       if (targetMembership) {
-        void fetch(
-          `/api/reorder/groups/${targetMembership.groupId}/members`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({
-              slotId: storageId,
-              contributionIds: [draggedKey],
-            }),
+        void fetchEndpoint(addMembers, { id: targetMembership.groupId }, {
+          body: {
+            slotId: storageId,
+            contributionIds: [draggedKey],
           },
-        );
+        });
         return;
       }
 
-      void fetch(`/api/reorder/${storageId}/groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      void fetchEndpoint(createGroup, { slotId: storageId }, {
+        body: {
           contributionIds: [targetKey, draggedKey],
-        }),
+        },
       });
     },
     [storageId],
@@ -325,13 +325,11 @@ function ReorderListMiddlewareInner({
       if (!dragged || isSpacer(dragged)) return;
       if ((dragged as Record<string, unknown>).excludeFromReorder) return;
 
-      void fetch(`/api/reorder/groups/${groupId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      void fetchEndpoint(addMembers, { id: groupId }, {
+        body: {
           slotId: storageId,
           contributionIds: [draggedKey],
-        }),
+        },
       });
     },
     [storageId],
@@ -406,10 +404,8 @@ function ReorderListMiddlewareInner({
         return;
       }
 
-      void fetch(`/api/reorder/groups/${groupId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ slotId: storageId, rank: newRank }),
+      void fetchEndpoint(patchGroup, { id: groupId }, {
+        body: { slotId: storageId, rank: newRank },
       });
     },
     [storageId],
@@ -488,11 +484,7 @@ function ReorderListMiddlewareInner({
   );
 
   function addGroup() {
-    void fetch(`/api/reorder/${storageId}/groups`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({}),
-    });
+    void fetchEndpoint(createGroup, { slotId: storageId }, { body: {} });
   }
 
   const ctxValue: ReorderAreaCtxValue = {

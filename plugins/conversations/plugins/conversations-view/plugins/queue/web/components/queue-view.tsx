@@ -19,6 +19,8 @@ import type { ViewProps } from "@plugins/conversations/plugins/conversations-vie
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
 import { queueRanksResource } from "../../shared/resources";
 import { tasksResource } from "@plugins/tasks/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
@@ -45,13 +47,6 @@ function parseDragId(id: string | number): string | null {
   return id.slice("queue-conv-".length);
 }
 
-async function queuePost(path: string, body: Record<string, unknown>) {
-  await fetch(`/api/conversations-queue/${path}`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-}
 
 const WORKING_EXPANDED_KEY = "queue-view:working:expanded";
 const QUEUE_EXPANDED_KEY = "queue-view:queue:expanded";
@@ -295,7 +290,7 @@ export function QueueView({
     const conversationId = parseDragId(event.active.id);
     const drop = event.over?.data.current as DropData | undefined;
     if (!conversationId || !drop || drop.targetId === conversationId) return;
-    await queuePost("reorder", { conversationId, targetId: drop.targetId, zone: drop.zone });
+    await fetchEndpoint(reorderQueue, {}, { body: { conversationId, targetId: drop.targetId, zone: drop.zone } });
   }, []);
 
   const pinnedCluster = useMemo(
@@ -373,9 +368,9 @@ export function QueueView({
                   dragInProgress={dragInProgress}
                   onNavigate={onNavigate}
                   onClose={onCloseConversation}
-                  onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
-                  onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
-                  onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
+                  onPromoteToTop={(id) => fetchEndpoint(promoteQueue, {}, { body: { conversationId: id } })}
+                  onSendToBottom={(id) => fetchEndpoint(demoteQueue, {}, { body: { conversationId: id } })}
+                  onStepDown={(id) => fetchEndpoint(stepDownQueue, {}, { body: { conversationId: id, steps: 5 } })}
                 />
               </SidebarMenu>
             </div>
@@ -396,9 +391,9 @@ export function QueueView({
                     dragInProgress={dragInProgress}
                     onNavigate={onNavigate}
                     onClose={onCloseConversation}
-                    onPromoteToTop={(id) => queuePost("promote", { conversationId: id })}
-                    onSendToBottom={(id) => queuePost("demote", { conversationId: id })}
-                    onStepDown={(id) => queuePost("step-down", { conversationId: id, steps: 5 })}
+                    onPromoteToTop={(id) => fetchEndpoint(promoteQueue, {}, { body: { conversationId: id } })}
+                    onSendToBottom={(id) => fetchEndpoint(demoteQueue, {}, { body: { conversationId: id } })}
+                    onStepDown={(id) => fetchEndpoint(stepDownQueue, {}, { body: { conversationId: id, steps: 5 } })}
                   />
                 ))}
               </SidebarMenu>
@@ -472,7 +467,7 @@ export function QueueView({
                     </SidebarMenuButton>
                     <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
                       <button
-                        onClick={(e) => { e.stopPropagation(); void queuePost("rerank", { conversationId: conv.id }); }}
+                        onClick={(e) => { e.stopPropagation(); void fetchEndpoint(rerankQueue, {}, { body: { conversationId: conv.id } }); }}
                         className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
                         aria-label="Add to queue"
                       >

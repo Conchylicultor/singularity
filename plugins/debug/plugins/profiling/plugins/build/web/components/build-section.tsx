@@ -5,7 +5,9 @@ import {
   useProfilingContext,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { BUILD_PHASE_ORDER, BUILD_PHASE_CONFIG } from "../phases";
+import { getBuildProfiling } from "../../shared/endpoints";
 
 interface BuildData {
   spans: Span[];
@@ -18,9 +20,7 @@ export function BuildSection(): ReactElement | null {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch("/api/debug/profiling/build");
-      if (!res.ok) return;
-      setData((await res.json()) as BuildData);
+      setData(await fetchEndpoint(getBuildProfiling, {}));
     // eslint-disable-next-line promise-safety/no-bare-catch
     } catch {
       // debug tool — silent on fetch errors

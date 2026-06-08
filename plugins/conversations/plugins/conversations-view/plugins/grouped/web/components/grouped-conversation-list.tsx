@@ -11,6 +11,14 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  createConversationGroup,
+  patchConversationGroup,
+  deleteConversationGroup,
+  addConversationGroupMembers,
+  removeConversationGroupMember,
+} from "../../shared/endpoints";
 import { conversationGroupsResource } from "../../shared";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { tasksResource } from "@plugins/tasks/core";
@@ -260,11 +268,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       const prevRank = prevGroupId ? (groups.find((g) => g.id === prevGroupId)?.rank ?? null) : null;
       const nextRank = nextGroupId ? (groups.find((g) => g.id === nextGroupId)?.rank ?? null) : null;
       const newRank = Rank.between(prevRank, nextRank);
-      await fetch(`/api/conversation-groups/${draggedGroupId}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ rank: newRank }),
-      });
+      await fetchEndpoint(patchConversationGroup, { id: draggedGroupId }, { body: { rank: newRank } });
       return;
     }
 
@@ -282,15 +286,11 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const idsToMove = capturedSiblings.length > 0 ? capturedSiblings : [draggedId];
 
     if (target.kind === "new-group") {
-      const res = await fetch(`/api/conversation-groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationIds: idsToMove }),
-      });
-      if (res.ok) {
-        const created = (await res.json()) as { id?: string };
+      try {
+        const created = await fetchEndpoint(createConversationGroup, {}, { body: { conversationIds: idsToMove } });
         if (created.id) setPendingFocusGroupId(created.id);
-      }
+      // eslint-disable-next-line promise-safety/no-bare-catch -- DnD fire-and-forget; live-state reconciles the view
+      } catch {}
       return;
     }
 
@@ -300,7 +300,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
         idsToMove
           .filter((id) => groupIdByConvId.has(id))
           .map((id) =>
-            fetch(`/api/conversation-groups/members/${id}`, { method: "DELETE" }),
+            fetchEndpoint(removeConversationGroupMember, { conversationId: id }),
           ),
       );
       return;
@@ -312,22 +312,14 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       for (const id of idsToMove) {
         if (!convIds.includes(id)) convIds.push(id);
       }
-      await fetch(`/api/conversation-groups`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ title: target.title, conversationIds: convIds }),
-      });
+      void fetchEndpoint(createConversationGroup, {}, { body: { title: target.title, conversationIds: convIds } });
       return;
     }
 
     if (target.kind === "group") {
       // If all siblings are already in this group, nothing to do.
       if (idsToMove.every((id) => groupIdByConvId.get(id) === target.groupId)) return;
-      await fetch(`/api/conversation-groups/${target.groupId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationIds: idsToMove }),
-      });
+      void fetchEndpoint(addConversationGroupMembers, { id: target.groupId }, { body: { conversationIds: idsToMove } });
       return;
     }
 
@@ -337,11 +329,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const targetGroupId = groupIdByConvId.get(target.convId);
     if (targetGroupId) {
       if (idsToMove.every((id) => groupIdByConvId.get(id) === targetGroupId)) return;
-      await fetch(`/api/conversation-groups/${targetGroupId}/members`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ conversationIds: idsToMove }),
-      });
+      void fetchEndpoint(addConversationGroupMembers, { id: targetGroupId }, { body: { conversationIds: idsToMove } });
       return;
     }
 
@@ -350,11 +338,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const anchor = active.find((c) => c.id === target.convId);
     const title = anchor?.title?.trim() || "Group";
     const newGroupIds = [target.convId, ...idsToMove.filter((id) => id !== target.convId)];
-    await fetch(`/api/conversation-groups`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ title, conversationIds: newGroupIds }),
-    });
+    void fetchEndpoint(createConversationGroup, {}, { body: { title, conversationIds: newGroupIds } });
   };
 
   const renderRow = (
@@ -379,9 +363,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             <SidebarMenuAction
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                void fetch(`/api/conversation-groups/members/${conv.id}`, {
-                  method: "DELETE",
-                });
+                void fetchEndpoint(removeConversationGroupMember, { conversationId: conv.id });
               }}
               className="right-7 opacity-0 group-hover/menu-item:opacity-100"
               aria-label="Remove from group"
@@ -454,23 +436,13 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
                 autoFocusRename={pendingFocusGroupId === g.id}
                 onRenameFocused={() => setPendingFocusGroupId(null)}
                 onRename={async (next) => {
-                  await fetch(`/api/conversation-groups/${g.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ title: next }),
-                  });
+                  await fetchEndpoint(patchConversationGroup, { id: g.id }, { body: { title: next } });
                 }}
                 onToggleExpanded={async (next) => {
-                  await fetch(`/api/conversation-groups/${g.id}`, {
-                    method: "PATCH",
-                    headers: { "Content-Type": "application/json" },
-                    body: JSON.stringify({ expanded: next }),
-                  });
+                  await fetchEndpoint(patchConversationGroup, { id: g.id }, { body: { expanded: next } });
                 }}
                 onDelete={async () => {
-                  await fetch(`/api/conversation-groups/${g.id}`, {
-                    method: "DELETE",
-                  });
+                  await fetchEndpoint(deleteConversationGroup, { id: g.id });
                 }}
               >
                 <SidebarMenu>
@@ -496,11 +468,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             dragInProgress={dragInProgress}
             hasActiveChild={hasActiveInGroup(ag.attemptGroups)}
             onRename={async (next) => {
-              await fetch(`/api/conversation-groups`, {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ title: next, conversationIds: ag.rootConvIds }),
-              });
+              await fetchEndpoint(createConversationGroup, {}, { body: { title: next, conversationIds: ag.rootConvIds } });
             }}
           >
             <SidebarMenu>

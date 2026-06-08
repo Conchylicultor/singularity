@@ -16,8 +16,9 @@ import {
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem, addTaskDependency } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
@@ -389,11 +390,7 @@ export function TaskGraph({ taskId }: { taskId: string }) {
   const onConnect = useCallback(
     (connection: Connection) => {
       if (!connection.source || !connection.target) return;
-      void fetch(`/api/tasks/${connection.target}/dependencies`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ dependsOnTaskId: connection.source }),
-      });
+      void fetchEndpoint(addTaskDependency, { id: connection.target }, { body: { dependsOnTaskId: connection.source } });
     },
     [],
   );

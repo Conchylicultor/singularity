@@ -6,7 +6,12 @@ import {
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import { cn } from "@/lib/utils";
-import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
+import {
+  type ReorderGroup,
+  patchGroup,
+  deleteGroup,
+} from "@plugins/reorder/plugins/groups/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { GroupRename } from "./group-rename";
 
 export function ReorderGroupBox({
@@ -38,26 +43,20 @@ export function ReorderGroupBox({
   const effectiveExpanded = isDragging ? false : group.expanded;
 
   function handleDelete() {
-    void fetch(`/api/reorder/groups/${group.id}`, {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId: storageId }),
+    void fetchEndpoint(deleteGroup, { id: group.id }, {
+      body: { slotId: storageId },
     });
   }
 
   function handleRename(next: string) {
-    void fetch(`/api/reorder/groups/${group.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId: storageId, title: next }),
+    void fetchEndpoint(patchGroup, { id: group.id }, {
+      body: { slotId: storageId, title: next },
     });
   }
 
   function handleToggleExpanded() {
-    void fetch(`/api/reorder/groups/${group.id}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ slotId: storageId, expanded: !group.expanded }),
+    void fetchEndpoint(patchGroup, { id: group.id }, {
+      body: { slotId: storageId, expanded: !group.expanded },
     });
   }
 

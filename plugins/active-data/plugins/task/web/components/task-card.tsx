@@ -6,14 +6,15 @@ import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { useActiveDataBinding } from "@plugins/active-data/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   attemptsResource,
   tasksResource,
+  createTask as createTaskEndpoint,
 } from "@plugins/tasks/core";
-import { TaskSchema, type Task } from "@plugins/tasks-core/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Button } from "@/components/ui/button";
 import { Row } from "@plugins/primitives/plugins/row/web";
@@ -71,19 +72,8 @@ export function TaskCard({
   const trimmed = prompt.trim();
   const disabled = creating || !trimmed;
 
-  const createTask = async (): Promise<Task> => {
-    const res = await fetch("/api/tasks", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ folderId: hostTaskId, description: trimmed }),
-    });
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      throw new Error(
-        `Create task failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-      );
-    }
-    return TaskSchema.parse(await res.json());
+  const createTask = async () => {
+    return fetchEndpoint(createTaskEndpoint, {}, { body: { folderId: hostTaskId, description: trimmed } });
   };
 
   const onCreate = async () => {

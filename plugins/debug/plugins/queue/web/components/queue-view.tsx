@@ -3,8 +3,9 @@ import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icon
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
-import { jobsListResource, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
-import { eventEmissionsResource, eventTriggersResource, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
+import { jobsListResource, retryJob, cancelJob, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
+import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, deleteTriggerEndpoint, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
@@ -40,13 +41,7 @@ export function QueueView() {
   );
 }
 
-// ─── Fetch helpers ───────────────────────────────────────────────────────
-
-async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json() as Promise<T>;
-}
+// ─── Helpers ─────────────────────────────────────────────────────────────
 
 function toastErr(e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
@@ -99,7 +94,7 @@ function JobsTab() {
 
   async function retry(id: string) {
     try {
-      await jsonFetch(`/api/jobs/${id}/retry`, { method: "POST" });
+      await fetchEndpoint(retryJob, { id });
     } catch (e) {
       toastErr(e, "Retry failed");
     }
@@ -107,7 +102,7 @@ function JobsTab() {
 
   async function cancel(id: string) {
     try {
-      await jsonFetch(`/api/jobs/${id}`, { method: "DELETE" });
+      await fetchEndpoint(cancelJob, { id });
     } catch (e) {
       toastErr(e, "Cancel failed");
     }
@@ -382,11 +377,7 @@ function TriggersTab() {
 
   async function toggle(id: string, enabled: boolean) {
     try {
-      await jsonFetch(`/api/events/triggers/${id}`, {
-        method: "PATCH",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ enabled }),
-      });
+      await fetchEndpoint(patchTriggerEndpoint, { id }, { body: { enabled } });
     } catch (e) {
       toastErr(e, "Toggle failed");
     }
@@ -394,7 +385,7 @@ function TriggersTab() {
 
   async function remove(id: string) {
     try {
-      await jsonFetch(`/api/events/triggers/${id}`, { method: "DELETE" });
+      await fetchEndpoint(deleteTriggerEndpoint, { id });
     } catch (e) {
       toastErr(e, "Delete failed");
     }

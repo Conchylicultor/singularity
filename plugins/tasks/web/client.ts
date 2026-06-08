@@ -1,5 +1,11 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { tasksResource, type TaskListItem } from "../core";
+import {
+  updateTask,
+  setTaskAutoStart,
+  clearTaskAutoStart,
+} from "../core/endpoints";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 
@@ -16,11 +22,7 @@ export type TaskPatch = Partial<{
 export type AutoStartModel = ConversationModel | "none";
 
 export async function patchTask(id: string, patch: TaskPatch): Promise<void> {
-  await fetch(`/api/tasks/${id}`, {
-    method: "PATCH",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(patch),
-  });
+  await fetchEndpoint(updateTask, { id }, { body: patch });
 }
 
 export async function setAutoStart(
@@ -28,14 +30,10 @@ export async function setAutoStart(
   model: AutoStartModel,
 ): Promise<void> {
   if (model === "none") {
-    await fetch(`/api/tasks/${id}/auto-start`, { method: "DELETE" });
+    await fetchEndpoint(clearTaskAutoStart, { id });
     return;
   }
-  await fetch(`/api/tasks/${id}/auto-start`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ model }),
-  });
+  await fetchEndpoint(setTaskAutoStart, { id }, { body: { model } });
 }
 
 export function useTask(id: string | null | undefined): TaskListItem | null {

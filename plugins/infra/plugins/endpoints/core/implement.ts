@@ -15,11 +15,14 @@ type HttpHandler = (
   params: Record<string, string>,
 ) => Response | Promise<Response>;
 
-// Widen string → string | Date recursively so handlers can return Drizzle
-// `timestamp` columns (Date) where the Zod response schema says `string`.
-// Response.json() serialises Date → ISO string, so the wire format is correct.
+// Widen string types recursively so handlers can return:
+// - Drizzle `timestamp` columns (Date) where the Zod schema says string
+// - Rank class objects where the schema says string (toJSON serialises them)
+// - Plain strings where the schema infers a branded string
+// Response.json() serialises all of these correctly on the wire.
+type JsonSerializable = { toJSON(): string; toString(): string };
 type JsonCompat<T> =
-  T extends string ? T | Date :
+  T extends string ? string | Date | JsonSerializable :
   T extends (infer U)[] ? JsonCompat<U>[] :
   T extends object ? { [K in keyof T]: JsonCompat<T[K]> } :
   T;

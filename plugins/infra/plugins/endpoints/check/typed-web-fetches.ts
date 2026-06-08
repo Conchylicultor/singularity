@@ -14,66 +14,13 @@ async function getRoot(): Promise<string> {
 // Migrating a call DECREASES the count (always passes); adding a new raw
 // fetch INCREASES it past the limit (fails the check).
 const ALLOWED = new Map<string, number>([
-  ["plugins/active-data/plugins/plugin-link/web/components/plugin-link-chip.tsx", 1],
-  ["plugins/active-data/plugins/plugin-link/web/panes.tsx", 1],
-  ["plugins/active-data/plugins/task/web/components/task-card.tsx", 1],
-["plugins/apps/plugins/deploy/plugins/servers/web/components/add-server-form.tsx", 1],
-  ["plugins/apps/plugins/deploy/plugins/servers/web/components/server-detail.tsx", 1],
-  ["plugins/apps/plugins/forge/plugins/catalog/web/components/catalog-view.tsx", 1],
-  ["plugins/apps/plugins/forge/plugins/publish/web/components/publish-view.tsx", 1],
-  ["plugins/backup/web/components/backup-panel.tsx", 2],
-  ["plugins/build/plugins/build-profiling/web/components/build-profiling-section.tsx", 1],
-  ["plugins/build/web/components/build-button.tsx", 1],
-  ["plugins/build/web/components/build-popover-content.tsx", 1],
-  ["plugins/code-explorer/web/components/file-tree-view.tsx", 1],
-  ["plugins/config/web/internal/config-client.ts", 2],
-  ["plugins/conversations-recover/web/components/recovery-view.tsx", 1],
-  ["plugins/conversations/plugins/conversation-view/plugins/code/plugins/docs-button/web/use-pushed-doc-files.ts", 1],
-  ["plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web/components/diff-view.tsx", 1],
-  ["plugins/review/plugins/code-review/web/components/review-sections-settings.tsx", 3],
-  ["plugins/review/plugins/code-review/web/use-push-files.ts", 1],
-  ["plugins/conversations/plugins/conversation-view/plugins/launch-prompts/web/components/launch-prompts-button.tsx", 1],
-  ["plugins/conversations/plugins/conversation-view/plugins/launch-prompts/web/components/launch-prompts-settings.tsx", 3],
-  ["plugins/conversations/plugins/conversation-view/plugins/prompt-templates/web/components/prompt-template-chips.tsx", 1],
-  ["plugins/conversations/plugins/conversation-view/plugins/prompt-templates/web/components/prompt-templates-settings.tsx", 3],
-  ["plugins/conversations/plugins/conversation-view/plugins/quick-prompts/web/components/quick-prompts-settings.tsx", 3],
-  ["plugins/conversations/plugins/conversations-view/plugins/grouped/web/components/grouped-conversation-list.tsx", 12],
-  ["plugins/conversations/plugins/conversations-view/plugins/queue/web/components/queue-view.tsx", 1],
-  ["plugins/conversations/plugins/conversations-view/web/components/conversation-list.tsx", 1],
-  ["plugins/conversations/plugins/conversations-view/web/internal/use-gone-conversations-pagination.ts", 1],
-  ["plugins/conversations/web/use-conversations.ts", 1],
-  ["plugins/crashes/web/report.ts", 1],
-  ["plugins/debug/plugins/broadcasts/web/components/broadcasts-panel.tsx", 2],
-  ["plugins/debug/plugins/memory/web/components/memory-panel.tsx", 2],
-  ["plugins/debug/plugins/profiling/plugins/boot/web/components/boot-section.tsx", 1],
-  ["plugins/debug/plugins/profiling/plugins/build/web/components/build-section.tsx", 1],
-  ["plugins/debug/plugins/profiling/plugins/push/web/components/push-section.tsx", 1],
-  ["plugins/debug/plugins/profiling/plugins/stats/web/components/stats-section.tsx", 1],
-  ["plugins/debug/plugins/queue/web/components/queue-view.tsx", 4],
-  ["plugins/debug/plugins/worktree-cleanup/web/components/worktree-cleanup-panel.tsx", 3],
-  ["plugins/events-test/web/components/events-test-view.tsx", 6],
-  ["plugins/health/web/internal/client.ts", 1],
-  ["plugins/infra/plugins/attachments/web/internal/list.ts", 1],
-  ["plugins/infra/plugins/attachments/web/internal/upload.ts", 1],
-  ["plugins/notifications/web/components/bell-button.tsx", 3],
-  ["plugins/plugin-meta/plugins/plugin-health/web/components/health-section.tsx", 1],
-  ["plugins/plugin-meta/plugins/plugin-view/web/panes.tsx", 1],
-  ["plugins/primitives/plugins/launch/web/components/launch-buttons.tsx", 1],
-  ["plugins/reorder/web/internal/dnd-components.tsx", 3],
-  ["plugins/reorder/web/internal/dnd-list-middleware.tsx", 6],
-  ["plugins/reorder/web/internal/group-box.tsx", 3],
-  ["plugins/screenshot/web/components/prompt-form.tsx", 1],
-  ["plugins/screenshot/web/components/screenshot-button.tsx", 1],
-  ["plugins/screenshot/web/components/screenshot-view.tsx", 1],
-  ["plugins/stats/plugins/commits/web/components/excluded-path-toggles.tsx", 1],
-  ["plugins/tasks/plugins/task-dependencies/web/components/task-dependencies.tsx", 2],
-  ["plugins/tasks/plugins/task-dependencies/web/components/task-dependents.tsx", 1],
-  ["plugins/tasks/plugins/task-events/web/components/task-events.tsx", 1],
-  ["plugins/tasks/plugins/task-graph/web/components/insertable-edge.tsx", 1],
-  ["plugins/tasks/plugins/task-graph/web/components/task-graph.tsx", 2],
-  ["plugins/tasks/plugins/task-list/web/components/launch-agent-action.tsx", 1],
-  ["plugins/tasks/plugins/task-list/plugins/tree/web/tasks-list.tsx", 1],
-  ["plugins/tasks/web/client.ts", 4],
+  // Binary / special transport — cannot use fetchEndpoint
+  ["plugins/crashes/web/report.ts", 1], // keepalive: true
+  ["plugins/infra/plugins/attachments/web/internal/list.ts", 1], // polymorphic URL pattern
+  ["plugins/infra/plugins/attachments/web/internal/upload.ts", 1], // FormData (multipart)
+  ["plugins/screenshot/web/components/prompt-form.tsx", 1], // binary image/png
+  ["plugins/screenshot/web/components/screenshot-button.tsx", 1], // binary image/png
+  ["plugins/screenshot/web/components/screenshot-view.tsx", 1], // binary blob response
 ]);
 
 const check: Check = {

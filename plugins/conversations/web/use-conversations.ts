@@ -2,6 +2,8 @@ import { useQuery } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ConversationSchema } from "@plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { getConversation } from "../core/endpoints";
 import { conversationsResource, type ConversationEntry } from "../core/resources";
 
 export const GonePageSchema = cursorPageSchema(ConversationSchema);
@@ -44,10 +46,12 @@ export function useConversationById(id: string | null): ConversationEntry | null
   const q = useQuery({
     queryKey: ["conversation", id],
     queryFn: async (): Promise<ConversationEntry | null> => {
-      const res = await fetch(`/api/conversations/${encodeURIComponent(id!)}`);
-      if (res.status === 404) return null;
-      if (!res.ok) throw new Error(`Failed to fetch conversation ${id}: ${res.status}`);
-      return ConversationSchema.parse(await res.json());
+      try {
+        return await fetchEndpoint(getConversation, { id: id! });
+      } catch (err) {
+        if (err instanceof EndpointError && err.status === 404) return null;
+        throw err;
+      }
     },
     enabled: id !== null && liveConv === null,
     staleTime: Infinity,

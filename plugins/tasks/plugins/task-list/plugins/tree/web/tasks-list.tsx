@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import {
   RenameInput,
@@ -11,7 +12,7 @@ import {
 } from "@plugins/primitives/plugins/tree/web";
 import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { TaskStatus } from "@plugins/tasks-core/core";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource, createTask } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "@plugins/tasks/plugins/task-list/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
@@ -35,14 +36,12 @@ async function createTaskRow(args: {
   parentId: string | null;
   rank?: Rank;
 }): Promise<string | null> {
-  const res = await fetch("/api/tasks", {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ folderId: args.parentId, rank: args.rank }),
-  });
-  if (!res.ok) return null;
-  const task = (await res.json()) as Task;
-  return task.id;
+  try {
+    const task = await fetchEndpoint(createTask, {}, { body: { folderId: args.parentId, rank: args.rank?.toString() } });
+    return task.id;
+  } catch {
+    return null;
+  }
 }
 
 function TaskRow({ node, depth }: { node: TreeNode<Task>; depth: number }) {

@@ -1,10 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   PluginDetail,
   type PluginNode,
-  type PluginTreePayload,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 
 export const pluginConvSidePane = Pane.define({
   id: "plugin-conv-side",
@@ -14,11 +15,6 @@ export const pluginConvSidePane = Pane.define({
   chrome: { history: false },
   resolve: false,
 });
-
-type TreeState =
-  | { kind: "loading" }
-  | { kind: "ok"; data: PluginTreePayload }
-  | { kind: "error"; message: string };
 
 function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
   for (const node of nodes) {
@@ -30,41 +26,22 @@ function indexNodes(nodes: PluginNode[], map = new Map<string, PluginNode>()) {
 
 function PluginConvSideBody() {
   const { pluginId } = pluginConvSidePane.useParams();
-  const [state, setState] = useState<TreeState>({ kind: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/plugin-view/tree")
-      .then(async (res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          setState({ kind: "error", message: `Failed to load (${res.status})` });
-          return;
-        }
-        setState({ kind: "ok", data: (await res.json()) as PluginTreePayload });
-      })
-      .catch((err) => {
-        if (!cancelled) setState({ kind: "error", message: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data, isLoading, error } = useEndpoint(getPluginTree, {});
 
   const node = useMemo(
-    () => (state.kind === "ok" ? (indexNodes(state.data.plugins).get(pluginId) ?? null) : null),
-    [state, pluginId],
+    () => (data ? (indexNodes(data.plugins).get(pluginId) ?? null) : null),
+    [data, pluginId],
   );
 
   return (
     <PaneChrome pane={pluginConvSidePane} title={node?.name ?? pluginId}>
-      {state.kind === "loading" ? (
+      {isLoading ? (
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
           Loading…
         </div>
-      ) : state.kind === "error" ? (
+      ) : error ? (
         <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
-          {state.message}
+          {String(error)}
         </div>
       ) : (
         <PluginDetail node={node} />

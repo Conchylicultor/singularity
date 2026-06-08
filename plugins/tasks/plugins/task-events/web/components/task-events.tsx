@@ -1,6 +1,7 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { MdOpenInNew } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
   CollapsibleContent,
@@ -12,33 +13,14 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import {
   attemptsResource,
   pushesResource,
+  getRepoInfo,
 } from "@plugins/tasks/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 
-type RepoInfo = { githubBase: string | null };
-
 function useGithubBase(): string | null {
-  const [base, setBase] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    void (async () => {
-      try {
-        const res = await fetch("/api/repo-info");
-        if (!res.ok) return;
-        const info = (await res.json()) as RepoInfo;
-        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!cancelled) setBase(info.githubBase);
-      // eslint-disable-next-line promise-safety/no-bare-catch
-      } catch {
-        // leave base null — row still renders without a link
-      }
-    })();
-    return () => {
-      cancelled = true;
-    };
-  }, []);
-  return base;
+  const { data } = useEndpoint(getRepoInfo, {});
+  return data?.githubBase ?? null;
 }
 
 function formatDate(value: Date | string): string {

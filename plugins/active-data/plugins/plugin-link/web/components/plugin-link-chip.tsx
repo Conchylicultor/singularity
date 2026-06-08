@@ -1,11 +1,12 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
 import { MdWidgets } from "react-icons/md";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
-import type { PluginNode, PluginTreePayload } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { pluginConvSidePane } from "../panes";
 
@@ -39,11 +40,7 @@ export function PluginLinkChip({
   const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
   const openPane = useOpenPane();
 
-  const { data } = useQuery<PluginTreePayload>({
-    queryKey: ["plugin-view-tree"],
-    queryFn: () => fetch("/api/plugin-view/tree").then((r) => r.json()),
-    staleTime: 60_000,
-  });
+  const { data } = useEndpoint(getPluginTree, {});
 
   const index = useMemo(
     () => (data ? indexNodes(data.plugins) : undefined),

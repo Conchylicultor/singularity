@@ -1,4 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { triggerBuildEndpoint } from "../../core/endpoints";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
@@ -228,14 +230,14 @@ export function BuildPopoverContent({
 
   const handleBuild = useCallback(async () => {
     try {
-      const res = await fetch("/api/build", { method: "POST" });
-      if (!res.ok) {
+      await fetchEndpoint(triggerBuildEndpoint, {});
+      toast({ type: "build", description: "Build started", variant: "info" });
+    } catch (err) {
+      if (err instanceof EndpointError) {
         toast({ type: "build", description: "Failed to start build", variant: "error" });
       } else {
-        toast({ type: "build", description: "Build started", variant: "info" });
+        toast({ type: "build", description: "Server unreachable", variant: "error" });
       }
-    } catch {
-      toast({ type: "build", description: "Server unreachable", variant: "error" });
     }
   }, []);
 

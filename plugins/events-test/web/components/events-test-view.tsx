@@ -5,6 +5,17 @@ import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib/utils";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  subscribeEventsTest,
+  emitEventsTest,
+  directEnqueueEventsTest,
+  getEventsTestLog,
+  resetEventsTest,
+  deleteEventsTestTrigger,
+  deleteEventsTestTargeting,
+  listEventsTestTriggers,
+} from "../../shared/endpoints";
 
 interface TriggerRow {
   id: string;
@@ -22,20 +33,6 @@ interface LogEntry {
   message: string;
   jobId: string;
   firedAt: string;
-}
-
-async function jsonFetch<T>(url: string, init?: RequestInit): Promise<T> {
-  const res = await fetch(url, init);
-  if (!res.ok) throw new Error(`${res.status} ${await res.text()}`);
-  return res.json() as Promise<T>;
-}
-
-async function postJson<T>(url: string, body: unknown): Promise<T> {
-  return jsonFetch<T>(url, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
 }
 
 function toastErr(e: unknown, prefix: string) {
@@ -73,10 +70,10 @@ export function EventsTestView() {
   const refresh = useCallback(async () => {
     try {
       const [t, l] = await Promise.all([
-        jsonFetch<{ rows: TriggerRow[] }>("/api/events-test/triggers"),
-        jsonFetch<{ entries: LogEntry[] }>("/api/events-test/log"),
+        fetchEndpoint(listEventsTestTriggers, {}),
+        fetchEndpoint(getEventsTestLog, {}),
       ]);
-      setTriggers(t.rows);
+      setTriggers(t.rows as unknown as TriggerRow[]);
       setLog(l.entries);
     } catch (e) {
       toastErr(e, "refresh failed");
@@ -111,14 +108,13 @@ export function EventsTestView() {
     }
     setSubBusy(true);
     try {
-      const { id } = await postJson<{ id: string }>(
-        "/api/events-test/subscribe",
-        {
+      const { id } = await fetchEndpoint(subscribeEventsTest, {}, {
+        body: {
           userId: subUserId.trim() || undefined,
           label: subLabel.trim(),
           oneShot: subOneShot,
         },
-      );
+      });
       flashTrigger(id);
       toast({
         type: "debug",
@@ -140,9 +136,11 @@ export function EventsTestView() {
     }
     setEmitBusy(true);
     try {
-      await postJson("/api/events-test/emit", {
-        userId: emitUserId.trim(),
-        message: emitMessage.trim() || undefined,
+      await fetchEndpoint(emitEventsTest, {}, {
+        body: {
+          userId: emitUserId.trim(),
+          message: emitMessage.trim() || undefined,
+        },
       });
       toast({
         type: "debug",
@@ -159,7 +157,7 @@ export function EventsTestView() {
 
   const onDeleteTrigger = async (id: string) => {
     try {
-      await fetch(`/api/events-test/trigger/${id}`, { method: "DELETE" });
+      await fetchEndpoint(deleteEventsTestTrigger, { id });
       toast({ type: "debug", description: "Trigger deleted", variant: "success" });
       await refresh();
     } catch (e) {
@@ -174,8 +172,8 @@ export function EventsTestView() {
     }
     setDtBusy(true);
     try {
-      await postJson("/api/events-test/delete-targeting", {
-        label: dtLabel.trim(),
+      await fetchEndpoint(deleteEventsTestTargeting, {}, {
+        body: { label: dtLabel.trim() },
       });
       toast({
         type: "debug",
@@ -198,14 +196,11 @@ export function EventsTestView() {
     }
     setDeBusy(true);
     try {
-      const { jobId } = await postJson<{ jobId: string }>(
-        "/api/events-test/direct-enqueue",
-        {
+      const { jobId } = await fetchEndpoint(directEnqueueEventsTest, {}, {
+        body: {
           label: deLabel.trim(),
-          userId: deUserId.trim() || undefined,
-          message: deMessage.trim() || undefined,
         },
-      );
+      });
       toast({
         type: "debug",
         description: `Enqueued job ${jobId}`,
@@ -221,7 +216,7 @@ export function EventsTestView() {
 
   const onResetLog = async () => {
     try {
-      await fetch("/api/events-test/reset", { method: "POST" });
+      await fetchEndpoint(resetEventsTest, {});
       toast({ type: "debug", description: "Log cleared" });
       await refresh();
     } catch (e) {

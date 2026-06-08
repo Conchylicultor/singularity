@@ -27,6 +27,7 @@ export type DeleteTargetingBody = z.infer<typeof DeleteTargetingBodySchema>;
 export const subscribeEventsTest = defineEndpoint({
   route: "POST /api/events-test/subscribe",
   body: SubscribeBodySchema,
+  response: z.object({ id: z.string() }),
 });
 
 export const emitEventsTest = defineEndpoint({
@@ -37,10 +38,20 @@ export const emitEventsTest = defineEndpoint({
 export const directEnqueueEventsTest = defineEndpoint({
   route: "POST /api/events-test/direct-enqueue",
   body: DirectEnqueueBodySchema,
+  response: z.object({ jobId: z.string() }),
+});
+
+const LogEntrySchema = z.object({
+  label: z.string(),
+  userId: z.string(),
+  message: z.string(),
+  jobId: z.string(),
+  firedAt: z.string(),
 });
 
 export const getEventsTestLog = defineEndpoint({
   route: "GET /api/events-test/log",
+  response: z.object({ entries: z.array(LogEntrySchema) }),
 });
 
 export const resetEventsTest = defineEndpoint({
@@ -58,6 +69,7 @@ export const deleteEventsTestTargeting = defineEndpoint({
 
 export const listEventsTestTriggers = defineEndpoint({
   route: "GET /api/events-test/triggers",
+  response: z.object({ rows: z.array(z.record(z.unknown())) }),
 });
 
 export const waitEventsTestIdle = defineEndpoint({

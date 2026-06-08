@@ -1,4 +1,6 @@
 import { useState } from "react";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { createServer } from "../../shared/endpoints";
 
 export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }) {
   const [name, setName] = useState("");
@@ -13,18 +15,15 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
     if (!host) return;
     setSubmitting(true);
     try {
-      const res = await fetch("/api/deploy/servers", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+      const server = await fetchEndpoint(createServer, {}, {
+        body: {
           name: name || host,
           host,
           port: Number(port) || 22,
           sshUser: sshUser || "root",
           sshPrivateKey: sshPrivateKey || undefined,
-        }),
+        },
       });
-      const server = await res.json();
       onSuccess(server.id);
     } finally {
       setSubmitting(false);

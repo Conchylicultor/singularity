@@ -1,4 +1,4 @@
-import { useState, useCallback, useEffect, type ReactElement } from "react";
+import { useState, type ReactElement } from "react";
 import {
   GanttSection,
   SpanDetail,
@@ -7,11 +7,8 @@ import {
   type Span,
   type PhaseConfig,
 } from "@plugins/debug/plugins/profiling/web";
-
-interface BuildData {
-  spans: Span[];
-  totalMs: number;
-}
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getBuildRunProfile } from "../../shared/endpoints";
 
 const PHASE_ORDER = [
   "build:preflight",
@@ -36,23 +33,8 @@ const PHASE_CONFIG: Record<string, PhaseConfig> = {
 };
 
 export function BuildProfilingSection({ runId }: { runId: string }): ReactElement | null {
-  const [data, setData] = useState<BuildData | null>(null);
+  const { data } = useEndpoint(getBuildRunProfile, { id: runId });
   const [hovered, setHovered] = useState<Span | null>(null);
-
-  const load = useCallback(async () => {
-    try {
-      const res = await fetch(`/api/build/runs/${encodeURIComponent(runId)}/profile`);
-      if (!res.ok) return;
-      setData((await res.json()) as BuildData);
-    // eslint-disable-next-line promise-safety/no-bare-catch
-    } catch {
-      /* profile unavailable */
-    }
-  }, [runId]);
-
-  useEffect(() => {
-    void load();
-  }, [load]);
 
   if (!data || data.spans.length === 0) return null;
 

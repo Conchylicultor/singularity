@@ -1,6 +1,8 @@
-import { useEffect, useMemo, useState } from "react";
+import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
-import type { PluginNode, PluginTreePayload } from "../core/types";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getPluginTree } from "../core/endpoints";
+import type { PluginNode } from "../core/types";
 import { PluginDetail } from "./components/plugin-detail";
 
 export const pluginViewPane = Pane.define({
@@ -11,54 +13,24 @@ export const pluginViewPane = Pane.define({
   resolve: false,
 });
 
-type LoadState =
-  | { kind: "loading" }
-  | { kind: "ok"; data: PluginTreePayload }
-  | { kind: "error"; message: string };
-
 function PluginViewBody() {
   const { pluginId } = pluginViewPane.useParams();
-  const [state, setState] = useState<LoadState>({ kind: "loading" });
-
-  useEffect(() => {
-    let cancelled = false;
-    fetch("/api/plugin-view/tree")
-      .then(async (res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({
-            kind: "error",
-            message: text || `Failed to load (${res.status})`,
-          });
-          return;
-        }
-        const data = (await res.json()) as PluginTreePayload;
-        setState({ kind: "ok", data });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setState({ kind: "error", message: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, []);
+  const { data: treeData, isLoading, error } = useEndpoint(getPluginTree, {});
 
   const indexed = useMemo(() => {
-    if (state.kind !== "ok") return new Map<string, PluginNode>();
+    if (!treeData) return new Map<string, PluginNode>();
     const map = new Map<string, PluginNode>();
     function visit(n: PluginNode) {
       map.set(n.id, n);
       for (const c of n.children) visit(c);
     }
-    for (const p of state.data.plugins) visit(p);
+    for (const p of treeData.plugins) visit(p);
     return map;
-  }, [state]);
+  }, [treeData]);
 
   const node = indexed.get(pluginId) ?? null;
 
-  if (state.kind === "loading") {
+  if (isLoading) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
         <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
@@ -67,14 +39,14 @@ function PluginViewBody() {
       </PaneChrome>
     );
   }
-  if (state.kind === "error") {
+  if (error) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
         <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm">
           <span className="font-medium text-foreground">
             Failed to load plugin tree
           </span>
-          <span className="text-muted-foreground">{state.message}</span>
+          <span className="text-muted-foreground">{String(error)}</span>
         </div>
       </PaneChrome>
     );

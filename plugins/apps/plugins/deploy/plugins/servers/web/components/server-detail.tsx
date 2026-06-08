@@ -1,5 +1,7 @@
 import { useState } from "react";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { Server } from "../../shared";
+import { deleteServer } from "../../shared/endpoints";
 import { ServerStatusBadge } from "./server-status-badge";
 
 export function ServerDetail({ server }: { server: Server }) {
@@ -8,7 +10,7 @@ export function ServerDetail({ server }: { server: Server }) {
   async function handleDelete() {
     if (!confirm(`Delete server "${server.name}"?`)) return;
     setDeleting(true);
-    await fetch(`/api/deploy/servers/${server.id}`, { method: "DELETE" });
+    await fetchEndpoint(deleteServer, { id: server.id });
     setDeleting(false);
   }
 

@@ -12,6 +12,8 @@ import type { FileData, HunkData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getFileContent } from "@plugins/code-explorer/core";
 import { useFileDiff } from "../use-file-diff";
 import { useDiffTokens } from "../use-diff-tokens";
 import type { DiffTokens } from "../use-diff-tokens";
@@ -283,13 +285,13 @@ export function DiffView({
   useEffect(() => {
     if (!baseHunks) return;
     const ref = base ?? "HEAD";
-    void fetch(`/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(basePath)}&ref=${encodeURIComponent(ref)}`)
-      .then((res) => res.ok ? res.json() : null)
-      .then((body: { content?: string } | null) => {
-        if (!body?.content) return;
+    // eslint-disable-next-line promise-safety/no-bare-catch -- background preload; 404/413 are expected for deleted/large files
+    void fetchEndpoint(getFileContent, { worktree }, { query: { path: basePath, ref } })
+      .then((body) => {
         fileContentRef.current = body.content;
         setTotalLines(body.content.split("\n").length);
       })
+      .catch(() => {});
   }, [baseHunks, worktree, basePath, base]);
 
   const effectiveHunks = expandedHunks ?? baseHunks;
@@ -299,13 +301,13 @@ export function DiffView({
     async (start: number, end: number) => {
       if (!fileContentRef.current) {
         const ref = base ?? "HEAD";
-        const res = await fetch(
-          `/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(basePath)}&ref=${encodeURIComponent(ref)}`,
-        );
-        if (!res.ok) return;
-        const body = (await res.json()) as { content?: string };
-        fileContentRef.current = body.content ?? "";
-        setTotalLines(fileContentRef.current.split("\n").length);
+        try {
+          const body = await fetchEndpoint(getFileContent, { worktree }, { query: { path: basePath, ref } });
+          fileContentRef.current = body.content;
+          setTotalLines(fileContentRef.current.split("\n").length);
+        } catch {
+          return;
+        }
       }
       const content = fileContentRef.current;
       setExpandedHunks((prev) => {

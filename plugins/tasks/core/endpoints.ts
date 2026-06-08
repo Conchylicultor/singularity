@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { ConversationModelSchema } from "@plugins/conversations/plugins/model-provider/core";
+import { dateString } from "@plugins/infra/plugins/endpoints/core";
 import {
   TaskChainSubmitBodySchema,
   TaskChainSubmitResponseSchema,
@@ -53,6 +54,27 @@ export const AddDependencyBodySchema = z.object({
 });
 export type AddDependencyBody = z.infer<typeof AddDependencyBodySchema>;
 
+// Wire-format response schema: plain JSON types (no Rank class, no Date class).
+// Consumers that need the rich domain types should parse via TaskSchema locally.
+const TaskResponseSchema = z.object({
+  id: z.string(),
+  title: z.string(),
+  description: z.string().nullable(),
+  status: z.string(),
+  folderId: z.string().nullable(),
+  groupId: z.string().nullable(),
+  rank: z.string(),
+  expanded: z.boolean(),
+  active: z.boolean(),
+  author: z.string().nullable(),
+  createdAt: dateString(),
+  updatedAt: dateString(),
+  droppedAt: dateString().nullable(),
+  heldAt: dateString().nullable(),
+  finishedAt: dateString().nullable(),
+  dependencies: z.array(z.string()),
+});
+
 // --- Endpoint definitions ---
 
 export const listTasks = defineEndpoint({
@@ -62,6 +84,7 @@ export const listTasks = defineEndpoint({
 export const createTask = defineEndpoint({
   route: "POST /api/tasks",
   body: CreateTaskBodySchema,
+  response: TaskResponseSchema,
 });
 
 export const createTaskChain = defineEndpoint({
@@ -73,10 +96,12 @@ export const createTaskChain = defineEndpoint({
 export const insertTaskBetween = defineEndpoint({
   route: "POST /api/tasks/insert-between",
   body: InsertBetweenBodySchema,
+  response: TaskResponseSchema,
 });
 
 export const getTask = defineEndpoint({
   route: "GET /api/tasks/:id",
+  response: TaskResponseSchema,
 });
 
 export const updateTask = defineEndpoint({
@@ -106,6 +131,11 @@ export const removeTaskDependency = defineEndpoint({
   route: "DELETE /api/tasks/:id/dependencies/:depId",
 });
 
+export const RepoInfoResponseSchema = z.object({
+  githubBase: z.string().nullable(),
+});
+
 export const getRepoInfo = defineEndpoint({
   route: "GET /api/repo-info",
+  response: RepoInfoResponseSchema,
 });

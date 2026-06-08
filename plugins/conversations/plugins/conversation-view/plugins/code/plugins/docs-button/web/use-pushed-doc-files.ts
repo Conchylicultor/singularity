@@ -1,5 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getPushFiles } from "@plugins/code-explorer/core";
 import { pushesResource } from "@plugins/tasks/core";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { isDocFile } from "./panes";
@@ -30,8 +32,7 @@ export function usePushedDocFiles(attemptId: string): EditedFile[] | null {
     void Promise.all(
       ids.map((pushId) =>
         // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab fetches doc files for its own display, no cross-tab write to deduplicate
-        fetch(`/api/code/main/push?pushId=${encodeURIComponent(pushId)}`)
-          .then((r) => (r.ok ? (r.json() as Promise<{ files: EditedFile[] }>) : Promise.resolve({ files: [] })))
+        fetchEndpoint(getPushFiles, { worktree: "main" }, { query: { pushId } })
           .then((data) => data.files.filter((f) => isDocFile(f.path)))
           .catch(() => [] as EditedFile[]),
       ),

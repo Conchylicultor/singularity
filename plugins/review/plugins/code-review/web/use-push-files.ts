@@ -1,5 +1,6 @@
-import { useEffect, useState } from "react";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getPushFiles } from "@plugins/code-explorer/core";
 
 export type PushFiles = {
   files: EditedFile[];
@@ -13,34 +14,14 @@ export type PushFilesState =
   | { kind: "error"; message: string };
 
 export function usePushFiles(pushId: string | null): PushFilesState {
-  const [state, setState] = useState<PushFilesState>({ kind: "loading" });
+  const { data, isLoading, error } = useEndpoint(
+    getPushFiles,
+    { worktree: "main" },
+    { query: { pushId: pushId ?? "" }, enabled: !!pushId },
+  );
 
-  useEffect(() => {
-    if (!pushId) {
-      setState({ kind: "loading" });
-      return;
-    }
-    let cancelled = false;
-    setState({ kind: "loading" });
-    fetch(`/api/code/main/push?pushId=${encodeURIComponent(pushId)}`)
-      .then(async (res) => {
-        if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({ kind: "error", message: text || res.statusText });
-          return;
-        }
-        const data = (await res.json()) as PushFiles;
-        setState({ kind: "ok", data });
-      })
-      .catch((err) => {
-        if (cancelled) return;
-        setState({ kind: "error", message: String(err) });
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [pushId]);
-
-  return state;
+  if (!pushId || isLoading) return { kind: "loading" };
+  if (error) return { kind: "error", message: String(error) };
+  if (data) return { kind: "ok", data };
+  return { kind: "loading" };
 }

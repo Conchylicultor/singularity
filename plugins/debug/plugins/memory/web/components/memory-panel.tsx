@@ -5,14 +5,13 @@ import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web"
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";
 
 type MemoryFile = {
   name: string;
   type: "index" | "feedback" | "project" | "user" | "reference" | "other";
 };
-
-type ListResponse = { ok: true; files: MemoryFile[]; dir: string };
-type ContentResponse = { ok: true; content: string } | { ok: false; error: string };
 
 const TYPE_BADGE_CLASSES: Record<MemoryFile["type"], string> = {
   index: "bg-muted text-muted-foreground",
@@ -37,8 +36,7 @@ export function MemoryPanel() {
 
   const loadList = useCallback(async () => {
     try {
-      const res = await fetch("/api/debug/memory");
-      const data = (await res.json()) as ListResponse;
+      const data = await fetchEndpoint(listMemoryFiles, {});
       setFiles(data.files);
       setDir(data.dir);
       if (data.files.length > 0 && selected === null) {
@@ -56,11 +54,9 @@ export function MemoryPanel() {
     if (!selected) { setContent(null); return; }
     setLoadingContent(true);
     setError(null);
-    fetch(`/api/debug/memory/${encodeURIComponent(selected)}`)
-      .then((r) => r.json())
-      .then((data: ContentResponse) => {
-        if (data.ok) setContent(data.content);
-        else setError(data.error);
+    fetchEndpoint(readMemoryFile, { name: selected })
+      .then((data) => {
+        setContent(data.content);
       })
       .catch((e: unknown) => setError(String(e)))
       .finally(() => setLoadingContent(false));
