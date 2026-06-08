@@ -1,7 +1,18 @@
+import { resolve } from "node:path";
+
 export interface ShellCall {
   name: string;
   args: string[];
   raw: string;
+  /**
+   * Effective working directory when this call runs, folding every preceding
+   * `cd` in the chain over `baseCwd`. Resolve a call's relative path args
+   * against THIS — never treat them as literal strings, or `cd <dir> && rm
+   * <rel>` slips past. Equals `baseCwd` when no `baseCwd` was supplied.
+   */
+  cwd: string;
+  /** Redirections local to this sub-command (resolve targets against `cwd`). */
+  redirections: ShellRedirection[];
 }
 
 export interface ShellRedirection {
@@ -11,6 +22,7 @@ export interface ShellRedirection {
 
 export interface ShellParseResult {
   calls: ShellCall[];
+  /** Every redirection across the command, flattened from `calls`. */
   redirections: ShellRedirection[];
 }
 
@@ -35,17 +47,50 @@ export function findCall(
   return parseShell(cmd).calls.find(predicate);
 }
 
-export function parseShell(cmd: string): ShellParseResult {
+export function parseShell(cmd: string, baseCwd = ""): ShellParseResult {
   const subs = splitOnOperators(cmd);
   const calls: ShellCall[] = [];
+  let cwd = baseCwd;
   for (const sub of subs) {
     const trimmed = sub.trim();
     if (!trimmed) continue;
-    const tokens = shellSplit(trimmed);
+    const redirections = scanRedirections(trimmed);
+    const tokens = stripRedirections(shellSplit(trimmed));
     if (tokens.length === 0) continue;
-    calls.push({ name: basename(tokens[0]!), args: tokens.slice(1), raw: trimmed });
+    const name = basename(tokens[0]!);
+    const args = tokens.slice(1);
+    // The call runs in the cwd in effect BEFORE its own `cd` takes hold; a
+    // `cd` only moves the directory for the calls that follow it.
+    calls.push({ name, args, raw: trimmed, cwd, redirections });
+    if (name === "cd") cwd = applyCd(cwd, args);
   }
-  return { calls, redirections: scanRedirections(cmd) };
+  return { calls, redirections: calls.flatMap((c) => c.redirections) };
+}
+
+/** Fold a single `cd` over the running cwd. */
+function applyCd(cwd: string, args: string[]): string {
+  const target = args.find((a) => !a.startsWith("-"));
+  // `cd` / `cd -` / `cd ~…` resolve to dirs we can't know here; leave the cwd
+  // unchanged rather than guess. Absolute targets replace it; relative ones
+  // fold onto it.
+  if (!target || target === "-" || target.startsWith("~")) return cwd;
+  return resolve(cwd, target);
+}
+
+/**
+ * Drop redirection operators and their targets from a token list so they don't
+ * masquerade as positional args (e.g. `echo x > f` → `["x"]`, not `["x",">","f"]`).
+ * Redirections are surfaced separately on `ShellCall.redirections`.
+ */
+function stripRedirections(tokens: string[]): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < tokens.length; i++) {
+    const t = tokens[i]!;
+    if (/^\d*>>?$/.test(t)) { i++; continue; } // bare operator: skip its target too
+    if (/^\d*>>?/.test(t)) continue; // operator glued to target (`>foo`, `2>>foo`)
+    out.push(t);
+  }
+  return out;
 }
 
 function basename(p: string): string {

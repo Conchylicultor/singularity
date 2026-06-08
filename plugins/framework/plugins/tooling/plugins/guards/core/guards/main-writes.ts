@@ -1,6 +1,7 @@
 import { resolve } from "node:path";
 import { defineGuard } from "../define-guard";
 import { parseShell } from "../parse-shell";
+import type { ShellCall } from "../parse-shell";
 import type { BashInput } from "../types";
 
 const DEST_LAST_CMDS = new Set(["cp", "mv", "rsync", "install"]);
@@ -35,6 +36,44 @@ const GIT_MUTATING_SUBCMDS = new Set([
   "push",
 ]);
 
+/**
+ * The directory a `git` call mutates: its effective cwd, unless an explicit
+ * `-C <dir>` redirects it. git always touches the repo containing this dir,
+ * regardless of any path args.
+ */
+function gitDir(call: ShellCall): string {
+  const i = call.args.indexOf("-C");
+  const target = i !== -1 ? call.args[i + 1] : undefined;
+  return target ? resolve(call.cwd, target) : call.cwd;
+}
+
+/**
+ * Every filesystem path a single call would write to, already resolved against
+ * the call's effective working directory (so a leading `cd` is honored). Empty
+ * when the call writes nothing we police.
+ */
+function writeTargets(call: ShellCall): string[] {
+  const nonFlag = call.args.filter((a) => !a.startsWith("-"));
+  const resolveAll = (ps: string[]) => ps.map((p) => resolve(call.cwd, p));
+
+  if (DEST_LAST_CMDS.has(call.name)) {
+    // cp/mv/rsync/install only write their last positional (the destination).
+    const dest = nonFlag[nonFlag.length - 1];
+    return nonFlag.length >= 2 && dest ? resolveAll([dest]) : [];
+  }
+  if (ALL_ARGS_CMDS.has(call.name)) return resolveAll(nonFlag);
+  if (INPLACE_FLAG_CMDS.has(call.name)) {
+    const hasInplace = call.args.some((a) => a === "-i" || a.startsWith("-i"));
+    return hasInplace ? resolveAll(nonFlag) : [];
+  }
+  if (call.name === "git") {
+    // Skip a leading `-C <dir>` global option to reach the subcommand.
+    const subcmd = call.args[0] === "-C" ? call.args[2] : call.args[0];
+    return subcmd && GIT_MUTATING_SUBCMDS.has(subcmd) ? [gitDir(call)] : [];
+  }
+  return [];
+}
+
 export const mainWritesGuard = defineGuard<BashInput>({
   name: "main-writes",
   matcher: "Bash",
@@ -45,78 +84,25 @@ export const mainWritesGuard = defineGuard<BashInput>({
     if (!cmd) return null;
 
     const repo = resolve(ctx.cwd, "../../..");
-    if (!cmd.includes(repo)) return null;
 
+    // A resolved, absolute path that lands inside the repo root but outside the
+    // agent's own worktree IS a write to main. Relative args are resolved
+    // against each call's effective cwd before reaching here.
     const isMainBranch = (p: string) =>
-      p.startsWith(`${repo}/`) && !p.startsWith(`${ctx.cwd}/`);
+      (p === repo || p.startsWith(`${repo}/`)) &&
+      p !== ctx.cwd &&
+      !p.startsWith(`${ctx.cwd}/`);
 
-    const { calls, redirections } = parseShell(cmd);
-
-    for (const r of redirections) {
-      if (isMainBranch(r.target)) {
-        return violation(`redirection target '${r.target}'`, repo, ctx.cwd);
-      }
-    }
-
-    const cdsToMain = calls.some(
-      (c) =>
-        c.name === "cd" &&
-        c.args.some((a) => {
-          const resolved = resolve(a);
-          // The worktree lives physically nested under the repo root
-          // (<repo>/.claude/worktrees/<name>), so a cd into the worktree
-          // itself must not be mistaken for a cd into main.
-          if (resolved === ctx.cwd || resolved.startsWith(`${ctx.cwd}/`)) {
-            return false;
-          }
-          return resolved === repo || resolved.startsWith(`${repo}/`);
-        }),
-    );
-    if (cdsToMain) {
-      for (const call of calls) {
-        const subcmd = call.args[0];
-        if (call.name === "git" && subcmd && GIT_MUTATING_SUBCMDS.has(subcmd)) {
-          return violation(
-            `git ${subcmd} after cd into main repo`,
-            repo,
-            ctx.cwd,
-          );
+    for (const call of parseShell(cmd, ctx.cwd).calls) {
+      for (const r of call.redirections) {
+        const target = resolve(call.cwd, r.target);
+        if (isMainBranch(target)) {
+          return violation(`redirection target '${r.target}'`, repo, ctx.cwd);
         }
       }
-    }
-
-    for (const call of calls) {
-      const paths = call.args.filter((a) => !a.startsWith("-"));
-
-      if (DEST_LAST_CMDS.has(call.name)) {
-        const dest = paths[paths.length - 1];
-        if (paths.length >= 2 && dest && isMainBranch(dest)) {
-          return violation(
-            `${call.name} destination '${dest}'`,
-            repo,
-            ctx.cwd,
-          );
-        }
-      } else if (ALL_ARGS_CMDS.has(call.name)) {
-        for (const p of paths) {
-          if (isMainBranch(p)) {
-            return violation(`${call.name} target '${p}'`, repo, ctx.cwd);
-          }
-        }
-      } else if (INPLACE_FLAG_CMDS.has(call.name)) {
-        const hasInplace = call.args.some(
-          (a) => a === "-i" || a.startsWith("-i"),
-        );
-        if (hasInplace) {
-          for (const p of paths) {
-            if (isMainBranch(p)) {
-              return violation(
-                `${call.name} -i target '${p}'`,
-                repo,
-                ctx.cwd,
-              );
-            }
-          }
+      for (const target of writeTargets(call)) {
+        if (isMainBranch(target)) {
+          return violation(`${call.name} target '${target}'`, repo, ctx.cwd);
         }
       }
     }
