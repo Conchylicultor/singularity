@@ -70,6 +70,7 @@ export const postConversationTurn = defineEndpoint({
 
 export const stopConversation = defineEndpoint({
   route: "POST /api/conversations/:id/stop",
+  response: z.object({ ok: z.boolean(), rewindText: z.string().nullable() }),
 });
 
 export const listConversationTurns = defineEndpoint({

@@ -8,7 +8,7 @@ import {
   notifyConversationsChanged,
   updateTask,
 } from "@plugins/tasks-core/server";
-import { dropAndExit } from "../../shared/endpoints";
+import { dropAndExit } from "../../core/endpoints";
 
 export const handleDropAndExit = implement(dropAndExit, async ({ params }) => {
   const { id } = params;

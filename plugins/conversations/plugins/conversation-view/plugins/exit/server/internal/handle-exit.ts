@@ -1,7 +1,7 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { deleteConversation } from "@plugins/conversations/server";
 import { getConversation, markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
-import { exitConversation } from "../../shared/endpoints";
+import { exitConversation } from "../../core/endpoints";
 
 export const handleExit = implement(exitConversation, async ({ params }) => {
   const conversation = await getConversation(params.id);

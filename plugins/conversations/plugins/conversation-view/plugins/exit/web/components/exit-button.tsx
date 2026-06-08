@@ -4,7 +4,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { exitConversation } from "../../shared";
+import { exitConversation } from "../../core";
 
 export function ExitItem({
   conversation,

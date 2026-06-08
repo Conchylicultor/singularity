@@ -7,7 +7,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
-import { dropAndExit } from "../../shared";
+import { dropAndExit } from "../../core";
 
 export function DropAndExitItem({
   conversation,

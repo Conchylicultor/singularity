@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { handleResume } from "./internal/handle-resume";
-import { resumeConversationEndpoint } from "../shared/endpoints";
+import { resumeConversationEndpoint } from "../core/endpoints";
 
 export default {
   name: "Resume",
