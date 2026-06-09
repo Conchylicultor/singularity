@@ -11,6 +11,7 @@ export const codeBlock = defineBlock({
   }),
   label: "Code",
   icon: MdCode,
+  aliases: ["snippet", "syntax", "monospace", "pre"],
   empty: () => ({ code: "" }),
   // Typing ``` at the start of a text block converts it into a code block. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.

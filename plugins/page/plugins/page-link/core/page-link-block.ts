@@ -7,5 +7,6 @@ export const pageLinkBlock = defineBlock({
   schema: z.object({ pageId: z.string() }),
   label: "Link to page",
   icon: MdLink,
+  aliases: ["link", "reference", "subpage"],
   empty: () => ({ pageId: "" }),
 });

@@ -9,6 +9,7 @@ export const toDoBlock = defineBlock({
   schema: toDoDataSchema,
   label: "To-do",
   icon: MdCheckBox,
+  aliases: ["checkbox", "task", "checklist", "todo"],
   empty: () => ({ text: "", checked: false }),
   placeholder: "To-do",
   // Typing `[] ` or `[ ] ` at the start of a block converts it into a to-do,

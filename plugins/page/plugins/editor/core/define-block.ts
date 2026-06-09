@@ -12,6 +12,13 @@ export interface BlockHandle<T> {
   label?: string;
   /** Optional insert-menu icon. */
   icon?: ComponentType<{ className?: string }>;
+  /**
+   * Optional alternate search terms for the insert menus (e.g. `["hr", "rule"]`
+   * for a divider). The block-type pickers match these in addition to `label`,
+   * but rank them below label matches. Only meaningful for block types that also
+   * declare a `label` (presence of `label` is what gates menu inclusion).
+   */
+  aliases?: string[];
   /** Returns the default `data` payload for a freshly inserted block. */
   empty?: () => T;
   /**
@@ -58,6 +65,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   schema: S;
   label?: string;
   icon?: ComponentType<{ className?: string }>;
+  aliases?: string[];
   empty?: () => z.infer<S>;
   markdownPrefixes?: string[];
   marker?: string;
@@ -72,6 +80,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     parse: (data) => opts.schema.parse(data),
     label: opts.label,
     icon: opts.icon,
+    aliases: opts.aliases,
     empty: opts.empty,
     markdownPrefixes: opts.markdownPrefixes,
     marker: opts.marker,

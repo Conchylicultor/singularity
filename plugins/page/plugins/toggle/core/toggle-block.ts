@@ -9,6 +9,7 @@ export const toggleBlock = defineBlock({
   schema: toggleDataSchema,
   label: "Toggle",
   icon: MdChevronRight,
+  aliases: ["collapsible", "accordion", "details", "expand"],
   empty: () => ({ text: "" }),
   placeholder: "Toggle",
   // Typing `> ` at the start of a block converts it into a toggle, preserving

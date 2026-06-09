@@ -17,14 +17,35 @@ export function useInsertableBlocks(): BlockHandle<unknown>[] {
   );
 }
 
-/** Case-insensitive substring match on the block's menu `label`. */
+/**
+ * Case-insensitive match on a block's menu `label` plus its declared `aliases`,
+ * ranked by relevance: label matches outrank alias-only matches, and prefix
+ * matches outrank substring matches. Original contribution/slot order is
+ * preserved within each rank tier (stable sort).
+ */
 export function filterBlockTypes(
   blocks: BlockHandle<unknown>[],
   query: string,
 ): BlockHandle<unknown>[] {
   const q = query.trim().toLowerCase();
   if (!q) return blocks;
-  return blocks.filter((b) => b.label?.toLowerCase().includes(q));
+
+  // Lower rank = higher priority; Infinity = no match (filtered out).
+  const rank = (b: BlockHandle<unknown>): number => {
+    const label = b.label?.toLowerCase();
+    if (label?.startsWith(q)) return 0;
+    if (label?.includes(q)) return 1;
+    const aliases = b.aliases?.map((a) => a.toLowerCase());
+    if (aliases?.some((a) => a.startsWith(q))) return 2;
+    if (aliases?.some((a) => a.includes(q))) return 3;
+    return Infinity;
+  };
+
+  return blocks
+    .map((b, i) => ({ b, i, r: rank(b) }))
+    .filter((x) => x.r !== Infinity)
+    .sort((a, b) => a.r - b.r || a.i - b.i) // tie-break on original index → stable
+    .map((x) => x.b);
 }
 
 /**

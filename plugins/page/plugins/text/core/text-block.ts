@@ -6,6 +6,7 @@ export const textBlock = defineBlock({
   schema: textDataSchema,
   label: "Text",
   icon: MdNotes,
+  aliases: ["paragraph", "plain", "body", "p"],
   empty: () => ({ text: "" }),
   placeholder: "Type '/' for commands",
 });

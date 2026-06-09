@@ -12,6 +12,7 @@ export const dividerBlock = defineBlock({
   schema: z.object({}),
   label: "Divider",
   icon: MdHorizontalRule,
+  aliases: ["hr", "rule", "separator", "line", "horizontal rule", "---"],
   empty: () => ({}),
   // Typing --- at the start of a text block converts it into a divider. The
   // generic MarkdownShortcutPlugin reads this off the slot — no editor changes.

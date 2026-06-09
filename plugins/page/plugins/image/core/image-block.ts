@@ -11,5 +11,6 @@ export const imageBlock = defineBlock({
   }),
   label: "Image",
   icon: MdImage,
+  aliases: ["picture", "photo", "img", "media"],
   empty: () => ({}), // no attachmentId → placeholder UI
 });

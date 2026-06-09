@@ -6,6 +6,7 @@ export const bulletedListBlock = defineBlock({
   schema: textDataSchema,
   label: "Bulleted list",
   icon: MdFormatListBulleted,
+  aliases: ["bullet", "unordered", "ul", "list"],
   empty: () => ({ text: "" }),
   marker: "•",
   placeholder: "List",
