@@ -21,6 +21,7 @@ sibling plugins (e.g. publish's tree component).
 - Server:
   - Routes: `GET /api/plugin-view/tree`
 - Sub-plugins:
+  - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
   - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.

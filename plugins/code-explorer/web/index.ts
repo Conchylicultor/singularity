@@ -7,6 +7,8 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { ConvTreeButton } from "./components/conv-tree-button";
 import { globalFileTreePane, convFileTreePane } from "./panes";
 
+export { FileTree } from "./components/file-tree";
+
 export default {
   description:
     "Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree.",

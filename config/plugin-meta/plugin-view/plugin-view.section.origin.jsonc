@@ -15,6 +15,7 @@
   // - registrations  — registrations
   // - sub-plugins  — sub-plugins
   // - runtimes  — runtimes
+  // - file-tree  — file-tree
   // - source-path  — source-path
   "order": [],
   "hidden": []

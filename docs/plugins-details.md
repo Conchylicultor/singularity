@@ -528,12 +528,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Contributes: `Pane.Register` "global-file-tree", `Pane.Register` "conv-file-tree", `Shell.Sidebar` "Explorer" → `component`, `Conversation.ActionBar` → `ConvTreeButton`
     - Uses: `conversations.useConversationById`, `shell.Shell`
+    - Exports: Values: `FileTree`
   - Server:
     - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
     - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
     - Routes: `GET /api/code/:worktree/tree`, `GET /api/code/:worktree/file`, `GET /api/code/:worktree/diff`, `GET /api/code/:worktree/image`, `GET /api/code/:worktree/push`, `GET /api/code/:worktree/commit`
   - Cross-plugin:
-    - Imported by: `file-resolve`, `plugin-changes`
+    - Imported by: `file-resolve`, `file-tree`, `plugin-changes`
     - Endpoint callers: `commits-graph`, `diff`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`
   - Core:
     - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
@@ -2021,6 +2022,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Routes: `GET /api/plugin-view/tree`
       - Plugins:
+        - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
+          - Web:
+            - Contributes: `PluginViewSlots.Section` "file-tree" → `FileTreeSection`
+            - Uses: `code-explorer.FileTree`
         - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
           - Web:
             - Contributes: `PluginViewSlots.Section` "runtimes" → `RuntimesSection`
