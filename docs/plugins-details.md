@@ -1772,12 +1772,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `codeBlock`
       - Core:
         - Exports: Values: `codeBlock`
+    - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
+      - Web:
+        - Contributes: `Editor.Block` "divider" → `DividerBlock`
+        - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
+      - Core:
+        - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageOption`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
       - Cross-plugin:
-        - Slot contributors: `bulleted-list`, `code-block`, `image`, `page-link`, `text`, `to-do`, `toggle`
+        - Slot contributors: `bulleted-list`, `code-block`, `divider`, `image`, `page-link`, `text`, `to-do`, `toggle`
       - Server:
         - Uses: `database.db`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`

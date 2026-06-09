@@ -2,9 +2,14 @@
 # Auto-stamp Singularity-Conversation trailer on every commit when the pane's
 # conversation id is present in the env. No-op if missing (e.g. manual commit
 # from a shell that was not spawned by the tmux runtime).
+# --no-divider: never treat a `---` line in the message body as a patch/scissors
+# divider. Without it, a commit body containing a line that starts with `---`
+# (e.g. describing a `---` markdown shortcut) makes interpret-trailers stamp the
+# trailer mid-body, above the `---`, where %(trailers) can't see it — the
+# conversation-trailer check then reports it missing even though it is present.
 if [ -n "$SINGULARITY_CONVERSATION_ID" ]; then
   if ! grep -q "^Singularity-Conversation:" "$1" 2>/dev/null; then
-    git interpret-trailers --in-place \
+    git interpret-trailers --in-place --no-divider \
       --trailer "Singularity-Conversation=$SINGULARITY_CONVERSATION_ID" "$1"
   fi
 fi

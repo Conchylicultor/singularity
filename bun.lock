@@ -1430,6 +1430,10 @@
       "name": "@singularity/plugin-page-code-block",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/divider": {
+      "name": "@singularity/plugin-page-divider",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/editor": {
       "name": "@singularity/plugin-page-editor",
       "version": "0.0.1",
@@ -3383,6 +3387,8 @@
     "@singularity/plugin-page-bulleted-list": ["@singularity/plugin-page-bulleted-list@workspace:plugins/page/plugins/bulleted-list"],
 
     "@singularity/plugin-page-code-block": ["@singularity/plugin-page-code-block@workspace:plugins/page/plugins/code-block"],
+
+    "@singularity/plugin-page-divider": ["@singularity/plugin-page-divider@workspace:plugins/page/plugins/divider"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
 
