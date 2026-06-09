@@ -54,7 +54,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 - Description: Core database infrastructure. Connection pooling and DB readiness.
 - Load-bearing: yes
 - Cross-plugin:
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `chord-grid`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `track-mixer`, `turn-summary`, `tweakcn`
+  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `chord-grid`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `marker`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `track-mixer`, `turn-summary`, `tweakcn`
 - Core:
   - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
 - Server:

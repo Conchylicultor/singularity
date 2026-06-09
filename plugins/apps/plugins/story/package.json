@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-apps-story",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Story Builder — author a page as a block tree and render it through pluggable lenses.",
+  "singularity": {
+    "collapsed": true
+  }
+}

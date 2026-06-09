@@ -25,6 +25,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
     - **`sonata`** [28 sub-plugins] — Sonata — extensible piano and music app.
+    - **`story`** [1 sub-plugin] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
         - **`contributions`** — Central view of all plugin contributions aggregated by type.

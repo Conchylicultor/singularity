@@ -270,6 +270,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to Sonata.Toolbar.
           - Web:
             - Contributes: `Sonata.Toolbar` "playback" → `PlaybackControls`
+    - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.
+      - Plugins:
+        - **`marker`** — Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.
+          - Server:
+            - Uses: `database.db`
+            - DB schema: `plugins/apps/plugins/story/plugins/marker/server/internal/tables.ts`
+            - Exports: Values: `getStoryMark`, `setStoryMark`, `storiesResource`, `storyMark`
+          - Web:
+            - Exports: Types: `StoryMark`; Values: `markStory`, `unmarkStory`, `useIsStory`, `useStories`
+          - Shared:
+            - Exports: Types: `StoryMark`, `StoryMarksPayload`; Values: `clearStoryMark`, `setStoryMark`, `storiesResource`, `StoryMarkSchema`, `StoryMarksPayloadSchema`
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
@@ -1138,7 +1149,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Cross-plugin:
-    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `chord-grid`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `track-mixer`, `turn-summary`, `tweakcn`
+    - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `chord-grid`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `marker`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `track-mixer`, `turn-summary`, `tweakcn`
   - Core:
     - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
   - Server:

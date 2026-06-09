@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-marker",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories."
+}

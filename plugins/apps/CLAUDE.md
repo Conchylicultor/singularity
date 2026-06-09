@@ -21,6 +21,7 @@
   - **`home`** — Home — app launcher and entry point.
   - **`pages`** — Notion-like pages app.
   - **`sonata`** — Sonata — extensible piano and music app.
+  - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.
   - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
   - **`workflows`** — Workflows app.
 

@@ -264,6 +264,14 @@
       "name": "@singularity/plugin-apps-sonata-transport-bar",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/story": {
+      "name": "@singularity/plugin-apps-story",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/story/plugins/marker": {
+      "name": "@singularity/plugin-apps-story-marker",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio": {
       "name": "@singularity/plugin-apps-studio",
       "version": "0.0.1",
@@ -2841,6 +2849,10 @@
     "@singularity/plugin-apps-sonata-track-mixer": ["@singularity/plugin-apps-sonata-track-mixer@workspace:plugins/apps/plugins/sonata/plugins/track-mixer"],
 
     "@singularity/plugin-apps-sonata-transport-bar": ["@singularity/plugin-apps-sonata-transport-bar@workspace:plugins/apps/plugins/sonata/plugins/transport-bar"],
+
+    "@singularity/plugin-apps-story": ["@singularity/plugin-apps-story@workspace:plugins/apps/plugins/story"],
+
+    "@singularity/plugin-apps-story-marker": ["@singularity/plugin-apps-story-marker@workspace:plugins/apps/plugins/story/plugins/marker"],
 
     "@singularity/plugin-apps-studio": ["@singularity/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
 
