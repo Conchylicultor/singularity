@@ -45,7 +45,7 @@ export type LaunchControlProps = {
    */
   openMode?: PaneOpenMode;
   onLaunched?: (conversation: Conversation) => void;
-  variant?: "default" | "outline";
+  variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "icon";
   disabled?: boolean;
   className?: string;
@@ -104,7 +104,7 @@ export function LaunchControl({
   const setDefaultModel = useSetDefaultModel();
 
   const busy = disabled || launching !== null;
-  const btnVariant = variant === "default" ? "default" : "outline";
+  const btnVariant = variant;
   const blue =
     variant === "default"
       ? "bg-primary hover:bg-primary/90 text-primary-foreground"

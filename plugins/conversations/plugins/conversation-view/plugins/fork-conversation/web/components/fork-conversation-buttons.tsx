@@ -14,7 +14,7 @@ export function ForkConversationButtons({
         <MdForkRight className="size-3.5 text-muted-foreground" />
         <LaunchControl
           size="sm"
-          variant="outline"
+          variant="ghost"
           getRequest={() => ({ attemptId: conversation.attemptId })}
         />
       </div>

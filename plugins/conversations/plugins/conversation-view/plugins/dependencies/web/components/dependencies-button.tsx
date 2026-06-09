@@ -230,7 +230,7 @@ export function DependenciesButton({
           align="end"
           contentClassName="w-96 p-2"
           trigger={
-            <Button variant="outline" size="xs" aria-label="Blocked by">
+            <Button variant="ghost" size="xs" aria-label="Blocked by">
               {hasBlockedBy && (
                 <span className="text-[10px] tabular-nums">
                   {depTaskIds.size}
@@ -264,7 +264,7 @@ export function DependenciesButton({
           align="end"
           contentClassName="w-96 p-2"
           trigger={
-            <Button variant="outline" size="xs" aria-label="Blocking">
+            <Button variant="ghost" size="xs" aria-label="Blocking">
               <span className={cn("text-[10px]", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>
                 {"→"}
               </span>
