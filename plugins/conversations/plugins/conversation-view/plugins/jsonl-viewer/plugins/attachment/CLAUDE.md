@@ -10,12 +10,13 @@
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
   - Exports: Values: `JsonlViewerAttachment`
 - Cross-plugin:
-  - Slot contributors: `command-permissions`, `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
+  - Slot contributors: `command-permissions`, `deferred-tools-delta`, `edited-text-file`, `nested-memory`, `skill-listing`, `task-reminder`
 - Core:
   - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
 - Sub-plugins:
   - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
   - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
+  - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
   - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
   - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
   - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.

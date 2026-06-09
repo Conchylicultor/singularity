@@ -4,7 +4,7 @@ import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugi
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { CodeWithLineNumbers } from "./code-with-line-numbers";
+import { CodeWithLineNumbers } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
 import { ReadImageView } from "./read-image-view";
 
 type ReadInput = { file_path: string; offset?: number; limit?: number };

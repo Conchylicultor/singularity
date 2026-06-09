@@ -784,7 +784,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
                 - Exports: Values: `JsonlViewerAttachment`
               - Cross-plugin:
-                - Slot contributors: `command-permissions`, `deferred-tools-delta`, `nested-memory`, `skill-listing`, `task-reminder`
+                - Slot contributors: `command-permissions`, `deferred-tools-delta`, `edited-text-file`, `nested-memory`, `skill-listing`, `task-reminder`
               - Core:
                 - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
               - Plugins:
@@ -794,6 +794,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "deferred_tools_delta" → `DeferredToolsDeltaView`
+                - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
+                  - Web:
+                    - Contributes: `JsonlViewerAttachment.Renderer` "edited_text_file" → `EditedTextFileView`
                 - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "nested_memory" → `NestedMemoryAttachmentView`
@@ -803,6 +806,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
                   - Web:
                     - Contributes: `JsonlViewerAttachment.Renderer` "task_reminder" → `TaskReminderAttachmentView`
+            - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
+              - Web:
+                - Exports: Values: `CodeWithLineNumbers`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`

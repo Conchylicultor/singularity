@@ -58,7 +58,8 @@
         - Plugins:
           - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
           - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
-          - **`attachment`** [5 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
+          - **`attachment`** [6 sub-plugins] — Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
+          - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
           - **`event-counter`** — Displays the total event count in the conversation toolbar.
           - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
           - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
