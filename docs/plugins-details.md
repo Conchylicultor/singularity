@@ -649,9 +649,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `registerFieldStorageProvider`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Core:
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `validationIssues`
+    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `stringifyConfigValue`, `validationIssues`
   - Cross-plugin:
-    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/secret/config`, `fields/string-list/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tokens/typography/google-fonts`, `ui/tweakcn/community-browser`
+    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tokens/typography/google-fonts`, `ui/tweakcn/community-browser`
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
       - Web:
@@ -664,7 +664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/placeholder.Placeholder`, `primitives/slot-render.defineDispatchSlot`
         - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
       - Cross-plugin:
-        - Imported by: `config_v2/settings`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/secret/config`, `fields/string-list/config`, `fields/text/config`
+        - Imported by: `config_v2/settings`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
@@ -1527,8 +1527,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `string-list`, `text`
-    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/secret`, `fields/string-list`, `fields/text`
+    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `reorder-tree`, `secret`, `text`
+    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
@@ -1773,6 +1773,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.fieldSchemaWithDefault`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `fields/object.objectFieldType`
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
+    - **`reorder-tree`** — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "reorder-tree"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Types: `ReorderNode`, `ReorderTree`; Values: `reorderTreeFieldType`, `reorderTreeIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/reorder-tree/config`
+      - Plugins:
+        - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/reorder-tree.ReorderNode`, `fields/reorder-tree.ReorderTree`, `fields/reorder-tree.reorderTreeFieldType`
+            - Exports: Types: `NormalizedNode`, `ReorderTreeFieldDef`; Values: `normalizeNode`, `reorderTreeField`
     - **`secret`** — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
       - Web:
         - Contributes: `Fields.Identity` "secret"
@@ -1797,23 +1814,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `ConfigV2SecretMeta`, `SecretFieldDef`; Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`
           - Cross-plugin:
             - Imported by: `auth/google`, `auth/notion`
-    - **`string-list`** — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
-      - Web:
-        - Contributes: `Fields.Identity` "string-list"
-        - Uses: `fields.Fields`
-      - Core:
-        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
-        - Exports: Values: `stringListFieldType`, `stringListIdentity`
-      - Cross-plugin:
-        - Imported by: `fields/string-list/config`
-      - Plugins:
-        - **`config`** — String-list field type: config-render capability (one-item-per-line textarea for config-v2.fields.renderer) plus the stringListField factory.
-          - Web:
-            - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
-            - Uses: `config_v2/fields.Fields`
-          - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/string-list.stringListFieldType`
-            - Exports: Types: `StringListFieldDef`; Values: `stringListField`
     - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "text"
@@ -1911,8 +1911,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`typescript`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
-            - Uses: `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`, `framework/plugin-id.asPath`, `framework/plugin-id.asPluginId`, `plugin-meta/barrel-import.AUTO_STUB_CSS`, `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`, `plugin-meta/barrel-import.AutoStubEntry`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.DocFact`, `plugin-meta/facets.Facet`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/parse-utils.findMarkerCalls`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginNode`, `plugin-meta/plugin-tree.PluginTree`
-            - Exports: Types: `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `PluginNode`, `PluginTree`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `reorderableSlotsManifestPath`, `resolveOriginAnnotations`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `standardPluginDirs`
+            - Uses: `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`, `config_v2.stringifyConfigValue`, `framework/plugin-id.asPath`, `framework/plugin-id.asPluginId`, `plugin-meta/barrel-import.AUTO_STUB_CSS`, `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`, `plugin-meta/barrel-import.AutoStubEntry`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.DocFact`, `plugin-meta/facets.Facet`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/parse-utils.findMarkerCalls`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginNode`, `plugin-meta/plugin-tree.PluginTree`
+            - Exports: Types: `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PluginNode`, `PluginTree`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `reorderableSlotsManifestPath`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `plugin-meta/facets`
@@ -2861,7 +2861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Cross-plugin:
     - Imported by: `primitives/collapsible-wrap`, `reorder/edit-mode`
   - Shared:
-    - Exports: Types: `ReorderableSlot`, `ReorderDirective`; Values: `reorderableSlots`, `reorderDirectiveDescriptor`
+    - Exports: Types: `ReorderableSlot`; Values: `reorderableSlots`, `reorderDirectiveDescriptor`
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
       - Web:

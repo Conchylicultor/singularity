@@ -11,6 +11,8 @@
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Types: `ReorderNode`, `ReorderTree`; Values: `reorderTreeFieldType`, `reorderTreeIdentity`
+- Cross-plugin:
+  - Imported by: `fields/reorder-tree/config`
 - Sub-plugins:
   - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
 

@@ -48,13 +48,8 @@ capability. Leaf plugins under `plugins/` register one type each.
   - Slots: `Fields.Identity`
   - Exports: Values: `Fields`
 - Cross-plugin:
-<<<<<<< .merge_file_A6EBjr
-  - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `string-list`, `text`
-  - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/secret`, `fields/string-list`, `fields/text`
-=======
   - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `reorder-tree`, `secret`, `text`
-  - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `reorder-tree`, `secret`, `text`
->>>>>>> .merge_file_gRVVk3
+  - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/text`
 - Core:
   - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
 - Sub-plugins:
