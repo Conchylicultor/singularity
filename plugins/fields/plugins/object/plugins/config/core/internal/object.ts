@@ -3,10 +3,10 @@ import {
   fieldSchemaWithDefault,
   type FieldDef,
   type FieldMeta,
-  type FieldType,
   type FieldsRecord,
   type InferFieldsObject,
 } from "@plugins/config_v2/core";
+import type { FieldType } from "@plugins/fields/core";
 import { objectFieldType } from "@plugins/fields/plugins/object/core";
 
 export interface ObjectFieldDef<F extends FieldsRecord = FieldsRecord>

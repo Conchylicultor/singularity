@@ -12,13 +12,9 @@ const SKIPPED_PLUGINS: ReadonlyArray<string> = [];
 // Sanctioned, TEMPORARY cross-plugin barrel re-exports for gradual migrations.
 // Key: `${reexporting-plugin}/${runtime} -> ${source-specifier}`. Normally forbidden
 // by the cross-plugin-reexport rule; each entry is a scoped, documented exception
-// removed once all importers move to the source barrel directly.
-const REEXPORT_EXCEPTIONS: ReadonlySet<string> = new Set([
-  // Unified-fields migration (research/2026-06-07-global-unify-fieldtype-token.md, S1→S4):
-  // config_v2/core temporarily re-exports the FieldType token from fields/core.
-  // Remove with the shim in task 8.
-  "config_v2/core -> @plugins/fields/core",
-]);
+// removed once all importers move to the source barrel directly. Currently empty —
+// add a scoped entry here only while a gradual token/API relocation is in flight.
+const REEXPORT_EXCEPTIONS: ReadonlySet<string> = new Set([]);
 
 // Framework-level files exempt from cross-plugin boundary checks (both the
 // import grammar (R4) and the "default-import is registry-only" rule (R5)).

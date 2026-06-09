@@ -1,8 +1,8 @@
 # fields
 
 The global unified **fields** primitive: a single `type × capability` matrix
-shared by every data surface (data-view today; config validation, Sonata, and
-the config_v2 token in later tasks).
+shared by every data surface (data-view, Sonata, and config_v2 — which now sources
+its `FieldType` token directly from `fields/core`).
 
 ## Mental model
 
