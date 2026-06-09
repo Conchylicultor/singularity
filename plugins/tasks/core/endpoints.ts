@@ -111,19 +111,6 @@ export const updateTask = defineEndpoint({
   response: TaskResponseSchema,
 });
 
-export const TaskAttachmentSchema = z.object({
-  id: z.string(),
-  filename: z.string(),
-  mime: z.string(),
-  size: z.number(),
-  createdAt: dateString(),
-});
-
-export const getTaskAttachments = defineEndpoint({
-  route: "GET /api/tasks/:id/attachments",
-  response: z.array(TaskAttachmentSchema),
-});
-
 export const setTaskAutoStart = defineEndpoint({
   route: "POST /api/tasks/:id/auto-start",
   body: SetAutoStartBodySchema,

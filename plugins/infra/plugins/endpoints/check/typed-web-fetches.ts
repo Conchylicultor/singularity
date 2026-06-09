@@ -11,16 +11,15 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// Remaining raw fetch("/api/...") call site. The keepalive/multipart/binary
-// special-transport cases now flow through fetchEndpoint via body/response
-// codecs (blob()/multipart()). The sole holdout builds its URL polymorphically
-// at runtime (/api/${ownerType}s/:id/attachments), so it has no literal
-// defineEndpoint to derive from — tracked for migration in a follow-up task,
-// after which this allowlist empties and the check rejects all raw /api/
-// fetches unconditionally.
-const ALLOWED = new Map<string, number>([
-  ["plugins/infra/plugins/attachments/web/internal/list.ts", 1], // polymorphic runtime route
-]);
+// The migration is complete: every web call site now goes through
+// fetchEndpoint/useEndpoint, including the special-transport cases
+// (keepalive/multipart/binary via blob()/multipart() codecs). The former
+// holdout — attachments' polymorphic runtime route — was dissolved into the
+// single registry-backed listAttachmentsEndpoint. No allowlisted holdout
+// remains, so this check rejects EVERY hardcoded /api/... web fetch
+// unconditionally. The cap/Map machinery is kept (with zero entries) so a
+// future, deliberately-justified exception can be added back explicitly.
+const ALLOWED = new Map<string, number>([]);
 
 const check: Check = {
   id: "endpoints:typed-web-fetches",

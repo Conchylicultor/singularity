@@ -19,7 +19,6 @@ export {
   insertTaskBetween,
   getTask,
   updateTask,
-  getTaskAttachments,
   setTaskAutoStart,
   clearTaskAutoStart,
   addTaskDependency,

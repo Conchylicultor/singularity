@@ -45,6 +45,7 @@ export interface AttachmentLink {
 }
 
 const linkSources: AttachmentLinkSource[] = [];
+const links = new Map<string, AttachmentLink>();
 
 // Create a `<owner>_attachments` join table linking a consumer's domain table
 // to `_attachments`, and return a handle whose methods close over it. Both
@@ -52,7 +53,8 @@ const linkSources: AttachmentLinkSource[] = [];
 // whose last link disappears. Module-load side effect — every consumer's
 // `tables*.ts` / `schema*.ts` runs at import time, registering its link.
 export function defineLink<T extends OwnerTable>(ownerTable: T): AttachmentLink {
-  const name = `${getTableName(ownerTable)}_attachments`;
+  const ownerType = getTableName(ownerTable);
+  const name = `${ownerType}_attachments`;
   const table = pgTable(
     name,
     {
@@ -68,7 +70,7 @@ export function defineLink<T extends OwnerTable>(ownerTable: T): AttachmentLink 
   );
   linkSources.push({ table, attachmentIdCol: table.attachmentId });
 
-  return Object.freeze({
+  const handle = Object.freeze({
     table,
     async set(ownerId, ids) {
       const wanted = Array.from(new Set(ids));
@@ -119,6 +121,15 @@ export function defineLink<T extends OwnerTable>(ownerTable: T): AttachmentLink 
       }));
     },
   } satisfies AttachmentLink);
+
+  links.set(ownerType, handle);
+  return handle;
+}
+
+// Look up the link handle for a given owner-type key (the owner table name,
+// e.g. "tasks"). Backs the central list-attachments dispatch endpoint.
+export function getLink(ownerType: string): AttachmentLink | undefined {
+  return links.get(ownerType);
 }
 
 export function getRegisteredLinks(): readonly AttachmentLinkSource[] {

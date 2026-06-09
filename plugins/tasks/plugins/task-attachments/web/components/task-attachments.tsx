@@ -1,6 +1,5 @@
-import { useEffect, useState } from "react";
-import { listAttachments, type Attachment } from "@plugins/infra/plugins/attachments/web";
-import { toast } from "@plugins/notifications/web";
+import { listAttachmentsEndpoint } from "@plugins/infra/plugins/attachments/core";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
   CollapsibleContent,
@@ -13,18 +12,10 @@ function formatSize(bytes: number): string {
 }
 
 export function TaskAttachments({ taskId }: { taskId: string }) {
-  const [attachments, setAttachments] = useState<Attachment[] | null>(null);
-
-  useEffect(() => {
-    listAttachments("task", taskId).then(setAttachments).catch((err: unknown) => {
-      toast({
-        type: "task",
-        title: "Failed to load attachments",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
-    });
-  }, [taskId]);
+  const { data: attachments } = useEndpoint(listAttachmentsEndpoint, {
+    ownerType: "tasks",
+    id: taskId,
+  });
 
   if (!attachments || attachments.length === 0) return null;
 

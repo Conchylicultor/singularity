@@ -12,7 +12,6 @@ import {
 } from "./internal/handle-dependencies";
 import { handleInsertBetween } from "./internal/handle-insert-between";
 import { handleRepoInfo } from "./internal/handle-repo-info";
-import { handleTaskAttachments } from "./internal/handle-task-attachments";
 import { pushIngestJob, runInitialReconcile } from "./internal/push-watcher";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { refAdvanced } from "@plugins/infra/plugins/git-watcher/server";
@@ -28,7 +27,6 @@ import {
   insertTaskBetween,
   getTask,
   updateTask,
-  getTaskAttachments,
   setTaskAutoStart,
   clearTaskAutoStart,
   addTaskDependency,
@@ -47,7 +45,6 @@ export default {
     [insertTaskBetween.route]: handleInsertBetween,
     [getTask.route]: handleGet,
     [updateTask.route]: handleUpdate,
-    [getTaskAttachments.route]: handleTaskAttachments,
     [setTaskAutoStart.route]: handleSetAutoStart,
     [clearTaskAutoStart.route]: handleClearAutoStart,
     [addTaskDependency.route]: handleAddDependency,
