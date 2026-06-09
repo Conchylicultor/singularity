@@ -98,6 +98,8 @@ export const handleCreateChain = implement(createTaskChain, async ({ body }) => 
         folderId,
         groupId,
         title: fallbackTitle,
+        // Draft-form titles are always a synthesised summary, upgraded by Haiku.
+        titleAuto: true,
         description,
         author,
       });

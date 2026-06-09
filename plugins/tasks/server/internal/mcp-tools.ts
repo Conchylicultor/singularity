@@ -113,6 +113,8 @@ agent see the actual outcome instead of executing a stale plan.`,
       folderId: currentTaskId,
       groupId: currentTaskId,
       title,
+      // The agent authored this title deliberately — keep it in the launch prompt.
+      titleAuto: false,
       description: description ?? null,
       author: conversationId,
     });

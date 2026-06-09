@@ -16,6 +16,9 @@ export interface CreateTaskInput {
   folderId?: string | null;
   groupId?: string | null;
   title: string;
+  // Defaults to true (machine-generated label). Pass false when the title is
+  // human/agent-authored (explicit API/MCP title) so buildTaskPrompt keeps it.
+  titleAuto?: boolean;
   author?: string;
   rank?: Rank;
   description?: string | null;
@@ -42,6 +45,7 @@ export async function createTask(input: CreateTaskInput) {
     folderId,
     groupId: input.groupId ?? null,
     title: input.title,
+    titleAuto: input.titleAuto ?? true,
     author: input.author,
     rank: rank.toJSON(),
     description: input.description ?? null,
@@ -64,7 +68,12 @@ export async function createTask(input: CreateTaskInput) {
 
 export async function updateTask(id: string, patch: UpdateTaskPatch) {
   const dbPatch: Record<string, unknown> = { updatedAt: new Date() };
-  if (typeof patch.title === "string") dbPatch.title = patch.title;
+  if (typeof patch.title === "string") {
+    dbPatch.title = patch.title;
+    // An explicit title write is human-authored — never re-summarized into the
+    // launch prompt, and protected from the Haiku CAS upgrade.
+    dbPatch.titleAuto = false;
+  }
   if (patch.description === null || typeof patch.description === "string") {
     dbPatch.description = patch.description;
   }
@@ -120,7 +129,9 @@ export async function updateTaskTitle(
 ): Promise<boolean> {
   const [updated] = await db
     .update(_tasks)
-    .set({ title, updatedAt: new Date() })
+    // Haiku-generated label: keep titleAuto true so the title stays out of the
+    // launch prompt (it is just a summary of the description).
+    .set({ title, titleAuto: true, updatedAt: new Date() })
     .where(
       and(
         eq(_tasks.id, id),

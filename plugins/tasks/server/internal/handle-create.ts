@@ -24,6 +24,8 @@ export const handleCreate = implement(createTaskEndpoint, async ({ body }) => {
   const row = await createTask({
     folderId: body.folderId ?? null,
     title,
+    // A caller-supplied title is human-authored; a synthesised fallback is not.
+    titleAuto: !explicitTitle,
     description,
     author: body.author ?? "user",
     rank: body.rank ? Rank.from(body.rank) : undefined,

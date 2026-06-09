@@ -38,6 +38,12 @@ export const _tasks = pgTable(
       onDelete: "set null",
     }),
     title: text("title").notNull(),
+    // Whether `title` is a machine-generated label (a Haiku/fallback summary of
+    // the description) rather than a human-authored one. When true,
+    // buildTaskPrompt omits the title from the launch prompt — it would only
+    // duplicate the description it was derived from. Flipped to false on any
+    // explicit title write (inline edit, MCP add_task, explicit API title).
+    titleAuto: boolean("title_auto").notNull().default(true),
     description: text("description"),
     // "user" for UI-created tasks, a conversation id for agent-created ones.
     author: text("author"),
