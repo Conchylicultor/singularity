@@ -9,8 +9,8 @@ import {
   Avatar,
   AvatarPicker,
   DEFAULT_AGENT_AVATAR,
-  type SvgNode,
 } from "@plugins/primitives/plugins/avatar/web";
+import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Button } from "@/components/ui/button";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";

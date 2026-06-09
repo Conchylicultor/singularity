@@ -2,8 +2,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
   Avatar,
   DEFAULT_AGENT_AVATAR,
-  type SvgNode,
 } from "@plugins/primitives/plugins/avatar/web";
+import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import {
   CONV_STATUS_DOT,
   type ConversationItemConv,

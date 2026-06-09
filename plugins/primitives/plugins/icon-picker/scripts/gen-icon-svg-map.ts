@@ -4,7 +4,7 @@
  * covering all Material Design icons + curated aliases. Run manually when
  * react-icons version or icon-metadata.json changes.
  *
- * Usage: bun run plugins/primitives/plugins/avatar/scripts/gen-icon-svg-map.ts
+ * Usage: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts
  */
 import { createHash } from "crypto";
 import { readFileSync, writeFileSync } from "fs";

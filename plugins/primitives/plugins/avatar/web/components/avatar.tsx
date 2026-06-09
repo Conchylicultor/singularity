@@ -1,7 +1,7 @@
 import { createElement, forwardRef } from "react";
 import { cn } from "@/lib/utils";
+import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { avatarColorClass } from "../internal/colors";
-import type { SvgNode } from "../internal/icons";
 
 export type AvatarSize = "xs" | "sm" | "md" | "lg";
 

@@ -30,7 +30,7 @@ const check: Check = {
       return {
         ok: false,
         message: "icon-svg-map.generated.ts does not exist",
-        hint: "Run: bun run plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts",
+        hint: "Run: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts",
       };
     }
 
@@ -39,7 +39,7 @@ const check: Check = {
       return {
         ok: false,
         message: "icon-svg-map.generated.ts is missing the @inputs-hash header",
-        hint: "Regenerate: bun run plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts",
+        hint: "Regenerate: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts",
       };
     }
     const fileHash = hashMatch[1];
@@ -53,7 +53,7 @@ const check: Check = {
       return {
         ok: false,
         message: `icon-svg-map.generated.ts is stale (file=${fileHash}, expected=${expectedHash})`,
-        hint: "Regenerate: bun run plugins/primitives/plugins/avatar/server/internal/gen-icon-svg-map.ts",
+        hint: "Regenerate: bun run plugins/primitives/plugins/icon-picker/scripts/gen-icon-svg-map.ts",
       };
     }
 

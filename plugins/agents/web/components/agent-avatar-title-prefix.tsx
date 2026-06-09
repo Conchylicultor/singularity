@@ -1,5 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Avatar, DEFAULT_AGENT_AVATAR, type SvgNode } from "@plugins/primitives/plugins/avatar/web";
+import { Avatar, DEFAULT_AGENT_AVATAR } from "@plugins/primitives/plugins/avatar/web";
+import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";

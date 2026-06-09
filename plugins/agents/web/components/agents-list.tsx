@@ -13,8 +13,8 @@ import {
   Avatar,
   AVATAR_COLOR_KEYS,
   DEFAULT_AGENT_AVATAR,
-  type SvgNode,
 } from "@plugins/primitives/plugins/avatar/web";
+import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import {
   MultiSelectProvider,
   SelectionBar,

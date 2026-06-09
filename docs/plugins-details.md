@@ -2044,11 +2044,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
       - Web:
         - Exports: Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`; Values: `JumpToBottomButton`, `useStickyScroll`
-    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
+    - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
-        - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`, `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `SvgNode`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`, `extractSvgNodes`, `loadFullIconSet`
-      - Server:
-        - Exports: Values: `resolveIconSvgNodesJson`
+        - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`
     - **`badge`** — Semantic badge primitive: size × variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.
       - Web:
         - Exports: Types: `BadgeProps`, `BadgeSize`, `BadgeVariant`; Values: `Badge`, `formatStatusLabel`
@@ -2138,6 +2136,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
+    - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
+      - Core:
+        - Exports: Types: `SvgNode`
+      - Web:
+        - Exports: Types: `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `IconPickerProps`, `IconSelection`, `SvgNode`; Values: `extractSvgNodes`, `IconPicker`, `loadFullIconSet`
+      - Server:
+        - Exports: Values: `resolveIconSvgNodes`, `resolveIconSvgNodesJson`
     - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
       - Web:
         - Exports: Types: `LaunchAgentPopoverProps`, `LaunchControlProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchControl`, `useLaunchConversation`

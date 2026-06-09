@@ -14,7 +14,7 @@ export interface CollectedEntry {
 
 export const serverEntries: CollectedEntry[] = [
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/server"), dependsOn: ["database", "infra/plugins/endpoints", "tasks-core"] },
-  { pluginPath: "agents", id: "agents", loader: () => import("@plugins/agents/server"), dependsOn: ["conversations", "conversations/plugins/model-provider", "database", "infra/plugins/attachments", "infra/plugins/endpoints", "primitives/plugins/avatar", "primitives/plugins/rank", "tasks-core"] },
+  { pluginPath: "agents", id: "agents", loader: () => import("@plugins/agents/server"), dependsOn: ["conversations", "conversations/plugins/model-provider", "database", "infra/plugins/attachments", "infra/plugins/endpoints", "primitives/plugins/icon-picker", "primitives/plugins/rank", "tasks-core"] },
   { pluginPath: "apps/plugins/deploy/plugins/servers", id: "apps.deploy.servers", loader: () => import("@plugins/apps/plugins/deploy/plugins/servers/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/secrets"] },
   { pluginPath: "apps/plugins/sonata/plugins/audio/plugins/piano", id: "apps.sonata.audio.piano", loader: () => import("@plugins/apps/plugins/sonata/plugins/audio/plugins/piano/server"), dependsOn: ["infra/plugins/asset-mirror"] },
   { pluginPath: "apps/plugins/sonata/plugins/audio/plugins/soundfont", id: "apps.sonata.audio.soundfont", loader: () => import("@plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/server"), dependsOn: ["infra/plugins/asset-mirror"] },
@@ -123,8 +123,9 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/page-link", id: "page.page-link", loader: () => import("@plugins/page/plugins/page-link/server"), dependsOn: ["page/plugins/links"] },
   { pluginPath: "plugin-meta/plugins/plugin-health", id: "plugin-meta.plugin-health", loader: () => import("@plugins/plugin-meta/plugins/plugin-health/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/entity-extensions", "infra/plugins/mcp", "infra/plugins/paths", "infra/plugins/worktree", "tasks-core", "tasks/plugins/task-preprompt"] },
   { pluginPath: "plugin-meta/plugins/plugin-view", id: "plugin-meta.plugin-view", loader: () => import("@plugins/plugin-meta/plugins/plugin-view/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },
-  { pluginPath: "primitives/plugins/avatar", id: "primitives.avatar", loader: () => import("@plugins/primitives/plugins/avatar/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "primitives/plugins/avatar", id: "primitives.avatar", loader: () => import("@plugins/primitives/plugins/avatar/server"), dependsOn: ["config_v2", "primitives/plugins/icon-picker"] },
   { pluginPath: "primitives/plugins/commit-list", id: "primitives.commit-list", loader: () => import("@plugins/primitives/plugins/commit-list/server"), dependsOn: ["infra/plugins/paths"] },
+  { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/server"), dependsOn: [] },
   { pluginPath: "primitives/plugins/rank", id: "primitives.rank", loader: () => import("@plugins/primitives/plugins/rank/server"), dependsOn: ["database"] },
   { pluginPath: "reorder/plugins/groups", id: "reorder.groups", loader: () => import("@plugins/reorder/plugins/groups/server"), dependsOn: ["database", "infra/plugins/endpoints", "primitives/plugins/rank"] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },

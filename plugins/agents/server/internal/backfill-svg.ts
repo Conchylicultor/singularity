@@ -1,6 +1,6 @@
 import { and, eq, isNotNull, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { resolveIconSvgNodesJson } from "@plugins/primitives/plugins/avatar/server";
+import { resolveIconSvgNodesJson } from "@plugins/primitives/plugins/icon-picker/server";
 import { _agents } from "./tables";
 
 export async function backfillAgentSvgNodes(): Promise<void> {

@@ -8,17 +8,9 @@ export {
   avatarColorClass,
   type AvatarColor,
 } from "./internal/colors";
-export {
-  DEFAULT_AGENT_AVATAR,
-  extractSvgNodes,
-  loadFullIconSet,
-  type FullIconSet,
-  type FullIconEntry,
-  type FullIconCategory,
-  type SvgNode,
-} from "./internal/icons";
+export { DEFAULT_AGENT_AVATAR } from "./internal/default-avatar";
 
 export default {
-  description: "Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.",
+  description: "Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.",
   contributions: [],
 } satisfies PluginDefinition;
