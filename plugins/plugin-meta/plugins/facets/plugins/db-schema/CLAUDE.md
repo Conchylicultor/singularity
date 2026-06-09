@@ -11,6 +11,7 @@ Part of the unified facet-based docgen pipeline. See `research/2026-05-20-global
 ## Plugin reference
 
 - Core:
+  - Uses: `plugin-meta/facets.defineFacet`
   - Exports: Types: `DbSchemaFacetData`, `EntityExtension`, `EntityExtensionRef`, `TableDef`; Values: `dbSchemaFacetDef`, `dbSchemaToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin tables table in the Studio Contributions view.

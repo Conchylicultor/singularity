@@ -12,8 +12,10 @@ One `parcel.subscribe(CLAUDE_PROJECTS_DIR)` covers all active conversations. A p
 
 - Description: Single @parcel/watcher-based JSONL transcript watcher. Replaces two independent 500ms pollers with one fan-out subscription.
 - Server:
-  - Uses: `tasks-core.getConversationClaudeSessionId`
+  - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.CLAUDE_PROJECTS_DIR`, `tasks-core.getConversationClaudeSessionId`
   - Exports: Values: `findTranscriptPath`, `readJsonlEvents`, `watchTranscript`
+- Cross-plugin:
+  - Imported by: `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
 - Core:
   - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `extractPreprompt`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `TokenUsageSchema`, `wrapPreprompt`
 

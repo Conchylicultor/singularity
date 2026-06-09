@@ -7,16 +7,16 @@
 - Description: Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
 - Web:
   - Contributes: `ActionBar.Item` → `BellButton`
-  - Uses: `shell.ShellCommands`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
   - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
 - Server:
-  - Uses: `database.db`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`
   - DB schema: `plugins/notifications/server/internal/tables.ts`
   - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`
   - Register: `defineJob('notifications.ttl-cleanup')`
   - Resources: `notifications` (push)
 - Cross-plugin:
-  - Imported by: `ask-user-question`, `auth`, `branch`, `build`, `build-fix`, `build-logs`, `conversation-category`, `conversations`, `crashes`, `dependencies`, `draw-on-app`, `drop-and-exit`, `drop-dependents`, `events-test`, `exit`, `floating-bar`, `fork`, `hold-and-exit`, `launch-prompts`, `mutation-errors`, `prompt-input`, `prompt-templates`, `push-and-exit`, `queue`, `resume`, `screenshot`, `summary`, `task-attachments`, `task-draft-form`, `task-preprompt`
+  - Imported by: `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `crashes`, `crashes/mutation-errors`, `database/fork`, `debug/queue`, `events-test`, `floating-bar`, `screenshot`, `screenshot/draw-on-app`, `tasks/task-attachments`, `tasks/task-draft-form`, `tasks/task-preprompt`
 - Shared:
   - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
 

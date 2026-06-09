@@ -7,13 +7,17 @@
 - Description: Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
 - Web:
   - Contributes: `ThemeEngine.PresetSource` "Preset Source"
+  - Uses: `infra/endpoints.useEndpoint`, `ui/theme-engine.ThemeEngine`
 - Server:
-  - Uses: `database.db`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - DB schema: `plugins/ui/plugins/tweakcn/server/internal/tables.ts`
   - Exports: Values: `_tweakcnThemes`
   - Routes: `GET /api/tweakcn/themes`, `POST /api/tweakcn/themes`, `DELETE /api/tweakcn/themes/:id`
 - Core:
+  - Uses: `infra/endpoints.defineEndpoint`
   - Exports: Types: `TweakcnTheme`; Values: `convertTweakcnTheme`, `deleteTweakcnTheme`, `importTweakcnTheme`, `listTweakcnThemes`, `TweakcnThemeSchema`
+- Cross-plugin:
+  - Imported by: `ui/tweakcn/community-browser`
 - Sub-plugins:
   - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
 

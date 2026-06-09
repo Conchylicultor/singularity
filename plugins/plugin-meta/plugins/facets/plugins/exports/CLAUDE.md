@@ -11,6 +11,7 @@ each exported symbol by reading cross-plugin import data from the cross-refs fac
 ## Plugin reference
 
 - Core:
+  - Uses: `framework/plugin-id.RUNTIME_FOLDERS`, `plugin-meta/facets.defineFacet`
   - Exports: Types: `ExportedSymbol`, `ExportsData`; Values: `exportsFacetDef`, `exportsToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin exports table in the Studio Contributions view.

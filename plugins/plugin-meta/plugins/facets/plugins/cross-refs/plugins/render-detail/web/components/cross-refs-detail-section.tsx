@@ -8,7 +8,15 @@ import {
   type PluginNode,
   type ExportRuntime,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import type { CrossRefsData } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
+import {
+  RUNTIME_FOLDERS,
+  asPath,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
+import type {
+  CrossRefsData,
+  ApiUse,
+} from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 
 // Renders the cross-refs facet's own data. Read `node.facets[id]` directly (as
 // every render host does) rather than importing the build-time `facets/core`
@@ -16,7 +24,7 @@ import type { CrossRefsData } from "@plugins/plugin-meta/plugins/facets/plugins/
 // The type-only import from the facet core is erased and safe.
 const CROSS_REFS_FACET_ID = "cross-refs";
 
-const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "core", "shared"];
+const RUNTIMES = RUNTIME_FOLDERS;
 
 export function CrossRefsDetailSection({ node }: { node: PluginNode }) {
   const data = node.facets?.[CROSS_REFS_FACET_ID] as CrossRefsData | undefined;
@@ -60,7 +68,7 @@ function UsesGroup({
   uses,
 }: {
   runtime: ExportRuntime;
-  uses: string[];
+  uses: ApiUse[];
 }) {
   return (
     <div className="flex flex-col gap-0.5">
@@ -73,10 +81,11 @@ function UsesGroup({
       <div className="ml-1 flex flex-col gap-px border-l border-border/50 pl-3">
         {uses.map((u) => (
           <code
-            key={u}
+            key={`${u.plugin}:${u.symbol ?? ""}`}
             className="truncate px-1.5 py-px font-mono text-xs text-foreground"
           >
-            {u}
+            {asPath(u.plugin)}
+            {u.symbol ? "." + u.symbol : ""}
           </code>
         ))}
       </div>
@@ -86,7 +95,7 @@ function UsesGroup({
 
 // ── Imported-by banner (ported from public-api-section.tsx) ──────────
 
-function ImportedByBanner({ names }: { names: string[] }) {
+function ImportedByBanner({ names }: { names: PluginId[] }) {
   const [expanded, setExpanded] = useState(false);
   const threshold = 4;
   const visible = expanded ? names : names.slice(0, threshold);
@@ -97,7 +106,7 @@ function ImportedByBanner({ names }: { names: string[] }) {
       <span className="mr-0.5 font-medium">Imported by</span>
       {visible.map((name, i) => (
         <span key={name} className="inline-flex items-center">
-          <PluginLink name={name} />
+          <PluginLink name={name} label={asPath(name)} />
           {i < visible.length - 1 && (
             <span className="text-muted-foreground/40">,</span>
           )}

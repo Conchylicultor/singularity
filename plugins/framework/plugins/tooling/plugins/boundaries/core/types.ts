@@ -1,3 +1,5 @@
+import type { RuntimeFolder } from "@plugins/framework/plugins/plugin-id/core";
+
 export interface ZoneDefinition {
   name: string;
   match: string;
@@ -24,7 +26,7 @@ export interface BoundaryConfig {
   zones: ZoneDefinition[];
 
   /** Which runtimes each runtime can import from. Default-deny: unlisted = blocked. */
-  runtimes: Record<string, string[]>;
+  runtimes: Record<RuntimeFolder, RuntimeFolder[]>;
 
   /** Specific full-zone pairs that bypass the runtime check. "source.runtime -> target.runtime" */
   runtimeExceptions?: string[];

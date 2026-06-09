@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/prompt-templates`, `floating-bar`
 - Web:
   - Exports: Types: `FloatingActionFadeInProps`, `FloatingActionProps`, `FloatingAnchor`; Values: `FloatingAction`, `FloatingActionFadeIn`
 

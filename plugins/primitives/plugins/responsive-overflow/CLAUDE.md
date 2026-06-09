@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Progressively hides children that don't fit the container width. Exposes ResponsiveOverflow component and useResponsiveOverflow hook.
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/prompt-templates`
 - Web:
   - Exports: Types: `ResponsiveOverflowProps`, `UseResponsiveOverflowHandle`, `UseResponsiveOverflowOptions`; Values: `ResponsiveOverflow`, `useResponsiveOverflow`
 

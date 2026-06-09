@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Sortable/filterable flex-layout data table primitive.
+- Cross-plugin:
+  - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/profiling/runtime`, `primitives/data-view/table`
 - Web:
   - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
 

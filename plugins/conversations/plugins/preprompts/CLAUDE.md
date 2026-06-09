@@ -12,6 +12,8 @@
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`
   - Exports: Values: `resolvePreprompt`, `resolvePrepromptItem`
+- Cross-plugin:
+  - Imported by: `conversations`, `conversations/conversation-preprompt`, `primitives/launch`, `tasks/task-draft-form`, `tasks/task-preprompt`
 - Shared:
   - Exports: Values: `prepromptsConfig`
 

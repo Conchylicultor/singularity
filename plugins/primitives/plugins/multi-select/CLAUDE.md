@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
+- Cross-plugin:
+  - Imported by: `agents`, `page/editor`, `tasks/task-list/tree`
 - Web:
   - Exports: Types: `MultiSelectHandle`, `MultiSelectItemHandle`, `MultiSelectProviderProps`, `SelectionBarProps`, `SelectionCheckboxProps`; Values: `MultiSelectProvider`, `SelectionBar`, `SelectionCheckbox`, `useMultiSelect`, `useMultiSelectItem`
 

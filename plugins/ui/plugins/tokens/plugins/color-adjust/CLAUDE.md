@@ -8,7 +8,7 @@
 - Web:
   - Slots: `ColorAdjust.Preset`
   - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Color adjust preset", `ColorAdjust.Preset` "Default", `ColorAdjust.Preset` "Grayscale", `ColorAdjust.Preset` "Muted", `ColorAdjust.Preset` "Vibrant", `ColorAdjust.Preset` "Dimmer", `ColorAdjust.Preset` "Brighter", `ColorAdjust.Preset` "Warm Shift", `ColorAdjust.Preset` "Hue +60", `ColorAdjust.Preset` "Hue -60", `ColorAdjust.Preset` "Hue +120", `ColorAdjust.Preset` "Hue -120", `ColorAdjust.Preset` "Invert Hue", `ThemeEngine.ColorTransform` "Color Transform", `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`, `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
   - Exports: Types: `ColorAdjustPresetContribution`; Values: `ColorAdjust`
 - Server:
   - Uses: `config_v2.ConfigV2`

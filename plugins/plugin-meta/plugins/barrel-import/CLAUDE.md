@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
+- Cross-plugin:
+  - Imported by: `framework/tooling/codegen`, `plugin-meta/plugin-tree`
 - Core:
   - Exports: Types: `AutoStubEntry`; Values: `AUTO_STUB_CSS`, `AUTO_STUB_PACKAGES`, `importBarrel`, `registerBarrelStubs`
 

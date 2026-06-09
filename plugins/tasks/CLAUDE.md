@@ -5,17 +5,19 @@
 ## Plugin reference
 
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
+- Web:
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
+  - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `patchTask`, `setAutoStart`, `useTask`
 - Server:
-  - Uses: `conversations.maybeLaunchTaskJob`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.getTaskDependencyIds`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listDependentIds`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`
+  - Uses: `conversations.maybeLaunchTaskJob`, `infra/attachments.getAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core.addTaskDependency`, `tasks-core.backfillMetaParent`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getConversation`, `tasks-core.getTask`, `tasks-core.getTaskDependencyIds`, `tasks-core.hasBlockingDep`, `tasks-core.insertPush`, `tasks-core.listAttempts`, `tasks-core.listDependentIds`, `tasks-core.listPushShasIn`, `tasks-core.listTasks`, `tasks-core.removeTaskDependency`, `tasks-core.taskAttachments`, `tasks-core.updateTask`, `tasks/auto-start.setTaskAutoStart`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/task-preprompt.setTaskPreprompt`, `tasks/task-title.scheduleTaskTitleUpdate`, `tasks/task-title.synthesiseTitleFallback`
   - Exports: Values: `armTaskAutoStart`
   - Register: `mcpTool('add_task')`, `defineJob('tasks.push-ingest')`
   - Routes: `GET /api/tasks`, `POST /api/tasks`, `POST /api/tasks/chain`, `POST /api/tasks/insert-between`, `GET /api/tasks/:id`, `PATCH /api/tasks/:id`, `GET /api/tasks/:id/attachments`, `POST /api/tasks/:id/auto-start`, `DELETE /api/tasks/:id/auto-start`, `POST /api/tasks/:id/dependencies`, `DELETE /api/tasks/:id/dependencies/:depId`, `GET /api/repo-info`
 - Core:
-  - Uses: `tasks-core.AttemptWithConversationsSchema`, `tasks-core.PushSchema`, `tasks-core.TaskListItemSchema`, `tasks-core.TaskSchema`
+  - Uses: `conversations/model-provider.ConversationModelSchema`, `infra/endpoints.dateString`, `infra/endpoints.defineEndpoint`, `primitives/live-state.keyedResourceDescriptor`, `primitives/live-state.resourceDescriptor`, `primitives/rank.RankSchema`, `tasks-core.AttemptWithConversationsSchema`, `tasks-core.PushSchema`, `tasks-core.TaskListItemSchema`, `tasks-core.TaskSchema`
   - Exports: Types: `AddDependencyBody`, `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `CreateTaskBody`, `InsertBetweenBody`, `Push`, `SetAutoStartBody`, `Task`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskListItem`, `UpdateTaskBody`; Values: `AddDependencyBodySchema`, `addTaskDependency`, `attemptsResource`, `clearTaskAutoStart`, `countTransitiveDependents`, `createTask`, `CreateTaskBodySchema`, `createTaskChain`, `getRepoInfo`, `getTask`, `getTaskAttachments`, `InsertBetweenBodySchema`, `insertTaskBetween`, `listTasks`, `pushesResource`, `removeTaskDependency`, `SetAutoStartBodySchema`, `setTaskAutoStart`, `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`, `taskDetailResource`, `tasksResource`, `updateTask`, `UpdateTaskBodySchema`
-- Web:
-  - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `patchTask`, `setAutoStart`, `useTask`
 - Cross-plugin:
+  - Imported by: `conversations/conversation-view/dependencies`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-list`, `tasks/task-list/tree`
   - Endpoint callers: `dependencies`
 - Sub-plugins:
   - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.

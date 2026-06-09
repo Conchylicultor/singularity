@@ -7,17 +7,18 @@
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 - Web:
   - Contributes: `Pane.Register` "global-file-tree", `Pane.Register` "conv-file-tree", `Shell.Sidebar` "Explorer" → `component`, `Conversation.ActionBar` → `ConvTreeButton`
-  - Uses: `conversations.useConversationById`, `shell.Shell`
+  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `shell.Shell`
   - Exports: Values: `FileTree`
 - Server:
-  - Uses: `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
   - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
   - Routes: `GET /api/code/:worktree/tree`, `GET /api/code/:worktree/file`, `GET /api/code/:worktree/diff`, `GET /api/code/:worktree/image`, `GET /api/code/:worktree/push`, `GET /api/code/:worktree/commit`
-- Cross-plugin:
-  - Imported by: `file-resolve`, `file-tree`, `plugin-changes`
-  - Endpoint callers: `commits-graph`, `diff`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`
 - Core:
+  - Uses: `conversations/conversation-view/code.EditedFileSchema`, `infra/endpoints.defineEndpoint`
   - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
+- Cross-plugin:
+  - Imported by: `code-explorer/file-resolve`, `plugin-meta/plugin-view/file-tree`, `review/plugin-changes`
+  - Endpoint callers: `commits-graph`, `diff`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`
 - Shared:
   - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
 - Sub-plugins:

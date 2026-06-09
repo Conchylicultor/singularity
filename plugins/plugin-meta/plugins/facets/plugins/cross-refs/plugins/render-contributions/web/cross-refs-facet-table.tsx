@@ -6,6 +6,10 @@ import {
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { CrossRefsData } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
+import {
+  RUNTIME_FOLDERS,
+  asPath,
+} from "@plugins/framework/plugins/plugin-id/core";
 import { MdCallSplit } from "react-icons/md";
 
 type CrossRefRow = {
@@ -40,15 +44,17 @@ const columns: ColumnDef<CrossRefRow>[] = [
   },
 ];
 
-const RUNTIMES = ["server", "central", "web", "core", "shared"] as const;
-
 function rows(entries: FacetTableEntry[]): CrossRefRow[] {
   const result: CrossRefRow[] = [];
   for (const entry of entries) {
     const data = entry.data as CrossRefsData;
-    for (const runtime of RUNTIMES) {
-      for (const used of data.apiUses[runtime]) {
-        result.push({ plugin: entry.node, used, runtime });
+    for (const runtime of RUNTIME_FOLDERS) {
+      for (const u of data.apiUses[runtime]) {
+        result.push({
+          plugin: entry.node,
+          used: `${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}`,
+          runtime,
+        });
       }
     }
   }

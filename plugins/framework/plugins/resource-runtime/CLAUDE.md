@@ -37,6 +37,8 @@ the client side and the keyed/scoped delta semantics.
 
 ## Plugin reference
 
+- Cross-plugin:
+  - Imported by: `framework/central-core`, `framework/server-core`
 - Core:
   - Exports: Types: `DependsOnEntry`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `createResourceRuntime`
 

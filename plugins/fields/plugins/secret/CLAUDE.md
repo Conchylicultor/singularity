@@ -35,6 +35,8 @@ four runtimes (core / web / server / central).
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `secretFieldType`, `secretIdentity`
+- Cross-plugin:
+  - Imported by: `fields/secret/config`
 - Sub-plugins:
   - **`config`** — Secret field type: config-render capability (password input for config-v2.fields.renderer) plus the secretField factory. Secret field type: encrypted storage with set/not-set metadata. Central-side secret config reader for auth providers.
 

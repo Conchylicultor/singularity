@@ -7,7 +7,7 @@
 - Description: Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
 - Web:
   - Contributes: `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `notifications.toast`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `conversations/conversation-view.Conversation`, `conversations/model-provider.familyClass`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/badge.Badge`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Shared:

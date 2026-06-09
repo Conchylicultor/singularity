@@ -5,6 +5,7 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { DbSchemaFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
+import { asPath } from "@plugins/framework/plugins/plugin-id/core";
 
 // Renders the db-schema facet's own data. Read `node.facets[id]` directly (as
 // every render host does) rather than importing the build-time `facets/core`
@@ -62,7 +63,7 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   key={e.tableName}
                   className="flex items-center gap-2 px-2 py-0.5 text-xs"
                 >
-                  <PluginLink name={e.parentPlugin} />
+                  <PluginLink name={e.parentPlugin} label={asPath(e.parentPlugin)} />
                   <code className="min-w-0 truncate font-mono text-muted-foreground">
                     {e.tableName}
                   </code>
@@ -80,7 +81,7 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   key={e.tableName}
                   className="flex items-center gap-2 px-2 py-0.5 text-xs"
                 >
-                  <PluginLink name={e.childPlugin} />
+                  <PluginLink name={e.childPlugin} label={asPath(e.childPlugin)} />
                   <code className="min-w-0 truncate font-mono text-muted-foreground">
                     {e.tableName}
                   </code>

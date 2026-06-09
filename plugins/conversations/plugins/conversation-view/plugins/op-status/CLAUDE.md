@@ -68,8 +68,9 @@ lock) was indistinguishable from the agent merely "working".
 - Description: Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
 - Web:
   - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`, `Item.Chips` → `OpStatusChip`
-  - Uses: `conversations.useConversation`, `conversations.useConversations`
+  - Uses: `conversations.useConversation`, `conversations.useConversations`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.Conversation`, `primitives/live-state.useResource`, `primitives/spinner.Spinner`, `primitives/tooltip.WithTooltip`
 - Server:
+  - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOp`, `infra/worktree.worktreesDir`
   - Exports: Values: `worktreeOpsResource`
 - Shared:
   - Exports: Types: `WorktreeOp`, `WorktreeOpsPayload`; Values: `WorktreeOpSchema`, `WorktreeOpsPayloadSchema`, `worktreeOpsResource`

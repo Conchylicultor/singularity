@@ -27,6 +27,8 @@ these capabilities via the `extends`-chain fallback.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `numberFieldType`, `numberIdentity`
+- Cross-plugin:
+  - Imported by: `fields/float`, `fields/int`
 - Sub-plugins:
   - **`filter`** — Number field type: data-view filter (min/max range control).
   - **`table`** — Number field type: data-view table cell (read-only numeric cell).

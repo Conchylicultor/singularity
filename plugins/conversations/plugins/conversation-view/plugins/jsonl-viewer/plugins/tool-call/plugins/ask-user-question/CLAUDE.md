@@ -12,9 +12,9 @@ Expanded: for each question, shows the full question text and a vertical option 
 - Description: Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
 - Web:
   - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn", `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-  - Uses: `notifications.toast`
+  - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`
 - Server:
-  - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
+  - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
 - Shared:
   - Exports: Values: `ANSWER_MARKER`, `answerAskUserQuestion`, `AnswerAskUserQuestionBodySchema`, `flushQuestion`
 

@@ -34,6 +34,8 @@ private `stripComments`, and the inline logic in `matchBracket`).
 
 ## Plugin reference
 
+- Cross-plugin:
+  - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/plugin-tree`
 - Core:
   - Exports: Types: `BarrelExport`, `MarkerCall`; Values: `findMarkerCalls`, `maskSource`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `stripTypes`, `walkFiles`
 

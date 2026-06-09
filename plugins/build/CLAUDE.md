@@ -7,17 +7,20 @@
 - Description: Trigger `./singularity build` from the toolbar.
 - Web:
   - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `notifications.toast`
+  - Uses: `config_v2.ConfigV2`, `debug/logs.clientLog`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`
   - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `notifications.recordNotification`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `debug/logs.Log`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.WEB_DIST_DIR`, `notifications.recordNotification`
   - DB schema: `plugins/build/server/internal/tables.ts`
   - Exports: Values: `_buildRuns`
   - Register: `defineJob('build.run')`
   - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
   - Routes: `POST /api/build`
 - Core:
+  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
+- Cross-plugin:
+  - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`
 - Shared:
   - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
 - Sub-plugins:

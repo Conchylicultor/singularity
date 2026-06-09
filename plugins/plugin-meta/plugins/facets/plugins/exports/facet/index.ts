@@ -9,6 +9,11 @@ import type {
   PluginTree,
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import {
+  RUNTIME_FOLDERS,
+  type RuntimeFolder,
+  type PluginId,
+} from "@plugins/framework/plugins/plugin-id/core";
+import {
   parseBarrelExports,
   readIfExists,
   maskSource,
@@ -16,58 +21,47 @@ import {
 import { crossRefsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 import { type ExportedSymbol, type ExportsData, exportsFacetDef } from "../core";
 
-const RUNTIMES = ["core", "web", "server", "central", "shared"] as const;
-type Runtime = (typeof RUNTIMES)[number];
-
 export default createFacet<ExportsData>({
   def: exportsFacetDef,
 
   extract(ctx) {
-    const parse = (runtime: Runtime): ExportedSymbol[] => {
+    const parse = (runtime: RuntimeFolder): ExportedSymbol[] => {
       const raw = readIfExists(join(ctx.dir, runtime, "index.ts"));
       if (!raw) return [];
       // Mask comments/regex (keep export-name structure) so a commented-out
       // `export default` / `export const X` can't register a phantom symbol.
       const src = maskSource(raw, { strings: false });
-      return parseBarrelExports(src).map(({ name, kind }) => ({ name, kind, consumers: [] }));
+      return parseBarrelExports(src).map(({ name, kind }) => ({
+        name,
+        kind,
+        consumers: [] as PluginId[],
+      }));
     };
-    return {
-      core: parse("core"),
-      web: parse("web"),
-      server: parse("server"),
-      central: parse("central"),
-      shared: parse("shared"),
-    };
+    const out = {} as ExportsData;
+    for (const rt of RUNTIME_FOLDERS) out[rt] = parse(rt);
+    return out;
   },
 
   relate(ctx: unknown) {
     const { tree } = ctx as { tree: PluginTree };
-    const byName = new Map<string, PluginNode>();
-    for (const node of tree.byDir.values()) byName.set(node.name, node);
+    const byId = new Map<PluginId, PluginNode>();
+    for (const node of tree.byDir.values()) byId.set(node.id, node);
 
     for (const importer of tree.byDir.values()) {
       const xrefs = getFacet(importer, crossRefsFacetDef);
       if (!xrefs) continue;
-      const allUses = [
-        ...(xrefs.apiUses["server"] ?? []),
-        ...(xrefs.apiUses["central"] ?? []),
-        ...(xrefs.apiUses["web"] ?? []),
-        ...(xrefs.apiUses["core"] ?? []),
-        ...(xrefs.apiUses["shared"] ?? []),
-      ];
-      for (const use of allUses) {
-        const dot = use.indexOf(".");
-        if (dot < 0) continue;
-        const targetName = use.slice(0, dot);
-        const symbol = use.slice(dot + 1);
-        const target = byName.get(targetName);
-        if (!target || target === importer) continue;
-        const targetData = getFacet(target, exportsFacetDef);
-        if (!targetData) continue;
-        for (const rt of RUNTIMES) {
-          const sym = targetData[rt].find((s) => s.name === symbol);
-          if (sym && !sym.consumers.includes(importer.name)) {
-            sym.consumers.push(importer.name);
+      for (const rt of RUNTIME_FOLDERS) {
+        for (const use of xrefs.apiUses[rt]) {
+          if (!use.symbol) continue;
+          const target = byId.get(use.plugin);
+          if (!target || target === importer) continue;
+          const targetData = getFacet(target, exportsFacetDef);
+          if (!targetData) continue;
+          for (const rt2 of RUNTIME_FOLDERS) {
+            const sym = targetData[rt2].find((s) => s.name === use.symbol);
+            if (sym && !sym.consumers.includes(importer.id)) {
+              sym.consumers.push(importer.id);
+            }
           }
         }
       }
@@ -75,7 +69,7 @@ export default createFacet<ExportsData>({
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, exportsFacetDef);
       if (!data) continue;
-      for (const rt of RUNTIMES) {
+      for (const rt of RUNTIME_FOLDERS) {
         for (const sym of data[rt]) sym.consumers.sort();
       }
     }
@@ -83,7 +77,7 @@ export default createFacet<ExportsData>({
 
   renderDoc(data) {
     const facts: DocFact[] = [];
-    for (const rt of RUNTIMES) {
+    for (const rt of RUNTIME_FOLDERS) {
       const symbols = data[rt];
       if (symbols.length === 0) continue;
       const types = symbols.filter((s) => s.kind === "type");

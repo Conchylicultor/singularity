@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { asPath, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { PluginLink } from "./plugin-link";
 
 /**
@@ -17,7 +18,7 @@ export function ConsumerList({ names }: { names: string[] }) {
       <span>←</span>
       {visible.map((name, i) => (
         <span key={name}>
-          <PluginLink name={name} />
+          <PluginLink name={name} label={asPath(name as PluginId)} />
           {i < visible.length - 1 && ","}
         </span>
       ))}

@@ -8,14 +8,15 @@
 - Web:
   - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
   - Contributes: `Core.Root` → `ThemeInjector`, `Core.Boot`, `ConfigV2.WebRegister`, `DynamicEnum.Options` "Theme"
-  - Uses: `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useScopeForked`
+  - Uses: `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useScopeForked`, `fields/dynamic-enum/config.DynamicEnum`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ColorAdjustment`, `ColorMode`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useColorMode`, `useResolvedColorMode`, `useThemeScopeId`, `useTokenGroupPresets`
 - Cross-plugin:
   - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
+  - Imported by: `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tokens/typography/google-fonts`, `ui/tweakcn`, `ui/tweakcn/community-browser`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Core:
-  - Uses: `config_v2.defineConfig`
+  - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`, `fields/enum/config.enumField`
   - Exports: Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`; Values: `defineTokenGroup`, `themeEngineConfig`
 - Sub-plugins:
   - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.

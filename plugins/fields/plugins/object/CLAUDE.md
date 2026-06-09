@@ -26,6 +26,8 @@ lives in the `plugins/config` sub-plugin.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `objectFieldType`, `objectIdentity`
+- Cross-plugin:
+  - Imported by: `fields/object/config`
 - Sub-plugins:
   - **`config`** — Object field type: config-render capability (collapsible sub-field renderer for config-v2.fields.renderer) plus the objectField factory.
 

@@ -12,3 +12,9 @@ export const asFsPath = (id: PluginId): string => id.split(".").join("/plugins/"
 
 /** Segments for breadcrumbs / last-segment matching. */
 export const pluginIdSegments = (id: PluginId): string[] => id.split(".");
+
+/** The plugin source/barrel runtime folders — the isolation + bundling vocabulary
+ *  and single source of truth. boundary-config keys and every per-runtime grouping
+ *  derive from this; never hardcode the list elsewhere. */
+export const RUNTIME_FOLDERS = ["web", "server", "central", "core", "shared"] as const;
+export type RuntimeFolder = (typeof RUNTIME_FOLDERS)[number];

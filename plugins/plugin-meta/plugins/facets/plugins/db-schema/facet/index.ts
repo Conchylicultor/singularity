@@ -6,7 +6,12 @@ import {
   getFacet,
   type DocFact,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import type { PluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import {
+  type PluginTree,
+  type PluginNode,
+  resolvePluginSpecifier,
+} from "@plugins/plugin-meta/plugins/plugin-tree/core";
+import { asPath, type PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   readIfExists,
   stripTypes,
@@ -120,8 +125,6 @@ function findDbFiles(pluginDir: string): string[] {
 
 // ── Facet ──────────────────────────────────────────────────────────────
 
-const pluginModuleRe = /@plugins\/([^/"'`]+)\/(?:server|central|shared|core)/;
-
 export default createFacet<DbSchemaFacetData>({
   def: dbSchemaFacetDef,
 
@@ -134,39 +137,44 @@ export default createFacet<DbSchemaFacetData>({
 
   relate(rawCtx) {
     const { tree } = rawCtx as { tree: PluginTree };
-    const byName = new Map<string, { name: string; facets: Record<string, unknown> }>();
-    for (const node of tree.byDir.values()) byName.set(node.name, node);
+    const byId = new Map<PluginId, PluginNode>();
+    for (const node of tree.byDir.values()) byId.set(node.id, node);
 
-    // Build plugin-name → varName→tableName map from Phase 1 extract data
-    const pluginVarToTable = new Map<string, Map<string, string>>();
+    // Build node.id → varName→tableName map from Phase 1 extract data
+    const pluginVarToTable = new Map<PluginId, Map<string, string>>();
     for (const node of tree.byDir.values()) {
       const d = getFacet(node, dbSchemaFacetDef);
       if (!d) continue;
       const m = new Map<string, string>();
       for (const t of d.tables) m.set(t.varName, t.name);
-      pluginVarToTable.set(node.name, m);
+      pluginVarToTable.set(node.id, m);
     }
 
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, dbSchemaFacetDef);
       if (!data) continue;
       for (const ref of parseEntityExtensionCalls(data.dbFiles)) {
-        const pluginMatch = ref.parentModule.match(pluginModuleRe);
-        if (!pluginMatch) continue;
-        const parentPluginName = pluginMatch[1]!;
+        // A defineExtension parent is always a cross-plugin barrel import.
+        if (!ref.parentModule.startsWith("@plugins/")) continue;
+        const r = resolvePluginSpecifier(tree, ref.parentModule);
+        if (!r)
+          throw new Error(
+            `db-schema facet: defineExtension parent "${ref.parentModule}" (in plugin ${node.id}) resolved to no plugin node`,
+          );
+        const parentPlugin = r.node.id;
         const parentTableName =
-          (pluginVarToTable.get(parentPluginName) ?? new Map()).get(ref.parentVarName) ?? "";
+          (pluginVarToTable.get(parentPlugin) ?? new Map()).get(ref.parentVarName) ?? "";
         const tableName = parentTableName
           ? `${parentTableName}_ext_${ref.extName}`
-          : `${parentPluginName}_ext_${ref.extName}`;
+          : `${r.node.name}_ext_${ref.extName}`;
         if (!data.entityExtensions.some((e) => e.tableName === tableName)) {
-          data.entityExtensions.push({ parentPlugin: parentPluginName, extName: ref.extName, tableName });
+          data.entityExtensions.push({ parentPlugin, extName: ref.extName, tableName });
         }
-        const parentNode = byName.get(parentPluginName);
+        const parentNode = byId.get(parentPlugin);
         if (!parentNode) continue;
         const parentData = getFacet(parentNode, dbSchemaFacetDef);
         if (parentData && !parentData.extendedBy.some((e) => e.tableName === tableName)) {
-          parentData.extendedBy.push({ childPlugin: node.name, extName: ref.extName, tableName });
+          parentData.extendedBy.push({ childPlugin: node.id, extName: ref.extName, tableName });
         }
       }
     }
@@ -185,10 +193,10 @@ export default createFacet<DbSchemaFacetData>({
       facts.push({ folder: "server", key: "DB schema", values: data.dbFiles.map((f) => `\`${relative(ctx.root, f)}\``) });
     }
     if (data.entityExtensions.length > 0) {
-      facts.push({ folder: "server", key: "Entity extension of", values: data.entityExtensions.map((ext) => `\`${ext.parentPlugin}\` (table \`${ext.tableName}\`)`) });
+      facts.push({ folder: "server", key: "Entity extension of", values: data.entityExtensions.map((ext) => `\`${asPath(ext.parentPlugin)}\` (table \`${ext.tableName}\`)`) });
     }
     if (data.extendedBy.length > 0) {
-      facts.push({ folder: "cross-plugin", key: "Extended by", values: data.extendedBy.map((e) => `\`${e.childPlugin}\` (table \`${e.tableName}\`)`) });
+      facts.push({ folder: "cross-plugin", key: "Extended by", values: data.extendedBy.map((e) => `\`${asPath(e.childPlugin)}\` (table \`${e.tableName}\`)`) });
     }
     return facts;
   },

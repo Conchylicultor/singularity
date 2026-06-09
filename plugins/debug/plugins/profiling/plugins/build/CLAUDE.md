@@ -7,9 +7,12 @@
 - Description: Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
 - Web:
   - Contributes: `Profiling.Section` → `BuildSection`, `Pane.Register` "debug-profiling-build-detail"
+  - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/placeholder.Placeholder`
   - Exports: Values: `buildProfileDetailPane`
+- Server:
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
 - Cross-plugin:
-  - Imported by: `build-commits`, `build-fix`, `build-info`, `build-logs`, `build-profiling`
+  - Imported by: `conversations/conversation-view/push-profiling`, `debug/profiling/push`
 - Shared:
   - Exports: Values: `getBuildProfiling`
 

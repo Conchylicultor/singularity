@@ -7,10 +7,10 @@
 - Description: Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 - Web:
   - Contributes: `Pane.Register` "events-test", `DebugApp.Sidebar` "Events Test" → `component`
-  - Uses: `notifications.toast`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/pane.openPane`, `primitives/pane.Pane`
   - Exports: Values: `eventsTestPane`
 - Server:
-  - Uses: `database.db`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/events.deleteTrigger`, `infra/events.deleteTriggersFor`, `infra/events.trigger`, `infra/jobs.defineJob`, `infra/jobs.UNSAFE_sweepStuckLocks`
   - DB schema: `plugins/events-test/server/internal/tables.ts`
   - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
 - Shared:

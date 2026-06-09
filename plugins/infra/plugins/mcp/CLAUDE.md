@@ -6,6 +6,8 @@
 
 - Description: HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
 - Load-bearing: yes
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
 - Server:
   - Exports: Types: `McpTool`, `McpToolContext`, `McpToolResult`; Values: `Mcp`
 - Shared:

@@ -1,14 +1,12 @@
+import { RUNTIME_FOLDERS, asPath } from "@plugins/framework/plugins/plugin-id/core";
 import type { CrossRefsData } from "./types";
 
-const RUNTIMES = ["server", "central", "web", "core", "shared"] as const;
-
-// Diff projection: the deduped union of apiUses across all runtimes. Mirrors the
-// legacy apiUseStrings() (compute-plugin-diff.ts) so the diff output is identical.
-// `shared` is empty in practice (cross-plugin imports from shared/ are forbidden),
-// so iterating it is harmless. importedBy is a derived reverse index that changes
-// based on OTHER plugins, so it is intentionally excluded from a per-plugin diff.
+// Diff projection: the deduped union of apiUses across all runtimes. importedBy is a
+// derived reverse index (depends on OTHER plugins), so it is intentionally excluded.
 export function crossRefsToComparable(data: CrossRefsData): string[] {
   const uses = new Set<string>();
-  for (const rt of RUNTIMES) for (const u of data.apiUses[rt]) uses.add(u);
+  for (const rt of RUNTIME_FOLDERS)
+    for (const u of data.apiUses[rt])
+      uses.add(`${asPath(u.plugin)}${u.symbol ? "." + u.symbol : ""}`);
   return [...uses];
 }

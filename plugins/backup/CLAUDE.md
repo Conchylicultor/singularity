@@ -7,15 +7,15 @@
 - Description: Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
-  - Uses: `config_v2.ConfigV2`
+  - Uses: `apps/debug/shell.DebugApp`, `config_v2.ConfigV2`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `backupPane`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `database/admin.backupDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.ATTACHMENTS_DIR`, `infra/paths.BACKUPS_DIR`, `infra/paths.KEY_PATH`, `infra/paths.STORE_PATH`
   - DB schema: `plugins/backup/server/internal/tables.ts`
   - Exports: Values: `_backupRuns`, `BackupTarget`
   - Register: `defineJob('backup.run')`
 - Cross-plugin:
-  - Imported by: `google-drive`, `local`
+  - Imported by: `backup/google-drive`, `backup/local`
 - Core:
   - Exports: Types: `BackupArchive`, `BackupManifest`, `BackupTargetResult`
 - Shared:

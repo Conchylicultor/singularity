@@ -27,6 +27,8 @@ slot — lives in the `plugins/config` sub-plugin.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Types: `ListItem`; Values: `listFieldType`, `listIdentity`
+- Cross-plugin:
+  - Imported by: `fields/list/config`
 - Sub-plugins:
   - **`config`** — List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
 

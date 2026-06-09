@@ -9,6 +9,8 @@ Strokes are stored in image-natural pixels so they survive resizing and can be b
 ## Plugin reference
 
 - Description: Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
+- Cross-plugin:
+  - Imported by: `screenshot`, `screenshot/draw-on-app`
 - Web:
   - Exports: Types: `DrawCanvasProps`, `Stroke`; Values: `applyStrokes`, `DrawCanvas`
 

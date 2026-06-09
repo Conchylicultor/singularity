@@ -69,16 +69,18 @@ Behavior:
 - Web:
   - Slots: `ActiveData.Tag`
   - Contributes: `MarkdownEnhancerSlot`
+  - Uses: `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`
   - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Cross-plugin:
   - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
-  - Imported by: `assistant-text`, `attempt`, `conv`, `plugin-link`, `task`, `task-link`
+  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`
 - Server:
-  - Uses: `database.db`, `tasks-core._conversations`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`
   - Routes: `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`, `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`
 - Core:
+  - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`, `PutBindingBody`; Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `deleteBinding`, `inlineBoundary`, `putBinding`, `putBindingBodySchema`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.

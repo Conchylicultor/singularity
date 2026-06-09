@@ -20,9 +20,11 @@ served by the plugin-meta/plugin-view plugin.
 - Web:
   - Slots: `Explorer.TreeRowBadge`
   - Contributes: `Pane.Register` "explorer", `Studio.Sidebar` "Explorer" → `component`
+  - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/collapsible.ExpandAllButton`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `TreeRowBadgeContribution`; Values: `Explorer`, `usePluginTree`
 - Cross-plugin:
   - Slot contributors: `child-count`, `collapsed`, `expand-collapse`, `load-bearing`
+  - Imported by: `apps/studio/explorer/child-count`, `apps/studio/explorer/collapsed`, `apps/studio/explorer/expand-collapse`, `apps/studio/explorer/load-bearing`
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the explorer plugin tree row.
   - **`collapsed`** — Collapsed badge in the explorer plugin tree row.

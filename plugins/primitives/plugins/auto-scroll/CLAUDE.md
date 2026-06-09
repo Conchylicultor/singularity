@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
+- Cross-plugin:
+  - Imported by: `build`, `build/build-logs`, `conversations/conversation-view/jsonl-viewer`
 - Web:
   - Exports: Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`; Values: `JumpToBottomButton`, `useStickyScroll`
 

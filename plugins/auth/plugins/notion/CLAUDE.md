@@ -11,7 +11,7 @@
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Central:
-  - Uses: `auth.registerAuthProvider`
+  - Uses: `auth.registerAuthProvider`, `fields/secret/config.readSecretConfig`
 - Shared:
   - Exports: Values: `notionAuthConfig`
 

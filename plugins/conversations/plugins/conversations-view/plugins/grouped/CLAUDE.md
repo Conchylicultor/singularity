@@ -7,11 +7,13 @@
 - Description: User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
 - Web:
   - Contributes: `ConversationsView.View` "Grouped" → `GroupedView`
-  - Uses: `conversations.useConversations`
+  - Uses: `conversations.useConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversations-view.ConversationsView`, `conversations/conversations-view.useGoneConversationsPagination`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/collapsible.CollapsibleChevron`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`
 - Server:
-  - Uses: `database.db`, `tasks-core._conversations`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
   - Exports: Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
+- Cross-plugin:
+  - Imported by: `improve`
 - Shared:
   - Exports: Types: `ConversationGroup`, `ConversationGroupMember`, `ConversationGroupsPayload`; Values: `addConversationGroupMembers`, `ConversationGroupMemberSchema`, `ConversationGroupSchema`, `ConversationGroupsPayloadSchema`, `conversationGroupsResource`, `createConversationGroup`, `deleteConversationGroup`, `patchConversationGroup`, `removeConversationGroupMember`
 

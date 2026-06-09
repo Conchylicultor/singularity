@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
+- Cross-plugin:
+  - Imported by: `agents`, `apps/studio/contributions/tables/foreign-keys`, `config_v2/config-link`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/user-image`, `debug/memory`, `debug/profiling`, `page/links`, `plugin-meta/plugin-view`, `primitives/avatar`, `primitives/color-picker`, `primitives/icon-picker`, `tasks/task-header`
 - Web:
   - Exports: Types: `SectionLabelProps`; Values: `SectionLabel`
 

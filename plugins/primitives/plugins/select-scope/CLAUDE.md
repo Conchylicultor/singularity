@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `page/editor`, `primitives/pane`, `primitives/syntax-highlight`
 - Web:
   - Exports: Values: `ContentScope`
 

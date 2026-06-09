@@ -7,10 +7,12 @@
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
 - Web:
   - Contributes: `Pane.Register` "screenshot", `ActionBar.Item` → `ScreenshotButton`
-  - Uses: `notifications.toast`
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/icon-button.IconButton`, `primitives/launch.LaunchControl`, `primitives/launch.LaunchRequest`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/text-editor.TextEditor`, `screenshot/draw-canvas.applyStrokes`, `screenshot/draw-canvas.DrawCanvas`, `screenshot/draw-canvas.Stroke`, `shell/action-bar.ActionBar`
   - Exports: Values: `captureApp`, `screenshotPane`
+- Server:
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
 - Cross-plugin:
-  - Imported by: `draw-on-app`
+  - Imported by: `screenshot/draw-on-app`
 - Shared:
   - Exports: Values: `createScreenshot`, `getScreenshot`, `saveScreenshotFile`
 - Sub-plugins:

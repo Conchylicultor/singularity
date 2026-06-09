@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
+- Cross-plugin:
+  - Imported by: `auth/google/setup-wizard`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/file-path`, `page/code-block`, `primitives/filepath-breadcrumb`, `review/code-review`, `review/plugin-changes/file-changes`
 - Web:
   - Exports: Types: `CopyButtonProps`; Values: `CopyButton`, `useCopyToClipboard`
 

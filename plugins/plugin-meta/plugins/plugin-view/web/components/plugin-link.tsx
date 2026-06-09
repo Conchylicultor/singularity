@@ -6,7 +6,7 @@ import { pluginViewPane } from "../panes";
  * per-facet render-detail sections (exports, cross-refs, …) that surface
  * consumer/importer relationships.
  */
-export function PluginLink({ name }: { name: string }) {
+export function PluginLink({ name, label }: { name: string; label?: string }) {
   const openPane = useOpenPane();
   return (
     <button
@@ -16,7 +16,7 @@ export function PluginLink({ name }: { name: string }) {
         openPane(pluginViewPane, { pluginId: name }, { mode: "swap" });
       }}
     >
-      {name}
+      {label ?? name}
     </button>
   );
 }

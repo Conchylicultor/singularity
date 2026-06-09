@@ -7,6 +7,7 @@ import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { ExportsData } from "@plugins/plugin-meta/plugins/facets/plugins/exports/core";
+import { RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import { MdOutput } from "react-icons/md";
 
 type ExportRow = {
@@ -59,13 +60,11 @@ const columns: ColumnDef<ExportRow>[] = [
   },
 ];
 
-const RUNTIMES = ["web", "server", "central", "core", "shared"] as const;
-
 function rows(entries: FacetTableEntry[]): ExportRow[] {
   const result: ExportRow[] = [];
   for (const entry of entries) {
     const data = entry.data as ExportsData;
-    for (const runtime of RUNTIMES) {
+    for (const runtime of RUNTIME_FOLDERS) {
       for (const sym of data[runtime]) {
         result.push({
           plugin: entry.node,

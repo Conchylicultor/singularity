@@ -22,6 +22,7 @@ the Forge catalog "Structure" tab, and the PR diff renderer all read
 ## Plugin reference
 
 - Core:
+  - Uses: `plugin-meta/facets.defineFacet`
   - Exports: Types: `StructureFacetData`; Values: `structureFacetDef`, `structureToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin structure-anomaly table in the Studio Contributions view.

@@ -26,10 +26,10 @@ contributions: [
 - Description: Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
 - Web:
   - Contributes: `Pane.Register` "conv-review", `Conversation.ActionBar` → `ReviewButton`
-  - Uses: `conversations.useConversationById`
+  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/toggle-chip.ToggleChip`
   - Exports: Types: `ReviewProps`, `Source`; Values: `convReviewPane`, `ReviewSlots`
 - Cross-plugin:
-  - Imported by: `code-review`, `plugin-changes`
+  - Imported by: `review/code-review`, `review/plugin-changes`
 - Sub-plugins:
   - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
   - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.

@@ -13,6 +13,7 @@ parsing helpers (`parseDefineGroup`, `stripTypes`, `readIfExists`) come from
 ## Plugin reference
 
 - Core:
+  - Uses: `plugin-meta/facets.defineFacet`
   - Exports: Types: `CommandDef`; Values: `commandsFacetDef`, `commandsToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin commands table in the Studio Contributions view.

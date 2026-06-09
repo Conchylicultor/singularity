@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.
+- Cross-plugin:
+  - Imported by: `apps`, `build`, `conversations/conversation-preprompt`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/fork-conversation`, `conversations/conversation-view/op-status`, `floating-bar`, `health`, `primitives/command-palette`, `primitives/icon-button`, `primitives/launch`, `primitives/pane`, `primitives/popover`, `ui/segmented-progress-bar/dots`, `worktree-switcher`
 - Web:
   - Exports: Types: `KbdProps`, `WithTooltipProps`; Values: `Kbd`, `TooltipProvider`, `WithTooltip`
 

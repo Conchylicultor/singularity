@@ -20,6 +20,8 @@ data-view capabilities live in dedicated sub-plugins under `plugins/`:
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `boolFieldType`, `boolIdentity`
+- Cross-plugin:
+  - Imported by: `fields/bool/config`
 - Sub-plugins:
   - **`config`** — Boolean field type: config-render capability (checkbox for config-v2.fields.renderer) plus the boolField factory.
   - **`filter`** — Boolean field type: data-view filter (yes/no segmented control).

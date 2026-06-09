@@ -15,6 +15,7 @@ import {
   type PluginNode,
   type ExportRuntime,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import { RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";
 import type {
   ExportsData,
   ExportedSymbol,
@@ -26,7 +27,7 @@ import type {
 // browser bundle. Type-only imports from the facet core are erased and safe.
 const EXPORTS_FACET_ID = "exports";
 
-const RUNTIMES: ExportRuntime[] = ["web", "server", "central", "core", "shared"];
+const RUNTIMES: readonly ExportRuntime[] = RUNTIME_FOLDERS;
 
 type SymbolCategory = "type" | "hook" | "component" | "value";
 

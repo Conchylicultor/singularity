@@ -45,8 +45,40 @@ export interface PluginNode {
 export interface PluginTree {
   pluginsRoot: string;
   byDir: Map<string, PluginNode>;
+  byPath: Map<string, PluginNode>;
   roots: PluginNode[];
   facets: Facet[];
+}
+
+const NESTING_SEGMENT = "plugins"; // umbrella interstitial; asFsPath joins ids with "/plugins/"
+
+/**
+ * Resolve a cross-plugin module specifier (`@plugins/<path>/<barrel>[/...]`) to its
+ * unique plugin node via longest-prefix match against the real plugin-path registry.
+ * Needs no runtime vocabulary: whatever exists in `byPath` is a plugin; the trailing
+ * segments are the barrel suffix (any name). Returns null for a non-@plugins specifier,
+ * an unknown plugin, or a specifier that nests deeper than any real plugin (next
+ * segment is the literal "plugins") — callers treat the latter two as broken refs.
+ */
+export function resolvePluginSpecifier(
+  tree: PluginTree,
+  specifier: string,
+): { node: PluginNode; suffix: string[] } | null {
+  if (!specifier.startsWith("@plugins/")) return null;
+  const parts = specifier.slice("@plugins/".length).split("/");
+  let best: PluginNode | undefined;
+  let bestLen = 0;
+  for (let i = 1; i <= parts.length; i++) {
+    const node = tree.byPath.get(parts.slice(0, i).join("/"));
+    if (node && i > bestLen) {
+      best = node;
+      bestLen = i;
+    }
+  }
+  if (!best) return null;
+  const suffix = parts.slice(bestLen);
+  if (suffix[0] === NESTING_SEGMENT) return null;
+  return { node: best, suffix };
 }
 
 // ── Walk ────────────────────────────────────────────────────────────
@@ -233,11 +265,13 @@ export async function buildPluginTree(
 
   // Step 2: collect core fields for each plugin
   const byDir = new Map<string, PluginNode>();
+  const byPath = new Map<string, PluginNode>();
   const parentDirs = new Map<string, string | null>();
 
   for (const d of dirs) {
     const collected = collectCoreFields(d, pluginsRoot);
     byDir.set(d, collected.node);
+    byPath.set(collected.node.path, collected.node);
     parentDirs.set(d, collected.parentDir);
   }
 
@@ -269,7 +303,7 @@ export async function buildPluginTree(
 
   computeIds(roots, "");
 
-  const tree: PluginTree = { pluginsRoot, byDir, roots, facets: [] };
+  const tree: PluginTree = { pluginsRoot, byDir, byPath, roots, facets: [] };
 
   // Step 4a: barrel import (web → server → central) — gated, only the 2 runtime
   // facets (contributions runtime part, registrations) need imported modules.

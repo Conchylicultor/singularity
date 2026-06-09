@@ -18,8 +18,10 @@ Like `int`, it demonstrates the `extends` chain — differing only in that its
   - Contributes: `Fields.Identity` "float"
   - Uses: `fields.Fields`
 - Core:
-  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+  - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/number.numberFieldType`
   - Exports: Values: `floatFieldType`, `floatIdentity`
+- Cross-plugin:
+  - Imported by: `fields/float/config`
 - Sub-plugins:
   - **`config`** — Float field type: config-render capability (number stepper for config-v2.fields.renderer) plus the floatField factory.
 

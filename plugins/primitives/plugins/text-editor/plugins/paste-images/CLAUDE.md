@@ -17,7 +17,10 @@
 - Description: Image paste/drop support for the text editor. Uploads images via the attachments primitive and renders inline thumbnails with lightbox expand.
 - Web:
   - Contributes: `TextEditorSlots.Plugin` → `ImageUploadPlugin`
+  - Uses: `infra/attachments.uploadAttachment`, `primitives/text-editor.registerNodeExtension`, `primitives/text-editor.TextEditorSlots`
   - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view`, `page/image`, `screenshot/draw-on-app`, `tasks/task-description`, `tasks/task-draft-form`
 - Core:
   - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
 

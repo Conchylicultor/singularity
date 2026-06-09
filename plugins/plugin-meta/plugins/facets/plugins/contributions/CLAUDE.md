@@ -22,7 +22,10 @@ shared `contributionId` helper live in `core/`.
 ## Plugin reference
 
 - Core:
+  - Uses: `plugin-meta/facets.defineFacet`
   - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionId`, `contributionsFacetDef`, `contributionsToComparable`
+- Cross-plugin:
+  - Imported by: `framework/tooling/codegen`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.

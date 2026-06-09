@@ -49,7 +49,7 @@ capability. Leaf plugins under `plugins/` register one type each.
   - Exports: Values: `Fields`
 - Cross-plugin:
   - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `string-list`, `text`
-  - Imported by: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `secret`, `string-list`, `text`
+  - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/secret`, `fields/string-list`, `fields/text`
 - Core:
   - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
 - Sub-plugins:

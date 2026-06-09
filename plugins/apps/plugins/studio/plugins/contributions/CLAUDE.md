@@ -8,7 +8,10 @@
 - Web:
   - Slots: `Contributions.FacetTable`
   - Contributes: `Pane.Register` "contributions", `Studio.Sidebar` "Contributions" → `component`
+  - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/data-table.DataTable`, `primitives/filter-chips.FilterChip`, `primitives/link-chip.LinkChip`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.SearchInput`
   - Exports: Types: `ContributionsFacetTable`, `FacetTableEntry`; Values: `Contributions`, `defineFacetTable`, `PluginChip`
+- Cross-plugin:
+  - Imported by: `plugin-meta/facets/commands/render-contributions`, `plugin-meta/facets/contributions/render-contributions`, `plugin-meta/facets/cross-refs/render-contributions`, `plugin-meta/facets/db-schema/render-contributions`, `plugin-meta/facets/exports/render-contributions`, `plugin-meta/facets/registrations/render-contributions`, `plugin-meta/facets/resources/render-contributions`, `plugin-meta/facets/routes/render-contributions`, `plugin-meta/facets/slots/render-contributions`, `plugin-meta/facets/structure/render-contributions`
 - Sub-plugins:
   - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 

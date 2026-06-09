@@ -8,10 +8,11 @@
 - Web:
   - Slots: `Stats.Chart`
   - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
-  - Uses: `shell.Shell`
+  - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/toggle-chip.ToggleChip`, `shell.Shell`
   - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Cross-plugin:
   - Slot contributors: `commits`, `cost`, `pushes`, `tasks`
+  - Imported by: `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`
 - Sub-plugins:
   - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
   - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.

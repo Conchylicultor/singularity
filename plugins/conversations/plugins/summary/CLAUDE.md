@@ -7,9 +7,9 @@
 - Description: Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
 - Web:
   - Contributes: `Pane.Register` "conv-summary"
-  - Uses: `notifications.toast`
+  - Uses: `conversations/conversation-view.conversationPane`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`
 - Server:
-  - Uses: `conversations.Turn`, `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `database.db`, `tasks-core.getConversation`, `tasks-core.getTask`
+  - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks-core.getConversation`, `tasks-core.getTask`
   - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
   - Exports: Values: `_conversationSummaries`, `conversationSummariesResource`
   - Register: `mcpTool('submit_conversation_summary')`

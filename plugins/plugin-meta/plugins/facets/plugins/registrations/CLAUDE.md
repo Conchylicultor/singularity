@@ -14,6 +14,7 @@ No `relate()` — registrations have no cross-plugin relationships.
 ## Plugin reference
 
 - Core:
+  - Uses: `plugin-meta/facets.defineFacet`
   - Exports: Types: `DocMetaRegistration`; Values: `registrationsFacetDef`, `registrationsToComparable`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin registrations table in the Studio Contributions view.

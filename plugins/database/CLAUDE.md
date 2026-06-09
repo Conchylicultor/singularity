@@ -53,12 +53,13 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
 
 - Description: Core database infrastructure. Connection pooling and DB readiness.
 - Load-bearing: yes
+- Server:
+  - Uses: `database/migrations.runMigrations`
+  - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
 - Cross-plugin:
-  - Imported by: `active-data`, `agents`, `attachments`, `auto-start`, `backup`, `build`, `build-commits`, `chord-grid`, `claude-cli`, `columns`, `commits`, `community-browser`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `conversations`, `cost`, `crashes`, `editor`, `engine`, `entity-extensions`, `events`, `events-test`, `foreign-keys`, `grouped`, `groups`, `image`, `improve`, `indexes`, `jobs`, `library`, `links`, `marker`, `midi`, `notes`, `notifications`, `playback-history`, `plugin-health`, `queue`, `rank`, `row-count`, `sample-rows`, `servers`, `summary`, `task-preprompt`, `tasks-core`, `track-mixer`, `turn-summary`, `tweakcn`
+  - Imported by: `active-data`, `agents`, `apps/deploy/servers`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/workflows/engine`, `backup`, `build`, `build/build-commits`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/notes`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `crashes`, `events-test`, `improve`, `infra/attachments`, `infra/claude-cli`, `infra/entity-extensions`, `infra/events`, `infra/jobs`, `notifications`, `page/editor`, `page/image`, `page/links`, `plugin-meta/plugin-health`, `primitives/rank`, `reorder/groups`, `stats/commits`, `stats/cost`, `tasks-core`, `tasks/auto-start`, `tasks/task-preprompt`, `ui/tweakcn`, `ui/tweakcn/community-browser`
 - Core:
   - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
-- Server:
-  - Exports: Values: `awaitDbReady`, `db`, `isTransientDbError`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.

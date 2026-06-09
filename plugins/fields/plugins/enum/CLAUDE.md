@@ -32,6 +32,8 @@ token) matches descriptors built with the factory.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `enumFieldType`, `enumIdentity`
+- Cross-plugin:
+  - Imported by: `fields/enum/config`
 - Sub-plugins:
   - **`config`** — Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
   - **`filter`** — Enum (select) field type: data-view filter (multi-select option chips).

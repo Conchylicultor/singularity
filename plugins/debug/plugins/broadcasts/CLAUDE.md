@@ -7,7 +7,10 @@
 - Description: View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
 - Web:
   - Contributes: `Pane.Register` "debug-broadcasts", `DebugApp.Sidebar` "Broadcasts" → `component`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/toggle-chip.ToggleChip`
   - Exports: Values: `broadcastsPane`
+- Server:
+  - Uses: `infra/endpoints.implement`, `infra/worktree.ensureMainWorktreeRoot`
 - Shared:
   - Exports: Types: `WriteBroadcastsBody`; Values: `getBroadcasts`, `writeBroadcasts`, `WriteBroadcastsBodySchema`
 

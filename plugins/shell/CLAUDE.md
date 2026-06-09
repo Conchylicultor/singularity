@@ -9,9 +9,11 @@
 - Web:
   - Commands: `Shell.Toast`
   - Slots: `Shell.Sidebar`, `Shell.Toolbar`
+  - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
 - Cross-plugin:
   - Slot contributors: `action-bar`, `agents`, `auth`, `code-explorer`, `conversations-view`, `settings`, `stats`, `task-detail`, `worktree-switcher`
+  - Imported by: `agents`, `apps/agent-manager/shell`, `auth`, `code-explorer`, `config_v2/settings`, `conversations/conversations-view`, `health`, `notifications`, `shell/action-bar`, `shell/toaster`, `stats`, `tasks/task-detail`, `worktree-switcher`
 - Sub-plugins:
   - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.
   - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.

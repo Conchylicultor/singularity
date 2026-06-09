@@ -135,6 +135,11 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
       const violations: Violation[] = [];
       const realizedEdges = new Set<string>();
 
+      // The checker treats runtime names as opaque strings parsed from file paths
+      // and specifiers, so read the (now key-typed) boundary map through the same
+      // widened view that checkRuntime() uses for its lookups.
+      const runtimeMap: Record<string, string[]> = config.runtimes;
+
       const sourceFiles = findSourceFiles(root);
 
       for (const absFile of sourceFiles) {
@@ -170,7 +175,7 @@ export function createBoundaryCheck(config: BoundaryConfig): Check {
             violations.push({
               file: relFile,
               message: `runtime isolation: ${source.runtime} cannot import ${target.runtime} (${srcLabel} → ${tgtLabel}, import "${specifier}")`,
-              fix: `${source.runtime} can only import from [${(config.runtimes[source.runtime!] ?? []).join(", ")}]. If this is legitimate, add a runtimeException in boundary.config.ts`,
+              fix: `${source.runtime} can only import from [${(runtimeMap[source.runtime!] ?? []).join(", ")}]. If this is legitimate, add a runtimeException in boundary.config.ts`,
             });
             continue;
           }

@@ -5,6 +5,8 @@
 ## Plugin reference
 
 - Description: Formats a Date as a human-readable relative string (just now, Nm ago, Nh ago, Nd ago). Exposes formatRelativeTime() and <RelativeTime date={…} />.
+- Cross-plugin:
+  - Imported by: `apps/sonata/library`, `apps/sonata/playback-history`, `build`, `build/build-info`, `conversations/conversation-ui/item`, `conversations/conversation-view/jsonl-viewer`, `debug/claude-cli-calls`, `debug/crashes`, `fields/date/table`, `notifications`, `plugin-meta/plugin-health`, `tasks/task-header`, `tasks/task-list/recent`, `welcome`
 - Web:
   - Exports: Values: `formatRelativeTime`, `RelativeTime`
 

@@ -26,6 +26,8 @@ Always go through `./singularity build` from the repo root — it runs `bun run 
 
 ## Plugin reference
 
+- Web:
+  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`
 - Structure:
   - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
   - Composition root: yes

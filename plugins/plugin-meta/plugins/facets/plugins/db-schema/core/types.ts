@@ -1,4 +1,5 @@
 import { defineFacet } from "@plugins/plugin-meta/plugins/facets/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 
 export interface TableDef {
   name: string;
@@ -6,13 +7,13 @@ export interface TableDef {
 }
 
 export interface EntityExtension {
-  parentPlugin: string;
+  parentPlugin: PluginId;
   extName: string;
   tableName: string;
 }
 
 export interface EntityExtensionRef {
-  childPlugin: string;
+  childPlugin: PluginId;
   extName: string;
   tableName: string;
 }

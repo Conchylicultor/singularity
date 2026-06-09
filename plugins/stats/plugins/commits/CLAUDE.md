@@ -7,10 +7,12 @@
 - Description: Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
 - Web:
   - Contributes: `Stats.Chart` "Commits" → `CommitsSection`, `Stats.Chart` "Lines changed" → `LinesChartsSection`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `stats.Stats`, `stats.useShowEmptyDays`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `conversations/conversation-category.autoColorKey`, `conversations/conversation-category.useCategoryAvatars`, `primitives/networking.fetchWithRetry`, `primitives/toggle-chip.SegmentedControl`, `primitives/toggle-chip.ToggleChip`, `stats.Stats`, `stats.useShowEmptyDays`
   - Exports: Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `useFetchJson`, `yAxisFormatter`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`
+  - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/conversation-category.conversationCategory`, `conversations/conversation-category.conversationCategoryConfig`, `database.db`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`
+- Cross-plugin:
+  - Imported by: `stats/cost`, `stats/pushes`, `stats/tasks`
 - Shared:
   - Exports: Values: `commitsConfig`, `getCommitsCumulative`, `getCommitsLinesCumulative`, `getCommitsLinesRate`, `getCommitsRate`
 

@@ -7,14 +7,18 @@
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
   - Contributes: `Core.Root` → `CrashReporter`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/error-boundary.registerBoundaryReporter`
   - Exports: Types: `CrashContext`; Values: `report`
 - Server:
-  - Uses: `database.db`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
   - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
   - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
   - Resources: `crashes` (push)
 - Core:
+  - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Crash`; Values: `crashesResource`, `CrashSchema`
+- Cross-plugin:
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `crashes/endpoint-errors`, `crashes/noise-rules`
 - Sub-plugins:
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.

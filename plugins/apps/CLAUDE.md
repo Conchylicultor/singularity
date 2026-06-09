@@ -9,10 +9,11 @@
 - Web:
   - Slots: `Apps.App`
   - Contributes: `Core.Root` → `AppsLayout`
+  - Uses: `primitives/pane.PaneBasePathContext`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
   - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
   - Slot contributors: `shell`
-  - Imported by: `app-cards`, `floating-bar`, `shell`, `theme`, `theme-customizer`, `theme-engine`
+  - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/sonata/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
   - **`debug`** — Debug app.

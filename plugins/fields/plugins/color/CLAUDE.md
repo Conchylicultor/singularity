@@ -20,6 +20,8 @@ read-only table cell and no filter.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `colorFieldType`, `colorIdentity`
+- Cross-plugin:
+  - Imported by: `fields/color/config`
 - Sub-plugins:
   - **`config`** — Color field type: config-render capability (hex/oklch popover picker for config-v2.fields.renderer) plus the colorField factory.
   - **`table`** — Color field type: data-view table cell (read-only color swatch).

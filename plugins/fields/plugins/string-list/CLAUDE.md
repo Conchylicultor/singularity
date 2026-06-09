@@ -26,6 +26,8 @@ slot — lives in the `plugins/config` sub-plugin.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `stringListFieldType`, `stringListIdentity`
+- Cross-plugin:
+  - Imported by: `fields/string-list/config`
 - Sub-plugins:
   - **`config`** — String-list field type: config-render capability (one-item-per-line textarea for config-v2.fields.renderer) plus the stringListField factory.
 

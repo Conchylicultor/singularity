@@ -37,6 +37,8 @@ desc) and each `slowest` span with its `parent`.
 ## Plugin reference
 
 - Load-bearing: yes
+- Cross-plugin:
+  - Imported by: `framework/server-core`, `infra/endpoints`
 - Core:
   - Exports: Types: `Aggregate`, `ParentBreakdown`, `SlowSpan`, `SpanKind`, `SpanRef`; Values: `getRuntimeProfile`, `installSpanContextRuntime`, `recordEntrySpan`, `recordSpan`, `resetRuntimeProfile`
 

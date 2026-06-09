@@ -7,6 +7,7 @@
 - Description: Umbrella for CSS token group plugins. Contributes global theme presets.
 - Web:
   - Contributes: `ThemeEngine.GlobalPreset` "Default", `ThemeEngine.GlobalPreset` "Ocean", `ThemeEngine.GlobalPreset` "Warm"
+  - Uses: `ui/theme-engine.ThemeEngine`
 - Sub-plugins:
   - **`categorical`** — Categorical color palette token group with switchable presets.
   - **`chart`** — Chart color token group with switchable presets.

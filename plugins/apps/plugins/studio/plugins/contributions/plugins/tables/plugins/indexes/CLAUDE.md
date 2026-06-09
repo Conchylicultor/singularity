@@ -7,8 +7,9 @@
 - Description: Table indexes section in the table detail view.
 - Web:
   - Contributes: `TableDetail.Section` "indexes" → `IndexesSection`
+  - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`
 - Server:
-  - Uses: `database.db`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
 - Shared:
   - Exports: Values: `getTableIndexes`
 

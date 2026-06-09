@@ -26,6 +26,8 @@ equality on the field descriptor, with a text-input fallback when unmatched).
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `dynamicEnumFieldType`, `dynamicEnumIdentity`
+- Cross-plugin:
+  - Imported by: `fields/dynamic-enum/config`
 - Sub-plugins:
   - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
 

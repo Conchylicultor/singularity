@@ -24,6 +24,8 @@ lives in the `plugins/config` sub-plugin.
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Types: `AvatarSpec`, `SvgNode`; Values: `avatarFieldType`, `avatarIdentity`
+- Cross-plugin:
+  - Imported by: `fields/avatar/config`
 - Sub-plugins:
   - **`config`** — Avatar field type: config-render capability (icon + color picker for config-v2.fields.renderer) plus the avatarField factory.
 

@@ -9,8 +9,12 @@ Push contention profiling sub-plugin for Debug > Profiling. Reads `~/.singularit
 - Description: Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
 - Web:
   - Contributes: `Profiling.Section` → `PushSection`, `Pane.Register` "debug-profiling-push-detail"
-  - Uses: `attempt-view.attemptPane`
+  - Uses: `attempt-view.attemptPane`, `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`
   - Exports: Values: `pushDetailPane`
+- Server:
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/push-profiling`
 - Shared:
   - Exports: Values: `getPushProfiling`
 - Sub-plugins:
