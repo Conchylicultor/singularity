@@ -100,7 +100,8 @@ export function FloatingTemplateChips({
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Failed to send",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     } finally {

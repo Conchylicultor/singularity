@@ -198,19 +198,21 @@ export function TaskDraftPopover({
       if (!outcome.ok) {
         toast({
           type: "task",
+          title: "Task submit failed",
           description: outcome.errorMessage ?? "Submit failed",
           variant: "error",
         });
         return;
       }
-      toast({ type: "task", description: describeOutcome(outcome, cards), variant: "success" });
+      toast({ type: "task", ...describeOutcome(outcome, cards), variant: "success" });
       onSuccess?.(outcome.taskIds ?? []);
       resetForm();
       setOpen(false);
     } catch (err) {
       toast({
         type: "task",
-        description: `Submit failed: ${(err as Error).message}`,
+        title: "Task submit failed",
+        description: (err as Error).message,
         variant: "error",
       });
     } finally {

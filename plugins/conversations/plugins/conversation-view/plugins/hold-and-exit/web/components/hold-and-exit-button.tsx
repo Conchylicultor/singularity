@@ -13,8 +13,8 @@ export function HoldAndExitItem({
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const { mutate, isPending } = useEndpointMutation(holdAndExit, {
-    onSuccess: () => toast({ type: "conversation", description: "Task held — conversation closed", variant: "success" }),
-    onError: (err) => toast({ type: "conversation", description: `Hold & Exit failed: ${err.message}`, variant: "error" }),
+    onSuccess: () => toast({ type: "conversation", title: "Task held", description: "Task held and conversation closed", variant: "success" }),
+    onError: (err) => toast({ type: "conversation", title: "Hold & Exit failed", description: err.message, variant: "error" }),
   });
 
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";

@@ -26,13 +26,15 @@ export function DropDependentsItem({
     onSuccess: (data) => {
       toast({
         type: "conversation",
+        title: "Dependents dropped",
         description: `Dropped ${data.dropped} task(s) and closed conversation`,
         variant: "success",
       });
     },
     onError: (err) => toast({
       type: "conversation",
-      description: `Drop dependents failed: ${err.message}`,
+      title: "Drop dependents failed",
+      description: err.message,
       variant: "error",
     }),
   });

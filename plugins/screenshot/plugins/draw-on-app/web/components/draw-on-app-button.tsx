@@ -43,7 +43,7 @@ export function DrawOnAppButton() {
           !(node instanceof HTMLElement && node.dataset.drawChrome === "true"),
       );
       if (!blob) {
-        toast({ type: "screenshot", description: "Capture failed", variant: "error" });
+        toast({ type: "screenshot", title: "Capture failed", description: "Capture returned no image", variant: "error" });
         setChromeVisible(true);
         return;
       }
@@ -55,7 +55,8 @@ export function DrawOnAppButton() {
     } catch (err) {
       toast({
         type: "screenshot",
-        description: `Capture failed: ${(err as Error).message}`,
+        title: "Capture failed",
+        description: (err as Error).message,
         variant: "error",
       });
       setChromeVisible(true);

@@ -38,7 +38,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
       })
       .join("\n\n");
     await navigator.clipboard.writeText(text);
-    toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
+    toast({ type: "build", title: "Logs copied", description: "Build logs copied to clipboard", variant: "info" });
   }, [steps]);
 
   return (
@@ -141,7 +141,7 @@ function LiveLogs(): ReactElement {
           setEntries((prev) => [...prev, msg]);
           break;
         case "error":
-          toast({ type: "build", description: msg.error, variant: "error" });
+          toast({ type: "build", title: "Build log error", description: msg.error, variant: "error" });
           break;
       }
     },
@@ -150,7 +150,7 @@ function LiveLogs(): ReactElement {
   const copyLogs = useCallback(async () => {
     const text = entries.map((e) => e.line).join("\n");
     await navigator.clipboard.writeText(text);
-    toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
+    toast({ type: "build", title: "Logs copied", description: "Build logs copied to clipboard", variant: "info" });
   }, [entries]);
 
   return (

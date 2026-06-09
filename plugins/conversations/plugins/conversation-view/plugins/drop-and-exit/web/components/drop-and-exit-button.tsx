@@ -30,12 +30,14 @@ export function DropAndExitItem({
 
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {
     onSuccess: (data) => {
-      const description = data.dropped ? "Task dropped and conversation closed" : "Conversation closed";
-      toast({ type: "conversation", description, variant: "success" });
+      const title = data.dropped ? "Task dropped" : "Conversation closed";
+      const description = data.dropped ? "Task marked dropped and conversation closed" : "Conversation closed without changing task state";
+      toast({ type: "conversation", title, description, variant: "success" });
     },
     onError: (err) => toast({
       type: "conversation",
-      description: `${hasPush ? "Complete" : "Drop"} & Exit failed: ${err.message}`,
+      title: `${hasPush ? "Complete" : "Drop"} & Exit failed`,
+      description: err.message,
       variant: "error",
     }),
   });

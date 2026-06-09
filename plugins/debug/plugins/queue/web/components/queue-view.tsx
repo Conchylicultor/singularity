@@ -45,7 +45,7 @@ export function QueueView() {
 
 function toastErr(e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
-  toast({ type: "debug", description: `${prefix}: ${msg}`, variant: "error" });
+  toast({ type: "debug", title: prefix, description: msg, variant: "error" });
 }
 
 function relativeTime(iso: string): string {

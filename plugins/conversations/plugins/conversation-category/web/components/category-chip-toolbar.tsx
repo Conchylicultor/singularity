@@ -33,7 +33,8 @@ export function CategoryChipToolbar() {
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Failed to set category: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Failed to set category",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     } finally {
@@ -50,7 +51,8 @@ export function CategoryChipToolbar() {
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Re-classify failed: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Re-classify failed",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     } finally {

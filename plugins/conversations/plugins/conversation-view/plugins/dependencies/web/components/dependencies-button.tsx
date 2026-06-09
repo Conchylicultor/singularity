@@ -97,7 +97,8 @@ export function DependenciesButton({
         if (!res.ok && res.status !== 204) {
           toast({
             type: "conversation",
-            description: (await res.text()) || "Failed to add dependency",
+            title: "Failed to add dependency",
+            description: (await res.text()) || `Server responded ${res.status}`,
             variant: "error",
           });
         }
@@ -139,7 +140,8 @@ export function DependenciesButton({
         if (!res.ok && res.status !== 204) {
           toast({
             type: "conversation",
-            description: (await res.text()) || "Failed to add dependency",
+            title: "Failed to add dependency",
+            description: (await res.text()) || `Server responded ${res.status}`,
             variant: "error",
           });
         }

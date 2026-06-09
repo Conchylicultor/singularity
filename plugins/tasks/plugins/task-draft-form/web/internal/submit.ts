@@ -91,12 +91,36 @@ export async function submitChain(args: SubmitArgs): Promise<SubmitOutcome> {
   }
 }
 
-export function describeOutcome(outcome: SubmitOutcome, cards: CardDraft[]): string {
+/** First non-empty line of a card's text, trimmed to a notification-friendly length. */
+function cardSummary(text: string): string {
+  const firstLine = text.split("\n").find((l) => l.trim()) ?? "";
+  const trimmed = firstLine.trim();
+  return trimmed.length > 80 ? `${trimmed.slice(0, 79)}…` : trimmed;
+}
+
+/**
+ * Title + detail for the post-submit notification. The title states the action
+ * ("Task created" / "Task queued"); the description names the specific task(s)
+ * so the bell entry is self-explanatory rather than a bare verb.
+ */
+export function describeOutcome(
+  outcome: SubmitOutcome,
+  cards: CardDraft[],
+): { title: string; description: string } {
   if (cards.length === 1) {
     const card = cards[0]!;
-    if (card.model === "queue") return "Queued";
-    return "Created";
+    const summary = cardSummary(card.text);
+    if (card.model === "queue") {
+      return { title: "Task queued", description: summary };
+    }
+    return { title: "Task created", description: `${summary} · ${card.model}` };
   }
-  if (outcome.launchedCount === 0) return `Queued ${outcome.totalCount} tasks`;
-  return `Created ${outcome.totalCount} tasks`;
+  const summaries = cards.map((c) => cardSummary(c.text)).filter(Boolean).join(" → ");
+  if (outcome.launchedCount === 0) {
+    return { title: `${outcome.totalCount} tasks queued`, description: summaries };
+  }
+  return {
+    title: `${outcome.totalCount} tasks created`,
+    description: `${outcome.launchedCount} launched · ${summaries}`,
+  };
 }

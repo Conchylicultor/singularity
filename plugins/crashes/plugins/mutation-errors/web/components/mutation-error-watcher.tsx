@@ -14,6 +14,7 @@ export function MutationErrorWatcher() {
       // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- reacts to this tab's local mutation cache, not shared live-state.
       toast({
         type: "mutation-error",
+        title: "Request failed",
         description: getEndpointErrorMessage(event.action.error),
         variant: "warning",
       });

@@ -34,16 +34,13 @@ export const notifyConversationCreatedJob = defineJob({
     const model = MODEL_REGISTRY[normalizeModel(event.model)].label;
     const task = await getTask(event.taskId);
     const taskTitle = task?.title ?? "";
-    const description =
-      event.spawnedBy === "dep-resolved" && taskTitle
-        ? `${taskTitle} unblocked · ${model}`
-        : taskTitle
-          ? `${taskTitle} started · ${model}`
-          : `Started · ${model}`;
+    const title =
+      event.spawnedBy === "dep-resolved" ? "Task unblocked" : "Conversation started";
+    const description = taskTitle ? `${taskTitle} · ${model}` : model;
 
     await recordNotification({
       type: "task",
-      title: "",
+      title,
       description,
       variant: "info",
       linkTo: `/c/${event.conversationId}`,

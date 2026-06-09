@@ -37,7 +37,7 @@ export function SummaryPane() {
     if (pendingSince !== null) {
       setPendingSince(null);
       // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- per-tab user-initiated (pendingSince gating), not a cross-tab broadcast reaction.
-      toast({ type: "summary", description: "Summary ready", variant: "success" });
+      toast({ type: "summary", title: "Summary ready", description: "A new conversation summary is available", variant: "success" });
     }
   }, [latest, pendingSince]);
 
@@ -47,12 +47,12 @@ export function SummaryPane() {
     const remaining = pendingSince + PENDING_TIMEOUT_MS - Date.now();
     if (remaining <= 0) {
       setPendingSince(null);
-      toast({ type: "summary", description: "Summarisation timed out", variant: "error" });
+      toast({ type: "summary", title: "Summarisation timed out", description: "No summary returned in time", variant: "error" });
       return;
     }
     const t = setTimeout(() => {
       setPendingSince(null);
-      toast({ type: "summary", description: "Summarisation timed out", variant: "error" });
+      toast({ type: "summary", title: "Summarisation timed out", description: "No summary returned in time", variant: "error" });
     }, remaining);
     return () => clearTimeout(t);
   }, [pendingSince]);
@@ -74,7 +74,8 @@ export function SummaryPane() {
       setPendingSince(null);
       toast({
         type: "summary",
-        description: `Summarise failed: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Summarise failed",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     }

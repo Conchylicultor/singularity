@@ -47,7 +47,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Failed to send: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Failed to send",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     } finally {
@@ -80,7 +81,8 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
       onError={(msg) =>
         toast({
           type: "conversation",
-          description: `Editor error: ${msg}`,
+          title: "Editor error",
+          description: msg,
           variant: "error",
         })
       }

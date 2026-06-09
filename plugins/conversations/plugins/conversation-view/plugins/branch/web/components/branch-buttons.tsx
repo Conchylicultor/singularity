@@ -35,7 +35,7 @@ export function BranchButtons({
     onLaunched: () => {
       setPrompt("");
       setOpen(false);
-      toast({ type: "conversation", description: "Branch created", variant: "success" });
+      toast({ type: "conversation", title: "Branch created", description: "Forked session running in the background", variant: "success" });
     },
   });
 

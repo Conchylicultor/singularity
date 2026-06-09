@@ -5,8 +5,10 @@ import type { NotificationVariant } from "../../shared/schema";
 
 export interface ToastArgs {
   type: string;
+  /** Headline: states *what happened* (e.g. "Task created"). Always required. */
+  title: string;
+  /** Detail: the specific instance (e.g. "Fix login bug · sonnet"). Always required. */
   description: string;
-  title?: string;
   variant?: NotificationVariant;
   linkTo?: string;
   metadata?: Record<string, unknown>;
@@ -32,7 +34,7 @@ export function toast(args: ToastArgs): void {
     body: {
       id,
       type: args.type,
-      title: args.title ?? args.description,
+      title: args.title,
       description: args.description,
       variant,
       linkTo: args.linkTo ?? null,

@@ -22,7 +22,8 @@ export function AnswerHereButton({
     onError: (err) =>
       toast({
         type: "conversation",
-        description: `Flush failed: ${err.message}`,
+        title: "Flush failed",
+        description: err.message,
         variant: "error",
       }),
   });

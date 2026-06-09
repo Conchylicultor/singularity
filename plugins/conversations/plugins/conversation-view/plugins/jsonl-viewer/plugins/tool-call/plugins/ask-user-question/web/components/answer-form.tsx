@@ -86,7 +86,8 @@ export function AnswerForm({
     onError: (err) =>
       toast({
         type: "conversation",
-        description: `Answer failed: ${err.message}`,
+        title: "Answer failed",
+        description: err.message,
         variant: "error",
       }),
   });

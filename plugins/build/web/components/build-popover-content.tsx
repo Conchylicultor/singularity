@@ -78,7 +78,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           setEntries((prev) => [...prev, msg]);
           break;
         case "error":
-          toast({ type: "build", description: msg.error, variant: "error" });
+          toast({ type: "build", title: "Build log error", description: msg.error, variant: "error" });
           break;
       }
     },
@@ -95,7 +95,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   const copyLogs = useCallback(async () => {
     const text = entries.map((e) => e.line).join("\n");
     await navigator.clipboard.writeText(text);
-    toast({ type: "build", description: "Logs copied to clipboard", variant: "info" });
+    toast({ type: "build", title: "Logs copied", description: "Build logs copied to clipboard", variant: "info" });
   }, [entries]);
 
   return (
@@ -231,12 +231,12 @@ export function BuildPopoverContent({
   const handleBuild = useCallback(async () => {
     try {
       await fetchEndpoint(triggerBuildEndpoint, {});
-      toast({ type: "build", description: "Build started", variant: "info" });
+      toast({ type: "build", title: "Build started", description: "Running ./singularity build", variant: "info" });
     } catch (err) {
       if (err instanceof EndpointError) {
-        toast({ type: "build", description: "Failed to start build", variant: "error" });
+        toast({ type: "build", title: "Build failed to start", description: err.message, variant: "error" });
       } else {
-        toast({ type: "build", description: "Server unreachable", variant: "error" });
+        toast({ type: "build", title: "Build failed to start", description: "Server unreachable", variant: "error" });
       }
     }
   }, []);

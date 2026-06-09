@@ -192,8 +192,8 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   if (trigger === "auto") {
     await recordNotification({
       type: "build",
-      title: "Auto-build triggered by new push",
-      description: "Auto-build triggered by new push",
+      title: "Auto-build started",
+      description: `Triggered by a new push (${buildId})`,
       variant: "info",
       dedupeKey: `build-start:${buildId}`,
     });
@@ -259,7 +259,7 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
     await recordNotification({
       type: "build",
       title: "Build succeeded",
-      description: "Build succeeded",
+      description: `Completed in ${Math.round((Date.now() - buildStartMs) / 1000)}s`,
       variant: "success",
       linkTo,
       dedupeKey: `build-finish:${buildId}`,
@@ -267,8 +267,8 @@ async function doRunBuild(trigger: "manual" | "auto"): Promise<void> {
   } else {
     await recordNotification({
       type: "build",
-      title: `Build failed (exit ${exitCode})`,
-      description: `Build failed (exit ${exitCode})`,
+      title: "Build failed",
+      description: `Exited with code ${exitCode} after ${Math.round((Date.now() - buildStartMs) / 1000)}s`,
       variant: "error",
       linkTo,
       dedupeKey: `build-finish:${buildId}`,

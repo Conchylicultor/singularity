@@ -36,11 +36,12 @@ export function ResumeButton({
         const text = await res.text();
         throw new Error(text || `HTTP ${res.status}`);
       }
-      toast({ type: "conversation", description: "Resuming conversation…", variant: "success" });
+      toast({ type: "conversation", title: "Resuming conversation", description: "Reconnecting the agent session…", variant: "success" });
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Resume failed: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Resume failed",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     } finally {

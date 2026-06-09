@@ -33,7 +33,8 @@ export function ConnectButton({
             onConnected?.(result.identity);
             toast({
               type: "auth",
-              description: `Connected (${result.identity.email ?? result.identity.accountId})`,
+              title: "Connected",
+              description: `${result.identity.email ?? result.identity.accountId}`,
               variant: "success",
             });
           } else if (result.message && result.message !== "cancelled") {

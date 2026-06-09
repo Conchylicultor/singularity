@@ -187,12 +187,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     try {
       await spec.run();
       if (spec.successToast) {
-        toast({ type: "conversation", description: spec.successToast, variant: "success" });
+        toast({ type: "conversation", title: spec.verb, description: spec.successToast, variant: "success" });
       }
     } catch (err) {
       toast({
         type: "conversation",
-        description: `${spec.verb} failed: ${endpointErrorText(err)}`,
+        title: `${spec.verb} failed`,
+        description: endpointErrorText(err),
         variant: "error",
       });
     } finally {

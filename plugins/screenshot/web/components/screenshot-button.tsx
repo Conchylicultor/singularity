@@ -22,7 +22,7 @@ export function ScreenshotButton() {
       // modern-screenshot relies on never fires in a hidden tab).
       const blob = await captureApp();
       if (!blob) {
-        toast({ type: "screenshot", description: "Screenshot failed", variant: "error" });
+        toast({ type: "screenshot", title: "Screenshot failed", description: "Capture returned no image", variant: "error" });
         return;
       }
 
@@ -48,7 +48,8 @@ export function ScreenshotButton() {
     } catch (err) {
       toast({
         type: "screenshot",
-        description: `Screenshot failed: ${(err as Error).message}`,
+        title: "Screenshot failed",
+        description: (err as Error).message,
         variant: "error",
       });
     } finally {
@@ -87,14 +88,16 @@ async function upload(id: string, blob: Blob): Promise<void> {
     if (!res.ok) {
       toast({
         type: "screenshot",
-        description: `Screenshot upload failed (${res.status})`,
+        title: "Screenshot upload failed",
+        description: `Server responded ${res.status}`,
         variant: "error",
       });
     }
   } catch (err) {
     toast({
       type: "screenshot",
-      description: `Screenshot upload failed: ${(err as Error).message}`,
+      title: "Screenshot upload failed",
+      description: (err as Error).message,
       variant: "error",
     });
   }

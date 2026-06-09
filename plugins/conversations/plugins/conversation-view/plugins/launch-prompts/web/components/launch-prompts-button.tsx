@@ -38,11 +38,12 @@ export function LaunchPromptsButton({
           attemptId: conversation.attemptId,
         },
       });
-      toast({ type: "conversation", description: `Launched: ${item.title}` });
+      toast({ type: "conversation", title: "Conversation launched", description: `Launched: ${item.title}` });
     } catch (err) {
       toast({
         type: "conversation",
-        description: `Failed to launch: ${getEndpointErrorMessage(err)}`,
+        title: "Failed to launch",
+        description: getEndpointErrorMessage(err),
         variant: "error",
       });
     } finally {

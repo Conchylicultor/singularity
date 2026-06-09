@@ -34,8 +34,9 @@ export const exitCleanFinalizeJob = defineJob({
       await recordNotification({
         type: "conversation",
         title: "Pushed and closed",
-        description: "Pushed and closed",
+        description: "Branch pushed and conversation closed",
         variant: "success",
+        linkTo: `/c/${conversationId}`,
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
     });

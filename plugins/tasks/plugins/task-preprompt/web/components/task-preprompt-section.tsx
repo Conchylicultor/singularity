@@ -15,7 +15,8 @@ export function TaskPrepromptSection({ taskId }: { taskId: string }) {
     setTaskPrepromptRemote(taskId, id).catch((err) => {
       toast({
         type: "task",
-        description: `Failed to set preprompt: ${err instanceof Error ? err.message : String(err)}`,
+        title: "Failed to set preprompt",
+        description: err instanceof Error ? err.message : String(err),
         variant: "error",
       });
     });

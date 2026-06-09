@@ -32,7 +32,8 @@ export function DefaultProviderRow({ providerId }: Props) {
       if (result.ok) {
         toast({
           type: "auth",
-          description: `Connected ${provider?.name ?? providerId}${
+          title: "Connected",
+          description: `${provider?.name ?? providerId}${
             result.identity?.email ? ` (${result.identity.email})` : ""
           }`,
           variant: "success",
@@ -63,7 +64,8 @@ export function DefaultProviderRow({ providerId }: Props) {
       await disconnect(providerId);
       toast({
         type: "auth",
-        description: `Disconnected ${provider?.name ?? providerId}`,
+        title: "Disconnected",
+        description: `${provider?.name ?? providerId}`,
         variant: "success",
       });
     } catch (err) {

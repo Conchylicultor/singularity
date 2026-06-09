@@ -59,9 +59,11 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
         <p className={`text-xs font-medium truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
           {n.title}
         </p>
-        <p className="text-xs text-muted-foreground line-clamp-2">
-          {n.description}
-        </p>
+        {n.description && n.description !== n.title && (
+          <p className="text-xs text-muted-foreground line-clamp-2">
+            {n.description}
+          </p>
+        )}
         <div className="flex items-center gap-2 mt-0.5">
           <RelativeTime date={n.createdAt} className="text-[10px] text-muted-foreground" />
           {n.type && (

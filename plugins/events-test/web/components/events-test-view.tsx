@@ -37,7 +37,7 @@ interface LogEntry {
 
 function toastErr(e: unknown, prefix: string) {
   const msg = e instanceof Error ? e.message : String(e);
-  toast({ type: "debug", description: `${prefix}: ${msg}`, variant: "error" });
+  toast({ type: "debug", title: prefix, description: msg, variant: "error" });
 }
 
 export function EventsTestView() {
@@ -103,7 +103,7 @@ export function EventsTestView() {
 
   const onSubscribe = async () => {
     if (!subLabel.trim()) {
-      toast({ type: "debug", description: "label is required", variant: "warning" });
+      toast({ type: "debug", title: "Missing field", description: "label is required", variant: "warning" });
       return;
     }
     setSubBusy(true);
@@ -118,7 +118,8 @@ export function EventsTestView() {
       flashTrigger(id);
       toast({
         type: "debug",
-        description: `Subscribed (${subUserId.trim() || "match-any"}, ${subOneShot ? "one-shot" : "recurring"})`,
+        title: "Subscribed",
+        description: `${subUserId.trim() || "match-any"}, ${subOneShot ? "one-shot" : "recurring"}`,
         variant: "success",
       });
       await refresh();
@@ -131,7 +132,7 @@ export function EventsTestView() {
 
   const onEmit = async () => {
     if (!emitUserId.trim()) {
-      toast({ type: "debug", description: "userId is required", variant: "warning" });
+      toast({ type: "debug", title: "Missing field", description: "userId is required", variant: "warning" });
       return;
     }
     setEmitBusy(true);
@@ -144,7 +145,8 @@ export function EventsTestView() {
       });
       toast({
         type: "debug",
-        description: `Emitted pinged(userId="${emitUserId.trim()}")`,
+        title: "Event emitted",
+        description: `pinged(userId="${emitUserId.trim()}")`,
         variant: "info",
       });
       await refresh();
@@ -158,7 +160,7 @@ export function EventsTestView() {
   const onDeleteTrigger = async (id: string) => {
     try {
       await fetchEndpoint(deleteEventsTestTrigger, { id });
-      toast({ type: "debug", description: "Trigger deleted", variant: "success" });
+      toast({ type: "debug", title: "Trigger deleted", description: `Trigger ${id}`, variant: "success" });
       await refresh();
     } catch (e) {
       toastErr(e, "delete failed");
@@ -167,7 +169,7 @@ export function EventsTestView() {
 
   const onDeleteTargeting = async () => {
     if (!dtLabel.trim()) {
-      toast({ type: "debug", description: "label is required", variant: "warning" });
+      toast({ type: "debug", title: "Missing field", description: "label is required", variant: "warning" });
       return;
     }
     setDtBusy(true);
@@ -177,7 +179,8 @@ export function EventsTestView() {
       });
       toast({
         type: "debug",
-        description: `Swept triggers with label="${dtLabel.trim()}"`,
+        title: "Triggers swept",
+        description: `label="${dtLabel.trim()}"`,
         variant: "success",
       });
       setDtLabel("");
@@ -191,7 +194,7 @@ export function EventsTestView() {
 
   const onDirectEnqueue = async () => {
     if (!deLabel.trim()) {
-      toast({ type: "debug", description: "label is required", variant: "warning" });
+      toast({ type: "debug", title: "Missing field", description: "label is required", variant: "warning" });
       return;
     }
     setDeBusy(true);
@@ -203,7 +206,8 @@ export function EventsTestView() {
       });
       toast({
         type: "debug",
-        description: `Enqueued job ${jobId}`,
+        title: "Job enqueued",
+        description: `Job ${jobId}`,
         variant: "success",
       });
       await refresh();
@@ -217,7 +221,7 @@ export function EventsTestView() {
   const onResetLog = async () => {
     try {
       await fetchEndpoint(resetEventsTest, {});
-      toast({ type: "debug", description: "Log cleared" });
+      toast({ type: "debug", title: "Log cleared", description: "Events test log reset", });
       await refresh();
     } catch (e) {
       toastErr(e, "reset failed");
