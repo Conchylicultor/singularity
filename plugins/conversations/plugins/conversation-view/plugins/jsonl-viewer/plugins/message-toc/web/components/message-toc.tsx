@@ -41,6 +41,19 @@ function truncate(text: string): string {
   return firstLine.slice(0, MAX_PREVIEW) + "…";
 }
 
+// The scroll container is a sibling of this overlay within the pane frame, not a
+// global. Walk up from the clicked element to the nearest ancestor whose subtree
+// holds a [data-pane-scroll] so a second open conversation pane can't be targeted.
+function paneScrollFrom(from: Element): HTMLElement | null {
+  let cur: Element | null = from.parentElement;
+  while (cur) {
+    const scroll = cur.querySelector<HTMLElement>("[data-pane-scroll]");
+    if (scroll) return scroll;
+    cur = cur.parentElement;
+  }
+  return null;
+}
+
 export function MessageToc() {
   const { convId } = conversationPane.useParams();
   const result = useResource(jsonlEventsResource, { id: convId });
@@ -48,14 +61,15 @@ export function MessageToc() {
 
   if (entries.length === 0) return null;
 
-  const scrollTo = (eventIndex: number) => {
-    const el = document.querySelector(`[data-event-index="${eventIndex}"]`);
+  const scrollTo = (eventIndex: number, from: Element) => {
+    const scroll = paneScrollFrom(from);
+    const el = scroll?.querySelector(`[data-event-index="${eventIndex}"]`);
     el?.scrollIntoView({ behavior: "smooth", block: "start" });
   };
 
   return (
     <FloatingAction
-      className="absolute top-2 right-3"
+      className="absolute top-2 right-3 z-nav"
       anchor="top-right"
       panelClassName="flex-col w-[3.25rem] group-data-hovered/fa:w-56 max-h-[1.625rem] group-data-hovered/fa:max-h-80"
     >
@@ -74,7 +88,7 @@ export function MessageToc() {
           <button
             key={entry.eventIndex}
             type="button"
-            onClick={() => scrollTo(entry.eventIndex)}
+            onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
             className="flex w-full items-start gap-2 px-2 py-1.5 text-left text-xs hover:bg-accent"
           >
             <span className="shrink-0 tabular-nums text-muted-foreground">
@@ -90,8 +104,8 @@ export function MessageToc() {
       <FloatingActionFadeIn className="shrink-0">
         <button
           type="button"
-          onClick={() => {
-            const container = document.querySelector("[data-pane-scroll]");
+          onClick={(e) => {
+            const container = paneScrollFrom(e.currentTarget);
             container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
           }}
           className="flex w-full items-center justify-center border-t border-border/40 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"

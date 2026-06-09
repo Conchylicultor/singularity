@@ -129,6 +129,7 @@ export function FloatingTemplateChips({
         </ResponsiveOverflow>
       )}
       <FloatingAction
+        className="relative size-7 z-popover"
         variant="ghost"
         panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-56"
       >
