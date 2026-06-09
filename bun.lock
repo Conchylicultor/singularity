@@ -1906,6 +1906,10 @@
       "name": "@singularity/plugin-primitives-tabbed-view",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/text": {
+      "name": "@singularity/plugin-primitives-text",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/text-editor": {
       "name": "@singularity/plugin-primitives-text-editor",
       "version": "0.0.1",
@@ -3639,6 +3643,8 @@
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 
     "@singularity/plugin-primitives-tabbed-view": ["@singularity/plugin-primitives-tabbed-view@workspace:plugins/primitives/plugins/tabbed-view"],
+
+    "@singularity/plugin-primitives-text": ["@singularity/plugin-primitives-text@workspace:plugins/primitives/plugins/text"],
 
     "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
 

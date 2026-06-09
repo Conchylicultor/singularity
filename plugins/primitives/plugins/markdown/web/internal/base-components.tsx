@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import type { Components } from "react-markdown";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { langFromClassName, nodeToText } from "./helpers";
 
 export function buildBaseComponents(
@@ -9,24 +10,24 @@ export function buildBaseComponents(
 ): Components {
   return {
     h1: ({ children, ...p }) => (
-      <h1 className="mt-4 mb-2 text-2xl font-semibold" {...p}>
+      <Text as="h1" variant="title" className="mt-4 mb-2" {...p}>
         {transform(children)}
-      </h1>
+      </Text>
     ),
     h2: ({ children, ...p }) => (
-      <h2 className="mt-4 mb-2 text-xl font-semibold" {...p}>
+      <Text as="h2" variant="title" className="mt-4 mb-2" {...p}>
         {transform(children)}
-      </h2>
+      </Text>
     ),
     h3: ({ children, ...p }) => (
-      <h3 className="mt-3 mb-1.5 text-lg font-semibold" {...p}>
+      <Text as="h3" variant="heading" className="mt-3 mb-1.5" {...p}>
         {transform(children)}
-      </h3>
+      </Text>
     ),
     h4: ({ children, ...p }) => (
-      <h4 className="mt-3 mb-1 font-semibold" {...p}>
+      <Text as="h4" variant="subheading" className="mt-3 mb-1" {...p}>
         {transform(children)}
-      </h4>
+      </Text>
     ),
     p: ({ children, ...p }) => (
       <p className="my-2" {...p}>

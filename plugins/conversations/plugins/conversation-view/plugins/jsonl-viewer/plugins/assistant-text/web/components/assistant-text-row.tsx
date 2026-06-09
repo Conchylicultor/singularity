@@ -7,6 +7,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { useRowMarkdown } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
@@ -20,7 +21,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
     <ContentScope>
       <div className="px-3 py-2">
         {markdownMode ? (
-          <div className="text-sm leading-6">
+          <Text as="div" variant="body">
             {(() => {
               const counts = new Map<string, number>();
               return segments.map((seg, i) => {
@@ -46,9 +47,9 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
                 );
               });
             })()}
-          </div>
+          </Text>
         ) : (
-          <div className="whitespace-pre-wrap break-words text-sm">{e.text}</div>
+          <Text as="div" variant="body" className="whitespace-pre-wrap break-words">{e.text}</Text>
         )}
       </div>
     </ContentScope>

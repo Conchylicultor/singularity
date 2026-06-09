@@ -27,6 +27,18 @@ export const defaultPreset: Preset = {
     fontWeightMedium: "500",
     fontWeightSemibold: "600",
     fontWeightBold: "700",
+    fontSizeTitle: "1.25rem",
+    fontSizeHeading: "1.125rem",
+    fontSizeSubheading: "1rem",
+    fontSizeBody: "0.875rem",
+    fontSizeLabel: "0.8125rem",
+    fontSizeCaption: "0.75rem",
+    lineHeightTitle: "1.75rem",
+    lineHeightHeading: "1.625rem",
+    lineHeightSubheading: "1.5rem",
+    lineHeightBody: "1.5rem",
+    lineHeightLabel: "1.25rem",
+    lineHeightCaption: "1rem",
   }),
 };
 

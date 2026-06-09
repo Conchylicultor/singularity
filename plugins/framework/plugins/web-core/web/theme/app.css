@@ -318,6 +318,22 @@
 @utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); }
 @utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); }
 
+/* Semantic typography role utilities — the single source of truth for text
+ * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height
+ * + weight (+ tracking) read DIRECTLY from the typography token group's
+ * --font-size-<role> / --line-height-<role> runtime vars (overridden by
+ * ThemeInjector), so picking a typography preset re-themes every role live. The
+ * `no-adhoc-typography` lint rule (text plugin) bans raw text-size / leading-*
+ * so every typographic decision routes through these roles via <Text role>.
+ * NOTE: roles read the vars directly — never bridge them through @theme inline
+ * (that would auto-generate a colliding `text-<role>` font-size utility). */
+@utility text-title      { font-size: var(--font-size-title);      line-height: var(--line-height-title);      font-weight: var(--font-weight-semibold); letter-spacing: -0.01em; }
+@utility text-heading    { font-size: var(--font-size-heading);    line-height: var(--line-height-heading);    font-weight: var(--font-weight-semibold); letter-spacing: -0.005em; }
+@utility text-subheading { font-size: var(--font-size-subheading); line-height: var(--line-height-subheading); font-weight: var(--font-weight-semibold); }
+@utility text-body       { font-size: var(--font-size-body);       line-height: var(--line-height-body);       font-weight: var(--font-weight-normal); }
+@utility text-label      { font-size: var(--font-size-label);      line-height: var(--line-height-label);      font-weight: var(--font-weight-medium); }
+@utility text-caption    { font-size: var(--font-size-caption);    line-height: var(--line-height-caption);    font-weight: var(--font-weight-normal); }
+
 /* Semantic z-layer utilities — the single source of truth for stacking order.
  * Values come from the static --z-* scale in @theme above (structural, not
  * runtime-themeable). The `no-adhoc-zindex` lint rule (z-layers plugin) bans raw

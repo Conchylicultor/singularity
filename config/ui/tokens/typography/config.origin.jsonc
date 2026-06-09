@@ -1,4 +1,4 @@
-// @hash 0339733b1b62
+// @hash 1f1897539f1e
 {
   "preset": "default",
   "overrides": {
@@ -14,7 +14,19 @@
       "fontWeightNormal": "",
       "fontWeightMedium": "",
       "fontWeightSemibold": "",
-      "fontWeightBold": ""
+      "fontWeightBold": "",
+      "fontSizeTitle": "",
+      "fontSizeHeading": "",
+      "fontSizeSubheading": "",
+      "fontSizeBody": "",
+      "fontSizeLabel": "",
+      "fontSizeCaption": "",
+      "lineHeightTitle": "",
+      "lineHeightHeading": "",
+      "lineHeightSubheading": "",
+      "lineHeightBody": "",
+      "lineHeightLabel": "",
+      "lineHeightCaption": ""
     },
     "dark": {
       "fontSans": "",
@@ -28,7 +40,19 @@
       "fontWeightNormal": "",
       "fontWeightMedium": "",
       "fontWeightSemibold": "",
-      "fontWeightBold": ""
+      "fontWeightBold": "",
+      "fontSizeTitle": "",
+      "fontSizeHeading": "",
+      "fontSizeSubheading": "",
+      "fontSizeBody": "",
+      "fontSizeLabel": "",
+      "fontSizeCaption": "",
+      "lineHeightTitle": "",
+      "lineHeightHeading": "",
+      "lineHeightSubheading": "",
+      "lineHeightBody": "",
+      "lineHeightLabel": "",
+      "lineHeightCaption": ""
     }
   }
 }
