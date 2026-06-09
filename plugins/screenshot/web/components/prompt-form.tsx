@@ -1,7 +1,7 @@
 import { useRef, useState } from "react";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { saveScreenshotFile } from "../../shared/endpoints";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
@@ -21,8 +21,10 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
     let path: string;
     try {
       ({ path } = await fetchEndpoint(saveScreenshotFile, { id }, { body: blob }));
-    } catch {
-      // Upload failed — degrade gracefully by launching without the @path suffix.
+    } catch (err) {
+      // A server non-2xx (the old `!res.ok` path) degrades gracefully by
+      // launching without the @path suffix; anything unexpected propagates.
+      if (!(err instanceof EndpointError)) throw err;
       return { prompt: body || undefined };
     }
     const prompt = body ? `${body}\n\n@${path}` : `@${path}`;

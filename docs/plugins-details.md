@@ -1664,7 +1664,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ClaudeCliCall`; Values: `ClaudeCliCallSchema`, `claudeCliCallsResource`
     - **`endpoints`** — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
       - Core:
-        - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
+        - Exports: Types: `Codec`, `EndpointDef`, `ExtractParams`; Values: `blob`, `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`, `isCodec`, `multipart`
       - Web:
         - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:
