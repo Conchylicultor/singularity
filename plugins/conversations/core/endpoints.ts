@@ -11,6 +11,7 @@ export const CreateConversationBodySchema = z.object({
   runtime: z.string().optional(),
   model: z.string().optional(),
   forkFromConversationId: z.string().optional(),
+  prepromptId: z.string().optional(),
 });
 export type CreateConversationBody = z.infer<typeof CreateConversationBodySchema>;
 

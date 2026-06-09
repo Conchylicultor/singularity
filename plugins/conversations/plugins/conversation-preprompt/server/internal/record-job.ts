@@ -21,6 +21,7 @@ export const recordPrepromptJob = defineJob({
   event: z
     .object({
       conversationId: z.string(),
+      prepromptId: z.string().optional(),
     })
     .passthrough(),
   dedup: "none",
@@ -41,7 +42,8 @@ export const recordPrepromptJob = defineJob({
       return;
     }
 
-    const prepromptId = (await getTaskPreprompt(conversation.taskId))?.prepromptId;
+    const prepromptId =
+      event?.prepromptId ?? (await getTaskPreprompt(conversation.taskId))?.prepromptId;
     const item = resolvePrepromptItem(prepromptId);
     if (!item) return;
 

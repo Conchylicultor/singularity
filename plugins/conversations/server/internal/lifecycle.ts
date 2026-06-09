@@ -45,6 +45,7 @@ export async function createConversation(
     spawnedBy?: string;
     kind?: ConversationKind;
     forkFromConversationId?: string;
+    prepromptId?: string;
   } = {},
 ): Promise<Conversation> {
   const runtimeId = opts.runtimeId ?? DEFAULT_RUNTIME;
@@ -159,11 +160,14 @@ export async function createConversation(
     throw err;
   }
 
-  // Resolve the per-task preprompt (config list-item id → text). A dangling or
-  // empty selection resolves to undefined → nothing is injected.
-  const preprompt = effectiveTaskId
-    ? resolvePreprompt((await getTaskPreprompt(effectiveTaskId))?.prepromptId)
-    : undefined;
+  // Resolve the preprompt (config list-item id → text). An explicit
+  // opts.prepromptId (ad-hoc launch input) takes precedence over the task
+  // default. A dangling or empty selection resolves to undefined → nothing is
+  // injected.
+  const prepromptId =
+    opts.prepromptId ??
+    (effectiveTaskId ? (await getTaskPreprompt(effectiveTaskId))?.prepromptId : undefined);
+  const preprompt = resolvePreprompt(prepromptId);
 
   // Bake the preprompt into the FIRST user turn (wrapped in
   // <special_instructions>) so it's durable, visible in the transcript, and
@@ -213,6 +217,7 @@ export async function createConversation(
     createdAt: conv.createdAt.toISOString(),
     prompt: opts.prompt?.trim() || undefined,
     kind: conv.kind,
+    prepromptId,
   });
 
   return conv;

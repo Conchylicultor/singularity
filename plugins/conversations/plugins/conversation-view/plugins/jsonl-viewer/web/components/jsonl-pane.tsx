@@ -12,6 +12,7 @@ import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
+import { ConversationIdProvider } from "./conversation-id-context";
 import { StickyReportProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
 
@@ -207,6 +208,7 @@ export function JsonlPane({
   }, [events.length, scrollIfPinned]);
 
   return (
+    <ConversationIdProvider id={conversation.id}>
     <div className="flex h-full min-h-0 flex-col">
       <div className="relative min-h-0 flex-1 isolate">
         <div
@@ -260,5 +262,6 @@ export function JsonlPane({
       </div>
       {children}
     </div>
+    </ConversationIdProvider>
   );
 }

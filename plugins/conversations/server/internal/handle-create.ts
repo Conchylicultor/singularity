@@ -18,6 +18,7 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       runtimeId: body.runtime,
       model,
       forkFromConversationId: body.forkFromConversationId,
+      prepromptId: body.prepromptId,
     });
   } catch (err) {
     notifyConversationsChanged();

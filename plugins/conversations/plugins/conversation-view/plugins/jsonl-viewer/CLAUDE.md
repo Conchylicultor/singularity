@@ -27,7 +27,7 @@ do not duplicate it in `system`, `task-notification`, `meta-prompt`,
 - Web:
   - Slots: `JsonlViewer.RowAction`, `JsonlViewer.Overlay`, `JsonlViewer.EventFilter`, `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`
   - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-  - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
+  - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
 - Cross-plugin:
   - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `preprompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
 - Server:
@@ -42,6 +42,7 @@ do not duplicate it in `system`, `task-notification`, `meta-prompt`,
   - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
   - **`event-counter`** — Displays the total event count in the conversation toolbar.
   - **`file-path`** — Clickable file path component with RTL ellipsis, copy button, and file-peek pane integration.
+  - **`investigate-event`** — Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
   - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
   - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
   - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.

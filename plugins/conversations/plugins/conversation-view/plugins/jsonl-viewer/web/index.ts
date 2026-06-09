@@ -8,6 +8,7 @@ export type { OverlayContribution, RowActionContribution, EventFilterContributio
 export { JsonlPane } from "./components/jsonl-pane";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export { useLastAssistantEvent } from "./components/last-assistant-context";
+export { useJsonlConversationId } from "./components/conversation-id-context";
 export { RowActionButton } from "./components/row-action-button";
 export { CopyTextAction } from "./components/copy-button";
 export { formatTime } from "./utils";

@@ -762,7 +762,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `JsonlViewer.RowAction`, `JsonlViewer.Overlay`, `JsonlViewer.EventFilter`, `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-            - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
+            - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
             - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `preprompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
           - Server:
@@ -816,6 +816,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Uses: `conversations.useConversationById`
                 - Exports: Values: `FilePath`, `toRelativePath`
+            - **`investigate-event`** — Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
+              - Web:
+                - Exports: Values: `InvestigateEventButton`
             - **`message-toc`** — Floating table of contents listing user messages for quick navigation.
               - Web:
                 - Contributes: `JsonlViewer.Overlay` "message-toc" → `MessageToc`

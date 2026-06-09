@@ -31,6 +31,7 @@ export type LaunchRequest = {
   taskId?: string;
   attemptId?: string;
   forkFromConversationId?: string;
+  prepromptId?: string;
 };
 
 export type LaunchControlProps = {

@@ -10,6 +10,7 @@ export interface ConversationCreatedPayload {
   createdAt: string;
   prompt?: string;
   kind?: string;
+  prepromptId?: string;
   [key: string]: unknown;
 }
 

@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";
 import type { LaunchRequest } from "./launch-control";
 import type { Conversation } from "@plugins/tasks-core/core";
@@ -20,6 +21,8 @@ export type LaunchAgentPopoverProps = {
    */
   openAfterLaunch?: boolean;
   onLaunched?: (conversation: Conversation) => void;
+  /** Whether to show the preprompt picker. Defaults to `true`. */
+  showPreprompt?: boolean;
 };
 
 export function LaunchAgentPopover({
@@ -33,9 +36,11 @@ export function LaunchAgentPopover({
   disabled,
   openAfterLaunch = true,
   onLaunched,
+  showPreprompt = true,
 }: LaunchAgentPopoverProps) {
   const [open, setOpen] = useState(false);
   const [text, setText] = useState("");
+  const [prepromptId, setPrepromptId] = useState<string | null>(null);
 
   return (
     <InlinePopover
@@ -56,11 +61,22 @@ export function LaunchAgentPopover({
         className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-sm"
         rows={3}
       />
+      {showPreprompt && (
+        <PrepromptSelect
+          value={prepromptId}
+          onChange={setPrepromptId}
+          ariaLabel="Preprompt"
+          className="w-full"
+        />
+      )}
       <LaunchControl
         size="sm"
         disabled={disabled}
         openAfterLaunch={openAfterLaunch}
-        getRequest={() => getRequest(text)}
+        getRequest={async () => {
+          const req = await getRequest(text);
+          return prepromptId ? { ...req, prepromptId } : req;
+        }}
         onLaunched={(conv) => {
           setOpen(false);
           onLaunched?.(conv);
