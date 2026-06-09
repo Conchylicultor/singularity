@@ -140,25 +140,33 @@ export const tasksResource = defineResource<TaskListItem[]>({
     },
   ],
   loader: async (_params, ctx) => {
-    const sel = db
-      .select({
-        id: tasks.id,
-        folderId: tasks.folderId,
-        groupId: tasks.groupId,
-        title: tasks.title,
-        author: tasks.author,
-        droppedAt: tasks.droppedAt,
-        heldAt: tasks.heldAt,
-        expanded: tasks.expanded,
-        rank: tasks.rank,
-        createdAt: tasks.createdAt,
-        updatedAt: tasks.updatedAt,
-        status: tasks.status,
-        active: tasks.active,
-        finishedAt: tasks.finishedAt,
-        dependencies: tasks.dependencies,
-      })
-      .from(tasks);
+    // Every `tasks_v` column except `description`. The `satisfies
+    // Record<keyof TaskListItem, unknown>` makes this projection fail to COMPILE
+    // if it ever drifts from `TaskListItemSchema` (= `TaskSchema.omit({
+    // description })`): adding a `_tasks` column makes it required in the schema,
+    // so omitting it here is a type error. Previously the column set was
+    // hand-listed with no such guard and the `as unknown as` cast below hid the
+    // mismatch — a missing column (e.g. `titleAuto`) surfaced only at runtime as
+    // a ZodError on every list load, freezing the whole tasks app.
+    const listColumns = {
+      id: tasks.id,
+      folderId: tasks.folderId,
+      groupId: tasks.groupId,
+      title: tasks.title,
+      titleAuto: tasks.titleAuto,
+      author: tasks.author,
+      droppedAt: tasks.droppedAt,
+      heldAt: tasks.heldAt,
+      expanded: tasks.expanded,
+      rank: tasks.rank,
+      createdAt: tasks.createdAt,
+      updatedAt: tasks.updatedAt,
+      status: tasks.status,
+      active: tasks.active,
+      finishedAt: tasks.finishedAt,
+      dependencies: tasks.dependencies,
+    } satisfies Record<keyof TaskListItem, unknown>;
+    const sel = db.select(listColumns).from(tasks);
     const scoped = ctx?.affectedIds
       ? sel.where(inArray(tasks.id, [...ctx.affectedIds]))
       : sel;

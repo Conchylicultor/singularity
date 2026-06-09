@@ -16,6 +16,26 @@ export interface RecordCrashResult {
   crashLoop: boolean;
 }
 
+// Crash payloads are unbounded: an aggregated error (e.g. a ZodError listing one
+// issue per row across thousands of rows) can be hundreds of KB. Persisting that
+// verbatim balloons the crash row, the derived task description, and ultimately
+// hangs the markdown renderer when the task is opened. Clamp every free-text
+// field at the ingestion boundary so nothing downstream can ever exceed these.
+const MESSAGE_MAX = 4_000;
+const STACK_MAX = 16_000;
+const COMPONENT_STACK_MAX = 8_000;
+
+// Truncate the middle, keeping head + tail. For stacks the innermost frames
+// (the tail) are usually the root cause; for aggregated errors the closing
+// context matters too — so we drop the redundant middle, not the end.
+function clamp(value: string, max: number): string {
+  if (value.length <= max) return value;
+  const head = Math.ceil(max / 2);
+  const tail = max - head;
+  const omitted = value.length - max;
+  return `${value.slice(0, head)}\n… [truncated ${omitted} chars] …\n${value.slice(value.length - tail)}`;
+}
+
 // Per-(fingerprint|worktree) in-process mutex. Serialising at the JS layer
 // avoids DB row locks saturating the connection pool under cold-start bursts.
 const taskCreationLocks = new Map<string, Promise<void>>();
@@ -28,6 +48,12 @@ export async function recordCrash(
 ): Promise<RecordCrashResult> {
   const fp = await fingerprintOf(input.errorType, input.stack);
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
+  const message = clamp(input.message, MESSAGE_MAX);
+  const stack = input.stack != null ? clamp(input.stack, STACK_MAX) : null;
+  const componentStack =
+    input.componentStack != null
+      ? clamp(input.componentStack, COMPONENT_STACK_MAX)
+      : null;
   const loop = bumpWindowAndCheck(fp);
   const noise = isNoiseCrash({
     source: input.source,
@@ -45,9 +71,9 @@ export async function recordCrash(
       worktree,
       source: input.source,
       errorType: input.errorType ?? null,
-      message: input.message,
-      stack: input.stack ?? null,
-      componentStack: input.componentStack ?? null,
+      message,
+      stack,
+      componentStack,
       url: input.url ?? null,
       userAgent: input.userAgent ?? null,
       slot: input.slot ?? null,
