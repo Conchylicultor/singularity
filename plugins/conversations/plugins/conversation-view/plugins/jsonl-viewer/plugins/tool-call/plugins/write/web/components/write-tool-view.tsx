@@ -12,7 +12,7 @@ export function WriteToolView({ event }: ToolRendererProps) {
   const { file_path = "", content = "" } = (event.input ?? {}) as Partial<WriteInput>;
 
   return (
-    <ToolCallCard event={event} summary={<FilePath filePath={file_path} />}>
+    <ToolCallCard event={event} aside={<FilePath filePath={file_path} />}>
       <div className="mt-2">
         <HighlightedCode
           code={content}

@@ -21,7 +21,7 @@ export function MultiEditView({ event }: ToolRendererProps) {
   const { file_path = "", edits = [] } = (event.input ?? {}) as Partial<MultiEditInput>;
   const multi = edits.length > 1;
   return (
-    <ToolCallCard event={event} summary={<FilePath filePath={file_path} />} defaultOpen>
+    <ToolCallCard event={event} aside={<FilePath filePath={file_path} />} defaultOpen>
       <div className="mt-2 space-y-3">
         {edits.map((edit, i) => (
           <div key={i}>

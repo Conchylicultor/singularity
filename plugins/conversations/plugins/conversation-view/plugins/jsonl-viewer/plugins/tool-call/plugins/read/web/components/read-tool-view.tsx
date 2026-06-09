@@ -52,7 +52,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
 
   if (!conversation) return null;
 
-  const summary = (
+  const aside = (
     <span className="flex min-w-0 items-center gap-2">
       <FilePath filePath={file_path} />
       <LineRangeBadge offset={offset} limit={limit} />
@@ -62,7 +62,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
   const isImage = isImagePath(file_path);
 
   return (
-    <ToolCallCard event={event} summary={summary} defaultOpen={isImage}>
+    <ToolCallCard event={event} aside={aside} defaultOpen={isImage}>
       {event.result && (
         <div className="mt-2">
           {event.result.isError ? (

@@ -17,7 +17,7 @@ function ResultDetail({ result }: { result: ToolCallEvent["result"] }) {
 export function EditView({ event }: ToolRendererProps) {
   const { file_path = "", old_string = "", new_string = "" } = (event.input ?? {}) as Partial<EditInput>;
   return (
-    <ToolCallCard event={event} summary={<FilePath filePath={file_path} />} defaultOpen>
+    <ToolCallCard event={event} aside={<FilePath filePath={file_path} />} defaultOpen>
       <div className="mt-2 space-y-2">
         <InlineDiff oldText={old_string} newText={new_string} path={file_path} />
         <ResultDetail result={event.result} />

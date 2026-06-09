@@ -580,6 +580,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter",
       "version": "0.0.1",
@@ -2995,6 +2999,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-task-reminder@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/task-reminder"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-code-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-collapsible-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-event-counter@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/event-counter"],
 
