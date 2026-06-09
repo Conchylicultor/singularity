@@ -15,6 +15,7 @@ import { runChecks, discoverTscTargets, tsBuildInfoPath } from "@plugins/framewo
 import {
   libpqEnv,
   readDatabaseConfig,
+  worktreeDataDir,
   PG_LOG_FILE,
   SINGULARITY_DIR,
   WORKTREES_DIR,
@@ -799,6 +800,9 @@ export function registerBuild(program: Command) {
                 const lines: StepResult["lines"] = [];
                 const start = performance.now();
                 const ok = await runChecks(undefined, {
+                  // Full, untruncated check output lands here; the buffered
+                  // `lines` (console + build.log) stay summarized.
+                  logFile: join(worktreeDataDir(name), "check.log"),
                   onCheckDone: (id, durationMs, wallStartMs) => {
                     pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
                   },
@@ -877,15 +881,21 @@ export function registerBuild(program: Command) {
 
       printStepResults(stepResults);
 
-      const failures = stepResults
-        .filter((r) => !r.success)
-        .map((r) => r.label);
+      const failedSteps = stepResults.filter((r) => !r.success);
+      const failures = failedSteps.map((r) => r.label);
 
       if (failures.length > 0) {
         await rm(stagingPath, { recursive: true, force: true });
-        writeBuildLogs(name);
+        const buildLog = writeBuildLogs(name);
         finalizeBuildLog(false);
-        console.error(`\nBuild failed: ${failures.join(", ")}`);
+        // Final lines, so they survive `./singularity build | tail`. When the
+        // checks step failed, point straight at its full untruncated transcript
+        // so agents can read it directly without the build.log → check.log hop.
+        const pointers = [`Full output: ${buildLog}`];
+        if (failedSteps.some((r) => r.id === "checks")) {
+          pointers.push(`Check logs:  ${join(worktreeDataDir(name), "check.log")}`);
+        }
+        console.error(`\nBuild failed: ${failures.join(", ")}\n${pointers.join("\n")}`);
         process.exit(1);
       }
 

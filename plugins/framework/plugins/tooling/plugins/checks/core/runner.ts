@@ -1,3 +1,5 @@
+import { writeFileSync, mkdirSync } from "node:fs";
+import { dirname } from "node:path";
 import { loadCollectedDir } from "@plugins/framework/plugins/tooling/plugins/collected-dir/core";
 import type { Check, CheckResult } from "./types";
 import { computeTreeHash } from "./tree-hash";
@@ -39,6 +41,15 @@ export interface RunChecksOptions {
   log: (line: string, stream: "stdout" | "stderr") => void;
   /** Bypass the tree-hash result cache entirely (lookup + record). */
   noCache?: boolean;
+  /**
+   * Absolute path to write the FULL, untruncated results to. The console
+   * (`log`) output stays summarized/truncated so it doesn't flood an agent's
+   * context (and survives being piped through `tail`); the file holds the
+   * complete failure messages so they can be read directly. When set, the
+   * console truncation note points at this file instead of telling the caller
+   * to re-run.
+   */
+  logFile?: string;
 }
 
 export async function runChecks(ids: string[] | undefined, options: RunChecksOptions): Promise<boolean> {
@@ -92,6 +103,16 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   );
 
   const log = options.log;
+  const logFile = options.logFile;
+
+  // Full, untruncated transcript mirrored to `logFile`. Every line emitted to
+  // the console is also recorded here verbatim; failure messages are recorded
+  // in full even when the console copy is truncated.
+  const full: string[] = [];
+  const emit = (line: string, stream: "stdout" | "stderr") => {
+    log(line, stream);
+    full.push(line);
+  };
 
   const MAX_MESSAGE_LINES = 100;
 
@@ -99,29 +120,41 @@ export async function runChecks(ids: string[] | undefined, options: RunChecksOpt
   for (const { check, result, durationMs, wallStart, cached } of results) {
     options?.onCheckDone?.(check.id, durationMs, wallStart);
     if (result.ok) {
-      log(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
+      emit(`• ${check.id} ... ok${cached ? " (cached)" : ""}`, "stdout");
     } else {
       allOk = false;
-      log(`• ${check.id} ... FAIL`, "stdout");
+      emit(`• ${check.id} ... FAIL`, "stdout");
+      const indented = `  ${result.message.split("\n").join("\n  ")}`;
       const lines = result.message.split("\n");
       if (lines.length > MAX_MESSAGE_LINES) {
         const head = lines.slice(0, 50).join("\n");
         const tail = lines.slice(-50).join("\n");
         const omitted = lines.length - 100;
-        log(`  ${head}\n  ... (${omitted} lines omitted — re-run \`./singularity check ${check.id}\` for full output)\n  ${tail}`, "stderr");
+        const moreHint = logFile
+          ? `see ${logFile} for full output`
+          : `re-run \`./singularity check ${check.id}\` for full output`;
+        // Truncated copy to the console; full copy to the file.
+        log(`  ${head}\n  ... (${omitted} lines omitted — ${moreHint})\n  ${tail}`, "stderr");
+        full.push(indented);
       } else {
-        log(`  ${result.message}`, "stderr");
+        emit(`  ${result.message}`, "stderr");
       }
-      if (result.hint) log(`  hint: ${result.hint}`, "stderr");
+      if (result.hint) emit(`  hint: ${result.hint}`, "stderr");
     }
   }
   if (!allOk) {
-    log(
+    emit(
       "\nIf you cannot fix the failing check(s): STOP, report the failure to the user, and wait for instructions. " +
         "Do NOT work around check failures — not by disabling checks, editing check code, " +
         "expanding skip lists, committing via raw git, or any other means.",
       "stderr",
     );
   }
+
+  if (logFile) {
+    mkdirSync(dirname(logFile), { recursive: true });
+    writeFileSync(logFile, full.join("\n") + "\n");
+  }
+
   return allOk;
 }
