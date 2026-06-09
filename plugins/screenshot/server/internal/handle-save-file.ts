@@ -1,28 +1,27 @@
 import { mkdir } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
+import { saveScreenshotFile } from "../../shared/endpoints";
 
 const DIR = join(tmpdir(), "singularity-screenshots");
 
-export async function handleSaveFile(
-  req: Request,
-  params: Record<string, string>,
-): Promise<Response> {
+export const handleSaveFile = implement(saveScreenshotFile, async ({ body, params, req }) => {
   const id = params.id;
-  if (!id) return new Response("missing id", { status: 400 });
+  if (!id) throw new HttpError(400, "missing id");
   if (!/^[A-Za-z0-9-]+$/.test(id)) {
-    return new Response("invalid id", { status: 400 });
+    throw new HttpError(400, "invalid id");
   }
   const contentType = req.headers.get("content-type") ?? "";
   if (!contentType.startsWith("image/png")) {
-    return new Response("expected content-type: image/png", { status: 400 });
+    throw new HttpError(400, "expected content-type: image/png");
   }
-  const bytes = new Uint8Array(await req.arrayBuffer());
+  const bytes = new Uint8Array(await body.arrayBuffer());
   if (bytes.byteLength === 0) {
-    return new Response("empty body", { status: 400 });
+    throw new HttpError(400, "empty body");
   }
   await mkdir(DIR, { recursive: true });
   const path = join(DIR, `${id}.png`);
   await Bun.write(path, bytes);
-  return Response.json({ path });
-}
+  return { path };
+});

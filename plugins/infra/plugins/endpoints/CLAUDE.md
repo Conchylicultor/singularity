@@ -51,6 +51,43 @@ await mutateAsync({ id }, { body: { name: "new" } });
 
 Use `fetchEndpoint` for imperative fetches outside React. Non-2xx responses throw `EndpointError(status, body)`.
 
+## Non-JSON payloads (codecs)
+
+A bare Zod schema in `body:`/`response:` means **JSON** — that's the default and covers ~all endpoints. Binary and multipart payloads opt into the *same* `body:`/`response:` slot via a **codec** exported from `@plugins/infra/plugins/endpoints/core`:
+
+```typescript
+import { blob, multipart } from "@plugins/infra/plugins/endpoints/core";
+
+export const createScreenshot = defineEndpoint({
+  route: "POST /api/screenshot",
+  body: blob("image/png"),                 // raw binary request; sets Content-Type
+  response: z.object({ id: z.string() }),  // bare schema → JSON response
+});
+
+export const getScreenshot = defineEndpoint({
+  route: "GET /api/screenshot/:id",
+  response: blob(),                        // typed Blob response (client decodes via res.blob())
+});
+
+export const uploadAttachment = defineEndpoint({
+  route: "POST /api/attachments",
+  body: multipart(),                       // FormData upload; the browser sets the boundary
+  response: UploadedAttachmentSchema,
+});
+```
+
+- `blob(contentType?)` — raw binary on the request (`body:`) or response (`response:`) side. The client encodes/decodes via `Blob`. A server handler that needs custom response headers (e.g. `cache-control`, `content-disposition`) may stay a raw handler instead of using `implement()` — `blob()` carries only the body.
+- `multipart()` — **request-only** FormData. No `Content-Type` is set so the browser supplies the multipart boundary; using it in a `response:` slot throws.
+
+`fetchEndpoint` also accepts two transport opts for fire-and-forget beacons:
+
+```typescript
+void fetchEndpoint(reportCrash, {}, { body, keepalive: true, report: false });
+```
+
+- `keepalive: true` — RequestInit passthrough so the request survives page unload (crash/analytics beacons).
+- `report: false` — skips endpoint error reporting for that call. Required for the crash beacon so a failing report can't recurse back into the crash pipeline. Defaults to `true`.
+
 ## Global error handling
 
 Every `useEndpointMutation` call is covered by a global toast safety net in `shell/toaster`. If a mutation errors and the error is unhandled, `getEndpointErrorMessage` extracts a human-readable string (prefers `body.message` over `"HTTP <status>"`) and `toast.error` fires automatically.
@@ -113,7 +150,7 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - Description: Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
 - Load-bearing: yes
 - Core:
-  - Exports: Types: `EndpointDef`, `ExtractParams`; Values: `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`
+  - Exports: Types: `Codec`, `EndpointDef`, `ExtractParams`; Values: `blob`, `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`, `isCodec`, `multipart`
 - Web:
   - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
 - Server:

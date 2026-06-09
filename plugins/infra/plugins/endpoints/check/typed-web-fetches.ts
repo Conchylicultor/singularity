@@ -11,18 +11,15 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// Legacy raw fetch("/api/...") call sites. Each entry records the file path
-// and the number of violations present when the allowlist was created.
-// Migrating a call DECREASES the count (always passes); adding a new raw
-// fetch INCREASES it past the limit (fails the check).
+// Remaining raw fetch("/api/...") call site. The keepalive/multipart/binary
+// special-transport cases now flow through fetchEndpoint via body/response
+// codecs (blob()/multipart()). The sole holdout builds its URL polymorphically
+// at runtime (/api/${ownerType}s/:id/attachments), so it has no literal
+// defineEndpoint to derive from — tracked for migration in a follow-up task,
+// after which this allowlist empties and the check rejects all raw /api/
+// fetches unconditionally.
 const ALLOWED = new Map<string, number>([
-  // Binary / special transport — cannot use fetchEndpoint
-  ["plugins/crashes/web/report.ts", 1], // keepalive: true
-  ["plugins/infra/plugins/attachments/web/internal/list.ts", 1], // polymorphic URL pattern
-  ["plugins/infra/plugins/attachments/web/internal/upload.ts", 1], // FormData (multipart)
-  ["plugins/screenshot/web/components/prompt-form.tsx", 1], // binary image/png
-  ["plugins/screenshot/web/components/screenshot-button.tsx", 1], // binary image/png
-  ["plugins/screenshot/web/components/screenshot-view.tsx", 1], // binary blob response
+  ["plugins/infra/plugins/attachments/web/internal/list.ts", 1], // polymorphic runtime route
 ]);
 
 const check: Check = {

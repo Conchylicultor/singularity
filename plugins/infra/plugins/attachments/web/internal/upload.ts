@@ -1,9 +1,11 @@
-export interface UploadedAttachment {
-  id: string;
-  filename: string;
-  mime: string;
-  size: number;
-}
+import type { z } from "zod";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import {
+  uploadAttachment as uploadAttachmentEndpoint,
+  type UploadedAttachmentSchema,
+} from "../../shared/endpoints";
+
+export type UploadedAttachment = z.infer<typeof UploadedAttachmentSchema>;
 
 // Staged upload: POSTs a file to /api/attachments. Server stores bytes, creates
 // a row with owner_id = NULL, returns the id. Caller must then link it to an
@@ -17,10 +19,5 @@ export async function uploadAttachment(
   const form = new FormData();
   const fileObj = file instanceof File ? file : new File([file], filename, { type: mime });
   form.append("file", fileObj, filename);
-  const res = await fetch("/api/attachments", { method: "POST", body: form });
-  if (!res.ok) {
-    const text = await res.text().catch(() => "");
-    throw new Error(`upload failed (${res.status}): ${text}`);
-  }
-  return (await res.json()) as UploadedAttachment;
+  return fetchEndpoint(uploadAttachmentEndpoint, {}, { body: form });
 }

@@ -27,9 +27,13 @@ export function getEndpointErrorMessage(error: unknown): string {
   return error instanceof Error ? error.message : String(error);
 }
 
-type FetchOpts<TBody, TQuery> = { signal?: AbortSignal } & (TBody extends void
-  ? { body?: never }
-  : { body: TBody }) &
+type FetchOpts<TBody, TQuery> = {
+  signal?: AbortSignal;
+  /** RequestInit passthrough; lets a beacon survive page unload. */
+  keepalive?: boolean;
+  /** Default true. `false` skips reportEndpointError (e.g. the crash beacon). */
+  report?: boolean;
+} & (TBody extends void ? { body?: never } : { body: TBody }) &
   (TQuery extends void ? { query?: never } : { query: TQuery });
 
 /**
@@ -73,10 +77,13 @@ export async function fetchEndpoint<
   }
 
   const headers: Record<string, string> = {};
-  let body: string | undefined;
-  if (opts && "body" in opts && opts.body !== undefined) {
-    headers["Content-Type"] = "application/json";
-    body = JSON.stringify(opts.body);
+  // Content-type comes only from the codec — no application/json fallback, so
+  // multipart stays header-less (the browser sets the boundary).
+  let body: BodyInit | undefined;
+  if (endpoint.bodyCodec && opts && "body" in opts && opts.body !== undefined) {
+    const enc = endpoint.bodyCodec.encodeRequest(opts.body);
+    body = enc.body;
+    if (enc.contentType) headers["Content-Type"] = enc.contentType;
   }
 
   const res = await fetch(url, {
@@ -84,6 +91,7 @@ export async function fetchEndpoint<
     headers,
     body,
     signal: opts?.signal,
+    keepalive: opts?.keepalive,
   });
 
   if (!res.ok) {
@@ -94,16 +102,17 @@ export async function fetchEndpoint<
       if (!(err instanceof SyntaxError)) throw err;
       errorBody = await res.text().catch(() => null);
     }
-    reportEndpointError({ route: endpoint.route, status: res.status, body: errorBody });
+    if (opts?.report !== false) {
+      reportEndpointError({ route: endpoint.route, status: res.status, body: errorBody });
+    }
     throw new EndpointError(res.status, errorBody);
   }
 
-  // void response (204 or no responseSchema)
-  if (res.status === 204 || !endpoint.responseSchema) {
+  // void response (204 or no response codec)
+  if (res.status === 204 || !endpoint.responseCodec) {
     return undefined as TResponse extends void ? void : TResponse;
   }
 
-  const json: unknown = await res.json();
-  const parsed = endpoint.responseSchema.parse(json);
+  const parsed = await endpoint.responseCodec.decodeResponse(res);
   return parsed as TResponse extends void ? void : TResponse;
 }

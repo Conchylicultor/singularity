@@ -4,6 +4,8 @@ import {
   applyStrokes,
   type Stroke,
 } from "@plugins/screenshot/plugins/draw-canvas/web";
+import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getScreenshot } from "../../shared/endpoints";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
 import { PromptForm } from "./prompt-form";
@@ -49,27 +51,33 @@ export function ScreenshotView({ id }: { id: string }) {
     while (true) {
       if (blobDelivered.current) return;
       try {
-        const res = await fetch(`/api/screenshots/${id}`);
-        if (res.ok) {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (!blobDelivered.current) {
-            setImageBlob(await res.blob());
-            resetEdits();
-          }
-          return;
-        }
-        if (res.status !== 404 || Date.now() > deadline) {
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-          if (!blobDelivered.current)
-            setError(res.status === 404 ? "Screenshot not found" : `Failed (${res.status})`);
-          return;
-        }
-      } catch (err) {
+        const blob = await fetchEndpoint(getScreenshot, { id });
         // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
-        if (!blobDelivered.current) setError((err as Error).message);
+        if (!blobDelivered.current) {
+          setImageBlob(blob);
+          resetEdits();
+        }
+        return;
+      } catch (err) {
+        // A 404 means the screenshot has not been uploaded yet — keep polling
+        // until the deadline. Any other error (or a 404 past the deadline) is
+        // terminal.
+        if (err instanceof EndpointError && err.status === 404 && Date.now() <= deadline) {
+          await new Promise((r) => setTimeout(r, 150));
+          continue;
+        }
+        // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
+        if (!blobDelivered.current) {
+          setError(
+            err instanceof EndpointError && err.status === 404
+              ? "Screenshot not found"
+              : err instanceof EndpointError
+                ? `Failed (${err.status})`
+                : (err as Error).message,
+          );
+        }
         return;
       }
-      await new Promise((r) => setTimeout(r, 150));
     }
   }, [id]);
 

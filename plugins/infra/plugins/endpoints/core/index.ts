@@ -3,4 +3,6 @@ export type { EndpointDef } from "./define-endpoint";
 export type { ExtractParams } from "./route-params";
 export { extractMethod, extractPath, interpolatePath } from "./route-params";
 export { implement, HttpError } from "./implement";
+export type { Codec } from "./codec";
+export { blob, multipart, isCodec } from "./codec";
 export { dateString } from "./schemas";

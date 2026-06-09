@@ -3,6 +3,8 @@ import { flushSync } from "react-dom";
 import { MdPhotoCamera } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { toast } from "@plugins/notifications/web";
+import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { createScreenshot } from "../../shared/endpoints";
 import { captureApp } from "../capture";
 
 export function ScreenshotButton() {
@@ -80,25 +82,22 @@ async function upload(id: string, blob: Blob): Promise<void> {
     });
 
   try {
-    const res = await fetch(`/api/screenshots/${id}`, {
-      method: "POST",
-      body: blob,
-      headers: { "content-type": "image/png" },
-    });
-    if (!res.ok) {
+    await fetchEndpoint(createScreenshot, { id }, { body: blob });
+  } catch (err) {
+    if (err instanceof EndpointError) {
       toast({
         type: "screenshot",
         title: "Screenshot upload failed",
-        description: `Server responded ${res.status}`,
+        description: `Server responded ${err.status}`,
+        variant: "error",
+      });
+    } else {
+      toast({
+        type: "screenshot",
+        title: "Screenshot upload failed",
+        description: (err as Error).message,
         variant: "error",
       });
     }
-  } catch (err) {
-    toast({
-      type: "screenshot",
-      title: "Screenshot upload failed",
-      description: (err as Error).message,
-      variant: "error",
-    });
   }
 }

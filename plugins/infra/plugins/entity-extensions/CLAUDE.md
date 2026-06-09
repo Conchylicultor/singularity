@@ -37,9 +37,10 @@ The handle exposes `.table` for same-plugin raw queries (live-state resource loa
 Each consumer plugin owns its own:
 - `server/internal/tables.ts` — calls `defineExtension(...)`
 - `server/internal/resource.ts` — `defineResource({mode: "push"})` returning the rows
-- `server/index.ts` — registers the resource and a single `POST /api/<feature>/:parentId` route
+- `core/endpoints.ts` — `defineEndpoint(...)` for the `POST /api/<feature>/:parentId` mutation
+- `server/index.ts` — registers the resource and wires the mutation via `implement(...)`
 - `shared/resources.ts` — `resourceDescriptor(...)` for the web client
-- `web/components/...` — `useResource(...)` + `fetch(...)`
+- `web/components/...` — `useResource(...)` for reads + `useEndpointMutation(...)` / `fetchEndpoint(...)` (from `@plugins/infra/plugins/endpoints/web`) for the mutation
 
 The parent plugin doesn't change.
 

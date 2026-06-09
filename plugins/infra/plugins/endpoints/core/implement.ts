@@ -1,14 +1,8 @@
 import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { EndpointDef } from "./define-endpoint";
+import { HttpError } from "./http-error";
 
-export class HttpError extends Error {
-  constructor(
-    public readonly status: number,
-    message?: string,
-  ) {
-    super(message ?? `HTTP ${status}`);
-  }
-}
+export { HttpError };
 
 type HttpHandler = (
   req: Request,
@@ -23,6 +17,7 @@ type HttpHandler = (
 type JsonSerializable = { toJSON(): string; toString(): string };
 type JsonCompat<T> =
   T extends string ? string | Date | JsonSerializable :
+  T extends Blob | ArrayBuffer | ArrayBufferView | FormData | ReadableStream ? T :
   T extends (infer U)[] ? JsonCompat<U>[] :
   T extends object ? { [K in keyof T]: JsonCompat<T[K]> } :
   T;
@@ -44,24 +39,11 @@ export function implement<
 ): HttpHandler {
   return async (req: Request, params: Record<string, string>) => {
     try {
-      // Parse body if schema exists
+      // Decode body via codec if one exists. The codec throws HttpError(400)
+      // on a bad payload, handled by the catch below.
       let body: TBody = undefined as TBody;
-      if (_endpoint.bodySchema) {
-        let raw: unknown;
-        try {
-          raw = await req.json();
-        } catch (err) {
-          if (!(err instanceof SyntaxError)) throw err;
-          return new Response("Invalid JSON body", { status: 400 });
-        }
-        const result = _endpoint.bodySchema.safeParse(raw);
-        if (!result.success) {
-          return Response.json(
-            { error: "Validation failed", issues: result.error.issues },
-            { status: 400 },
-          );
-        }
-        body = result.data;
+      if (_endpoint.bodyCodec) {
+        body = await _endpoint.bodyCodec.decodeRequest(req);
       }
 
       // Parse query if schema exists
@@ -99,7 +81,9 @@ export function implement<
         return new Response(null, { status: 204 });
       }
 
-      return Response.json(result);
+      return _endpoint.responseCodec
+        ? _endpoint.responseCodec.encodeResponse(result as TResponse)
+        : Response.json(result);
     } catch (err) {
       if (err instanceof HttpError) {
         return new Response(err.message, { status: err.status });

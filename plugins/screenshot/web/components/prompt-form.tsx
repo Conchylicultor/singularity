@@ -1,6 +1,8 @@
 import { useRef, useState } from "react";
 import { LaunchControl, type LaunchRequest } from "@plugins/primitives/plugins/launch/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { saveScreenshotFile } from "../../shared/endpoints";
 
 export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | null | Promise<Blob | null> }) {
   const [text, setText] = useState("");
@@ -16,13 +18,13 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
     const body = textRef.current.trim();
     const blob = await getBlob();
     if (!blob) return { prompt: body || undefined };
-    const res = await fetch(`/api/screenshots/${id}/file`, {
-      method: "POST",
-      body: blob,
-      headers: { "content-type": "image/png" },
-    });
-    if (!res.ok) return { prompt: body || undefined };
-    const { path } = (await res.json()) as { path: string };
+    let path: string;
+    try {
+      ({ path } = await fetchEndpoint(saveScreenshotFile, { id }, { body: blob }));
+    } catch {
+      // Upload failed — degrade gracefully by launching without the @path suffix.
+      return { prompt: body || undefined };
+    }
     const prompt = body ? `${body}\n\n@${path}` : `@${path}`;
     return { prompt };
   };

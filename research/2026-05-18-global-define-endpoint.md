@@ -169,8 +169,7 @@ import { handleUpdate } from "./internal/handle-update";
 httpRoutes: {
   [getAgent.route]: handleGet,        // ← implement() already called in the file
   [updateAgent.route]: handleUpdate,
-  // non-migrated handlers still work side-by-side:
-  "POST /api/agents/:id/launch": handleLaunch,
+  [launchAgent.route]: handleLaunch,
 }
 ```
 
@@ -264,51 +263,30 @@ const entries = useMemo(() => data?.entries ?? [], [data]);
 
 The backup panel originally polled (setTimeout at 2s/5s/10s) after triggering an async job. `invalidates` triggers one refetch on success. Async jobs need live-state WS push for real-time updates, not query invalidation.
 
-### 7. Special-case endpoints to skip or defer
+### 7. Special-case endpoints (now handled via codecs)
 
-- `crashes` — needs `keepalive: true` which `fetchEndpoint` doesn't support
-- `debug/worktree-cleanup` — streaming DELETE response (`res.body.getReader()`)
-- `screenshot` — binary blob POST (`content-type: image/png`)
+These non-JSON transports were originally skipped; they now flow through the typed
+path via `body:`/`response:` codecs (`blob()` / `multipart()`) plus the
+`keepalive` / `report` opts on `fetchEndpoint` (see
+`research/2026-06-09-global-endpoint-codecs-non-json.md`):
+
+- `crashes` — keepalive beacon via `fetchEndpoint(..., { keepalive: true, report: false })` (`report:false` so a failing report can't recurse into the crash pipeline)
+- `screenshot` — binary blob POST/GET via `blob("image/png")` / `blob()`
+- `attachments` upload — multipart via `multipart()`
+
+The one remaining raw `fetch("/api/…")` in web code is
+`attachments/web/internal/list.ts`, a polymorphic runtime-built route — a *route*
+problem, not an encoding one — deferred to its own follow-up task.
 
 ## Migration strategy
 
-**Phase 1** — Ship the primitive + one reference migration:
-1. Create `plugins/infra/plugins/endpoints/` with core/server/web
-2. Migrate `agents` plugin end-to-end (7 endpoints, has CRUD + custom)
-3. Validate type inference, runtime behavior, build passes
-
-**Phase 2** — Migrate high-value plugins:
-- `tasks` / `tasks-core` (~15 endpoints)
-- `conversations` (heavily fetched)
-- `config` / `config_v2`
-
-**Phase 3** — Remaining plugins migrate incrementally. Old hand-written handlers continue working indefinitely.
-
-**Web-side migration order** (recommended):
-1. Start with void mutations — zero schema changes, quickest wins (~50% of remaining calls)
-2. Batch response schema additions as a precursor pass before migrating web consumers
-3. Use `dateString()` for all Drizzle timestamp columns in response schemas
-4. Skip special cases (streaming, binary, keepalive) until last
-
-## Key files to create/modify
-
-| File | Action |
-|------|--------|
-| `plugins/infra/plugins/endpoints/core/route-params.ts` | Create — template literal types + runtime URL helpers |
-| `plugins/infra/plugins/endpoints/core/define-endpoint.ts` | Create — `defineEndpoint()` + `EndpointDef` type |
-| `plugins/infra/plugins/endpoints/core/index.ts` | Create — barrel |
-| `plugins/infra/plugins/endpoints/server/internal/implement.ts` | Create — `implement()` + `HttpError` |
-| `plugins/infra/plugins/endpoints/server/index.ts` | Create — barrel (no ServerPluginDefinition needed, just exports) |
-| `plugins/infra/plugins/endpoints/web/internal/fetch-endpoint.ts` | Create — `fetchEndpoint()` + `EndpointError` |
-| `plugins/infra/plugins/endpoints/web/internal/use-endpoint.ts` | Create — `useEndpoint()` hook (wraps `useQuery`) |
-| `plugins/infra/plugins/endpoints/web/internal/use-endpoint-mutation.ts` | Create — `useEndpointMutation()` hook (wraps `useMutation`) |
-| `plugins/infra/plugins/endpoints/web/index.ts` | Create — barrel |
-| `plugins/agents/core/endpoints.ts` | Create — agent endpoint definitions |
-| `plugins/agents/server/internal/handle-get.ts` | Modify — use `implement()` |
-| `plugins/agents/server/internal/handle-update.ts` | Modify — use `implement()` |
-| `plugins/agents/server/internal/handle-delete.ts` | Modify — use `implement()` |
-| `plugins/agents/server/index.ts` | Modify — use `[endpoint.route]` keys |
-| `plugins/agents/web/components/agents-list.tsx` | Modify — use `fetchEndpoint()` |
+The migration is **complete**: every server handler moved to `implement()` and
+every web consumer to `fetchEndpoint` / `useEndpoint` / `useEndpointMutation`,
+covering both JSON and non-JSON payloads (the latter via the `blob()` /
+`multipart()` codecs — see
+`research/2026-06-09-global-endpoint-codecs-non-json.md`). The only remaining raw
+`fetch("/api/…")` in web code is the polymorphic `attachments/web/internal/list.ts`
+route, deferred to a follow-up.
 
 ## Verification
 
