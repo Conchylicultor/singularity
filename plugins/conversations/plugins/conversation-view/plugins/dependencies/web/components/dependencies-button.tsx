@@ -181,14 +181,14 @@ export function DependenciesButton({
             Blocked by
           </div>
           {blockerConvs.map((c) => (
-            <div key={c.taskId} className="truncate text-xs">
+            <div key={c.taskId} className="text-xs">
               {c.title}
             </div>
           ))}
           {orphanDepIds.map((id) => {
             const t = allTasks.find((at) => at.id === id);
             return (
-              <div key={id} className="truncate text-xs text-muted-foreground">
+              <div key={id} className="text-xs text-muted-foreground">
                 {t?.title ?? id}
               </div>
             );
@@ -201,14 +201,14 @@ export function DependenciesButton({
             Blocking
           </div>
           {blockedConvs.map((c) => (
-            <div key={c.taskId} className="truncate text-xs">
+            <div key={c.taskId} className="text-xs">
               {c.title}
             </div>
           ))}
           {orphanBlockedIds.map((id) => {
             const t = allTasks.find((at) => at.id === id);
             return (
-              <div key={id} className="truncate text-xs text-muted-foreground">
+              <div key={id} className="text-xs text-muted-foreground">
                 {t?.title ?? id}
               </div>
             );
@@ -222,7 +222,7 @@ export function DependenciesButton({
   );
 
   return (
-    <WithTooltip content={peekContent} side="top">
+    <WithTooltip content={peekContent} side="top" className="max-w-md">
       <ButtonGroup>
         <InlinePopover
           open={blockedByOpen}
