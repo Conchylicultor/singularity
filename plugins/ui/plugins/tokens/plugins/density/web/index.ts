@@ -14,7 +14,6 @@ export { Density } from "./slots";
 export type { DensityPresetContribution } from "./slots";
 
 export default {
-  name: "UI: Density",
   description: "Density token group (padding intents) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Density.Preset(p)),

@@ -6,7 +6,6 @@ import { TableView } from "./components/table-view";
 export type { TableViewOptions } from "../core";
 
 export default {
-  name: "Data View — Table",
   description:
     "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.",
   contributions: [

@@ -9,7 +9,6 @@ export { Tasks } from "./slots";
 export type { TaskViewProps } from "./slots";
 
 export default {
-  name: "Task: List",
   description:
     "Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).",
   contributions: [

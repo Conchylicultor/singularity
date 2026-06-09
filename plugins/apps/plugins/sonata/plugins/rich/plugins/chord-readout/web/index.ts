@@ -4,7 +4,6 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordReadout } from "./components/chord-readout";
 
 export default {
-  name: "Sonata: Chord Readout",
   description:
     "Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().",
   contributions: [

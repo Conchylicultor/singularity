@@ -10,7 +10,6 @@ export {
 } from "./use-conversations";
 export type { ConversationsState } from "./use-conversations";
 export default {
-  name: "Conversations",
   collapsed: true,
   description: "Conversation domain: shared hooks and client-side API.",
   loadBearing: true,

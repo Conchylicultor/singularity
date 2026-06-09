@@ -4,7 +4,6 @@ import { handleGetCatalog } from "./internal/handle-get-catalog";
 import { handleApply } from "./internal/handle-apply";
 
 export default {
-  name: "UI: Tweakcn Community Browser",
   description:
     "Community theme catalog and apply endpoints for tweakcn.",
   httpRoutes: {

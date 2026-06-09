@@ -5,7 +5,6 @@ import { toggleBlock } from "../core";
 export { toggleBlock } from "../core";
 
 export default {
-  name: "Toggle Block",
   description: "Toggle (collapsible) block type for the page editor.",
   contributions: [
     Editor.Block({

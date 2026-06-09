@@ -23,7 +23,6 @@ export {
 } from "./internal/registry";
 
 export default {
-  name: "Slot Render",
   description:
     "Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).",
   loadBearing: true,

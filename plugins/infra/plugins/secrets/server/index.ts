@@ -17,6 +17,5 @@ export {
 } from "@plugins/infra/plugins/secrets/core";
 
 export default {
-  name: "Secrets",
   loadBearing: true,
 } satisfies ServerPluginDefinition;

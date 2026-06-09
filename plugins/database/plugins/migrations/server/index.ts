@@ -3,6 +3,5 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 export { runMigrations } from "./internal/runner";
 
 export default {
-  name: "Database Migrations",
   description: "DDL lifecycle: migration runner and SQL files.",
 } satisfies ServerPluginDefinition;

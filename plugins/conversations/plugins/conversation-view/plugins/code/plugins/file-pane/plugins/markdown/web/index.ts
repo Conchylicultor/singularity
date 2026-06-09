@@ -4,7 +4,6 @@ import { MarkdownView } from "./components/markdown-view";
 import { supportsMarkdown } from "./internal/supports";
 
 export default {
-  name: "Conversation: Code — Markdown renderer",
   description: "Rendered markdown preview for .md and .mdx files.",
   contributions: [
     FilePane.Renderer({

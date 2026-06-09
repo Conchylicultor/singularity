@@ -10,7 +10,6 @@ export {
 } from "./components/push-gantt";
 
 export default {
-  name: "Push Gantt",
   description: "Reusable push/build Gantt chart component.",
   contributions: [],
 } satisfies PluginDefinition;

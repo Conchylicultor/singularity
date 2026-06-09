@@ -10,7 +10,6 @@ export type {
 export { filterTree, collectAllIds } from "./internal/filter-tree";
 
 export default {
-  name: "Search",
   description:
     "Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.",
   contributions: [],

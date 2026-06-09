@@ -5,7 +5,6 @@ import { CodeEnhancer } from "./internal/code-enhancer";
 import { ImgEnhancer } from "./internal/img-enhancer";
 
 export default {
-  name: "Markdown Extensions",
   description:
     "Conversation-scoped markdown enhancers: file-links, inline code enhancements, and image proxying.",
   contributions: [

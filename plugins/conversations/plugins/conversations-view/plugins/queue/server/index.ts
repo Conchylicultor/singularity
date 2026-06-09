@@ -32,7 +32,6 @@ export { seedRankJob } from "./internal/seed-rank-job";
 export { lockDeck, rankForTop, rankForBottom, rankAfterN, rankAdjacentTo, rankAfterBlockers, endRank, findTaskIdForConversation, reseatGroupMembers, upsertRank, rankJoiningGroup } from "./internal/queue-ranks";
 
 export default {
-  name: "Conversations Queue",
   description:
     "Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.",
   contributions: [

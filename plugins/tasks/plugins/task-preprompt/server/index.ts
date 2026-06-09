@@ -9,7 +9,6 @@ export { getTaskPreprompt, setTaskPreprompt, inheritTaskPreprompt } from "./inte
 export { taskPrepromptsResource } from "./internal/resource";
 
 export default {
-  name: "Tasks: Preprompt",
   description:
     "Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.",
   contributions: [Resource.Declare(taskPrepromptsResource)],

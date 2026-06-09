@@ -14,7 +14,6 @@ export { Chart } from "./slots";
 export type { ChartPresetContribution } from "./slots";
 
 export default {
-  name: "UI: Chart",
   description: "Chart color token group with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Chart.Preset(p)),

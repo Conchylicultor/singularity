@@ -8,7 +8,6 @@ import { crashesPane } from "./panes";
 export { crashesPane } from "./panes";
 
 export default {
-  name: "Crashes",
   description:
     "Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.",
   contributions: [

@@ -4,7 +4,6 @@ import { DateFilter } from "./components/date-filter";
 import { predicate, isActive } from "./internal/date-filter-logic";
 
 export default {
-  name: "Fields: Date — Filter",
   description: "Date field type: data-view filter (inclusive date-range control).",
   contributions: [
     DataViewSlots.Filter({

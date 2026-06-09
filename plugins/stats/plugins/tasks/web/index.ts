@@ -3,7 +3,6 @@ import { Stats } from "@plugins/stats/web";
 import { TasksSection } from "./components/tasks-section";
 
 export default {
-  name: "Stats: Tasks",
   description: "Task-based stats: active (open) tasks over time.",
   contributions: [
     Stats.Chart({

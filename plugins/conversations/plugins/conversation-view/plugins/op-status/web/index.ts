@@ -5,7 +5,6 @@ import { OpStatusBanner } from "./components/op-status-banner";
 import { OpStatusChip } from "./components/op-status-chip";
 
 export default {
-  name: "Conversation View: Op Status",
   description:
     "Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock).",
   contributions: [

@@ -8,7 +8,6 @@ import { MostPlayedOrder, RecentlyPlayedOrder } from "./components/sort-orders";
 export { usePlaybackHistory, usePlaybackHistoryMap } from "./hooks";
 
 export default {
-  name: "Sonata: Playback History",
   description:
     "Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and adds Most/Recently played sort orderings (Library.Sort).",
   contributions: [

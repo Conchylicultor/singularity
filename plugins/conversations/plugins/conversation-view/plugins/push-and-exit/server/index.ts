@@ -7,7 +7,6 @@ import { startPushAndExit } from "../shared/endpoints";
 import { pushAndExitConfig } from "../shared/config";
 
 export default {
-  name: "Push and Exit",
   contributions: [ConfigV2.Register({ descriptor: pushAndExitConfig })],
   httpRoutes: {
     [startPushAndExit.route]: handleStart,

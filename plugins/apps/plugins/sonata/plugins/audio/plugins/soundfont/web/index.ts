@@ -4,7 +4,6 @@ import { GM_INSTRUMENTS, familyIcon } from "./gm";
 import { createSoundfontVoices } from "./voices";
 
 export default {
-  name: "Sonata: General MIDI Soundfont",
   description:
     "Sonata Instruments: the full General MIDI melodic set (programs 1-127) backed by smplr's Soundfont, served same-origin via the asset-mirror (offline after first warm-up). Program 0 (acoustic grand) is owned by the dedicated sampled-piano plugin.",
   // One plugin registers many Instrument contributions: the GM table filtered to

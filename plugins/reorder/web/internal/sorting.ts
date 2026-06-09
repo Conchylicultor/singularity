@@ -44,7 +44,7 @@ export function entryKey(item: Contribution | SpacerItem): string {
 }
 
 export function contributionLabel(c: Contribution): string {
-  return (c._pluginName as string | undefined) ?? (c.id as string | undefined) ?? "Item";
+  return (c._pluginId as string | undefined) ?? (c.id as string | undefined) ?? "Item";
 }
 
 function excludeFromReorder(item: Contribution | SpacerItem): boolean {

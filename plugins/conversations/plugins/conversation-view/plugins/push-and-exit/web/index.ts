@@ -5,7 +5,6 @@ import { PushAndExitButton } from "./components/push-and-exit-button";
 import { pushAndExitConfig } from "../shared/config";
 
 export default {
-  name: "Conversation: Push & Exit",
   description:
     "Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.",
   contributions: [

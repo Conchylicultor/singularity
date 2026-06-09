@@ -5,7 +5,6 @@ import { runMigrations } from "@plugins/database/plugins/migrations/server";
 export { db, awaitDbReady, isTransientDbError } from "./internal/client";
 
 export default {
-  name: "Database",
   description:
     "Core database infrastructure. Connection pooling and DB readiness.",
   loadBearing: true,

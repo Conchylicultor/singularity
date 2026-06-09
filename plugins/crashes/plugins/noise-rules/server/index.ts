@@ -2,7 +2,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { CrashNoiseRule } from "@plugins/crashes/server";
 
 export default {
-  name: "Crashes: noise rules",
   description:
     "Built-in noise classification rules for low-signal crashes (e.g. ResizeObserver loop warnings).",
   contributions: [

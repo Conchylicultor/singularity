@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 
 export default {
-  name: "Routes: Diff Renderer",
   description: "Diff renderer for the routes facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

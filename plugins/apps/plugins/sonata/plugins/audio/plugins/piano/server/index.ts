@@ -9,7 +9,6 @@ import { PIANO_MIRROR_ID, PIANO_REMOTE_BASE } from "../shared/mirror";
  * piano sounds fully offline.
  */
 export default {
-  name: "Sonata: Acoustic Piano (server)",
   description:
     "Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.",
   register: [

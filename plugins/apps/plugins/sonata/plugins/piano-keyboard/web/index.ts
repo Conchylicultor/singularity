@@ -5,7 +5,6 @@ import { PianoKeyboard } from "./components/piano-keyboard";
 import { pianoKeyboardConfig } from "../shared/config";
 
 export default {
-  name: "Sonata: Piano Keyboard",
   description:
     "Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys.",
   contributions: [

@@ -9,7 +9,6 @@ export { songMidi } from "./internal/tables";
 export { songMidiLiveResource } from "./internal/resource";
 
 export default {
-  name: "Sonata: MIDI Source (server)",
   description:
     "Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.",
   httpRoutes: {

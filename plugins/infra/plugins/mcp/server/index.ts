@@ -6,7 +6,6 @@ export { Mcp } from "./internal/mcp";
 export type { McpTool, McpToolContext, McpToolResult } from "./internal/mcp";
 
 export default {
-  name: "MCP",
   description:
     "HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.",
   loadBearing: true,

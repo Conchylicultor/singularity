@@ -3,7 +3,6 @@ import { getAllowFiles } from "../shared/endpoints";
 import { handleGetAllowFiles } from "./internal/allow-files-handler";
 
 export default {
-  name: "Conversation: Allow Monitor",
   httpRoutes: {
     [getAllowFiles.route]: handleGetAllowFiles,
   },

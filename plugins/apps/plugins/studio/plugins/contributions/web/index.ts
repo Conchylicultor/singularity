@@ -11,7 +11,6 @@ export type { ContributionsFacetTable, FacetTableEntry } from "./facet-table";
 export { defineFacetTable } from "./facet-table";
 
 export default {
-  name: "Studio: Contributions",
   description:
     "Central view of all plugin contributions aggregated by type.",
   contributions: [

@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/studio/plugins/contributions/
 import { SampleRowsSection } from "./components/sample-rows-section";
 
 export default {
-  name: "Studio: Contributions / Tables / Sample Rows",
   description: "Sample rows section (first 10 rows) in the table detail view.",
   contributions: [
     TableDetail.Section({

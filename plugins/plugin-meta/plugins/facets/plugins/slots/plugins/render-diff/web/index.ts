@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 
 export default {
-  name: "Slots: Diff Renderer",
   description: "Diff renderer for the slots facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

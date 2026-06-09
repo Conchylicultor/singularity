@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 
 export default {
-  name: "DB Schema: Diff Renderer",
   description: "Diff renderer for the db-schema facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

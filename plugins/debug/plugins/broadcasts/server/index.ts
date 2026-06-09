@@ -4,7 +4,6 @@ import { handleWrite } from "./internal/handle-write";
 import { getBroadcasts, writeBroadcasts } from "../shared/endpoints";
 
 export default {
-  name: "Broadcasts",
   description: "View and edit cli/broadcasts.json from the UI.",
   httpRoutes: {
     [getBroadcasts.route]: handleRead,

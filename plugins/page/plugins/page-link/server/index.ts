@@ -3,7 +3,6 @@ import { PageLinks } from "@plugins/page/plugins/links/server";
 import { pageLinkBlock } from "../core";
 
 export default {
-  name: "Page Link Block",
   description:
     "Link-to-page block type: references another page as a clickable block; feeds the backlinks index.",
   contributions: [

@@ -9,7 +9,6 @@ export {
 export { formatStatusLabel } from "./internal/format-label";
 
 export default {
-  name: "Badge",
   description:
     "Semantic badge primitive: size × variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.",
   contributions: [],

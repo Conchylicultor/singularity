@@ -28,7 +28,6 @@ export { ExpandAllButton } from "./internal/expand-all-button";
 export type { ExpandAllButtonProps } from "./internal/expand-all-button";
 
 export default {
-  name: "Collapsible",
   description:
     "Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.",
   contributions: [],

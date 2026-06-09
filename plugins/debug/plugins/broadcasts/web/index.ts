@@ -8,7 +8,6 @@ import { broadcastsPane } from "./panes";
 export { broadcastsPane } from "./panes";
 
 export default {
-  name: "Broadcasts",
   description: "View and edit cli/broadcasts.json broadcast messages for stale worktrees.",
   contributions: [
     Pane.Register({ pane: broadcastsPane }),

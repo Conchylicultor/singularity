@@ -13,7 +13,6 @@ export {
 } from "./internal/token-mode-context";
 
 export default {
-  name: "Theme Customizer",
   description:
     "Extensible theme customization pane with global preset picker, search, and contributed sections.",
   contributions: [

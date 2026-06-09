@@ -10,7 +10,6 @@ export type { RefAdvancedPayload, RefHead } from "../shared/types";
 export { RefHeadSchema } from "../shared/types";
 
 export default {
-  name: "Git Watcher",
   description:
     "Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.",
   loadBearing: true,

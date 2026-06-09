@@ -13,7 +13,6 @@ export { ColorAdjust } from "./slots";
 export type { ColorAdjustPresetContribution } from "./slots";
 
 export default {
-  name: "UI: Color Adjust",
   description:
     "Cross-cutting color adjustment transform for all color token groups.",
   contributions: [

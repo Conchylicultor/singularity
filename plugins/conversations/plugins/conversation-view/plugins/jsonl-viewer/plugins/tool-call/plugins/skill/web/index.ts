@@ -3,7 +3,6 @@ import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-vie
 import { SkillToolView } from "./components/skill-tool-view";
 
 export default {
-  name: "JSONL Viewer: Skill tool renderer",
   description:
     "Renders Skill tool calls with skill name, args preview, and injected context.",
   contributions: [

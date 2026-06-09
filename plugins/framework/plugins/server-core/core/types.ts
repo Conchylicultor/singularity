@@ -49,10 +49,10 @@ export type { ServerContribution, ServerContributionToken } from "./contribution
 /**
  * Authored server-plugin shape. `id` is deliberately absent — it is derived
  * from the plugin's unique hierarchy path and injected by the loader (see
- * {@link LoadedServerPlugin}), never hand-authored.
+ * {@link LoadedServerPlugin}), never hand-authored. There is likewise no human
+ * `name`: the derived id is the sole identity (see `PluginDefinition`).
  */
 export interface ServerPluginDefinition {
-  name: string;
   description?: string;
   /**
    * Marks the plugin as critical core infrastructure. See

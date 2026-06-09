@@ -3,7 +3,6 @@ import { SonataProgress } from "@plugins/apps/plugins/sonata/plugins/progress/pl
 import { SectionBands } from "./components/section-bands";
 
 export default {
-  name: "Sonata: Progress Sections",
   description:
     "Sonata progress marker: labeled section-region bands along the progression bar, drawn from 'section' annotations.",
   contributions: [

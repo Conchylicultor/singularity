@@ -10,7 +10,6 @@ export { statsPane } from "./panes";
 export { useShowEmptyDays } from "./components/stats-context";
 
 export default {
-  name: "Stats",
   collapsed: true,
   description: "Root plugin hosting stacked chart contributions from child plugins.",
   contributions: [

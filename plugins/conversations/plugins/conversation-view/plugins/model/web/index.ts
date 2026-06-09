@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { ModelBadge } from "./components/model-badge";
 
 export default {
-  name: "Conversation: Model",
   description:
     "Displays the conversation model as a colored chip in the toolbar.",
   contributions: [

@@ -5,7 +5,6 @@ import { SiNotion } from "react-icons/si";
 import { notionAuthConfig } from "../shared";
 
 export default {
-  name: "Auth: Notion",
   description:
     "Notion OAuth provider (scaffold). Adds the Notion row to the Accounts pane and a credentials section to Settings.",
   contributions: [

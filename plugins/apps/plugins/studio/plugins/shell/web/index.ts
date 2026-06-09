@@ -6,7 +6,6 @@ import { StudioLayout } from "./components/studio-layout";
 export { Studio } from "./slots";
 
 export default {
-  name: "Studio: Shell",
   description:
     "App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.",
   contributions: [

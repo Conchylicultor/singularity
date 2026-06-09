@@ -11,7 +11,6 @@ import { handleDelete } from "./internal/handle-delete";
 export { _tweakcnThemes } from "./internal/tables";
 
 export default {
-  name: "UI: Tweakcn",
   description:
     "Imports tweakcn themes and registers them as dynamic presets in all token groups.",
   httpRoutes: {

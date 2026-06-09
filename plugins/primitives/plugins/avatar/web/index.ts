@@ -19,7 +19,6 @@ export {
 } from "./internal/icons";
 
 export default {
-  name: "Avatar",
   description: "Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.",
   contributions: [],
 } satisfies PluginDefinition;

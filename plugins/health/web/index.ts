@@ -7,7 +7,6 @@ import { ReconnectWatcher } from "./components/reconnect-watcher";
 export { getHealth, waitForRestart } from "./internal/client";
 
 export default {
-  name: "Health",
   description: "Surfaces server restarts as a toast; exposes /api/health helpers.",
   contributions: [
     Core.Root({ component: ReconnectWatcher }),

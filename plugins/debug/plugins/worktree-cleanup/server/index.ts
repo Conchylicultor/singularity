@@ -5,7 +5,6 @@ import { handleBulkDelete } from "./internal/handle-bulk-delete";
 import { listWorktrees, bulkDeleteWorktrees, deleteWorktree } from "../shared/endpoints";
 
 export default {
-  name: "Worktree Cleanup",
   description: "Audit and remove stale git worktrees and their Postgres DB forks.",
   httpRoutes: {
     [listWorktrees.route]: handleList,

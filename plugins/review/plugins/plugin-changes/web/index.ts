@@ -8,7 +8,6 @@ export { usePluginFacetDiffs } from "./use-facet-diffs";
 export type { FacetDiff } from "./use-facet-diffs";
 
 export default {
-  name: "Review: Plugin Changes",
   description:
     "Shows which plugins were added/modified and their public API diff.",
   contributions: [

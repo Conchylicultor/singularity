@@ -6,7 +6,6 @@ export { listAttachments } from "./internal/list";
 export type { Attachment } from "./internal/list";
 
 export default {
-  name: "Attachments",
   description:
     "Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin.",
   contributions: [],

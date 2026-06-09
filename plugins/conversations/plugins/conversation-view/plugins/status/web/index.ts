@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/p
 import { StatusBadge } from "./components/status-badge";
 
 export default {
-  name: "Conversation: Status",
   description: "Displays the conversation status as a colored badge in the toolbar.",
   contributions: [
     Conversation.Header({ id: "status", component: StatusBadge }),

@@ -3,7 +3,6 @@ import { handleRestoreBatch } from "./internal/handle-restore-batch";
 import { restoreBatch } from "../shared/endpoints";
 
 export default {
-  name: "Conversations Recover",
   description:
     "Batch-restore recently-closed conversations that were killed by a crash.",
   httpRoutes: {

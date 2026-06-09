@@ -4,7 +4,6 @@ import { EnumFilter } from "./components/enum-filter";
 import { predicate, isActive } from "./internal/enum-filter-logic";
 
 export default {
-  name: "Fields: Select — Filter",
   description: "Enum (select) field type: data-view filter (multi-select option chips).",
   contributions: [
     DataViewSlots.Filter({

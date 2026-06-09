@@ -29,7 +29,6 @@ export type {
 } from "./internal/use-subtree-expand-all";
 
 export default {
-  name: "Tree",
   description:
     "Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.",
   contributions: [],

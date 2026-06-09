@@ -3,7 +3,6 @@ import { Profiling } from "@plugins/debug/plugins/profiling/web";
 import { BootSection } from "./components/boot-section";
 
 export default {
-  name: "Boot Profiling",
   description: "Server boot profiling for the Gantt debug pane.",
   contributions: [
     Profiling.Section({

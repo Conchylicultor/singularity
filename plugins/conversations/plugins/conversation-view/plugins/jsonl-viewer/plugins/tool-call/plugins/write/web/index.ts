@@ -3,7 +3,6 @@ import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-vie
 import { WriteToolView } from "./components/write-tool-view";
 
 export default {
-  name: "JSONL Viewer: Write tool renderer",
   description:
     "Renders Write tool calls with syntax-highlighted file content and clickable path affordances.",
   contributions: [

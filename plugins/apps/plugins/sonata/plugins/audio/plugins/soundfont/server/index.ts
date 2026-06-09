@@ -9,7 +9,6 @@ import { SOUNDFONT_MIRROR_ID, SOUNDFONT_REMOTE_BASE } from "../shared/mirror";
  * warm-up per instrument, that timbre sounds fully offline.
  */
 export default {
-  name: "Sonata: General MIDI Soundfont (server)",
   description:
     "Registers the gm-soundfont asset mirror so the General MIDI instruments' samples are served same-origin (offline-capable) rather than streamed from the remote gleitz CDN.",
   register: [

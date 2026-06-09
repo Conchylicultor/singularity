@@ -6,7 +6,6 @@ import { PianoRoll } from "./components/piano-roll";
 import { pianoRollConfig } from "../shared/config";
 
 export default {
-  name: "Sonata: Piano Roll",
   description:
     "Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays.",
   contributions: [

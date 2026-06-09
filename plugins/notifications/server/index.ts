@@ -19,7 +19,6 @@ export { recordNotification } from "./internal/record-notification";
 export type { RecordNotificationInput } from "./internal/record-notification";
 
 export default {
-  name: "Notifications",
   description: "Persistent bell-button notifications backed by the DB.",
   contributions: [Resource.Declare(notificationsResource)],
   // ttlCleanupJob declares `schedule` — the jobs worker seeds its cron item at

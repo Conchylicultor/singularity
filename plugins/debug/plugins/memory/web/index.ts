@@ -8,7 +8,6 @@ import { memoryPane } from "./panes";
 export { memoryPane } from "./panes";
 
 export default {
-  name: "Memory",
   description: "Browse Claude Code auto-memory files for the current project.",
   contributions: [
     Pane.Register({ pane: memoryPane }),

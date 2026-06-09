@@ -3,7 +3,6 @@ import { handleResume } from "./internal/handle-resume";
 import { resumeConversationEndpoint } from "../core/endpoints";
 
 export default {
-  name: "Resume",
   httpRoutes: {
     [resumeConversationEndpoint.route]: handleResume,
   },

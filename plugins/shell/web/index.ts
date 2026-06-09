@@ -3,7 +3,6 @@ export { Shell } from "./slots";
 export { Shell as ShellCommands, type ToastVariant, type ToastArgs } from "./commands";
 
 export default {
-  name: "Shell",
   description:
     "Foundational app layout; defines the slots and commands most other plugins extend.",
   loadBearing: true,

@@ -2,7 +2,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { wsHandler } from "./internal/ws-handler";
 
 export default {
-  name: "Terminal",
   wsRoutes: {
     "/ws/terminal": wsHandler,
   },

@@ -39,7 +39,6 @@ import {
 export { armTaskAutoStart } from "./internal/arm-auto-start";
 
 export default {
-  name: "Tasks",
   description: "Nested tasks with attempts linking to conversations.",
   httpRoutes: {
     [listTasks.route]: handleList,

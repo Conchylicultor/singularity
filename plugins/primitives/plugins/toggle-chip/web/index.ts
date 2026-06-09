@@ -11,7 +11,6 @@ export {
 } from "./internal/toggle-chip";
 
 export default {
-  name: "Toggle Chip",
   description:
     "Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.",
   contributions: [],

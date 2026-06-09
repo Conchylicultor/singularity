@@ -24,7 +24,6 @@ export { usePageOptions, PageOptionsList } from "./components/page-options";
 export type { PageOption } from "./components/page-options";
 
 export default {
-  name: "Page Editor",
   description: "Block-based document editor component and slot system.",
   contributions: [],
 } satisfies PluginDefinition;

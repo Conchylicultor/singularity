@@ -4,7 +4,6 @@ import { MdChatBubble } from "react-icons/md";
 import { AgentManagerLayout } from "./components/agent-manager-layout";
 
 export default {
-  name: "Agent Manager: Shell",
   description:
     "App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.",
   contributions: [

@@ -6,7 +6,6 @@ export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
 export { useCurrentAppId } from "./use-current-app-id";
 
 export default {
-  name: "Apps",
   description:
     "App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.",
   loadBearing: true,

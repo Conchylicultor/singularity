@@ -3,7 +3,6 @@ import { Fields } from "@plugins/fields/web";
 import { textIdentity } from "../core";
 
 export default {
-  name: "Fields: Text",
   description:
     "Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.",
   contributions: [Fields.Identity({ identity: textIdentity })],

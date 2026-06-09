@@ -277,7 +277,7 @@ export function defineDispatchSlot<
     // Index correspondence: both `cleanItems` and `rawContributions` come from
     // `ctx.bySlot.get(id)` (clean is a positional `.map` of raw — slots.ts:33-36),
     // so `rawContributions[matchedIndex]` is the stamped Contribution carrying
-    // `_pluginName` for the error-boundary middleware. The fallback path has no
+    // `_pluginId` for the error-boundary middleware. The fallback path has no
     // contribution, so synthesize a minimal one with a generic boundary label.
     const contribution: Contribution =
       matchedIndex >= 0

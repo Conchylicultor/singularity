@@ -9,7 +9,6 @@ export type { MarkdownEnhancement } from "./internal/enhancement-context";
 export { langFromClassName, nodeToText } from "./internal/helpers";
 
 export default {
-  name: "Markdown",
   description:
     "Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.",
   contributions: [],

@@ -8,6 +8,5 @@ import { googleAuthConfig } from "../shared";
 // render the Google credentials section in the per-worktree Settings UI.
 // No HTTP routes, no onReady, no internal/.
 export default {
-  name: "Auth: Google",
   contributions: [ConfigV2.Register({ descriptor: googleAuthConfig })],
 } satisfies ServerPluginDefinition;

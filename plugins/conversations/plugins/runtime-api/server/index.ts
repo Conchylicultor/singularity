@@ -3,7 +3,6 @@ import { Runtime } from "@plugins/conversations/server";
 import { apiRuntime } from "./internal/api-runtime";
 
 export default {
-  name: "Conversations Runtime: api",
   description:
     "Stub placeholder for running Claude via the Anthropic Agent SDK (not yet implemented).",
   register: [Runtime.define(apiRuntime)],

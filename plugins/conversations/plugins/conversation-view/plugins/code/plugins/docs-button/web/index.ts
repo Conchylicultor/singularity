@@ -5,7 +5,6 @@ import { DocsButton } from "./components/docs-button";
 import { convDocsPane } from "./panes";
 
 export default {
-  name: "Conversation: Code — Docs button",
   description:
     "Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.",
   contributions: [

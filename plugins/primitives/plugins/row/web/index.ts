@@ -13,7 +13,6 @@ export {
 } from "./internal/section-header-row";
 
 export default {
-  name: "Row",
   description:
     "Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.",
   contributions: [],

@@ -3,7 +3,6 @@ import { ExitMenu } from "@plugins/conversations/plugins/conversation-view/plugi
 import { HoldAndExitItem } from "./components/hold-and-exit-button";
 
 export default {
-  name: "Conversation: Hold & Exit",
   description:
     "Exit-menu entry that marks the task as held and closes the conversation.",
   contributions: [ExitMenu.Item({ id: "hold-and-exit", component: HoldAndExitItem, order: 0 })],

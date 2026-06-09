@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/studio/plugins/contributions/
 import { ForeignKeysSection } from "./components/foreign-keys-section";
 
 export default {
-  name: "Studio: Contributions / Tables / Foreign Keys",
   description:
     "FK relationships section (outgoing and incoming) in the table detail view.",
   contributions: [

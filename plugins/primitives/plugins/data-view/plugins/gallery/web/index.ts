@@ -9,7 +9,6 @@ export type { GalleryViewOptions } from "../core";
 export { galleryOptions } from "../core";
 
 export default {
-  name: "Data View: Gallery",
   description:
     "Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.",
   contributions: [

@@ -8,7 +8,6 @@ import { ConfigSidebarButton } from "./components/config-sidebar-button";
 export { configNavPane, configDetailPane } from "./internal/panes";
 
 export default {
-  name: "Config v2: Settings",
   description: "Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields.",
   contributions: [
     Pane.Register({ pane: configNavPane }),

@@ -3,7 +3,6 @@ import { Contributions } from "@plugins/apps/plugins/studio/plugins/contribution
 import { routesFacetTable } from "./routes-facet-table";
 
 export default {
-  name: "Routes: Contributions Table",
   description: "Aggregated cross-plugin routes table in the Studio Contributions view.",
   contributions: [Contributions.FacetTable(routesFacetTable)],
 } satisfies PluginDefinition;

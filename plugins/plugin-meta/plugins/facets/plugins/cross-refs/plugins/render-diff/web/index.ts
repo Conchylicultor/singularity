@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/cross-refs/core";
 
 export default {
-  name: "Cross-refs: Diff Renderer",
   description: "Diff renderer for the cross-refs facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

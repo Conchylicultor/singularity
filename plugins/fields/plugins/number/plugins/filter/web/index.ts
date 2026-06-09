@@ -4,7 +4,6 @@ import { NumberFilter } from "./components/number-filter";
 import { predicate, isActive } from "./internal/number-filter-logic";
 
 export default {
-  name: "Fields: Number — Filter",
   description: "Number field type: data-view filter (min/max range control).",
   contributions: [
     DataViewSlots.Filter({

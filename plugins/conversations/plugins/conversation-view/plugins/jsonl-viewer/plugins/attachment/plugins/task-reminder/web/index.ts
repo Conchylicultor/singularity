@@ -3,7 +3,6 @@ import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversati
 import { TaskReminderAttachmentView } from "./components/task-reminder-attachment-view";
 
 export default {
-  name: "JSONL Viewer: task-reminder attachment renderer",
   collapsed: true,
   description:
     "Renders task-reminder attachment events showing periodic task list injections.",

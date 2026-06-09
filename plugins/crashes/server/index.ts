@@ -15,7 +15,6 @@ export { CrashNoiseRule } from "./internal/noise-rules";
 export type { CrashNoiseRuleSpec, CrashNoiseInput } from "./internal/noise-rules";
 
 export default {
-  name: "Crashes",
   description: "Records server/frontend crashes and files deduped tasks.",
   httpRoutes: {
     [reportCrash.route]: handleReport,

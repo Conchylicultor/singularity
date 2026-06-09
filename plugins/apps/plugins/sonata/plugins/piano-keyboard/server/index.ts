@@ -6,7 +6,6 @@ import { pianoKeyboardConfig } from "../shared/config";
 // config_v2 reads back undefined unless the descriptor is registered on BOTH
 // web (WebRegister) and server (Register).
 export default {
-  name: "Sonata: Piano Keyboard",
   description:
     "Server registration of the piano-keyboard config (key-label scope).",
   contributions: [ConfigV2.Register({ descriptor: pianoKeyboardConfig })],

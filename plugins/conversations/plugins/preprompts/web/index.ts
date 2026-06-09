@@ -9,7 +9,6 @@ export { PrepromptGlyph } from "./components/preprompt-glyph";
 export { usePreprompt } from "./internal/use-preprompt";
 
 export default {
-  name: "Preprompts",
   description:
     "Settings library of system-prompt snippets and a reusable picker for selecting a task's preprompt.",
   contributions: [ConfigV2.WebRegister({ descriptor: prepromptsConfig })],

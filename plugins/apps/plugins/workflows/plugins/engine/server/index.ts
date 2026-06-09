@@ -35,7 +35,6 @@ export type { StepExecutorSpec, StepResult, StepExecutorRunArgs } from "./intern
 export { workflowDefinitionsResource, workflowExecutionsResource } from "./internal/resources";
 
 export default {
-  name: "Workflows: Engine",
   description:
     "Core backend infrastructure for the workflows app. Owns DB tables, step executor registry, durable run job, trigger event, HTTP API, and live-state resources.",
   httpRoutes: {

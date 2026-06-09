@@ -24,7 +24,6 @@ export type { ColorMode } from "./use-color-mode";
 export { transformValues } from "./internal/transform";
 
 export default {
-  name: "UI: Theme Engine",
   description:
     "Central settings pane for switching visual variants of pluggable UI components.",
   contributions: [

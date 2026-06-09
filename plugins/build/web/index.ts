@@ -10,7 +10,6 @@ export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
 
 export default {
-  name: "Build",
   collapsed: true,
   description: "Trigger `./singularity build` from the toolbar.",
   contributions: [

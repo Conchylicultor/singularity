@@ -43,7 +43,6 @@ export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/
 export type { Block, PageData } from "../core/schemas";
 
 export default {
-  name: "Page Editor",
   description: "Block-based document editor — tables, routes, and live state.",
   httpRoutes: {
     [listPages.route]: handleListPages,

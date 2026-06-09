@@ -4,7 +4,6 @@ export { Backlinks } from "./components/backlinks";
 export type { BacklinksProps } from "./components/backlinks";
 
 export default {
-  name: "Page Links",
   description:
     "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.",
   contributions: [],

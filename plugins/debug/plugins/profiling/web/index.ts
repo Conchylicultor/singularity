@@ -30,7 +30,6 @@ export { DragSelection } from "./components/drag-selection";
 export type { DragState } from "./components/drag-selection";
 
 export default {
-  name: "Profiling",
   description: "Gantt chart of build steps and server startup phases.",
   contributions: [
     Pane.Register({ pane: profilingPane }),

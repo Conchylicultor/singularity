@@ -30,19 +30,18 @@ export const MyPlugin = {
 
 ### Creating a plugin
 
-A plugin is a `PluginDefinition` — just `{ name, contributions? }`. `id` is not authored — the loader derives it from the plugin's hierarchy path and injects it as `LoadedPlugin.id`.
+A plugin is a `PluginDefinition` — just `{ description, contributions? }`. There is no authored `name`: a plugin is identified solely by its `id`, which the loader derives from the hierarchy path and injects as `LoadedPlugin.id`. Any short label a UI needs is the id's leaf segment; user-facing titles belong to the contributions (an app's tooltip, a sidebar entry's title), not the plugin package.
 
 ```typescript
 import { type PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Shell } from "@plugins/shell/web";
 
-const myPlugin: PluginDefinition = {
-  name: "My Plugin",
+export default {
+  description: "My plugin, in one line.",
   contributions: [
     Shell.Sidebar({ title: "My Panel", icon: MyIcon, component: MyPanel }),
   ],
-};
-export default myPlugin;
+} satisfies PluginDefinition;
 ```
 
 ### Rendering contributions
@@ -205,7 +204,7 @@ export const terminalPane = Pane.define({
 
 // plugins/terminal/web/index.ts
 export default {
-  name: "Terminal",
+  description: "Terminal panes.",
   contributions: [Pane.Register({ pane: terminalPane })],
 } satisfies PluginDefinition;
 

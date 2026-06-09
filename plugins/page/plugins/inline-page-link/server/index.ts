@@ -3,7 +3,6 @@ import { PageLinks } from "@plugins/page/plugins/links/server";
 import { extractInlinePageLinks } from "./internal/extract-inline-links";
 
 export default {
-  name: "Inline Page Link",
   description:
     "Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.",
   contributions: [

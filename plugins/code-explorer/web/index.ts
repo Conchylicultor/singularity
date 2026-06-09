@@ -8,7 +8,6 @@ import { ConvTreeButton } from "./components/conv-tree-button";
 import { globalFileTreePane, convFileTreePane } from "./panes";
 
 export default {
-  name: "Code Explorer",
   description:
     "Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree.",
   contributions: [

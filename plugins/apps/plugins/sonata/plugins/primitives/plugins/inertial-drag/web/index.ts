@@ -7,7 +7,6 @@ export type {
 } from "./internal/use-inertial-drag";
 
 export default {
-  name: "Inertial Drag",
   description:
     "1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).",
   contributions: [],

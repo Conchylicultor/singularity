@@ -7,7 +7,6 @@ import { buildProfileDetailPane } from "./panes";
 export { buildProfileDetailPane } from "./panes";
 
 export default {
-  name: "Build Profiling",
   description: "Build step profiling for the Gantt debug pane.",
   contributions: [
     Profiling.Section({

@@ -1,13 +1,20 @@
 import { useContext, useMemo } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
-import { storePathOf } from "./store-path";
+import { storePathOf, storePluginId } from "./store-path";
 
 export interface ConfigRegistration {
   descriptor: ConfigDescriptor;
-  /** Canonical DOT-form plugin id this config is registered under (matches `PluginNode.id`). */
+  /**
+   * Canonical DOT-form plugin id this config is *stored* under — the slot-owner
+   * when a contribution overrides `pluginId` (e.g. reorder planting each slot's
+   * directive under the slot's defining plugin), else the registering plugin.
+   * Matches `PluginNode.id`, so the settings tree groups under the owning plugin.
+   */
   pluginId: PluginId;
+  /** Display label: the store plugin's leaf segment, == its `PluginNode.name`. */
   pluginName: string;
   storePath: string;
 }
@@ -20,13 +27,20 @@ export function useConfigRegistrations(): ConfigRegistration[] {
   return useMemo(
     () =>
       (raw ?? [])
-        .filter((c) => c._pluginId && c._pluginName)
-        .map((c) => ({
-          descriptor: c.descriptor as ConfigDescriptor,
-          pluginId: c._pluginId!,
-          pluginName: c._pluginName as string,
-          storePath: storePathOf(c)!,
-        })),
+        .filter((c) => storePluginId(c))
+        .map((c) => {
+          // Single chokepoint: pluginId, pluginName, and storePath all derive
+          // from storePluginId (the explicit override, else the registering
+          // plugin) so the UI grouping can never drift from the on-disk path.
+          const id = storePluginId(c)!;
+          const segs = pluginIdSegments(id);
+          return {
+            descriptor: c.descriptor as ConfigDescriptor,
+            pluginId: id,
+            pluginName: segs[segs.length - 1] ?? id,
+            storePath: storePathOf(c)!,
+          };
+        }),
     [raw],
   );
 }

@@ -3,7 +3,6 @@ import { PluginViewSlots } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { StructureDetailSection } from "./components/structure-detail-section";
 
 export default {
-  name: "Structure: Detail Section",
   description: "Per-plugin structure section in the plugin detail pane.",
   contributions: [
     PluginViewSlots.Section({

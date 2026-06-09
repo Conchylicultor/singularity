@@ -3,7 +3,6 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { PlaybackControls } from "./components/playback-controls";
 
 export default {
-  name: "Sonata: Transport Bar",
   description:
     "Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to Sonata.Toolbar.",
   contributions: [

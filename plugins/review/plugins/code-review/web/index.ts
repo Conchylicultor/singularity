@@ -6,7 +6,6 @@ import { CodeReviewSummary } from "./components/code-review-summary";
 import { reviewConfig } from "../shared/config";
 
 export default {
-  name: "Review: Code Review",
   description:
     "File-by-file code review section for the review pane.",
   contributions: [

@@ -6,7 +6,6 @@ import { WorkflowsLayout } from "./components/workflows-layout";
 export { WorkflowsApp } from "./slots";
 
 export default {
-  name: "Workflows: Shell",
   description:
     "App shell for the workflows app. Registers the /workflows app entry and defines WorkflowsApp.Sidebar/Toolbar slots.",
   contributions: [

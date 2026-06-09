@@ -3,7 +3,6 @@ import { handleDropDependents } from "./internal/handle-drop-dependents";
 import { dropDependents } from "../shared/endpoints";
 
 export default {
-  name: "Drop Dependents",
   httpRoutes: {
     [dropDependents.route]: handleDropDependents,
   },

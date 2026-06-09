@@ -12,7 +12,6 @@ export type {
 } from "./internal/filter-chips";
 
 export default {
-  name: "Filter Chips",
   description:
     "Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.",
   contributions: [],

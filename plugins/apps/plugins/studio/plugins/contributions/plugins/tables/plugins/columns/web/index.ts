@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/studio/plugins/contributions/
 import { ColumnsSection } from "./components/columns-section";
 
 export default {
-  name: "Studio: Contributions / Tables / Columns",
   description: "Table column definitions section in the table detail view.",
   contributions: [
     TableDetail.Section({

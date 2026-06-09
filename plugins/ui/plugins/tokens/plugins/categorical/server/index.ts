@@ -3,6 +3,5 @@ import { ConfigV2 } from "@plugins/config_v2/server";
 import { categoricalConfig } from "../shared";
 
 export default {
-  name: "UI: Categorical",
   contributions: [ConfigV2.Register({ descriptor: categoricalConfig })],
 } satisfies ServerPluginDefinition;

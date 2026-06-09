@@ -8,7 +8,6 @@ import { finalizeOrphanedPushes } from "./internal/read-contention";
 import { getPushProfiling, getPushDetail } from "../shared/endpoints";
 
 export default {
-  name: "Push Profiling",
   description: "Push contention profiling data endpoint.",
   httpRoutes: {
     [getPushProfiling.route]: handlePushProfiling,

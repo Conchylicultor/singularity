@@ -11,7 +11,6 @@ import { PageDetail, PageTree } from "./slots";
 export { PageDetail, PageTree } from "./slots";
 
 export default {
-  name: "Pages: Tree",
   description:
     "Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.",
   contributions: [

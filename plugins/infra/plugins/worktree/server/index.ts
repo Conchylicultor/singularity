@@ -28,5 +28,4 @@ export {
 } from "./internal/worktree-op";
 
 export default {
-  name: "Worktree",
 } satisfies ServerPluginDefinition;

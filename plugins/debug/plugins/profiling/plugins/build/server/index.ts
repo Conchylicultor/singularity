@@ -4,7 +4,6 @@ import { handleBuildDetail } from "./internal/handle-build-detail";
 import { getBuildProfiling, getBuildRunProfileByWorktree } from "../shared/endpoints";
 
 export default {
-  name: "Build Profiling",
   description: "Build step profiling data endpoint.",
   httpRoutes: {
     [getBuildProfiling.route]: handleBuildProfiling,

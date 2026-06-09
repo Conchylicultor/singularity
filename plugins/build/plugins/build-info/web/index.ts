@@ -3,7 +3,6 @@ import { BuildDetailSlots } from "@plugins/build/web";
 import { BuildInfo } from "./components/build-info";
 
 export default {
-  name: "Build: Info",
   description:
     "Status, trigger, commit hash, and timing section in the build detail pane.",
   contributions: [

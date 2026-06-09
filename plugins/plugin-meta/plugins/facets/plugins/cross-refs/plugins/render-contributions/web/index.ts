@@ -3,7 +3,6 @@ import { Contributions } from "@plugins/apps/plugins/studio/plugins/contribution
 import { crossRefsFacetTable } from "./cross-refs-facet-table";
 
 export default {
-  name: "Cross-refs: Contributions Table",
   description: "Aggregated cross-plugin cross-refs table in the Studio Contributions view.",
   contributions: [Contributions.FacetTable(crossRefsFacetTable)],
 } satisfies PluginDefinition;

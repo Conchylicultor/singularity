@@ -3,7 +3,6 @@ import { Fields } from "@plugins/config_v2/plugins/fields/web";
 import { EnumRenderer } from "./components/enum-renderer";
 
 export default {
-  name: "Fields: Enum Config",
   description:
     "Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.",
   contributions: [Fields.Renderer(EnumRenderer)],

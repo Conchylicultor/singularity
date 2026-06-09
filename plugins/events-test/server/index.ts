@@ -27,7 +27,6 @@ import {
 } from "../shared/endpoints";
 
 export default {
-  name: "Events Test",
   description: "Dummy plugin exercising the events and jobs APIs end-to-end.",
   httpRoutes: {
     [subscribeEventsTest.route]: handleSubscribe,

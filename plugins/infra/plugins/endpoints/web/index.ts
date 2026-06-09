@@ -7,7 +7,6 @@ export { registerEndpointErrorReporter, reportEndpointError } from "./internal/e
 export type { EndpointErrorInfo } from "./internal/error-reporter";
 
 export default {
-  name: "Endpoints",
   description:
     "Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client.",
   loadBearing: true,

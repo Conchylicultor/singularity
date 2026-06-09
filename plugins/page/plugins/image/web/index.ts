@@ -6,7 +6,6 @@ import { ImageBlock } from "./components/image-block";
 export { imageBlock } from "../core";
 
 export default {
-  name: "Image Block",
   description:
     "Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.",
   contributions: [

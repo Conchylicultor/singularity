@@ -17,7 +17,6 @@ export { ReorderLayoutContext } from "./internal/reorder-layout";
 export type { ReorderLayout } from "./internal/reorder-layout";
 
 export default {
-  name: "Reorder",
   description:
     "Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware.",
   loadBearing: true,

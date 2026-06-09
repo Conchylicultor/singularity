@@ -3,7 +3,6 @@ import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-vie
 import { AddTaskToolView } from "./components/add-task-tool-view";
 
 export default {
-  name: "JSONL Viewer: add_task tool renderer",
   description:
     "Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.",
   contributions: [

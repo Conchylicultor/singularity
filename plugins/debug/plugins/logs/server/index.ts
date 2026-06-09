@@ -9,7 +9,6 @@ export type { LogChannel, LogStream } from "./internal/log";
 export { listChannels, readChannelEntries } from "./internal/persist";
 
 export default {
-  name: "Logs",
   httpRoutes: {
     [getLogChannels.route]: handleChannels,
     [emitLogs.route]: handleEmit,

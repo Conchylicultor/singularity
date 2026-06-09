@@ -10,7 +10,6 @@ export type { DiffTokens, ShikiTokenNode } from "./use-diff-tokens";
 export { buildSideTokenMap } from "./use-diff-tokens";
 
 export default {
-  name: "Conversation: Code — Diff renderer",
   description:
     "Side-by-side diff of the file vs HEAD in the conversation's worktree.",
   contributions: [

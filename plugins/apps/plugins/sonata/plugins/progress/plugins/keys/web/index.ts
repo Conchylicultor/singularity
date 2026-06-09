@@ -3,7 +3,6 @@ import { SonataProgress } from "@plugins/apps/plugins/sonata/plugins/progress/pl
 import { KeyFlags } from "./components/key-flags";
 
 export default {
-  name: "Sonata: Progress Keys",
   description:
     "Sonata progress marker: key-signature flags along the progression bar (starting key + 'key' annotation changes).",
   contributions: [

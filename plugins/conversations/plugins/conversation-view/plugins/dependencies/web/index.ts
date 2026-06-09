@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/w
 import { DependenciesButton } from "./components/dependencies-button";
 
 export default {
-  name: "Conversation: Dependencies",
   description:
     "Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.",
   contributions: [

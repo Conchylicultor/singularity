@@ -8,7 +8,6 @@ import { worktreeCleanupPane } from "./panes";
 export { worktreeCleanupPane } from "./panes";
 
 export default {
-  name: "Worktree Cleanup",
   description: "Audit and remove stale git worktrees and their Postgres DB forks.",
   contributions: [
     Pane.Register({ pane: worktreeCleanupPane }),

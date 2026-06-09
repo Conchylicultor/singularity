@@ -3,7 +3,6 @@ import { Contributions } from "@plugins/apps/plugins/studio/plugins/contribution
 import { dbSchemaFacetTable } from "./db-schema-facet-table";
 
 export default {
-  name: "DB Schema: Contributions Table",
   description: "Aggregated cross-plugin tables table in the Studio Contributions view.",
   contributions: [Contributions.FacetTable(dbSchemaFacetTable)],
 } satisfies PluginDefinition;

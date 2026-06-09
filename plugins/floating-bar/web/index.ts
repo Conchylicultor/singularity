@@ -4,7 +4,6 @@ import { FloatingBar } from "./components/floating-bar";
 import { floatingBarConfig } from "../shared/config";
 
 export default {
-  name: "Floating Bar",
   description:
     "Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.",
   contributions: [

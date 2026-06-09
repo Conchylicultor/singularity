@@ -3,7 +3,6 @@ import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversati
 import { CommandPermissionsView } from "./components/command-permissions-view";
 
 export default {
-  name: "JSONL Viewer: command-permissions attachment renderer",
   collapsed: true,
   description:
     "Renders command-permissions attachment events showing permission grants for the session.",

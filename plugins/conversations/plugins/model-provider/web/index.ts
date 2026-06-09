@@ -14,7 +14,6 @@ export { ModelSelect } from "./components/model-select";
 export type { ModelSelectProps } from "./components/model-select";
 
 export default {
-  name: "Model Provider",
   description: "Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.",
   contributions: [
     ConfigV2.WebRegister({ descriptor: modelProviderConfig }),

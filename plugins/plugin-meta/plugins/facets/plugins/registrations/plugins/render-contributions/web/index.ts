@@ -3,7 +3,6 @@ import { Contributions } from "@plugins/apps/plugins/studio/plugins/contribution
 import { registrationsFacetTable } from "./registrations-facet-table";
 
 export default {
-  name: "Registrations: Contributions Table",
   description: "Aggregated cross-plugin registrations table in the Studio Contributions view.",
   contributions: [Contributions.FacetTable(registrationsFacetTable)],
 } satisfies PluginDefinition;

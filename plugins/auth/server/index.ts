@@ -13,7 +13,6 @@ export type {
 } from "@plugins/auth/core";
 
 export default {
-  name: "Auth",
   description:
     "Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens.",
 } satisfies ServerPluginDefinition;

@@ -6,7 +6,6 @@ import { HomeLayout } from "./components/home-layout";
 export { Home } from "./slots";
 
 export default {
-  name: "Home: Shell",
   description:
     "App shell for Home. Registers the /home app entry and defines the Home.Section slot.",
   contributions: [

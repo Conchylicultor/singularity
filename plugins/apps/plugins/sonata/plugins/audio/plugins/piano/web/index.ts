@@ -4,7 +4,6 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { createVoices } from "./voices";
 
 export default {
-  name: "Sonata: Acoustic Piano",
   description:
     "Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback.",
   contributions: [

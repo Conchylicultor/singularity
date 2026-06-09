@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 
 export default {
-  name: "Contributions: Diff Renderer",
   description: "Diff renderer for the contributions facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

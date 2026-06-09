@@ -6,7 +6,6 @@ export { TableDetail } from "./slots";
 export { tableDetailPane } from "./panes";
 
 export default {
-  name: "Studio: Contributions / Tables",
   description:
     "Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.",
   contributions: [Pane.Register({ pane: tableDetailPane })],

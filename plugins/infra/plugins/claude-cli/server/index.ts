@@ -8,7 +8,6 @@ export { _claudeCliCalls } from "./internal/tables";
 export { claudeCliCallsResource } from "./internal/resources";
 
 export default {
-  name: "Claude CLI",
   description:
     "One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.",
   contributions: [Resource.Declare(claudeCliCallsResource)],

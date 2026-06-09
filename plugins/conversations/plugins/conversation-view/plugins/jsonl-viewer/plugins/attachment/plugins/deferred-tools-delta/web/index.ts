@@ -3,7 +3,6 @@ import { JsonlViewerAttachment } from "@plugins/conversations/plugins/conversati
 import { DeferredToolsDeltaView } from "./components/deferred-tools-delta-view";
 
 export default {
-  name: "JSONL Viewer: deferred-tools-delta attachment renderer",
   collapsed: true,
   description:
     "Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.",

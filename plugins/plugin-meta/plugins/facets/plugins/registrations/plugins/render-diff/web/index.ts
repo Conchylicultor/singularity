@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
 
 export default {
-  name: "Registrations: Diff Renderer",
   description: "Diff renderer for the registrations facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

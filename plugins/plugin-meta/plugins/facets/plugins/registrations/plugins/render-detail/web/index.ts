@@ -3,7 +3,6 @@ import { PluginViewSlots } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { RegistrationsDetailSection } from "./components/registrations-detail-section";
 
 export default {
-  name: "Registrations: Detail Section",
   description: "Per-plugin registrations section in the plugin detail pane.",
   contributions: [
     PluginViewSlots.Section({

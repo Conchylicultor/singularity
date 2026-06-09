@@ -5,7 +5,6 @@ import { handleSaveFile } from "./internal/handle-save-file";
 import { createScreenshot, getScreenshot, saveScreenshotFile } from "../shared/endpoints";
 
 export default {
-  name: "Screenshot",
   description: "Stores in-flight screenshots so a freshly opened tab can fetch them.",
   httpRoutes: {
     [createScreenshot.route]: handleCreate,

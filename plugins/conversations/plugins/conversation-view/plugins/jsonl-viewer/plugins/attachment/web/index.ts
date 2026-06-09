@@ -5,7 +5,6 @@ import { AttachmentRow } from "./components/attachment-row";
 export { JsonlViewerAttachment } from "./slots";
 
 export default {
-  name: "JSONL Viewer: Attachment event renderer",
   collapsed: true,
   description:
     "Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.",

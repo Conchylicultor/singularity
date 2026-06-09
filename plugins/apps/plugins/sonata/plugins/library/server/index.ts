@@ -17,7 +17,6 @@ export type { UpdateSongMetaInput } from "./internal/update-song-meta";
 export { songAttachments } from "./internal/schema-attachments";
 
 export default {
-  name: "Sonata: Library",
   description:
     "Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.",
   httpRoutes: {

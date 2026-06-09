@@ -5,7 +5,6 @@ import { googleDriveBackupConfig } from "../shared/config";
 import { runGoogleDriveTarget } from "./internal/run-target";
 
 export default {
-  name: "Backup: Google Drive",
   description: "Uploads backup archives to Google Drive.",
   contributions: [
     ConfigV2.Register({ descriptor: googleDriveBackupConfig }),

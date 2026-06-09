@@ -10,7 +10,6 @@ export { BackupTarget } from "./internal/contribution";
 export { _backupRuns } from "./internal/tables";
 
 export default {
-  name: "Backup",
   description:
     "Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.",
   httpRoutes: {

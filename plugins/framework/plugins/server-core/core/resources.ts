@@ -54,7 +54,6 @@ const runtime = createResourceRuntime({
     Resource.Declare.getContributions().map((c) => ({
       key: c.key,
       pluginId: c._pluginId,
-      pluginName: c._pluginName,
     })),
 });
 

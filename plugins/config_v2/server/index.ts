@@ -16,7 +16,6 @@ export { registerFieldStorageProvider, getFieldStorageProvider, hasFieldStorageP
 export type { FieldStorageProvider } from "./internal/field-storage-providers";
 
 export default {
-  name: "Config v2",
   description: "Typed JSONC config handles for server plugins.",
   contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource), Resource.Declare(configV2TiersServerResource), Resource.Declare(configV2ScopeForkedServerResource)],
   httpRoutes: {

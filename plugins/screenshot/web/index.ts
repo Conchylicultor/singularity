@@ -8,7 +8,6 @@ export { screenshotPane } from "./panes";
 export { captureApp } from "./capture";
 
 export default {
-  name: "Screenshot",
   description: "Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached.",
   contributions: [
     Pane.Register({ pane: screenshotPane }),

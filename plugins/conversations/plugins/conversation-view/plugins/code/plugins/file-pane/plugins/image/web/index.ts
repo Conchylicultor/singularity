@@ -4,7 +4,6 @@ import { ImageView } from "./components/image-view";
 import { supportsImage } from "./internal/supports";
 
 export default {
-  name: "Conversation: Code — Image renderer",
   description: "Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.",
   contributions: [
     FilePane.Renderer({

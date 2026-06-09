@@ -10,7 +10,6 @@ export type { TreeRowBadgeContribution } from "./slots";
 export { usePluginTree } from "./context";
 
 export default {
-  name: "Studio: Explorer",
   description:
     "Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.",
   contributions: [

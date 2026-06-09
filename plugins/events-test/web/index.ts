@@ -8,7 +8,6 @@ import { eventsTestPane } from "./panes";
 export { eventsTestPane } from "./panes";
 
 export default {
-  name: "Events Test",
   description: "Dummy UI for exercising the events plugin end-to-end.",
   contributions: [
     Pane.Register({ pane: eventsTestPane }),

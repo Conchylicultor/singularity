@@ -5,7 +5,6 @@ export { Kbd, type KbdProps } from "./components/kbd";
 export { WithTooltip, type WithTooltipProps } from "./components/with-tooltip";
 
 export default {
-  name: "Tooltip",
   description:
     "WithTooltip wrapper, TooltipProvider, and <Kbd> keyboard shortcut badge.",
   contributions: [],

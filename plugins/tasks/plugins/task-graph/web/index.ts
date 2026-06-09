@@ -3,7 +3,6 @@ import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskGraph } from "./components/task-graph";
 
 export default {
-  name: "Task: Graph",
   description:
     "Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.",
   contributions: [

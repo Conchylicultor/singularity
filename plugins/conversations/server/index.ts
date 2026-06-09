@@ -61,7 +61,6 @@ export type { UserTurnSentPayload } from "./internal/tables-user-turn-sent-event
 export { SYSTEM_META_TASK_ID } from "./internal/meta-system";
 
 export default {
-  name: "Conversations",
   description:
     "Conversation domain: shared server code and types; view plugins live under `plugins/`.",
   loadBearing: true,

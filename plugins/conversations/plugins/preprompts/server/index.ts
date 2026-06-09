@@ -5,7 +5,6 @@ import { prepromptsConfig } from "../shared/config";
 export { resolvePreprompt, resolvePrepromptItem } from "./internal/resolve";
 
 export default {
-  name: "Preprompts",
   description:
     "Library of named instruction snippets prepended to a task's agent first user turn as a <special_instructions> block.",
   contributions: [ConfigV2.Register({ descriptor: prepromptsConfig })],

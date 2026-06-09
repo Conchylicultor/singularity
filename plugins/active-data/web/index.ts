@@ -19,7 +19,6 @@ export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding
 import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
 
 export default {
-  name: "Active Data",
   collapsed: true,
   description:
     "Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify().",

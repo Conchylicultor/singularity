@@ -13,7 +13,6 @@ export {
 } from "./hooks";
 
 export default {
-  name: "Sonata: Track Mixer",
   description:
     "Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine.",
   contributions: [

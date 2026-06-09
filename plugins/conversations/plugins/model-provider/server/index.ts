@@ -5,7 +5,6 @@ import { modelProviderConfig } from "../shared/config";
 export { resolveCliFlag } from "./internal/resolve-cli-flag";
 
 export default {
-  name: "Model Provider",
   description: "Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.",
   contributions: [
     ConfigV2.Register({ descriptor: modelProviderConfig }),

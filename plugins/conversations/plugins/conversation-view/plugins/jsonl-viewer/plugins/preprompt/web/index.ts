@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { PrepromptRow } from "./components/preprompt-row";
 
 export default {
-  name: "JSONL Viewer: Preprompt renderer",
   description:
     "Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.",
   contributions: [

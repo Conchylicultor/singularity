@@ -12,7 +12,6 @@ export { backlinksResource } from "./internal/resources";
 export { reindexPage } from "./internal/reindex";
 
 export default {
-  name: "Page Links",
   description:
     "Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.",
   register: [reindexLinksJob],

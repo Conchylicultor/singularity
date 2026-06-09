@@ -15,6 +15,5 @@ export { backupDatabase, inspectBackup } from "./internal/backup";
 export type { BackupInfo, TableStat } from "./internal/backup";
 
 export default {
-  name: "Database Admin",
   description: "Admin operations for the database plugin — fork, backup, drop, list.",
 } satisfies ServerPluginDefinition;

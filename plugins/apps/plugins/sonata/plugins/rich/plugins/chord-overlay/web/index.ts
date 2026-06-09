@@ -3,7 +3,6 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ChordOverlay } from "./components/chord-overlay";
 
 export default {
-  name: "Sonata: Chord Overlay",
   description:
     "Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.",
   contributions: [

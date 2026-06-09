@@ -8,7 +8,6 @@ export type { ToolRendererContribution } from "./slots";
 export { ToolCallCard } from "./components/tool-call-card";
 
 export default {
-  name: "JSONL Viewer: Tool call renderer",
   collapsed: true,
   description:
     "Renders paired tool-call events with exact/pattern/fallback dispatch to per-tool renderer plugins.",

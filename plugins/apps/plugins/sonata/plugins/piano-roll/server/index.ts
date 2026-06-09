@@ -6,7 +6,6 @@ import { pianoRollConfig } from "../shared/config";
 // config_v2 reads back undefined unless the descriptor is registered on BOTH
 // web (WebRegister) and server (Register).
 export default {
-  name: "Sonata: Piano Roll",
   description:
     "Server registration of the piano-roll config (Synthesia-style note-name labels).",
   contributions: [ConfigV2.Register({ descriptor: pianoRollConfig })],

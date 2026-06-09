@@ -5,7 +5,6 @@ import { localBackupConfig } from "../shared/config";
 import { runLocalTarget } from "./internal/run-local-target";
 
 export default {
-  name: "Backup: Local",
   description: "Stores backup archives on the local filesystem.",
   contributions: [
     ConfigV2.Register({ descriptor: localBackupConfig }),

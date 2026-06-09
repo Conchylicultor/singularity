@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { QueueOperationRow } from "./components/queue-operation-row";
 
 export default {
-  name: "JSONL Viewer: Queue-operation event renderer",
   description:
     "Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.",
   contributions: [

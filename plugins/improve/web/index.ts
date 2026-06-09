@@ -6,7 +6,6 @@ export { Improve as ImproveCommands } from "./commands";
 export type { OpenWithTextArgs } from "./commands";
 
 export default {
-  name: "Improve",
   description:
     'Toolbar button for app-improvement feedback. Files a task under "Improvements" with URL + optional screenshot.',
   contributions: [

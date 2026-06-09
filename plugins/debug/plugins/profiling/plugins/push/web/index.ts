@@ -7,7 +7,6 @@ import { pushDetailPane } from "./panes";
 export { pushDetailPane } from "./panes";
 
 export default {
-  name: "Push Profiling",
   description: "Push contention profiling for the Gantt debug pane.",
   contributions: [
     Profiling.Section({

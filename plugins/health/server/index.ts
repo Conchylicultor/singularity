@@ -4,7 +4,6 @@ import { handleHealthReady } from "./internal/handle-health-ready";
 import { getHealth, getHealthReady } from "../shared/endpoints";
 
 export default {
-  name: "Health",
   description: "Liveness endpoint used by clients to detect server restarts.",
   httpRoutes: {
     [getHealth.route]: handleHealth,

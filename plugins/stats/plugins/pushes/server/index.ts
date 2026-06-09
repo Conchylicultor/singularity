@@ -9,7 +9,6 @@ import {
 } from "../shared/endpoints";
 
 export default {
-  name: "Stats: Pushes",
   description:
     "Push contention stats: wait time, throughput, and step breakdown.",
   httpRoutes: {

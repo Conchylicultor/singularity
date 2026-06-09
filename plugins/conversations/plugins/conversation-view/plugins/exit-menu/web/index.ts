@@ -5,7 +5,6 @@ import { ExitMenuButton } from "./components/exit-menu-button";
 export { ExitMenu } from "./slots";
 
 export default {
-  name: "Conversation: Exit Menu",
   description:
     "Ghost icon button next to Push & Exit that opens a menu of exit actions (hold, exit, drop, drop dependents). Hosts the ExitMenu.Item slot each action contributes to.",
   contributions: [

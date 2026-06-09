@@ -5,7 +5,6 @@ import { googleSetupPane } from "./panes";
 export { googleSetupPane } from "./panes";
 
 export default {
-  name: "Auth: Google Setup Wizard",
   description:
     "Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.",
   contributions: [Pane.Register({ pane: googleSetupPane })],

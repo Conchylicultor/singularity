@@ -14,7 +14,6 @@ export { Shape } from "./slots";
 export type { ShapePresetContribution } from "./slots";
 
 export default {
-  name: "UI: Shape",
   description: "Shape token group (border-radius) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Shape.Preset(p)),

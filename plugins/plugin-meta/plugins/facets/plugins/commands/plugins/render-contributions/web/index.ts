@@ -3,7 +3,6 @@ import { Contributions } from "@plugins/apps/plugins/studio/plugins/contribution
 import { commandsFacetTable } from "./commands-facet-table";
 
 export default {
-  name: "Commands: Contributions Table",
   description: "Aggregated cross-plugin commands table in the Studio Contributions view.",
   contributions: [Contributions.FacetTable(commandsFacetTable)],
 } satisfies PluginDefinition;

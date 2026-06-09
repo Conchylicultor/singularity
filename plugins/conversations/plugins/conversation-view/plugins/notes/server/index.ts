@@ -8,7 +8,6 @@ export { conversationNotes } from "./internal/tables";
 export { conversationNotesResource } from "./internal/resource";
 
 export default {
-  name: "Conversation: Notes",
   description:
     "Per-conversation free-form notes, auto-saved to the server.",
   contributions: [Resource.Declare(conversationNotesResource)],

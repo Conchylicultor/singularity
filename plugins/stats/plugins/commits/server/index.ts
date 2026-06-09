@@ -11,7 +11,6 @@ import {
 } from "../shared/endpoints";
 
 export default {
-  name: "Stats: Commits",
   description: "Commit-based stats: commits and lines of change over time.",
   contributions: [ConfigV2.Register({ descriptor: commitsConfig })],
   httpRoutes: {

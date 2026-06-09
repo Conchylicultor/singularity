@@ -11,7 +11,6 @@ export { resolveWorktreePath } from "./internal/resolve-worktree-path";
 export { resolveParentSha, getRangeFiles } from "./internal/get-push-files";
 
 export default {
-  name: "Code Explorer",
   description:
     "Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.",
   httpRoutes: {

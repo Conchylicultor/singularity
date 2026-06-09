@@ -18,7 +18,6 @@ export type {
 } from "../core";
 
 export default {
-  name: "Data View",
   description:
     "Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.",
   contributions: [],

@@ -11,7 +11,6 @@ export { cursorPageSchema } from "../core";
 export type { CursorPage } from "../core";
 
 export default {
-  name: "Cursor Pagination",
   description:
     "Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.",
   contributions: [],

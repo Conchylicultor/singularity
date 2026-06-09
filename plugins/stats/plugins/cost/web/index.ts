@@ -9,7 +9,6 @@ import { TokenMixChart } from "./components/token-mix-chart";
 import { TopConversationsTable } from "./components/top-conversations-table";
 
 export default {
-  name: "Stats: Cost & tokens",
   description:
     "Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown.",
   contributions: [

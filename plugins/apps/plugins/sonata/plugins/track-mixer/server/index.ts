@@ -8,7 +8,6 @@ export { _trackView } from "./internal/tables";
 export { trackViewLiveResource } from "./internal/resource";
 
 export default {
-  name: "Sonata: Track Mixer",
   description:
     "Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.",
   httpRoutes: {

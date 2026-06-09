@@ -11,7 +11,6 @@ export { rectSortingStrategy } from "./internal/strategies";
 export type { SortingStrategy } from "./internal/strategies";
 
 export default {
-  name: "Sortable List",
   description:
     "Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.",
   contributions: [],

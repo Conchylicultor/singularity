@@ -3,7 +3,6 @@ import { ExitMenu } from "@plugins/conversations/plugins/conversation-view/plugi
 import { DropDependentsItem } from "./components/drop-dependents-button";
 
 export default {
-  name: "Conversation: Drop Dependents",
   description:
     "Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.",
   contributions: [ExitMenu.Item({ id: "drop-dependents", component: DropDependentsItem, order: 3 })],

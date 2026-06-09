@@ -8,7 +8,6 @@ import { pluginConvSidePane } from "./panes";
 export { PluginLinkChip };
 
 export default {
-  name: "Active Data: plugin link chip",
   description:
     "Renders plugin IDs in backtick-wrapped inline code as clickable chips that open the plugin-view pane. Models emit the plugin's dotted id (e.g. `tasks`, `active-data.conv`) and the chip validates and resolves it at render time.",
   contributions: [

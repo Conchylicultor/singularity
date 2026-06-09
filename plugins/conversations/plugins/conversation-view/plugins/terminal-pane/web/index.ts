@@ -5,7 +5,6 @@ import { TerminalButton } from "./components/terminal-button";
 import { convTerminalPane } from "./panes";
 
 export default {
-  name: "Conversation: Terminal pane",
   description:
     "Toolbar button that opens a right pane attaching to the conversation's tmux session.",
   contributions: [

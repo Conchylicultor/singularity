@@ -8,7 +8,6 @@ import { ApiChangesSummary } from "./components/api-changes-summary";
 // ApiChangesSection/Summary are the single source of truth for their own
 // emptiness — each returns null when there are no facet diffs.
 export default {
-  name: "Review: API Changes",
   description:
     "API surface diff section for per-plugin review cards.",
   contributions: [

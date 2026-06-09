@@ -8,7 +8,6 @@ export type { ViewProps } from "./slots";
 export { useGoneConversationsPagination } from "./internal/use-gone-conversations-pagination";
 
 export default {
-  name: "Conversations",
   description: "Sidebar list of all conversations.",
   contributions: [
     Shell.Sidebar({

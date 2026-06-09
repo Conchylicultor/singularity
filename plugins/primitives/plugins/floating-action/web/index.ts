@@ -11,7 +11,6 @@ export type {
 } from "./internal/floating-action";
 
 export default {
-  name: "Floating Action",
   description:
     "Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.",
   contributions: [],

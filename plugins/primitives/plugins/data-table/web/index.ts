@@ -5,7 +5,6 @@ export type { ColumnDef, DataTableProps } from "./internal/types";
 export type { SortState } from "./internal/use-data-table";
 
 export default {
-  name: "Data Table",
   description:
     "Sortable/filterable flex-layout data table primitive.",
   contributions: [],

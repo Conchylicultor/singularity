@@ -15,7 +15,6 @@ export { SidebarPalette } from "./slots";
 export type { SidebarPalettePresetContribution } from "./slots";
 
 export default {
-  name: "UI: Sidebar Palette",
   description: "Sidebar palette token group with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => SidebarPalette.Preset(p)),

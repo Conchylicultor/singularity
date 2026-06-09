@@ -8,7 +8,6 @@ export { songPlayback } from "./internal/tables";
 export { playbackHistoryLiveResource } from "./internal/resource";
 
 export default {
-  name: "Sonata: Playback History",
   description:
     "Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.",
   httpRoutes: {

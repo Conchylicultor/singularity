@@ -6,6 +6,5 @@ import "./internal/install";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export default {
-  name: "Runtime Profiler",
   loadBearing: true,
 } satisfies ServerPluginDefinition;

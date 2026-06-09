@@ -17,7 +17,6 @@ export { healthReviewExt } from "./internal/tables";
 export { pluginHealthReviewsResource } from "./internal/resource";
 
 export default {
-  name: "Plugin Health",
   description: "Per-plugin health review tracking.",
   contributions: [Resource.Declare(pluginHealthReviewsResource)],
   httpRoutes: {

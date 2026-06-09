@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { AssistantThinkingRow } from "./components/assistant-thinking-row";
 
 export default {
-  name: "JSONL Viewer: Assistant thinking renderer",
   description: "Renders assistant thinking blocks in the JSONL viewer as collapsible sections.",
   contributions: [
     JsonlViewer.EventRenderer({ match: "assistant-thinking", component: AssistantThinkingRow }),

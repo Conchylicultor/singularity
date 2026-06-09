@@ -2,7 +2,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { reorderConfigRegistrations } from "./internal/config-registrations";
 
 export default {
-  name: "Reorder",
   description:
     "Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.",
   loadBearing: true,

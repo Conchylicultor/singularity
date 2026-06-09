@@ -28,7 +28,6 @@ export { AGENTS_META_TASK_ID } from "./internal/meta-agents";
 export { nextAgentRankUnder } from "./internal/rank";
 
 export default {
-  name: "Agents",
   description: "Named agent definitions that launch conversations.",
   httpRoutes: {
     [listAgents.route]: handleList,

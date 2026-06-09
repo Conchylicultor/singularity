@@ -43,7 +43,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { wsHandler } from "./internal/ws-handler";
 
 const plugin: ServerPluginDefinition = {
-  name: "Terminal",
   wsRoutes: {
     "/ws/terminal": wsHandler,
   },
@@ -114,7 +113,6 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { handleList } from "./internal/handle-list";
 
 const plugin: ServerPluginDefinition = {
-  name: "Tasks",
   httpRoutes: {
     "GET /api/tasks": handleList,
   },

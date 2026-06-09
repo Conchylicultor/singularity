@@ -6,7 +6,6 @@ import {
 } from "@plugins/plugin-meta/plugins/facets/plugins/exports/core";
 
 export default {
-  name: "Exports: Diff Renderer",
   description: "Diff renderer for the exports facet (PR review).",
   contributions: [
     PluginChangesSlots.DiffRenderer({

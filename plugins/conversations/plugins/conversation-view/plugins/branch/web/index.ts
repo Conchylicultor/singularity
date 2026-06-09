@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/w
 import { BranchButtons } from "./components/branch-buttons";
 
 export default {
-  name: "Conversation: Branch",
   description:
     "Forks the current Claude session into a background conversation with the typed draft as the opening prompt.",
   contributions: [

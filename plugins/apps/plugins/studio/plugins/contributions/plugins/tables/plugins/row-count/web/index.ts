@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/studio/plugins/contributions/
 import { RowCountSection } from "./components/row-count-section";
 
 export default {
-  name: "Studio: Contributions / Tables / Row Count",
   description:
     "Live row count section (estimated from pg_stat_user_tables) in the table detail view.",
   contributions: [

@@ -19,7 +19,6 @@ export type Contribution = {
    * dotted plugin id (e.g. `conversations.conversation-view`).
    */
   _pluginId?: PluginId;
-  _pluginName?: string;
   _pluginDescription?: string;
   _doc?: DocMeta;
   [key: string]: unknown;
@@ -47,10 +46,13 @@ export interface Registration {
  * Authored plugin shape — exactly what a barrel default-exports. `id` is
  * deliberately absent: it is NOT hand-authored. The loader derives it from the
  * plugin's unique directory/hierarchy path (see {@link LoadedPlugin}), which
- * makes duplicate ids impossible by construction.
+ * makes duplicate ids impossible by construction. There is also no human
+ * `name`: a plugin is identified solely by its derived id, and the short label
+ * any UI needs is the id's leaf segment. User-facing titles belong to the
+ * contributions a plugin makes (an app's tooltip, a sidebar entry's label),
+ * not to the plugin package itself.
  */
 export interface PluginDefinition {
-  name: string;
   description: string;
   /**
    * Marks the plugin as critical core infrastructure. Load-bearing plugins

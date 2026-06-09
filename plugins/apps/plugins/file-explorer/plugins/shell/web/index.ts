@@ -6,7 +6,6 @@ import { FileExplorerLayout } from "./components/file-explorer-layout";
 export { FileExplorer } from "./slots";
 
 export default {
-  name: "File Explorer: Shell",
   description:
     "App shell for the file explorer. Registers the /files app entry and defines FileExplorer.Sidebar/Toolbar slots.",
   contributions: [

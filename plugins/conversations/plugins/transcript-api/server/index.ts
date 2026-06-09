@@ -3,7 +3,6 @@ import { handleTranscript } from "./internal/handle-transcript";
 import { getConversationTranscript } from "../shared/endpoints";
 
 export default {
-  name: "Conversation Transcript API",
   description:
     "Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.",
   httpRoutes: {

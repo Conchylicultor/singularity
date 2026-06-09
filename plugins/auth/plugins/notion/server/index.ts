@@ -6,6 +6,5 @@ import { notionAuthConfig } from "../shared";
 // runtime lives in `../central/`. See `../google/server/index.ts` for the
 // full rationale.
 export default {
-  name: "Auth: Notion",
   contributions: [ConfigV2.Register({ descriptor: notionAuthConfig })],
 } satisfies ServerPluginDefinition;

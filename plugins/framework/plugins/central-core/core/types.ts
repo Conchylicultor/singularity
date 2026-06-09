@@ -28,10 +28,10 @@ export interface Registration {
 /**
  * Authored central-plugin shape. `id` is deliberately absent — it is derived
  * from the plugin's unique hierarchy path and injected by the loader (see
- * {@link LoadedCentralPlugin}), never hand-authored.
+ * {@link LoadedCentralPlugin}), never hand-authored. There is likewise no human
+ * `name`: the derived id is the sole identity (see `PluginDefinition`).
  */
 export interface CentralPluginDefinition {
-  name: string;
   description?: string;
   /**
    * Marks the plugin as critical core infrastructure. See

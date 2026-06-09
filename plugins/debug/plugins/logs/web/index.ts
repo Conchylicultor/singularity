@@ -9,7 +9,6 @@ export { logsPane, logChannelPane } from "./panes";
 export { clientLog } from "./client-log";
 
 export default {
-  name: "Logs",
   description: "System logs pane, opened from the Debug sidebar.",
   contributions: [
     Pane.Register({ pane: logsPane }),

@@ -3,7 +3,6 @@ import { handleDropAndExit } from "./internal/handle-drop-and-exit";
 import { dropAndExit } from "../core/endpoints";
 
 export default {
-  name: "Drop and Exit",
   httpRoutes: {
     [dropAndExit.route]: handleDropAndExit,
   },

@@ -3,7 +3,6 @@ import { ExitMenu } from "@plugins/conversations/plugins/conversation-view/plugi
 import { DropAndExitItem } from "./components/drop-and-exit-button";
 
 export default {
-  name: "Conversation: Drop & Exit",
   description:
     "Exit-menu entry that marks the top task as dropped and closes the conversation.",
   contributions: [ExitMenu.Item({ id: "drop-and-exit", component: DropAndExitItem, order: 2 })],

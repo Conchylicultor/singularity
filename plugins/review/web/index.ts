@@ -9,7 +9,6 @@ export { convReviewPane } from "./panes";
 export type { Source, ReviewProps } from "./source";
 
 export default {
-  name: "Review",
   description:
     "Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.",
   contributions: [

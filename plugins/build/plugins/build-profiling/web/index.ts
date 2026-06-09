@@ -3,7 +3,6 @@ import { BuildDetailSlots } from "@plugins/build/web";
 import { BuildProfilingSection } from "./components/build-profiling-section";
 
 export default {
-  name: "Build: Profiling",
   description:
     "Per-run build profiling Gantt section in the build detail pane.",
   contributions: [

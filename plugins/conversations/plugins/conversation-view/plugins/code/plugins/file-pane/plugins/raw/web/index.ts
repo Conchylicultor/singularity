@@ -3,7 +3,6 @@ import { FilePane } from "@plugins/conversations/plugins/conversation-view/plugi
 import { RawView } from "./components/raw-view";
 
 export default {
-  name: "Conversation: Code — Raw renderer",
   description:
     "Plain file renderer with syntax highlighting. Fallback tab for any text file.",
   contributions: [

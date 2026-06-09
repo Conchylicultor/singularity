@@ -4,7 +4,6 @@ import { blocksChanged } from "@plugins/page/plugins/editor/server";
 import { reconcileImageAttachmentsJob } from "./internal/reconcile-job";
 
 export default {
-  name: "Image Block (server)",
   description:
     "Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.",
   register: [reconcileImageAttachmentsJob],

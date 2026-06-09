@@ -4,7 +4,6 @@ import { Tasks } from "@plugins/tasks/plugins/task-list/web";
 import { TasksRecentView } from "./internal/tasks-recent-view";
 
 export default {
-  name: "Task List: Recent",
   description: "Recency-sorted flat task list tab.",
   contributions: [
     Tasks.View({

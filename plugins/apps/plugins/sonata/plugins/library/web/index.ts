@@ -9,7 +9,6 @@ export type { SortOrderProps } from "./slots";
 export { useOpenSong } from "./hooks";
 
 export default {
-  name: "Sonata: Library",
   description:
     "Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances.",
   contributions: [

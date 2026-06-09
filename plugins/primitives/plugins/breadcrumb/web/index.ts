@@ -7,7 +7,6 @@ export {
 } from "./internal/breadcrumb";
 
 export default {
-  name: "Breadcrumb",
   description:
     "Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.",
   contributions: [],

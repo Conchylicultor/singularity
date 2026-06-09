@@ -12,7 +12,7 @@ export function ErrorBoundaryMiddleware({
   children: ReactNode;
 }) {
   return (
-    <PluginErrorBoundary slot={slotId} label={contribution._pluginName}>
+    <PluginErrorBoundary slot={slotId} label={contribution._pluginId}>
       {children}
     </PluginErrorBoundary>
   );

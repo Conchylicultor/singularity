@@ -6,7 +6,6 @@ export {
 } from "./internal/filepath-breadcrumb";
 
 export default {
-  name: "Filepath Breadcrumb",
   description:
     "File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.",
   contributions: [],

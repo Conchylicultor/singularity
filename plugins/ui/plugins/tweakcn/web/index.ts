@@ -5,7 +5,6 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listTweakcnThemes } from "../core";
 
 export default {
-  name: "UI: Tweakcn",
   description:
     "Imports tweakcn themes as dynamic presets across all token groups.",
   contributions: [

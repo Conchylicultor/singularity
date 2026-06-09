@@ -3,7 +3,6 @@ import { TaskDetailSlots } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskEvents } from "./components/task-events";
 
 export default {
-  name: "Task: Events",
   description:
     "Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.",
   contributions: [

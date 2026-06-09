@@ -54,7 +54,6 @@ export function PluginProvider({
       (p.contributions ?? []).map((c) => ({
         ...c,
         _pluginId: p.id,
-        _pluginName: p.name,
         _pluginDescription: p.description,
       })),
     );

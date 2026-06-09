@@ -7,7 +7,6 @@ import { AnswerHereButton } from "./components/answer-here-button";
 import { ANSWER_MARKER } from "../shared";
 
 export default {
-  name: "JSONL Viewer: AskUserQuestion tool renderer",
   description:
     "Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.",
   contributions: [

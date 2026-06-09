@@ -5,7 +5,6 @@ export type { Stroke, DrawCanvasProps } from "./draw-canvas";
 export { applyStrokes } from "./apply-strokes";
 
 export default {
-  name: "Draw Canvas",
   description:
     "Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.",
   contributions: [],

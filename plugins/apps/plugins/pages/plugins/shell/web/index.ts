@@ -6,7 +6,6 @@ import { PagesLayout } from "./components/pages-layout";
 export { Pages } from "./slots";
 
 export default {
-  name: "Pages: Shell",
   description:
     "App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.",
   contributions: [

@@ -205,7 +205,7 @@ export interface ResourceRuntimeOptions {
    *  this is the extra hook. server: reportServerError(errorReport(ctx, err)); central: omit. */
   reportError?: (context: string, err: unknown) => void;
   /** Per-key owner metadata for the _debug endpoint. server: from Resource.Declare; central: omit. */
-  debugOwners?: () => Array<{ key: string; pluginId?: string; pluginName?: string }>;
+  debugOwners?: () => Array<{ key: string; pluginId?: string }>;
 }
 
 export interface ResourceRuntime {
@@ -900,15 +900,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
 
   function handleResourcesDebug(): Response {
     rebuildDag();
-    const ownerByKey = new Map<string, { pluginId?: string; pluginName?: string }>();
+    const ownerByKey = new Map<string, { pluginId?: string }>();
     for (const c of opts.debugOwners?.() ?? []) {
-      ownerByKey.set(c.key, { pluginId: c.pluginId, pluginName: c.pluginName });
+      ownerByKey.set(c.key, { pluginId: c.pluginId });
     }
     const out: Array<{
       key: string;
       mode: ResourceMode;
       pluginId?: string;
-      pluginName?: string;
       subscribers: number;
       versions: Record<string, number>;
       dependsOn: string[];
@@ -925,7 +924,6 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         key: entry.key,
         mode: entry.mode,
         pluginId: owner?.pluginId,
-        pluginName: owner?.pluginName,
         subscribers,
         versions: Object.fromEntries(entry.versions),
         dependsOn: entry.upstreamKeys,

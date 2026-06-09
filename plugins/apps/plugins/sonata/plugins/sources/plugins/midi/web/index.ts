@@ -16,7 +16,6 @@ export { compile };
 export { useSongMidi } from "./hooks";
 
 export default {
-  name: "Sonata: MIDI Source",
   description:
     "MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count.",
   contributions: [

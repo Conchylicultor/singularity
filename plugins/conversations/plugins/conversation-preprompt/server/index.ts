@@ -11,7 +11,6 @@ export { recordConversationPreprompt } from "./internal/record";
 export { recordPrepromptJob } from "./internal/record-job";
 
 export default {
-  name: "Conversation: Preprompt",
   description:
     "Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.",
   contributions: [

@@ -19,7 +19,6 @@ export {
 export type { ActiveRelateContext } from "./active-relate-context";
 
 export default {
-  name: "Task Draft Form",
   description:
     "Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.",
   contributions: [],

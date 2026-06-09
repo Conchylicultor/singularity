@@ -2,7 +2,6 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ThemeEngine } from "@plugins/ui/plugins/theme-engine/web";
 
 export default {
-  name: "UI: Token Groups",
   collapsed: true,
   description:
     "Umbrella for CSS token group plugins. Contributes global theme presets.",

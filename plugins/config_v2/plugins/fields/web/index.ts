@@ -11,7 +11,6 @@ export type {
 } from "./internal/slots";
 
 export default {
-  name: "Config v2: Fields",
   description:
     "Field type registry. Sub-plugins contribute field types with core factories and web renderers.",
   contributions: [],

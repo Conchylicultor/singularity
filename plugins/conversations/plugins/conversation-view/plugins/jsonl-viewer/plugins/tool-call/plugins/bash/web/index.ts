@@ -3,7 +3,6 @@ import { JsonlViewerTool } from "@plugins/conversations/plugins/conversation-vie
 import { BashToolView } from "./components/bash-tool-view";
 
 export default {
-  name: "JSONL Viewer: Bash tool renderer",
   description:
     "Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.",
   contributions: [

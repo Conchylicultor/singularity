@@ -3,7 +3,6 @@ import { Runtime } from "@plugins/conversations/server";
 import { tmuxRuntime } from "./internal/tmux-runtime";
 
 export default {
-  name: "Conversations Runtime: tmux",
   description: "Runs Claude CLI sessions inside tmux panes.",
   register: [Runtime.define(tmuxRuntime)],
 } satisfies ServerPluginDefinition;

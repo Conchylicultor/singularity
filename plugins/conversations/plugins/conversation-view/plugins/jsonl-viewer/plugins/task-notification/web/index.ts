@@ -3,7 +3,6 @@ import { JsonlViewer } from "@plugins/conversations/plugins/conversation-view/pl
 import { TaskNotificationRow } from "./components/task-notification-row";
 
 export default {
-  name: "JSONL Viewer: Task notification renderer",
   description:
     "Renders background task completion notifications in the JSONL viewer.",
   contributions: [

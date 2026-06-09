@@ -15,7 +15,6 @@ export type { TypographyPresetContribution } from "./slots";
 export { typographyConfig } from "./internal/config";
 
 export default {
-  name: "UI: Typography",
   description: "Typography token group (fonts, letter-spacing) with switchable presets.",
   contributions: [
     ...builtInPresets.map((p) => Typography.Preset(p)),

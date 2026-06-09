@@ -3,7 +3,6 @@ import { Conversation } from "@plugins/conversations/plugins/conversation-view/w
 import { ForkConversationButtons } from "./components/fork-conversation-buttons";
 
 export default {
-  name: "Conversation: Fork",
   description:
     "Toolbar buttons (+Sonnet / +Opus) that spin up a new conversation in the same worktree.",
   contributions: [Conversation.PromptBar({ id: "fork-conversation", component: ForkConversationButtons, section: "New", sectionOrder: 1 })],

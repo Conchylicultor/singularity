@@ -5,7 +5,6 @@ import { bulletedListBlock } from "../core";
 export { bulletedListBlock } from "../core";
 
 export default {
-  name: "Bulleted List Block",
   description: "Bulleted-list block type for the page editor.",
   contributions: [
     Editor.Block({

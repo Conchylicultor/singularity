@@ -3,7 +3,6 @@ import { TableDetail } from "@plugins/apps/plugins/studio/plugins/contributions/
 import { IndexesSection } from "./components/indexes-section";
 
 export default {
-  name: "Studio: Contributions / Tables / Indexes",
   description: "Table indexes section in the table detail view.",
   contributions: [
     TableDetail.Section({ id: "indexes", label: "Indexes", component: IndexesSection }),

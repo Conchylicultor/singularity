@@ -20,7 +20,6 @@ export { TaskTreeDetail } from "./components/task-tree-detail";
 export { tasksRootPane, taskDetailPane } from "./panes";
 
 export default {
-  name: "Task Detail",
   description:
     "Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.",
   contributions: [

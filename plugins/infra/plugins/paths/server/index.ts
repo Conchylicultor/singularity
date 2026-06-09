@@ -26,5 +26,4 @@ export { GIT, PGREP, CLAUDE, TMUX } from "./internal/bins";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
 export default {
-  name: "Paths",
 } satisfies ServerPluginDefinition;
