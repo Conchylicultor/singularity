@@ -129,7 +129,7 @@ export function AnswerForm({
                     }`}
                   >
                     <Indicator selected={isSelected} multi={q.multiSelect} />
-                    <div className="min-w-0 flex-1">
+                    <div className="min-w-0 flex-1 select-text">
                       <p className="text-xs font-medium">{opt.label}</p>
                       <p className="text-xs text-muted-foreground">
                         {opt.description}
