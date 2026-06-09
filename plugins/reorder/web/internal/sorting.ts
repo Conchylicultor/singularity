@@ -1,14 +1,13 @@
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import type { ReorderDirective } from "../../shared/directive";
+import type { ReorderTree } from "@plugins/fields/plugins/reorder-tree/core";
+import { normalizeNode } from "@plugins/fields/plugins/reorder-tree/plugins/config/core";
 import type { ReorderGroup } from "@plugins/reorder/plugins/groups/core";
 
-// A spacer is a synthetic token in `directive.order` of the form
-// `__spacer__<unique-id>`. It renders as a blank draggable gap; it never touches
-// `hidden` and never joins a group. App-created tokens use `crypto.randomUUID()`;
-// hand-authored duplicates are de-duplicated on read in `applyDirective`.
-export const SPACER_PREFIX = "__spacer__";
-
+// A spacer is a `{ spacer: <id> }` node in the `items` tree. It renders as a
+// blank draggable gap; it is never hidden and never joins a group. App-created
+// spacer ids use `crypto.randomUUID()`; hand-authored duplicates are
+// de-duplicated on read in `applyTree`. The raw spacer id is the SpacerItem `.id`.
 export type SpacerItem = { readonly id: string; readonly _spacer: true };
 
 export function isSpacer(
@@ -66,33 +65,40 @@ export interface ReorderState {
 }
 
 /**
- * Apply a reorder directive over the LIVE contribution catalog.
+ * Apply a reorder `ReorderTree` over the LIVE contribution catalog.
  *
- * Implemented as a positional WALK of `directive.order`, which lets spacer
- * tokens materialize at their `order` positions while preserving non-spacer
+ * Implemented as a positional WALK of the tree (via `normalizeNode`), which lets
+ * spacer nodes materialize at their positions while preserving non-spacer
  * behavior exactly:
- *  - `hidden`: contributions whose `entryKey ∈ directive.hidden` are removed
- *    (but `excludeFromReorder` items are NEVER hidden).
- *  - `order`: walked left-to-right —
- *      • a `SPACER_PREFIX` token emits a `{ id, _spacer: true }` spacer (deduped:
- *        a repeated token is skipped, so hand-authored duplicates can't collide);
- *      • a token matching a visible non-excluded contribution emits that
- *        contribution and marks it consumed;
- *      • any other token (drift: removed/unknown/hidden contribution) is skipped.
- *    Unconsumed visible non-excluded contributions are then appended in natural
- *    runtime order.
- *  - `excludeFromReorder` items stay pinned last in natural order (as before).
+ *  - `kind:"item"` — resolve `item` against the visible-non-excluded `byKey` map.
+ *      • `{ item, hidden: true }` routes that contribution to the `hidden` bucket
+ *        (but `excludeFromReorder` items are NEVER hidden);
+ *      • otherwise the contribution is emitted and marked consumed;
+ *      • a token matching no live contribution (drift: removed/unknown) is skipped.
+ *  - `kind:"spacer"` — emits a `{ id: spacer, _spacer: true }` spacer (deduped: a
+ *    repeated id is skipped, so hand-authored duplicates can't collide).
+ *  - `kind:"group"` — IGNORED for now (groups are deferred and stay DB-backed).
  *
- * New contributions append; removed ones are silently ignored — a changing
- * catalog never invalidates a saved directive. Groups stay DB-backed and the
- * membership construction is unchanged.
+ * After the walk, any live, visible-non-excluded contribution NOT named in the
+ * tree is appended in natural runtime order (fail-loud — a contribution is never
+ * silently dropped, even in the stale window before reconciliation).
+ *
+ * `excludeFromReorder` items stay pinned last in natural order (as before). The
+ * groups pass below is unchanged: it reads `groupsData` (DB) and partitions the
+ * tree-derived sorted list into top-level groups + ungrouped items.
  */
-export function applyDirective(
+export function applyTree(
   contributions: Contribution[],
-  directive: ReorderDirective,
+  tree: ReorderTree,
   groupsData: GroupsData | null,
 ): ReorderState {
-  const hiddenSet = new Set(directive.hidden);
+  // First pass over the tree: collect the entryKeys explicitly marked hidden, so
+  // the catalog partition can route them to the `hidden` bucket up front.
+  const hiddenSet = new Set<string>();
+  for (const node of tree) {
+    const n = normalizeNode(node);
+    if (n.kind === "item" && n.hidden) hiddenSet.add(n.item);
+  }
 
   // Partition the live catalog into hidden / visible-non-excluded / excluded.
   // Excluded items are never in the walk working set — they are pinned last.
@@ -118,19 +124,25 @@ export function applyDirective(
     byKey.set(contributionKey(c)!, c);
   }
 
-  // Walk the order array, emitting spacers (deduped) and consuming contributions.
+  // Walk the tree, emitting spacers (deduped) and consuming contributions.
   const sorted: (Contribution | SpacerItem)[] = [];
   const emittedSpacers = new Set<string>();
-  for (const token of directive.order) {
-    if (token.startsWith(SPACER_PREFIX)) {
-      if (emittedSpacers.has(token)) continue;
-      emittedSpacers.add(token);
-      sorted.push({ id: token, _spacer: true as const });
-    } else if (byKey.has(token)) {
-      sorted.push(byKey.get(token)!);
-      byKey.delete(token);
+  for (const node of tree) {
+    const n = normalizeNode(node);
+    if (n.kind === "spacer") {
+      if (emittedSpacers.has(n.spacer)) continue;
+      emittedSpacers.add(n.spacer);
+      sorted.push({ id: n.spacer, _spacer: true as const });
+    } else if (n.kind === "item") {
+      // Hidden items were already routed to the `hidden` bucket; skip them here.
+      if (n.hidden) continue;
+      if (byKey.has(n.item)) {
+        sorted.push(byKey.get(n.item)!);
+        byKey.delete(n.item);
+      }
+      // else: drift (removed/unknown contribution) → skip.
     }
-    // else: drift (removed/unknown/hidden contribution) → skip.
+    // kind:"group" → ignored (deferred; groups stay DB-backed).
   }
 
   // Append unconsumed visible-non-excluded in natural runtime order (iterate the
@@ -219,9 +231,9 @@ export function applyDirective(
       const bExcl =
         !isGroupEntry(b.entry) && excludeFromReorder(b.entry as Contribution | SpacerItem);
       if (aExcl !== bExcl) return aExcl ? 1 : -1;
-      // Groups carry a DB rank; ungrouped items are placed by the directive order
+      // Groups carry a DB rank; ungrouped items are placed by the tree order
       // already baked into their `naturalIdx` (the index within `ungrouped`,
-      // which preserves the directive-sorted `entries` order). A group sorts
+      // which preserves the tree-sorted `entries` order). A group sorts
       // relative to items by its rank vs the item's position.
       if (a.rank && b.rank) return Rank.compare(a.rank, b.rank);
       if (a.rank) return -1;

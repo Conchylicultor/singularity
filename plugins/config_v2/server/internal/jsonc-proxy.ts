@@ -9,6 +9,7 @@ import {
 import { randomUUID } from "node:crypto";
 import { dirname } from "node:path";
 import { parse as parseJsonc } from "jsonc-parser";
+import { stringifyConfigValue } from "../../core";
 import type { ConfigProxy } from "../../core";
 import type { JsonValue } from "../../core";
 
@@ -39,7 +40,7 @@ export function jsoncConfigProxy(filePath: string): ConfigProxy {
     write(content: JsonValue, hash: string | null) {
       let str = "";
       if (hash !== null) str += `// @hash ${hash}\n`;
-      str += JSON.stringify(content, null, 2) + "\n";
+      str += stringifyConfigValue(content) + "\n";
       const tmp = `${filePath}.tmp-${randomUUID()}`;
       try {
         mkdirSync(dirname(filePath), { recursive: true });

@@ -1,12 +1,17 @@
-// @hash 2936705f08f1
+// @hash b81e353e5ce2
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - queued-chip  — queued-chip
-  // - child-count  — child-count
-  // - expand-collapse-all  — expand-collapse-all
-  // - delete  — delete
-  // - launch-agent  — launch-agent
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   queued-chip — queued-chip
+  //   child-count — child-count
+  //   expand-collapse-all — expand-collapse-all
+  //   delete — delete
+  //   launch-agent — launch-agent
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "queued-chip",
+    "child-count",
+    "expand-collapse-all",
+    "delete",
+    "launch-agent"
+  ]
 }

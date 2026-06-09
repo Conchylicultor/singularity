@@ -28,18 +28,20 @@ import {
 } from "@plugins/reorder/plugins/groups/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import type { ReorderDirective } from "../../shared/directive";
+import type {
+  ReorderNode,
+  ReorderTree,
+} from "@plugins/fields/plugins/reorder-tree/core";
 import { reorderDescriptors } from "./descriptors";
 import { useEditMode } from "./edit-mode-store";
 import { ReorderGroupBox } from "./group-box";
 import {
-  applyDirective,
+  applyTree,
   contributionKey,
   contributionLabel,
   entryKey,
   isGroupEntry,
   isSpacer,
-  SPACER_PREFIX,
   type SpacerItem,
   type TopLevelEntry,
 } from "./sorting";
@@ -52,6 +54,41 @@ import {
 import { ReorderLayoutContext } from "./reorder-layout";
 
 const DRAG_GROUP_PREFIX = "reorder-drag-group-";
+
+/**
+ * Materialize the current full layout into a `ReorderTree`: a bare string per
+ * visible contribution (terse), a `{ spacer }` node per spacer, and a
+ * `{ item, hidden: true }` node per hidden contribution (appended last so the
+ * hidden set survives reorder/spacer writes). Optionally rewrites the node for
+ * `hideKey` to `{ item, hidden: true }` (hide) — spacers are never hidden.
+ *
+ * `hidden` keys already present in `hideKey` are not duplicated; pass `hideKey`
+ * to hide one of the currently-visible `entries`.
+ */
+function materializeTree(
+  entries: (Contribution | SpacerItem)[],
+  hiddenKeys: string[],
+  hideKey?: string,
+): ReorderTree {
+  const tree: ReorderNode[] = [];
+  for (const e of entries) {
+    if (isSpacer(e)) {
+      tree.push({ spacer: e.id });
+    } else {
+      const key = entryKey(e);
+      if (key === hideKey) {
+        tree.push({ item: key, hidden: true });
+      } else {
+        tree.push(key);
+      }
+    }
+  }
+  // Preserve the existing hidden set so a reorder/spacer write doesn't un-hide.
+  for (const key of hiddenKeys) {
+    if (key !== hideKey) tree.push({ item: key, hidden: true });
+  }
+  return tree;
+}
 
 const reorderCollisionDetection: CollisionDetection = (args) => {
   const sortableContainers = args.droppableContainers.filter((c) => {
@@ -138,15 +175,9 @@ function ReorderListMiddlewareInner({
   }, []);
 
   // `useConfig` on a generically-typed descriptor returns a loose record;
-  // treat it as a possibly-partial directive and fill defaults defensively.
-  const directiveRaw = useConfig(descriptor) as unknown as Partial<ReorderDirective>;
-  const directive = useMemo<ReorderDirective>(
-    () => ({
-      order: directiveRaw.order ?? [],
-      hidden: directiveRaw.hidden ?? [],
-    }),
-    [directiveRaw],
-  );
+  // read the single `items` field as a possibly-missing `ReorderTree`.
+  const cfg = useConfig(descriptor) as unknown as { items?: ReorderTree };
+  const items = useMemo<ReorderTree>(() => cfg.items ?? [], [cfg.items]);
   const setConfig = useSetConfig(descriptor);
 
   // Groups stay DB-backed (untouched by the config migration).
@@ -159,8 +190,8 @@ function ReorderListMiddlewareInner({
   );
 
   const state = useMemo(
-    () => applyDirective(contributions, directive, groupsData),
-    [contributions, directive, groupsData],
+    () => applyTree(contributions, items, groupsData),
+    [contributions, items, groupsData],
   );
 
   const hiddenItems = useMemo(
@@ -176,8 +207,13 @@ function ReorderListMiddlewareInner({
 
   const entriesRef = useRef(state.entries);
   entriesRef.current = state.entries;
-  const directiveRef = useRef(directive);
-  directiveRef.current = directive;
+  const itemsRef = useRef(items);
+  itemsRef.current = items;
+  const hiddenKeysRef = useRef<string[]>([]);
+  hiddenKeysRef.current = useMemo(
+    () => state.hidden.map((c) => contributionKey(c)!),
+    [state.hidden],
+  );
   const membershipMapRef = useRef(state.membershipMap);
   membershipMapRef.current = state.membershipMap;
   const groupsDataRef = useRef(groupsData);
@@ -190,18 +226,24 @@ function ReorderListMiddlewareInner({
   // --- Hide / restore (config-backed) ---------------------------------------
 
   const hideItem = useCallback((key: string) => {
-    const hidden = directiveRef.current.hidden;
-    if (hidden.includes(key)) return;
-    setConfigRef.current("hidden", [...hidden, key]);
+    if (hiddenKeysRef.current.includes(key)) return;
+    // Materialize the full layout, flipping `key` to `{ item, hidden: true }`.
+    setConfigRef.current(
+      "items",
+      materializeTree(entriesRef.current, hiddenKeysRef.current, key),
+    );
   }, []);
 
   const restoreItem = useCallback((key: string) => {
-    const hidden = directiveRef.current.hidden;
-    if (!hidden.includes(key)) return;
-    setConfigRef.current(
-      "hidden",
-      hidden.filter((k) => k !== key),
+    if (!hiddenKeysRef.current.includes(key)) return;
+    // Materialize the visible order, then re-add the restored item as a bare
+    // string and drop it from the persisted hidden set.
+    const tree = materializeTree(
+      entriesRef.current,
+      hiddenKeysRef.current.filter((k) => k !== key),
     );
+    tree.push(key);
+    setConfigRef.current("items", tree);
   }, []);
 
   const hideItemRef = useRef(hideItem);
@@ -214,20 +256,20 @@ function ReorderListMiddlewareInner({
   const addSpacer = useCallback(() => {
     // Materialize the current full visible order so the spacer lands at the
     // visual end, not after only the explicitly-ordered items.
-    const tokens = entriesRef.current.map((x) => entryKey(x));
-    setConfigRef.current("order", [
-      ...tokens,
-      `${SPACER_PREFIX}${crypto.randomUUID()}`,
-    ]);
+    const tree = materializeTree(entriesRef.current, hiddenKeysRef.current);
+    tree.push({ spacer: crypto.randomUUID() });
+    setConfigRef.current("items", tree);
   }, []);
 
-  const deleteSpacer = useCallback((token: string) => {
-    // Filter the persisted order only — never materialize (would bloat the
-    // directive by promoting every natural-order item).
-    setConfigRef.current(
-      "order",
-      directiveRef.current.order.filter((t) => t !== token),
+  const deleteSpacer = useCallback((spacerId: string) => {
+    // Materialize the current order minus the targeted spacer node. Materializing
+    // (rather than filtering the raw tree) keeps the persisted layout consistent
+    // with the rendered order even after an unsaved drag.
+    const tree = materializeTree(
+      entriesRef.current.filter((e) => !(isSpacer(e) && e.id === spacerId)),
+      hiddenKeysRef.current,
     );
+    setConfigRef.current("items", tree);
   }, []);
 
   const addSpacerRef = useRef(addSpacer);
@@ -283,7 +325,10 @@ function ReorderListMiddlewareInner({
         });
       }
 
-      setConfigRef.current("order", next.map((x) => entryKey(x)));
+      setConfigRef.current(
+        "items",
+        materializeTree(next, hiddenKeysRef.current),
+      );
     },
     [storageId],
   );

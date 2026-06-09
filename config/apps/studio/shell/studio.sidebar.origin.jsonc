@@ -1,9 +1,11 @@
-// @hash 2936705f08f1
+// @hash 4e353050d47a
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - contributions  — Contributions
-  // - explorer  — Explorer
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   contributions — Contributions
+  //   explorer — Explorer
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "contributions",
+    "explorer"
+  ]
 }

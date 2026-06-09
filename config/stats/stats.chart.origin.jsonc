@@ -1,16 +1,25 @@
-// @hash 2936705f08f1
+// @hash f6fa1efd0139
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - commits  — Commits
-  // - lines  — Lines changed
-  // - tasks-active  — Tasks
-  // - pushes  — Pushes
-  // - cost-overview  — Cost & Tokens
-  // - cost-token-mix  — Token mix per day
-  // - cost-avg-per-conversation  — Average cost per conversation
-  // - cost-distribution  — Cost distribution per conversation
-  // - cost-top-conversations  — Top conversations by cost
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   commits — Commits
+  //   lines — Lines changed
+  //   tasks-active — Tasks
+  //   pushes — Pushes
+  //   cost-overview — Cost & Tokens
+  //   cost-token-mix — Token mix per day
+  //   cost-avg-per-conversation — Average cost per conversation
+  //   cost-distribution — Cost distribution per conversation
+  //   cost-top-conversations — Top conversations by cost
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "commits",
+    "lines",
+    "tasks-active",
+    "pushes",
+    "cost-overview",
+    "cost-token-mix",
+    "cost-avg-per-conversation",
+    "cost-distribution",
+    "cost-top-conversations"
+  ]
 }

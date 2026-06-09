@@ -1,15 +1,23 @@
-// @hash 2936705f08f1
+// @hash ed8b0973deb9
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - header  — header
-  // - description  — description
-  // - events  — events
-  // - dependencies  — dependencies
-  // - dependents  — dependents
-  // - preprompt  — preprompt
-  // - attachments  — attachments
-  // - graph  — graph
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   header — header
+  //   description — description
+  //   events — events
+  //   dependencies — dependencies
+  //   dependents — dependents
+  //   preprompt — preprompt
+  //   attachments — attachments
+  //   graph — graph
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "header",
+    "description",
+    "events",
+    "dependencies",
+    "dependents",
+    "preprompt",
+    "attachments",
+    "graph"
+  ]
 }

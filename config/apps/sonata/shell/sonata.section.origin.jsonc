@@ -1,11 +1,15 @@
-// @hash 2936705f08f1
+// @hash 11bd9e998a95
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - audio  — Audio
-  // - chord-readout  — Current chord
-  // - chord-grid-editor  — Chord Grid
-  // - track-mixer  — Tracks
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   audio — Audio
+  //   chord-readout — Current chord
+  //   chord-grid-editor — Chord Grid
+  //   track-mixer — Tracks
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "audio",
+    "chord-readout",
+    "chord-grid-editor",
+    "track-mixer"
+  ]
 }

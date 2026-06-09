@@ -1,10 +1,13 @@
-// @hash 2936705f08f1
+// @hash a4f344dfb48d
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - op-status  — op-status
-  // - notes  — notes
-  // - turn-summary  — turn-summary
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   op-status — op-status
+  //   notes — notes
+  //   turn-summary — turn-summary
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "op-status",
+    "notes",
+    "turn-summary"
+  ]
 }

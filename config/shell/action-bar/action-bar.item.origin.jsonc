@@ -1,16 +1,25 @@
-// @hash 2936705f08f1
+// @hash 57e4f05b7cff
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - theme-customizer  — theme-customizer
-  // - reorder-pen  — reorder-pen
-  // - screenshot  — screenshot
-  // - draw-on-app  — draw-on-app
-  // - health-dot  — health-dot
-  // - theme-light-dark  — theme-light-dark
-  // - improve  — improve
-  // - build  — build
-  // - notifications  — notifications
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   theme-customizer — theme-customizer
+  //   reorder-pen — reorder-pen
+  //   screenshot — screenshot
+  //   draw-on-app — draw-on-app
+  //   health-dot — health-dot
+  //   theme-light-dark — theme-light-dark
+  //   improve — improve
+  //   build — build
+  //   notifications — notifications
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "theme-customizer",
+    "reorder-pen",
+    "screenshot",
+    "draw-on-app",
+    "health-dot",
+    "theme-light-dark",
+    "improve",
+    "build",
+    "notifications"
+  ]
 }

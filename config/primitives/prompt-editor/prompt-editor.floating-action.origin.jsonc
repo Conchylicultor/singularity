@@ -1,11 +1,15 @@
-// @hash 2936705f08f1
+// @hash 1948912712ef
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - voice-input  — voice-input
-  // - exit-menu  — exit-menu
-  // - push-and-exit  — push-and-exit
-  // - prompt-templates  — prompt-templates
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   voice-input — voice-input
+  //   exit-menu — exit-menu
+  //   push-and-exit — push-and-exit
+  //   prompt-templates — prompt-templates
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "voice-input",
+    "exit-menu",
+    "push-and-exit",
+    "prompt-templates"
+  ]
 }

@@ -1,14 +1,21 @@
-// @hash 2936705f08f1
+// @hash ec50f48d3693
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - config-v2  — Config
-  // - tasks  — Tasks
-  // - accounts  — Accounts
-  // - agents  — Agents
-  // - conversations  — Conversations
-  // - code-explorer  — Explorer
-  // - stats  — Stats
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   config-v2 — Config
+  //   tasks — Tasks
+  //   accounts — Accounts
+  //   agents — Agents
+  //   conversations — Conversations
+  //   code-explorer — Explorer
+  //   stats — Stats
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "config-v2",
+    "tasks",
+    "accounts",
+    "agents",
+    "conversations",
+    "code-explorer",
+    "stats"
+  ]
 }

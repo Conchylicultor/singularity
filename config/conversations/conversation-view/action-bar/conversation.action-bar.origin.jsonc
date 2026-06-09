@@ -1,19 +1,31 @@
-// @hash 2936705f08f1
+// @hash 5d5229c0d202
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - attempt-switch  — attempt-switch
-  // - push-profiling  — push-profiling
-  // - terminal  — terminal
-  // - docs  — docs
-  // - open-app  — open-app
-  // - commits-graph  — commits-graph
-  // - event-counter  — event-counter
-  // - tasks  — tasks
-  // - dependent-count  — dependent-count
-  // - vscode  — vscode
-  // - review  — review
-  // - explorer  — explorer
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   attempt-switch — attempt-switch
+  //   push-profiling — push-profiling
+  //   terminal — terminal
+  //   docs — docs
+  //   open-app — open-app
+  //   commits-graph — commits-graph
+  //   event-counter — event-counter
+  //   tasks — tasks
+  //   dependent-count — dependent-count
+  //   vscode — vscode
+  //   review — review
+  //   explorer — explorer
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "attempt-switch",
+    "push-profiling",
+    "terminal",
+    "docs",
+    "open-app",
+    "commits-graph",
+    "event-counter",
+    "tasks",
+    "dependent-count",
+    "vscode",
+    "review",
+    "explorer"
+  ]
 }

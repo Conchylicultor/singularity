@@ -1,12 +1,17 @@
-// @hash 2936705f08f1
+// @hash dda46e932710
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - foreign-keys  — foreign-keys
-  // - sample-rows  — sample-rows
-  // - row-count  — row-count
-  // - columns  — columns
-  // - indexes  — indexes
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   foreign-keys — foreign-keys
+  //   sample-rows — sample-rows
+  //   row-count — row-count
+  //   columns — columns
+  //   indexes — indexes
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "foreign-keys",
+    "sample-rows",
+    "row-count",
+    "columns",
+    "indexes"
+  ]
 }

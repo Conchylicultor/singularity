@@ -1,14 +1,21 @@
-// @hash 2936705f08f1
+// @hash 9fc74e72c2e2
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - fork-session  — fork-session
-  // - timestamp  — timestamp
-  // - raw-json  — raw-json
-  // - stop-reason  — stop-reason
-  // - markdown-toggle  — markdown-toggle
-  // - copy-assistant-text  — copy-assistant-text
-  // - copy-tool-result  — copy-tool-result
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   fork-session — fork-session
+  //   timestamp — timestamp
+  //   raw-json — raw-json
+  //   stop-reason — stop-reason
+  //   markdown-toggle — markdown-toggle
+  //   copy-assistant-text — copy-assistant-text
+  //   copy-tool-result — copy-tool-result
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "fork-session",
+    "timestamp",
+    "raw-json",
+    "stop-reason",
+    "markdown-toggle",
+    "copy-assistant-text",
+    "copy-tool-result"
+  ]
 }

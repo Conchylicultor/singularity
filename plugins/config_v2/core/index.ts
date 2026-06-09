@@ -27,6 +27,7 @@ export type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeFor
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,
+  stringifyConfigValue,
   codeConfigProxy,
   readonlyProxy,
 } from "./internal/config-proxy";

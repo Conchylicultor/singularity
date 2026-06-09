@@ -1,11 +1,15 @@
-// @hash 2936705f08f1
+// @hash c4fd675d9273
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - child-count  — child-count
-  // - load-bearing  — load-bearing
-  // - expand-collapse  — expand-collapse
-  // - collapsed  — collapsed
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   child-count — child-count
+  //   load-bearing — load-bearing
+  //   expand-collapse — expand-collapse
+  //   collapsed — collapsed
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "child-count",
+    "load-bearing",
+    "expand-collapse",
+    "collapsed"
+  ]
 }

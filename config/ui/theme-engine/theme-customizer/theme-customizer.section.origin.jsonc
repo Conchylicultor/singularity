@@ -1,17 +1,27 @@
-// @hash 2936705f08f1
+// @hash 7a1bf8f4582b
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - community-browser  — community-browser
-  // - shape  — shape
-  // - sidebar-palette  — sidebar-palette
-  // - shadow  — shadow
-  // - chart  — chart
-  // - density  — density
-  // - categorical  — categorical
-  // - color-palette  — color-palette
-  // - typography  — typography
-  // - color-adjust  — color-adjust
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   community-browser — community-browser
+  //   shape — shape
+  //   sidebar-palette — sidebar-palette
+  //   shadow — shadow
+  //   chart — chart
+  //   density — density
+  //   categorical — categorical
+  //   color-palette — color-palette
+  //   typography — typography
+  //   color-adjust — color-adjust
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "community-browser",
+    "shape",
+    "sidebar-palette",
+    "shadow",
+    "chart",
+    "density",
+    "categorical",
+    "color-palette",
+    "typography",
+    "color-adjust"
+  ]
 }

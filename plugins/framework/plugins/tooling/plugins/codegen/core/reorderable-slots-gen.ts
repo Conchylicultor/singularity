@@ -3,6 +3,7 @@ import { join } from "path";
 import { buildEnrichedTree } from "./docgen";
 import {
   setDefaultOriginAnnotationsPreparer,
+  setDefaultOriginDefaultsPreparer,
   type OriginAnnotationsProvider,
 } from "./config-origin-gen";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
@@ -142,7 +143,11 @@ export async function renderReorderableSlotsManifest(
   return renderManifest(slots);
 }
 
-/** Build the origin-annotations provider from the per-slot catalog. */
+/**
+ * Slim origin-annotations provider: the order now lives in the `items` value
+ * (a materialized `ReorderTree`), so the comment is just a legend mapping each
+ * available `entryKey` to its label plus a one-line format note.
+ */
 function buildOriginAnnotationsProvider(
   catalog: Map<string, CatalogItem[]>,
 ): OriginAnnotationsProvider {
@@ -150,13 +155,13 @@ function buildOriginAnnotationsProvider(
     // The directive descriptor's `name` is the slotId.
     const items = catalog.get(descriptor.name);
     if (!items || items.length === 0) return [];
-    const lines: string[] = [
-      "Available items in this slot (reorder via the `order` array, hide via `hidden`):",
-      'Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.',
-    ];
+    const lines: string[] = ["Legend (entryKey — label):"];
     for (const item of items) {
-      lines.push(`- ${item.entryKey}  — ${item.label}`);
+      lines.push(`  ${item.entryKey} — ${item.label}`);
     }
+    lines.push(
+      'Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.',
+    );
     return lines;
   };
 }
@@ -172,6 +177,24 @@ function buildOriginAnnotationsProvider(
 setDefaultOriginAnnotationsPreparer(async (root: string) => {
   const { catalog } = await collectReorderableSlots(root);
   return buildOriginAnnotationsProvider(catalog);
+});
+
+/**
+ * Side-effecting registration: installs the reorder catalog as the process-wide
+ * default origin-DEFAULTS preparer. The materialized default for each reorderable
+ * slot's `items` field is the full ordered catalog of `entryKey`s (bare strings —
+ * terse). This makes the origin hash reflect the live catalog: adding/removing a
+ * contribution shifts the hash → committed overrides go stale and
+ * `config-origins-in-sync` blocks push until reconciled (the agent forcing
+ * function). Returns `undefined` for descriptors whose slotId isn't in the
+ * catalog, so non-reorder descriptors fall back to `descriptor.defaults`.
+ */
+setDefaultOriginDefaultsPreparer(async (root: string) => {
+  const { catalog } = await collectReorderableSlots(root);
+  return (descriptor: ConfigDescriptor) => {
+    const items = catalog.get(descriptor.name);
+    return items ? { items: items.map((c) => c.entryKey) } : undefined;
+  };
 });
 
 /** Regenerate `reorderable-slots.generated.ts` if it drifted. */

@@ -3,7 +3,7 @@ import { randomUUID } from "crypto";
 import { dirname, join } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
-import { computeHash, effective, propagate, readonlyProxy } from "@plugins/config_v2/core";
+import { computeHash, effective, propagate, readonlyProxy, stringifyConfigValue } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigProxy, FieldDef, JsonValue } from "@plugins/config_v2/core";
 import {
   registerBarrelStubs,
@@ -111,7 +111,7 @@ function renderFieldLines(
       lines.push(...renderFieldLines(subFields, subDefaults, `${indent}  `));
       lines.push(`${indent}}${comma}`);
     } else {
-      lines.push(`${indent}"${key}": ${JSON.stringify(value)}${comma}`);
+      lines.push(`${indent}"${key}": ${stringifyConfigValue(value, indent)}${comma}`);
     }
   }
   return lines;
@@ -179,12 +179,77 @@ export function setDefaultOriginAnnotationsPreparer(
   defaultOriginAnnotationsPreparer = preparer;
 }
 
+/**
+ * Build-time hook that *overrides* a generated origin's default value. Unlike
+ * annotations (pure comments), the returned defaults feed BOTH the JSON body and
+ * the `@hash`, so changing them shifts the committed origin and marks existing
+ * overrides stale. Returning `undefined` (the no-provider path) falls back to
+ * `descriptor.defaults` — byte-identical to before this hook existed. Used by
+ * reorder to materialize each slot's full contribution catalog as the default.
+ */
+export type OriginDefaultsProvider = (
+  descriptor: ConfigDescriptor,
+  hierarchyPath: string,
+) => Record<string, unknown> | undefined;
+
+/**
+ * Process-wide default defaults provider. Mirrors {@link defaultOriginAnnotations}:
+ * both the build step and the `config-origins-in-sync` check resolve their
+ * provider through {@link resolveOriginDefaults}, so whatever the build wiring
+ * registers here is applied identically on both sides — keeping the committed
+ * origin defaults/hash and the check's expected ones byte-for-byte equal.
+ * Defaults to `undefined` (→ uses `descriptor.defaults`, identical to before
+ * this hook existed).
+ */
+let defaultOriginDefaults: OriginDefaultsProvider | undefined;
+
+export function setDefaultOriginDefaults(
+  provider: OriginDefaultsProvider | undefined,
+): void {
+  defaultOriginDefaults = provider;
+}
+
+/** Explicit provider wins; otherwise fall back to the registered default. */
+export function resolveOriginDefaults(
+  explicit?: OriginDefaultsProvider,
+): OriginDefaultsProvider | undefined {
+  return explicit ?? defaultOriginDefaults;
+}
+
+/**
+ * Async, root-aware default-defaults *preparer*, symmetric to
+ * {@link OriginAnnotationsPreparer}. Reorder's materialized catalog can only be
+ * built after walking the enriched plugin tree (async), so a preparer module
+ * registers a function here that, given the repo root, builds the provider. As
+ * with annotations, the preparer must be registered as a side effect of
+ * *importing* a shared module that BOTH the build step and the
+ * `config-origins-in-sync` check import, so both separate processes resolve
+ * identical defaults.
+ */
+export type OriginDefaultsPreparer = (
+  root: string,
+) => Promise<OriginDefaultsProvider | undefined>;
+
+let defaultOriginDefaultsPreparer: OriginDefaultsPreparer | undefined;
+
+export function setDefaultOriginDefaultsPreparer(
+  preparer: OriginDefaultsPreparer | undefined,
+): void {
+  defaultOriginDefaultsPreparer = preparer;
+}
+
 function renderOriginJsonc(
   descriptor: ConfigDescriptor,
   hierarchyPath: string,
   originAnnotations?: OriginAnnotationsProvider,
+  originDefaults?: OriginDefaultsProvider,
 ): string {
-  const hash = computeHash(descriptor.defaults as unknown as JsonValue);
+  // An override provider supplies the materialized defaults; with no provider
+  // this is `descriptor.defaults` — same value for both the body and the hash,
+  // byte-identical to before the hook existed.
+  const defaults =
+    originDefaults?.(descriptor, hierarchyPath) ?? descriptor.defaults;
+  const hash = computeHash(defaults as unknown as JsonValue);
   const lines: string[] = [];
   lines.push(`// @hash ${hash}`);
   lines.push("{");
@@ -200,7 +265,7 @@ function renderOriginJsonc(
   lines.push(
     ...renderFieldLines(
       descriptor.fields as Record<string, FieldDef>,
-      descriptor.defaults as Record<string, unknown>,
+      defaults as Record<string, unknown>,
       "  ",
     ),
   );
@@ -212,6 +277,7 @@ function renderOriginJsonc(
 export async function renderConfigOriginContent(opts: {
   root: string;
   originAnnotations?: OriginAnnotationsProvider;
+  originDefaults?: OriginDefaultsProvider;
 }): Promise<Map<string, string>> {
   const configs = await discoverConfigs(opts.root);
   const result = new Map<string, string>();
@@ -224,10 +290,20 @@ export async function renderConfigOriginContent(opts: {
   if (!annotations && defaultOriginAnnotationsPreparer) {
     annotations = await defaultOriginAnnotationsPreparer(opts.root);
   }
+  // Same explicit→sync→async-preparer chain for the defaults override. With no
+  // provider registered this stays `undefined`, so `renderOriginJsonc` falls
+  // back to `descriptor.defaults` — byte-identical to today.
+  let originDefaults = resolveOriginDefaults(opts.originDefaults);
+  if (!originDefaults && defaultOriginDefaultsPreparer) {
+    originDefaults = await defaultOriginDefaultsPreparer(opts.root);
+  }
 
   for (const { hierarchyPath, descriptor } of configs) {
     const relPath = `${hierarchyPath}/${descriptor.name}.origin.jsonc`;
-    result.set(relPath, renderOriginJsonc(descriptor, hierarchyPath, annotations));
+    result.set(
+      relPath,
+      renderOriginJsonc(descriptor, hierarchyPath, annotations, originDefaults),
+    );
   }
 
   return result;
@@ -236,6 +312,7 @@ export async function renderConfigOriginContent(opts: {
 export async function generateConfigOrigins(opts: {
   root: string;
   originAnnotations?: OriginAnnotationsProvider;
+  originDefaults?: OriginDefaultsProvider;
 }): Promise<void> {
   const rendered = await renderConfigOriginContent(opts);
   const configDir = join(opts.root, "config");

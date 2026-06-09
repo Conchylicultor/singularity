@@ -1,9 +1,11 @@
-// @hash 2936705f08f1
+// @hash 24228b89efea
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - file-changes  — file-changes
-  // - api-changes  — api-changes
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   file-changes — file-changes
+  //   api-changes — api-changes
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "file-changes",
+    "api-changes"
+  ]
 }

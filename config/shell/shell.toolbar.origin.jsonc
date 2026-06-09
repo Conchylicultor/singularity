@@ -1,9 +1,11 @@
-// @hash 2936705f08f1
+// @hash 995b29a1894a
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - action-bar  — action-bar
-  // - worktree-switcher  — worktree-switcher
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   action-bar — action-bar
+  //   worktree-switcher — worktree-switcher
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "action-bar",
+    "worktree-switcher"
+  ]
 }

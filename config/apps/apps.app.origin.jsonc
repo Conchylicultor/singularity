@@ -1,16 +1,25 @@
-// @hash 2936705f08f1
+// @hash d6a3ffd75907
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - agent-manager  — Agent Manager
-  // - home  — Home
-  // - studio  — Studio
-  // - deploy  — Deploy
-  // - sonata  — Sonata
-  // - workflows  — Workflows
-  // - file-explorer  — File Explorer
-  // - pages  — Pages
-  // - debug  — Debug
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   agent-manager — Agent Manager
+  //   home — Home
+  //   studio — Studio
+  //   deploy — Deploy
+  //   sonata — Sonata
+  //   workflows — Workflows
+  //   file-explorer — File Explorer
+  //   pages — Pages
+  //   debug — Debug
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "agent-manager",
+    "home",
+    "studio",
+    "deploy",
+    "sonata",
+    "workflows",
+    "file-explorer",
+    "pages",
+    "debug"
+  ]
 }

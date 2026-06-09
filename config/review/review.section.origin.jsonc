@@ -1,9 +1,11 @@
-// @hash 2936705f08f1
+// @hash 6239976a7656
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - code-review  — code-review
-  // - plugin-changes  — plugin-changes
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   code-review — code-review
+  //   plugin-changes — plugin-changes
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "code-review",
+    "plugin-changes"
+  ]
 }

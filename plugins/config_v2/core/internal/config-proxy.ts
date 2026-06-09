@@ -26,6 +26,24 @@ export function computeHash(content: JsonValue): string {
   ).slice(0, 12);
 }
 
+/**
+ * THE canonical config value serializer — 2-space-indented JSON, re-indented so
+ * every line after the first sits under `indent`. Used by BOTH the runtime
+ * override writer (`jsoncConfigProxy.write`, `indent = ""`) and the build-time
+ * origin generator (`renderFieldLines`, where `indent` is the field's nesting).
+ * One serializer means committed origins and user overrides format arrays/objects
+ * identically (one element per line). Formatting never affects `computeHash`
+ * (which hashes the compact value), so re-indenting is purely cosmetic.
+ */
+export function stringifyConfigValue(value: unknown, indent = ""): string {
+  const json = JSON.stringify(value, null, 2);
+  if (!indent) return json;
+  return json
+    .split("\n")
+    .map((line, i) => (i === 0 ? line : indent + line))
+    .join("\n");
+}
+
 export function codeConfigProxy<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
 ): ConfigProxy {

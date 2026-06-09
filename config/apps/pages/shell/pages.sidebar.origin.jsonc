@@ -1,8 +1,9 @@
-// @hash 2936705f08f1
+// @hash be6d2bd9979b
 {
-  // Available items in this slot (reorder via the `order` array, hide via `hidden`):
-  // Insert a blank gap by adding a "__spacer__<unique-id>" string into the order array.
-  // - pages  — Pages
-  "order": [],
-  "hidden": []
+  // Legend (entryKey — label):
+  //   pages — Pages
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "pages"
+  ]
 }

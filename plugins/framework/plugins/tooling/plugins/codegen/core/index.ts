@@ -35,8 +35,13 @@ export {
   resolveOriginAnnotations,
   setDefaultOriginAnnotations,
   setDefaultOriginAnnotationsPreparer,
+  resolveOriginDefaults,
+  setDefaultOriginDefaults,
+  setDefaultOriginDefaultsPreparer,
   type OriginAnnotationsProvider,
   type OriginAnnotationsPreparer,
+  type OriginDefaultsProvider,
+  type OriginDefaultsPreparer,
 } from "./config-origin-gen";
 
 // Importing this module registers the reorder contribution catalog as the
