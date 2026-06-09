@@ -915,7 +915,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`assistant-text`** — Renders assistant text events in the JSONL viewer, with optional markdown rendering.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-text" → `AssistantTextRow`, `JsonlViewer.RowAction` "stop-reason" → `StopReasonAction`, `JsonlViewer.RowAction` "markdown-toggle" → `MarkdownToggleAction`, `JsonlViewer.RowAction` "copy-assistant-text" → `CopyAssistantTextAction`
-                - Uses: `active-data.ActiveDataIdentityProvider`, `active-data.useActiveDataSegments`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.RowActionButton`, `conversations/conversation-view/jsonl-viewer.useRowMarkdown`, `primitives/markdown.Markdown`, `primitives/select-scope.ContentScope`
+                - Uses: `active-data.ActiveDataIdentityProvider`, `active-data.useActiveDataSegments`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.RowActionButton`, `conversations/conversation-view/jsonl-viewer.useRowMarkdown`, `primitives/markdown.Markdown`, `primitives/select-scope.ContentScope`, `primitives/text.Text`
             - **`assistant-thinking`** — Renders assistant thinking blocks in the JSONL viewer as collapsible sections.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "assistant-thinking" → `AssistantThinkingRow`
@@ -2681,7 +2681,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `Markdown.Extension`
-        - Uses: `primitives/syntax-highlight.HighlightedCode`
+        - Uses: `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
         - Exports: Types: `MarkdownEnhancement`; Values: `langFromClassName`, `Markdown`, `MarkdownEnhancementContext`, `MarkdownEnhancerSlot`, `nodeToText`, `useMarkdownEnhancement`
       - Cross-plugin:
         - Imported by: `active-data`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/markdown-extensions`, `debug/memory`
@@ -2812,6 +2812,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `TabbedView`, `TabContribution`; Values: `defineTabbedView`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`, `tasks/task-list`
+    - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
+      - Cross-plugin:
+        - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-text`, `primitives/markdown`
+      - Web:
+        - Exports: Types: `TextProps`, `TextTone`, `TextVariant`; Values: `Text`
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Web:
         - Slots: `TextEditorSlots.Plugin`
