@@ -14,6 +14,8 @@ export interface AvatarProps {
   statusDot?: string | null;
   /** Used as a stable key for the deterministic color fallback when `color` is null. */
   fallbackKey?: string;
+  /** Force a neutral (muted) disc, ignoring `color` and the auto-color fallback. */
+  colorless?: boolean;
   className?: string;
   title?: string;
 }
@@ -36,12 +38,12 @@ function renderSvgNodes(nodes: SvgNode[]): React.ReactNode {
 }
 
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
-  { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, className, title },
+  { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, colorless, className, title },
   ref,
 ) {
   const sz = SIZE_MAP[size];
   const hasSvg = svgNodes != null && svgNodes.length > 0;
-  const filled = hasSvg || color != null;
+  const filled = !colorless && (hasSvg || color != null);
   const bg = filled ? avatarColorClass(color, fallbackKey ?? icon ?? undefined) : "bg-muted";
   return (
     <span

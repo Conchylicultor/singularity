@@ -27,12 +27,11 @@ export function AgentAvatarRow({ conv }: { conv: ConversationItemConv }) {
   return (
     <Avatar
       icon={agent?.icon ?? DEFAULT_AGENT_AVATAR.icon}
-      color={agent?.iconColor ?? DEFAULT_AGENT_AVATAR.color}
       svgNodes={parseSvgNodes(agent?.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
       size="sm"
       statusDot={CONV_STATUS_DOT[conv.status]}
-      fallbackKey={agent?.id}
       title={agent?.name}
+      colorless
     />
   );
 }
