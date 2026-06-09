@@ -809,6 +809,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`code-listing`** — Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
               - Web:
                 - Exports: Values: `CodeWithLineNumbers`
+            - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body, in muted or primary tone.
+              - Web:
+                - Exports: Types: `CollapsibleCardProps`, `CollapsibleCardTone`; Values: `CollapsibleCard`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`
