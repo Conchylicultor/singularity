@@ -1,9 +1,9 @@
 import { useMemo } from "react";
-import { MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { pagesResource, updateBlock, pageData } from "@plugins/page/plugins/editor/core";
+import { PageIconButton, type PageIconValue } from "./page-icon-button";
 
 export function PageHeader({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);
@@ -27,11 +27,22 @@ export function PageHeader({ pageId }: { pageId: string }) {
     },
   });
 
+  const saveIcon = async (next: PageIconValue) => {
+    if (!page) return;
+    await mutateAsync({
+      params: { id: pageId },
+      body: {
+        data: { ...pageData(page), icon: next.icon, iconSvgNodes: next.iconSvgNodes },
+      },
+    });
+  };
+
   return (
     <div className="flex items-center gap-2 px-1 pb-2">
-      <span className="text-muted-foreground flex size-7 shrink-0 items-center justify-center text-xl">
-        {data?.icon ? data.icon : <MdDescription className="size-6" />}
-      </span>
+      <PageIconButton
+        value={{ icon: data?.icon ?? null, iconSvgNodes: data?.iconSvgNodes ?? null }}
+        onChange={saveIcon}
+      />
       <input
         value={title.value}
         onChange={(e) => title.onChange(e.target.value)}

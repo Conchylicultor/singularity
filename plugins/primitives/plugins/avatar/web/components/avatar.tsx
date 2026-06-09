@@ -1,5 +1,6 @@
-import { createElement, forwardRef } from "react";
+import { forwardRef } from "react";
 import { cn } from "@/lib/utils";
+import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { avatarColorClass } from "../internal/colors";
 
@@ -27,16 +28,6 @@ const SIZE_MAP: Record<AvatarSize, { box: string; icon: string; dot: string; rin
   lg: { box: "size-12 text-base", icon: "size-6", dot: "size-3 -right-0.5 -bottom-0.5", ring: "ring-2" },
 };
 
-function renderSvgNodes(nodes: SvgNode[]): React.ReactNode {
-  return nodes.map((node, i) =>
-    createElement(
-      node.tag,
-      { key: i, ...node.attr },
-      node.child.length > 0 ? renderSvgNodes(node.child) : undefined,
-    ),
-  );
-}
-
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
   { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, colorless, className, title },
   ref,
@@ -56,16 +47,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
         className,
       )}
     >
-      {hasSvg ? (
-        <svg
-          viewBox="0 0 24 24"
-          className={sz.icon}
-          fill="currentColor"
-          aria-hidden
-        >
-          {renderSvgNodes(svgNodes!)}
-        </svg>
-      ) : null}
+      {hasSvg ? <SvgIcon nodes={svgNodes!} className={sz.icon} /> : null}
       {statusDot ? (
         <span
           className={cn(

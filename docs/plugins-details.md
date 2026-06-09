@@ -140,7 +140,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `PageDetail.Section`, `PageTree.RowActions`
             - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`, `PageTree.RowActions` → `DeletePageAction`
-            - Uses: `apps/pages/shell.Pages`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `page/editor.BlockEditor`, `page/links.Backlinks`, `primitives/app-shell.SidebarPaneSection`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/slot-render.defineRenderSlot`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeList`
+            - Uses: `apps/pages/shell.Pages`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `page/links.Backlinks`, `primitives/app-shell.SidebarPaneSection`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.IconPicker`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/row.Row`, `primitives/slot-render.defineRenderSlot`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeList`
             - Exports: Values: `PageDetail`, `PageTree`
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
           - Web:
@@ -2159,8 +2159,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
-        - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`
-        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageOption`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
+        - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`
+        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
       - Cross-plugin:
         - Slot contributors: `bulleted-list`, `code-block`, `divider`, `image`, `page-link`, `text`, `to-do`, `toggle`
         - Imported by: `apps/pages/page-tree`, `apps/story/marker`, `page/bulleted-list`, `page/code-block`, `page/divider`, `page/image`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/text`, `page/to-do`, `page/toggle`
@@ -2173,7 +2173,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/blocks/:id/split`, `POST /api/blocks/:id/merge`, `POST /api/blocks/:id/indent`, `POST /api/blocks/:id/outdent`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.RankSchema`
-        - Exports: Types: `Block`, `BlockHandle`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `CreateBlockBody`, `MoveBlockBody`, `PageData`, `PasteBlocksBody`, `SerializedBlock`, `SplitBlockBody`, `TextData`, `UpdateBlockBody`; Values: `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `indentBlock`, `listBlocks`, `listPages`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `SerializedBlockSchema`, `splitBlock`, `SplitBlockBodySchema`, `textDataSchema`, `updateBlock`, `UpdateBlockBodySchema`
+        - Exports: Types: `Block`, `BlockHandle`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `CreateBlockBody`, `MoveBlockBody`, `PageData`, `PasteBlocksBody`, `SerializedBlock`, `SplitBlockBody`, `TextData`, `UpdateBlockBody`; Values: `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `indentBlock`, `listBlocks`, `listPages`, `mergeBlocks`, `moveBlock`, `MoveBlockBodySchema`, `outdentBlock`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `SerializedBlockSchema`, `splitBlock`, `SplitBlockBodySchema`, `SvgNodeSchema`, `textDataSchema`, `updateBlock`, `UpdateBlockBodySchema`
     - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
       - Web:
         - Contributes: `Editor.Block` "image" → `ImageBlock`
@@ -2188,14 +2188,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `imageBlock`
     - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
       - Web:
-        - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`
+        - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageIcon`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`
       - Server:
         - Uses: `page/links.PageLinks`
       - Core:
         - Exports: Values: `PAGE_LINK_TOKEN_PATTERN`, `pageLinkToken`, `scanPageLinkTokens`
     - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
       - Web:
-        - Uses: `primitives/live-state.useResource`, `primitives/row.Row`, `primitives/section-label.SectionLabel`
+        - Uses: `page/editor.PageIcon`, `primitives/live-state.useResource`, `primitives/row.Row`, `primitives/section-label.SectionLabel`
         - Exports: Types: `BacklinksProps`; Values: `Backlinks`
       - Server:
         - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockLifecycle`, `page/editor.blocksChanged`, `page/editor.PAGE_BLOCK_TYPE`
@@ -2203,14 +2203,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexPage`
         - Register: `defineJob('page.links.reindex')`
       - Core:
-        - Uses: `primitives/live-state.resourceDescriptor`
+        - Uses: `page/editor.SvgNodeSchema`, `primitives/live-state.resourceDescriptor`
         - Exports: Types: `BacklinkRow`; Values: `BacklinkRowSchema`, `backlinksResource`
       - Cross-plugin:
         - Imported by: `apps/pages/page-tree`, `page/inline-page-link`, `page/page-link`
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-        - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`
+        - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`
         - Exports: Values: `pageLinkBlock`
       - Server:
         - Uses: `page/links.PageLinks`
@@ -2502,7 +2502,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `JumpToBottomButtonProps`, `StickyScrollHandle`, `UseStickyScrollOptions`; Values: `JumpToBottomButton`, `useStickyScroll`
     - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
       - Web:
-        - Uses: `primitives/icon-picker.IconPicker`, `primitives/row.Row`, `primitives/section-label.SectionLabel`
+        - Uses: `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`, `primitives/row.Row`, `primitives/section-label.SectionLabel`
         - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`
       - Server:
         - Uses: `primitives/icon-picker.resolveIconSvgNodes`
@@ -2647,9 +2647,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/section-label.SectionLabel`
-        - Exports: Types: `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `IconPickerProps`, `IconSelection`, `SvgNode`; Values: `extractSvgNodes`, `IconPicker`, `loadFullIconSet`
+        - Exports: Types: `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `IconPickerProps`, `IconSelection`, `SvgIconProps`, `SvgNode`; Values: `extractSvgNodes`, `IconPicker`, `loadFullIconSet`, `SvgIcon`
       - Cross-plugin:
-        - Imported by: `agents`, `primitives/avatar`
+        - Imported by: `agents`, `apps/pages/page-tree`, `page/editor`, `primitives/avatar`
       - Server:
         - Exports: Values: `resolveIconSvgNodes`, `resolveIconSvgNodesJson`
       - Core:
@@ -2752,7 +2752,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsibleContext`
         - Exports: Types: `RowHover`, `RowProps`, `RowSize`, `SectionHeaderRowProps`, `SectionHeaderVariant`; Values: `Row`, `SectionHeaderRow`
       - Cross-plugin:
-        - Imported by: `active-data/task`, `agents`, `apps/sonata/track-mixer`, `build`, `code-explorer`, `code-explorer/file-resolve`, `conversations/conversation-category`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `page/editor`, `page/links`, `page/page-link`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view/sub-plugins`, `primitives/avatar`, `primitives/detail-sections`, `primitives/tree`, `reorder`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`
+        - Imported by: `active-data/task`, `agents`, `apps/pages/page-tree`, `apps/sonata/track-mixer`, `build`, `code-explorer`, `code-explorer/file-resolve`, `conversations/conversation-category`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `page/editor`, `page/links`, `page/page-link`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view/sub-plugins`, `primitives/avatar`, `primitives/detail-sections`, `primitives/tree`, `reorder`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Cross-plugin:
         - Imported by: `apps/sonata/track-mixer`, `apps/studio/contributions`, `apps/studio/explorer`, `code-explorer`, `config_v2/settings`, `conversations/conversation-view/dependencies`, `page/editor`, `page/page-link`, `primitives/data-view`, `primitives/tree`, `ui/theme-engine/theme-customizer`, `ui/tweakcn/community-browser`

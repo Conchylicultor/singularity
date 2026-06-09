@@ -19,6 +19,7 @@ import {
   pageData,
   type Block,
 } from "@plugins/page/plugins/editor/core";
+import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
@@ -30,7 +31,7 @@ type PageRowData = Block;
 
 function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }) {
   const { mutateAsync: rename } = useEndpointMutation(updateBlock);
-  const { title, icon } = pageData(node);
+  const { title, iconSvgNodes } = pageData(node);
   return (
     <RowChrome
       node={node}
@@ -45,8 +46,8 @@ function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }
         </PageTree.RowActions.Render>
       }
     >
-      <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center text-sm">
-        {icon ? icon : <MdDescription className="size-4" />}
+      <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
+        <PageIcon nodes={iconSvgNodes} className="size-4" />
       </span>
       <RenameInput
         nodeId={node.id}

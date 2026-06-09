@@ -8,10 +8,11 @@ import { backlinksResource as backlinksDescriptor } from "../../core/resources";
 import type { BacklinkRow } from "../../core/schemas";
 import { _pageLinks } from "./tables";
 
-// `data->>'title'` / `data->>'icon'`: the source page's title/icon live in the
-// `type="page"` block's `data` JSON.
+// `data->>'title'` / `data->'iconSvgNodes'`: the source page's title and icon
+// SVG tree live in the `type="page"` block's `data` JSON. `->` (not `->>`)
+// keeps the icon tree as JSON so it deserializes back to an array.
 const titleExpr = sql<string>`${_blocks.data} ->> 'title'`;
-const iconExpr = sql<string | null>`${_blocks.data} ->> 'icon'`;
+const iconSvgNodesExpr = sql<unknown>`${_blocks.data} -> 'iconSvgNodes'`;
 
 // Push resource: lists the source pages that link TO `pageId`, ordered by
 // title. Notified by the reindexer for every affected target.
@@ -24,7 +25,7 @@ export const backlinksResource = defineResource<BacklinkRow[], { pageId: string 
       .select({
         id: _blocks.id,
         title: titleExpr,
-        icon: iconExpr,
+        iconSvgNodes: iconSvgNodesExpr,
       })
       .from(_pageLinks)
       .innerJoin(_blocks, eq(_pageLinks.sourcePageId, _blocks.id))

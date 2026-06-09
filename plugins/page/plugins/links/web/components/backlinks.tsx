@@ -2,6 +2,7 @@ import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { backlinksResource } from "../../core/resources";
 
 export interface BacklinksProps {
@@ -32,7 +33,7 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
               onClick={() => onOpenPage?.(row.id)}
               icon={
                 <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-                  {row.icon ?? <MdLink className="size-4" />}
+                  <PageIcon nodes={row.iconSvgNodes} fallback={MdLink} className="size-4" />
                 </span>
               }
             >

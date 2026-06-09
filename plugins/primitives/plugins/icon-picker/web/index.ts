@@ -1,6 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { IconPicker, type IconPickerProps, type IconSelection } from "./components/icon-picker";
+export { SvgIcon, type SvgIconProps } from "./components/svg-icon";
 export {
   extractSvgNodes,
   loadFullIconSet,

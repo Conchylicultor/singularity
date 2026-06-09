@@ -5,7 +5,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
-import { useBlockEditor } from "@plugins/page/plugins/editor/web";
+import { useBlockEditor, PageIcon } from "@plugins/page/plugins/editor/web";
 
 type SerializedPageLinkInlineNode = {
   type: "page-link-inline";
@@ -85,7 +85,7 @@ function PageLinkInlineView({ pageId }: { pageId: string }) {
     <LinkChip
       leading={
         <span className="flex size-3.5 shrink-0 items-center justify-center">
-          {data?.icon ?? <MdLink className="size-3.5" />}
+          <PageIcon nodes={data?.iconSvgNodes} fallback={MdLink} className="size-3.5" />
         </span>
       }
       onClick={(e) => {

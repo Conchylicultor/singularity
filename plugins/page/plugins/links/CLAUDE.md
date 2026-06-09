@@ -6,7 +6,7 @@
 
 - Description: Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
 - Web:
-  - Uses: `primitives/live-state.useResource`, `primitives/row.Row`, `primitives/section-label.SectionLabel`
+  - Uses: `page/editor.PageIcon`, `primitives/live-state.useResource`, `primitives/row.Row`, `primitives/section-label.SectionLabel`
   - Exports: Types: `BacklinksProps`; Values: `Backlinks`
 - Server:
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockLifecycle`, `page/editor.blocksChanged`, `page/editor.PAGE_BLOCK_TYPE`
@@ -14,7 +14,7 @@
   - Exports: Types: `PageLinkExtractor`; Values: `backlinksResource`, `PageLinks`, `reindexPage`
   - Register: `defineJob('page.links.reindex')`
 - Core:
-  - Uses: `primitives/live-state.resourceDescriptor`
+  - Uses: `page/editor.SvgNodeSchema`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `BacklinkRow`; Values: `BacklinkRowSchema`, `backlinksResource`
 - Cross-plugin:
   - Imported by: `apps/pages/page-tree`, `page/inline-page-link`, `page/page-link`

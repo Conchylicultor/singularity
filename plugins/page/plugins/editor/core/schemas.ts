@@ -1,5 +1,19 @@
 import { z } from "zod";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
+import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
+
+// Recursive validator for the icon-picker SvgNode storage format. The `data`
+// jsonb column stores the tree natively (no JSON-string wrapping), so a page
+// can render its icon without importing the react-icons bundle. Exported so
+// other page-domain surfaces that surface a page icon (e.g. the backlinks
+// index) validate it the same way.
+export const SvgNodeSchema: z.ZodType<SvgNode> = z.lazy(() =>
+  z.object({
+    tag: z.string(),
+    attr: z.record(z.string()),
+    child: z.array(SvgNodeSchema),
+  }),
+);
 
 // A block is the single node type. A page is just a block of `type="page"` whose
 // `data` is `{ title, icon }`; content blocks carry their own payload in `data`.
@@ -21,10 +35,14 @@ export type Block = z.infer<typeof BlockSchema>;
 // The reserved block type for a page node.
 export const PAGE_BLOCK_TYPE = "page";
 
-// The `data` payload of a `type="page"` block.
+// The `data` payload of a `type="page"` block. `icon` is the Material Design
+// icon key (e.g. "rocket"); `iconSvgNodes` is its extracted SVG tree, rendered
+// directly so display surfaces don't ship the icon registry. Both null = no
+// icon (a default glyph is shown instead).
 export const PageDataSchema = z.object({
   title: z.string(),
   icon: z.string().nullable(),
+  iconSvgNodes: z.array(SvgNodeSchema).nullable().optional(),
 });
 export type PageData = z.infer<typeof PageDataSchema>;
 

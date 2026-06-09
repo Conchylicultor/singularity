@@ -1,8 +1,9 @@
 import { useMemo } from "react";
-import { MdDescription, MdAddCircleOutline } from "react-icons/md";
+import { MdAddCircleOutline } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource, pageData, type Block } from "../../core";
+import { PageIcon } from "./page-icon";
 
 /** One row in a page picker: an existing page, or a "create new page" affordance. */
 export type PageOption =
@@ -39,7 +40,7 @@ export function usePageOptions(
 function PageOptionIcon({ page }: { page: Block }) {
   return (
     <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-      {pageData(page).icon ?? <MdDescription className="size-4" />}
+      <PageIcon nodes={pageData(page).iconSvgNodes} className="size-4" />
     </span>
   );
 }

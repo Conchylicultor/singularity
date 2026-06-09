@@ -22,6 +22,8 @@ export type {
 } from "./internal/block-text-extensions";
 export { usePageOptions, PageOptionsList } from "./components/page-options";
 export type { PageOption } from "./components/page-options";
+export { PageIcon } from "./components/page-icon";
+export type { PageIconProps } from "./components/page-icon";
 
 export default {
   description: "Block-based document editor component and slot system.",

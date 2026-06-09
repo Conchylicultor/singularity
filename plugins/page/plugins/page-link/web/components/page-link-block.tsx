@@ -10,6 +10,7 @@ import {
   useBlockEditor,
   usePageOptions,
   PageOptionsList,
+  PageIcon,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { pageLinkBlock } from "../../core";
@@ -122,7 +123,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
         onClick={() => onOpenPage?.(pageId)}
         icon={
           <span className="flex size-4 shrink-0 items-center justify-center text-muted-foreground">
-            {targetData?.icon ?? <MdLink className="size-4" />}
+            <PageIcon nodes={targetData?.iconSvgNodes} fallback={MdLink} className="size-4" />
           </span>
         }
       >
