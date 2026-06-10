@@ -40,13 +40,13 @@ export async function watchedDirs(): Promise<string[]> {
   );
 }
 
-/** List the absolute paths of `.mid`/`.midi` files directly in `dir`. A missing
- * dir is logged and skipped (expected: a configured path may not exist yet),
- * not crashed. Other errors propagate. */
+/** List the absolute paths of `.mid`/`.midi` files anywhere under `dir`
+ * (recursively, into subfolders). A missing dir is logged and skipped (expected:
+ * a configured path may not exist yet), not crashed. Other errors propagate. */
 async function listMidiFiles(dir: string): Promise<string[]> {
   let entries: import("node:fs").Dirent[];
   try {
-    entries = await readdir(dir, { withFileTypes: true });
+    entries = await readdir(dir, { withFileTypes: true, recursive: true });
   } catch (err) {
     if ((err as NodeJS.ErrnoException).code === "ENOENT") {
       console.warn(`[midi-folders] watched dir does not exist, skipping: ${dir}`);
@@ -54,9 +54,11 @@ async function listMidiFiles(dir: string): Promise<string[]> {
     }
     throw err;
   }
+  // With `recursive`, each entry's containing directory is `parentPath` (not the
+  // scan root), so the full path must be rebuilt from it.
   return entries
     .filter((e) => e.isFile() && MIDI_EXTENSIONS.has(extname(e.name).toLowerCase()))
-    .map((e) => join(dir, e.name));
+    .map((e) => join(e.parentPath, e.name));
 }
 
 /**
