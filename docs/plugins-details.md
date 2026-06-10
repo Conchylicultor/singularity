@@ -678,7 +678,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `stringifyConfigValue`, `validationIssues`
   - Cross-plugin:
-    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tokens/typography/google-fonts`, `ui/tweakcn/community-browser`
+    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tokens/typography/google-fonts`, `ui/tweakcn/community-browser`
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
       - Web:
@@ -691,7 +691,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/placeholder.Placeholder`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`
         - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
       - Cross-plugin:
-        - Imported by: `config_v2/settings`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`
+        - Imported by: `config_v2/settings`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
@@ -1554,8 +1554,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Slot contributors: `avatar`, `bool`, `color`, `date`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `reorder-tree`, `secret`, `text`
-    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/text`
+    - Slot contributors: `avatar`, `bool`, `color`, `date`, `directory-path`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `reorder-tree`, `secret`, `text`
+    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
@@ -1638,6 +1638,23 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.Cell` "date" → `DateCell`
             - Uses: `primitives/data-view.DataViewSlots`, `primitives/relative-time.formatRelativeTime`
+    - **`directory-path`** — Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "directory-path"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `directoryPathFieldType`, `directoryPathIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/directory-path/config`
+      - Plugins:
+        - **`config`** — Directory-path field type: config-render capability (folder picker for config-v2.fields.renderer) plus the dirPathField factory.
+          - Web:
+            - Contributes: `config-v2.fields.renderer` "directory-path" → `DirPathRenderer`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/folder-picker.FolderPickerPopover`
+          - Core:
+            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/directory-path.directoryPathFieldType`
+            - Exports: Types: `DirPathFieldDef`; Values: `dirPathField`
     - **`dynamic-enum`** — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
       - Web:
         - Contributes: `Fields.Identity` "dynamic-enum"
@@ -2034,7 +2051,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/runtime-profiler.recordEntrySpan`
         - Exports: Types: `Codec`, `EndpointDef`, `ExtractParams`; Values: `blob`, `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`, `isCodec`, `multipart`
       - Cross-plugin:
-        - Imported by: `active-data`, `active-data/plugin-link`, `active-data/task`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/workflows/engine`, `auth`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-fix`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-view`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/notes`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `conversations/transcript-api`, `crashes`, `crashes/endpoint-errors`, `crashes/mutation-errors`, `debug/broadcasts`, `debug/logs`, `debug/memory`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/profiling/stats`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `health`, `infra/attachments`, `infra/events`, `infra/jobs`, `infra/secrets`, `notifications`, `page/editor`, `page/inline-page-link`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `primitives/launch`, `reorder`, `reorder/groups`, `review/code-review`, `review/plugin-changes`, `screenshot`, `tasks`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tweakcn`, `ui/tweakcn/community-browser`
+        - Imported by: `active-data`, `active-data/plugin-link`, `active-data/task`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/workflows/engine`, `auth`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-fix`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-view`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/notes`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `conversations/transcript-api`, `crashes`, `crashes/endpoint-errors`, `crashes/mutation-errors`, `debug/broadcasts`, `debug/logs`, `debug/memory`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/profiling/stats`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `health`, `infra/attachments`, `infra/events`, `infra/jobs`, `infra/secrets`, `notifications`, `page/editor`, `page/inline-page-link`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `primitives/folder-picker`, `primitives/launch`, `reorder`, `reorder/groups`, `review/code-review`, `review/plugin-changes`, `screenshot`, `tasks`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tweakcn`, `ui/tweakcn/community-browser`
       - Web:
         - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:
@@ -2662,7 +2679,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/breadcrumb.Breadcrumb`, `primitives/breadcrumb.BreadcrumbSegment`, `primitives/copy-to-clipboard.CopyButton`
         - Exports: Types: `FilepathBreadcrumbProps`; Values: `FilepathBreadcrumb`
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/code/file-pane`
+        - Imported by: `conversations/conversation-view/code/file-pane`, `primitives/folder-picker`
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
       - Web:
         - Uses: `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
@@ -2674,13 +2691,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/prompt-templates`, `floating-bar`
       - Web:
         - Exports: Types: `FloatingActionFadeInProps`, `FloatingActionProps`, `FloatingAnchor`; Values: `FloatingAction`, `FloatingActionFadeIn`
+    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
+      - Web:
+        - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/icon-button.IconButton`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/truncating-text.TruncatingText`
+        - Exports: Types: `FolderPickerPopoverProps`, `FolderPickerProps`; Values: `FolderPicker`, `FolderPickerPopover`, `useHostDir`
+      - Server:
+        - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
+        - Routes: `GET /api/primitives/folder-picker/browse`
+      - Core:
+        - Uses: `infra/endpoints.defineEndpoint`
+        - Exports: Values: `browseHostDir`
+      - Cross-plugin:
+        - Imported by: `fields/directory-path/config`
     - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
+        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/section-label.SectionLabel`, `primitives/text.Text`
@@ -2742,7 +2771,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `useDraft`
     - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
       - Cross-plugin:
-        - Imported by: `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `attempt-view`, `build/build-commits`, `config_v2/fields`, `config_v2/settings`, `conversations-recover`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/worktree-cleanup`, `page/image`, `page/inline-page-link`, `page/page-link`, `primitives/pane`, `review/code-review`, `tasks/task-list/recent`, `tasks/task-list/tree`
+        - Imported by: `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `attempt-view`, `build/build-commits`, `config_v2/fields`, `config_v2/settings`, `conversations-recover`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/worktree-cleanup`, `page/image`, `page/inline-page-link`, `page/page-link`, `primitives/folder-picker`, `primitives/pane`, `review/code-review`, `tasks/task-list/recent`, `tasks/task-list/tree`
       - Web:
         - Exports: Types: `PlaceholderProps`; Values: `Placeholder`
     - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
@@ -2750,7 +2779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/tooltip.WithTooltip`
         - Exports: Types: `InlinePopoverProps`; Values: `InlinePopover`
       - Cross-plugin:
-        - Imported by: `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/launch`, `reorder/editor`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/folder-picker`, `primitives/launch`, `reorder/editor`, `tasks/task-draft-form`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -2790,7 +2819,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsibleContext`
         - Exports: Types: `RowHover`, `RowProps`, `RowSize`, `SectionHeaderRowProps`, `SectionHeaderVariant`; Values: `Row`, `SectionHeaderRow`
       - Cross-plugin:
-        - Imported by: `active-data/task`, `agents`, `apps/pages/page-tree`, `apps/sonata/track-mixer`, `build`, `code-explorer`, `code-explorer/file-resolve`, `conversations/conversation-category`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `page/editor`, `page/links`, `page/page-link`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view/sub-plugins`, `primitives/avatar`, `primitives/detail-sections`, `primitives/tree`, `reorder/editor`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`
+        - Imported by: `active-data/task`, `agents`, `apps/pages/page-tree`, `apps/sonata/track-mixer`, `build`, `code-explorer`, `code-explorer/file-resolve`, `conversations/conversation-category`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `page/editor`, `page/links`, `page/page-link`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view/sub-plugins`, `primitives/avatar`, `primitives/detail-sections`, `primitives/folder-picker`, `primitives/tree`, `reorder/editor`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Cross-plugin:
         - Imported by: `apps/sonata/track-mixer`, `apps/studio/contributions`, `apps/studio/explorer`, `code-explorer`, `config_v2/settings`, `conversations/conversation-view/dependencies`, `page/editor`, `page/page-link`, `primitives/data-view`, `primitives/tree`, `ui/theme-engine/theme-customizer`, `ui/tweakcn/community-browser`
@@ -2825,7 +2854,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `SortableItemProps`, `SortableItemState`, `SortableListProps`, `SortingStrategy`; Values: `rectSortingStrategy`, `SortableItem`, `SortableList`
     - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
       - Cross-plugin:
-        - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `build`, `conversations-recover`, `conversations/conversation-view/op-status`, `debug/worktree-cleanup`
+        - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `build`, `conversations-recover`, `conversations/conversation-view/op-status`, `debug/worktree-cleanup`, `primitives/folder-picker`
       - Web:
         - Exports: Types: `SpinnerProps`; Values: `Spinner`
     - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
@@ -2894,7 +2923,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `agents`, `apps/pages/page-tree`, `apps/story/story-core`, `config_v2/settings`, `tasks/task-list`, `tasks/task-list/tree`
     - **`truncating-text`** — Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
       - Cross-plugin:
-        - Imported by: `worktree-switcher`
+        - Imported by: `primitives/folder-picker`, `worktree-switcher`
       - Web:
         - Exports: Types: `TruncatingTextProps`; Values: `TruncatingText`
     - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).

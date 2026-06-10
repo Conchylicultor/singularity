@@ -98,7 +98,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
 
-- **`fields`** [41 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [43 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
 
@@ -195,6 +195,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
     - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
+    - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
     - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.

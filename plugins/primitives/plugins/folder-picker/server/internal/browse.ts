@@ -1,7 +1,7 @@
 import { readdir, stat } from "node:fs/promises";
-import { homedir } from "node:os";
 import { dirname, isAbsolute, resolve } from "node:path";
 import { HttpError, implement } from "@plugins/infra/plugins/endpoints/server";
+import { HOME_DIR } from "@plugins/infra/plugins/paths/core";
 import { browseHostDir } from "../../core";
 
 /** Map a Node fs errno to a loud HTTP error, or rethrow the unexpected. */
@@ -15,7 +15,7 @@ function asHttpError(err: unknown, path: string): never {
 
 export const browse = implement(browseHostDir, async ({ query }) => {
   const raw = query.path?.trim();
-  const target = raw && raw.length > 0 ? raw : homedir();
+  const target = raw && raw.length > 0 ? raw : HOME_DIR;
 
   // A relative path is meaningless for a host picker — reject loudly.
   if (!isAbsolute(target)) {

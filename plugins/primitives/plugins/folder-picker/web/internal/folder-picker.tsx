@@ -58,7 +58,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
             <Row
               key={entry.name}
               hover="muted"
-              icon={<MdFolder className="size-4 shrink-0 text-muted-foreground" />}
+              icon={<MdFolder className="shrink-0 text-muted-foreground" />}
               onClick={() => data && setBrowsePath(`${data.path}/${entry.name}`)}
             >
               <TruncatingText>{entry.name}</TruncatingText>

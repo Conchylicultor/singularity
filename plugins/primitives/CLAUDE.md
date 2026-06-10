@@ -28,11 +28,8 @@
   - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
   - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
   - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
-<<<<<<< .merge_file_j2Pugp
-  - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
-=======
   - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
->>>>>>> .merge_file_YQBxek
+  - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
   - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
   - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
   - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
