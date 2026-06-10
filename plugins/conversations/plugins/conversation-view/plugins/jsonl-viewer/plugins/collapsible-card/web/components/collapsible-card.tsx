@@ -84,7 +84,9 @@ export function CollapsibleCard({
           )}
         >
           <CollapsibleChevron open={open} className="size-3" />
-          <span className="min-w-0 truncate">{label}</span>
+          <span className="flex min-w-0 items-center gap-2 truncate">
+            {label}
+          </span>
         </button>
         {aside ?? (filePath && <FilePath filePath={filePath} />)}
         {trailing && <span className="ml-auto shrink-0">{trailing}</span>}
