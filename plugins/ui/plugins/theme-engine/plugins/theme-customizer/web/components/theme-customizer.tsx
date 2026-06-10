@@ -1,12 +1,11 @@
 import { useEffect, useRef, useState } from "react";
-import { MdTune } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
-import { PaneChrome, openPane } from "@plugins/primitives/plugins/pane/web";
+import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useConfig, useSetConfig, useConfigRegistrations, useScopeForked } from "@plugins/config_v2/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField, forkScope, deleteScope } from "@plugins/config_v2/core";
 import { useCurrentAppId } from "@plugins/apps/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine, ThemeScopeProvider, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";
@@ -73,42 +72,22 @@ function GlobalPresetPicker() {
   );
 }
 
-export function VariantSettings() {
+// Pickers for pluggable-component variants (sidebar framing, progress bar, …),
+// each registered via `ThemeEngine.VariantGroup`. Scope follows the surrounding
+// `ThemeScopeProvider`, so a forked app edits its own variant selection.
+function VariantGroupSection() {
   const groups = ThemeEngine.VariantGroup.useContributions();
-  const globalPresets = ThemeEngine.GlobalPreset.useContributions();
-
-  if (groups.length === 0 && globalPresets.length === 0) {
-    return (
-      <Text as="p" variant="body" className="text-muted-foreground">
-        No pluggable components registered.
-      </Text>
-    );
-  }
-
+  if (groups.length === 0) return null;
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-start justify-between gap-4">
-        <GlobalPresetPicker />
-        <button
-          className="flex items-center gap-1.5 px-3 py-1 text-body rounded-md border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors shrink-0"
-          onClick={() => openPane(themeCustomizerPane, {}, { mode: "root" })}
-        >
-          <MdTune className="size-4" />
-          Customize
-        </button>
-      </div>
-      {groups.length > 0 && (
-        <div className="flex flex-col gap-4">
-          <ThemeEngine.VariantGroup.Render>
-            {(g) => (
-              <div>
-                <Text as="h4" variant="label" className="mb-1">{g.componentLabel}</Text>
-                <g.component />
-              </div>
-            )}
-          </ThemeEngine.VariantGroup.Render>
-        </div>
-      )}
+    <div className="flex flex-col gap-4">
+      <ThemeEngine.VariantGroup.Render>
+        {(g) => (
+          <div className="flex flex-col gap-1.5">
+            <Text variant="label">{g.componentLabel}</Text>
+            <g.component />
+          </div>
+        )}
+      </ThemeEngine.VariantGroup.Render>
     </div>
   );
 }
@@ -232,6 +211,7 @@ export function ThemeCustomizerBody() {
                 forked={forked}
               />
             )}
+            <VariantGroupSection />
             <GlobalPresetPicker />
             <TokenModeSelector mode={tokenMode} onChange={setTokenMode} />
             <SearchInput

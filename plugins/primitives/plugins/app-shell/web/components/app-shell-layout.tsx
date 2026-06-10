@@ -1,5 +1,11 @@
 import type { ReactNode } from "react";
-import type { RenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import {
+  renderIsolated,
+  type RenderSlot,
+} from "@plugins/primitives/plugins/slot-render/web";
+import type { SidebarFramingProps } from "../../core";
+import { AppShell } from "../slots";
 import { Button } from "@/components/ui/button";
 import {
   Sidebar,
@@ -41,6 +47,33 @@ function ToolbarItem(item: {
     );
   }
   return null;
+}
+
+/**
+ * The current (and default) sidebar framing, extracted verbatim from the
+ * sidebar-bearing branch below. Used when no `AppShell.Framing` is contributed,
+ * so the shell renders identically even if the sidebar-framing plugin is not
+ * loaded. The `flush` variant of sidebar-framing mirrors this byte-for-byte.
+ */
+function DefaultFlushFraming({
+  header,
+  sidebarContent,
+  body,
+}: SidebarFramingProps) {
+  return (
+    <SidebarProvider className="h-full min-h-0">
+      <Sidebar>
+        {header && (
+          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-0">
+            {header}
+          </SidebarHeader>
+        )}
+        <div className="flex min-h-0 flex-1 flex-col">{sidebarContent}</div>
+      </Sidebar>
+
+      <SidebarInset className="min-w-0">{body}</SidebarInset>
+    </SidebarProvider>
+  );
 }
 
 export function AppShellLayout({
@@ -88,28 +121,33 @@ export function AppShellLayout({
     </>
   );
 
+  // A UI plugin can contribute the sidebar/main framing (flush/floating/inset).
+  // Exactly one framing is expected — its Region internally dispatches to the
+  // per-app active variant. With none, fall back to the inline default flush.
+  const framings = AppShell.Framing.useContributions();
+
   // No sidebar → no SidebarProvider/Inset; just a full-height column holding
-  // the (optional) toolbar and the main renderer.
+  // the (optional) toolbar and the main renderer. Framing is sidebar-only.
   if (!sidebarSlot) {
     return <div className="flex h-full min-h-0 flex-col">{body}</div>;
   }
 
-  return (
-    <SidebarProvider className="h-full min-h-0">
-      <Sidebar>
-        {header && (
-          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-0">
-            {header}
-          </SidebarHeader>
-        )}
-        <div className="flex min-h-0 flex-1 flex-col">
-          <sidebarSlot.Render>
-            {(item) => <item.component />}
-          </sidebarSlot.Render>
-        </div>
-      </Sidebar>
+  const sidebarContent = (
+    <sidebarSlot.Render>{(item) => <item.component />}</sidebarSlot.Render>
+  );
 
-      <SidebarInset className="min-w-0">{body}</SidebarInset>
-    </SidebarProvider>
+  // useContributions() seals the `component` field, so the framing can't be
+  // rendered as <Framing/>; route it through renderIsolated (which unseals and
+  // applies the error-boundary middleware). No contribution → inline default.
+  const framingProps: SidebarFramingProps = { header, sidebarContent, body };
+  const framing = framings[0];
+  return framing ? (
+    renderIsolated(
+      AppShell.Framing.id,
+      framing as unknown as Contribution,
+      framingProps,
+    )
+  ) : (
+    <DefaultFlushFraming {...framingProps} />
   );
 }

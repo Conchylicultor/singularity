@@ -298,6 +298,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
+    - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
+      - Plugins:
+        - **`floating`** — Floating sidebar framing — the sidebar renders as a rounded, detached card.
+        - **`flush`** — Flush sidebar framing — the default, pixel-identical to the original app shell.
+        - **`inset`** — Inset sidebar framing — the main area floats as a rounded inset card.
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
@@ -305,6 +310,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
       - Plugins:
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
+    - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
 
 - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
 

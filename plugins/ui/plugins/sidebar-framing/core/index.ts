@@ -1,0 +1,1 @@
+export { sidebarFraming } from "./region";

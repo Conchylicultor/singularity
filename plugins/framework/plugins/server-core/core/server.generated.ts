@@ -145,6 +145,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "tasks", id: "tasks", loader: () => import("@plugins/tasks/server"), dependsOn: ["conversations", "conversations/plugins/model-provider", "infra/plugins/attachments", "infra/plugins/endpoints", "infra/plugins/events", "infra/plugins/git-watcher", "infra/plugins/jobs", "infra/plugins/mcp", "infra/plugins/paths", "infra/plugins/worktree", "primitives/plugins/rank", "tasks-core", "tasks/plugins/auto-start", "tasks/plugins/task-preprompt", "tasks/plugins/task-title"] },
   { pluginPath: "terminal", id: "terminal", loader: () => import("@plugins/terminal/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "ui/plugins/segmented-progress-bar", id: "ui.segmented-progress-bar", loader: () => import("@plugins/ui/plugins/segmented-progress-bar/server"), dependsOn: ["config_v2"] },
+  { pluginPath: "ui/plugins/sidebar-framing", id: "ui.sidebar-framing", loader: () => import("@plugins/ui/plugins/sidebar-framing/server"), dependsOn: ["ui/plugins/variant-region"] },
   { pluginPath: "ui/plugins/theme-engine", id: "ui.theme-engine", loader: () => import("@plugins/ui/plugins/theme-engine/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/categorical", id: "ui.tokens.categorical", loader: () => import("@plugins/ui/plugins/tokens/plugins/categorical/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tokens/plugins/chart", id: "ui.tokens.chart", loader: () => import("@plugins/ui/plugins/tokens/plugins/chart/server"), dependsOn: ["config_v2"] },
@@ -157,4 +158,5 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "ui/plugins/tokens/plugins/typography", id: "ui.tokens.typography", loader: () => import("@plugins/ui/plugins/tokens/plugins/typography/server"), dependsOn: ["config_v2"] },
   { pluginPath: "ui/plugins/tweakcn/plugins/community-browser", id: "ui.tweakcn.community-browser", loader: () => import("@plugins/ui/plugins/tweakcn/plugins/community-browser/server"), dependsOn: ["database", "infra/plugins/endpoints", "ui/plugins/tweakcn"] },
   { pluginPath: "ui/plugins/tweakcn", id: "ui.tweakcn", loader: () => import("@plugins/ui/plugins/tweakcn/server"), dependsOn: ["database", "infra/plugins/endpoints"] },
+  { pluginPath: "ui/plugins/variant-region", id: "ui.variant-region", loader: () => import("@plugins/ui/plugins/variant-region/server"), dependsOn: ["config_v2"] },
 ];

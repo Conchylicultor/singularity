@@ -2194,6 +2194,22 @@
       "name": "@singularity/plugin-ui-segmented-progress-bar-segmented",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/sidebar-framing": {
+      "name": "@singularity/plugin-ui-sidebar-framing",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/sidebar-framing/plugins/floating": {
+      "name": "@singularity/plugin-ui-sidebar-framing-floating",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/sidebar-framing/plugins/flush": {
+      "name": "@singularity/plugin-ui-sidebar-framing-flush",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/sidebar-framing/plugins/inset": {
+      "name": "@singularity/plugin-ui-sidebar-framing-inset",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/theme-engine": {
       "name": "@singularity/plugin-ui-theme-engine",
       "version": "0.0.1",
@@ -2252,6 +2268,10 @@
     },
     "plugins/ui/plugins/tweakcn/plugins/community-browser": {
       "name": "@singularity/plugin-ui-tweakcn-community-browser",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/variant-region": {
+      "name": "@singularity/plugin-ui-variant-region",
       "version": "0.0.1",
     },
     "plugins/welcome": {
@@ -3830,6 +3850,14 @@
 
     "@singularity/plugin-ui-segmented-progress-bar-segmented": ["@singularity/plugin-ui-segmented-progress-bar-segmented@workspace:plugins/ui/plugins/segmented-progress-bar/plugins/segmented"],
 
+    "@singularity/plugin-ui-sidebar-framing": ["@singularity/plugin-ui-sidebar-framing@workspace:plugins/ui/plugins/sidebar-framing"],
+
+    "@singularity/plugin-ui-sidebar-framing-floating": ["@singularity/plugin-ui-sidebar-framing-floating@workspace:plugins/ui/plugins/sidebar-framing/plugins/floating"],
+
+    "@singularity/plugin-ui-sidebar-framing-flush": ["@singularity/plugin-ui-sidebar-framing-flush@workspace:plugins/ui/plugins/sidebar-framing/plugins/flush"],
+
+    "@singularity/plugin-ui-sidebar-framing-inset": ["@singularity/plugin-ui-sidebar-framing-inset@workspace:plugins/ui/plugins/sidebar-framing/plugins/inset"],
+
     "@singularity/plugin-ui-theme-engine": ["@singularity/plugin-ui-theme-engine@workspace:plugins/ui/plugins/theme-engine"],
 
     "@singularity/plugin-ui-theme-engine-theme-customizer": ["@singularity/plugin-ui-theme-engine-theme-customizer@workspace:plugins/ui/plugins/theme-engine/plugins/theme-customizer"],
@@ -3859,6 +3887,8 @@
     "@singularity/plugin-ui-tweakcn": ["@singularity/plugin-ui-tweakcn@workspace:plugins/ui/plugins/tweakcn"],
 
     "@singularity/plugin-ui-tweakcn-community-browser": ["@singularity/plugin-ui-tweakcn-community-browser@workspace:plugins/ui/plugins/tweakcn/plugins/community-browser"],
+
+    "@singularity/plugin-ui-variant-region": ["@singularity/plugin-ui-variant-region@workspace:plugins/ui/plugins/variant-region"],
 
     "@singularity/plugin-welcome": ["@singularity/plugin-welcome@workspace:plugins/welcome"],
 

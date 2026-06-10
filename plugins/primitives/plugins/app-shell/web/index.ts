@@ -7,6 +7,9 @@ export type {
 } from "./components/app-shell-layout";
 export { SidebarNavItem, sidebarNavItem } from "./components/sidebar-nav-item";
 export { SidebarPaneSection } from "./components/sidebar-pane-section";
+export { AppShell } from "./slots";
+export type { FramingContribution } from "./slots";
+export type { SidebarFramingProps } from "../core";
 
 export default {
   description:
