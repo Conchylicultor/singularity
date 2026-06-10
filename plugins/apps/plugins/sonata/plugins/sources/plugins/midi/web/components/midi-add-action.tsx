@@ -3,12 +3,8 @@ import { MdFileUpload } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  beatToSeconds,
-  scoreEndBeat,
-} from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useOpenSong } from "@plugins/apps/plugins/sonata/plugins/library/web";
-import { compile } from "../compile";
+import { deriveMidiSongMeta } from "../../shared/parse";
 import { createMidiSong } from "../../shared/endpoints";
 
 /**
@@ -26,22 +22,21 @@ export function MidiAddAction() {
     setImporting(true);
     try {
       const buf = await file.arrayBuffer();
-      // Parse client-side for the card metadata. `compile` throws loudly on
-      // malformed MIDI — we let it propagate.
-      const score = compile(buf);
-      const endBeat = scoreEndBeat(score);
+      // Derive the card metadata client-side. `deriveMidiSongMeta` parses the
+      // file and throws loudly on malformed MIDI — we let it propagate.
+      const meta = deriveMidiSongMeta(buf, file.name);
       const up = await uploadAttachment(file, file.name, "audio/midi");
       const song = await fetchEndpoint(
         createMidiSong,
         {},
         {
           body: {
-            title: file.name.replace(/\.midi?$/i, ""),
+            title: meta.title,
             composer: null,
             attachmentId: up.id,
-            durationSec: beatToSeconds(score, endBeat),
-            endBeat,
-            trackCount: score.tracks.length,
+            durationSec: meta.durationSec,
+            endBeat: meta.endBeat,
+            trackCount: meta.trackCount,
           },
         },
       );

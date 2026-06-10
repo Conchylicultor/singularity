@@ -1,0 +1,5 @@
+// @hash 429bc7c266af
+{
+  // Absolute directories whose .mid/.midi files are auto-imported into the Sonata library and kept in sync.
+  "folders": []
+}

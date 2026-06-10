@@ -18,6 +18,8 @@ export const songMidiLiveResource = defineResource<SongMidiRow[]>({
       songId: r.parentId,
       attachmentId: r.attachmentId,
       trackCount: r.trackCount,
+      sourcePath: r.sourcePath,
+      sourceMissing: r.sourceMissing,
     }));
   },
 });

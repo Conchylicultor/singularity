@@ -1,4 +1,4 @@
-import { integer, text } from "drizzle-orm/pg-core";
+import { boolean, integer, text } from "drizzle-orm/pg-core";
 import { _songs } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 
@@ -9,5 +9,13 @@ import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server
 export const songMidi = defineExtension(_songs, "midi", {
   attachmentId: text("attachment_id").notNull(),
   trackCount: integer("track_count").notNull(),
+  // Absolute path of the watched-folder file this song was imported from.
+  // Null = manual import (never touched by the folder watcher); set = folder-
+  // imported and the idempotency key for re-import. See the folders sub-plugin.
+  sourcePath: text("source_path"),
+  // True when a folder-imported file has disappeared from disk: the song stays
+  // (and stays playable from its copied attachment) but is badged "source
+  // deleted". Always false for manual imports.
+  sourceMissing: boolean("source_missing").notNull().default(false),
 });
 export const _songMidiExt = songMidi.table; // drizzle-kit discovery

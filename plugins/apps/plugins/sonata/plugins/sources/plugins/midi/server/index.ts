@@ -7,6 +7,13 @@ import { seedMidiStarters } from "./internal/seed";
 
 export { songMidi } from "./internal/tables";
 export { songMidiLiveResource } from "./internal/resource";
+export {
+  importMidiSong,
+  getSongMidiBySourcePath,
+  setSourceMissing,
+  listFolderImportedSongs,
+} from "./internal/import";
+export type { ImportMidiSongInput } from "./internal/import";
 
 export default {
   description:

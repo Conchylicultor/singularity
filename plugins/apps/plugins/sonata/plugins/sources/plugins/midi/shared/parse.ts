@@ -1,31 +1,50 @@
 /**
- * Compile a MIDI ArrayBuffer into a Sonata `Score`.
+ * Parse a MIDI ArrayBuffer into a Sonata `Score`, plus derive the song metadata
+ * the library stores alongside it.
  *
  * Beats are always **quarter-note beats**: `beat = ticks / ppq`.
  * Velocity is kept on the 0–127 integer scale (MIDI native); `@tonejs/midi`
  * already normalises its `note.velocity` to 0–1 floats, so we multiply by 127
  * and round to restore the canonical MIDI range that `Note.velocity` documents.
+ *
+ * Lives in `shared/` (plugin-private) so both the web import button and the
+ * plugin's own server import path call one isomorphic source of truth.
+ * `@tonejs/midi` is Node/Bun-safe.
  */
 
 import { Midi } from "@tonejs/midi";
-import type {
-  KeySignature,
-  Note,
-  Score,
-  TempoEvent,
-  TimeSigEvent,
-  TrackMeta,
+import {
+  beatToSeconds,
+  scoreEndBeat,
+  type KeySignature,
+  type Note,
+  type Score,
+  type TempoEvent,
+  type TimeSigEvent,
+  type TrackMeta,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
-export function compile(raw: unknown): Score {
-  if (!(raw instanceof ArrayBuffer)) {
-    throw new Error(
-      `[midi source] compile() expected an ArrayBuffer, got ${typeof raw}`,
-    );
+/** Accepts an `ArrayBuffer` (web) or a `Uint8Array` (server `Bun.file().bytes()`). */
+function toArrayBuffer(raw: unknown): ArrayBuffer {
+  if (raw instanceof ArrayBuffer) return raw;
+  if (raw instanceof Uint8Array) {
+    // `@tonejs/midi` reads from an ArrayBuffer; hand it a tight copy so a
+    // pooled/oversized backing buffer never leaks extra bytes into the parser.
+    return raw.buffer.slice(
+      raw.byteOffset,
+      raw.byteOffset + raw.byteLength,
+    ) as ArrayBuffer;
   }
+  throw new Error(
+    `[midi source] parseMidi() expected an ArrayBuffer or Uint8Array, got ${typeof raw}`,
+  );
+}
+
+export function parseMidi(raw: unknown): Score {
+  const buf = toArrayBuffer(raw);
 
   // @tonejs/midi throws on malformed input — we propagate loudly (no swallow).
-  const midi = new Midi(raw);
+  const midi = new Midi(buf);
   const ppq = midi.header.ppq;
 
   // --- Tempo map -------------------------------------------------------
@@ -111,5 +130,32 @@ export function compile(raw: unknown): Score {
     timeSigMap,
     notes,
     annotations: [],
+  };
+}
+
+export interface MidiSongMeta {
+  title: string;
+  durationSec: number;
+  endBeat: number;
+  trackCount: number;
+}
+
+/**
+ * Derive the library song metadata from a MIDI file's bytes and its filename.
+ * The single source of truth shared by the web import button and the server
+ * import path — title comes from the filename (sans `.mid`/`.midi`), the rest
+ * from the parsed `Score`.
+ */
+export function deriveMidiSongMeta(
+  raw: unknown,
+  filename: string,
+): MidiSongMeta {
+  const score = parseMidi(raw);
+  const endBeat = scoreEndBeat(score);
+  return {
+    title: filename.replace(/\.midi?$/i, ""),
+    durationSec: beatToSeconds(score, endBeat),
+    endBeat,
+    trackCount: score.tracks.length,
   };
 }

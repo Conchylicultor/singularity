@@ -34,8 +34,8 @@ shell mounts `<FullPane/>`, which paints the active pane full-surface.
   - Uses: `apps/sonata/shell.publishSonataTransport`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/data-view.DataView`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/toggle-chip.SegmentedControl`
   - Exports: Types: `SortOrderProps`; Values: `Library`, `useOpenSong`
 - Cross-plugin:
-  - Slot contributors: `chord-grid`, `midi`, `playback-history`
-  - Imported by: `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`
+  - Slot contributors: `chord-grid`, `folders`, `midi`, `playback-history`
+  - Imported by: `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/midi/folders`, `apps/sonata/track-mixer`
   - Extended by: `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`), `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`), `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)
 - Server:
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`
