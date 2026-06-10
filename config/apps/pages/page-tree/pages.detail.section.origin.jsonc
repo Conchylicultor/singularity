@@ -1,9 +1,7 @@
-// @hash 9890bf7eb1c9
+// @hash c6db4b9fe7fd
 {
-  // Legend (entryKey — label):
-  //   backlinks — backlinks
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "backlinks"
+    "apps.pages.page-tree:backlinks"
   ]
 }

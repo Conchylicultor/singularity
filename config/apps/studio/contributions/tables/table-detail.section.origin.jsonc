@@ -1,17 +1,11 @@
-// @hash dda46e932710
+// @hash 14720ee829f5
 {
-  // Legend (entryKey — label):
-  //   foreign-keys — foreign-keys
-  //   sample-rows — sample-rows
-  //   row-count — row-count
-  //   columns — columns
-  //   indexes — indexes
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "foreign-keys",
-    "sample-rows",
-    "row-count",
-    "columns",
-    "indexes"
+    "apps.studio.contributions.tables.foreign-keys:foreign-keys",
+    "apps.studio.contributions.tables.sample-rows:sample-rows",
+    "apps.studio.contributions.tables.row-count:row-count",
+    "apps.studio.contributions.tables.columns:columns",
+    "apps.studio.contributions.tables.indexes:indexes"
   ]
 }

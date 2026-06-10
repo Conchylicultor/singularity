@@ -1,17 +1,11 @@
-// @hash 1dab7fb010e0
+// @hash 373010a44394
 {
-  // Legend (entryKey — label):
-  //   fix — fix
-  //   profiling — profiling
-  //   commits — commits
-  //   logs — logs
-  //   info — info
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "fix",
-    "profiling",
-    "commits",
-    "logs",
-    "info"
+    "build.build-fix:fix",
+    "build.build-profiling:profiling",
+    "build.build-commits:commits",
+    "build.build-logs:logs",
+    "build.build-info:info"
   ]
 }

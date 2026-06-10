@@ -1,9 +1,7 @@
-// @hash 94eb911bb311
+// @hash fca88b7a1afe
 {
-  // Legend (entryKey — label):
-  //   apps — Apps
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "apps"
+    "apps.home.app-cards:apps"
   ]
 }

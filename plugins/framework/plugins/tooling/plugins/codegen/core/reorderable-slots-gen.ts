@@ -46,7 +46,6 @@ export interface ReorderableSlotEntry {
 
 interface CatalogItem {
   entryKey: string;
-  label: string;
 }
 
 interface ReorderableSlotsData {
@@ -89,13 +88,12 @@ async function collectReorderableSlots(
       if (!definingPath.has(c.slotId)) continue;
       if (!c.id) continue;
       const entryKey = c.pluginId ? `${c.pluginId}:${c.id}` : c.id;
-      const label = c.doc.label ?? entryKey;
       let items = catalog.get(c.slotId);
       if (!items) {
         items = [];
         catalog.set(c.slotId, items);
       }
-      items.push({ entryKey, label });
+      items.push({ entryKey });
     }
   }
 
@@ -144,9 +142,10 @@ export async function renderReorderableSlotsManifest(
 }
 
 /**
- * Slim origin-annotations provider: the order now lives in the `items` value
- * (a materialized `ReorderTree`), so the comment is just a legend mapping each
- * available `entryKey` to its label plus a one-line format note.
+ * Slim origin-annotations provider: the order lives in the `items` value (a
+ * materialized `ReorderTree`) and each entry is a fully-qualified `entryKey`
+ * (`pluginId:id`), so the comment is just a one-line hand-edit format note —
+ * the per-entry label map would only restate the already-explicit keys.
  */
 function buildOriginAnnotationsProvider(
   catalog: Map<string, CatalogItem[]>,
@@ -155,14 +154,9 @@ function buildOriginAnnotationsProvider(
     // The directive descriptor's `name` is the slotId.
     const items = catalog.get(descriptor.name);
     if (!items || items.length === 0) return [];
-    const lines: string[] = ["Legend (entryKey — label):"];
-    for (const item of items) {
-      lines.push(`  ${item.entryKey} — ${item.label}`);
-    }
-    lines.push(
+    return [
       'Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.',
-    );
-    return lines;
+    ];
   };
 }
 

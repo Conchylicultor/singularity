@@ -1,25 +1,15 @@
-// @hash f6fa1efd0139
+// @hash ff962147af57
 {
-  // Legend (entryKey — label):
-  //   commits — Commits
-  //   lines — Lines changed
-  //   tasks-active — Tasks
-  //   pushes — Pushes
-  //   cost-overview — Cost & Tokens
-  //   cost-token-mix — Token mix per day
-  //   cost-avg-per-conversation — Average cost per conversation
-  //   cost-distribution — Cost distribution per conversation
-  //   cost-top-conversations — Top conversations by cost
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "commits",
-    "lines",
-    "tasks-active",
-    "pushes",
-    "cost-overview",
-    "cost-token-mix",
-    "cost-avg-per-conversation",
-    "cost-distribution",
-    "cost-top-conversations"
+    "stats.commits:commits",
+    "stats.commits:lines",
+    "stats.tasks:tasks-active",
+    "stats.pushes:pushes",
+    "stats.cost:cost-overview",
+    "stats.cost:cost-token-mix",
+    "stats.cost:cost-avg-per-conversation",
+    "stats.cost:cost-distribution",
+    "stats.cost:cost-top-conversations"
   ]
 }

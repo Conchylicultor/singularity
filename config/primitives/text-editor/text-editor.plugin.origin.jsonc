@@ -1,9 +1,7 @@
-// @hash 7fa4b4d0f0df
+// @hash 4382e150131f
 {
-  // Legend (entryKey — label):
-  //   paste-images — paste-images
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "paste-images"
+    "primitives.text-editor.paste-images:paste-images"
   ]
 }

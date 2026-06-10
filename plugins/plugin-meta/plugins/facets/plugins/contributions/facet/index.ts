@@ -73,16 +73,14 @@ export default createFacet<ContributionsFacetData>({
         if (!def) continue;
 
         // `_pluginId` is stamped onto each contribution only at runtime by
-        // PluginProvider; the raw barrel export doesn't carry it. The
-        // contributions belong to the plugin whose barrel we imported, so the
-        // plugin's own `id` (when present) is the authoritative `_pluginId`. Fall
-        // back to a per-contribution `_pluginId` if one happens to be present.
-        const defPluginId = typeof def.id === "string" ? (def.id as string) : undefined;
-
+        // PluginProvider (`_pluginId = p.id`); the raw barrel export imported
+        // here carries neither it nor a `def.id` (the loader injects the plugin
+        // id, plugins never author it). The authoritative owner is the node
+        // whose barrel we're importing, so `pluginId` is filled in `relate()`
+        // from `node.id` — matching the runtime `entryKey` (`${p.id}:${id}`).
         const rawContributions = def.contributions as
           | Array<Record<string, unknown> & {
               _slotId?: string;
-              _pluginId?: string;
               id?: string;
               _doc?: { label?: string; detail?: string };
             }>
@@ -96,11 +94,10 @@ export default createFacet<ContributionsFacetData>({
             typeof comp === "function" && comp.name ? (comp.name as string) : undefined;
           runtimeContributions.push({
             slotId: c._slotId,
-            // slotDisplayName filled in by relate()
+            // slotDisplayName + pluginId filled in by relate()
             componentName,
             doc: c._doc ?? {},
             id: typeof c.id === "string" ? c.id : undefined,
-            pluginId: c._pluginId ?? defPluginId,
           });
         }
       }
@@ -123,7 +120,8 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    // Fill display names into already-extracted runtime contribution data
+    // Fill display names + the authoritative owner pluginId (the node whose
+    // barrel produced these runtime contributions) into already-extracted data.
     for (const node of tree.byDir.values()) {
       const data = getFacet(node, contributionsFacetDef);
       if (!data || data.runtime.length === 0) continue;
@@ -131,6 +129,7 @@ export default createFacet<ContributionsFacetData>({
         if (!c.slotDisplayName) {
           c.slotDisplayName = slotDisplayNames.get(c.slotId);
         }
+        c.pluginId = node.id;
       }
     }
 

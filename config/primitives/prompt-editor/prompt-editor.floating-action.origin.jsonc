@@ -1,15 +1,10 @@
-// @hash 1948912712ef
+// @hash a621761bf7d9
 {
-  // Legend (entryKey — label):
-  //   voice-input — voice-input
-  //   exit-menu — exit-menu
-  //   push-and-exit — push-and-exit
-  //   prompt-templates — prompt-templates
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "voice-input",
-    "exit-menu",
-    "push-and-exit",
-    "prompt-templates"
+    "primitives.prompt-editor.voice-input:voice-input",
+    "conversations.conversation-view.exit-menu:exit-menu",
+    "conversations.conversation-view.push-and-exit:push-and-exit",
+    "conversations.conversation-view.prompt-templates:prompt-templates"
   ]
 }

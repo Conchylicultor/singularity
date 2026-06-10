@@ -19,7 +19,12 @@ export interface DocMetaContribution {
    * id`). Raw — not computed here; consumers build the catalog key.
    */
   id?: string;
-  /** The id of the plugin that authored this contribution (`_pluginId`). */
+  /**
+   * The id of the plugin that authored this contribution — the owning node's
+   * `id`, filled in `relate()`. Equals the runtime `_pluginId` (`p.id`), so
+   * `${pluginId}:${id}` matches the runtime reorder `entryKey()`. Always set for
+   * runtime contributions (only optional structurally).
+   */
   pluginId?: string;
 }
 

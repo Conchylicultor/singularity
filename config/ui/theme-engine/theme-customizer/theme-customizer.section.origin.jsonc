@@ -1,27 +1,16 @@
-// @hash 7a1bf8f4582b
+// @hash 020bab39d69a
 {
-  // Legend (entryKey — label):
-  //   community-browser — community-browser
-  //   shape — shape
-  //   sidebar-palette — sidebar-palette
-  //   shadow — shadow
-  //   chart — chart
-  //   density — density
-  //   categorical — categorical
-  //   color-palette — color-palette
-  //   typography — typography
-  //   color-adjust — color-adjust
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "community-browser",
-    "shape",
-    "sidebar-palette",
-    "shadow",
-    "chart",
-    "density",
-    "categorical",
-    "color-palette",
-    "typography",
-    "color-adjust"
+    "ui.tweakcn.community-browser:community-browser",
+    "ui.tokens.shape:shape",
+    "ui.tokens.sidebar-palette:sidebar-palette",
+    "ui.tokens.shadow:shadow",
+    "ui.tokens.chart:chart",
+    "ui.tokens.density:density",
+    "ui.tokens.categorical:categorical",
+    "ui.tokens.color-palette:color-palette",
+    "ui.tokens.typography:typography",
+    "ui.tokens.color-adjust:color-adjust"
   ]
 }

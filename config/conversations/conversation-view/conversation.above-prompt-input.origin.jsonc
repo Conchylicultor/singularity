@@ -1,13 +1,9 @@
-// @hash a4f344dfb48d
+// @hash d788a9de5ff8
 {
-  // Legend (entryKey — label):
-  //   op-status — op-status
-  //   notes — notes
-  //   turn-summary — turn-summary
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "op-status",
-    "notes",
-    "turn-summary"
+    "conversations.conversation-view.op-status:op-status",
+    "conversations.conversation-view.notes:notes",
+    "conversations.conversation-view.turn-summary:turn-summary"
   ]
 }

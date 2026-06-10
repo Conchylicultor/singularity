@@ -1,23 +1,14 @@
-// @hash f90a8c79cd46
+// @hash 2204cc5d5c9b
 {
-  // Legend (entryKey — label):
-  //   agent-avatar — agent-avatar
-  //   title — title
-  //   status — status
-  //   allow-monitor — allow-monitor
-  //   model — model
-  //   category — category
-  //   progress — progress
-  //   preprompt — preprompt
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "agent-avatar",
-    "title",
-    "status",
-    "allow-monitor",
-    "model",
-    "category",
-    "progress",
-    "preprompt"
+    "agents:agent-avatar",
+    "conversations.conversation-view:title",
+    "conversations.conversation-view.status:status",
+    "conversations.conversation-view.allow-monitor:allow-monitor",
+    "conversations.conversation-view.model:model",
+    "conversations.conversation-category:category",
+    "conversations.conversation-progress:progress",
+    "conversations.conversation-preprompt:preprompt"
   ]
 }

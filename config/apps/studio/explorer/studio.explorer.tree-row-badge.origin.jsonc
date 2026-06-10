@@ -1,15 +1,10 @@
-// @hash c4fd675d9273
+// @hash 504ddb8c8896
 {
-  // Legend (entryKey — label):
-  //   child-count — child-count
-  //   load-bearing — load-bearing
-  //   expand-collapse — expand-collapse
-  //   collapsed — collapsed
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "child-count",
-    "load-bearing",
-    "expand-collapse",
-    "collapsed"
+    "apps.studio.explorer.child-count:child-count",
+    "apps.studio.explorer.load-bearing:load-bearing",
+    "apps.studio.explorer.expand-collapse:expand-collapse",
+    "apps.studio.explorer.collapsed:collapsed"
   ]
 }

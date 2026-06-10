@@ -1,15 +1,10 @@
-// @hash 11bd9e998a95
+// @hash dfe15328ec08
 {
-  // Legend (entryKey — label):
-  //   audio — Audio
-  //   chord-readout — Current chord
-  //   chord-grid-editor — Chord Grid
-  //   track-mixer — Tracks
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "audio",
-    "chord-readout",
-    "chord-grid-editor",
-    "track-mixer"
+    "apps.sonata.audio.engine:audio",
+    "apps.sonata.rich.chord-readout:chord-readout",
+    "apps.sonata.sources.chord-grid:chord-grid-editor",
+    "apps.sonata.track-mixer:track-mixer"
   ]
 }

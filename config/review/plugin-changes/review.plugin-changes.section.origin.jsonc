@@ -1,11 +1,8 @@
-// @hash 24228b89efea
+// @hash 7137cb80fcf0
 {
-  // Legend (entryKey — label):
-  //   file-changes — file-changes
-  //   api-changes — api-changes
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "file-changes",
-    "api-changes"
+    "review.plugin-changes.file-changes:file-changes",
+    "review.plugin-changes.api-changes:api-changes"
   ]
 }

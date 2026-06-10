@@ -1,17 +1,11 @@
-// @hash d76026bccf1a
+// @hash c283db5ee990
 {
-  // Legend (entryKey — label):
-  //   boot — boot
-  //   runtime — runtime
-  //   push — push
-  //   build — build
-  //   stats — stats
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "boot",
-    "runtime",
-    "push",
-    "build",
-    "stats"
+    "debug.profiling.boot:boot",
+    "debug.profiling.runtime:runtime",
+    "debug.profiling.push:push",
+    "debug.profiling.build:build",
+    "debug.profiling.stats:stats"
   ]
 }

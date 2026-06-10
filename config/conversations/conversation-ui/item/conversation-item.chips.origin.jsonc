@@ -1,13 +1,9 @@
-// @hash c0041f5922d1
+// @hash 4332ee36b2dc
 {
-  // Legend (entryKey — label):
-  //   op-status — op-status
-  //   progress — progress
-  //   preprompt — preprompt
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "op-status",
-    "progress",
-    "preprompt"
+    "conversations.conversation-view.op-status:op-status",
+    "conversations.conversation-progress:progress",
+    "conversations.conversation-preprompt:preprompt"
   ]
 }

@@ -1,11 +1,8 @@
-// @hash 995b29a1894a
+// @hash fddc9b6ebc21
 {
-  // Legend (entryKey — label):
-  //   action-bar — action-bar
-  //   worktree-switcher — worktree-switcher
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "action-bar",
-    "worktree-switcher"
+    "shell.action-bar:action-bar",
+    "worktree-switcher:worktree-switcher"
   ]
 }

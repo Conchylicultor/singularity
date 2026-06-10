@@ -1,11 +1,8 @@
-// @hash 4e353050d47a
+// @hash 2a0e5d1247dc
 {
-  // Legend (entryKey — label):
-  //   contributions — Contributions
-  //   explorer — Explorer
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "contributions",
-    "explorer"
+    "apps.studio.contributions:contributions",
+    "apps.studio.explorer:explorer"
   ]
 }

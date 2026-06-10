@@ -1,23 +1,14 @@
-// @hash ed8b0973deb9
+// @hash 7a199a5c2339
 {
-  // Legend (entryKey — label):
-  //   header — header
-  //   description — description
-  //   events — events
-  //   dependencies — dependencies
-  //   dependents — dependents
-  //   preprompt — preprompt
-  //   attachments — attachments
-  //   graph — graph
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "header",
-    "description",
-    "events",
-    "dependencies",
-    "dependents",
-    "preprompt",
-    "attachments",
-    "graph"
+    "tasks.task-header:header",
+    "tasks.task-description:description",
+    "tasks.task-events:events",
+    "tasks.task-dependencies:dependencies",
+    "tasks.task-dependencies:dependents",
+    "tasks.task-preprompt:preprompt",
+    "tasks.task-attachments:attachments",
+    "tasks.task-graph:graph"
   ]
 }

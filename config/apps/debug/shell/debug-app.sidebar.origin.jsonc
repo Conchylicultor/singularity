@@ -1,29 +1,17 @@
-// @hash 996162ae99e7
+// @hash f36fd936f0ac
 {
-  // Legend (entryKey — label):
-  //   conversations-recover — Recovery
-  //   events-test — Events Test
-  //   backup — Backup
-  //   claude-cli-calls — Claude CLI Calls
-  //   broadcasts — Broadcasts
-  //   memory — Memory
-  //   crashes — Crashes
-  //   worktree-cleanup — Worktree Cleanup
-  //   logs — Logs
-  //   profiling — Profiling
-  //   queue — Queue
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "conversations-recover",
-    "events-test",
-    "backup",
-    "claude-cli-calls",
-    "broadcasts",
-    "memory",
-    "crashes",
-    "worktree-cleanup",
-    "logs",
-    "profiling",
-    "queue"
+    "conversations-recover:conversations-recover",
+    "events-test:events-test",
+    "backup:backup",
+    "debug.claude-cli-calls:claude-cli-calls",
+    "debug.broadcasts:broadcasts",
+    "debug.memory:memory",
+    "debug.crashes:crashes",
+    "debug.worktree-cleanup:worktree-cleanup",
+    "debug.logs:logs",
+    "debug.profiling:profiling",
+    "debug.queue:queue"
   ]
 }

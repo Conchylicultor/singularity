@@ -1,21 +1,13 @@
-// @hash 9fc74e72c2e2
+// @hash c35f272196c8
 {
-  // Legend (entryKey — label):
-  //   fork-session — fork-session
-  //   timestamp — timestamp
-  //   raw-json — raw-json
-  //   stop-reason — stop-reason
-  //   markdown-toggle — markdown-toggle
-  //   copy-assistant-text — copy-assistant-text
-  //   copy-tool-result — copy-tool-result
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "fork-session",
-    "timestamp",
-    "raw-json",
-    "stop-reason",
-    "markdown-toggle",
-    "copy-assistant-text",
-    "copy-tool-result"
+    "conversations.conversation-view.fork-session:fork-session",
+    "conversations.conversation-view.jsonl-viewer:timestamp",
+    "conversations.conversation-view.jsonl-viewer:raw-json",
+    "conversations.conversation-view.jsonl-viewer.assistant-text:stop-reason",
+    "conversations.conversation-view.jsonl-viewer.assistant-text:markdown-toggle",
+    "conversations.conversation-view.jsonl-viewer.assistant-text:copy-assistant-text",
+    "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result"
   ]
 }

@@ -1,17 +1,11 @@
-// @hash 4ff76e0fa5f4
+// @hash 3cd0174d325d
 {
-  // Legend (entryKey — label):
-  //   branch — Branch
-  //   fork-conversation — New
-  //   launch-prompts — Launch
-  //   dependencies — Deps
-  //   notes-toggle — Notes
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "branch",
-    "fork-conversation",
-    "launch-prompts",
-    "dependencies",
-    "notes-toggle"
+    "conversations.conversation-view.branch:branch",
+    "conversations.conversation-view.fork-conversation:fork-conversation",
+    "conversations.conversation-view.launch-prompts:launch-prompts",
+    "conversations.conversation-view.dependencies:dependencies",
+    "conversations.conversation-view.notes:notes-toggle"
   ]
 }

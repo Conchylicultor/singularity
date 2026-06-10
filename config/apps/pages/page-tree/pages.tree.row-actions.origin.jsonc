@@ -1,9 +1,7 @@
-// @hash badd5fbbd39b
+// @hash 734da42e3720
 {
-  // Legend (entryKey — label):
-  //   delete — delete
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "delete"
+    "apps.pages.page-tree:delete"
   ]
 }

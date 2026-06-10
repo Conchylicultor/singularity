@@ -1,9 +1,7 @@
-// @hash 0beee3b2987d
+// @hash 7d56976ec2a7
 {
-  // Legend (entryKey — label):
-  //   prompt-input — prompt-input
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "prompt-input"
+    "conversations.conversation-view.prompt-input:prompt-input"
   ]
 }

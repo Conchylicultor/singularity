@@ -1,25 +1,15 @@
-// @hash 57e4f05b7cff
+// @hash ae3f7f411da1
 {
-  // Legend (entryKey — label):
-  //   theme-customizer — theme-customizer
-  //   reorder-pen — reorder-pen
-  //   screenshot — screenshot
-  //   draw-on-app — draw-on-app
-  //   health-dot — health-dot
-  //   theme-light-dark — theme-light-dark
-  //   improve — improve
-  //   build — build
-  //   notifications — notifications
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "theme-customizer",
-    "reorder-pen",
-    "screenshot",
-    "draw-on-app",
-    "health-dot",
-    "theme-light-dark",
-    "improve",
-    "build",
-    "notifications"
+    "ui.theme-engine.theme-customizer:theme-customizer",
+    "reorder.edit-mode:reorder-pen",
+    "screenshot:screenshot",
+    "screenshot.draw-on-app:draw-on-app",
+    "health:health-dot",
+    "theme:theme-light-dark",
+    "improve:improve",
+    "build:build",
+    "notifications:notifications"
   ]
 }

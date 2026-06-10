@@ -1,25 +1,15 @@
-// @hash d6a3ffd75907
+// @hash 031029ebd675
 {
-  // Legend (entryKey — label):
-  //   agent-manager — Agent Manager
-  //   home — Home
-  //   studio — Studio
-  //   deploy — Deploy
-  //   sonata — Sonata
-  //   workflows — Workflows
-  //   file-explorer — File Explorer
-  //   pages — Pages
-  //   debug — Debug
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "agent-manager",
-    "home",
-    "studio",
-    "deploy",
-    "sonata",
-    "workflows",
-    "file-explorer",
-    "pages",
-    "debug"
+    "apps.agent-manager.shell:agent-manager",
+    "apps.home.shell:home",
+    "apps.studio.shell:studio",
+    "apps.deploy.shell:deploy",
+    "apps.sonata.shell:sonata",
+    "apps.workflows.shell:workflows",
+    "apps.file-explorer.shell:file-explorer",
+    "apps.pages.shell:pages",
+    "apps.debug.shell:debug"
   ]
 }

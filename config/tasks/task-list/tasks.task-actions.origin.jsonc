@@ -1,17 +1,11 @@
-// @hash b81e353e5ce2
+// @hash 2c76f578b3cd
 {
-  // Legend (entryKey — label):
-  //   queued-chip — queued-chip
-  //   child-count — child-count
-  //   expand-collapse-all — expand-collapse-all
-  //   delete — delete
-  //   launch-agent — launch-agent
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "queued-chip",
-    "child-count",
-    "expand-collapse-all",
-    "delete",
-    "launch-agent"
+    "tasks.auto-start:queued-chip",
+    "tasks.task-list:child-count",
+    "tasks.task-list:expand-collapse-all",
+    "tasks.task-list:delete",
+    "tasks.task-list:launch-agent"
   ]
 }

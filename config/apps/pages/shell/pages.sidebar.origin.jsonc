@@ -1,9 +1,7 @@
-// @hash be6d2bd9979b
+// @hash d0bc804a545b
 {
-  // Legend (entryKey — label):
-  //   pages — Pages
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "pages"
+    "apps.pages.page-tree:pages"
   ]
 }

@@ -1,21 +1,13 @@
-// @hash ec50f48d3693
+// @hash 24dec803da18
 {
-  // Legend (entryKey — label):
-  //   config-v2 — Config
-  //   tasks — Tasks
-  //   accounts — Accounts
-  //   agents — Agents
-  //   conversations — Conversations
-  //   code-explorer — Explorer
-  //   stats — Stats
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
-    "config-v2",
-    "tasks",
-    "accounts",
-    "agents",
-    "conversations",
-    "code-explorer",
-    "stats"
+    "config_v2.settings:config-v2",
+    "tasks.task-detail:tasks",
+    "auth:accounts",
+    "agents:agents",
+    "conversations.conversations-view:conversations",
+    "code-explorer:code-explorer",
+    "stats:stats"
   ]
 }
