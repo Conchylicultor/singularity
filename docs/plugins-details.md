@@ -1952,7 +1952,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Web:
     - Contributes: `Core.Root` → `ReconnectWatcher`, `ActionBar.Item` → `HealthDot`
-    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/tooltip.WithTooltip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/status-dot.StatusDot`, `primitives/tooltip.WithTooltip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
     - Exports: Values: `getHealth`, `waitForRestart`
   - Server:
     - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
@@ -2125,7 +2125,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - Web:
     - Contributes: `ActionBar.Item` → `BellButton`
-    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
     - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
   - Server:
     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`
@@ -2659,7 +2659,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `config_v2/config-link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
+        - Imported by: `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `config_v2/config-link`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/section-label.SectionLabel`
@@ -2743,6 +2743,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `PromptEditorSlots.FloatingAction` → `VoiceInputButton`
             - Uses: `primitives/icon-button.IconButton`, `primitives/prompt-editor.PromptEditorSlots`
+    - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Server:
         - Uses: `database.db`
@@ -2808,7 +2809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `SpinnerProps`; Values: `Spinner`
     - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
       - Cross-plugin:
-        - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/task-link`, `agents`, `apps/deploy/servers`, `attempt-view`, `build/build-info`, `conversations/conversation-ui/item`, `conversations/conversation-view/tasks-panel`, `floating-bar`, `tasks/task-status`, `welcome`
+        - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/task-link`, `agents`, `apps/deploy/servers`, `attempt-view`, `build/build-info`, `conversations/conversation-ui/item`, `conversations/conversation-view/tasks-panel`, `floating-bar`, `health`, `tasks/task-status`, `welcome`, `worktree-switcher`
       - Web:
         - Exports: Types: `StatusDotProps`; Values: `StatusDot`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
@@ -3376,6 +3377,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
   - Web:
     - Contributes: `Shell.Toolbar` → `WorktreeDropdown`
-    - Uses: `primitives/live-state.useResource`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `shell.Shell`
+    - Uses: `primitives/live-state.useResource`, `primitives/status-dot.StatusDot`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `shell.Shell`
 
 <!-- AUTOGENERATED:END -->
