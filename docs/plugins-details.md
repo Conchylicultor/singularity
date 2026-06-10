@@ -331,7 +331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`render`** — Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
           - Web:
             - Slots: `Story.Renderer`, `Story.Content`
-            - Uses: `primitives/live-state.useResource`, `primitives/slot-render.defineDispatchSlot`, `primitives/toggle-chip.SegmentedControl`
+            - Uses: `primitives/live-state.useResource`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
             - Exports: Values: `RendererPicker`, `Story`, `StoryRender`
         - **`story-core`** — Renderer-agnostic StoryNode IR plus buildStoryTree — the single place a block type maps to a structural role (divider → break, else content).
           - Core:
@@ -2830,7 +2830,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversations-view`, `tasks/task-list`
     - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-text`, `primitives/markdown`
+        - Imported by: `apps/story/render`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `primitives/markdown`
       - Web:
         - Exports: Types: `TextProps`, `TextTone`, `TextVariant`; Values: `Text`
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
