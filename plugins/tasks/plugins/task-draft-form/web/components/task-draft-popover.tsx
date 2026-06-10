@@ -76,15 +76,20 @@ export function TaskDraftPopover({
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);
   const [url, setUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
-  const [relateMode, setRelateMode] = useState<TaskChainRelateMode | undefined>(
-    relate?.defaultMode,
-  );
+  const [relateMode, setRelateMode, clearRelateMode] = useDraft<
+    TaskChainRelateMode | undefined
+  >("task-draft:relate-mode", relate?.defaultMode, {
+    scope: draftScope(target),
+  });
 
   const activeRelate = useActiveRelateContext();
   const hasAmbientRelate = !relate && activeRelate !== null;
-  const [ambientRelateMode, setAmbientRelateMode] = useState<
-    TaskChainRelateMode | undefined
-  >(undefined);
+  const [ambientRelateMode, setAmbientRelateMode, clearAmbientRelateMode] =
+    useDraft<TaskChainRelateMode | undefined>(
+      "task-draft:ambient-relate-mode",
+      undefined,
+      { scope: draftScope(target) },
+    );
   const [insertBeforeIds, setInsertBeforeIds] = useState<Set<string>>(
     new Set(),
   );
@@ -153,8 +158,8 @@ export function TaskDraftPopover({
   const resetForm = () => {
     clearCards();
     seenIdsRef.current = new Set();
-    setRelateMode(relate?.defaultMode);
-    setAmbientRelateMode(undefined);
+    clearRelateMode();
+    clearAmbientRelateMode();
     setInsertBeforeIds(new Set());
     setStandalone(false);
   };
