@@ -1,6 +1,14 @@
 import { defineConfig } from "@plugins/config_v2/core";
 import { boolField } from "@plugins/fields/plugins/bool/plugins/config/core";
 
+/**
+ * Right inset that clears the collapsed floating bar (a `size-8` icon anchored
+ * at `right-3`). Published by the bar as the `--floating-bar-safe-area` CSS var
+ * so app headers can reserve a gutter via the `pr-floating-bar` utility instead
+ * of hand-rolling a `pr-14`.
+ */
+export const FLOATING_BAR_GUTTER = "3.5rem";
+
 export const floatingBarConfig = defineConfig({
   fields: {
     enabled: boolField({

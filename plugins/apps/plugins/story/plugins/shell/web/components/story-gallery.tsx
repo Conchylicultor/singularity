@@ -50,9 +50,7 @@ export function StoryGallery() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      {/* `pr-14` reserves the top-right gutter for the global floating action
-          bar (fixed top-2 right-3) so the "New story" button stays clickable. */}
-      <div className="flex items-center justify-between gap-4 py-4 pl-6 pr-14">
+      <div className="flex items-center justify-between gap-4 py-4 pl-6 pr-floating-bar">
         <Text variant="title">Stories</Text>
         <Button size="sm" onClick={() => void newStory()}>
           <MdAdd className="size-4" />

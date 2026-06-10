@@ -71,7 +71,7 @@ export function AppShellLayout({
   children: ReactNode;
 }) {
   const toolbar = toolbarSlot && (
-    <header className="flex items-center border-b px-chrome h-chrome-bar gap-2 bg-background overflow-hidden">
+    <header className="flex items-center border-b pl-chrome pr-floating-bar h-chrome-bar gap-2 bg-background overflow-hidden">
       {sidebarSlot && <SidebarTrigger />}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}

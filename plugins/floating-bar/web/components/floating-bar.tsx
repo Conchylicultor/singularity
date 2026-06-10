@@ -1,3 +1,4 @@
+import { useLayoutEffect } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import {
   FloatingAction,
@@ -8,7 +9,7 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { useActiveApp } from "@plugins/apps/web";
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
-import { floatingBarConfig } from "../../shared/config";
+import { FLOATING_BAR_GUTTER, floatingBarConfig } from "../../shared/config";
 import {
   useFloatingBarStatus,
   type StatusTone,
@@ -19,6 +20,13 @@ const TONE_CLASS: Record<StatusTone, string> = {
   warning: "bg-warning",
   destructive: "bg-destructive",
 };
+
+/**
+ * Global CSS var carrying the bar's reserved top-right gutter. The `app.css`
+ * `pr-floating-bar` utility reads it; it exists on `:root` **iff** the bar is
+ * mounted, so headers reclaim the space whenever the bar is hidden.
+ */
+const SAFE_AREA_VAR = "--floating-bar-safe-area";
 
 /**
  * Global floating action bar (top-right). Collapsed: a single icon with a
@@ -33,7 +41,21 @@ export function FloatingBar() {
 
   // Hidden when disabled, or on the app that already hosts the toolbar (the
   // agent manager) — avoids double-mounting the action buttons.
-  if (!enabled || activeApp?.hostsToolbar) return null;
+  const visible = enabled && !activeApp?.hostsToolbar;
+
+  // Publish (or clear) the reserved-gutter var before paint, so headers that
+  // route through `pr-floating-bar` reserve space without a reserve-then-jump
+  // flash. The bar owns this value: it lives on `:root` only while mounted.
+  useLayoutEffect(() => {
+    const root = document.documentElement;
+    if (visible) root.style.setProperty(SAFE_AREA_VAR, FLOATING_BAR_GUTTER);
+    else root.style.removeProperty(SAFE_AREA_VAR);
+    return () => {
+      root.style.removeProperty(SAFE_AREA_VAR);
+    };
+  }, [visible]);
+
+  if (!visible) return null;
 
   return (
     <FloatingAction

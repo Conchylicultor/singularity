@@ -333,6 +333,14 @@
 @utility h-chrome-bar { height: var(--chrome-bar-h); }
 @utility h-chrome-pane { height: var(--chrome-pane-h); }
 @utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); }
+@utility pl-chrome { padding-left: var(--chrome-pad-x); }
+
+/* Floating-bar safe area — right inset that clears the global floating action
+ * bar (a fixed top-right overlay). Width is owned + published by the
+ * floating-bar plugin as --floating-bar-safe-area; it falls back to the chrome
+ * pad when the bar is hidden (config off / a toolbar-hosting app), so an app
+ * header never sits under the bar without hand-reserving a pr-14. */
+@utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); }
 
 /* Semantic typography role utilities — the single source of truth for text
  * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height
