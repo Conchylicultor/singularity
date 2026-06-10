@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import { useResource, useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdRefresh } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -7,29 +7,17 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { clientLog } from "@plugins/debug/plugins/logs/web";
-import { mainAheadCountResource, buildHistoryResource, frontendHashResource } from "../../shared";
+import { mainAheadCountResource, buildHistoryResource } from "../../shared";
+import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
 
 export function BuildButton() {
   const [open, setOpen] = useState(false);
-  const [staleTab, setStaleTab] = useState(false);
   const openPane = useOpenPane();
 
-  // --- Frontend hash (stale-tab detection) ---
-  const hashResult = useResource(frontendHashResource);
-  const currentHash = hashResult.pending ? "" : hashResult.data.hash;
-  const initialHashRef = useRef<string | null>(null);
-
-  useEffect(() => {
-    if (hashResult.pending) return;
-    if (!currentHash) return;
-    if (initialHashRef.current === null) {
-      initialHashRef.current = currentHash;
-    } else if (currentHash !== initialHashRef.current) {
-      setStaleTab(true);
-    }
-  }, [hashResult.pending, currentHash]);
+  // --- Stale-tab detection (baked build id vs server's current build id) ---
+  const { stale: staleTab } = useStaleFrontend();
 
   // --- Main ahead count ---
   const aheadResult = useResource(mainAheadCountResource);
@@ -48,7 +36,7 @@ export function BuildButton() {
   const building = latestRun?.finishedAt === null;
   const failed =
     !building && latestRun != null && latestRun.exitCode !== null && latestRun.exitCode !== 0;
-  const loaded = !hashResult.pending;
+  const loaded = !aheadResult.pending;
 
   // Priority: a stale tab (new frontend already served) needs a reload regardless
   // of build state; otherwise reflect the active build, then the last outcome.

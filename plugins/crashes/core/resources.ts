@@ -17,6 +17,8 @@ export const CrashSchema = z.object({
   count: z.number().int(),
   crashLoop: z.boolean(),
   noise: z.boolean(),
+  lastClientId: z.string().nullable(),
+  lastBuildId: z.string().nullable(),
   taskId: z.string().nullable(),
   firstSeenAt: z.coerce.date(),
   lastSeenAt: z.coerce.date(),

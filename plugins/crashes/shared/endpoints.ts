@@ -11,6 +11,8 @@ export const CrashReportBodySchema = z.object({
   userAgent: z.string().nullable().optional(),
   slot: z.string().nullable().optional(),
   label: z.string().nullable().optional(),
+  clientId: z.string().nullable().optional(),
+  buildId: z.string().nullable().optional(),
 });
 export type CrashReportBody = z.infer<typeof CrashReportBodySchema>;
 

@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { getServerBuildId } from "@plugins/build/server";
 import { createTask, getTask } from "@plugins/tasks-core/server";
 import { recordNotification } from "@plugins/notifications/server";
 import { _crashes } from "./tables";
@@ -55,11 +56,19 @@ export async function recordCrash(
       ? clamp(input.componentStack, COMPONENT_STACK_MAX)
       : null;
   const loop = bumpWindowAndCheck(fp);
+  // A crash whose originating bundle's build id differs from the server's
+  // current build id came from an outdated frontend tab — benign version-skew.
+  const serverBuildId = getServerBuildId();
+  const staleOrigin =
+    input.buildId != null &&
+    serverBuildId != null &&
+    input.buildId !== serverBuildId;
   const noise = isNoiseCrash({
     source: input.source,
     errorType: input.errorType ?? null,
     message: input.message,
     stack: input.stack ?? null,
+    staleOrigin,
   });
 
   const id = `crash-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
@@ -80,6 +89,8 @@ export async function recordCrash(
       label: input.label ?? null,
       crashLoop: loop,
       noise,
+      lastClientId: input.clientId ?? null,
+      lastBuildId: input.buildId ?? null,
     })
     .onConflictDoUpdate({
       target: [_crashes.fingerprint, _crashes.worktree],
@@ -89,6 +100,8 @@ export async function recordCrash(
         updatedAt: new Date(),
         crashLoop: sql`${_crashes.crashLoop} OR ${loop}`,
         noise,
+        lastClientId: input.clientId ?? null,
+        lastBuildId: input.buildId ?? null,
       },
     })
     .returning();
@@ -102,7 +115,10 @@ export async function recordCrash(
     return { taskId: row.taskId, wasNew: false, crashLoop: true };
   }
 
-  const outcome = await ensureTaskForCrash(row.id, `${fp}|${worktree}`);
+  const outcome = await ensureTaskForCrash(row.id, `${fp}|${worktree}`, {
+    staleOrigin,
+    serverBuildId,
+  });
   crashesResource.notify();
   const desc = row.errorType
     ? `${row.errorType}: ${row.message}`
@@ -119,6 +135,8 @@ export async function recordCrash(
       taskId: outcome.taskId,
       source: row.source,
       fingerprint: fp,
+      clientId: input.clientId ?? null,
+      buildId: input.buildId ?? null,
     },
   });
   return { ...outcome, crashLoop: false };
@@ -127,6 +145,7 @@ export async function recordCrash(
 async function ensureTaskForCrash(
   crashId: string,
   lockKey: string,
+  origin: { staleOrigin: boolean; serverBuildId: string | null },
 ): Promise<{ taskId: string | null; wasNew: boolean }> {
   // Serialize concurrent callers for the same fingerprint. A request arriving
   // while another is mid-creation waits on the prior promise, then re-reads
@@ -154,8 +173,13 @@ async function ensureTaskForCrash(
 
     const task = await createTask({
       folderId: CRASHES_META_TASK_ID,
-      title: taskTitle(latest),
-      description: taskDescription(latest, recurrence),
+      title: taskTitle(latest, origin.staleOrigin),
+      description: taskDescription(
+        latest,
+        recurrence,
+        origin.staleOrigin,
+        origin.serverBuildId,
+      ),
       author: "crashes-plugin",
     });
     await db
@@ -169,9 +193,13 @@ async function ensureTaskForCrash(
   }
 }
 
-function taskTitle(row: { errorType: string | null; message: string }): string {
+function taskTitle(
+  row: { errorType: string | null; message: string },
+  staleOrigin: boolean,
+): string {
   const prefix = row.errorType ? `${row.errorType}: ` : "";
-  const raw = `[crash] ${prefix}${row.message}`;
+  const stalePrefix = staleOrigin ? "[Stale tab] " : "";
+  const raw = `${stalePrefix}[crash] ${prefix}${row.message}`;
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
 
@@ -191,10 +219,19 @@ function taskDescription(
     label: string | null;
     message: string;
     errorType: string | null;
+    lastBuildId: string | null;
   },
   recurrence: boolean,
+  staleOrigin: boolean,
+  serverBuildId: string | null,
 ): string {
   const lines: string[] = [];
+  if (staleOrigin) {
+    lines.push(
+      `**Origin:** stale frontend tab (build ${row.lastBuildId} vs current ${serverBuildId}) — likely benign version-skew, not a live bug.`,
+    );
+    lines.push("");
+  }
   if (recurrence) {
     lines.push(
       `**Recurrence** — this fingerprint previously had a task that was dropped. It just happened again.`,

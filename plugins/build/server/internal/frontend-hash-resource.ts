@@ -3,12 +3,13 @@ import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { WEB_DIST_DIR } from "@plugins/infra/plugins/paths/server";
 import { FrontendHashSchema } from "../../shared";
 import { buildLog } from "./build-log";
+import { getServerBuildId } from "./server-build-id";
 
 export const frontendHashResource = defineResource({
   key: "build.frontendHash",
   mode: "push",
   schema: FrontendHashSchema,
-  loader: async () => ({ hash: await getFrontendHash() }),
+  loader: async () => ({ hash: await getFrontendHash(), buildId: getServerBuildId() ?? "" }),
 });
 
 async function getFrontendHash(): Promise<string> {

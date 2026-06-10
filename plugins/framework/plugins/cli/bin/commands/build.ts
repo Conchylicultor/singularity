@@ -789,6 +789,17 @@ export function registerBuild(program: Command) {
       // the bounded build pool. See host-semaphore.ts.
       const slotKind: HostSlotKind = branch === "main" ? "exempt" : "build";
       let endSlotWaitSpan: (() => void) | undefined;
+
+      // Compute a per-build id BEFORE vite runs, so the same value is both
+      // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id —
+      // bundle and server agree by construction (no chicken-and-egg).
+      const shortCommitProc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
+        cwd: root,
+        stdout: "pipe",
+      });
+      const shortCommit = shortCommitProc.stdout.toString().trim();
+      const buildId = `${shortCommit || "nocommit"}-${Date.now()}`;
+
       const stepResults = await withHostSlot(
         slotKind,
         async () => {
@@ -852,7 +863,7 @@ export function registerBuild(program: Command) {
             (async (): Promise<StepResult> => {
               const end = buildProfilerStart("viteBuild", "build:frontend", "vite build");
               const start = performance.now();
-              const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName });
+              const output = await execBuffered(["bun", "run", "build"], webDir, { VITE_OUT_DIR: stagingName, VITE_BUILD_ID: buildId });
               end();
               return {
                 id: "viteBuild",
@@ -908,6 +919,9 @@ export function registerBuild(program: Command) {
       if (buildCommit) {
         writeFileSync(resolve(stagingPath, ".build-commit"), buildCommit + "\n");
       }
+
+      // The build id baked into the bundle, so the server can detect stale tabs.
+      writeFileSync(resolve(stagingPath, ".build-id"), buildId + "\n");
 
       // Gapless publish via a `dist` → `dist.live.<pid>` symlink swap. The
       // staging tree is renamed to a versioned release, then `dist` is repointed

@@ -29,6 +29,10 @@ export const _crashes = pgTable(
     count: integer("count").notNull().default(1),
     crashLoop: boolean("crash_loop").notNull().default(false),
     noise: boolean("noise").notNull().default(false),
+    // Attribution (last-writer-wins): the tab + bundle build id of the most
+    // recent report for this fingerprint. NOT part of the dedup key.
+    lastClientId: text("last_client_id"),
+    lastBuildId: text("last_build_id"),
     // Soft reference to tasks.id — the cross-plugin FK would cross a plugin
     // boundary, so we validate integrity in code via getTask() instead. A
     // deleted task just surfaces as `needsTask` on the next crash.

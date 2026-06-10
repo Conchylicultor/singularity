@@ -5,6 +5,9 @@ export interface CrashNoiseInput {
   errorType: string | null;
   message: string;
   stack: string | null;
+  // True when the report's build id differs from the server's current build id
+  // (the crash came from an outdated frontend tab — benign version-skew).
+  staleOrigin?: boolean;
 }
 export interface CrashNoiseRuleSpec {
   id: string;

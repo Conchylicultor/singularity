@@ -21,5 +21,12 @@ export default {
         errorType === "ClaudeCliError" &&
         /claude --print exited (?:143|137)\b/.test(message),
     }),
+    // A crash whose originating frontend tab is running an obsolete bundle
+    // (build id mismatch). Benign version-skew during a rollout, not a live
+    // bug — mute the notification but still record + file the (attributed) task.
+    CrashNoiseRule({
+      id: "stale-frontend",
+      matches: (i) => i.staleOrigin === true,
+    }),
   ],
 } satisfies ServerPluginDefinition;

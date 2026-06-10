@@ -24,6 +24,8 @@ export const handleReport = implement(reportCrash, async ({ body }) => {
     userAgent: body.userAgent ?? null,
     slot: body.slot ?? null,
     label: body.label ?? null,
+    clientId: body.clientId ?? null,
+    buildId: body.buildId ?? null,
   });
   return result;
 });

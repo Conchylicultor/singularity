@@ -1,4 +1,5 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { CrashReport } from "../shared/types";
 import { reportCrash, type CrashReportResult } from "../shared/endpoints";
 
@@ -18,7 +19,12 @@ export interface CrashContext {
 // itself). Returns null if the request fails or was discarded during unload.
 export async function report(body: CrashReport): Promise<CrashReportResult | null> {
   try {
-    return await fetchEndpoint(reportCrash, {}, { body, keepalive: true, report: false });
+    const stamped = {
+      ...body,
+      clientId: getTabId(),
+      buildId: import.meta.env.VITE_BUILD_ID ?? null,
+    };
+    return await fetchEndpoint(reportCrash, {}, { body: stamped, keepalive: true, report: false });
   // eslint-disable-next-line promise-safety/no-bare-catch -- this is called during crash/error handling (keepalive fetch at page unload); propagating here would hide the original error and crash the error handler itself
   } catch {
     return null;

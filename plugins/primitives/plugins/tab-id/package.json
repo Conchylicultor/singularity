@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-tab-id",
+  "description": "Stable per-tab id (sessionStorage-backed) for crash/notification attribution.",
+  "private": true,
+  "version": "0.0.1"
+}

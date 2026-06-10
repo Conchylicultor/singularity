@@ -6,6 +6,7 @@ import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import { dismissNotification, dismissAllNotifications, markAllNotificationsRead } from "../../shared/endpoints";
@@ -46,6 +47,7 @@ function navigateTo(url: string) {
 }
 
 function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notification; dismiss: (id: string) => void; navigateTo: (url: string) => void; onClose: () => void }) {
+  const clientId = typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
   return (
     <li
       className={`flex gap-2 px-3 py-2.5 border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
@@ -68,6 +70,11 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
           <RelativeTime date={n.createdAt} className="text-[10px] text-muted-foreground" />
           {n.type && (
             <span className="text-[10px] text-muted-foreground">{n.type}</span>
+          )}
+          {clientId != null && (
+            <span className="text-[10px] text-muted-foreground">
+              {clientId === getTabId() ? "this tab" : "another tab"}
+            </span>
           )}
           {n.linkTo?.startsWith("/") && (
             <span className="text-[10px] text-muted-foreground hover:text-foreground">

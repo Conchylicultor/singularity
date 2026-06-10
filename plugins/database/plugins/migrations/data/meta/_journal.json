@@ -967,6 +967,13 @@
       "tag": "20260609_163127_02720d1b__add_task_title_auto",
       "hash": "02720d1b",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781099286000,
+      "tag": "20260610_134806_24aa1e4f__add_crash_tab_attribution",
+      "hash": "24aa1e4f",
+      "breakpoints": true
     }
   ]
 }

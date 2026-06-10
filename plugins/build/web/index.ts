@@ -8,6 +8,7 @@ import { buildPane, buildDetailPane } from "./panes";
 
 export { BuildDetail as BuildDetailSlots } from "./slots";
 export { buildPane, buildDetailPane } from "./panes";
+export { useStaleFrontend } from "./hooks/use-stale-frontend";
 
 export default {
   collapsed: true,

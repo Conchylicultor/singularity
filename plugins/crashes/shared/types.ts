@@ -21,4 +21,8 @@ export interface CrashReport {
   // a human label). Omitted for window-level errors — we don't know then.
   slot?: string | null;
   label?: string | null;
+  // Tab that produced the crash (sessionStorage-backed) and the build id of the
+  // bundle that produced it. Used for attribution + stale-frontend detection.
+  clientId?: string | null;
+  buildId?: string | null;
 }

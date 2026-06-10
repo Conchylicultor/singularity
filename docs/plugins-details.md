@@ -548,11 +548,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
     - Uses: `config_v2.ConfigV2`, `debug/logs.clientLog`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`
-    - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`
+    - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`, `useStaleFrontend`
   - Server:
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `debug/logs.Log`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.WEB_DIST_DIR`, `notifications.recordNotification`
     - DB schema: `plugins/build/server/internal/tables.ts`
-    - Exports: Values: `_buildRuns`
+    - Exports: Values: `_buildRuns`, `getServerBuildId`
     - Register: `defineJob('build.run')`
     - Resources: `build.frontendHash` (push), `build.history` (push), `build.mainAheadCount` (push)
     - Routes: `POST /api/build`
@@ -560,7 +560,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
     - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
   - Cross-plugin:
-    - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`
+    - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`, `crashes`, `debug/crashes`
   - Shared:
     - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
   - Plugins:
@@ -1314,10 +1314,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`crashes`** — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
   - Web:
     - Contributes: `Core.Root` → `CrashReporter`
-    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/error-boundary.registerBoundaryReporter`
+    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/error-boundary.registerBoundaryReporter`, `primitives/tab-id.getTabId`
     - Exports: Types: `CrashContext`; Values: `report`
   - Server:
-    - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+    - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
     - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
     - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
     - Resources: `crashes` (push)
@@ -1408,7 +1408,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
       - Web:
         - Contributes: `Pane.Register` "crashes", `DebugApp.Sidebar` "Crashes" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`
+        - Uses: `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`
         - Exports: Values: `crashesPane`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - Web:
@@ -2116,7 +2116,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - Web:
     - Contributes: `ActionBar.Item` → `BellButton`
-    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
     - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
   - Server:
     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`
@@ -2806,6 +2806,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `getHighlighter`, `HighlightedCode`, `languageForPath`, `resolveLang`, `SHIKI_LANGS`, `themeForMode`, `useDarkMode`
       - Cross-plugin:
         - Imported by: `config_v2/settings`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`, `page/code-block`, `primitives/markdown`, `ui/tweakcn/community-browser`
+    - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
+      - Cross-plugin:
+        - Imported by: `crashes`, `debug/crashes`, `notifications`
+      - Web:
+        - Exports: Values: `getTabId`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
         - Uses: `primitives/slot-render.renderIsolated`
