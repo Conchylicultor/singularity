@@ -16,12 +16,13 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
-  useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCostAvgPerConversation } from "../../shared/endpoints";
 import { formatUsd, formatUsdCompact, formatTokensCompact } from "./format";
-import { useScope, withScope } from "./use-scope";
+import { useScope } from "./use-scope";
 
 interface ByFamilyEntry {
   avgCost: number;
@@ -37,11 +38,6 @@ interface Point {
   rolling7ByFamily: Record<string, { cost: number | null; tokens: number | null }>;
   rolling7Cost: number | null;
   rolling7Tokens: number | null;
-}
-
-interface Resp {
-  points: Point[];
-  families: string[];
 }
 
 const FAMILY_PALETTE: Record<string, string> = {
@@ -95,13 +91,10 @@ function flattenTokens(
 
 export function AvgCostPerConversationChart() {
   const { scope } = useScope();
-  const { data, error } = useFetchJson<Resp>(
-    withScope("/api/stats/cost/avg-per-conversation", scope),
-    scope,
-  );
+  const { data: resp, error } = useEndpoint(getCostAvgPerConversation, {}, { query: { scope } });
 
-  const points = data?.points ?? [];
-  const families = data?.families ?? [];
+  const points = resp?.points ?? [];
+  const families = resp?.families ?? [];
   const costRows = flattenCost(points, families);
   const tokenRows = flattenTokens(points, families);
 
@@ -113,9 +106,9 @@ export function AvgCostPerConversationChart() {
         </Text>
         <div className="h-56 w-full">
           <ChartState
-            error={error}
-            loading={data === null}
-            empty={!!data && points.length === 0}
+            error={error ? getEndpointErrorMessage(error) : null}
+            loading={resp === undefined}
+            empty={!!resp && points.length === 0}
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart
@@ -192,9 +185,9 @@ export function AvgCostPerConversationChart() {
         </Text>
         <div className="h-56 w-full">
           <ChartState
-            error={error}
-            loading={data === null}
-            empty={!!data && points.length === 0}
+            error={error ? getEndpointErrorMessage(error) : null}
+            loading={resp === undefined}
+            empty={!!resp && points.length === 0}
           >
             <ResponsiveContainer width="100%" height="100%">
               <ComposedChart

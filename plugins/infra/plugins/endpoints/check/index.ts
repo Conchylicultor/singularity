@@ -1,5 +1,6 @@
 import { grepCode } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import typedWebFetches from "./typed-web-fetches";
+import noRawJsonHandlers from "./no-raw-json-handlers";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -11,10 +12,6 @@ async function getRoot(): Promise<string> {
   });
   return (await new Response(proc.stdout).text()).trim();
 }
-
-// All plugins have been migrated to defineEndpoint + implement().
-// No legacy allowlist entries remain.
-const ALLOWED = new Set<string>([]);
 
 const typedHandlers: Check = {
   id: "endpoints:typed-handlers",
@@ -40,8 +37,6 @@ const typedHandlers: Check = {
       )
         continue;
 
-      if (ALLOWED.has(m.path)) continue;
-
       offenders.push(`${m.path}:${m.line}:${m.text}`);
     }
 
@@ -55,4 +50,4 @@ const typedHandlers: Check = {
   },
 };
 
-export default [typedHandlers, typedWebFetches];
+export default [typedHandlers, typedWebFetches, noRawJsonHandlers];

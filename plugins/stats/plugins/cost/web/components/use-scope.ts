@@ -17,8 +17,3 @@ export function useScope(): {
     toggle: () => setConfig("singularityOnly", !singularityOnly),
   };
 }
-
-export function withScope(url: string, scope: Scope): string {
-  const sep = url.includes("?") ? "&" : "?";
-  return `${url}${sep}scope=${scope}`;
-}

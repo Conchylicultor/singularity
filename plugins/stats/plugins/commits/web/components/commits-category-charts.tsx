@@ -17,6 +17,8 @@ import {
   autoColorKey,
   useCategoryAvatars,
 } from "@plugins/conversations/plugins/conversation-category/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCommitsCumulative, getCommitsRate } from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -27,7 +29,6 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   tooltipNumberFormatter,
-  useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
 
@@ -94,7 +95,7 @@ interface CategoryResponse {
   categories: string[];
 }
 
-function useOrderedKeys(data: CategoryResponse | null): string[] {
+function useOrderedKeys(data: CategoryResponse | undefined): string[] {
   return useMemo(() => {
     if (!data) return [];
     const { points, categories } = data;
@@ -128,14 +129,12 @@ function flattenByCategory(
 }
 
 export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
-  const dedupParam = dedup ? "&dedup=1" : "";
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useCategoryColorFn();
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data, error } = useFetchJson<CategoryResponse>(
-    `/api/stats/commits/cumulative?breakdown=category${dedupParam}`,
-    dedup ? "dedup" : undefined,
-  );
+  const { data: raw, error } = useEndpoint(getCommitsCumulative, {}, { query: { breakdown: "category", dedup: dedup ? "true" : "false" } });
+  // breakdown=category call site — response is always the byCategory branch.
+  const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
   const rawFlat = flattenByCategory(data?.points ?? [], allKeys, "date");
   const flatPoints = useMemo(
@@ -146,8 +145,8 @@ export function CumulativeCommitsCategoryChart({ dedup }: { dedup?: boolean }) {
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={data === undefined}
         empty={!!data && data.points.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
@@ -213,14 +212,12 @@ const BUCKETS: { id: Bucket; label: string }[] = [
 
 export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
   const [bucket, setBucket] = useState<Bucket>("day");
-  const dedupParam = dedup ? "&dedup=1" : "";
   const { showEmptyDays } = useShowEmptyDays();
   const colorFor = useCategoryColorFn();
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
-  const { data, error } = useFetchJson<CategoryResponse>(
-    `/api/stats/commits/rate?bucket=${bucket}&breakdown=category${dedupParam}`,
-    dedup ? "dedup" : undefined,
-  );
+  const { data: raw, error } = useEndpoint(getCommitsRate, {}, { query: { bucket, breakdown: "category", dedup: dedup ? "true" : "false" } });
+  // breakdown=category call site — response is always the byCategory branch.
+  const data = raw as CategoryResponse | undefined;
   const allKeys = useOrderedKeys(data);
   const rawFlat = flattenByCategory(data?.points ?? [], allKeys, "bucket");
   const flatPoints = useMemo(
@@ -232,8 +229,8 @@ export function CommitsRateCategoryChart({ dedup }: { dedup?: boolean }) {
     <div className="flex flex-col gap-3">
       <div className="h-64 w-full">
         <ChartState
-          error={error}
-          loading={data === null}
+          error={error ? getEndpointErrorMessage(error) : null}
+          loading={data === undefined}
           empty={!!data && data.points.length === 0}
         >
           <ResponsiveContainer width="100%" height="100%">

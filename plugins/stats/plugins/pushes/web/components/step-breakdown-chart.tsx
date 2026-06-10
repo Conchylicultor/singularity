@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getPushesStepBreakdown } from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -19,18 +21,10 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
-  useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 
-interface Point {
-  bucket: string;
-  fetch: number;
-  rebase: number;
-  checks: number;
-  push: number;
-  other: number;
-}
+type Bucket = "day" | "week" | "month";
 
 const STEP_COLORS: Record<string, string> = {
   fetch: "#6366f1",   // indigo
@@ -50,17 +44,13 @@ const STEP_LABELS: Record<string, string> = {
 
 const STEP_KEYS = ["fetch", "rebase", "checks", "push", "other"] as const;
 
-export function StepBreakdownChart({ bucket }: { bucket: string }) {
+export function StepBreakdownChart({ bucket }: { bucket: Bucket }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: Point[] }>(
-    `/api/stats/pushes/step-breakdown?bucket=${bucket}`,
-  );
+  const { data: resp, error } = useEndpoint(getPushesStepBreakdown, {}, { query: { bucket } });
+  const rawPoints = useMemo(() => resp?.points ?? [], [resp]);
   const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    return showEmptyDays
-      ? fillGaps(raw, "bucket", bucket as "day" | "week" | "month")
-      : raw;
-  }, [data?.points, showEmptyDays, bucket]);
+    return showEmptyDays ? fillGaps(rawPoints, "bucket", bucket) : rawPoints;
+  }, [rawPoints, showEmptyDays, bucket]);
 
   return (
     <div>
@@ -69,9 +59,9 @@ export function StepBreakdownChart({ bucket }: { bucket: string }) {
       </Text>
       <div className="h-64 w-full">
         <ChartState
-          error={error}
-          loading={data === null}
-          empty={!!data && data.points.length === 0}
+          error={error ? getEndpointErrorMessage(error) : null}
+          loading={resp === undefined}
+          empty={!!resp && rawPoints.length === 0}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

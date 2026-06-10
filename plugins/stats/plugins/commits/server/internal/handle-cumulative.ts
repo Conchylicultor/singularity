@@ -1,36 +1,23 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { commitsConfig } from "../../shared/config";
-import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
+import { getCommitsCumulative, getCommitsLinesCumulative } from "../../shared/endpoints";
+import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
 import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
 
-function commitsTimingHeader(handlerMs: number): string {
-  const git = getGitLogTiming();
-  const parts = [`total;dur=${handlerMs}`];
-  if (git) {
-    parts.push(git.cached ? "gitLog;dur=0;desc=\"cached\"" : `gitLog;dur=${git.ms}`);
-  }
-  return parts.join(", ");
-}
-
-function shouldDedup(req: Request): boolean {
-  return new URL(req.url).searchParams.get("dedup") === "1";
-}
-
-async function resolveCommits(req: Request): Promise<Awaited<ReturnType<typeof getCommits>>> {
+async function resolveCommits(dedup: boolean): Promise<Awaited<ReturnType<typeof getCommits>>> {
   const { excludedPaths } = getConfig(commitsConfig);
   const active = excludedPaths.filter(p => p.enabled).map(p => p.path);
   let commits = active.length === 0 ? await getCommits() : await getCommitsExcludingPaths(active);
-  if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+  if (dedup) commits = deduplicateByPushId(commits);
   return commits;
 }
 
-export async function handleCumulative(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const breakdown = new URL(req.url).searchParams.get("breakdown") === "category";
+export const handleCumulative = implement(getCommitsCumulative, async ({ query }) => {
   let commits = await getCommits();
-  if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+  if (query.dedup === "true") commits = deduplicateByPushId(commits);
 
-  if (breakdown) {
+  if (query.breakdown === "category") {
     const catMap = await buildCategoryMap();
     const perDay = new Map<string, Record<string, number>>();
     for (const c of commits) {
@@ -48,10 +35,7 @@ export async function handleCumulative(req: Request): Promise<Response> {
       }
       return { date, byCategory: { ...running } };
     });
-    const configOrder = getConfigCategoryOrder();
-    const resp = Response.json({ points, categories: configOrder });
-    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-    return resp;
+    return { points, categories: getConfigCategoryOrder() };
   }
 
   const perDay = new Map<string, number>();
@@ -65,17 +49,13 @@ export async function handleCumulative(req: Request): Promise<Response> {
     running += perDay.get(date)!;
     return { date, count: running };
   });
-  const resp = Response.json({ points });
-  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-  return resp;
-}
+  return { points };
+});
 
-export async function handleLinesCumulative(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
-  const commits = await resolveCommits(req);
+export const handleLinesCumulative = implement(getCommitsLinesCumulative, async ({ query }) => {
+  const commits = await resolveCommits(query.dedup === "true");
 
-  if (breakdown) {
+  if (query.breakdown === "ext") {
     const perDay = new Map<string, Record<string, { added: number; removed: number }>>();
     for (const c of commits) {
       const day = c.iso.slice(0, 10);
@@ -99,9 +79,7 @@ export async function handleLinesCumulative(req: Request): Promise<Response> {
       }
       return { date, byExt: Object.fromEntries(Object.entries(running).map(([k, v]) => [k, { ...v }])) };
     });
-    const resp = Response.json({ points });
-    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-    return resp;
+    return { points };
   }
 
   const perDay = new Map<string, { added: number; removed: number }>();
@@ -121,7 +99,5 @@ export async function handleLinesCumulative(req: Request): Promise<Response> {
     removed += e.removed;
     return { date, added, removed };
   });
-  const resp = Response.json({ points });
-  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-  return resp;
-}
+  return { points };
+});

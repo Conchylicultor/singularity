@@ -17,9 +17,10 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   tooltipNumberFormatter,
-  useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getTasksCumulative } from "../../shared/endpoints";
 
 const TOTAL_COLOR = "var(--chart-total, #2563eb)";
 const ACTIVE_COLOR = "var(--chart-active, #f59e0b)";
@@ -37,9 +38,8 @@ interface Point {
 }
 
 export function TasksCumulativeChart() {
-  const { data, error } = useFetchJson<{ points: Point[] }>(
-    "/api/stats/tasks/cumulative",
-  );
+  const { data: resp, error } = useEndpoint(getTasksCumulative, {});
+  const points: Point[] = resp?.points ?? [];
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     total: false,
     active: false,
@@ -71,13 +71,13 @@ export function TasksCumulativeChart() {
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && data.points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && points.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
-            data={data?.points ?? []}
+            data={points}
             margin={{ top: 8, right: 16, bottom: 8, left: 0 }}
           >
             <CartesianGrid {...gridProps} />

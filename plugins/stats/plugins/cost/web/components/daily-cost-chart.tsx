@@ -17,21 +17,12 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
-  useFetchJson,
 } from "@plugins/stats/plugins/commits/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCostDaily } from "../../shared/endpoints";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { formatUsd, formatUsdCompact } from "./format";
-import { useScope, withScope } from "./use-scope";
-
-interface DailyByModelPoint {
-  date: string;
-  byModel: Record<string, number>;
-}
-
-interface Resp {
-  points: DailyByModelPoint[];
-  models: string[];
-}
+import { useScope } from "./use-scope";
 
 // Family-based palette; specific revisions (opus-4-7, sonnet-4-6, …)
 // inherit the family color so the chart stays readable as versions roll over.
@@ -59,22 +50,19 @@ function colorFor(model: string, idx: number): string {
 export function DailyCostChart() {
   const { scope } = useScope();
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<Resp>(
-    withScope("/api/stats/cost/daily", scope),
-    scope,
-  );
-  const models = data?.models ?? [];
+  const { data: resp, error } = useEndpoint(getCostDaily, {}, { query: { scope } });
+  const models = resp?.models ?? [];
   const rows = useMemo(() => {
-    const raw = (data?.points ?? []).map((p) => ({ date: p.date, ...p.byModel }));
+    const raw = (resp?.points ?? []).map((p) => ({ date: p.date, ...p.byModel }));
     return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
-  }, [data?.points, showEmptyDays]);
+  }, [resp?.points, showEmptyDays]);
 
   return (
     <div className="h-72 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && rows.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && rows.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart

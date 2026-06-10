@@ -1,7 +1,18 @@
 import type { DailyUsage } from "ccusage/data-loader";
-import { canonicalModel, getBundleTiming, loadBundle, parseScope, type PerSession, type Scope } from "./load-usage";
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { canonicalModel, loadBundle, type PerSession, type Scope } from "./load-usage";
 import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
+import {
+  getCostAvgPerConversation,
+  getCostCumulative,
+  getCostDaily,
+  getCostDailyByFamily,
+  getCostDistribution,
+  getCostSessions,
+  getCostTokenMix,
+  getCostTotals,
+} from "../../shared/endpoints";
 
 function modelFamily(canonical: string): string {
   const meta = MODEL_REGISTRY[canonical as ConversationModel];
@@ -29,9 +40,8 @@ interface DailyByModelPoint {
   byModel: Record<string, number>;
 }
 
-export async function handleDaily(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleDaily = implement(getCostDaily, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { daily, projectIsSingularity } = await loadBundle();
   const rows = filterDaily(daily, scope, projectIsSingularity);
   const perDay = new Map<string, Map<string, number>>();
@@ -56,17 +66,16 @@ export async function handleDaily(req: Request): Promise<Response> {
     for (const m of models) byModel[m] = roundCents(bucket.get(m) ?? 0);
     return { date, byModel };
   });
-  return withCostTiming(Response.json({ points, models }), Math.round(performance.now() - t0));
-}
+  return { points, models };
+});
 
 interface CumulativePoint {
   date: string;
   cost: number;
 }
 
-export async function handleCumulative(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleCumulative = implement(getCostCumulative, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { daily, projectIsSingularity } = await loadBundle();
   const rows = filterDaily(daily, scope, projectIsSingularity);
   const perDay = new Map<string, number>();
@@ -79,8 +88,8 @@ export async function handleCumulative(req: Request): Promise<Response> {
     running += perDay.get(date)!;
     return { date, cost: roundCents(running) };
   });
-  return withCostTiming(Response.json({ points }), Math.round(performance.now() - t0));
-}
+  return { points };
+});
 
 interface TokenMixPoint {
   date: string;
@@ -90,9 +99,8 @@ interface TokenMixPoint {
   cacheRead: number;
 }
 
-export async function handleTokenMix(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleTokenMix = implement(getCostTokenMix, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { daily, projectIsSingularity } = await loadBundle();
   const rows = filterDaily(daily, scope, projectIsSingularity);
   const perDay = new Map<string, TokenMixPoint>();
@@ -113,12 +121,11 @@ export async function handleTokenMix(req: Request): Promise<Response> {
   const points = [...perDay.values()].sort((a, b) =>
     a.date < b.date ? -1 : 1,
   );
-  return withCostTiming(Response.json({ points }), Math.round(performance.now() - t0));
-}
+  return { points };
+});
 
-export async function handleTotals(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleTotals = implement(getCostTotals, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { daily, sessions, projectIsSingularity } = await loadBundle();
   const dailyRows = filterDaily(daily, scope, projectIsSingularity);
   const sessRows = filterSessions(sessions, scope);
@@ -141,7 +148,7 @@ export async function handleTotals(req: Request): Promise<Response> {
   }
   const activeDays = days.size;
   const avgDailyCost = activeDays > 0 ? totalCost / activeDays : 0;
-  return withCostTiming(Response.json({
+  return {
     totalCost: roundCents(totalCost),
     totalTokens: input + output + cacheCreation + cacheRead,
     byTokenKind: { input, output, cacheCreation, cacheRead },
@@ -149,8 +156,8 @@ export async function handleTotals(req: Request): Promise<Response> {
     avgDailyCost: roundCents(avgDailyCost),
     activeDays,
     sessionCount: sessRows.length,
-  }), Math.round(performance.now() - t0));
-}
+  };
+});
 
 interface SessionRow {
   sessionId: string;
@@ -166,12 +173,11 @@ interface SessionRow {
   modelsUsed: string[];
 }
 
-export async function handleSessions(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleSessions = implement(getCostSessions, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { sessions, convBySession } = await loadBundle();
   const filtered = filterSessions(sessions, scope);
-  const limit = Number(new URL(req.url).searchParams.get("limit")) || 50;
+  const limit = query.limit ? Number(query.limit) : 50;
   const sorted = [...filtered].sort((a, b) => b.cost - a.cost);
   const rows: SessionRow[] = sorted.slice(0, limit).map((s) => {
     const meta = convBySession.get(s.sessionId);
@@ -189,13 +195,12 @@ export async function handleSessions(req: Request): Promise<Response> {
       modelsUsed: s.modelsUsed.map(canonicalModel),
     };
   });
-  return withCostTiming(Response.json({ rows }), Math.round(performance.now() - t0));
-}
+  return { rows };
+});
 
 // Session count per day per model family (not cost).
-export async function handleDailyByFamily(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleDailyByFamily = implement(getCostDailyByFamily, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { sessions } = await loadBundle();
   const filtered = filterSessions(sessions, scope);
   const perDay = new Map<string, Map<string, number>>();
@@ -222,16 +227,15 @@ export async function handleDailyByFamily(req: Request): Promise<Response> {
     for (const f of families) byFamily[f] = bucket.get(f) ?? 0;
     return { date, byFamily };
   });
-  return withCostTiming(Response.json({ points, families }), Math.round(performance.now() - t0));
-}
+  return { points, families };
+});
 
 // Dynamic buckets scaled to the actual cost range.
-export async function handleDistribution(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleDistribution = implement(getCostDistribution, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { sessions } = await loadBundle();
   const filtered = filterSessions(sessions, scope);
-  if (filtered.length === 0) return withCostTiming(Response.json({ buckets: [] }), Math.round(performance.now() - t0));
+  if (filtered.length === 0) return { buckets: [] };
   const maxCost = filtered.reduce((m, s) => Math.max(m, s.cost), 0);
   const step = bucketStep(maxCost);
   const ceiling = Math.ceil(maxCost / step) * step;
@@ -255,8 +259,8 @@ export async function handleDistribution(req: Request): Promise<Response> {
       }
     }
   }
-  return withCostTiming(Response.json({ buckets: buckets.map(({ label, count }) => ({ label, count })) }), Math.round(performance.now() - t0));
-}
+  return { buckets: buckets.map(({ label, count }) => ({ label, count })) };
+});
 
 function bucketStep(maxCost: number): number {
   if (maxCost <= 1) return 0.1;
@@ -288,11 +292,8 @@ interface DayData {
   byFamily: Map<string, FamilyData>;
 }
 
-export async function handleAvgPerConversation(
-  req: Request,
-): Promise<Response> {
-  const t0 = performance.now();
-  const scope = parseScope(req);
+export const handleAvgPerConversation = implement(getCostAvgPerConversation, async ({ query }) => {
+  const scope: Scope = query.scope ?? "singularity";
   const { sessions } = await loadBundle();
   const filtered = filterSessions(sessions, scope);
 
@@ -383,8 +384,8 @@ export async function handleAvgPerConversation(
     };
   });
 
-  return withCostTiming(Response.json({ points, families }), Math.round(performance.now() - t0));
-}
+  return { points, families };
+});
 
 function roundCents(n: number): number {
   return Math.round(n * 100) / 100;
@@ -398,29 +399,4 @@ function daysAgo(n: number): Date {
 
 function isoDay(d: Date): string {
   return d.toISOString().slice(0, 10);
-}
-
-function costTimingHeader(handlerMs: number): string {
-  const bt = getBundleTiming();
-  const parts = [`total;dur=${handlerMs}`];
-  if (bt) {
-    if (bt.cached) {
-      parts.push("bundle;dur=0;desc=\"cached\"");
-    } else {
-      parts.push(`bundle;dur=${bt.totalMs}`);
-      parts.push(`loadDaily;dur=${bt.loadDailyMs}`);
-      parts.push(`classify;dur=${bt.classifyMs}`);
-      parts.push(`convBySession;dur=${bt.convBySessionMs}`);
-      parts.push(`walkSessions;dur=${bt.walkSessionsMs}`);
-    }
-  }
-  return parts.join(", ");
-}
-
-function withCostTiming(
-  resp: Response,
-  handlerMs: number,
-): Response {
-  resp.headers.set("Server-Timing", costTimingHeader(handlerMs));
-  return resp;
 }

@@ -8,10 +8,11 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
-  useFetchJson,
 } from "@plugins/stats/plugins/commits/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCostDailyByFamily } from "../../shared/endpoints";
 import { useShowEmptyDays } from "@plugins/stats/web";
-import { useScope, withScope } from "./use-scope";
+import { useScope } from "./use-scope";
 
 const FAMILY_COLORS: Record<string, string> = {
   opus: "#7c3aed",
@@ -25,26 +26,18 @@ function colorForFamily(family: string, idx: number): string {
   return FAMILY_COLORS[family] ?? FALLBACK_COLORS[idx % FALLBACK_COLORS.length] ?? "#64748b";
 }
 
-interface Resp {
-  points: Array<{ date: string; byFamily: Record<string, number> }>;
-  families: string[];
-}
-
 export function ModelUsageChart() {
   const { scope } = useScope();
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<Resp>(
-    withScope("/api/stats/cost/daily-by-family", scope),
-    scope,
-  );
-  const families = data?.families ?? [];
+  const { data: resp, error } = useEndpoint(getCostDailyByFamily, {}, { query: { scope } });
+  const families = resp?.families ?? [];
   const rows = useMemo(() => {
-    const raw = (data?.points ?? []).map((p) => ({ date: p.date, ...p.byFamily }));
+    const raw = (resp?.points ?? []).map((p) => ({ date: p.date, ...p.byFamily }));
     return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
-  }, [data?.points, showEmptyDays]);
+  }, [resp?.points, showEmptyDays]);
   return (
     <div className="h-72 w-full">
-      <ChartState error={error} loading={data === null} empty={!!data && rows.length === 0}>
+      <ChartState error={error ? getEndpointErrorMessage(error) : null} loading={resp === undefined} empty={!!resp && rows.length === 0}>
         <ResponsiveContainer width="100%" height="100%">
           <BarChart data={rows} margin={{ top: 8, right: 16, bottom: 8, left: 0 }}>
             <CartesianGrid {...gridProps} />

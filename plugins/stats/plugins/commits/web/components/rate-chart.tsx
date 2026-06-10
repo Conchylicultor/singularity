@@ -10,6 +10,8 @@ import {
 } from "recharts";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCommitsRate } from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -19,7 +21,6 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   tooltipNumberFormatter,
-  useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
 
@@ -37,34 +38,24 @@ interface Point {
   count: number;
 }
 
-export function RateChart({
-  baseUrl,
-  valueLabel,
-  dedup,
-}: {
-  baseUrl: string;
-  valueLabel: string;
-  dedup?: boolean;
-}) {
+export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
+  const valueLabel = "Commits";
   const [bucket, setBucket] = useState<Bucket>("day");
   const { showEmptyDays } = useShowEmptyDays();
-  const dedupParam = dedup ? "&dedup=1" : "";
-  const { data, error } = useFetchJson<{ points: Point[] }>(
-    `${baseUrl}?bucket=${bucket}${dedupParam}`,
-    dedup ? "dedup" : undefined,
-  );
+  const { data: resp, error } = useEndpoint(getCommitsRate, {}, { query: { bucket, dedup: dedup ? "true" : "false" } });
+  // Plain (non-breakdown) call site — the response is always the plain branch.
+  const rawPoints = useMemo(() => (resp?.points ?? []) as Point[], [resp]);
   const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    return showEmptyDays ? fillGaps(raw, "bucket", bucket) : raw;
-  }, [data?.points, showEmptyDays, bucket]);
+    return showEmptyDays ? fillGaps(rawPoints, "bucket", bucket) : rawPoints;
+  }, [rawPoints, showEmptyDays, bucket]);
 
   return (
     <div className="flex flex-col gap-3">
       <div className="h-64 w-full">
         <ChartState
-          error={error}
-          loading={data === null}
-          empty={!!data && data.points.length === 0}
+          error={error ? getEndpointErrorMessage(error) : null}
+          loading={resp === undefined}
+          empty={!!resp && rawPoints.length === 0}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart
@@ -102,8 +93,4 @@ export function RateChart({
       <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
     </div>
   );
-}
-
-export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
-  return <RateChart baseUrl="/api/stats/commits/rate" valueLabel="Commits" dedup={dedup} />;
 }

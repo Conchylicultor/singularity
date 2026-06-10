@@ -6,7 +6,6 @@ import { LinesChartsSection } from "./components/lines-charts";
 import { commitsConfig } from "../shared/config";
 
 export {
-  useFetchJson,
   ChartState,
   axisProps,
   yAxisFormatter,

@@ -17,9 +17,9 @@ All endpoints accept `?bucket=day|week|month` (default `day`).
 - Description: Push contention stats: wait time, throughput, and step breakdown charts. Push contention stats: wait time, throughput, and step breakdown.
 - Web:
   - Contributes: `Stats.Chart` "Pushes" → `PushesSection`
-  - Uses: `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.useFetchJson`, `stats/commits.yAxisFormatter`
+  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
 - Server:
-  - Uses: `infra/paths.SINGULARITY_DIR`
+  - Uses: `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
 - Shared:
   - Exports: Values: `getPushesStepBreakdown`, `getPushesThroughput`, `getPushesWaitTime`
 

@@ -1,8 +1,10 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getPushesWaitTime } from "../../shared/endpoints";
 import { readContentionRecords } from "./read-contention";
-import { keyFor, parseBucket } from "./buckets";
+import { keyFor } from "./buckets";
 
-export async function handleWaitTime(req: Request): Promise<Response> {
-  const bucket = parseBucket(req);
+export const handleWaitTime = implement(getPushesWaitTime, async ({ query }) => {
+  const bucket = query.bucket ?? "day";
   const records = readContentionRecords();
 
   const buckets = new Map<
@@ -42,5 +44,5 @@ export async function handleWaitTime(req: Request): Promise<Response> {
       };
     });
 
-  return Response.json({ points });
-}
+  return { points };
+});

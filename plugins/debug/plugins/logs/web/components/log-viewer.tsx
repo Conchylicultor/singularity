@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
-import { fetchWithRetry, ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
+import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getLogChannels } from "@plugins/debug/plugins/logs/core";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
@@ -44,9 +46,8 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
       });
     }
 
-    fetchWithRetry("/api/logs/channels")
-      .then((r) => r.json())
-      .then((data: { channels: string[] }) => {
+    fetchEndpoint(getLogChannels, {})
+      .then((data) => {
         const backendChannels: ChannelRef[] = data.channels.map((id) => ({
           source: "backend",
           id,

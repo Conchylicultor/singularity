@@ -1,31 +1,19 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { commitsConfig } from "../../shared/config";
-import { deduplicateByPushId, getCommits, getCommitsExcludingPaths, getGitLogTiming } from "./commit-timestamps";
+import { getCommitsRate, getCommitsLinesRate } from "../../shared/endpoints";
+import { deduplicateByPushId, getCommits, getCommitsExcludingPaths } from "./commit-timestamps";
 import { buildCategoryMap, categoryFor, getConfigCategoryOrder } from "./category-map";
 
-function commitsTimingHeader(handlerMs: number): string {
-  const git = getGitLogTiming();
-  const parts = [`total;dur=${handlerMs}`];
-  if (git) {
-    parts.push(git.cached ? "gitLog;dur=0;desc=\"cached\"" : `gitLog;dur=${git.ms}`);
-  }
-  return parts.join(", ");
-}
-
-function shouldDedup(req: Request): boolean {
-  return new URL(req.url).searchParams.get("dedup") === "1";
-}
-
-async function resolveCommits(req: Request): Promise<Awaited<ReturnType<typeof getCommits>>> {
+async function resolveCommits(dedup: boolean): Promise<Awaited<ReturnType<typeof getCommits>>> {
   const { excludedPaths } = getConfig(commitsConfig);
   const active = excludedPaths.filter(p => p.enabled).map(p => p.path);
   let commits = active.length === 0 ? await getCommits() : await getCommitsExcludingPaths(active);
-  if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+  if (dedup) commits = deduplicateByPushId(commits);
   return commits;
 }
 
 type Bucket = "hour" | "day" | "week" | "month" | "year";
-const BUCKETS: Bucket[] = ["hour", "day", "week", "month", "year"];
 
 function keyFor(iso: string, bucket: Bucket): string {
   const d = new Date(iso);
@@ -54,19 +42,12 @@ function keyFor(iso: string, bucket: Bucket): string {
   }
 }
 
-function parseBucket(req: Request): Bucket {
-  const raw = new URL(req.url).searchParams.get("bucket") ?? "day";
-  return (BUCKETS.includes(raw as Bucket) ? raw : "day") as Bucket;
-}
-
-export async function handleRate(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const bucket = parseBucket(req);
-  const breakdown = new URL(req.url).searchParams.get("breakdown") === "category";
+export const handleRate = implement(getCommitsRate, async ({ query }) => {
+  const bucket = query.bucket ?? "day";
   let commits = await getCommits();
-  if (shouldDedup(req)) commits = deduplicateByPushId(commits);
+  if (query.dedup === "true") commits = deduplicateByPushId(commits);
 
-  if (breakdown) {
+  if (query.breakdown === "category") {
     const catMap = await buildCategoryMap();
     const counts = new Map<string, Record<string, number>>();
     for (const c of commits) {
@@ -79,10 +60,7 @@ export async function handleRate(req: Request): Promise<Response> {
     const points = [...counts.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
       .map(([k, v]) => ({ bucket: k, byCategory: v }));
-    const configOrder = getConfigCategoryOrder();
-    const resp = Response.json({ bucket, points, categories: configOrder });
-    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-    return resp;
+    return { bucket, points, categories: getConfigCategoryOrder() };
   }
 
   const counts = new Map<string, number>();
@@ -93,18 +71,14 @@ export async function handleRate(req: Request): Promise<Response> {
   const points = [...counts.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : 1))
     .map(([k, v]) => ({ bucket: k, count: v }));
-  const resp = Response.json({ bucket, points });
-  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-  return resp;
-}
+  return { bucket, points };
+});
 
-export async function handleLinesRate(req: Request): Promise<Response> {
-  const t0 = performance.now();
-  const bucket = parseBucket(req);
-  const breakdown = new URL(req.url).searchParams.get("breakdown") === "ext";
-  const commits = await resolveCommits(req);
+export const handleLinesRate = implement(getCommitsLinesRate, async ({ query }) => {
+  const bucket = query.bucket ?? "day";
+  const commits = await resolveCommits(query.dedup === "true");
 
-  if (breakdown) {
+  if (query.breakdown === "ext") {
     const counts = new Map<string, Record<string, { added: number; removed: number }>>();
     for (const c of commits) {
       const k = keyFor(c.iso, bucket);
@@ -120,9 +94,7 @@ export async function handleLinesRate(req: Request): Promise<Response> {
     const points = [...counts.entries()]
       .sort((a, b) => (a[0] < b[0] ? -1 : 1))
       .map(([k, v]) => ({ bucket: k, byExt: v }));
-    const resp = Response.json({ bucket, points });
-    resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-    return resp;
+    return { bucket, points };
   }
 
   const counts = new Map<string, { added: number; removed: number }>();
@@ -136,7 +108,5 @@ export async function handleLinesRate(req: Request): Promise<Response> {
   const points = [...counts.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : 1))
     .map(([k, v]) => ({ bucket: k, added: v.added, removed: v.removed }));
-  const resp = Response.json({ bucket, points });
-  resp.headers.set("Server-Timing", commitsTimingHeader(Math.round(performance.now() - t0)));
-  return resp;
-}
+  return { bucket, points };
+});

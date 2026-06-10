@@ -1,31 +1,5 @@
-import { useEffect, useState } from "react";
-import { fetchWithRetry } from "@plugins/primitives/plugins/networking/web";
+import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
-
-export function useFetchJson<T>(url: string, cacheKey?: string): {
-  data: T | null;
-  error: string | null;
-} {
-  const [data, setData] = useState<T | null>(null);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    let cancelled = false;
-    setData(null);
-    setError(null);
-    fetchWithRetry(url)
-      .then((r) => r.json())
-      .then((d: T) => {
-        if (!cancelled) setData(d);
-      })
-      .catch((e) => {
-        if (!cancelled) setError(String(e));
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [url, cacheKey]);
-  return { data, error };
-}
 
 export function ChartState({
   error,
@@ -36,7 +10,7 @@ export function ChartState({
   error: string | null;
   empty: boolean;
   loading: boolean;
-  children: React.ReactNode;
+  children: ReactNode;
 }) {
   if (error) return <Text as="div" variant="body" className="text-destructive">Failed to load: {error}</Text>;
   if (loading) return <Text as="div" variant="body" className="text-muted-foreground">Loading…</Text>;

@@ -1,12 +1,6 @@
 /** Shared bucket helpers — mirrors the pattern from stats-commits. */
 
 export type Bucket = "day" | "week" | "month";
-const BUCKETS: Bucket[] = ["day", "week", "month"];
-
-export function parseBucket(req: Request): Bucket {
-  const raw = new URL(req.url).searchParams.get("bucket") ?? "day";
-  return (BUCKETS.includes(raw as Bucket) ? raw : "day") as Bucket;
-}
 
 export function keyFor(iso: string, bucket: Bucket): string {
   const d = new Date(iso);

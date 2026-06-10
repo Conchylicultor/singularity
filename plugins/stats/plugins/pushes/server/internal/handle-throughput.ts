@@ -1,8 +1,10 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getPushesThroughput } from "../../shared/endpoints";
 import { readContentionRecords } from "./read-contention";
-import { keyFor, parseBucket } from "./buckets";
+import { keyFor } from "./buckets";
 
-export async function handleThroughput(req: Request): Promise<Response> {
-  const bucket = parseBucket(req);
+export const handleThroughput = implement(getPushesThroughput, async ({ query }) => {
+  const bucket = query.bucket ?? "day";
   const records = readContentionRecords();
 
   const buckets = new Map<string, { success: number; failed: number }>();
@@ -29,5 +31,5 @@ export async function handleThroughput(req: Request): Promise<Response> {
       failed: entry.failed,
     }));
 
-  return Response.json({ points });
-}
+  return { points };
+});

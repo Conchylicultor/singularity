@@ -1,7 +1,9 @@
-import { ChartState, useFetchJson } from "@plugins/stats/plugins/commits/web";
+import { ChartState } from "@plugins/stats/plugins/commits/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCostTotals } from "../../shared/endpoints";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { ScopeToggle } from "./scope-toggle";
-import { useScope, withScope } from "./use-scope";
+import { useScope } from "./use-scope";
 import { formatTokensCompact, formatUsd } from "./format";
 
 interface Totals {
@@ -21,10 +23,7 @@ interface Totals {
 
 export function CostKpis() {
   const { scope } = useScope();
-  const { data, error } = useFetchJson<Totals>(
-    withScope("/api/stats/cost/totals", scope),
-    scope,
-  );
+  const { data: resp, error } = useEndpoint(getCostTotals, {}, { query: { scope } });
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
@@ -35,11 +34,11 @@ export function CostKpis() {
         <ScopeToggle />
       </div>
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && data.sessionCount === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && resp.sessionCount === 0}
       >
-        {data && <KpiGrid totals={data} />}
+        {resp && <KpiGrid totals={resp} />}
       </ChartState>
     </div>
   );

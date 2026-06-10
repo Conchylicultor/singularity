@@ -11,6 +11,8 @@ import {
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getPushesWaitTime } from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -19,29 +21,18 @@ import {
   gridProps,
   tooltipContentStyle,
   tooltipLabelStyle,
-  useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 
-interface Point {
-  bucket: string;
-  avg: number;
-  max: number;
-  contested: number;
-  total: number;
-}
+type Bucket = "day" | "week" | "month";
 
-export function WaitTimeChart({ bucket }: { bucket: string }) {
+export function WaitTimeChart({ bucket }: { bucket: Bucket }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: Point[] }>(
-    `/api/stats/pushes/wait-time?bucket=${bucket}`,
-  );
+  const { data: resp, error } = useEndpoint(getPushesWaitTime, {}, { query: { bucket } });
+  const rawPoints = useMemo(() => resp?.points ?? [], [resp]);
   const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    return showEmptyDays
-      ? fillGaps(raw, "bucket", bucket as "day" | "week" | "month")
-      : raw;
-  }, [data?.points, showEmptyDays, bucket]);
+    return showEmptyDays ? fillGaps(rawPoints, "bucket", bucket) : rawPoints;
+  }, [rawPoints, showEmptyDays, bucket]);
 
   return (
     <div>
@@ -50,9 +41,9 @@ export function WaitTimeChart({ bucket }: { bucket: string }) {
       </Text>
       <div className="h-64 w-full">
         <ChartState
-          error={error}
-          loading={data === null}
-          empty={!!data && data.points.length === 0}
+          error={error ? getEndpointErrorMessage(error) : null}
+          loading={resp === undefined}
+          empty={!!resp && rawPoints.length === 0}
         >
           <ResponsiveContainer width="100%" height="100%">
             <BarChart

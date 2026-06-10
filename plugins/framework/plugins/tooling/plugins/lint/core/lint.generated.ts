@@ -18,6 +18,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", id: "framework.tooling.lint.promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", id: "framework.tooling.lint.reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/web-core", id: "framework.web-core", loader: () => import("@plugins/framework/plugins/web-core/lint"), dependsOn: [] },
+  { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/badge", id: "primitives.badge", loader: () => import("@plugins/primitives/plugins/badge/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/control-size", id: "primitives.control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },

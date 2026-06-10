@@ -9,6 +9,8 @@ import {
   YAxis,
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCommitsCumulative } from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -18,7 +20,6 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   tooltipNumberFormatter,
-  useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
 
@@ -27,28 +28,22 @@ interface Point {
   count: number;
 }
 
-export function CumulativeChart({
-  url,
-  valueLabel,
-  dedup,
-}: {
-  url: string;
-  valueLabel: string;
-  dedup?: boolean;
-}) {
-  const fullUrl = dedup ? `${url}?dedup=1` : url;
+export function CumulativeCommitsChart({ dedup }: { dedup?: boolean }) {
+  const valueLabel = "Commits";
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: Point[] }>(fullUrl, dedup ? "dedup" : undefined);
-  const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    return showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
-  }, [data?.points, showEmptyDays]);
+  const { data: resp, error } = useEndpoint(getCommitsCumulative, {}, { query: { dedup: dedup ? "true" : "false" } });
+  // Plain (non-breakdown) call site — the response is always the plain branch.
+  const rawPoints = useMemo(() => (resp?.points ?? []) as Point[], [resp]);
+  const points = useMemo(
+    () => (showEmptyDays ? fillGaps(rawPoints, "date", "day", "carry") : rawPoints),
+    [rawPoints, showEmptyDays],
+  );
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && data.points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && rawPoints.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <LineChart
@@ -87,8 +82,4 @@ export function CumulativeChart({
       </ChartState>
     </div>
   );
-}
-
-export function CumulativeCommitsChart({ dedup }: { dedup?: boolean }) {
-  return <CumulativeChart url="/api/stats/commits/cumulative" valueLabel="Commits" dedup={dedup} />;
 }

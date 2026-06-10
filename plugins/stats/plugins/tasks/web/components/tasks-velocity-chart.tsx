@@ -20,10 +20,11 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   tooltipNumberFormatter,
-  useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getTasksDaily } from "../../shared/endpoints";
 
 const ADDED_COLOR = "var(--chart-active, #f59e0b)";
 const COMPLETED_COLOR = "var(--chart-completed, #16a34a)";
@@ -42,13 +43,12 @@ interface DailyPoint {
 
 export function TasksVelocityChart() {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: DailyPoint[] }>(
-    "/api/stats/tasks/daily",
+  const { data: resp, error } = useEndpoint(getTasksDaily, {});
+  const rawPoints = useMemo(() => (resp?.points ?? []) as DailyPoint[], [resp]);
+  const points = useMemo(
+    () => (showEmptyDays ? fillGaps(rawPoints, "date", "day") : rawPoints),
+    [rawPoints, showEmptyDays],
   );
-  const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    return showEmptyDays ? fillGaps(raw, "date", "day") : raw;
-  }, [data?.points, showEmptyDays]);
   const [hidden, setHidden] = useState<Record<SeriesKey, boolean>>({
     added: false,
     completed: false,
@@ -80,9 +80,9 @@ export function TasksVelocityChart() {
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && data.points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && rawPoints.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart

@@ -1,7 +1,8 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks-core/server";
+import { getTasksDaily } from "../../shared/endpoints";
 
-export async function handleDaily(_req: Request): Promise<Response> {
-  const t0 = performance.now();
+export const handleDaily = implement(getTasksDaily, async () => {
   const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -41,7 +42,5 @@ export async function handleDaily(_req: Request): Promise<Response> {
     // net > 0 = more resolved than added that day = active count shrank
     .map((p) => ({ ...p, net: p.completed + p.dropped - p.added }));
 
-  const resp = Response.json({ points });
-  resp.headers.set("Server-Timing", `total;dur=${Math.round(performance.now() - t0)}`);
-  return resp;
-}
+  return { points };
+});

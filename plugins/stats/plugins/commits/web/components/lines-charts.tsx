@@ -1,4 +1,5 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useConfig } from "@plugins/config_v2/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { commitsConfig } from "../../shared/config";
@@ -21,6 +22,8 @@ import {
   ToggleChip,
 } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCommitsLinesCumulative, getCommitsLinesRate } from "../../shared/endpoints";
 import {
   ChartState,
   axisProps,
@@ -31,7 +34,6 @@ import {
   tooltipContentStyle,
   tooltipLabelStyle,
   tooltipNumberFormatter,
-  useFetchJson,
   yAxisFormatter,
 } from "./chart-primitives";
 import { ExcludedPathToggles } from "./excluded-path-toggles";
@@ -94,30 +96,27 @@ interface CumulativePoint {
   removed: number;
 }
 
-export function CumulativeLinesChart({ filterKey, dedup }: { filterKey?: string; dedup?: boolean }) {
-  const dedupParam = dedup ? "?dedup=1" : "";
+export function CumulativeLinesChart({ dedup }: { dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: CumulativePoint[] }>(
-    `/api/stats/commits/lines/cumulative${dedupParam}`,
-    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
-  );
+  const { data: resp, error } = useEndpoint(getCommitsLinesCumulative, {}, { query: { dedup: dedup ? "true" : "false" } });
+  // Plain (non-breakdown) call site — the response is always the plain branch.
+  const rawPoints = useMemo(() => (resp?.points ?? []) as CumulativePoint[], [resp]);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    const filled = showEmptyDays ? fillGaps(raw, "date", "day", "carry") : raw;
+    const filled = showEmptyDays ? fillGaps(rawPoints, "date", "day", "carry") : rawPoints;
     return filled.map((p) => ({
       date: p.date,
       added: p.added,
       removed: -p.removed,
       net: p.added - p.removed,
     }));
-  }, [data?.points, showEmptyDays]);
+  }, [rawPoints, showEmptyDays]);
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && data.points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && rawPoints.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
@@ -205,26 +204,23 @@ interface RatePoint {
   removed: number;
 }
 
-export function LinesRateChart({ bucket, filterKey, dedup }: { bucket: Bucket; filterKey?: string; dedup?: boolean }) {
-  const dedupParam = dedup ? "&dedup=1" : "";
+export function LinesRateChart({ bucket, dedup }: { bucket: Bucket; dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: RatePoint[] }>(
-    `/api/stats/commits/lines/rate?bucket=${bucket}${dedupParam}`,
-    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
-  );
+  const { data: resp, error } = useEndpoint(getCommitsLinesRate, {}, { query: { bucket, dedup: dedup ? "true" : "false" } });
+  // Plain (non-breakdown) call site — the response is always the plain branch.
+  const rawPoints = useMemo(() => (resp?.points ?? []) as RatePoint[], [resp]);
   const { hidden, onLegendClick, legendFormatter } = useToggleable();
   const points = useMemo(() => {
-    const raw = data?.points ?? [];
-    const filled = showEmptyDays ? fillGaps(raw, "bucket", bucket) : raw;
+    const filled = showEmptyDays ? fillGaps(rawPoints, "bucket", bucket) : rawPoints;
     return filled.map((p) => ({ ...p, removed: -p.removed }));
-  }, [data?.points, showEmptyDays, bucket]);
+  }, [rawPoints, showEmptyDays, bucket]);
 
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && data.points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && rawPoints.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -328,16 +324,13 @@ function extColor(ext: string): string {
   return EXT_PALETTE[hash % EXT_PALETTE.length] ?? OTHER_COLOR;
 }
 
-export function CumulativeLinesBreakdownChart({ filterKey, dedup }: { filterKey?: string; dedup?: boolean }) {
-  const dedupParam = dedup ? "&dedup=1" : "";
+export function CumulativeLinesBreakdownChart({ dedup }: { dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
-    `/api/stats/commits/lines/cumulative?breakdown=ext${dedupParam}`,
-    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
-  );
-  const points = data?.points ?? [];
-  const exts = topExtensions(points);
-  const rawFlat = flattenByExt(points, exts, "date");
+  const { data: resp, error } = useEndpoint(getCommitsLinesCumulative, {}, { query: { breakdown: "ext", dedup: dedup ? "true" : "false" } });
+  // breakdown=ext call site — the response is always the byExt branch.
+  const points = useMemo(() => (resp?.points ?? []) as ByExtPoint[], [resp]);
+  const exts = useMemo(() => topExtensions(points), [points]);
+  const rawFlat = useMemo(() => flattenByExt(points, exts, "date"), [points, exts]);
   const flatPoints = useMemo(
     () => (showEmptyDays ? fillGaps(rawFlat, "date", "day", "carry") : rawFlat),
     [rawFlat, showEmptyDays],
@@ -349,9 +342,9 @@ export function CumulativeLinesBreakdownChart({ filterKey, dedup }: { filterKey?
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && points.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <ComposedChart
@@ -401,16 +394,13 @@ export function CumulativeLinesBreakdownChart({ filterKey, dedup }: { filterKey?
   );
 }
 
-export function LinesRateBreakdownChart({ bucket, filterKey, dedup }: { bucket: Bucket; filterKey?: string; dedup?: boolean }) {
-  const dedupParam = dedup ? "&dedup=1" : "";
+export function LinesRateBreakdownChart({ bucket, dedup }: { bucket: Bucket; dedup?: boolean }) {
   const { showEmptyDays } = useShowEmptyDays();
-  const { data, error } = useFetchJson<{ points: ByExtPoint[] }>(
-    `/api/stats/commits/lines/rate?bucket=${bucket}&breakdown=ext${dedupParam}`,
-    `${filterKey ?? ""}:${dedup ? "1" : "0"}`,
-  );
-  const points = data?.points ?? [];
-  const exts = topExtensions(points);
-  const rawFlat = flattenByExt(points, exts, "bucket");
+  const { data: resp, error } = useEndpoint(getCommitsLinesRate, {}, { query: { bucket, breakdown: "ext", dedup: dedup ? "true" : "false" } });
+  // breakdown=ext call site — the response is always the byExt branch.
+  const points = useMemo(() => (resp?.points ?? []) as ByExtPoint[], [resp]);
+  const exts = useMemo(() => topExtensions(points), [points]);
+  const rawFlat = useMemo(() => flattenByExt(points, exts, "bucket"), [points, exts]);
   const flatPoints = useMemo(
     () => (showEmptyDays ? fillGaps(rawFlat, "bucket", bucket) : rawFlat),
     [rawFlat, showEmptyDays, bucket],
@@ -421,9 +411,9 @@ export function LinesRateBreakdownChart({ bucket, filterKey, dedup }: { bucket: 
   return (
     <div className="h-64 w-full">
       <ChartState
-        error={error}
-        loading={data === null}
-        empty={!!data && points.length === 0}
+        error={error ? getEndpointErrorMessage(error) : null}
+        loading={resp === undefined}
+        empty={!!resp && points.length === 0}
       >
         <ResponsiveContainer width="100%" height="100%">
           <BarChart
@@ -473,6 +463,15 @@ export function LinesChartsSection() {
   const { excludedPaths, filterRebases } = useConfig(commitsConfig);
   const filterKey = JSON.stringify(excludedPaths);
 
+  // The lines endpoints derive their excluded-path filter from server config
+  // (not a query param), so toggling excluded paths does not change the
+  // useEndpoint query key. Refetch explicitly when the filter changes.
+  const queryClient = useQueryClient();
+  useEffect(() => {
+    void queryClient.invalidateQueries({ queryKey: ["endpoint", getCommitsLinesCumulative.route] });
+    void queryClient.invalidateQueries({ queryKey: ["endpoint", getCommitsLinesRate.route] });
+  }, [queryClient, filterKey]);
+
   return (
     <div className="flex flex-col gap-6">
       <div className="flex items-center justify-between gap-4">
@@ -487,11 +486,11 @@ export function LinesChartsSection() {
       </div>
       <div>
         <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Over time</Text>
-        {byType ? <CumulativeLinesBreakdownChart filterKey={filterKey} dedup={filterRebases} /> : <CumulativeLinesChart filterKey={filterKey} dedup={filterRebases} />}
+        {byType ? <CumulativeLinesBreakdownChart dedup={filterRebases} /> : <CumulativeLinesChart dedup={filterRebases} />}
       </div>
       <div>
         <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Per period</Text>
-        {byType ? <LinesRateBreakdownChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} />}
+        {byType ? <LinesRateBreakdownChart bucket={bucket} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} dedup={filterRebases} />}
         <SegmentedControl
           options={BUCKETS}
           value={bucket}

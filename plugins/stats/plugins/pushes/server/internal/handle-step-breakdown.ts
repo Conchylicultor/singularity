@@ -1,5 +1,7 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { getPushesStepBreakdown } from "../../shared/endpoints";
 import { readContentionRecords } from "./read-contention";
-import { keyFor, parseBucket } from "./buckets";
+import { keyFor } from "./buckets";
 
 const STEP_GROUPS: Record<string, string> = {
   fetch: "fetch",
@@ -13,10 +15,8 @@ const STEP_GROUPS: Record<string, string> = {
   normalize: "other",
 };
 
-const GROUP_KEYS = ["fetch", "rebase", "checks", "push", "other"] as const;
-
-export async function handleStepBreakdown(req: Request): Promise<Response> {
-  const bucket = parseBucket(req);
+export const handleStepBreakdown = implement(getPushesStepBreakdown, async ({ query }) => {
+  const bucket = query.bucket ?? "day";
   const records = readContentionRecords();
 
   const buckets = new Map<
@@ -38,16 +38,19 @@ export async function handleStepBreakdown(req: Request): Promise<Response> {
     }
   }
 
+  const avgSeconds = (entry: { sums: Record<string, number>; count: number }, group: string) =>
+    Math.round(((entry.sums[group] ?? 0) / entry.count / 1000) * 100) / 100;
+
   const points = [...buckets.entries()]
     .sort((a, b) => (a[0] < b[0] ? -1 : 1))
-    .map(([date, entry]) => {
-      const point: Record<string, string | number> = { bucket: date };
-      for (const group of GROUP_KEYS) {
-        point[group] =
-          Math.round(((entry.sums[group] ?? 0) / entry.count / 1000) * 100) / 100;
-      }
-      return point;
-    });
+    .map(([date, entry]) => ({
+      bucket: date,
+      fetch: avgSeconds(entry, "fetch"),
+      rebase: avgSeconds(entry, "rebase"),
+      checks: avgSeconds(entry, "checks"),
+      push: avgSeconds(entry, "push"),
+      other: avgSeconds(entry, "other"),
+    }));
 
-  return Response.json({ points });
-}
+  return { points };
+});

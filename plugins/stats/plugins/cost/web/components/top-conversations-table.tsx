@@ -1,9 +1,11 @@
-import { ChartState, useFetchJson } from "@plugins/stats/plugins/commits/web";
+import { ChartState } from "@plugins/stats/plugins/commits/web";
+import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { getCostSessions } from "../../shared/endpoints";
 import { cn } from "@/lib/utils";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { formatTokensCompact, formatUsd } from "./format";
-import { useScope, withScope } from "./use-scope";
+import { useScope } from "./use-scope";
 
 interface Row {
   sessionId: string;
@@ -21,15 +23,12 @@ interface Row {
 
 export function TopConversationsTable() {
   const { scope } = useScope();
-  const { data, error } = useFetchJson<{ rows: Row[] }>(
-    withScope("/api/stats/cost/sessions?limit=50", scope),
-    scope,
-  );
+  const { data: resp, error } = useEndpoint(getCostSessions, {}, { query: { scope, limit: "50" } });
   return (
     <ChartState
-      error={error}
-      loading={data === null}
-      empty={!!data && data.rows.length === 0}
+      error={error ? getEndpointErrorMessage(error) : null}
+      loading={resp === undefined}
+      empty={!!resp && resp.rows.length === 0}
     >
       <div className="overflow-x-auto">
         <table className="w-full text-body">
@@ -43,7 +42,7 @@ export function TopConversationsTable() {
             </tr>
           </thead>
           <tbody>
-            {data?.rows.map((r) => (
+            {resp?.rows.map((r) => (
               <TopRow key={r.sessionId} row={r} />
             ))}
           </tbody>

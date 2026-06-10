@@ -1,7 +1,8 @@
+import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks-core/server";
+import { getTasksCumulative } from "../../shared/endpoints";
 
-export async function handleCumulative(_req: Request): Promise<Response> {
-  const t0 = performance.now();
+export const handleCumulative = implement(getTasksCumulative, async () => {
   const allTasks = await listTasks({ excludeId: CONVERSATIONS_META_TASK_ID });
 
   const toDate = (v: Date | string) => (v instanceof Date ? v : new Date(v));
@@ -50,7 +51,5 @@ export async function handleCumulative(_req: Request): Promise<Response> {
     byKey.set(key, { date: key, total, active, completed, dropped });
   }
   const points = [...byKey.values()];
-  const resp = Response.json({ points });
-  resp.headers.set("Server-Timing", `total;dur=${Math.round(performance.now() - t0)}`);
-  return resp;
-}
+  return { points };
+});

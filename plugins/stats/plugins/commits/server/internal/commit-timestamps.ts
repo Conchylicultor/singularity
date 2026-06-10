@@ -3,12 +3,6 @@ import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const TTL_MS = 30_000;
 
-let lastGitLogMs: number | null = null;
-let lastGitLogCached = false;
-export function getGitLogTiming(): { ms: number; cached: boolean } | null {
-  return lastGitLogMs != null ? { ms: lastGitLogMs, cached: lastGitLogCached } : null;
-}
-
 export interface CommitInfo {
   sha: string;
   iso: string;
@@ -20,7 +14,6 @@ export interface CommitInfo {
 }
 
 async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
-  const t0 = performance.now();
   const root = await ensureMainWorktreeRoot();
   const proc = Bun.spawn(
     [
@@ -67,8 +60,6 @@ async function parseGitLog(args: string[]): Promise<CommitInfo[]> {
     }
     commits.push(current);
   }
-  lastGitLogMs = Math.round(performance.now() - t0);
-  lastGitLogCached = false;
   return commits;
 }
 
@@ -77,7 +68,6 @@ const filteredCache = new Map<string, { expires: number; commits: CommitInfo[] }
 
 export async function getCommits(): Promise<CommitInfo[]> {
   if (cache && cache.expires > Date.now()) {
-    lastGitLogCached = true;
     return cache.commits;
   }
   const commits = await parseGitLog([]);
@@ -89,7 +79,6 @@ export async function getCommitsExcludingPaths(excludedPaths: string[]): Promise
   const key = [...excludedPaths].sort().join("|");
   const cached = filteredCache.get(key);
   if (cached && cached.expires > Date.now()) {
-    lastGitLogCached = true;
     return cached.commits;
   }
   const excludeArgs = excludedPaths.map((p) => `:(exclude)${p}`);

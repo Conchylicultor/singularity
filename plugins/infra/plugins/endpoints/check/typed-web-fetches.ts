@@ -11,20 +11,10 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-// The migration is complete: every web call site now goes through
-// fetchEndpoint/useEndpoint, including the special-transport cases
-// (keepalive/multipart/binary via blob()/multipart() codecs). The former
-// holdout — attachments' polymorphic runtime route — was dissolved into the
-// single registry-backed listAttachmentsEndpoint. No allowlisted holdout
-// remains, so this check rejects EVERY hardcoded /api/... web fetch
-// unconditionally. The cap/Map machinery is kept (with zero entries) so a
-// future, deliberately-justified exception can be added back explicitly.
-const ALLOWED = new Map<string, number>([]);
-
 const check: Check = {
   id: "endpoints:typed-web-fetches",
   description:
-    'Web code must use fetchEndpoint/useEndpoint instead of raw fetch("/api/..."); legacy call sites are allowlisted with a per-file cap',
+    'Web code must use fetchEndpoint/useEndpoint instead of raw fetch("/api/...")',
   async run() {
     const root = await getRoot();
 
@@ -38,7 +28,8 @@ const check: Check = {
       maskStrings: false,
     });
 
-    // Reproduce `git grep -c`: count matching lines per file.
+    // Count matching lines per file; any /web/ file with ≥1 raw /api/ fetch is
+    // an offender.
     const counts = new Map<string, number>();
     for (const m of matches) {
       counts.set(m.path, (counts.get(m.path) ?? 0) + 1);
@@ -48,20 +39,14 @@ const check: Check = {
 
     for (const [path, count] of counts) {
       if (!path.includes("/web/")) continue;
-
-      const allowed = ALLOWED.get(path) ?? 0;
-      if (count > allowed) {
-        offenders.push(
-          `${path}: ${count} raw fetch call(s) (allowed: ${allowed})`,
-        );
-      }
+      offenders.push(`${path}: ${count} raw fetch call(s)`);
     }
 
     if (offenders.length === 0) return { ok: true };
 
     return {
       ok: false,
-      message: `${offenders.length} file(s) with raw fetch("/api/...") calls exceeding the allowlist:\n    ${offenders.join("\n    ")}`,
+      message: `${offenders.length} file(s) with raw fetch("/api/...") calls:\n    ${offenders.join("\n    ")}`,
       hint: 'Use fetchEndpoint() / useEndpoint() / useEndpointMutation() from @plugins/infra/plugins/endpoints/web instead of raw fetch("/api/..."). See the endpoints plugin CLAUDE.md for the pattern.',
     };
   },
