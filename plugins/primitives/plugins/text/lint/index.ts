@@ -259,7 +259,7 @@ export default {
       "plugins/primitives/plugins/toggle-chip/web/internal/toggle-chip.tsx",
       "plugins/primitives/plugins/tree/web/internal/tree-list.tsx",
       "plugins/primitives/plugins/tree/web/internal/tree-row-chrome.tsx",
-      "plugins/reorder/web/internal/dnd-components.tsx",
+      "plugins/reorder/plugins/editor/web/internal/items.tsx",
       "plugins/reorder/web/internal/group-rename.tsx",
       "plugins/review/plugins/code-review/web/components/code-review-section.tsx",
       "plugins/review/plugins/code-review/web/components/code-review-summary.tsx",

@@ -95,7 +95,7 @@ export default {
       "plugins/primitives/plugins/avatar/web/components/avatar.tsx",
       "plugins/primitives/plugins/color-picker/web/internal/color-input.tsx",
       "plugins/primitives/plugins/color-picker/web/internal/color-picker.tsx",
-      "plugins/reorder/web/internal/dnd-components.tsx",
+      "plugins/reorder/plugins/editor/web/internal/items.tsx",
       "plugins/reorder/web/internal/group-box.tsx",
       "plugins/review/plugins/code-review/web/components/review-file-row.tsx",
       "plugins/review/plugins/plugin-changes/plugins/api-changes/web/components/api-changes-summary.tsx",

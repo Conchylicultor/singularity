@@ -26,10 +26,30 @@ Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder 
 
 ## Architecture
 
-Two middlewares registered by the reorder plugin, built on `@plugins/primitives/plugins/sortable-list/web` (`@dnd-kit/sortable`):
+Two middlewares registered by the reorder plugin, built on the shared
+presentational editor `@plugins/reorder/plugins/editor/web` (itself wrapping
+`@plugins/primitives/plugins/sortable-list/web` / `@dnd-kit/sortable`):
 
-1. **`ReorderListMiddleware`** (list, priority 0) — wraps the contribution list with `SortableList`, reads the slot's `items` tree via `useConfig(descriptor)`, applies it over the live catalog via `applyTree()`, renders groups/restore button in edit mode. Custom collision detection filters zone droppables from `closestCenter` (so displacement transforms work correctly) and appends zone hits from `pointerWithin` (for group create/join dispatch at drop time via `event.collisions`). If a slot has no descriptor (runtime-only render slot, `reorder:false`, or an unresolved id), it falls back to natural order with no reorder applied.
-2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each contribution with `SortableItem` for smooth displacement animations during drag. In edit mode, also renders grouping zones (center zone for group creation, join zone for existing groups).
+1. **`ReorderListMiddleware`** (list, priority 0) — reads the slot's `items` tree via `useConfig(descriptor)`, applies it over the live catalog via `applyTree()`, maps the resulting `groupedEntries` into the editor's presentational `entries` (items as item-middleware-wrapped contributions, spacers, pre-rendered group boxes), and renders `<ReorderEditor>` wired to `setConfig` + the DB-backed group endpoints. If a slot has no descriptor (runtime-only render slot, `reorder:false`, or an unresolved id), it falls back to natural order with no reorder applied.
+2. **`ReorderItemMiddleware`** (item, priority 50) — wraps each contribution with `SortableReorderItem` (from the editor barrel) for smooth displacement animations during drag. In edit mode, also renders grouping zones (center zone for group creation, join zone for existing groups).
+
+### Shared presentational editor (`plugins/editor`)
+
+The drag-and-drop list itself lives in the **`editor` sub-plugin**
+(`plugins/reorder/plugins/editor/`) as `<ReorderEditor>` — a purely
+presentational component (SortableList + move dispatch + flat `sortableIds` +
+hide/restore/spacer affordances + grouping zones). It knows nothing about
+config_v2, the live catalog, or the `ReorderTree` format; the consumer maps its
+own data into `entries` + callbacks and threads `editMode`/`orientation` as
+props (the editor does **not** read the global `useEditMode()` signal). This lets
+the **same editor** power both the in-app pen-drag (this middleware, wired to
+`setConfig`) and the `reorder-tree` field renderer in the Config settings pane
+(`fields/reorder-tree/plugins/config/web`, wired to the field's `onChange`).
+Because the editor imports neither `reorder/web` nor the `reorder-tree` field, the
+field plugin can import it without a `reorder ↔ reorder-tree` cycle. Group support
+degrades gracefully: with no group callbacks/entries, collision falls back to
+plain `closestCenter`, grouping zones aren't rendered, and "Add Group" is hidden
+(the field editor's mode — groups stay deferred there).
 
 ## Storage — config_v2 `items` tree (materialized)
 
@@ -102,7 +122,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
 - Load-bearing: yes
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/slot-render.RenderSlotSubIdContext`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/slot-render.RenderSlotSubIdContext`, `reorder/editor.DRAG_GROUP_PREFIX`, `reorder/editor.ReorderAreaContext`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/editor.SpacerReorderItem`
   - Exports: Types: `ReorderLayout`; Values: `getEditMode`, `ReorderLayoutContext`, `setEditMode`, `useEditMode`
 - Server:
   - Uses: `config_v2.ConfigV2`
@@ -112,6 +132,7 @@ Module-level signal in `web/internal/edit-mode-store.ts` (no React Context). The
   - Exports: Types: `ReorderableSlot`; Values: `reorderableSlots`, `reorderDirectiveDescriptor`
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
+  - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
   - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
 
 <!-- AUTOGENERATED:END -->

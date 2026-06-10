@@ -12,6 +12,7 @@ import {
   deleteGroup,
 } from "@plugins/reorder/plugins/groups/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { DRAG_GROUP_PREFIX } from "@plugins/reorder/plugins/editor/web";
 import { GroupRename } from "./group-rename";
 
 export function ReorderGroupBox({
@@ -30,7 +31,7 @@ export function ReorderGroupBox({
   children: ReactNode;
 }) {
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
-    id: `reorder-drag-group-${group.id}`,
+    id: `${DRAG_GROUP_PREFIX}${group.id}`,
     data: { kind: "drag-group", groupId: group.id },
     disabled: !editMode,
   });

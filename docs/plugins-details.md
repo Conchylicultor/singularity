@@ -1786,7 +1786,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`config`** — Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
           - Web:
             - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
-            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`
+            - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/reorder-tree.ReorderNode`, `fields/reorder-tree.ReorderTree`, `fields/reorder-tree.reorderTreeFieldType`
             - Exports: Types: `NormalizedNode`, `ReorderTreeFieldDef`; Values: `normalizeNode`, `reorderTreeField`
@@ -2718,7 +2718,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/tooltip.WithTooltip`
         - Exports: Types: `InlinePopoverProps`; Values: `InlinePopover`
       - Cross-plugin:
-        - Imported by: `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/launch`, `reorder`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/launch`, `reorder/editor`, `tasks/task-draft-form`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -2757,7 +2757,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsibleContext`
         - Exports: Types: `RowHover`, `RowProps`, `RowSize`, `SectionHeaderRowProps`, `SectionHeaderVariant`; Values: `Row`, `SectionHeaderRow`
       - Cross-plugin:
-        - Imported by: `active-data/task`, `agents`, `apps/pages/page-tree`, `apps/sonata/track-mixer`, `build`, `code-explorer`, `code-explorer/file-resolve`, `conversations/conversation-category`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `page/editor`, `page/links`, `page/page-link`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view/sub-plugins`, `primitives/avatar`, `primitives/detail-sections`, `primitives/tree`, `reorder`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`
+        - Imported by: `active-data/task`, `agents`, `apps/pages/page-tree`, `apps/sonata/track-mixer`, `build`, `code-explorer`, `code-explorer/file-resolve`, `conversations/conversation-category`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `page/editor`, `page/links`, `page/page-link`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view/sub-plugins`, `primitives/avatar`, `primitives/detail-sections`, `primitives/tree`, `reorder/editor`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-preprompt`, `ui/theme-engine/theme-customizer`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`
     - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
       - Cross-plugin:
         - Imported by: `apps/sonata/track-mixer`, `apps/studio/contributions`, `apps/studio/explorer`, `code-explorer`, `config_v2/settings`, `conversations/conversation-view/dependencies`, `page/editor`, `page/page-link`, `primitives/data-view`, `primitives/tree`, `ui/theme-engine/theme-customizer`, `ui/tweakcn/community-browser`
@@ -2787,7 +2787,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineDispatchSlot`, `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `renderIsolated`, `RenderSlotSubIdContext`
     - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.
       - Cross-plugin:
-        - Imported by: `fields/list/config`, `layouts/miller`, `primitives/collapsible-wrap`, `reorder`
+        - Imported by: `fields/list/config`, `layouts/miller`, `primitives/collapsible-wrap`, `reorder/editor`
       - Web:
         - Exports: Types: `SortableItemProps`, `SortableItemState`, `SortableListProps`, `SortingStrategy`; Values: `rectSortingStrategy`, `SortableItem`, `SortableList`
     - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
@@ -2864,7 +2864,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`reorder`** — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
     - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
-    - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/slot-render.RenderSlotSubIdContext`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+    - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/slot-render.RenderSlotSubIdContext`, `reorder/editor.DRAG_GROUP_PREFIX`, `reorder/editor.ReorderAreaContext`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/editor.SpacerReorderItem`
     - Exports: Types: `ReorderLayout`; Values: `getEditMode`, `ReorderLayoutContext`, `setEditMode`, `useEditMode`
   - Server:
     - Uses: `config_v2.ConfigV2`
@@ -2877,6 +2877,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Contributes: `ActionBar.Item` → `PenButton`, `Shortcuts.Shortcut` "reorder.exit-edit-mode (escape)"
         - Uses: `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`, `reorder.getEditMode`, `reorder.setEditMode`, `reorder.useEditMode`, `shell/action-bar.ActionBar`
+    - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
+      - Web:
+        - Uses: `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+        - Exports: Types: `ReorderAreaCtxValue`, `ReorderEditorProps`, `ReorderEntry`, `ReorderGroupEntry`, `ReorderItemEntry`, `ReorderSpacerEntry`; Values: `DRAG_GROUP_PREFIX`, `ReorderAreaContext`, `ReorderEditor`, `RestoreButton`, `SortableReorderItem`, `SpacerReorderItem`
+      - Cross-plugin:
+        - Imported by: `fields/reorder-tree/config`, `reorder`
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
       - Server:
         - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankUnder`

@@ -2,7 +2,10 @@ import { useContext, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useEditMode } from "./edit-mode-store";
 import { contributionKey, contributionLabel } from "./sorting";
-import { ReorderAreaContext, SortableReorderItem } from "./dnd-components";
+import {
+  ReorderAreaContext,
+  SortableReorderItem,
+} from "@plugins/reorder/plugins/editor/web";
 
 export function ReorderItemMiddleware({
   contribution,

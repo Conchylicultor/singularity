@@ -8,17 +8,10 @@ import {
   type ReactNode,
 } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import {
-  closestCenter,
-  pointerWithin,
-  type CollisionDetection,
-  type DragEndEvent,
-} from "@dnd-kit/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { RenderSlotSubIdContext } from "@plugins/primitives/plugins/slot-render/web";
-import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import {
   reorderGroupsResource,
   createGroup,
@@ -32,6 +25,11 @@ import type {
   ReorderNode,
   ReorderTree,
 } from "@plugins/fields/plugins/reorder-tree/core";
+import {
+  ReorderEditor,
+  SpacerReorderItem,
+  type ReorderEntry,
+} from "@plugins/reorder/plugins/editor/web";
 import { reorderDescriptors } from "./descriptors";
 import { useEditMode } from "./edit-mode-store";
 import { ReorderGroupBox } from "./group-box";
@@ -45,15 +43,7 @@ import {
   type SpacerItem,
   type TopLevelEntry,
 } from "./sorting";
-import {
-  RestoreButton,
-  SpacerReorderItem,
-  ReorderAreaContext,
-  type ReorderAreaCtxValue,
-} from "./dnd-components";
 import { ReorderLayoutContext } from "./reorder-layout";
-
-const DRAG_GROUP_PREFIX = "reorder-drag-group-";
 
 /**
  * Materialize the current full layout into a `ReorderTree`: a bare string per
@@ -89,27 +79,6 @@ function materializeTree(
   }
   return tree;
 }
-
-const reorderCollisionDetection: CollisionDetection = (args) => {
-  const sortableContainers = args.droppableContainers.filter((c) => {
-    const id = String(c.id);
-    return !id.startsWith("group-zone:") && !id.startsWith("group-join:");
-  });
-  const sortableHits = closestCenter({
-    ...args,
-    droppableContainers: sortableContainers,
-  });
-
-  const withinHits = pointerWithin(args);
-  const zoneHits = withinHits.filter((c) => {
-    const zone = (
-      c.data?.droppableContainer?.data?.current as Record<string, unknown>
-    )?.zone;
-    return zone === "child" || zone === "group-join";
-  });
-
-  return [...sortableHits, ...zoneHits];
-};
 
 export function ReorderListMiddleware({
   slotId,
@@ -461,86 +430,63 @@ function ReorderListMiddlewareInner({
   const onGroupReorderRef = useRef(onGroupReorder);
   onGroupReorderRef.current = onGroupReorder;
 
-  // --- Sortable IDs ----------------------------------------------------------
-
-  const sortableIds = useMemo(() => {
-    const ids: string[] = [];
-    for (const entry of state.groupedEntries) {
-      if (isGroupEntry(entry)) {
-        for (const member of entry.members) {
-          if (isSpacer(member)) {
-            ids.push(member.id);
-          } else if (
-            !(member as Record<string, unknown>).excludeFromReorder
-          ) {
-            ids.push(entryKey(member));
-          }
-        }
-      } else if (isSpacer(entry)) {
-        ids.push(entry.id);
-      } else if (
-        !(entry as Record<string, unknown>).excludeFromReorder
-      ) {
-        ids.push(entryKey(entry));
-      }
-    }
-    return ids;
-  }, [state.groupedEntries]);
-
-  // --- onMove dispatch -------------------------------------------------------
-
-  const handleMove = useCallback(
-    (activeId: string, overId: string, event: DragEndEvent) => {
-      if (activeId.startsWith(DRAG_GROUP_PREFIX)) {
-        const gId = activeId.slice(DRAG_GROUP_PREFIX.length);
-        onGroupReorderRef.current(gId, overId);
-        return;
-      }
-
-      const zoneCollision = event.collisions?.find((c) => {
-        const zone = (
-          c.data?.droppableContainer?.data?.current as Record<string, unknown>
-        )?.zone;
-        return zone === "child" || zone === "group-join";
-      });
-
-      if (zoneCollision) {
-        const zoneId = String(zoneCollision.id);
-        if (zoneId.startsWith("group-zone:")) {
-          const targetKey = zoneId.slice("group-zone:".length);
-          onGroupCreateRef.current(activeId, targetKey);
-          return;
-        }
-        if (zoneId.startsWith("group-join:")) {
-          const groupId = zoneId.slice("group-join:".length);
-          onGroupJoinRef.current(activeId, groupId);
-          return;
-        }
-      }
-
-      onDropRef.current(activeId, overId);
-    },
-    [],
-  );
-
   function addGroup() {
     void fetchEndpoint(createGroup, { slotId: storageId }, { body: {} });
   }
 
-  const ctxValue: ReorderAreaCtxValue = {
-    storageId,
-    hiddenItems,
-    addGroup,
-    addSpacer: () => addSpacerRef.current(),
-    onHide: (key) => hideItemRef.current(key),
-    onRestore: (key) => restoreItemRef.current(key),
-    onDeleteSpacer: (token) => deleteSpacerRef.current(token),
-    dragInProgress: false,
-    orientation,
-  };
+  // --- Map the grouped state into the editor's presentational entries --------
 
-  // --- Render with overlay ---------------------------------------------------
+  const entries = useMemo<ReorderEntry[]>(
+    () =>
+      state.groupedEntries.map((entry): ReorderEntry => {
+        if (isGroupEntry(entry)) {
+          const memberIds: string[] = [];
+          for (const m of entry.members) {
+            if (isSpacer(m)) memberIds.push(m.id);
+            else if (!(m as Record<string, unknown>).excludeFromReorder)
+              memberIds.push(entryKey(m));
+          }
+          return {
+            kind: "group",
+            id: entry.group.id,
+            memberIds,
+            node: (
+              <ReorderGroupBox
+                group={entry.group}
+                storageId={storageId}
+                editMode={editMode}
+              >
+                {entry.members.map((member) => {
+                  if (isSpacer(member)) {
+                    return (
+                      <SpacerReorderItem
+                        key={member.id}
+                        itemKey={member.id}
+                        editMode={editMode}
+                      />
+                    );
+                  }
+                  return renderItem(member);
+                })}
+              </ReorderGroupBox>
+            ),
+          };
+        }
+        if (isSpacer(entry)) {
+          return { kind: "spacer", id: entry.id };
+        }
+        return {
+          kind: "item",
+          id: entryKey(entry),
+          excluded: !!(entry as Record<string, unknown>).excludeFromReorder,
+          node: renderItem(entry),
+        };
+      }),
+    [state.groupedEntries, storageId, editMode, renderItem],
+  );
 
+  // The drag overlay re-renders the active contribution (catalog-aware), so it
+  // lives here, not in the presentational editor.
   const renderOverlay = useCallback(
     (activeId: string) => {
       const contribution = entriesRef.current.find(
@@ -557,59 +503,25 @@ function ReorderListMiddlewareInner({
   );
 
   return (
-    <ReorderAreaContext.Provider value={ctxValue}>
+    <>
       <div ref={sentinelRef} style={{ display: "none" }} aria-hidden />
-      <SortableList
-        items={sortableIds}
-        onMove={handleMove}
-        overlay={editMode ? renderOverlay : undefined}
-        disabled={!editMode}
-        collisionDetection={reorderCollisionDetection}
+      <ReorderEditor
+        entries={entries}
+        hiddenItems={hiddenItems}
+        onDrop={(a, o) => onDropRef.current(a, o)}
+        onHide={(k) => hideItemRef.current(k)}
+        onRestore={(k) => restoreItemRef.current(k)}
+        onAddSpacer={() => addSpacerRef.current()}
+        onDeleteSpacer={(t) => deleteSpacerRef.current(t)}
+        onGroupCreate={(a, t) => onGroupCreateRef.current(a, t)}
+        onGroupJoin={(a, g) => onGroupJoinRef.current(a, g)}
+        onGroupReorder={(g, o) => onGroupReorderRef.current(g, o)}
+        onAddGroup={addGroup}
+        editMode={editMode}
         orientation={orientation}
         strategy={injected?.strategy}
-      >
-        {state.groupedEntries.map((entry) => {
-          if (isGroupEntry(entry)) {
-            return (
-              <ReorderGroupBox
-                key={entry.group.id}
-                group={entry.group}
-                storageId={storageId}
-                editMode={editMode}
-              >
-                {entry.members.map((member) => {
-                  if (isSpacer(member)) {
-                    return (
-                      <SpacerReorderItem
-                        key={member.id}
-                        itemKey={member.id}
-                      />
-                    );
-                  }
-                  return renderItem(member);
-                })}
-              </ReorderGroupBox>
-            );
-          }
-          if (isSpacer(entry)) {
-            return (
-              <SpacerReorderItem
-                key={entry.id}
-                itemKey={entry.id}
-              />
-            );
-          }
-          return renderItem(entry);
-        })}
-        {editMode && (
-          <RestoreButton
-            hiddenItems={hiddenItems}
-            addGroup={addGroup}
-            addSpacer={() => addSpacerRef.current()}
-            onRestore={(key) => restoreItemRef.current(key)}
-          />
-        )}
-      </SortableList>
-    </ReorderAreaContext.Provider>
+        renderOverlay={renderOverlay}
+      />
+    </>
   );
 }

@@ -237,6 +237,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`reorder`** [load-bearing] — Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Plugins:
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
+    - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
     - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.

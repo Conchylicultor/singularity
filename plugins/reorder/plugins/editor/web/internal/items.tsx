@@ -7,24 +7,20 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { cn } from "@/lib/utils";
-import { useEditMode } from "./edit-mode-store";
 
 // --- Area context ------------------------------------------------------------
 
+// Read by the item-internal affordances (hide button, spacer delete button,
+// grouping zone). The editor provides it; both the reorder middleware and the
+// config field renderer flow through the same context.
 export type ReorderAreaCtxValue = {
-  storageId: string;
-  hiddenItems: Array<{ key: string; label: string }>;
-  addGroup: () => void;
-  /** Append a blank spacer token to the slot's `order` directive. */
-  addSpacer: () => void;
-  /** Hide a contribution by `entryKey` (writes the config directive). */
-  onHide: (key: string) => void;
-  /** Restore a hidden contribution by `entryKey`. */
-  onRestore: (key: string) => void;
-  /** Remove a spacer token from the slot's `order` directive. */
-  onDeleteSpacer: (token: string) => void;
-  dragInProgress: boolean;
   orientation: "horizontal" | "vertical";
+  /** Hide a contribution by id (its entryKey). */
+  onHide: (id: string) => void;
+  /** Remove a spacer node by id. */
+  onDeleteSpacer: (id: string) => void;
+  /** Whether grouping affordances (center drop zone) are active. */
+  groupsEnabled: boolean;
 };
 
 export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
@@ -71,6 +67,7 @@ export function SortableReorderItem({
 }) {
   const ctx = useContext(ReorderAreaContext);
   const isHorizontal = ctx?.orientation === "horizontal";
+  const groupsEnabled = ctx?.groupsEnabled ?? false;
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEmpty, setIsEmpty] = useState(false);
 
@@ -140,7 +137,7 @@ export function SortableReorderItem({
               {label}
             </div>
           )}
-          {editMode && <GroupingZone itemKey={itemKey} />}
+          {editMode && groupsEnabled && <GroupingZone itemKey={itemKey} />}
         </>
       )}
     </SortableItem>
@@ -150,14 +147,15 @@ export function SortableReorderItem({
 // --- Spacer reorder item -----------------------------------------------------
 
 // A spacer renders as a flex gap. In edit mode it becomes a draggable, dashed
-// placeholder with a delete button; the token is removed from the slot's `order`
-// directive via `onDeleteSpacer`.
+// placeholder with a delete button; the node is removed from the `items` tree
+// via `onDeleteSpacer`.
 export function SpacerReorderItem({
   itemKey,
+  editMode,
 }: {
   itemKey: string;
+  editMode: boolean;
 }) {
-  const editMode = useEditMode();
   const ctx = useContext(ReorderAreaContext);
 
   if (!editMode) {
@@ -199,13 +197,14 @@ export function SpacerReorderItem({
 
 export function RestoreButton({
   hiddenItems,
-  addGroup,
-  addSpacer,
+  onAddGroup,
+  onAddSpacer,
   onRestore,
 }: {
   hiddenItems: Array<{ key: string; label: string }>;
-  addGroup: () => void;
-  addSpacer: () => void;
+  /** Optional — the "Add Group" row is hidden when absent (e.g. field editor). */
+  onAddGroup?: () => void;
+  onAddSpacer: () => void;
   onRestore: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -256,23 +255,25 @@ export function RestoreButton({
         )}
 
         <div className="border-t border-border p-1">
+          {onAddGroup && (
+            <Row
+              size="sm"
+              hover="accent"
+              icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
+              onClick={() => {
+                onAddGroup();
+                setOpen(false);
+              }}
+            >
+              Add Group
+            </Row>
+          )}
           <Row
             size="sm"
             hover="accent"
             icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
             onClick={() => {
-              addGroup();
-              setOpen(false);
-            }}
-          >
-            Add Group
-          </Row>
-          <Row
-            size="sm"
-            hover="accent"
-            icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
-            onClick={() => {
-              addSpacer();
+              onAddSpacer();
               setOpen(false);
             }}
           >

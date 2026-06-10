@@ -1950,6 +1950,10 @@
       "name": "@singularity/plugin-reorder-edit-mode",
       "version": "0.0.1",
     },
+    "plugins/reorder/plugins/editor": {
+      "name": "@singularity/plugin-reorder-editor",
+      "version": "0.0.1",
+    },
     "plugins/reorder/plugins/groups": {
       "name": "@singularity/plugin-reorder-groups",
       "version": "0.0.1",
@@ -3663,6 +3667,8 @@
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 
     "@singularity/plugin-reorder-edit-mode": ["@singularity/plugin-reorder-edit-mode@workspace:plugins/reorder/plugins/edit-mode"],
+
+    "@singularity/plugin-reorder-editor": ["@singularity/plugin-reorder-editor@workspace:plugins/reorder/plugins/editor"],
 
     "@singularity/plugin-reorder-groups": ["@singularity/plugin-reorder-groups@workspace:plugins/reorder/plugins/groups"],
 
