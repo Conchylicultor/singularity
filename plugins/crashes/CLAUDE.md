@@ -10,7 +10,7 @@
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/error-boundary.registerBoundaryReporter`, `primitives/tab-id.getTabId`
   - Exports: Types: `CrashContext`; Values: `report`
 - Server:
-  - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+  - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `notifications.recordNotification`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
   - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
   - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
   - Resources: `crashes` (push)

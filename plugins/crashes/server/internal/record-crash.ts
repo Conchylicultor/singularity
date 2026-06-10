@@ -47,22 +47,35 @@ const taskCreationLocks = new Map<string, Promise<void>>();
 export async function recordCrash(
   input: CrashReport,
 ): Promise<RecordCrashResult> {
+  // Split the report into the fields that transform on the way to the row
+  // (clamped text, renamed attribution) and the verbatim ones that map 1:1 to
+  // columns of the same name. Spreading `verbatim` into the insert means a new
+  // plain report field persists automatically instead of being silently dropped
+  // by a hand-written column list — the only fields named explicitly below are
+  // the ones that genuinely differ from the report shape.
+  const {
+    message: rawMessage,
+    stack: rawStack,
+    componentStack: rawComponentStack,
+    clientId,
+    buildId,
+    ...verbatim
+  } = input;
+
   const fp = await fingerprintOf(input.errorType, input.stack);
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
-  const message = clamp(input.message, MESSAGE_MAX);
-  const stack = input.stack != null ? clamp(input.stack, STACK_MAX) : null;
+  const message = clamp(rawMessage, MESSAGE_MAX);
+  const stack = rawStack != null ? clamp(rawStack, STACK_MAX) : null;
   const componentStack =
-    input.componentStack != null
-      ? clamp(input.componentStack, COMPONENT_STACK_MAX)
+    rawComponentStack != null
+      ? clamp(rawComponentStack, COMPONENT_STACK_MAX)
       : null;
   const loop = bumpWindowAndCheck(fp);
   // A crash whose originating bundle's build id differs from the server's
   // current build id came from an outdated frontend tab — benign version-skew.
   const serverBuildId = getServerBuildId();
   const staleOrigin =
-    input.buildId != null &&
-    serverBuildId != null &&
-    input.buildId !== serverBuildId;
+    buildId != null && serverBuildId != null && buildId !== serverBuildId;
   const noise = isNoiseCrash({
     source: input.source,
     errorType: input.errorType ?? null,
@@ -78,19 +91,16 @@ export async function recordCrash(
       id,
       fingerprint: fp,
       worktree,
-      source: input.source,
-      errorType: input.errorType ?? null,
+      // source, errorType, url, userAgent, slot, label — map 1:1 to columns.
+      ...verbatim,
+      // Clamped text + renamed last-writer-wins attribution columns.
       message,
       stack,
       componentStack,
-      url: input.url ?? null,
-      userAgent: input.userAgent ?? null,
-      slot: input.slot ?? null,
-      label: input.label ?? null,
       crashLoop: loop,
       noise,
-      lastClientId: input.clientId ?? null,
-      lastBuildId: input.buildId ?? null,
+      lastClientId: clientId ?? null,
+      lastBuildId: buildId ?? null,
     })
     .onConflictDoUpdate({
       target: [_crashes.fingerprint, _crashes.worktree],
@@ -100,8 +110,8 @@ export async function recordCrash(
         updatedAt: new Date(),
         crashLoop: sql`${_crashes.crashLoop} OR ${loop}`,
         noise,
-        lastClientId: input.clientId ?? null,
-        lastBuildId: input.buildId ?? null,
+        lastClientId: clientId ?? null,
+        lastBuildId: buildId ?? null,
       },
     })
     .returning();
@@ -135,8 +145,8 @@ export async function recordCrash(
       taskId: outcome.taskId,
       source: row.source,
       fingerprint: fp,
-      clientId: input.clientId ?? null,
-      buildId: input.buildId ?? null,
+      clientId: clientId ?? null,
+      buildId: buildId ?? null,
     },
   });
   return { ...outcome, crashLoop: false };
