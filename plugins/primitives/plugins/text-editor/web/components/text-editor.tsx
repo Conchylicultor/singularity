@@ -9,6 +9,7 @@ import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
 import { cn } from "@/lib/utils";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
+import { DecoratorNavPlugin } from "../internal/decorator-nav-plugin";
 import { TextEditorSlots } from "../slots";
 import {
   applyMarkdownToEditor,
@@ -69,6 +70,7 @@ export function TextEditor({
       />
       <ValueSyncPlugin value={value} onChange={onChange} />
       <PluginSlot onError={onError} />
+      <DecoratorNavPlugin />
       {onSubmit && submitMode !== "none" && (
         <EnterKeyPlugin onSubmit={onSubmit} submitMode={submitMode} />
       )}
