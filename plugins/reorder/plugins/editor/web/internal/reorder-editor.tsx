@@ -69,6 +69,7 @@ export function ReorderEditor({
   editMode,
   orientation = "vertical",
   strategy,
+  wrap = false,
   renderOverlay,
 }: ReorderEditorProps) {
   const groupsEnabled =
@@ -127,6 +128,30 @@ export function ReorderEditor({
     groupsEnabled,
   };
 
+  // The sortable cells + trailing restore button, shared by the bare and
+  // wrap-container renders so dnd registration is identical in both.
+  const itemNodes = (
+    <>
+      {entries.map((e) => {
+        if (e.kind === "spacer") {
+          return (
+            <SpacerReorderItem key={e.id} itemKey={e.id} editMode={editMode} />
+          );
+        }
+        // item + group nodes are opaque pre-rendered content.
+        return <Fragment key={e.id}>{e.node}</Fragment>;
+      })}
+      {editMode && (
+        <RestoreButton
+          hiddenItems={hiddenItems}
+          onAddGroup={onAddGroup}
+          onAddSpacer={onAddSpacer}
+          onRestore={onRestore}
+        />
+      )}
+    </>
+  );
+
   return (
     <ReorderAreaContext.Provider value={ctxValue}>
       <SortableList
@@ -138,22 +163,16 @@ export function ReorderEditor({
         orientation={orientation}
         strategy={strategy}
       >
-        {entries.map((e) => {
-          if (e.kind === "spacer") {
-            return (
-              <SpacerReorderItem key={e.id} itemKey={e.id} editMode={editMode} />
-            );
-          }
-          // item + group nodes are opaque pre-rendered content.
-          return <Fragment key={e.id}>{e.node}</Fragment>;
-        })}
-        {editMode && (
-          <RestoreButton
-            hiddenItems={hiddenItems}
-            onAddGroup={onAddGroup}
-            onAddSpacer={onAddSpacer}
-            onRestore={onRestore}
-          />
+        {wrap ? (
+          // Editor-owned wrap container: a single honest flex parent of the
+          // sortable cells, so a horizontal row wraps instead of overflowing.
+          // `SortableContext` registers items by id regardless of DOM nesting,
+          // so one extra div is invisible to dnd-kit.
+          <div className="flex flex-1 flex-wrap content-start items-start gap-1.5 min-w-0">
+            {itemNodes}
+          </div>
+        ) : (
+          itemNodes
         )}
       </SortableList>
     </ReorderAreaContext.Provider>

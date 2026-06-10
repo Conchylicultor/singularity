@@ -1,4 +1,4 @@
-import type { CSSProperties, ReactNode } from "react";
+import { useContext, type CSSProperties, type ReactNode } from "react";
 import {
   MdClose,
   MdDragIndicator,
@@ -13,12 +13,13 @@ import {
 } from "@plugins/reorder/plugins/groups/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { DRAG_GROUP_PREFIX } from "@plugins/reorder/plugins/editor/web";
+import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import { GroupRename } from "./group-rename";
 
 export function ReorderGroupBox({
   group,
   storageId,
-  editMode,
+  editMode: editModeProp,
   autoFocusRename,
   onRenameFocused,
   children,
@@ -30,6 +31,12 @@ export function ReorderGroupBox({
   onRenameFocused?: () => void;
   children: ReactNode;
 }) {
+  // An area-level override (popover regime's inline render) forces display-only
+  // so the inline group box drops its drag/delete chrome even though the entry
+  // was built with the global edit-mode prop.
+  const override = useContext(ReorderEffectiveEditModeContext);
+  const editMode = override ?? editModeProp;
+
   const { attributes, listeners, setNodeRef: setDragRef, transform, isDragging } = useDraggable({
     id: `${DRAG_GROUP_PREFIX}${group.id}`,
     data: { kind: "drag-group", groupId: group.id },

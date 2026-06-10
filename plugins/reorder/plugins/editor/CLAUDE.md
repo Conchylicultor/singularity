@@ -28,9 +28,20 @@ import { ReorderEditor } from "@plugins/reorder/plugins/editor/web";
   onAddSpacer={…} onDeleteSpacer={…}
   // optional — middleware only; absence disables grouping UI:
   onGroupCreate={…} onGroupJoin={…} onGroupReorder={…} onAddGroup={…}
-  editMode={…} orientation="vertical" strategy={…} renderOverlay={…}
+  editMode={…} orientation="vertical" strategy={…} wrap={…} renderOverlay={…}
 />
 ```
+
+### `wrap` — editor-owned flex-wrap container
+
+`wrap` (default `false`) renders the sortable cells inside an owned
+`flex flex-1 flex-wrap` container so a horizontal row wraps onto multiple lines
+instead of overflowing. Pair it with `strategy={rectSortingStrategy}` for correct
+2-D drag. Use it ONLY when the host does **not** already own wrapping — never with
+a `CollapsibleWrap` host, whose child-measurement would break on an interposed
+wrapper div. The `reorder` list middleware sets it only in the "editor-wrap"
+regime (see `reorder`'s CLAUDE.md). Default (`false`) renders the cells bare, so
+the CollapsibleWrap-host and plain-row paths are byte-for-byte unchanged.
 
 ### Item rendering is opaque
 

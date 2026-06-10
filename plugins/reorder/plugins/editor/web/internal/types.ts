@@ -64,6 +64,14 @@ export interface ReorderEditorProps {
   editMode: boolean;
   orientation?: "horizontal" | "vertical";
   strategy?: SortingStrategy;
+  /**
+   * Render the items inside an editor-owned `flex flex-wrap` container so a
+   * horizontal row wraps onto multiple lines instead of overflowing. Used only
+   * when the HOST does not already own wrapping — NEVER with a CollapsibleWrap
+   * host (whose child-measurement would break on an interposed wrapper div).
+   * Pair with `strategy={rectSortingStrategy}` for correct 2-D drag.
+   */
+  wrap?: boolean;
   /** Active-drag overlay (e.g. a floating contribution card). Omit → no overlay. */
   renderOverlay?: (activeId: string) => ReactNode;
 }

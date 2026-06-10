@@ -1,4 +1,5 @@
 import {
+  Fragment,
   useCallback,
   useContext,
   useLayoutEffect,
@@ -7,8 +8,12 @@ import {
   useState,
   type ReactNode,
 } from "react";
+import { MdTune } from "react-icons/md";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
+import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { Button } from "@/components/ui/button";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { RenderSlotSubIdContext } from "@plugins/primitives/plugins/slot-render/web";
@@ -32,6 +37,7 @@ import {
 } from "@plugins/reorder/plugins/editor/web";
 import { reorderDescriptors } from "./descriptors";
 import { useEditMode } from "./edit-mode-store";
+import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import { ReorderGroupBox } from "./group-box";
 import {
   applyTree,
@@ -44,6 +50,16 @@ import {
   type TopLevelEntry,
 } from "./sorting";
 import { ReorderLayoutContext } from "./reorder-layout";
+
+/**
+ * Below this host width (px), a horizontal reorder area in edit mode is too
+ * cramped to drag in place (chrome — ring, ×-badge, placeholder, +Add — overlaps
+ * the content). Instead the inline view stays clean (display-only) and editing
+ * moves into a roomy vertical popover. Above it, the row wraps onto extra lines.
+ * A single tunable knee matched to the conversation-progress-card host class; not
+ * a prop (no host needs to override it).
+ */
+const POPOVER_WIDTH_THRESHOLD = 280;
 
 /**
  * Materialize the current full layout into a `ReorderTree`: a bare string per
@@ -130,17 +146,43 @@ function ReorderListMiddlewareInner({
   const editMode = useEditMode();
   const injected = useContext(ReorderLayoutContext);
 
+  const [popoverOpen, setPopoverOpen] = useState(false);
+
   const sentinelRef = useRef<HTMLDivElement>(null);
   const [orientation, setOrientation] = useState<"horizontal" | "vertical">(
     "vertical",
   );
+  // `null` until first measured — regime defaults to wrap (never overlaps) until
+  // a real width is known, so we don't flash a collapse-into-popover on mount.
+  const [hostWidth, setHostWidth] = useState<number | null>(null);
+  // Measure the host (the sentinel's parent) for BOTH flex-direction and width.
+  // ResizeObserver + rAF, no timers (repo rule; mirrors collapsible-wrap).
   useLayoutEffect(() => {
     const parent = sentinelRef.current?.parentElement;
     if (!parent) return;
-    const dir = getComputedStyle(parent).flexDirection;
-    setOrientation(
-      dir === "row" || dir === "row-reverse" ? "horizontal" : "vertical",
-    );
+
+    const recompute = () => {
+      const dir = getComputedStyle(parent).flexDirection;
+      setOrientation(
+        dir === "row" || dir === "row-reverse" ? "horizontal" : "vertical",
+      );
+      setHostWidth(parent.clientWidth);
+    };
+
+    let rafId: number | null = null;
+    const schedule = () => {
+      if (rafId !== null) cancelAnimationFrame(rafId);
+      rafId = requestAnimationFrame(recompute);
+    };
+
+    const ro = new ResizeObserver(schedule);
+    ro.observe(parent);
+    recompute();
+
+    return () => {
+      ro.disconnect();
+      if (rafId !== null) cancelAnimationFrame(rafId);
+    };
   }, []);
 
   // `useConfig` on a generically-typed descriptor returns a loose record;
@@ -502,25 +544,101 @@ function ReorderListMiddlewareInner({
     [renderItem],
   );
 
+  // --- Constrained-space regime ----------------------------------------------
+  // For a horizontal area in edit mode with NO host-owned wrapping (CollapsibleWrap
+  // injects `ReorderLayoutContext`), pick by measured host width:
+  //   • "host-wrap"   — host owns wrapping → render exactly as before.
+  //   • "passthrough" — vertical or non-edit → no chrome overflow → render as before.
+  //   • "editor-wrap" — wide enough → editor-owned flex-wrap so items stack, not overlap.
+  //   • "popover"     — too narrow → clean display-only inline + edit in a vertical popover.
+  const regime: "host-wrap" | "passthrough" | "editor-wrap" | "popover" =
+    injected
+      ? "host-wrap"
+      : orientation === "vertical" || !editMode
+        ? "passthrough"
+        : hostWidth !== null && hostWidth < POPOVER_WIDTH_THRESHOLD
+          ? "popover"
+          : "editor-wrap";
+
+  const wrap = regime === "editor-wrap";
+  const strategy = injected?.strategy ?? (wrap ? rectSortingStrategy : undefined);
+
+  // Shared callback wiring (ref-backed; identical write paths for both surfaces).
+  const editorProps = {
+    entries,
+    hiddenItems,
+    onDrop: (a: string, o: string) => onDropRef.current(a, o),
+    onHide: (k: string) => hideItemRef.current(k),
+    onRestore: (k: string) => restoreItemRef.current(k),
+    onAddSpacer: () => addSpacerRef.current(),
+    onDeleteSpacer: (t: string) => deleteSpacerRef.current(t),
+    onGroupCreate: (a: string, t: string) => onGroupCreateRef.current(a, t),
+    onGroupJoin: (a: string, g: string) => onGroupJoinRef.current(a, g),
+    onGroupReorder: (g: string, o: string) => onGroupReorderRef.current(g, o),
+    onAddGroup: addGroup,
+    renderOverlay,
+  };
+
+  const sentinel = (
+    <div ref={sentinelRef} style={{ display: "none" }} aria-hidden />
+  );
+
+  if (regime === "popover") {
+    return (
+      <>
+        {sentinel}
+        {/* Inline: the live contributions in DISPLAY mode (override forces every
+            item/group non-draggable, no chrome, no SortableContext). */}
+        <ReorderEffectiveEditModeContext.Provider value={false}>
+          {entries.map((e) =>
+            e.kind === "spacer" ? (
+              <SpacerReorderItem key={e.id} itemKey={e.id} editMode={false} />
+            ) : (
+              <Fragment key={e.id}>{e.node}</Fragment>
+            ),
+          )}
+        </ReorderEffectiveEditModeContext.Provider>
+        {/* Editing happens in a roomy vertical popover — the only drag surface. */}
+        <InlinePopover
+          open={popoverOpen}
+          onOpenChange={setPopoverOpen}
+          tooltip="Edit layout"
+          trigger={
+            <Button
+              variant="ghost"
+              size="icon"
+              aria-label="Edit layout"
+              // Stop the pointerdown from reaching an ancestor reorder item's
+              // dnd-kit sensor (which would capture the pointer and swallow the
+              // popover-trigger click) — same guard the hide/spacer buttons use.
+              onPointerDown={(e) => e.stopPropagation()}
+              // `pointer-events-auto` re-enables the trigger when this area is
+              // nested inside another reorder item, whose edit-mode content
+              // wrapper is `pointer-events-none`. The popover content portals to
+              // <body>, escaping that trap — so a nested narrow area becomes
+              // editable here even though inline drag never was.
+              className="shrink-0 pointer-events-auto"
+            >
+              <MdTune className="size-3.5" />
+            </Button>
+          }
+          contentClassName="w-72 p-2"
+        >
+          <ReorderEditor {...editorProps} editMode orientation="vertical" />
+        </InlinePopover>
+      </>
+    );
+  }
+
   return (
     <>
-      <div ref={sentinelRef} style={{ display: "none" }} aria-hidden />
+      {sentinel}
       <ReorderEditor
-        entries={entries}
-        hiddenItems={hiddenItems}
-        onDrop={(a, o) => onDropRef.current(a, o)}
-        onHide={(k) => hideItemRef.current(k)}
-        onRestore={(k) => restoreItemRef.current(k)}
-        onAddSpacer={() => addSpacerRef.current()}
-        onDeleteSpacer={(t) => deleteSpacerRef.current(t)}
-        onGroupCreate={(a, t) => onGroupCreateRef.current(a, t)}
-        onGroupJoin={(a, g) => onGroupJoinRef.current(a, g)}
-        onGroupReorder={(g, o) => onGroupReorderRef.current(g, o)}
-        onAddGroup={addGroup}
+        {...editorProps}
         editMode={editMode}
         orientation={orientation}
-        strategy={injected?.strategy}
-        renderOverlay={renderOverlay}
+        strategy={strategy}
+        wrap={wrap}
       />
     </>
   );

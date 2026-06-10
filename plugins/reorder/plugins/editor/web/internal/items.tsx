@@ -131,7 +131,9 @@ export function SortableReorderItem({
             className={cn(
               editMode ? "pointer-events-none" : "contents",
               // Fill the box so full-width vertical rows keep spanning the column.
-              editMode && !isHorizontal && "w-full",
+              // Skip when empty — an empty `w-full` div would steal the whole row
+              // from the placeholder sibling, wrapping its label onto two lines.
+              editMode && !isHorizontal && !isEmpty && "w-full",
             )}
           >
             {children}
@@ -141,8 +143,8 @@ export function SortableReorderItem({
               className={cn(
                 "pointer-events-none select-none italic text-muted-foreground/50",
                 isHorizontal
-                  ? "px-2 py-0.5 text-3xs whitespace-nowrap"
-                  : "px-3 py-1.5 text-center text-caption",
+                  ? "px-2 py-0.5 text-3xs max-w-24 truncate"
+                  : "w-full px-3 py-1.5 text-center text-caption",
               )}
             >
               {label}

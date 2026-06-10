@@ -43,7 +43,11 @@ export function entryKey(item: Contribution | SpacerItem): string {
 }
 
 export function contributionLabel(c: Contribution): string {
-  return (c._pluginId as string | undefined) ?? (c.id as string | undefined) ?? "Item";
+  // Prefer the short, stable `id` (e.g. `allow-monitor`) over the full dotted
+  // `_pluginId` path (`conversations.conversation-view.allow-monitor`) — the
+  // empty-item placeholder is a compact drag affordance, not a debug label, so
+  // the long path overflows narrow horizontal bands.
+  return (c.id as string | undefined) ?? (c._pluginId as string | undefined) ?? "Item";
 }
 
 function excludeFromReorder(item: Contribution | SpacerItem): boolean {

@@ -1,6 +1,7 @@
 import { useContext, type ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useEditMode } from "./edit-mode-store";
+import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import { contributionKey, contributionLabel } from "./sorting";
 import {
   ReorderAreaContext,
@@ -15,9 +16,16 @@ export function ReorderItemMiddleware({
   contribution: Contribution;
   children: ReactNode;
 }) {
-  const editMode = useEditMode();
+  const globalEditMode = useEditMode();
+  const override = useContext(ReorderEffectiveEditModeContext);
+  const editMode = override ?? globalEditMode;
   const ctx = useContext(ReorderAreaContext);
   if (!ctx) return <>{children}</>;
+
+  // Display-only override (popover regime's inline render): render the
+  // contribution bare. Crucially this skips `SortableReorderItem`/`useSortable`,
+  // which would otherwise need a `SortableContext` the inline render never mounts.
+  if (override === false) return <>{children}</>;
 
   const key = contributionKey(contribution);
   if (!key) return <>{children}</>;
