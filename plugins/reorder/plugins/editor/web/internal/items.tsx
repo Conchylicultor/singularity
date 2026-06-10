@@ -40,7 +40,7 @@ export function GroupingZone({ itemKey }: { itemKey: string }) {
     <div
       ref={setNodeRef}
       className={cn(
-        "absolute z-raised rounded transition-colors",
+        "absolute z-raised rounded-md transition-colors",
         isHorizontal
           ? "inset-y-0 left-[42.5%] right-[42.5%]"
           : "inset-x-0 top-[42.5%] bottom-[42.5%]",
