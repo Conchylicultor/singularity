@@ -129,7 +129,6 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/server"), dependsOn: [] },
   { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/rank", id: "primitives.rank", loader: () => import("@plugins/primitives/plugins/rank/server"), dependsOn: ["database"] },
-  { pluginPath: "reorder/plugins/groups", id: "reorder.groups", loader: () => import("@plugins/reorder/plugins/groups/server"), dependsOn: ["database", "infra/plugins/endpoints", "primitives/plugins/rank"] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },
   { pluginPath: "review/plugins/code-review", id: "review.code-review", loader: () => import("@plugins/review/plugins/code-review/server"), dependsOn: ["config_v2"] },
   { pluginPath: "review/plugins/plugin-changes", id: "review.plugin-changes", loader: () => import("@plugins/review/plugins/plugin-changes/server"), dependsOn: ["code-explorer", "conversations/plugins/conversation-view/plugins/code", "infra/plugins/endpoints", "infra/plugins/paths", "tasks-core"] },

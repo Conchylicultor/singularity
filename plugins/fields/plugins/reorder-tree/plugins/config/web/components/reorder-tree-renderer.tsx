@@ -13,43 +13,116 @@ import {
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
 import {
   treeToView,
   reorderTree,
   hideInTree,
   restoreInTree,
-  addSpacer,
-  deleteSpacer,
+  removeNode,
+  patchNode,
+  insertNode,
 } from "./tree-ops";
 
 // Full drag editor for a reorder-tree field in the Config settings pane. It maps
-// the saved `ReorderTree` into the shared `<ReorderEditor>` (reorder, hide/restore,
-// add/remove spacer) and persists every edit via the field's `onChange`. There's
-// no live catalog here, so items are labeled by their raw `entryKey` string.
+// the saved `ReorderTree` into the shared `<ReorderEditor>` and persists every
+// edit via the field's `onChange`. There's no live catalog here, so items are
+// labeled by their raw `entryKey` string, and container members render as label
+// chips. Every node type (spacer, header, …) is rendered through the contributed
+// `reorder.node-type` registry — the config pane hardcodes none of them.
+
+/** A plain entryKey label chip, wrapped as a draggable item. */
+function ItemChip({ id }: { id: string }) {
+  return (
+    <SortableReorderItem itemKey={id} editMode label={id}>
+      <Text variant="body" className="px-2 py-1 font-mono">
+        {id}
+      </Text>
+    </SortableReorderItem>
+  );
+}
+
 const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
   field,
   value,
   onChange,
 }) => {
+  const nodeTypes = useReorderNodeTypes();
+
   const { entries, hiddenItems } = useMemo(() => {
     const view = treeToView(value);
-    const editorEntries: ReorderEntry[] = view.entries.map((e) =>
-      e.kind === "spacer"
-        ? { kind: "spacer", id: e.id }
-        : {
-            kind: "item",
+    const editorEntries: ReorderEntry[] = [];
+    for (const e of view.entries) {
+      if (e.kind === "item") {
+        editorEntries.push({
+          kind: "item",
+          id: e.id,
+          node: <ItemChip id={e.id} />,
+        });
+        continue;
+      }
+      const nodeType = nodeTypes.get(e.type);
+      if (!nodeType) continue; // unknown type → fail-soft skip
+      const parsed = nodeType.schema.safeParse(e.payload);
+      const payload = parsed.success ? parsed.data : {};
+      const onPatch = (p: Record<string, unknown>) =>
+        onChange(patchNode(value, e.viewId, p));
+      const onRemove = () => onChange(removeNode(value, e.viewId));
+
+      if (e.members !== undefined) {
+        // Container node: render members as label chips passed as children.
+        const collapsed =
+          typeof (payload as { collapsed?: unknown }).collapsed === "boolean" &&
+          (payload as { collapsed: boolean }).collapsed;
+        const children = collapsed ? undefined : (
+          <>
+            {e.members.map((m) => (
+              <ItemChip key={m.id} id={m.id} />
+            ))}
+          </>
+        );
+        editorEntries.push({
+          kind: "node",
+          id: e.viewId,
+          memberIds: collapsed ? [] : e.members.map((m) => m.id),
+          node: nodeType.render({
+            payload,
             id: e.id,
-            node: (
-              <SortableReorderItem itemKey={e.id} editMode label={e.id}>
-                <Text variant="body" className="px-2 py-1 font-mono">
-                  {e.id}
-                </Text>
-              </SortableReorderItem>
-            ),
-          },
-    );
+            editMode: true,
+            children,
+            onPatch,
+            onRemove,
+          }),
+        });
+        continue;
+      }
+
+      // Leaf node (e.g. spacer).
+      editorEntries.push({
+        kind: "node",
+        id: e.viewId,
+        node: nodeType.render({
+          payload,
+          id: e.id,
+          editMode: true,
+          onPatch,
+          onRemove,
+        }),
+      });
+    }
     return { entries: editorEntries, hiddenItems: view.hiddenItems };
-  }, [value]);
+  }, [value, nodeTypes, onChange]);
+
+  const inserts = useMemo(
+    () =>
+      Array.from(nodeTypes.values())
+        .filter((t) => t.insert !== undefined)
+        .map((t) => ({
+          label: t.insert!.label,
+          onInsert: () => onChange(insertNode(value, t.insert!.create())),
+        })),
+    [nodeTypes, value, onChange],
+  );
 
   return (
     <div className="flex flex-col gap-1.5 py-3">
@@ -60,8 +133,8 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
         onDrop={(a, o) => onChange(reorderTree(value, a, o))}
         onHide={(k) => onChange(hideInTree(value, k))}
         onRestore={(k) => onChange(restoreInTree(value, k))}
-        onAddSpacer={() => onChange(addSpacer(value))}
-        onDeleteSpacer={(id) => onChange(deleteSpacer(value, id))}
+        inserts={inserts}
+        onRemoveNode={(id) => onChange(removeNode(value, id))}
         editMode
         orientation="vertical"
       />

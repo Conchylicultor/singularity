@@ -14,7 +14,7 @@ setEditMode(true);
 const editMode = useEditMode();
 ```
 
-Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list and item middlewares handle sorting, DnD wrapping, user-created groups, and edit-mode affordances automatically. No configuration needed.
+Hosts just use `<MySlot.Render>{(item) => ...}</MySlot.Render>` — the reorder list and item middlewares handle sorting, DnD wrapping, registry-driven node types (spacers, container groups), and edit-mode affordances automatically. No configuration needed.
 
 `id` is the **stable identifier** for a contribution in a slot. The layout tree references contributions by `entryKey` — `pluginId:id` (computed by `entryKey()`), which prevents collisions when different plugins contribute the same `id` to the same slot. Never rename `id` — renaming orphans the entry in any saved layout (an orphaned name in the tree is skipped on read and the live contribution falls back to natural-order append, so nothing disappears, but the customization is lost).
 
@@ -38,36 +38,37 @@ presentational editor `@plugins/reorder/plugins/editor/web` (itself wrapping
 The drag-and-drop list itself lives in the **`editor` sub-plugin**
 (`plugins/reorder/plugins/editor/`) as `<ReorderEditor>` — a purely
 presentational component (SortableList + move dispatch + flat `sortableIds` +
-hide/restore/spacer affordances + grouping zones). It knows nothing about
-config_v2, the live catalog, or the `ReorderTree` format; the consumer maps its
-own data into `entries` + callbacks and threads `editMode`/`orientation` as
-props (the editor does **not** read the global `useEditMode()` signal). This lets
-the **same editor** power both the in-app pen-drag (this middleware, wired to
-`setConfig`) and the `reorder-tree` field renderer in the Config settings pane
-(`fields/reorder-tree/plugins/config/web`, wired to the field's `onChange`).
-Because the editor imports neither `reorder/web` nor the `reorder-tree` field, the
-field plugin can import it without a `reorder ↔ reorder-tree` cycle. Group support
-degrades gracefully: with no group callbacks/entries, collision falls back to
-plain `closestCenter`, grouping zones aren't rendered, and "Add Group" is hidden
-(the field editor's mode — groups stay deferred there).
+hide/restore + registry-driven `inserts`/`onRemoveNode`). It has just two opaque
+entry kinds — `item` and a generic `node` (with optional `memberIds` for
+containers) — and knows nothing about config_v2, the live catalog, the
+`ReorderTree` format, or any specific node type; the consumer pre-renders each
+node via the node-type registry and maps its own data into `entries` + callbacks,
+threading `editMode`/`orientation` as props (the editor does **not** read the
+global `useEditMode()` signal). This lets the **same editor** power both the
+in-app pen-drag (this middleware, wired to `setConfig`) and the `reorder-tree`
+field renderer in the Config settings pane (`fields/reorder-tree/plugins/config/web`,
+wired to the field's `onChange`). Because the editor imports neither `reorder/web`
+nor the `reorder-tree` field, the field plugin can import it without a
+`reorder ↔ reorder-tree` cycle.
 
 ## Storage — config_v2 `items` tree (materialized)
 
-Slot layout lives in **config_v2**, not the DB. Each reorderable render slot gets one config_v2 descriptor (`reorderDirectiveDescriptor(slotId)` in `shared/directive.ts`) — a single `items` field of type `reorder-tree` (`@plugins/fields/plugins/reorder-tree`). The value is a **recursive tagged-node tree** (`ReorderTree = ReorderNode[]`):
+Slot layout lives in **config_v2**, not the DB. Each reorderable render slot gets one config_v2 descriptor (`reorderDirectiveDescriptor(slotId)` in `shared/directive.ts`) — a single `items` field of type `reorder-tree` (`@plugins/fields/plugins/reorder-tree`). The value is a **tree** (`ReorderTree = ReorderNode[]`) whose core format reserves only the structural fields; everything else is per-node-type payload:
 
 ```ts
 type ReorderNode =
   | string                                   // terse: coerces to { item }
   | { item: string; hidden?: boolean }       // entryKey; hidden = remove from slot
-  | { spacer: string }                       // spacer id → blank draggable gap
-  | { group: string; items: ReorderNode[] }; // RESERVED — groups deferred, never emitted yet
+  | { type: string; id?: string;             // any registered node type (dispatch by `type`)
+      items?: ReorderNode[];                 // structural child-list (containers only)
+      [payload: string]: unknown };          // per-type payload, OWNED by the node type
 ```
 
 - An `item` node names a contribution by `entryKey`. A bare string is the terse form (coerces to `{ item }`). `{ item, hidden: true }` removes it from the slot (never hides `excludeFromReorder` items).
-- A `spacer` node materializes a blank draggable gap at its position; the spacer id is a `crypto.randomUUID()`.
-- The `group` arm is **reserved** so groups can slot in later without a format migration. The editor never emits or parses it, and `applyTree` ignores it — groups stay DB-backed (see Caveats).
+- Every **extension** node is `{ type, … }` — dispatched to the **node-type registry** (`@plugins/reorder/plugins/node-types`). The core format knows only the structural `type`/`id`/`items`; `label`/`collapsed`/etc. are each node type's own payload (validated by its `schema`). Built-ins: `{ type: "spacer", id }` (a blank draggable gap) and `{ type: "header", label?, collapsed?, items: [...] }` (a labeled, collapsible **container**). Containers are **one level — no nesting**.
+- An **unknown** `type` (or invalid payload) is skipped at render (fail-soft).
 
-The tree is **applied over the live catalog** at render (`applyTree()` in `web/internal/sorting.ts`) via `normalizeNode`: named items emit in tree order, hidden items route to the hidden bucket, spacers emit gaps, unknown names are skipped, and **any live, visible contribution not named in the tree is appended in natural order** (fail-loud — a contribution is never silently dropped). `excludeFromReorder` items stay pinned last.
+The tree is **applied over the live catalog** at render (`applyTree()` in `web/internal/sorting.ts`) via `normalizeNode`: named items emit in tree order, hidden items route to the hidden bucket, container members resolve and are **consumed** (so they don't re-emit at top level), unknown names are skipped, and **any live, visible contribution not named in the tree is appended in natural order** (fail-loud — a contribution is never silently dropped). `excludeFromReorder` items stay pinned last. Both consumers (this middleware and the config-pane field renderer) pre-render each node via `useReorderNodeTypes()` and hand the editor opaque `node` content.
 
 ### Materialized origin (not a sparse patch)
 
@@ -88,11 +89,12 @@ The `reorderable-slots-in-sync` check fails if the manifest drifts; rebuild to r
 
 ### Write path
 
-Every edit **materializes** the full visible order into a fresh `items` tree (`materializeTree` in `dnd-list-middleware.tsx`) and `setConfig("items", tree)`:
+Every edit **materializes** the top-level order into a fresh `items` tree (`materializeTree` in `dnd-list-middleware.tsx`) and `setConfig("items", tree)`. Container subtrees are re-emitted **verbatim** from the raw tree (members/payload preserved) — in-app editing rewrites only the loose top-level items/spacers around them:
 
-- **Drag reorder:** the new visible order as bare strings (+ `{ spacer }` per spacer); the existing hidden set is appended as `{ item, hidden: true }` nodes so a reorder never un-hides.
-- **Hide:** the same materialization, flipping the target item's node to `{ item, hidden: true }`. **Restore:** materialize, drop the key from the hidden set, and re-append it as a bare string.
-- **Add spacer:** materialize + append `{ spacer: crypto.randomUUID() }`. **Delete spacer:** materialize the order minus that spacer node.
+- **Drag reorder:** the new top-level order — contributions as bare strings, leaf/container nodes verbatim; the existing hidden set is appended as `{ item, hidden: true }` so a reorder never un-hides.
+- **Hide / restore:** materialize, flipping the target to/from `{ item, hidden: true }`.
+- **Insert (registry-driven):** node types declaring `insert` (e.g. spacer's "Add Spacer") append `insert.create()`. **Remove:** `onRemoveNode(id)` drops the node by id (top-level or inside a container).
+- **Patch:** `onPatch(id, partial)` shallow-merges into the addressed node's payload (e.g. the header collapse toggle). Containers are addressed by `id`; a hand-authored container without one gets a `crypto.randomUUID()` assigned on its first in-app write (reads never mutate config).
 
 config_v2's set-field endpoint + watcher drive the live update across tabs.
 
@@ -106,9 +108,9 @@ Because the origin default is the materialized catalog, adding/removing a contri
 
 ### Caveats
 
-- **subId collapses to slot scope.** `storageId = slotId[:subId]` is used for groups, but the config layout is keyed by the base `slotId` only — subIds aren't known at build. Sub-instances of one render slot therefore **share a single layout**. Intended.
-- **Spacers are typed nodes.** A spacer is a `{ spacer: <uuid> }` node in the `items` tree (never hidden, never in a group); its raw uuid is the runtime spacer id. The edit-mode "Add Spacer" affordance appends one; the spacer's × button materializes the order minus that node. `applyTree` emits a blank draggable gap per spacer node, de-duplicating repeated ids on read. Agents can hand-author gaps by inserting a `{ "spacer": "<id>" }` node into a committed `items` array.
-- **Groups stay DB-backed (deferred in the tree).** The `groups` sub-plugin is unchanged — group membership and group rank still live in Postgres and use `Rank`. The `{ group }` union arm is reserved but never emitted/parsed; `applyTree` ignores it and keeps the existing DB-backed groups pass. Only top-level order/visibility/spacers moved to the config tree.
+- **subId collapses to slot scope.** The config layout is keyed by the base `slotId` only — subIds aren't known at build. Sub-instances of one render slot therefore **share a single layout**. Intended.
+- **Node types are extensible (registry-driven).** Spacer and the `header` container are just the first built-ins; add a node type by dropping a sub-plugin under `plugins/reorder/plugins/node-types/plugins/` that contributes `ReorderNodes.NodeType(...)` — no edits to the core format, the editor, or the consumers. Agents hand-author nodes via the `{ "type": … }` shapes shown in each origin file's comment legend.
+- **Groups (containers) are config-only this pass.** In-app edit mode reorders loose items/spacers, hides/restores, adds spacers, and toggles a container's `collapsed` — but does **not** create/destroy containers or change their membership/order (author that in the JSONC). Containers are not top-level draggable yet (no drag handle/rank). The old DB-backed `groups` sub-plugin (Postgres tables + `Rank` + endpoints) was **deleted**.
 
 ## Edit mode
 
@@ -133,7 +135,7 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Load-bearing: yes
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/slot-render.RenderSlotSubIdContext`, `primitives/sortable-list.rectSortingStrategy`, `reorder/editor.DRAG_GROUP_PREFIX`, `reorder/editor.ReorderAreaContext`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/editor.SpacerReorderItem`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/sortable-list.rectSortingStrategy`, `reorder/editor.ReorderAreaContext`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/node-types.useReorderNodeTypes`
   - Exports: Types: `ReorderLayout`; Values: `getEditMode`, `ReorderLayoutContext`, `setEditMode`, `useEditMode`
 - Server:
   - Uses: `config_v2.ConfigV2`
@@ -144,6 +146,6 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Sub-plugins:
   - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
   - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
-  - **`groups`** — User-created groups within reorderable areas. Drag items onto each other to form groups.
+  - **`node-types`** — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
 
 <!-- AUTOGENERATED:END -->

@@ -3,15 +3,15 @@
 The **presentational** drag-and-drop reorder editor, shared by two consumers:
 
 1. **`reorder`'s list middleware** (`ReorderListMiddleware`) — wired to config_v2
-   `setConfig("items", …)` over the live contribution catalog, with DB-backed
-   groups.
+   `setConfig("items", …)` over the live contribution catalog.
 2. **The `reorder-tree` field renderer**
    (`fields/reorder-tree/plugins/config/web`) — wired to the field's `onChange`,
    operating directly on the saved `ReorderTree`. This is what makes the Config
    settings pane a full drag editor.
 
 It is deliberately **display-only**: it knows nothing about config_v2, the live
-catalog, or the `ReorderTree` format. Each consumer maps its own data into
+catalog, the `ReorderTree` format, or any specific node type. Each consumer
+pre-renders its node types via the node-type registry and maps its own data into
 `entries` + callbacks. Because it imports **neither `reorder/web` nor the
 `reorder-tree` field**, the field plugin can import it without forming a
 `reorder ↔ reorder-tree` cycle.
@@ -22,12 +22,11 @@ catalog, or the `ReorderTree` format. Each consumer maps its own data into
 import { ReorderEditor } from "@plugins/reorder/plugins/editor/web";
 
 <ReorderEditor
-  entries={entries}            // (item | spacer | pre-rendered group) in display order
+  entries={entries}            // (item | node) in display order — `node` is opaque
   hiddenItems={hiddenItems}    // { key, label }[] for the restore popover
   onDrop={…} onHide={…} onRestore={…}
-  onAddSpacer={…} onDeleteSpacer={…}
-  // optional — middleware only; absence disables grouping UI:
-  onGroupCreate={…} onGroupJoin={…} onGroupReorder={…} onAddGroup={…}
+  inserts={[{ label, onInsert }]}   // registry-driven insert affordances (e.g. "Add Spacer")
+  onRemoveNode={(id) => …}          // remove a node by id (e.g. a spacer's × button)
   editMode={…} orientation="vertical" strategy={…} wrap={…} renderOverlay={…}
 />
 ```
@@ -43,14 +42,17 @@ wrapper div. The `reorder` list middleware sets it only in the "editor-wrap"
 regime (see `reorder`'s CLAUDE.md). Default (`false`) renders the cells bare, so
 the CollapsibleWrap-host and plain-row paths are byte-for-byte unchanged.
 
-### Item rendering is opaque
+### Two opaque entry kinds
 
-An item entry carries a pre-rendered `node`; the editor never wraps it. The
-reorder middleware passes a contribution wrapped by `ReorderItemMiddleware`
-(→ a `SortableReorderItem`); the field renderer passes an explicit
-`SortableReorderItem` around a label chip. Both `SortableReorderItem` and
-`SpacerReorderItem` are exported here so each consumer wraps with the same
-draggable; the editor renders spacer entries itself.
+`ReorderEntry` is `item | node`. An `item` carries a pre-rendered contribution
+`node` (the middleware wraps it via `ReorderItemMiddleware` → `SortableReorderItem`;
+the field renderer wraps a label chip). A `node` entry carries opaque
+pre-rendered content for any registered node type, plus optional `memberIds` for
+containers (so the shared `SortableContext` registers the child ids; a container
+pushes only its members, never its own id — it isn't top-level draggable). The
+editor renders both opaquely and knows nothing about spacers, headers, etc.
+`SortableReorderItem` and `SpacerReorderItem` are exported so node-type plugins
+and consumers wrap with the same draggable primitive.
 
 ### `editMode` is a prop, not a signal
 
@@ -58,13 +60,6 @@ The editor must not depend on `reorder`, so the global `useEditMode()` signal is
 **not** read here — the consumer threads `editMode` in (middleware passes
 `useEditMode()`; the field renderer passes `true`). `orientation` is likewise a
 prop (middleware auto-detects; field is always `"vertical"`).
-
-### Graceful group degradation
-
-`groupsEnabled` is derived from the presence of any group callback/entry. When
-false: collision detection falls back to plain `closestCenter`, grouping zones
-are not rendered, and the "Add Group" row is hidden. `DRAG_GROUP_PREFIX` (the
-group-drag-id contract) is exported for `reorder`'s group box to reuse.
 
 ## Plugin reference
 
@@ -77,8 +72,8 @@ group-drag-id contract) is exported for `reorder`'s group box to reuse.
 - Description: Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
 - Web:
   - Uses: `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/text.Text`
-  - Exports: Types: `ReorderAreaCtxValue`, `ReorderEditorProps`, `ReorderEntry`, `ReorderGroupEntry`, `ReorderItemEntry`, `ReorderSpacerEntry`; Values: `DRAG_GROUP_PREFIX`, `ReorderAreaContext`, `ReorderEditor`, `RestoreButton`, `SortableReorderItem`, `SpacerReorderItem`
+  - Exports: Types: `ReorderAreaCtxValue`, `ReorderEditorProps`, `ReorderEntry`, `ReorderItemEntry`, `ReorderNodeEntry`; Values: `ReorderAreaContext`, `ReorderEditor`, `RestoreButton`, `SortableReorderItem`, `SpacerReorderItem`
 - Cross-plugin:
-  - Imported by: `fields/reorder-tree/config`, `reorder`
+  - Imported by: `fields/reorder-tree/config`, `reorder`, `reorder/node-types/spacer`
 
 <!-- AUTOGENERATED:END -->

@@ -981,6 +981,13 @@
       "tag": "20260610_170451_20eaf229__midi_source_path",
       "hash": "20eaf229",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781134404000,
+      "tag": "20260610_233324_e4d43140__remove_reorder_groups",
+      "hash": "e4d43140",
+      "breakpoints": true
     }
   ]
 }

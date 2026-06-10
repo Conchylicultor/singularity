@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { ReorderEditor, DRAG_GROUP_PREFIX } from "./internal/reorder-editor";
+export { ReorderEditor } from "./internal/reorder-editor";
 export {
   ReorderAreaContext,
   SortableReorderItem,
@@ -11,8 +11,7 @@ export {
 export type {
   ReorderEntry,
   ReorderItemEntry,
-  ReorderSpacerEntry,
-  ReorderGroupEntry,
+  ReorderNodeEntry,
   ReorderEditorProps,
 } from "./internal/types";
 

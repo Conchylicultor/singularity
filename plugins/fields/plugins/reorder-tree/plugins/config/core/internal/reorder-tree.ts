@@ -13,9 +13,17 @@ import {
 const nodeSchema: z.ZodType<ReorderNode> = z.lazy(() =>
   z.union([
     z.string(),
+    // `{item}` arm MUST precede the typed-node arm so item nodes are never
+    // swallowed (and `hidden` is preserved).
     z.object({ item: z.string(), hidden: z.boolean().optional() }),
-    z.object({ spacer: z.string() }),
-    z.object({ group: z.string(), items: z.array(nodeSchema) }),
+    z
+      .object({
+        type: z.string(), // REQUIRED — gates the typed-node arm
+        id: z.string().optional(),
+        items: z.array(nodeSchema).optional(),
+      })
+      // per-type payload + back-compat `{spacer}` reads survive passthrough.
+      .passthrough(),
   ]),
 );
 
@@ -36,22 +44,41 @@ export function reorderTreeField(
 
 /**
  * Discriminated, normalized view of a {@link ReorderNode}. Coerces the terse
- * bare-string form to `{ kind: "item", item, hidden: false }`.
+ * bare-string form to `{ kind: "item", item, hidden: false }`. Structural and
+ * payload-opaque — the node type's payload is carried verbatim in `payload`
+ * (own keys minus the structural `type`/`id`/`items`) and validated downstream
+ * by the node type's own schema, not here.
  */
 export type NormalizedNode =
   | { kind: "item"; item: string; hidden: boolean }
-  | { kind: "spacer"; spacer: string }
-  | { kind: "group"; group: string; items: ReorderNode[] };
+  | {
+      kind: "node";
+      type: string;
+      id?: string;
+      payload: Record<string, unknown>;
+      members?: ReorderNode[];
+    };
 
 export function normalizeNode(node: ReorderNode): NormalizedNode {
   if (typeof node === "string") {
     return { kind: "item", item: node, hidden: false };
   }
   if ("item" in node) {
-    return { kind: "item", item: node.item, hidden: node.hidden ?? false };
+    // The typed-node arm's `[payload]: unknown` index signature defeats
+    // discriminated narrowing here, so read the item-node shape explicitly.
+    const itemNode = node as { item: string; hidden?: boolean };
+    return { kind: "item", item: itemNode.item, hidden: itemNode.hidden ?? false };
   }
+  // Back-compat read for old files: legacy `{ spacer }` nodes (emit-new only —
+  // the format type no longer has this arm, hence the localized cast).
   if ("spacer" in node) {
-    return { kind: "spacer", spacer: node.spacer };
+    const spacer = (node as unknown as { spacer: string }).spacer;
+    return { kind: "node", type: "spacer", id: spacer, payload: {} };
   }
-  return { kind: "group", group: node.group, items: node.items };
+  if ("type" in node) {
+    const { type, id, items, ...payload } = node;
+    return { kind: "node", type, id, payload, members: items };
+  }
+  // The zod schema prevents this in practice; fail loud.
+  throw new Error("malformed reorder node");
 }

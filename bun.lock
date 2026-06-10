@@ -2006,8 +2006,16 @@
       "name": "@singularity/plugin-reorder-editor",
       "version": "0.0.1",
     },
-    "plugins/reorder/plugins/groups": {
-      "name": "@singularity/plugin-reorder-groups",
+    "plugins/reorder/plugins/node-types": {
+      "name": "@singularity/plugin-reorder-node-types",
+      "version": "0.0.1",
+    },
+    "plugins/reorder/plugins/node-types/plugins/header": {
+      "name": "@singularity/plugin-reorder-node-types-header",
+      "version": "0.0.1",
+    },
+    "plugins/reorder/plugins/node-types/plugins/spacer": {
+      "name": "@singularity/plugin-reorder-node-types-spacer",
       "version": "0.0.1",
     },
     "plugins/review": {
@@ -3768,7 +3776,11 @@
 
     "@singularity/plugin-reorder-editor": ["@singularity/plugin-reorder-editor@workspace:plugins/reorder/plugins/editor"],
 
-    "@singularity/plugin-reorder-groups": ["@singularity/plugin-reorder-groups@workspace:plugins/reorder/plugins/groups"],
+    "@singularity/plugin-reorder-node-types": ["@singularity/plugin-reorder-node-types@workspace:plugins/reorder/plugins/node-types"],
+
+    "@singularity/plugin-reorder-node-types-header": ["@singularity/plugin-reorder-node-types-header@workspace:plugins/reorder/plugins/node-types/plugins/header"],
+
+    "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 

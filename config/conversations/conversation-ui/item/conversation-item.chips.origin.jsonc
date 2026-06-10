@@ -1,6 +1,8 @@
 // @hash 4332ee36b2dc
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "conversations.conversation-view.op-status:op-status",
     "conversations.conversation-progress:progress",

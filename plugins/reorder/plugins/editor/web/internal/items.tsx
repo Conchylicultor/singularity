@@ -1,6 +1,5 @@
 import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
-import { useDroppable } from "@dnd-kit/core";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -11,45 +10,20 @@ import { cn } from "@/lib/utils";
 
 // --- Area context ------------------------------------------------------------
 
-// Read by the item-internal affordances (hide button, spacer delete button,
-// grouping zone). The editor provides it; both the reorder middleware and the
-// config field renderer flow through the same context.
+// Read by the item-internal affordances (hide button, node remove button). The
+// editor provides it; both the reorder middleware and the config field renderer
+// flow through the same context.
 export type ReorderAreaCtxValue = {
   orientation: "horizontal" | "vertical";
   /** Hide a contribution by id (its entryKey). */
   onHide: (id: string) => void;
-  /** Remove a spacer node by id. */
-  onDeleteSpacer: (id: string) => void;
-  /** Whether grouping affordances (center drop zone) are active. */
-  groupsEnabled: boolean;
+  /** Remove a node (e.g. a spacer) by id. */
+  onRemoveNode: (id: string) => void;
 };
 
 export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
   null,
 );
-
-// --- Grouping zone (center overlay for group-on-drop) ------------------------
-
-export function GroupingZone({ itemKey }: { itemKey: string }) {
-  const { setNodeRef, isOver } = useDroppable({
-    id: `group-zone:${itemKey}`,
-    data: { zone: "child", targetId: itemKey },
-  });
-  const ctx = useContext(ReorderAreaContext);
-  const isHorizontal = ctx?.orientation === "horizontal";
-  return (
-    <div
-      ref={setNodeRef}
-      className={cn(
-        "absolute z-raised rounded-md transition-colors",
-        isHorizontal
-          ? "inset-y-0 left-[42.5%] right-[42.5%]"
-          : "inset-x-0 top-[42.5%] bottom-[42.5%]",
-        isOver && "ring-2 ring-primary bg-accent/30",
-      )}
-    />
-  );
-}
 
 // --- Sortable reorder item ---------------------------------------------------
 
@@ -68,7 +42,6 @@ export function SortableReorderItem({
 }) {
   const ctx = useContext(ReorderAreaContext);
   const isHorizontal = ctx?.orientation === "horizontal";
-  const groupsEnabled = ctx?.groupsEnabled ?? false;
   const contentRef = useRef<HTMLDivElement>(null);
   const [isEmpty, setIsEmpty] = useState(false);
 
@@ -150,7 +123,6 @@ export function SortableReorderItem({
               {label}
             </div>
           )}
-          {editMode && groupsEnabled && <GroupingZone itemKey={itemKey} />}
         </>
       )}
     </SortableItem>
@@ -161,7 +133,7 @@ export function SortableReorderItem({
 
 // A spacer renders as a flex gap. In edit mode it becomes a draggable, dashed
 // placeholder with a delete button; the node is removed from the `items` tree
-// via `onDeleteSpacer`.
+// via `ctx.onRemoveNode`.
 export function SpacerReorderItem({
   itemKey,
   editMode,
@@ -177,7 +149,7 @@ export function SpacerReorderItem({
 
   function handleDelete(e: React.MouseEvent) {
     e.stopPropagation();
-    ctx?.onDeleteSpacer(itemKey);
+    ctx?.onRemoveNode(itemKey);
   }
 
   return (
@@ -210,14 +182,12 @@ export function SpacerReorderItem({
 
 export function RestoreButton({
   hiddenItems,
-  onAddGroup,
-  onAddSpacer,
+  inserts,
   onRestore,
 }: {
   hiddenItems: Array<{ key: string; label: string }>;
-  /** Optional — the "Add Group" row is hidden when absent (e.g. field editor). */
-  onAddGroup?: () => void;
-  onAddSpacer: () => void;
+  /** Registry-driven insert affordances (e.g. "Add Spacer"). */
+  inserts: Array<{ label: string; onInsert: () => void }>;
   onRestore: (key: string) => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -267,32 +237,24 @@ export function RestoreButton({
           </div>
         )}
 
-        <div className="border-t border-border p-1">
-          {onAddGroup && (
-            <Row
-              size="sm"
-              hover="accent"
-              icon={<MdAdd className="shrink-0 text-muted-foreground" />}
-              onClick={() => {
-                onAddGroup();
-                setOpen(false);
-              }}
-            >
-              Add Group
-            </Row>
-          )}
-          <Row
-            size="sm"
-            hover="accent"
-            icon={<MdAdd className="shrink-0 text-muted-foreground" />}
-            onClick={() => {
-              onAddSpacer();
-              setOpen(false);
-            }}
-          >
-            Add Spacer
-          </Row>
-        </div>
+        {inserts.length > 0 && (
+          <div className="border-t border-border p-1">
+            {inserts.map((insert) => (
+              <Row
+                key={insert.label}
+                size="sm"
+                hover="accent"
+                icon={<MdAdd className="shrink-0 text-muted-foreground" />}
+                onClick={() => {
+                  insert.onInsert();
+                  setOpen(false);
+                }}
+              >
+                {insert.label}
+              </Row>
+            ))}
+          </div>
+        )}
 
         <div className="border-t border-border px-2.5 py-2">
           <Text

@@ -17,32 +17,29 @@ export interface ReorderItemEntry {
   node: ReactNode;
 }
 
-export interface ReorderSpacerEntry {
-  kind: "spacer";
-  /** Spacer uuid; the editor renders the `SpacerReorderItem` itself. */
-  id: string;
-}
-
 /**
- * A pre-rendered group box (middleware-only; groups stay DB-backed). The editor
- * does not build group UI — the consumer injects a ready group element via `node`
- * and tells the editor which sortable ids live inside it (`memberIds`) so the
- * shared `SortableContext` registers them.
+ * An opaque pre-rendered node — a spacer (leaf) or a container (e.g. a header
+ * box). The consumer renders it via the node-type registry and passes the result
+ * here; the editor never builds node UI.
+ *
+ * `memberIds` is present ONLY for container nodes, so the shared
+ * `SortableContext` registers the child ids that live inside the node. A
+ * container pushes ONLY its `memberIds` (it is NOT top-level draggable in this
+ * pass — no own sortable id). A leaf node (e.g. a spacer) omits `memberIds`, so
+ * it pushes its own `id` and is itself sortable.
  */
-export interface ReorderGroupEntry {
-  kind: "group";
+export interface ReorderNodeEntry {
+  kind: "node";
   id: string;
-  memberIds: string[];
   node: ReactNode;
+  /** Sortable child ids — present only for container nodes. */
+  memberIds?: string[];
 }
 
-export type ReorderEntry =
-  | ReorderItemEntry
-  | ReorderSpacerEntry
-  | ReorderGroupEntry;
+export type ReorderEntry = ReorderItemEntry | ReorderNodeEntry;
 
 export interface ReorderEditorProps {
-  /** Top-level display order (items, spacers, optional pre-rendered groups). */
+  /** Top-level display order (items + pre-rendered nodes). */
   entries: ReorderEntry[];
   /** Hidden items, surfaced in the restore popover. */
   hiddenItems: Array<{ key: string; label: string }>;
@@ -51,14 +48,12 @@ export interface ReorderEditorProps {
   onDrop: (draggedId: string, overId: string) => void;
   onHide: (id: string) => void;
   onRestore: (key: string) => void;
-  onAddSpacer: () => void;
-  onDeleteSpacer: (id: string) => void;
-
-  // --- optional group callbacks (middleware only) ---
-  onGroupCreate?: (draggedId: string, targetId: string) => void;
-  onGroupJoin?: (draggedId: string, groupId: string) => void;
-  onGroupReorder?: (groupId: string, overId: string) => void;
-  onAddGroup?: () => void;
+  /** Registry-driven insert affordances (e.g. "Add Spacer"), shown in the
+   *  RestoreButton popover. The `create()` half is consumer-side; `onInsert`
+   *  is opaque to the editor. */
+  inserts: Array<{ label: string; onInsert: () => void }>;
+  /** Generic remove for a node by id (e.g. the spacer's × button). */
+  onRemoveNode: (id: string) => void;
 
   // --- display ---
   editMode: boolean;

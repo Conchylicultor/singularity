@@ -144,8 +144,9 @@ export async function renderReorderableSlotsManifest(
 /**
  * Slim origin-annotations provider: the order lives in the `items` value (a
  * materialized `ReorderTree`) and each entry is a fully-qualified `entryKey`
- * (`pluginId:id`), so the comment is just a one-line hand-edit format note —
- * the per-entry label map would only restate the already-explicit keys.
+ * (`pluginId:id`), so the comments are just a hand-edit format note for the
+ * extension node types (a bare string is the terse form of an item) — the
+ * per-entry label map would only restate the already-explicit keys.
  */
 function buildOriginAnnotationsProvider(
   catalog: Map<string, CatalogItem[]>,
@@ -155,7 +156,9 @@ function buildOriginAnnotationsProvider(
     const items = catalog.get(descriptor.name);
     if (!items || items.length === 0) return [];
     return [
-      'Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.',
+      'Hide: { "item": "<key>", "hidden": true }',
+      'Spacer (gap): { "type": "spacer", "id": "<unique-id>" }',
+      'Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }',
     ];
   };
 }
