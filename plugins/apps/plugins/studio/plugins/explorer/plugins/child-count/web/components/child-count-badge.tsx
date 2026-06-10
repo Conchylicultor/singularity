@@ -12,7 +12,7 @@ export function ChildCountBadge({ node }: { node: PluginNode }) {
   const count = countDescendants(node);
   if (count === 0) return null;
   return (
-    <span className="hidden shrink-0 text-[10px] tabular-nums text-muted-foreground group-hover/row:inline">
+    <span className="hidden shrink-0 text-3xs tabular-nums text-muted-foreground group-hover/row:inline">
       {count}
     </span>
   );

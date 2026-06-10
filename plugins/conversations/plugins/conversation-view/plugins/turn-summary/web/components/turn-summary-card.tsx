@@ -5,6 +5,7 @@ import {
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { turnSummariesResource } from "../../shared";
 
 function parseBullets(text: string): string[] {
@@ -52,7 +53,7 @@ export function TurnSummaryCard({
   const hasDetail = caveats.length > 0 || actions.length > 0;
 
   return (
-    <div className="rounded-md border border-border bg-muted/30 px-3 py-2 text-xs">
+    <Text as="div" variant="caption" className="rounded-md border border-border bg-muted/30 px-3 py-2">
       <button
         type="button"
         onClick={hasDetail ? toggle : undefined}
@@ -66,7 +67,7 @@ export function TurnSummaryCard({
         ) : (
           <span className="mt-0.5 size-3.5 shrink-0" />
         )}
-        <span className="flex-1 leading-snug">
+        <span className="flex-1">
           {summary.summary || "(no summary)"}
         </span>
       </button>
@@ -90,7 +91,7 @@ export function TurnSummaryCard({
           )}
         </div>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -106,7 +107,7 @@ function BulletList({
       {items.map((item, i) => (
         <li key={i} className="flex items-start gap-1.5">
           {icon}
-          <span className="leading-snug">{item}</span>
+          <span>{item}</span>
         </li>
       ))}
     </ul>

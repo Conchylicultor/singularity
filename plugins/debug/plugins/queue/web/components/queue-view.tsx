@@ -7,6 +7,7 @@ import { jobsListResource, retryJob, cancelJob, type JobRow, type JobState } fro
 import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, deleteTriggerEndpoint, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { cn } from "@/lib/utils";
@@ -135,8 +136,8 @@ function JobsTab() {
         {visible.length === 0 ? (
           <Empty>No jobs.</Empty>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 border-b bg-background text-left text-xs text-muted-foreground">
+          <table className="w-full text-body">
+            <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">State</th>
                 <th className="px-3 py-2">Job</th>
@@ -158,12 +159,12 @@ function JobsTab() {
                       {r.state}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.jobName}</td>
+                  <td className="px-3 py-2 font-mono text-caption">{r.jobName}</td>
                   <td className="px-3 py-2 tabular-nums">
                     {r.attempts}/{r.maxAttempts}
                   </td>
                   <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.runAt)}</td>
-                  <td className="px-3 py-2 text-xs text-destructive">
+                  <td className="px-3 py-2 text-caption text-destructive">
                     {r.lastError ? truncate(r.lastError.split("\n")[0] ?? "", 60) : ""}
                   </td>
                   <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
@@ -201,16 +202,16 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
-            <div className="text-xs text-muted-foreground">Job</div>
-            <div className="font-mono text-sm">{job.jobName}</div>
+            <Text as="div" variant="caption" className="text-muted-foreground">Job</Text>
+            <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
           </div>
           <Button size="sm" variant="ghost" onClick={onClose}>
             Close
           </Button>
         </div>
-        <div className="flex-1 space-y-4 overflow-auto p-4 text-sm">
+        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-4">
           <Field label="ID">
-            <code className="text-xs">{job.id}</code>
+            <code className="text-caption">{job.id}</code>
           </Field>
           <Field label="State">
             <Badge size="sm" colorClass={STATE_STYLES[job.state]}>
@@ -224,18 +225,18 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
           )}
           <Field label="Queue">{job.queueName ?? "(default)"}</Field>
           <Field label="Input">
-            <pre className="max-h-64 overflow-auto rounded bg-muted p-2 text-xs">
+            <pre className="max-h-64 overflow-auto rounded-md bg-muted p-2 text-caption">
               {JSON.stringify(job.input, null, 2)}
             </pre>
           </Field>
           {job.lastError && (
             <Field label="Last error">
-              <pre className="max-h-64 overflow-auto rounded bg-destructive/5 p-2 text-xs text-destructive">
+              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/5 p-2 text-caption text-destructive">
                 {job.lastError}
               </pre>
             </Field>
           )}
-        </div>
+        </Text>
       </div>
     </div>
   );
@@ -252,9 +253,9 @@ function EventsTab() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b px-3 py-2">
-        <div className="text-xs text-muted-foreground">
+        <Text as="div" variant="caption" className="text-muted-foreground">
           Capped ring-buffer of last ~1000 emit() calls.
-        </div>
+        </Text>
         <div className="flex-1" />
         <Button size="sm" variant="ghost" onClick={() => void refetch()}>
           <MdRefresh className="size-4" /> Refresh
@@ -264,8 +265,8 @@ function EventsTab() {
         {rows.length === 0 ? (
           <Empty>No emissions recorded yet. Emit an event to populate this log.</Empty>
         ) : (
-          <table className="w-full text-sm">
-            <thead className="sticky top-0 border-b bg-background text-left text-xs text-muted-foreground">
+          <table className="w-full text-body">
+            <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
                 <th className="px-3 py-2">Time</th>
                 <th className="px-3 py-2">Event</th>
@@ -281,7 +282,7 @@ function EventsTab() {
                   onClick={() => setSelected(r)}
                 >
                   <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.emittedAt)}</td>
-                  <td className="px-3 py-2 font-mono text-xs">{r.eventName}</td>
+                  <td className="px-3 py-2 font-mono text-caption">{r.eventName}</td>
                   <td className="px-3 py-2">
                     <Badge
                       size="sm"
@@ -294,7 +295,7 @@ function EventsTab() {
                       {r.matchedCount}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 font-mono text-xs text-muted-foreground">
+                  <td className="px-3 py-2 font-mono text-caption text-muted-foreground">
                     {truncate(JSON.stringify(r.payload), 80)}
                   </td>
                 </tr>
@@ -323,14 +324,14 @@ function EmissionDrawer({
       >
         <div className="flex items-center justify-between border-b px-4 py-3">
           <div>
-            <div className="text-xs text-muted-foreground">Emission</div>
-            <div className="font-mono text-sm">{emission.eventName}</div>
+            <Text as="div" variant="caption" className="text-muted-foreground">Emission</Text>
+            <Text as="div" variant="body" className="font-mono">{emission.eventName}</Text>
           </div>
           <Button size="sm" variant="ghost" onClick={onClose}>
             Close
           </Button>
         </div>
-        <div className="flex-1 space-y-4 overflow-auto p-4 text-sm">
+        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-4">
           <Field label="Emitted at">
             {new Date(emission.emittedAt).toLocaleString()} ({relativeTime(emission.emittedAt)})
           </Field>
@@ -340,7 +341,7 @@ function EmissionDrawer({
                 0 — no trigger matched this emission.
               </span>
             ) : (
-              <ul className="space-y-1 font-mono text-xs">
+              <ul className="space-y-1 font-mono text-caption">
                 {emission.matchedTriggerIds.map((id) => (
                   <li key={id}>{id}</li>
                 ))}
@@ -348,11 +349,11 @@ function EmissionDrawer({
             )}
           </Field>
           <Field label="Payload">
-            <pre className="max-h-96 overflow-auto rounded bg-muted p-2 text-xs">
+            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-2 text-caption">
               {JSON.stringify(emission.payload, null, 2)}
             </pre>
           </Field>
-        </div>
+        </Text>
       </div>
     </div>
   );
@@ -394,9 +395,9 @@ function TriggersTab() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center border-b px-3 py-2">
-        <div className="text-xs text-muted-foreground">
+        <Text as="div" variant="caption" className="text-muted-foreground">
           Active subscriptions across all registered events.
-        </div>
+        </Text>
         <div className="flex-1" />
         <Button size="sm" variant="ghost" onClick={() => void refetch()}>
           <MdRefresh className="size-4" /> Refresh
@@ -409,15 +410,15 @@ function TriggersTab() {
           <div className="divide-y">
             {grouped.map(([eventName, triggers]) => (
               <div key={eventName}>
-                <div className="sticky top-0 border-b bg-muted/50 px-3 py-1.5 text-xs font-semibold">
+                <Text as="div" variant="caption" className="sticky top-0 border-b bg-muted/50 px-3 py-1.5 font-semibold">
                   {eventName} <span className="text-muted-foreground">({triggers.length})</span>
-                </div>
-                <table className="w-full text-sm">
+                </Text>
+                <table className="w-full text-body">
                   <tbody>
                     {triggers.map((t) => (
                       <tr key={t.id} className={cn("border-b", !t.enabled && "opacity-60")}>
-                        <td className="px-3 py-2 font-mono text-xs">{t.jobName}</td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-2 font-mono text-caption">{t.jobName}</td>
+                        <td className="px-3 py-2 text-caption">
                           {Object.keys(t.filters).length > 0 && (
                             <div className="flex flex-wrap gap-1">
                               {Object.entries(t.filters).map(([k, v]) => (
@@ -433,15 +434,15 @@ function TriggersTab() {
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                        <td className="px-3 py-2 text-caption text-muted-foreground">
                           {Object.keys(t.jobWith).length > 0 && (
                             <code>{truncate(JSON.stringify(t.jobWith), 40)}</code>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-xs">
+                        <td className="px-3 py-2 text-caption">
                           {t.oneShot && <span className="text-muted-foreground">oneShot</span>}
                         </td>
-                        <td className="px-3 py-2 text-xs text-muted-foreground">
+                        <td className="px-3 py-2 text-caption text-muted-foreground">
                           {relativeTime(t.createdAt)}
                         </td>
                         <td className="px-3 py-2 text-right">
@@ -473,9 +474,9 @@ function TriggersTab() {
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+    <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
       {children}
-    </div>
+    </Text>
   );
 }
 
@@ -488,7 +489,7 @@ function Field({
 }) {
   return (
     <div>
-      <div className="mb-1 text-xs font-medium uppercase text-muted-foreground">{label}</div>
+      <Text as="div" variant="caption" className="mb-1 font-medium uppercase text-muted-foreground">{label}</Text>
       <div>{children}</div>
     </div>
   );

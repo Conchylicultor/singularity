@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
@@ -97,12 +98,12 @@ export function DefaultProviderRow({ providerId }: Props) {
           />
         </div>
         {status?.identity?.email ? (
-          <div className="text-sm text-muted-foreground truncate">
+          <Text as="div" variant="body" className="text-muted-foreground truncate">
             {status.identity.email}
-          </div>
+          </Text>
         ) : null}
         {status?.scopes && status.scopes.length > 0 ? (
-          <details className="mt-1 text-xs text-muted-foreground">
+          <details className="mt-1 text-caption text-muted-foreground">
             <summary className="cursor-pointer">
               {status.scopes.length} scope{status.scopes.length === 1 ? "" : "s"}
             </summary>
@@ -114,10 +115,10 @@ export function DefaultProviderRow({ providerId }: Props) {
           </details>
         ) : null}
         {status?.lastRefreshError ? (
-          <div className="mt-1 text-xs text-warning">
+          <Text as="div" variant="caption" className="mt-1 text-warning">
             Last refresh failed:{" "}
             <span className="font-mono">{status.lastRefreshError.message}</span>
-          </div>
+          </Text>
         ) : null}
       </div>
       <div className="flex items-center gap-2 shrink-0">

@@ -12,9 +12,13 @@ import {
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
+
+// Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
+const monoLogClass = "font-mono text-xs leading-5";
 
 export function BuildLogSection({ runId }: { runId: string }): ReactElement {
   const { data } = useEndpoint(getBuildRunLogs, { id: runId });
@@ -44,7 +48,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
   return (
     <div className="flex flex-col gap-1">
       <div className="flex items-center justify-between pb-1">
-        <span className="text-xs font-medium text-muted-foreground">Logs</span>
+        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
         <Button
           variant="ghost"
           size="icon"
@@ -67,8 +71,8 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
 
   return (
     <Collapsible defaultOpen={!step.success || step.lines.length <= 6}>
-      <div className="rounded border bg-muted/30 overflow-hidden">
-        <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-xs hover:bg-muted/50 transition-colors">
+      <div className="rounded-md border bg-muted/30 overflow-hidden">
+        <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-caption hover:bg-muted/50 transition-colors">
           <CollapsibleChevron className="size-3 text-muted-foreground" />
           {step.success ? (
             <MdCheck className="size-3.5 text-success shrink-0" />
@@ -80,7 +84,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
         </CollapsibleTrigger>
         <CollapsibleContent>
           {step.lines.length > 0 && (
-            <div className="border-t px-3 py-2 font-mono text-xs leading-5 max-h-64 overflow-y-auto">
+            <div className={`border-t px-3 py-2 max-h-64 overflow-y-auto ${monoLogClass}`}>
               {step.lines.map((line, i) => (
                 <div
                   key={i}
@@ -156,9 +160,9 @@ function LiveLogs(): ReactElement {
   return (
     <div className="relative flex flex-col">
       <div className="flex items-center justify-between pb-1">
-        <span className="text-xs font-medium text-muted-foreground">
+        <Text as="span" variant="label" className="text-muted-foreground">
           Logs <span className="text-muted-foreground/60 ml-1">Live</span>
-        </span>
+        </Text>
         <Button
           variant="ghost"
           size="icon"
@@ -172,7 +176,7 @@ function LiveLogs(): ReactElement {
       </div>
       <div
         ref={stickyScroll.scrollRef}
-        className="min-h-48 max-h-96 overflow-y-auto rounded border bg-muted/30 px-3 py-2 font-mono text-xs leading-5"
+        className={`min-h-48 max-h-96 overflow-y-auto rounded-md border bg-muted/30 px-3 py-2 ${monoLogClass}`}
       >
         {entries.length === 0 && (
           <span className="text-muted-foreground">No build logs yet</span>

@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FieldDef } from "@plugins/config_v2/core";
 import { setConfigField } from "@plugins/config_v2/core";
 import { resetConfigField } from "../../core";
@@ -104,8 +105,7 @@ export function ConfigFieldRow({
         </button>
       </div>
       {hasConflict && (
-        // eslint-disable-next-line badge/no-adhoc-chip -- warning banner container, not a chip
-        <div className="ml-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-xs text-warning">
+        <Text as="div" variant="caption" className="ml-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-warning">
           <MdWarning className="size-3 shrink-0" />
           <span className="flex-1 truncate">
             Upstream: {formatOriginValue(originValue)}
@@ -120,7 +120,7 @@ export function ConfigFieldRow({
           >
             Accept
           </Badge>
-        </div>
+        </Text>
       )}
     </div>
   );

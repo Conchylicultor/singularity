@@ -192,7 +192,7 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
               aria-selected={active}
               onClick={() => setSelectedKey(key)}
               className={cn(
-                "relative -mb-px px-3 py-1.5 text-sm border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "relative -mb-px px-3 py-1.5 text-body border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 active
                   ? "border-foreground text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground",
@@ -206,7 +206,7 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 
       <div
         ref={viewportRef}
-        className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-4 font-mono text-xs leading-5"
+        className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-4 font-mono text-caption"
       >
         {entries.map((entry) => (
           <div

@@ -2,6 +2,7 @@ import type { ComponentType } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { MdPlaylistAdd, MdNorthEast, MdClose, MdNotificationsActive } from "react-icons/md";
 import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type QueueOperationEvent = Extract<JsonlEvent, { kind: "queue-operation" }>;
 
@@ -52,7 +53,7 @@ export function QueueOperationRow({ event }: { event: JsonlEvent }) {
   const task = e.content ? taskNotificationSummary(e.content) : null;
 
   return (
-    <div className="flex items-center gap-2 px-1 py-0.5 text-xs text-muted-foreground">
+    <Text as="div" variant="caption" className="flex items-center gap-2 px-1 py-0.5 text-muted-foreground">
       <span
         className="flex shrink-0 items-center gap-1 font-medium tracking-wide text-2xs"
       >
@@ -74,6 +75,6 @@ export function QueueOperationRow({ event }: { event: JsonlEvent }) {
       ) : e.content ? (
         <span className="truncate">{e.content}</span>
       ) : null}
-    </div>
+    </Text>
   );
 }

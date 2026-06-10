@@ -1,5 +1,5 @@
 import { type ReactNode } from "react";
-import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   DataViewRenderProps,
   FieldDef,
@@ -100,9 +100,13 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center p-6 text-sm text-muted-foreground">
+      <Text
+        as="div"
+        variant="body"
+        className="flex h-full items-center justify-center p-6 text-muted-foreground"
+      >
         {props.emptyState}
-      </div>
+      </Text>
     );
   }
 
@@ -136,19 +140,25 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
             media={media}
           >
             {titleField ? (
-              <div className="truncate text-sm font-semibold text-foreground">
+              <Text
+                as="div"
+                variant="label"
+                className="truncate font-semibold text-foreground"
+              >
                 {renderFieldContent(titleField, row)}
-              </div>
+              </Text>
             ) : null}
             {bodyFields.length > 0 ? (
               <div className="mt-1 flex flex-col gap-0.5">
                 {bodyFields.map((field) => (
-                  <div
+                  <Text
+                    as="div"
                     key={field.id}
-                    className={cn("truncate text-xs text-muted-foreground")}
+                    variant="caption"
+                    className="truncate text-muted-foreground"
                   >
                     {renderFieldContent(field, row)}
-                  </div>
+                  </Text>
                 ))}
               </div>
             ) : null}

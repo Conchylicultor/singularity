@@ -3,6 +3,7 @@ import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web"
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({
@@ -69,15 +70,15 @@ function CommitFileList({
   return (
     <div className="flex h-full min-h-0 flex-col">
       <div className="flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
-        <span className="text-sm font-medium tabular-nums">
+        <Text as="span" variant="label" className="tabular-nums">
           {files.length} {files.length === 1 ? "file" : "files"}
-        </span>
-        <span className="text-xs tabular-nums text-success">
+        </Text>
+        <Text as="span" variant="caption" className="tabular-nums text-success">
           +{totals.additions}
-        </span>
-        <span className="text-xs tabular-nums text-destructive">
+        </Text>
+        <Text as="span" variant="caption" className="tabular-nums text-destructive">
           −{totals.deletions}
-        </span>
+        </Text>
       </div>
       <div className="min-h-0 flex-1 overflow-auto">
         {files.map((file) => (
@@ -121,7 +122,7 @@ function CommitFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className="sticky top-0 z-raised flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left text-sm hover:bg-muted/80"
+        className="text-body sticky top-0 z-raised flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left hover:bg-muted/80"
         aria-expanded={expanded}
       >
         <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
@@ -135,14 +136,14 @@ function CommitFileRow({
           <span className="text-muted-foreground">{dir}</span>
           <span className="font-medium">{basename}</span>
         </span>
-        <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-2 tabular-nums">
           <span className="text-success">
             +{file.additions}
           </span>
           <span className="text-destructive">
             −{file.deletions}
           </span>
-        </span>
+        </Text>
       </button>
       {expanded && (
         <div className="bg-background">

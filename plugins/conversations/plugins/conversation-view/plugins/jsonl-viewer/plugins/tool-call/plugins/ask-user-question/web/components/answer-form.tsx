@@ -1,5 +1,6 @@
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -107,11 +108,13 @@ export function AnswerForm({
         return (
           <div key={qi}>
             {questions.length > 1 && (
-              <p className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground">
+              <p className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground">
                 {q.header}
               </p>
             )}
-            <p className="mb-1.5 text-xs text-foreground">{q.question}</p>
+            <Text as="p" variant="caption" className="mb-1.5 text-foreground">
+              {q.question}
+            </Text>
             <div className="space-y-1">
               {q.options.map((opt, oi) => {
                 const isSelected = answer.selected.includes(opt.label);
@@ -130,12 +133,14 @@ export function AnswerForm({
                   >
                     <Indicator selected={isSelected} multi={q.multiSelect} />
                     <div className="min-w-0 flex-1 select-text">
-                      <p className="text-xs font-medium">{opt.label}</p>
-                      <p className="text-xs text-muted-foreground">
+                      <Text as="p" variant="caption" className="font-medium">
+                        {opt.label}
+                      </Text>
+                      <Text as="p" variant="caption" tone="muted">
                         {opt.description}
-                      </p>
+                      </Text>
                       {opt.preview && (
-                        <pre className="mt-1 whitespace-pre-wrap break-words rounded bg-muted/60 p-1.5 font-mono text-[10px] text-muted-foreground">
+                        <pre className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-1.5 font-mono text-3xs text-muted-foreground">
                           {opt.preview}
                         </pre>
                       )}
@@ -160,7 +165,7 @@ export function AnswerForm({
                     setOtherText(qi, e.target.value, q.multiSelect)
                   }
                   placeholder="Other…"
-                  className="h-7 flex-1 text-xs"
+                  className="text-caption h-7 flex-1"
                 />
               </div>
             </div>

@@ -14,6 +14,7 @@ import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/we
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   SearchInput,
   useTextFilter,
@@ -132,7 +133,7 @@ function InstrumentPicker({
         <button
           type="button"
           aria-label="Track instrument"
-          className="flex min-w-0 items-center gap-1 rounded text-3xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex min-w-0 items-center gap-1 rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
         >
           {ResolvedIcon ? <ResolvedIcon className="size-3 shrink-0" /> : null}
           <span className="truncate">{resolvedLabel}</span>
@@ -229,9 +230,9 @@ function TrackRow({
       <ColorSwatch songId={songId} trackId={trackId} color={color} />
 
       <div className={cn("min-w-0 flex-1", hidden && "opacity-50")}>
-        <div className="truncate text-xs font-medium text-foreground">
+        <Text as="div" variant="caption" className="truncate font-medium text-foreground">
           {name}
-        </div>
+        </Text>
         <div className="flex items-center gap-1 text-3xs text-muted-foreground">
           <InstrumentPicker
             songId={songId}

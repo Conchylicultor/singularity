@@ -1,5 +1,6 @@
 import { useState, type ReactElement } from "react";
 import { MdDelete } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import type { BlockEditorAPI } from "../types";
@@ -38,9 +39,13 @@ export function BlockActionsMenu({
       trigger={trigger}
     >
       <div className="flex flex-col gap-1">
-        <div className="text-muted-foreground px-2 pt-1 text-xs font-medium uppercase tracking-wide">
+        <Text
+          as="div"
+          variant="caption"
+          className="text-muted-foreground px-2 pt-1 font-medium uppercase tracking-wide"
+        >
           Turn into
-        </div>
+        </Text>
         <BlockTypeList
           blocks={blocks}
           activeIndex={activeIndex}

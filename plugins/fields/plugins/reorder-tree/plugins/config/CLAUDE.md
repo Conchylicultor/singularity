@@ -7,7 +7,7 @@
 - Description: Reorder-tree field type: config-render capability (read-only tree list for config-v2.fields.renderer) plus the reorderTreeField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
-  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`
+  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/text.Text`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/reorder-tree.ReorderNode`, `fields/reorder-tree.ReorderTree`, `fields/reorder-tree.reorderTreeFieldType`
   - Exports: Types: `NormalizedNode`, `ReorderTreeFieldDef`; Values: `normalizeNode`, `reorderTreeField`

@@ -1,5 +1,6 @@
 import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
@@ -36,7 +37,7 @@ export function DepPopoverContent({
 
   return (
     <>
-      <SectionLabel className="mb-1.5 text-[10px]">{label}</SectionLabel>
+      <SectionLabel className="mb-1.5 text-3xs">{label}</SectionLabel>
 
       {(currentConvs.length > 0 || orphanIds.length > 0) && (
         <ul className="mb-2 space-y-px">
@@ -49,7 +50,7 @@ export function DepPopoverContent({
                 type="button"
                 onClick={() => onRemove(c.taskId!)}
                 disabled={busy === c.taskId}
-                className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded p-0.5"
+                className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-0.5"
                 aria-label="Remove"
               >
                 <MdClose className="size-3" />
@@ -62,16 +63,18 @@ export function DepPopoverContent({
               depTask?.status === "done" || depTask?.status === "dropped";
             return (
               <li key={id} className="flex items-center gap-1">
-                <span
-                  className={`flex-1 truncate text-xs ${isTerminal ? "text-muted-foreground line-through" : ""}`}
+                <Text
+                  as="span"
+                  variant="caption"
+                  className={`flex-1 truncate ${isTerminal ? "text-muted-foreground line-through" : ""}`}
                 >
                   {depTask?.title ?? id}
-                </span>
+                </Text>
                 <button
                   type="button"
                   onClick={() => onRemove(id)}
                   disabled={busy === id}
-                  className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded p-0.5"
+                  className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-0.5"
                   aria-label="Remove"
                 >
                   <MdClose className="size-3" />
@@ -89,9 +92,13 @@ export function DepPopoverContent({
         wrapperClassName="mb-1.5"
       />
       {availableConvs.length === 0 ? (
-        <div className="py-2 text-center text-xs text-muted-foreground">
+        <Text
+          as="div"
+          variant="caption"
+          className="py-2 text-center text-muted-foreground"
+        >
           No conversations found
-        </div>
+        </Text>
       ) : (
         <ul className="max-h-64 space-y-px overflow-y-auto">
           {availableConvs.map((c) => (

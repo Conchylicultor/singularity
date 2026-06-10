@@ -23,8 +23,8 @@ export function ReadImageView({
         alt={alt}
         className={
           expanded
-            ? "max-h-[80vh] max-w-full rounded border border-border object-contain"
-            : "max-h-32 max-w-xs rounded border border-border object-cover"
+            ? "max-h-[80vh] max-w-full rounded-md border border-border object-contain"
+            : "max-h-32 max-w-xs rounded-md border border-border object-cover"
         }
         style={expanded ? undefined : { imageRendering: "pixelated" }}
         onLoad={(e) => {

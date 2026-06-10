@@ -7,6 +7,7 @@ import { tasksResource } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
 import type { TaskListItem, TaskStatus } from "@plugins/tasks-core/core";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 function isTerminal(status: TaskStatus): boolean {
   return status === "done" || status === "dropped";
@@ -33,7 +34,7 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
   return (
     <div className="flex flex-col">
       <div className="flex items-center gap-2 px-2 pb-1">
-        <label className="flex items-center gap-1.5 text-xs text-muted-foreground">
+        <Text as="label" variant="caption" tone="muted" className="flex items-center gap-1.5">
           <input
             type="checkbox"
             checked={hideTerminal}
@@ -41,7 +42,7 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
             className="size-3"
           />
           Hide done/dropped
-        </label>
+        </Text>
       </div>
       <div className="flex flex-col gap-0.5">
         {sorted.map((task) => (

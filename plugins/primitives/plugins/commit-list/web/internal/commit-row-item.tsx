@@ -1,4 +1,5 @@
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { CommitRow } from "../../core";
 import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";
 
@@ -39,12 +40,14 @@ export function CommitRowItem({
       onClick={onClick ? () => onClick(commit) : undefined}
     >
       <CommitRail isFirst={isFirst} isLast={isLast} color={color} />
-      <span
-        className="font-mono text-xs text-muted-foreground"
+      <Text
+        as="span"
+        variant="caption"
+        className="font-mono text-muted-foreground"
         title={commit.sha}
       >
         {commit.shortSha}
-      </span>
+      </Text>
       <span className="flex-1 truncate" title={commit.subject}>
         {commit.subject}
       </span>
@@ -53,12 +56,20 @@ export function CommitRowItem({
           pushed
         </Badge>
       )}
-      <span className="hidden truncate text-xs text-muted-foreground sm:inline">
+      <Text
+        as="span"
+        variant="caption"
+        className="hidden truncate text-muted-foreground sm:inline"
+      >
         {commit.authorName}
-      </span>
-      <span className="shrink-0 text-xs text-muted-foreground tabular-nums">
+      </Text>
+      <Text
+        as="span"
+        variant="caption"
+        className="shrink-0 text-muted-foreground tabular-nums"
+      >
         {formatRelative(commit.authoredAt)}
-      </span>
+      </Text>
     </li>
   );
 }

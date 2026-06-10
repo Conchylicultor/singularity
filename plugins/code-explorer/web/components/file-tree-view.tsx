@@ -6,6 +6,7 @@ import {
   ResizablePanelGroup,
 } from "@/components/ui/resizable";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { getCodeTree } from "../../shared/endpoints";
 import { FileTree } from "./file-tree";
 
@@ -31,17 +32,17 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
       <ResizablePanel id="tree" defaultSize={25} minSize={15}>
         <div className="h-full min-h-0 overflow-auto border-r">
           {isLoading ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
+            <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
               Loading…
-            </div>
+            </Text>
           ) : error ? (
-            <div className="px-3 py-2 text-sm text-destructive">
+            <Text as="div" variant="body" className="px-3 py-2 text-destructive">
               {String(error)}
-            </div>
+            </Text>
           ) : !treeData || treeData.files.length === 0 ? (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
+            <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
               No files.
-            </div>
+            </Text>
           ) : (
             <FileTree
               files={treeData.files}
@@ -61,9 +62,9 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
               status="clean"
             />
           ) : (
-            <div className="flex h-full items-center justify-center px-3 py-2 text-sm text-muted-foreground">
+            <Text as="div" variant="body" className="flex h-full items-center justify-center px-3 py-2 text-muted-foreground">
               Select a file to preview.
-            </div>
+            </Text>
           )}
         </div>
       </ResizablePanel>

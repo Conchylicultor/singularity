@@ -8,6 +8,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import { dismissNotification, dismissAllNotifications, markAllNotificationsRead } from "../../shared/endpoints";
@@ -59,38 +60,41 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
       }
     >
       <div className="flex-1 min-w-0">
-        <p className={`text-xs font-medium truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
+        <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
           {n.title}
-        </p>
+        </Text>
         {n.description && n.description !== n.title && (
-          <p className="text-xs text-muted-foreground line-clamp-2">
+          <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
             {n.description}
-          </p>
+          </Text>
         )}
         <div className="flex items-center gap-2 mt-0.5">
-          <RelativeTime date={n.createdAt} className="text-[10px] text-muted-foreground" />
+          <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
           {n.type && (
-            <span className="text-[10px] text-muted-foreground">{n.type}</span>
+            <span className="text-3xs text-muted-foreground">{n.type}</span>
           )}
           {clientId != null && (
-            <span className="text-[10px] text-muted-foreground">
+            <span className="text-3xs text-muted-foreground">
               {clientId === getTabId() ? "this tab" : "another tab"}
             </span>
           )}
           {n.linkTo?.startsWith("/") && (
-            <span className="text-[10px] text-muted-foreground hover:text-foreground">
+            <span className="text-3xs text-muted-foreground hover:text-foreground">
               View &rarr;
             </span>
           )}
         </div>
       </div>
-      <button
-        className="shrink-0 text-muted-foreground hover:text-foreground text-sm leading-none"
+      <Text
+        as="button"
+        variant="body"
+        // eslint-disable-next-line text/no-adhoc-typography -- tight line-height centers the × glyph in the button
+        className="shrink-0 text-muted-foreground hover:text-foreground leading-none"
         onClick={(e) => { e.stopPropagation(); dismiss(n.id); }}
         aria-label="Dismiss"
       >
         &times;
-      </button>
+      </Text>
     </li>
   );
 }
@@ -173,7 +177,7 @@ export function BellButton() {
             className={unreadCount > 0 ? undefined : "text-muted-foreground"}
           />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums pointer-events-none">
+            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-3xs font-bold tabular-nums pointer-events-none">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -183,14 +187,16 @@ export function BellButton() {
       contentClassName="w-80 p-0"
     >
         <div className="flex items-center justify-between px-3 py-2 border-b">
-          <span className="text-sm font-semibold">Notifications</span>
+          <Text variant="body" className="font-semibold">Notifications</Text>
           {list.length > 0 && (
-            <button
-              className="text-xs text-muted-foreground hover:text-foreground"
+            <Text
+              as="button"
+              variant="caption"
+              className="text-muted-foreground hover:text-foreground"
               onClick={dismissAll}
             >
               Clear all
-            </button>
+            </Text>
           )}
         </div>
         {list.length > 0 && (
@@ -210,18 +216,18 @@ export function BellButton() {
           </div>
         )}
         {list.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+          <Text as="p" variant="body" className="px-3 py-6 text-center text-muted-foreground">
             No notifications
-          </p>
+          </Text>
         ) : filtered.length === 0 ? (
-          <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+          <Text as="p" variant="body" className="px-3 py-6 text-center text-muted-foreground">
             No notifications for this filter
-          </p>
+          </Text>
         ) : (
           <div className="max-h-96 overflow-y-auto">
             {unreadFiltered.length > 0 && (
               <>
-                <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-destructive bg-destructive/5 border-b">
+                <div className="px-3 py-1.5 text-3xs font-semibold uppercase tracking-wider text-destructive bg-destructive/5 border-b">
                   Unread ({unreadFiltered.length})
                 </div>
                 <ul>
@@ -234,7 +240,7 @@ export function BellButton() {
             {restFiltered.length > 0 && (
               <>
                 {unreadFiltered.length > 0 && (
-                  <div className="px-3 py-1.5 text-[10px] font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
+                  <div className="px-3 py-1.5 text-3xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
                     Earlier
                   </div>
                 )}

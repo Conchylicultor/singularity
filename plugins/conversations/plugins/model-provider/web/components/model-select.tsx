@@ -63,7 +63,7 @@ export function ModelSelect({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-32 text-xs", className)}>
+      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-32 text-caption", className)}>
         <SelectValue />
       </SelectTrigger>
       <SelectContent>

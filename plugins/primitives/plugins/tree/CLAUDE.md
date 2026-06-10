@@ -6,7 +6,7 @@
 
 - Description: Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
 - Web:
-  - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.ExpandAllButton`, `primitives/row.Row`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/toggle-chip.ToggleChip`
+  - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.ExpandAllButton`, `primitives/row.Row`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
   - Exports: Types: `ExpandableRow`, `RenameInputProps`, `RowChromeMenuHelpers`, `RowChromeProps`, `RowControls`, `RowMenuItem`, `TreeItem`, `TreeListContextValue`, `TreeListProps`, `TreeRowChromeProps`, `UseSubtreeExpandAllReturn`; Values: `hideTerminalSubtrees`, `RenameInput`, `RowChrome`, `TreeList`, `TreeRowChrome`, `useSubtreeExpandAll`, `useTreeListContext`, `useTreeRow`
 - Core:
   - Uses: `primitives/rank.Rank`

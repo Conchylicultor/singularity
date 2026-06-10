@@ -1,4 +1,5 @@
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function FileDisambiguation({
   query,
@@ -11,10 +12,10 @@ export function FileDisambiguation({
 }) {
   return (
     <div className="flex h-full flex-col gap-1 p-3">
-      <div className="mb-1 text-xs text-muted-foreground">
+      <Text as="div" variant="caption" className="mb-1 text-muted-foreground">
         Multiple files match{" "}
         <span className="font-mono font-medium text-foreground">{query}</span>
-      </div>
+      </Text>
       <div className="min-h-0 flex-1 overflow-auto">
         {matches.map((filePath) => {
           const lastSlash = filePath.lastIndexOf("/");

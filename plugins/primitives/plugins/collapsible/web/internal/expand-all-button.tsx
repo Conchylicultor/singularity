@@ -25,10 +25,10 @@ export function ExpandAllButton({
       title={label}
       aria-label={label}
       className={cn(
-        "flex shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
+        "flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "compact"
           ? "size-7 hover:bg-accent"
-          : "gap-1 text-xs",
+          : "gap-1 text-caption",
       )}
     >
       <Icon className="size-4" />

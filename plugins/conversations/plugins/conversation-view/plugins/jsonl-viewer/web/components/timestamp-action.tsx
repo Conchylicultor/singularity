@@ -5,7 +5,7 @@ export function TimestampAction({ event }: { event: JsonlEvent }) {
   return (
     <Timestamp
       at={event.at}
-      className="tabular-nums text-[11px] text-muted-foreground"
+      className="tabular-nums text-2xs text-muted-foreground"
     />
   );
 }

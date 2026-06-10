@@ -23,7 +23,7 @@ Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
 - Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
 - Web:
-  - Uses: `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/toggle-chip.ToggleChip`
+  - Uses: `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
   - Exports: Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskDraftPopoverProps`, `TaskDraftRelate`; Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view`, `conversations/conversation-view/new-child-task`, `improve`, `tasks/task-dependencies`

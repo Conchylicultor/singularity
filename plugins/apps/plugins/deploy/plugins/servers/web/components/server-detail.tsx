@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { Server } from "../../shared";
 import { deleteServer } from "../../shared/endpoints";
 import { ServerStatusBadge } from "./server-status-badge";
@@ -19,29 +20,29 @@ export function ServerDetail({ server }: { server: Server }) {
       <div className="flex items-start justify-between">
         <div>
           <div className="flex items-center gap-2">
-            <h3 className="text-base font-semibold">{server.name}</h3>
+            <Text as="h3" variant="subheading">{server.name}</Text>
             <ServerStatusBadge status={server.status} />
           </div>
-          <div className="text-muted-foreground mt-1 text-sm">
+          <Text as="div" variant="body" className="text-muted-foreground mt-1">
             {server.sshUser}@{server.host}:{server.port}
-          </div>
+          </Text>
         </div>
         <button
           onClick={handleDelete}
           disabled={deleting}
-          className="text-destructive text-xs hover:underline disabled:opacity-50"
+          className="text-caption text-destructive hover:underline disabled:opacity-50"
         >
           Delete
         </button>
       </div>
-      <div className="flex gap-4 text-xs">
+      <Text as="div" variant="caption" className="flex gap-4">
         <div>
           <span className="text-muted-foreground">SSH Key: </span>
           <span className={server.sshKeyConfigured ? "text-success" : "text-warning"}>
             {server.sshKeyConfigured ? "Configured" : "Not set"}
           </span>
         </div>
-      </div>
+      </Text>
     </div>
   );
 }

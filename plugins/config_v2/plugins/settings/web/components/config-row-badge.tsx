@@ -16,7 +16,7 @@ export function ConfigRowBadge({
   }
   if (modifiedCount > 0) {
     return (
-      <span className="ml-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-[10px] font-medium text-primary-foreground">
+      <span className="ml-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-3xs font-medium text-primary-foreground">
         {modifiedCount}
       </span>
     );

@@ -4,6 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { PageHeader } from "./components/page-header";
 import { PageDetail } from "./slots";
 
@@ -46,10 +47,14 @@ export const pageDetailPane = Pane.define({
 
 function PagesRoot(): ReactElement {
   return (
-    <div className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm">
+    <Text
+      as="div"
+      variant="body"
+      className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-8 text-center"
+    >
       <MdDescription className="size-8 opacity-50" />
       <p>Select a page from the sidebar, or create a new one.</p>
-    </div>
+    </Text>
   );
 }
 

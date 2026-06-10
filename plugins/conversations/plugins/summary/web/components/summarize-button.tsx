@@ -25,7 +25,7 @@ export function SummarizeButton() {
         variant={isOpen ? "secondary" : "ghost"}
         size="sm"
         onClick={toggle}
-        className="gap-1.5 text-xs"
+        className="gap-1.5 text-caption"
         title="Summary"
         aria-label="Summary"
         aria-pressed={isOpen}

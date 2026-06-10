@@ -2,6 +2,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { CodeWithLineNumbers } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
@@ -66,7 +67,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
       {event.result && (
         <div className="mt-2">
           {event.result.isError ? (
-            <p className="text-xs text-destructive">{event.result.content}</p>
+            <Text as="p" variant="caption" className="text-destructive">{event.result.content}</Text>
           ) : isImagePath(file_path) ? (
             <ReadImageView
               worktree={conversation.attemptId}

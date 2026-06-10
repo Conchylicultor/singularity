@@ -10,6 +10,7 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type AddTaskInput = {
   title: string;
@@ -75,9 +76,9 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
     <ToolCallCard event={event} summary={summary} defaultOpen>
       <div className="mt-2 space-y-2">
         {input.description && (
-          <p className="text-xs text-muted-foreground whitespace-pre-wrap">
+          <Text as="p" variant="caption" className="text-muted-foreground whitespace-pre-wrap">
             {input.description}
-          </p>
+          </Text>
         )}
         {taskId && (
           <LinkChip
@@ -89,7 +90,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
           </LinkChip>
         )}
         {event.result?.isError && (
-          <p className="text-xs text-destructive">{event.result.content}</p>
+          <Text as="p" variant="caption" className="text-destructive">{event.result.content}</Text>
         )}
       </div>
     </ToolCallCard>

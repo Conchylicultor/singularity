@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { cn } from "@/lib/utils";
 
@@ -117,7 +118,7 @@ export function SortableReorderItem({
         <>
           {editMode && (
             <button
-              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
+              className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 group-hover/reorder-item:opacity-80 hover:!opacity-100 transition-opacity"
               onPointerDown={(e) => e.stopPropagation()}
               onClick={handleHide}
               aria-label="Hide item"
@@ -140,8 +141,8 @@ export function SortableReorderItem({
               className={cn(
                 "pointer-events-none select-none italic text-muted-foreground/50",
                 isHorizontal
-                  ? "px-2 py-0.5 text-[10px] whitespace-nowrap"
-                  : "px-3 py-1.5 text-center text-xs",
+                  ? "px-2 py-0.5 text-3xs whitespace-nowrap"
+                  : "px-3 py-1.5 text-center text-caption",
               )}
             >
               {label}
@@ -186,11 +187,11 @@ export function SpacerReorderItem({
             isDragging && "opacity-40",
           )}
         >
-          <span className="text-[10px] text-muted-foreground/60 select-none">
+          <span className="text-3xs text-muted-foreground/60 select-none">
             ⇔
           </span>
           <button
-            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-[10px] leading-none cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
+            className="absolute -top-1.5 -right-1.5 z-raised flex h-4 w-4 items-center justify-center rounded-full bg-destructive text-destructive-foreground text-3xs cursor-pointer opacity-0 group-hover:opacity-80 hover:!opacity-100 transition-opacity"
             onPointerDown={(e) => e.stopPropagation()}
             onClick={handleDelete}
             aria-label="Remove spacer"
@@ -292,21 +293,29 @@ export function RestoreButton({
         </div>
 
         <div className="border-t border-border px-2.5 py-2">
-          <div className="flex items-center gap-1.5 text-xs font-medium text-muted-foreground mb-1.5">
+          <Text
+            as="div"
+            variant="label"
+            className="flex items-center gap-1.5 text-muted-foreground mb-1.5"
+          >
             <MdStorefront className="size-3.5" />
             Marketplace
-          </div>
+          </Text>
           <div className="relative">
             <MdSearch className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search..."
-              className="h-7 pl-7 text-xs"
+              className="h-7 pl-7 text-caption"
               disabled
             />
           </div>
-          <p className="mt-1.5 text-center text-xs text-muted-foreground/60">
+          <Text
+            as="p"
+            variant="caption"
+            className="mt-1.5 text-center text-muted-foreground/60"
+          >
             No items
-          </p>
+          </Text>
         </div>
 
         <div className="border-t border-border p-1">

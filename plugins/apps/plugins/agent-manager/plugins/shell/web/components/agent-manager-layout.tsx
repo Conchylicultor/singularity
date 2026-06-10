@@ -1,5 +1,6 @@
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Shell } from "@plugins/shell/web";
 
 export function AgentManagerLayout() {
@@ -19,9 +20,9 @@ export function AgentManagerLayout() {
           className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <img src="/icon.svg" alt="Singularity" className="size-6 shrink-0" />
-          <span className="truncate text-base font-semibold tracking-tight">
+          <Text as="span" variant="subheading" className="truncate tracking-tight">
             Singularity
-          </span>
+          </Text>
         </a>
       }
     >

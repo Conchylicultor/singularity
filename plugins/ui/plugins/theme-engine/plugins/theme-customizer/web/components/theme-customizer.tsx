@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { MdTune } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { PaneChrome, openPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useConfig, useSetConfig, useConfigRegistrations, useScopeForked } from "@plugins/config_v2/web";
@@ -48,7 +49,7 @@ function GlobalPresetPicker() {
     <div className="flex flex-col gap-3">
       <div className="flex items-center gap-3">
         <div className="h-px flex-1 bg-border" />
-        <span className="text-[10px] font-semibold uppercase tracking-widest text-muted-foreground">
+        <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
           Theme
         </span>
         <div className="h-px flex-1 bg-border" />
@@ -57,7 +58,7 @@ function GlobalPresetPicker() {
         {globalPresets.map((p) => (
           <button
             key={p.id}
-            className={`px-4 py-2 text-sm font-medium rounded-lg transition-colors ${
+            className={`px-4 py-2 text-label rounded-lg transition-colors ${
               p.id === activeId
                 ? "border-2 border-primary bg-primary/10 text-primary"
                 : "border border-border text-muted-foreground hover:border-primary/50 bg-muted/20"
@@ -78,9 +79,9 @@ export function VariantSettings() {
 
   if (groups.length === 0 && globalPresets.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground">
+      <Text as="p" variant="body" className="text-muted-foreground">
         No pluggable components registered.
-      </p>
+      </Text>
     );
   }
 
@@ -89,7 +90,7 @@ export function VariantSettings() {
       <div className="flex items-start justify-between gap-4">
         <GlobalPresetPicker />
         <button
-          className="flex items-center gap-1.5 px-3 py-1 text-sm rounded-md border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors shrink-0"
+          className="flex items-center gap-1.5 px-3 py-1 text-body rounded-md border border-border text-muted-foreground hover:border-primary/50 hover:text-foreground transition-colors shrink-0"
           onClick={() => openPane(themeCustomizerPane, {}, { mode: "root" })}
         >
           <MdTune className="size-4" />
@@ -101,7 +102,7 @@ export function VariantSettings() {
           <ThemeEngine.VariantGroup.Render>
             {(g) => (
               <div>
-                <h4 className="text-sm font-medium mb-1">{g.componentLabel}</h4>
+                <Text as="h4" variant="label" className="mb-1">{g.componentLabel}</Text>
                 <g.component />
               </div>
             )}
@@ -132,7 +133,7 @@ function TokenModeSelector({
           key={id}
           type="button"
           onClick={() => onChange(id)}
-          className={`flex-1 py-1 text-xs font-medium rounded-md border transition-colors ${
+          className={`flex-1 py-1 text-caption font-medium rounded-md border transition-colors ${
             mode === id
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
@@ -169,7 +170,7 @@ function CustomizeForAppToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`flex items-center justify-between gap-3 px-3 py-2 text-sm rounded-md border transition-colors ${
+      className={`flex items-center justify-between gap-3 px-3 py-2 text-body rounded-md border transition-colors ${
         forked
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"

@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import { DepPopoverContent } from "./dep-popover-content";
 
@@ -177,46 +178,46 @@ export function DependenciesButton({
     <div className="space-y-1.5">
       {hasBlockedBy && (
         <div>
-          <div className="text-[10px] tracking-wider text-muted-foreground">
+          <div className="text-3xs tracking-wider text-muted-foreground">
             Blocked by
           </div>
           {blockerConvs.map((c) => (
-            <div key={c.taskId} className="text-xs">
+            <Text as="div" variant="caption" key={c.taskId}>
               {c.title}
-            </div>
+            </Text>
           ))}
           {orphanDepIds.map((id) => {
             const t = allTasks.find((at) => at.id === id);
             return (
-              <div key={id} className="text-xs text-muted-foreground">
+              <Text as="div" variant="caption" key={id} className="text-muted-foreground">
                 {t?.title ?? id}
-              </div>
+              </Text>
             );
           })}
         </div>
       )}
       {hasBlocking && (
         <div>
-          <div className="text-[10px] tracking-wider text-muted-foreground">
+          <div className="text-3xs tracking-wider text-muted-foreground">
             Blocking
           </div>
           {blockedConvs.map((c) => (
-            <div key={c.taskId} className="text-xs">
+            <Text as="div" variant="caption" key={c.taskId}>
               {c.title}
-            </div>
+            </Text>
           ))}
           {orphanBlockedIds.map((id) => {
             const t = allTasks.find((at) => at.id === id);
             return (
-              <div key={id} className="text-xs text-muted-foreground">
+              <Text as="div" variant="caption" key={id} className="text-muted-foreground">
                 {t?.title ?? id}
-              </div>
+              </Text>
             );
           })}
         </div>
       )}
       {!hasAny && (
-        <div className="text-xs text-muted-foreground">Click to add dependencies</div>
+        <Text as="div" variant="caption" className="text-muted-foreground">Click to add dependencies</Text>
       )}
     </div>
   );
@@ -232,11 +233,11 @@ export function DependenciesButton({
           trigger={
             <Button variant="ghost" size="xs" aria-label="Blocked by">
               {hasBlockedBy && (
-                <span className="text-[10px] tabular-nums">
+                <span className="text-3xs tabular-nums">
                   {depTaskIds.size}
                 </span>
               )}
-              <span className={cn("text-[10px]", hasBlockedBy ? "text-muted-foreground" : "text-muted-foreground/40")}>
+              <span className={cn("text-3xs", hasBlockedBy ? "text-muted-foreground" : "text-muted-foreground/40")}>
                 {"←"}
               </span>
             </Button>
@@ -265,11 +266,11 @@ export function DependenciesButton({
           contentClassName="w-96 p-2"
           trigger={
             <Button variant="ghost" size="xs" aria-label="Blocking">
-              <span className={cn("text-[10px]", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>
+              <span className={cn("text-3xs", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>
                 {"→"}
               </span>
               {hasBlocking && (
-                <span className="text-[10px] tabular-nums">
+                <span className="text-3xs tabular-nums">
                   {blockedTaskIds.size}
                 </span>
               )}

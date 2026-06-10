@@ -5,6 +5,7 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -75,10 +76,10 @@ export function MessageToc() {
     >
       <div className="flex shrink-0 items-center gap-1.5 px-2 py-1 group-data-hovered/fa:border-b group-data-hovered/fa:border-border/40">
         <MdFormatListNumbered className="size-3.5 shrink-0 text-muted-foreground" />
-        <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+        <Text as="span" variant="caption" className="shrink-0 tabular-nums text-muted-foreground">
           {entries.length}
-        </span>
-        <span className="ml-auto text-[10px] font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-hovered/fa:opacity-100">
+        </Text>
+        <span className="ml-auto text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-hovered/fa:opacity-100">
           messages
         </span>
       </div>
@@ -89,7 +90,7 @@ export function MessageToc() {
             key={entry.eventIndex}
             type="button"
             onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
-            className="flex w-full items-start gap-2 px-2 py-1.5 text-left text-xs hover:bg-accent"
+            className="flex w-full items-start gap-2 px-2 py-1.5 text-left text-caption hover:bg-accent"
           >
             <span className="shrink-0 tabular-nums text-muted-foreground">
               #{entry.userIndex}

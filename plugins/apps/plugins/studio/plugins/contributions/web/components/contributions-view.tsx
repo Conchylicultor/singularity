@@ -6,6 +6,7 @@ import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -52,17 +53,17 @@ export function ContributionsView() {
 
   if (isLoading) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
         Loading…
-      </div>
+      </Text>
     );
   }
   if (error) {
     return (
-      <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm">
+      <Text as="div" variant="body" className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
         <span className="font-medium text-foreground">Failed to load</span>
         <span className="text-muted-foreground">{String(error)}</span>
-      </div>
+      </Text>
     );
   }
 
@@ -121,9 +122,9 @@ export function ContributionsView() {
             emptyLabel={`No ${activeTable.label.toLowerCase()} found`}
           />
         ) : (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             No contribution tables registered
-          </div>
+          </Text>
         )}
       </div>
     </div>

@@ -150,14 +150,14 @@ function EditorShell({
             <ContentEditable
               style={{ minHeight, maxHeight }}
               className={cn(
-                "px-2.5 py-1.5 text-sm leading-5 outline-none resize-none",
+                "px-2.5 py-1.5 text-body outline-none resize-none",
                 "overflow-y-auto",
                 className,
               )}
               aria-disabled={disabled}
               aria-placeholder={placeholder ?? ""}
               placeholder={
-                <div className="text-muted-foreground pointer-events-none absolute inset-0 px-2.5 py-1.5 text-sm leading-5">
+                <div className="text-muted-foreground pointer-events-none absolute inset-0 px-2.5 py-1.5 text-body">
                   {placeholder ?? ""}
                 </div>
               }

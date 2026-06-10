@@ -2,6 +2,7 @@ import { MdWarning } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -70,7 +71,7 @@ export function ReviewFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className={`sticky top-0 flex w-full items-center gap-2 px-3 py-1.5 text-left text-sm hover:bg-muted/80 ${LEVEL_BG[level]}`}
+        className={`text-body sticky top-0 flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/80 ${LEVEL_BG[level]}`}
         aria-expanded={expanded}
         title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
       >
@@ -95,7 +96,7 @@ export function ReviewFileRow({
             onClick={(e) => e.stopPropagation()}
           />
         </span>
-        <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-2 tabular-nums">
           <span className="text-success">+{file.additions}</span>
           <span className="text-destructive">−{file.deletions}</span>
           {level !== "safe" && (
@@ -104,7 +105,7 @@ export function ReviewFileRow({
               aria-label={LEVEL_TOOLTIP[level]}
             />
           )}
-        </span>
+        </Text>
       </button>
       {expanded && (
         <div className="bg-background">

@@ -1,5 +1,6 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import { commitsConfig } from "../../shared/config";
 
@@ -14,9 +15,9 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
 
   if (excludedPaths.length === 0) {
     return (
-      <p className="text-xs text-muted-foreground">
+      <Text as="p" variant="caption" className="text-muted-foreground">
         No paths configured. Add entries to <code>excludedPaths</code> in Settings.
-      </p>
+      </Text>
     );
   }
 

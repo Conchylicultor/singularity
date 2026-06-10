@@ -9,7 +9,7 @@ export function ImageCell(props: TableCellProps): ReactNode {
     <img
       src={src}
       alt=""
-      className="size-8 rounded border border-border object-cover"
+      className="size-8 rounded-md border border-border object-cover"
     />
   );
 }

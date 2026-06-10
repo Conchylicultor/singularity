@@ -58,8 +58,8 @@ export function Row({
       className={cn(
         "group flex w-full items-center rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" && "gap-1.5 text-xs",
-        size === "md" && "gap-2 text-sm",
+        size === "sm" && "gap-1.5 text-caption",
+        size === "md" && "gap-2 text-body",
         hover === "accent" && (selected ? "bg-accent" : "hover:bg-accent"),
         hover === "muted" && (selected ? "bg-muted" : "hover:bg-muted/50"),
         bordered && "border",

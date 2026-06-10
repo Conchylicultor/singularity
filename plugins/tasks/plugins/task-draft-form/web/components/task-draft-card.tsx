@@ -4,6 +4,7 @@ import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
@@ -69,7 +70,7 @@ function ContextRow({
   return (
     <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5">
       {showUrl && (
-        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-1.5">
           <input
             type="checkbox"
             className="h-3 w-3 cursor-pointer"
@@ -78,10 +79,10 @@ function ContextRow({
             onChange={(e) => onToggleUrl!(e.target.checked)}
           />
           URL
-        </label>
+        </Text>
       )}
       {showScreenshot && (
-        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-1.5">
           <input
             type="checkbox"
             className="h-3 w-3 cursor-pointer"
@@ -90,7 +91,7 @@ function ContextRow({
             onChange={(e) => onToggleScreenshot!(e.target.checked)}
           />
           Screenshot
-        </label>
+        </Text>
       )}
     </div>
   );
@@ -171,7 +172,7 @@ export function TaskDraftCard({
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
         <div className="flex flex-wrap items-center gap-3">
           <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
-          <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+          <Text as="div" variant="caption" tone="muted" className="flex items-center gap-1.5">
             <span>Preprompt</span>
             <PrepromptSelect
               value={prepromptId}
@@ -179,7 +180,7 @@ export function TaskDraftCard({
               disabled={disabled}
               ariaLabel="Preprompt"
             />
-          </div>
+          </Text>
           {showRelate && (
             <RelateModeChip
               value={relateMode}
@@ -196,7 +197,7 @@ export function TaskDraftCard({
             disabled={disabled}
             aria-label="Remove task"
             title="Remove task"
-            className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-5 items-center justify-center rounded cursor-pointer"
+            className="text-muted-foreground hover:text-foreground hover:bg-muted flex size-5 items-center justify-center rounded-md cursor-pointer"
           >
             <MdClose className="size-3.5" />
           </button>
@@ -222,7 +223,7 @@ export function TaskDraftCard({
         )}
       {showStandalone && onStandaloneChange && (
         <div className="px-2 py-1.5">
-          <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+          <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-1.5">
             <input
               type="checkbox"
               className="h-3 w-3 cursor-pointer"
@@ -231,7 +232,7 @@ export function TaskDraftCard({
               onChange={(e) => onStandaloneChange(e.target.checked)}
             />
             Standalone (don't inherit existing dependencies)
-          </label>
+          </Text>
         </div>
       )}
     </div>

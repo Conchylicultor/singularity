@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactElement } from "react";
 import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   formatDuration,
   GanttContainer,
@@ -109,17 +110,17 @@ export function PhaseGroup({
     <div className={cn("border-b", config.bg)}>
       <div className="flex items-center gap-2 px-4 py-1.5">
         <div className={cn("size-2.5 rounded-full", config.color)} />
-        <div className="text-xs font-semibold">{config.label}</div>
-        <div className="font-mono text-xs tabular-nums text-muted-foreground">
+        <Text as="div" variant="caption" className="font-semibold">{config.label}</Text>
+        <Text as="div" variant="caption" className="font-mono tabular-nums text-muted-foreground">
           {formatDuration(phaseDuration)}
-        </div>
-        <div className="text-xs text-muted-foreground">
+        </Text>
+        <Text as="div" variant="caption" className="text-muted-foreground">
           +{formatDuration(phaseStart)}
-        </div>
+        </Text>
         {filteredCount > 0 && (
-          <div className="text-xs text-muted-foreground/60">
+          <Text as="div" variant="caption" className="text-muted-foreground/60">
             ({filteredCount} &lt;1ms hidden)
-          </div>
+          </Text>
         )}
       </div>
 
@@ -153,10 +154,10 @@ export function SpanRow({
       <div className="w-40 shrink-0 truncate font-mono text-2xs text-muted-foreground">
         {span.label}
       </div>
-      <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
+      <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
         <div
           className={cn(
-            "absolute top-0 h-full rounded transition-opacity",
+            "absolute top-0 h-full rounded-md transition-opacity",
             color,
             isHovered ? "opacity-100" : "opacity-70",
           )}
@@ -181,8 +182,10 @@ export function SpanDetail({
   className?: string;
 }): ReactElement {
   return (
-    <div
-      className={cn("border-t bg-muted/50 px-4 py-2 text-xs", className)}
+    <Text
+      as="div"
+      variant="caption"
+      className={cn("border-t bg-muted/50 px-4 py-2", className)}
     >
       {span ? (
         <>
@@ -203,6 +206,6 @@ export function SpanDetail({
       ) : (
         <span className="text-muted-foreground/50">Hover a span to see details</span>
       )}
-    </div>
+    </Text>
   );
 }

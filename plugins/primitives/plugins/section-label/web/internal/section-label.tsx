@@ -14,7 +14,7 @@ export function SectionLabel({
   return (
     <As
       className={cn(
-        "text-xs uppercase tracking-wide text-muted-foreground",
+        "text-caption uppercase tracking-wide text-muted-foreground",
         className,
       )}
     >

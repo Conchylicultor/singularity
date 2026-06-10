@@ -29,7 +29,7 @@ export function DeleteAgentAction({
       title={title}
       aria-label="Delete agent"
       className={cn(
-        "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded",
+        "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md",
         disabled && "cursor-not-allowed opacity-30 hover:bg-transparent",
       )}
     >

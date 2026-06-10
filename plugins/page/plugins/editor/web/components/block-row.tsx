@@ -69,7 +69,7 @@ export function BlockRow({
           aria-expanded={!collapsed}
           onClick={() => api.setExpanded(collapsed)}
           className={cn(
-            "absolute top-1 z-raised flex size-5 items-center justify-center rounded",
+            "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
             "text-muted-foreground hover:bg-accent cursor-pointer",
             collapsed ? "opacity-60" : "opacity-0 group-hover/row:opacity-60",
           )}
@@ -88,7 +88,7 @@ export function BlockRow({
             type="button"
             aria-label="Insert block below"
             className={cn(
-              "absolute top-1 z-raised flex size-5 items-center justify-center rounded",
+              "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-pointer",
               "opacity-0 group-hover/row:opacity-60",
             )}
@@ -112,7 +112,7 @@ export function BlockRow({
             {...attributes}
             {...listeners}
             className={cn(
-              "absolute top-1 z-raised flex size-5 items-center justify-center rounded",
+              "absolute top-1 z-raised flex size-5 items-center justify-center rounded-md",
               "text-muted-foreground hover:bg-accent cursor-grab active:cursor-grabbing",
               "opacity-0 group-hover/row:opacity-60",
             )}
@@ -127,7 +127,7 @@ export function BlockRow({
           focus that a click would otherwise start. */}
       <div
         className={cn(
-          "rounded",
+          "rounded-md",
           isDragging && "opacity-40",
           isSelected && "bg-primary/10 ring-primary/30 ring-1",
         )}

@@ -129,7 +129,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
           onFocus={nameField.onFocus}
           onBlur={nameField.onBlur}
           placeholder="Untitled"
-          className="placeholder:text-muted-foreground flex-1 bg-transparent text-xl font-semibold outline-none focus:ring-0"
+          className="placeholder:text-muted-foreground flex-1 bg-transparent text-title outline-none focus:ring-0"
         />
       </div>
       <div className="flex flex-col gap-1">
@@ -139,7 +139,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
         <select
           value={model ?? ""}
           onChange={(e) => void onModelChange(e.target.value)}
-          className="focus:ring-ring w-fit rounded border bg-transparent px-2 py-1 text-sm outline-none focus:ring-1"
+          className="focus:ring-ring w-fit rounded-md border bg-transparent px-2 py-1 text-body outline-none focus:ring-1"
         >
           <option key="" value="">Default</option>
           {visibleModels.map((m) => (

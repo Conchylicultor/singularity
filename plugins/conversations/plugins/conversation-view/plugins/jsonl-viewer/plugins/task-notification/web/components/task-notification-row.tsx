@@ -1,6 +1,7 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;
 
@@ -13,7 +14,7 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
   const e = event as TaskNotificationEvent;
   const statusClass = STATUS_CLASS[e.status] ?? "text-muted-foreground";
   return (
-    <div className="flex flex-col gap-0.5 px-1 py-0.5 text-xs text-muted-foreground">
+    <Text as="div" variant="caption" className="flex flex-col gap-0.5 px-1 py-0.5 text-muted-foreground">
       <div className="flex items-center gap-2">
         <Badge variant="muted" size="sm" className="font-mono">
           {e.taskId}
@@ -37,6 +38,6 @@ export function TaskNotificationRow({ event }: { event: JsonlEvent }) {
             ))}
         </div>
       )}
-    </div>
+    </Text>
   );
 }

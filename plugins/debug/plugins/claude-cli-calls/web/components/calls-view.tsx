@@ -8,6 +8,7 @@ import {
   MODEL_REGISTRY,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { CallRow } from "./call-row";
 
 type ModelFilter = "all" | ModelTier;
@@ -77,18 +78,18 @@ export function CallsView() {
           </FilterGroup>
         )}
         <div className="flex-1" />
-        <div className="text-xs text-muted-foreground tabular-nums">
+        <Text as="div" variant="caption" className="text-muted-foreground tabular-nums">
           {visible.length}
           {visible.length !== calls.length ? ` / ${calls.length}` : ""} calls
-        </div>
+        </Text>
       </div>
       <div className="flex-1 overflow-auto">
         {visible.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             {calls.length === 0
               ? "No claude --print calls recorded yet."
               : "No calls match the current filter."}
-          </div>
+          </Text>
         ) : (
           <ul className="divide-y">
             {visible.map((c: ClaudeCliCall) => (

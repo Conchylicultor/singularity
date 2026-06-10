@@ -1,5 +1,6 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type AssistantThinkingEvent = Extract<JsonlEvent, { kind: "assistant-thinking" }>;
 
@@ -8,9 +9,13 @@ export function AssistantThinkingRow({ event }: { event: JsonlEvent }) {
 
   return (
     <CollapsibleCard label="Thinking">
-      <div className="whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground leading-5">
+      <Text
+        as="div"
+        variant="caption"
+        className="whitespace-pre-wrap break-words font-mono text-muted-foreground"
+      >
         {e.thinking}
-      </div>
+      </Text>
     </CollapsibleCard>
   );
 }

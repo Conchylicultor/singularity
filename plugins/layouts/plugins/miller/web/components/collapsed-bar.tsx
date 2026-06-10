@@ -19,7 +19,7 @@ export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
       {title && (
         <span
           style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}
-          className="truncate text-[11px] font-medium"
+          className="truncate text-2xs font-medium"
         >
           {title}
         </span>

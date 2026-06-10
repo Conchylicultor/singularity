@@ -1,5 +1,6 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type TaskCreateInput = {
   subject?: string;
@@ -17,12 +18,18 @@ export function TaskCreateToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {input.description && input.subject && (
-        <p className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">
+        <Text
+          as="p"
+          variant="caption"
+          className="mt-2 text-muted-foreground whitespace-pre-wrap"
+        >
           {input.description}
-        </p>
+        </Text>
       )}
       {event.result?.isError && (
-        <p className="mt-2 text-xs text-destructive">{event.result.content}</p>
+        <Text as="p" variant="caption" className="mt-2 text-destructive">
+          {event.result.content}
+        </Text>
       )}
     </ToolCallCard>
   );

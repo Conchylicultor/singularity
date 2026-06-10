@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
@@ -84,12 +85,14 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
   return (
     <div className="flex flex-col gap-2 py-3">
       {field.meta.label ? (
-        <label className="text-sm font-medium">{field.meta.label}</label>
+        <Text as="label" variant="label">
+          {field.meta.label}
+        </Text>
       ) : null}
       {field.meta.description ? (
-        <p className="text-xs text-muted-foreground">
+        <Text as="p" variant="caption" className="text-muted-foreground">
           {field.meta.description}
-        </p>
+        </Text>
       ) : null}
 
       <SortableList items={ids} onMove={handleMove}>

@@ -3,6 +3,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { buildHistoryResource } from "@plugins/build/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
@@ -44,8 +45,8 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-baseline justify-between gap-4">
-      <span className="shrink-0 text-xs text-muted-foreground">{label}</span>
-      <span className="text-sm">{children}</span>
+      <Text as="span" variant="caption" className="shrink-0 text-muted-foreground">{label}</Text>
+      <Text as="span" variant="body">{children}</Text>
     </div>
   );
 }
@@ -55,7 +56,7 @@ export function BuildInfo({ runId }: { runId: string }) {
   const run = result.pending ? undefined : result.data.find((r) => r.id === runId);
 
   if (!run) {
-    return <p className="text-xs text-muted-foreground">Run not found</p>;
+    return <Text as="p" variant="caption" className="text-muted-foreground">Run not found</Text>;
   }
 
   return (
@@ -70,6 +71,7 @@ export function BuildInfo({ runId }: { runId: string }) {
       <div className="flex flex-col gap-2">
         {run.commitHash && (
           <Row label="Commit">
+            {/* eslint-disable-next-line text/no-adhoc-typography -- mono commit-hash chip, intentional inline-code size */}
             <code className="font-mono text-xs">{run.commitHash.slice(0, 8)}</code>
           </Row>
         )}

@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface NestedMemoryPayload {
   type: "nested_memory";
@@ -17,9 +18,13 @@ export function NestedMemoryAttachmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard label="Memory" filePath={att.path}>
-      <pre className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground leading-5">
+      <Text
+        as="pre"
+        variant="caption"
+        className="max-h-64 overflow-auto whitespace-pre-wrap break-words font-mono text-muted-foreground"
+      >
         {att.content?.content ?? JSON.stringify(att, null, 2)}
-      </pre>
+      </Text>
     </CollapsibleCard>
   );
 }

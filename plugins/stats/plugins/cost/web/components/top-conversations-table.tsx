@@ -32,9 +32,9 @@ export function TopConversationsTable() {
       empty={!!data && data.rows.length === 0}
     >
       <div className="overflow-x-auto">
-        <table className="w-full text-sm">
+        <table className="w-full text-body">
           <thead>
-            <tr className="border-b text-left text-xs text-muted-foreground">
+            <tr className="border-b text-left text-caption text-muted-foreground">
               <th className="px-2 py-1.5 font-medium">Conversation</th>
               <th className="px-2 py-1.5 font-medium">Model(s)</th>
               <th className="px-2 py-1.5 text-right font-medium">Cost</th>
@@ -78,11 +78,11 @@ function TopRow({ row }: { row: Row }) {
             {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
           </span>
           {row.status && (
-            <span className="text-xs text-muted-foreground">{row.status}</span>
+            <span className="text-caption text-muted-foreground">{row.status}</span>
           )}
         </div>
       </td>
-      <td className="px-2 py-1.5 text-xs text-muted-foreground">
+      <td className="px-2 py-1.5 text-caption text-muted-foreground">
         {row.modelsUsed.join(", ")}
       </td>
       <td className="px-2 py-1.5 text-right font-mono tabular-nums">
@@ -91,7 +91,7 @@ function TopRow({ row }: { row: Row }) {
       <td className="px-2 py-1.5 text-right font-mono tabular-nums text-muted-foreground">
         {formatTokensCompact(totalTokens)}
       </td>
-      <td className="px-2 py-1.5 text-xs text-muted-foreground">
+      <td className="px-2 py-1.5 text-caption text-muted-foreground">
         {row.lastActivity}
       </td>
     </tr>
@@ -100,7 +100,7 @@ function TopRow({ row }: { row: Row }) {
 
 function UntitledLabel({ sessionId }: { sessionId: string }) {
   return (
-    <span className="font-mono text-xs text-muted-foreground">
+    <span className="font-mono text-caption text-muted-foreground">
       {sessionId.slice(0, 8)}…
     </span>
   );

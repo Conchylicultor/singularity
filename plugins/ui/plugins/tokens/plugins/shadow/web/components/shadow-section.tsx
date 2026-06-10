@@ -6,6 +6,7 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import {
   Color,
@@ -113,7 +114,7 @@ function ParamInput({
       <input
         ref={inputRef}
         type="text"
-        className="flex-1 text-xs font-mono bg-transparent border border-transparent rounded px-1.5 py-0.5 focus:border-border focus:bg-background focus:outline-none"
+        className="flex-1 text-caption font-mono bg-transparent border border-transparent rounded-md px-1.5 py-0.5 focus:border-border focus:bg-background focus:outline-none"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={commit}
@@ -183,7 +184,7 @@ export function ShadowSection({ search }: { search: string }) {
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
@@ -209,7 +210,7 @@ export function ShadowSection({ search }: { search: string }) {
           <div className="flex flex-col gap-1.5">
             {/* Color row */}
             <Row as="div" hover="muted" className="gap-2">
-              <span className="text-xs font-medium w-16 shrink-0">Color</span>
+              <Text as="span" variant="label" className="w-16 shrink-0">Color</Text>
               <div className="flex items-center gap-2 flex-1">
                 <ColorPickerPopover
                   value={colorOklch}
@@ -223,9 +224,9 @@ export function ShadowSection({ search }: { search: string }) {
                     }
                   }}
                 />
-                <span className="text-xs font-mono text-muted-foreground">
+                <Text as="span" variant="caption" className="font-mono text-muted-foreground">
                   {mergedParams.color}
-                </span>
+                </Text>
               </div>
               <button
                 type="button"
@@ -249,9 +250,9 @@ export function ShadowSection({ search }: { search: string }) {
               const isOverridden = overrides[key] !== "";
               return (
                 <Row key={key} as="div" hover="muted" className="gap-2">
-                  <span className="text-xs font-medium w-16 shrink-0">
+                  <Text as="span" variant="label" className="w-16 shrink-0">
                     {label}
-                  </span>
+                  </Text>
                   <ParamInput
                     paramKey={key}
                     value={mergedParams[key]}
@@ -292,10 +293,10 @@ export function ShadowSection({ search }: { search: string }) {
                   className="flex flex-col items-center gap-1"
                 >
                   <span
-                    className="size-8 rounded bg-background border border-border"
+                    className="size-8 rounded-md bg-background border border-border"
                     style={{ boxShadow: value }}
                   />
-                  <span className="text-[10px] text-muted-foreground text-center max-w-12 leading-tight">
+                  <span className="text-3xs text-muted-foreground text-center max-w-12">
                     {label.replace("Shadow ", "")}
                   </span>
                 </div>

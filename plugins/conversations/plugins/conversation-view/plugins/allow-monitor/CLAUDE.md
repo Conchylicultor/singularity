@@ -20,7 +20,7 @@ Polls every 3 seconds via a plain `useQuery` with `refetchInterval` — no WebSo
 - Description: Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
 - Web:
   - Contributes: `Conversation.Header` → `AllowMonitorChip`
-  - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `primitives/badge.Badge`, `primitives/tooltip.WithTooltip`
+  - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `primitives/badge.Badge`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
 - Server:
   - Uses: `infra/endpoints.implement`, `tasks-core.getConversation`
 - Shared:

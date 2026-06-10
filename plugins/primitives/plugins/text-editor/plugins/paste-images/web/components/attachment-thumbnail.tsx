@@ -37,7 +37,7 @@ export function AttachmentThumbnail({
           <img
             src={attachmentUrl(attachmentId)}
             alt={alt ?? "attachment"}
-            className={`${sizeClass} rounded border border-border`}
+            className={`${sizeClass} rounded-md border border-border`}
             draggable={false}
           />
         </button>
@@ -45,7 +45,7 @@ export function AttachmentThumbnail({
         <img
           src={attachmentUrl(attachmentId)}
           alt={alt ?? "attachment"}
-          className={`${sizeClass} rounded border border-border`}
+          className={`${sizeClass} rounded-md border border-border`}
           draggable={false}
         />
       )}

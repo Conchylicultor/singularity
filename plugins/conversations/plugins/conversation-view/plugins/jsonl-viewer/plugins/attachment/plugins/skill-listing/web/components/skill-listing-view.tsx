@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface SkillListingPayload {
   type: "skill_listing";
@@ -41,9 +42,11 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
       }
     >
       {skills.length === 0 ? (
-        <p className="text-xs text-muted-foreground/60 italic">No skills listed.</p>
+        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+          No skills listed.
+        </Text>
       ) : (
-        <ul className="flex flex-col gap-0.5 text-xs leading-5">
+        <Text as="ul" variant="caption" className="flex flex-col gap-0.5">
           {skills.map((skill) => (
             <li key={skill.name} className="text-muted-foreground">
               <span className="font-semibold text-foreground">{skill.name}</span>
@@ -54,7 +57,7 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
               )}
             </li>
           ))}
-        </ul>
+        </Text>
       )}
     </CollapsibleCard>
   );

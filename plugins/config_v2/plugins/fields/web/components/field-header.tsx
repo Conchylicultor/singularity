@@ -1,15 +1,16 @@
 import type { FieldDef } from "@plugins/config_v2/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function FieldHeader({ field }: { field: FieldDef }) {
   return (
     <div className="flex flex-col gap-0.5">
       {field.meta.label ? (
-        <label className="text-sm font-medium">{field.meta.label}</label>
+        <Text as="label" variant="label">{field.meta.label}</Text>
       ) : null}
       {field.meta.description ? (
-        <p className="text-xs text-muted-foreground">
+        <Text as="p" variant="caption" tone="muted">
           {field.meta.description}
-        </p>
+        </Text>
       ) : null}
     </div>
   );

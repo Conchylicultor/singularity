@@ -10,6 +10,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type TaskListItem, removeTaskDependency } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
@@ -25,7 +26,7 @@ export function TaskDependents({ taskId }: { taskId: string }) {
       <SectionHeaderRow variant="eyebrow">Dependents</SectionHeaderRow>
       <CollapsibleContent>
         {dependentIds.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No dependents.</p>
+          <Text as="p" variant="body" tone="muted">No dependents.</Text>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {dependentIds.map((depId) => (
@@ -73,7 +74,7 @@ function DependentChip({
           <button
             type="button"
             onClick={remove}
-            className="hover:bg-destructive/10 hover:text-destructive rounded p-0.5"
+            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-0.5"
             aria-label={`Remove dependent ${title}`}
           >
             <MdClose className="h-3 w-3" />

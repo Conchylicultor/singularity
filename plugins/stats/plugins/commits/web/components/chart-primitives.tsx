@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { fetchWithRetry } from "@plugins/primitives/plugins/networking/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function useFetchJson<T>(url: string, cacheKey?: string): {
   data: T | null;
@@ -37,9 +38,9 @@ export function ChartState({
   loading: boolean;
   children: React.ReactNode;
 }) {
-  if (error) return <div className="text-destructive text-sm">Failed to load: {error}</div>;
-  if (loading) return <div className="text-muted-foreground text-sm">Loading…</div>;
-  if (empty) return <div className="text-muted-foreground text-sm">No commits yet.</div>;
+  if (error) return <Text as="div" variant="body" className="text-destructive">Failed to load: {error}</Text>;
+  if (loading) return <Text as="div" variant="body" className="text-muted-foreground">Loading…</Text>;
+  if (empty) return <Text as="div" variant="body" className="text-muted-foreground">No commits yet.</Text>;
   return <>{children}</>;
 }
 

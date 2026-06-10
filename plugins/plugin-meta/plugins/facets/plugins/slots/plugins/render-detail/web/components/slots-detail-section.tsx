@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Section,
   type PluginNode,
@@ -18,9 +19,11 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
     <Section title="Slots" count={`${data.length} slot${data.length !== 1 ? "s" : ""}`}>
       <div className="flex flex-col gap-0.5">
         {data.map((s) => (
-          <div
+          <Text
+            as="div"
+            variant="caption"
             key={s.slotId}
-            className="flex items-center gap-2 px-2 py-0.5 text-xs"
+            className="flex items-center gap-2 px-2 py-0.5"
           >
             <code className="font-mono text-foreground">
               {s.groupName}.{s.memberName}
@@ -28,7 +31,7 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
             <code className="ml-auto truncate font-mono text-muted-foreground/60">
               {s.slotId}
             </code>
-          </div>
+          </Text>
         ))}
       </div>
     </Section>

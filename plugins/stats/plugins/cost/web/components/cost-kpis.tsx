@@ -1,4 +1,5 @@
 import { ChartState, useFetchJson } from "@plugins/stats/plugins/commits/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope, withScope } from "./use-scope";
 import { formatTokensCompact, formatUsd } from "./format";
@@ -27,10 +28,10 @@ export function CostKpis() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex items-center justify-between">
-        <p className="text-xs text-muted-foreground">
+        <Text as="p" variant="caption" className="text-muted-foreground">
           Sourced from <code>ccusage</code>: parses{" "}
           <code>~/.claude/projects</code> on each load.
-        </p>
+        </Text>
         <ScopeToggle />
       </div>
       <ChartState
@@ -99,18 +100,16 @@ function Kpi({
   muted?: boolean;
 }) {
   return (
-    <div className="rounded border bg-background p-3">
-      <div className="text-xs text-muted-foreground">{label}</div>
-      <div
-        className={
-          muted
-            ? "mt-1 text-base font-medium text-foreground"
-            : "mt-1 text-2xl font-semibold text-foreground"
-        }
+    <div className="rounded-md border bg-background p-3">
+      <Text as="div" variant="caption" className="text-muted-foreground">{label}</Text>
+      <Text
+        as="div"
+        variant={muted ? "subheading" : "title"}
+        className={muted ? "mt-1 font-medium text-foreground" : "mt-1 text-foreground"}
       >
         {value}
-      </div>
-      {sub && <div className="text-xs text-muted-foreground">{sub}</div>}
+      </Text>
+      {sub && <Text as="div" variant="caption" className="text-muted-foreground">{sub}</Text>}
     </div>
   );
 }

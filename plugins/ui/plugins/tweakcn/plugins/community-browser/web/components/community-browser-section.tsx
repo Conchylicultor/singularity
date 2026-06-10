@@ -9,6 +9,7 @@ import { setConfigField } from "@plugins/config_v2/core";
 import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import { getCatalog, applyCatalogTheme } from "../../core";
 import { CommunityThemeCard } from "./community-theme-card";
@@ -141,14 +142,16 @@ export function CommunityBrowserSection({ search }: { search: string }) {
       )}
 
       {isLoading && (
-        <p className="text-sm text-muted-foreground">Loading themes...</p>
+        <Text as="p" variant="body" tone="muted">
+          Loading themes...
+        </Text>
       )}
 
       {!isLoading && themes && visible.length > 0 && (
         <>
-          <span className="text-xs text-muted-foreground">
+          <Text as="span" variant="caption" tone="muted">
             {visible.length} themes
-          </span>
+          </Text>
           <div className="grid grid-cols-2 gap-2">
             {visible.map((theme) => (
               <CommunityThemeCard
@@ -163,9 +166,9 @@ export function CommunityBrowserSection({ search }: { search: string }) {
       )}
 
       {!isLoading && themes && visible.length === 0 && (
-        <p className="text-sm text-muted-foreground">
+        <Text as="p" variant="body" tone="muted">
           No themes match your search.
-        </p>
+        </Text>
       )}
 
       <ImportByUrl search={search} onApply={handleApply} />

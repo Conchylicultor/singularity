@@ -1,4 +1,5 @@
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
@@ -50,9 +51,9 @@ function FilePeekPaneBody() {
         title={<FilepathBreadcrumb path={filePath} />}
         hideRightActions
       >
-        <div className="px-3 py-2 text-sm text-muted-foreground">
+        <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
           Resolving…
-        </div>
+        </Text>
       </PaneChrome>
     );
   }

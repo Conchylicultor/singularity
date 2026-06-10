@@ -1,5 +1,6 @@
 import type { ComponentType } from "react";
 import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 /**
  * A horizontal picker rendered from a list of `{ id, label, icon? }` items.
@@ -25,7 +26,11 @@ export function Picker({
   loadedIds?: string[];
 }) {
   if (items.length === 0) {
-    return <span className="text-xs text-muted-foreground">{empty}</span>;
+    return (
+      <Text variant="caption" tone="muted">
+        {empty}
+      </Text>
+    );
   }
   return (
     <div className="flex flex-wrap items-center gap-1">
@@ -41,7 +46,7 @@ export function Picker({
             aria-pressed={active}
             // eslint-disable-next-line row/no-adhoc-row -- bespoke picker: per-item "loaded" dot indicator that SegmentedControl can't express
             className={cn(
-              "flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-xs font-medium transition-colors",
+              "flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-label transition-colors",
               active
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border bg-transparent text-muted-foreground hover:bg-muted/50",

@@ -61,7 +61,7 @@ export function PrepromptSelect({
       }}
       disabled={disabled}
     >
-      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-40 text-xs", className)}>
+      <SelectTrigger aria-label={ariaLabel} className={cn("h-7 w-40 text-caption", className)}>
         <SelectValue>
           {(v: string | null) => {
             if (v == null || v === OFF) return offLabel;

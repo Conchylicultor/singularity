@@ -2,6 +2,7 @@ import { useContext, useEffect, useRef, useState } from "react";
 import { MdCheck } from "react-icons/md";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -51,17 +52,17 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
   if (isSet && !editing) {
     return (
       <div className="flex flex-col gap-1.5 py-3">
-        {field.meta.label ? <label className="text-sm font-medium">{field.meta.label}</label> : null}
-        {field.meta.description ? <p className="text-xs text-muted-foreground">{field.meta.description}</p> : null}
+        {field.meta.label ? <Text as="label" variant="label">{field.meta.label}</Text> : null}
+        {field.meta.description ? <Text as="p" variant="caption" className="text-muted-foreground">{field.meta.description}</Text> : null}
         <div className="flex items-center gap-2">
-          <span className="flex items-center gap-1 text-xs text-success">
+          <Text variant="caption" className="flex items-center gap-1 text-success">
             <MdCheck className="size-3.5" />
             Configured
-          </span>
+          </Text>
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-xs"
+            className="h-6 px-2 text-caption"
             onClick={() => setEditing(true)}
           >
             Replace
@@ -73,8 +74,8 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
 
   return (
     <div className="flex flex-col gap-1.5 py-3">
-      {field.meta.label ? <label className="text-sm font-medium">{field.meta.label}</label> : null}
-      {field.meta.description ? <p className="text-xs text-muted-foreground">{field.meta.description}</p> : null}
+      {field.meta.label ? <Text as="label" variant="label">{field.meta.label}</Text> : null}
+      {field.meta.description ? <Text as="p" variant="caption" className="text-muted-foreground">{field.meta.description}</Text> : null}
       <Input
         type="password"
         value={local}

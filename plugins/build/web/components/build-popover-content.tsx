@@ -11,11 +11,15 @@ import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { buildHistoryResource } from "../../shared";
 import type { BuildRun } from "../../shared";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
+
+// Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
+const logViewerClass = "overflow-y-auto bg-muted/30 px-3 py-2 font-mono text-xs leading-5";
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
@@ -101,7 +105,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
   return (
     <div className="relative flex flex-col border-b">
       <div className="flex items-center justify-between border-b px-3 py-1">
-        <span className="text-xs font-medium text-muted-foreground">Logs</span>
+        <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
         <Button
           variant="ghost"
           size="icon"
@@ -115,10 +119,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
       </div>
       <div
         ref={stickyScroll.scrollRef}
-        className={cn(
-          "overflow-y-auto bg-muted/30 px-3 py-2 font-mono text-xs leading-5",
-          variant === "popover" ? "h-48" : "flex-1 min-h-48",
-        )}
+        className={cn(logViewerClass, variant === "popover" ? "h-48" : "flex-1 min-h-48")}
       >
         {entries.length === 0 && (
           <span className="text-muted-foreground">No build logs yet</span>
@@ -179,9 +180,9 @@ function BuildHistoryList({
 
   return (
     <div className="px-3 py-2">
-      <span className="text-xs font-medium text-muted-foreground">History</span>
+      <Text as="span" variant="label" className="text-muted-foreground">History</Text>
       {visible.length === 0 && (
-        <p className="mt-1 text-xs text-muted-foreground">No builds yet</p>
+        <Text as="p" variant="caption" className="mt-1 text-muted-foreground">No builds yet</Text>
       )}
       <div className="mt-1 flex flex-col gap-0.5">
         {visible.map((run) => (

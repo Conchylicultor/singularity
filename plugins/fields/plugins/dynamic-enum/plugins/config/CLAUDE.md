@@ -21,7 +21,7 @@ text input when no contribution matches.
 - Description: Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
-  - Uses: `config_v2/fields.Fields`
+  - Uses: `config_v2/fields.Fields`, `primitives/text.Text`
   - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`

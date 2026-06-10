@@ -6,6 +6,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { DbSchemaFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the db-schema facet's own data. Read `node.facets[id]` directly (as
 // every render host does) rather than importing the build-time `facets/core`
@@ -39,9 +40,11 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
           <SubHeading label="Tables" count={tables.length}>
             <div className="flex flex-col gap-0.5">
               {tables.map((t) => (
-                <div
+                <Text
+                  as="div"
+                  variant="caption"
                   key={t.name}
-                  className="flex items-center gap-2 px-2 py-0.5 text-xs"
+                  className="flex items-center gap-2 px-2 py-0.5"
                 >
                   <code className="min-w-0 truncate font-mono text-foreground">
                     {t.name}
@@ -49,7 +52,7 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   <span className="ml-auto shrink-0 font-mono text-3xs text-muted-foreground/50">
                     {t.varName}
                   </span>
-                </div>
+                </Text>
               ))}
             </div>
           </SubHeading>
@@ -59,15 +62,17 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
           <SubHeading label="Extends" count={entityExtensions.length}>
             <div className="flex flex-col gap-0.5">
               {entityExtensions.map((e) => (
-                <div
+                <Text
+                  as="div"
+                  variant="caption"
                   key={e.tableName}
-                  className="flex items-center gap-2 px-2 py-0.5 text-xs"
+                  className="flex items-center gap-2 px-2 py-0.5"
                 >
                   <PluginLink name={e.parentPlugin} label={asPath(e.parentPlugin)} />
                   <code className="min-w-0 truncate font-mono text-muted-foreground">
                     {e.tableName}
                   </code>
-                </div>
+                </Text>
               ))}
             </div>
           </SubHeading>
@@ -77,15 +82,17 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
           <SubHeading label="Extended by" count={extendedBy.length}>
             <div className="flex flex-col gap-0.5">
               {extendedBy.map((e) => (
-                <div
+                <Text
+                  as="div"
+                  variant="caption"
                   key={e.tableName}
-                  className="flex items-center gap-2 px-2 py-0.5 text-xs"
+                  className="flex items-center gap-2 px-2 py-0.5"
                 >
                   <PluginLink name={e.childPlugin} label={asPath(e.childPlugin)} />
                   <code className="min-w-0 truncate font-mono text-muted-foreground">
                     {e.tableName}
                   </code>
-                </div>
+                </Text>
               ))}
             </div>
           </SubHeading>

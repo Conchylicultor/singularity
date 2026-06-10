@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { BlockHandle } from "../../core";
 import { Editor } from "../slots";
 
@@ -66,7 +67,9 @@ export function BlockTypeList({
 }) {
   if (blocks.length === 0) {
     return (
-      <div className="text-muted-foreground px-2 py-1.5 text-sm">No block types</div>
+      <Text as="div" variant="body" className="text-muted-foreground px-2 py-1.5">
+        No block types
+      </Text>
     );
   }
 

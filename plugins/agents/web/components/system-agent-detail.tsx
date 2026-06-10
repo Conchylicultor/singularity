@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { SystemAgentDescriptor } from "../system-agents";
 
 export function SystemAgentDetail({
@@ -7,10 +8,10 @@ export function SystemAgentDetail({
 }) {
   return (
     <div className="flex flex-col gap-3 p-6">
-      <h1 className="text-xl font-semibold">{descriptor.name}</h1>
-      <p className="text-muted-foreground text-xs italic">
+      <Text as="h1" variant="title">{descriptor.name}</Text>
+      <Text as="p" variant="caption" className="text-muted-foreground italic">
         This system agent has no custom UI yet.
-      </p>
+      </Text>
     </div>
   );
 }

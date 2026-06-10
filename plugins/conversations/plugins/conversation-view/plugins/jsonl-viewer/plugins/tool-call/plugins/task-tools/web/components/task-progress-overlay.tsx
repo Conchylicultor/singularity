@@ -9,6 +9,7 @@ import {
   MdExpandLess,
   MdClose,
 } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
 
 function StatusIcon({ status }: { status: string }) {
@@ -28,15 +29,15 @@ function StatusIcon({ status }: { status: string }) {
 
 function TaskRow({ task }: { task: TaskEntry }) {
   return (
-    <div className="flex items-center gap-2 px-3 py-1 text-xs">
+    <Text as="div" variant="caption" className="flex items-center gap-2 px-3 py-1">
       <StatusIcon status={task.status} />
       <span className="min-w-0 flex-1 truncate text-foreground/80">
         {task.description}
       </span>
-      <span className="shrink-0 font-mono text-[10px] text-muted-foreground/60">
+      <span className="shrink-0 font-mono text-3xs text-muted-foreground/60">
         {task.taskId.slice(0, 8)}
       </span>
-    </div>
+    </Text>
   );
 }
 
@@ -51,14 +52,14 @@ export function TaskProgressOverlay() {
     <div className="absolute inset-x-0 bottom-10 z-float flex justify-center pointer-events-none">
       <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
         <div className="flex items-center px-3 py-2">
-          <span className="tabular-nums text-xs text-muted-foreground">
+          <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
             {completedCount}/{totalCount} complete
-          </span>
+          </Text>
           <div className="ml-auto flex items-center gap-1">
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               {expanded ? (
                 <MdExpandMore className="size-4" />
@@ -69,7 +70,7 @@ export function TaskProgressOverlay() {
             <button
               type="button"
               onClick={() => setDismissed(true)}
-              className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <MdClose className="size-4" />
             </button>

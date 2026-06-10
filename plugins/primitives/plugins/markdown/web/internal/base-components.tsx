@@ -72,7 +72,7 @@ export function buildBaseComponents(
       }
       return (
         <code
-          className="rounded bg-muted px-1 py-0.5 font-mono text-xs"
+          className="rounded-md bg-muted px-1 py-0.5 font-mono text-caption"
           {...rest}
         >
           {children}

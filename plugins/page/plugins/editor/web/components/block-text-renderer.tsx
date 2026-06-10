@@ -1,4 +1,5 @@
 import { useMemo, type ReactNode } from "react";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { BlockRendererProps } from "../types";
 import { Editor } from "../slots";
 import { BlockTextEditor } from "./block-text-editor";
@@ -43,12 +44,14 @@ export function BlockTextRenderer({ block, isFocused, editor }: BlockRendererPro
     );
   } else if (handle?.marker) {
     marker = (
-      <span
+      <Text
+        as="span"
+        variant="body"
         aria-hidden
-        className="text-muted-foreground flex-none select-none py-1 pl-3 pr-1 text-sm leading-6"
+        className="text-muted-foreground flex-none select-none py-1 pl-3 pr-1"
       >
         {handle.marker}
-      </span>
+      </Text>
     );
   }
 

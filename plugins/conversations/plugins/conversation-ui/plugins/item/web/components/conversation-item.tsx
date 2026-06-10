@@ -3,6 +3,7 @@ import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import { Item } from "../slots";
 
@@ -69,14 +70,16 @@ export function ConvSysBadge({ conv }: { conv: ConversationItemConv }) {
 export function ConvTitle({ conv }: { conv: ConversationItemConv }) {
   const muted = conv.status === "gone" || conv.status === "done";
   return (
-    <span
+    <Text
+      as="span"
+      variant="caption"
       className={cn(
-        "min-w-0 flex-1 truncate text-xs",
+        "min-w-0 flex-1 truncate",
         muted && "text-muted-foreground",
       )}
     >
       {conv.title ?? "Starting…"}
-    </span>
+    </Text>
   );
 }
 

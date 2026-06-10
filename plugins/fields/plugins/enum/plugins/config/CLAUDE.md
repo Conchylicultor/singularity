@@ -20,7 +20,7 @@ string. `FieldHeader` comes from the slot owner
 - Description: Enum field type: config-render capability. Contributes the radio/dropdown renderer to the config-v2.fields.renderer slot.
 - Web:
   - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
-  - Uses: `config_v2/fields.Fields`
+  - Uses: `config_v2/fields.Fields`, `primitives/text.Text`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/enum.enumFieldType`
   - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`

@@ -10,6 +10,7 @@ import {
   type CollisionDetection,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -124,7 +125,11 @@ function BlockEditorInner() {
   const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
 
   if (result.pending) {
-    return <div className="px-3 py-2 text-sm text-muted-foreground">Loading...</div>;
+    return (
+      <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
+        Loading...
+      </Text>
+    );
   }
 
   return (
@@ -624,7 +629,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
             </div>
             {marquee && (
               <div
-                className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded border"
+                className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded-md border"
                 style={{ top: marquee.top, height: marquee.height }}
               />
             )}
@@ -632,13 +637,16 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
         </ContentScope>
         <DragOverlay dropAnimation={null}>
           {activeId ? (
-            // eslint-disable-next-line badge/no-adhoc-chip -- drag overlay container, not a chip
-            <div className="bg-background/90 border-accent text-muted-foreground flex items-center gap-1 rounded border px-2 py-1 text-sm shadow">
+            <Text
+              as="div"
+              variant="body"
+              className="bg-background/90 border-accent text-muted-foreground flex items-center gap-1 rounded-md border px-2 py-1 shadow"
+            >
               <MdDragIndicator className="size-4" />
               {bulkDragRef.current && selectedCount > 1
                 ? `${selectedCount} blocks`
                 : null}
-            </div>
+            </Text>
           ) : null}
         </DragOverlay>
       </DndContext>

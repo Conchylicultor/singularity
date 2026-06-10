@@ -4,6 +4,7 @@ import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
@@ -51,9 +52,9 @@ export function WorkflowNodeCard({
         {node.kind === "workflow" && (
           <MdAccountTree className="size-3 shrink-0 text-muted-foreground" />
         )}
-        <span className="min-w-0 flex-1 truncate text-xs font-medium text-foreground">
+        <Text as="span" variant="label" className="min-w-0 flex-1 truncate text-foreground">
           {node.label}
-        </span>
+        </Text>
         {modelColor && (
           <Badge size="sm" colorClass={modelColor} className="shrink-0 font-mono">
             {modelDisplayLabel(node.model!)}
@@ -68,7 +69,7 @@ export function WorkflowNodeCard({
         </span>
       )}
       {node.promptPreview && (
-        <span className="line-clamp-2 text-[11px] leading-snug text-muted-foreground">
+        <span className="line-clamp-2 text-2xs text-muted-foreground">
           {node.promptPreview}
         </span>
       )}

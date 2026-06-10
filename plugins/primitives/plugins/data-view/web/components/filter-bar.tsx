@@ -1,4 +1,5 @@
 import type { ReactNode } from "react";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FieldDef, FilterContribution } from "../../core";
 
 export interface FilterBarProps {
@@ -38,7 +39,9 @@ export function FilterBar({
         const Control = contribution.Control;
         return (
           <div key={field.id} className="flex flex-col gap-1">
-            <span className="text-xs text-muted-foreground">{field.label}</span>
+            <Text variant="caption" className="text-muted-foreground">
+              {field.label}
+            </Text>
             <Control
               value={filters[field.id]}
               onChange={(v) => setFilter(field.id, v)}

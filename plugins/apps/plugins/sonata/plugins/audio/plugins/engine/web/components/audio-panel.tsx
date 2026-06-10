@@ -16,13 +16,13 @@ export function AudioPanel() {
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Audio
       </div>
 
       {/* Master volume. */}
       <label className="mt-3 block">
-        <span className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
           Volume
         </span>
         <input
@@ -39,7 +39,7 @@ export function AudioPanel() {
       {/* Aggregate sample-load status line. */}
       <div
         className={cn(
-          "mt-3 text-xs",
+          "mt-3 text-caption",
           loadError ? "text-destructive" : "text-muted-foreground",
         )}
       >

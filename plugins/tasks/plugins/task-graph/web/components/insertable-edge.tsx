@@ -8,6 +8,7 @@ import {
 } from "@xyflow/react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { removeTaskDependency, insertTaskBetween } from "@plugins/tasks/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export type InsertableEdgeData = {
   sourceTaskId: string;
@@ -103,7 +104,7 @@ export function InsertableEdge({
             onClick={handleClick}
             aria-label="Insert task"
           >
-            <span className="text-sm font-medium leading-none">+</span>
+            <Text variant="label">+</Text>
           </button>
           <button
             type="button"
@@ -112,7 +113,7 @@ export function InsertableEdge({
             onClick={handleDelete}
             aria-label="Remove dependency"
           >
-            <span className="text-sm font-medium leading-none">&times;</span>
+            <Text variant="label">&times;</Text>
           </button>
         </div>
       </EdgeLabelRenderer>

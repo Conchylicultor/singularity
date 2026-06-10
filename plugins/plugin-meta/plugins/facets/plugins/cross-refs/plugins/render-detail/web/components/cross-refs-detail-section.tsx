@@ -13,6 +13,7 @@ import {
   asPath,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   CrossRefsData,
   ApiUse,
@@ -72,21 +73,23 @@ function UsesGroup({
 }) {
   return (
     <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1.5 px-2 text-xs">
+      <Text as="div" variant="caption" className="flex items-center gap-1.5 px-2">
         <span className={cn("font-mono font-medium", RUNTIME_COLORS[runtime])}>
           {runtime}
         </span>
         <span className="text-muted-foreground/50">({uses.length})</span>
-      </div>
+      </Text>
       <div className="ml-1 flex flex-col gap-px border-l border-border/50 pl-3">
         {uses.map((u) => (
-          <code
+          <Text
+            as="code"
+            variant="caption"
             key={`${u.plugin}:${u.symbol ?? ""}`}
-            className="truncate px-1.5 py-px font-mono text-xs text-foreground"
+            className="truncate px-1.5 py-px font-mono text-foreground"
           >
             {asPath(u.plugin)}
             {u.symbol ? "." + u.symbol : ""}
-          </code>
+          </Text>
         ))}
       </div>
     </div>

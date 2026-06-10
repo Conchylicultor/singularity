@@ -11,6 +11,7 @@ import type { IconType } from "react-icons";
 import type { TaskStatus } from "@plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 
 /**
@@ -125,7 +126,7 @@ export function StatusSignal({ status }: { status: TaskStatus }) {
   return (
     <span className="inline-flex items-center gap-1.5">
       <StatusDot colorClass={meta.dotClass} />
-      <span className="text-muted-foreground text-xs">{meta.label}</span>
+      <Text variant="caption" tone="muted">{meta.label}</Text>
     </span>
   );
 }

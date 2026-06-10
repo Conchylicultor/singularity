@@ -36,7 +36,7 @@ export function FilePath({ filePath }: FilePathProps) {
     <span className="group/path inline-flex items-center gap-0.5 max-w-full min-w-0">
       <button
         onClick={openFile}
-        className="min-w-0 max-w-full overflow-hidden whitespace-nowrap font-mono text-[11px] text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
+        className="min-w-0 max-w-full overflow-hidden whitespace-nowrap font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         style={{ direction: "rtl", textOverflow: "ellipsis" }}
         title={relativePath}
       >

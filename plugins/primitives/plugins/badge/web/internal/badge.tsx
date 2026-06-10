@@ -22,7 +22,7 @@ const VARIANT_CLASS: Record<BadgeVariant, string> = {
 export interface BadgeProps {
   /** Semantic color variant. Default "muted". Ignored when `colorClass` is set. */
   variant?: BadgeVariant;
-  /** Size token. sm → text-3xs, md → text-xs. Default "md". */
+  /** Size token. sm → text-3xs, md → text-caption. Default "md". */
   size?: BadgeSize;
   /** Color-only escape hatch: replaces the variant bg/text classes (map-driven colors). */
   colorClass?: string;
@@ -52,7 +52,7 @@ export function Badge({
       className={cn(
         "inline-flex items-center gap-1 whitespace-nowrap rounded-md p-chip font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
         size === "sm" && "text-3xs",
-        size === "md" && "text-xs",
+        size === "md" && "text-caption",
         colorClass ?? VARIANT_CLASS[variant],
         className,
       )}

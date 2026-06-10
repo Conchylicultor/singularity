@@ -1,6 +1,7 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { useJsonlConversationId } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { InvestigateEventButton } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/investigate-event/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { AttachmentRendererProps } from "../../core";
 
 export function GenericAttachmentView({ event }: AttachmentRendererProps) {
@@ -18,9 +19,13 @@ export function GenericAttachmentView({ event }: AttachmentRendererProps) {
         />
       }
     >
-      <pre className="whitespace-pre-wrap break-words font-mono text-xs text-muted-foreground leading-5">
+      <Text
+        as="pre"
+        variant="caption"
+        className="whitespace-pre-wrap break-words font-mono text-muted-foreground"
+      >
         {JSON.stringify(event.attachment, null, 2)}
-      </pre>
+      </Text>
     </CollapsibleCard>
   );
 }

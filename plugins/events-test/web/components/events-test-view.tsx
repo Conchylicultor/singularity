@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -235,18 +236,18 @@ export function EventsTestView() {
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
         <header className="flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-xl font-semibold tracking-tight">
+            <Text as="h1" variant="title" className="tracking-tight">
               Events Test
-            </h1>
-            <p className="text-sm text-muted-foreground">
-              Exercises the <code className="rounded bg-muted px-1">events</code>{" "}
-              and <code className="rounded bg-muted px-1">jobs</code> plugins:
+            </Text>
+            <Text as="p" variant="body" tone="muted">
+              Exercises the <code className="rounded-md bg-muted px-1">events</code>{" "}
+              and <code className="rounded-md bg-muted px-1">jobs</code> plugins:
               subscribe a trigger, emit a payload, watch the job fire. Backed
-              by <code className="rounded bg-muted px-1">events_test.pinged</code>{" "}
+              by <code className="rounded-md bg-muted px-1">events_test.pinged</code>{" "}
               event and{" "}
-              <code className="rounded bg-muted px-1">events_test.log</code>{" "}
+              <code className="rounded-md bg-muted px-1">events_test.log</code>{" "}
               job.
-            </p>
+            </Text>
           </div>
           <Button variant="ghost" size="sm" onClick={refresh}>
             <MdRefresh className="size-4" />
@@ -271,15 +272,15 @@ export function EventsTestView() {
                 onChange={(e) => setSubLabel(e.target.value)}
               />
             </FieldRow>
-            <label className="flex items-center gap-2 text-sm text-muted-foreground">
+            <Text as="label" variant="body" tone="muted" className="flex items-center gap-2">
               <input
                 type="checkbox"
                 checked={subOneShot}
                 onChange={(e) => setSubOneShot(e.target.checked)}
-                className="size-4 rounded border-input"
+                className="size-4 rounded-md border-input"
               />
               oneShot (delete row after fire)
-            </label>
+            </Text>
             <Button onClick={onSubscribe} disabled={subBusy}>
               <MdBolt className="size-4" />
               {subBusy ? "Subscribing…" : "Subscribe"}
@@ -317,9 +318,9 @@ export function EventsTestView() {
         <Section
           title="Direct enqueue (Layer 1)"
           action={
-            <span className="text-xs text-muted-foreground">
+            <Text as="span" variant="caption" tone="muted">
               calls logPing.enqueue(...) — no trigger row involved
-            </span>
+            </Text>
           }
         >
           <div className="grid gap-3 md:grid-cols-3">
@@ -360,9 +361,9 @@ export function EventsTestView() {
         <Section
           title={`Active triggers (${triggers.length})`}
           action={
-            <span className="text-xs text-muted-foreground">
+            <Text as="span" variant="caption" tone="muted">
               polls every 1s — one-shot rows disappear after fire
-            </span>
+            </Text>
           }
         >
           {triggers.length === 0 ? (
@@ -373,7 +374,7 @@ export function EventsTestView() {
                 <div
                   key={t.id}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-sm transition-colors",
+                    "flex items-center gap-3 px-3 py-2 text-body transition-colors",
                     flashedIds.has(t.id) && "bg-success/10",
                   )}
                 >
@@ -383,16 +384,16 @@ export function EventsTestView() {
                         {t.userId ?? "(any)"}
                       </Badge>
                       <span className="text-muted-foreground">→</span>
-                      <span className="font-mono text-xs">{t.jobName}</span>
-                      <span className="truncate text-xs text-muted-foreground">
+                      <Text as="span" variant="caption" className="font-mono">{t.jobName}</Text>
+                      <Text as="span" variant="caption" tone="muted" className="truncate">
                         {JSON.stringify(t.jobWith)}
-                      </span>
+                      </Text>
                     </div>
-                    <div className="flex items-center gap-2 text-xs text-muted-foreground">
+                    <Text as="div" variant="caption" tone="muted" className="flex items-center gap-2">
                       <span>{t.oneShot ? "one-shot" : "recurring"}</span>
                       <span>·</span>
                       <span className="truncate font-mono">{t.id}</span>
-                    </div>
+                    </Text>
                   </div>
                   <Button
                     variant="ghost"
@@ -446,27 +447,29 @@ export function EventsTestView() {
           ) : (
             <div className="divide-y divide-border rounded-md border border-border">
               {log.map((e, i) => (
-                <div
+                <Text
+                  as="div"
+                  variant="body"
                   key={`${e.jobId}-${e.firedAt}-${i}`}
-                  className="flex flex-col gap-0.5 px-3 py-2 text-sm"
+                  className="flex flex-col gap-0.5 px-3 py-2"
                 >
                   <div className="flex items-center gap-2">
                     <Badge size="md" colorClass="bg-info/10 text-info-foreground" className="font-mono">
                       {e.label}
                     </Badge>
                     <span className="text-muted-foreground">fired for</span>
-                    <span className="font-mono text-xs">
+                    <Text as="span" variant="caption" className="font-mono">
                       userId={e.userId}
-                    </span>
-                    <span className="truncate text-xs text-muted-foreground">
+                    </Text>
+                    <Text as="span" variant="caption" tone="muted" className="truncate">
                       msg={JSON.stringify(e.message)}
-                    </span>
+                    </Text>
                   </div>
-                  <div className="truncate text-xs text-muted-foreground">
+                  <Text as="div" variant="caption" tone="muted" className="truncate">
                     {new Date(e.firedAt).toLocaleTimeString()} ·{" "}
                     <span className="font-mono">job {e.jobId}</span>
-                  </div>
-                </div>
+                  </Text>
+                </Text>
               ))}
             </div>
           )}
@@ -490,7 +493,7 @@ function Section({
   return (
     <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
       <div className="flex items-center justify-between gap-2">
-        <h2 className="text-sm font-medium">{title}</h2>
+        <Text as="h2" variant="label">{title}</Text>
         {action}
       </div>
       <div className="flex flex-col gap-3">{children}</div>
@@ -507,7 +510,7 @@ function FieldRow({
 }) {
   return (
     <div className="flex flex-col gap-1">
-      <label className="text-xs text-muted-foreground">{label}</label>
+      <Text as="label" variant="caption" tone="muted">{label}</Text>
       {children}
     </div>
   );
@@ -515,8 +518,8 @@ function FieldRow({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <div className="rounded-md border border-dashed border-border px-3 py-6 text-center text-sm text-muted-foreground">
+    <Text as="div" variant="body" tone="muted" className="rounded-md border border-dashed border-border px-3 py-6 text-center">
       {children}
-    </div>
+    </Text>
   );
 }

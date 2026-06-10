@@ -47,7 +47,7 @@ export function HighlightedCode({
     return (
       <ContentScope>
         <pre
-          className={`my-2 overflow-auto rounded bg-muted p-3 font-mono text-xs leading-5 ${className ?? ""}`}
+          className={`my-2 overflow-auto rounded-md bg-muted p-3 font-mono text-caption ${className ?? ""}`}
         >
           <code>{code}</code>
         </pre>

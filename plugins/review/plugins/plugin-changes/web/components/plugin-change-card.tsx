@@ -1,5 +1,6 @@
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
 
@@ -25,9 +26,9 @@ export function PluginChangeCard({
         ) : (
           <MdExpandMore className="size-4 text-muted-foreground shrink-0" />
         )}
-        <span className="text-sm font-medium truncate">
+        <Text as="span" variant="label" className="truncate">
           {plugin.pluginId}
-        </span>
+        </Text>
         <Badge
           size="sm"
           colorClass={plugin.status === "added" ? "bg-success/15 text-success" : "bg-info/15 text-info"}

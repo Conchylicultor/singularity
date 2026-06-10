@@ -5,6 +5,7 @@ import { useConversations } from "@plugins/conversations/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 
 export function WelcomeView() {
@@ -31,9 +32,9 @@ export function WelcomeView() {
         {/* Branding */}
         <div className="flex flex-col items-center gap-2">
           <img src="/icon.svg" alt="Singularity" className="size-24" />
-          <span className="text-lg font-semibold tracking-tight">
+          <Text as="span" variant="heading" className="tracking-tight">
             Singularity
-          </span>
+          </Text>
         </div>
 
         {/* Stats */}
@@ -48,10 +49,10 @@ export function WelcomeView() {
                 key={stat.label}
                 className="flex-1 rounded-lg border bg-card p-3 text-center"
               >
-                <div className="text-2xl font-semibold text-foreground">
+                <Text as="div" variant="title" className="text-foreground">
                   {stat.value}
-                </div>
-                <div className="text-[11px] text-muted-foreground">
+                </Text>
+                <div className="text-2xs text-muted-foreground">
                   {stat.label}
                 </div>
               </div>
@@ -66,9 +67,9 @@ export function WelcomeView() {
         {!conv.pending && recentConversations.length > 0 && (
           <div className="w-full">
             <div className="flex items-center justify-between mb-2">
-              <span className="text-xs font-medium text-muted-foreground">
+              <Text as="span" variant="label" className="text-muted-foreground">
                 Recent conversations
-              </span>
+              </Text>
             </div>
             <div className="flex flex-col rounded-lg border bg-card overflow-hidden divide-y">
               {recentConversations.map((conversation) => (
@@ -83,7 +84,7 @@ export function WelcomeView() {
                   <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
                     <span
                       className={cn(
-                        "truncate text-xs",
+                        "truncate text-caption",
                         !conversation.active
                           ? "text-muted-foreground"
                           : "font-medium text-foreground",
@@ -91,7 +92,7 @@ export function WelcomeView() {
                     >
                       {conversation.title ?? "Starting..."}
                     </span>
-                    <RelativeTime date={conversation.createdAt} className="text-[10px] text-muted-foreground" />
+                    <RelativeTime date={conversation.createdAt} className="text-3xs text-muted-foreground" />
                   </div>
                   <MdArrowForward className="size-3.5 text-muted-foreground/50 shrink-0" />
                 </button>

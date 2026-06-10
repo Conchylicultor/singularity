@@ -1,4 +1,5 @@
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stats } from "../slots";
 import { StatsProvider, useShowEmptyDays } from "./stats-context";
 
@@ -34,12 +35,12 @@ function StatsContent() {
           </ToggleChip>
         </div>
         {charts.length === 0 ? (
-          <div className="text-muted-foreground text-sm">No stats available.</div>
+          <Text as="div" variant="body" className="text-muted-foreground">No stats available.</Text>
         ) : (
           <Stats.Chart.Render>
             {(item) => (
               <section className="bg-card rounded-lg border p-4">
-                <h2 className="mb-4 text-sm font-medium">{item.title}</h2>
+                <Text as="h2" variant="label" className="mb-4">{item.title}</Text>
                 <item.component />
               </section>
             )}

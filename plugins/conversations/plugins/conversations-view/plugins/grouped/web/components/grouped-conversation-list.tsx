@@ -34,6 +34,7 @@ import {
   SidebarMenuSubButton,
 } from "@/components/ui/sidebar";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { MdChevronRight, MdClose, MdFolder, MdRemoveCircleOutline } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { DraggableRow, type DropTarget } from "./draggable-row";
@@ -487,9 +488,9 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
           hasActiveChild={hasActiveInGroup(trulyUngrouped)}
           count={trulyUngrouped.length}
           title={
-            <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+            <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
               Ungrouped
-            </div>
+            </Text>
           }
         >
           {trulyUngrouped.length > 0 ? (
@@ -497,7 +498,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
               {trulyUngrouped.map((ag) => renderAttemptGroup(ag))}
             </SidebarMenu>
           ) : (
-            <div className="px-2 py-1 text-[11px] text-muted-foreground italic">
+            <div className="px-2 py-1 text-2xs text-muted-foreground italic">
               No ungrouped conversations
             </div>
           )}
@@ -510,7 +511,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
                 type="button"
                 onClick={toggleGoneExpanded}
                 aria-label={goneExpanded ? "Collapse closed" : "Expand closed"}
-                className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+                className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
               >
                 <MdChevronRight
                   className={cn(
@@ -519,9 +520,9 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
                   )}
                 />
               </button>
-              <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+              <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
                 Closed
-              </div>
+              </Text>
             </div>
             {!dragInProgress && goneExpanded && (
               <div className="mt-0.5 pl-1">
@@ -568,16 +569,16 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       </div>
       <DragOverlay dropAnimation={null}>
         {activeGroupId ? (
-          <div className="bg-background/90 border-accent flex items-center gap-1.5 rounded border px-2 py-1.5 text-sm font-medium shadow-md">
+          <Text as="div" variant="label" className="bg-background/90 border-accent flex items-center gap-1.5 rounded-md border px-2 py-1.5 shadow-md">
             <MdFolder className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">
               {groups.find((g) => g.id === activeGroupId)?.title || "Group"}
             </span>
-          </div>
+          </Text>
         ) : activeConv ? (
-          <div className="bg-background/90 border-accent flex items-center rounded border px-2 py-1.5 text-sm shadow-md">
+          <Text as="div" variant="body" className="bg-background/90 border-accent flex items-center rounded-md border px-2 py-1.5 shadow-md">
             <ConversationItem conv={activeConv} />
-          </div>
+          </Text>
         ) : null}
       </DragOverlay>
     </DndContext>

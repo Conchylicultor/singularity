@@ -8,6 +8,7 @@ import {
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { dynamicEnumFieldType } from "@plugins/fields/plugins/dynamic-enum/core";
 import type { DynamicEnumFieldDef } from "../../core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { DynamicEnum, type DynamicEnumOption } from "../internal/slots";
 
 const DynamicEnumRenderer: FieldRendererComponent<string> = ({
@@ -53,12 +54,14 @@ function ResolvedEnum({
     <div className="flex flex-col gap-1.5 py-3">
       <div className="flex flex-col gap-0.5">
         {field.meta.label ? (
-          <label className="text-sm font-medium">{field.meta.label}</label>
+          <Text as="label" variant="label">
+            {field.meta.label}
+          </Text>
         ) : null}
         {field.meta.description ? (
-          <p className="text-xs text-muted-foreground">
+          <Text as="p" variant="caption" tone="muted">
             {field.meta.description}
-          </p>
+          </Text>
         ) : null}
       </div>
       {useRadio ? (
@@ -83,16 +86,18 @@ function TextFallback({
     <div className="flex flex-col gap-1.5 py-3">
       <div className="flex flex-col gap-0.5">
         {field.meta.label ? (
-          <label className="text-sm font-medium">{field.meta.label}</label>
+          <Text as="label" variant="label">
+            {field.meta.label}
+          </Text>
         ) : null}
         {field.meta.description ? (
-          <p className="text-xs text-muted-foreground">
+          <Text as="p" variant="caption" tone="muted">
             {field.meta.description}
-          </p>
+          </Text>
         ) : null}
       </div>
       <input
-        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm"
+        className="flex h-9 w-full rounded-md border border-input bg-transparent px-3 py-1 text-body shadow-sm"
         value={value}
         onChange={(e) => onChange(e.target.value)}
         placeholder={field.meta.placeholder}
@@ -113,9 +118,11 @@ function RadioGroup({
   return (
     <div role="radiogroup" className="flex flex-col gap-1.5">
       {options.map((opt) => (
-        <label
+        <Text
+          as="label"
+          variant="body"
           key={opt.value}
-          className="flex cursor-pointer items-center gap-2 text-sm"
+          className="flex cursor-pointer items-center gap-2"
         >
           <input
             type="radio"
@@ -126,7 +133,7 @@ function RadioGroup({
             className="accent-primary"
           />
           {opt.label}
-        </label>
+        </Text>
       ))}
     </div>
   );

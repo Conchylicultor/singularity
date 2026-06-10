@@ -1,6 +1,7 @@
 import { MdCampaign } from "react-icons/md";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type PrepromptEvent = Extract<JsonlEvent, { kind: "preprompt" }>;
 
@@ -17,9 +18,9 @@ export function PrepromptRow({ event }: { event: JsonlEvent }) {
         </>
       }
     >
-      <div className="whitespace-pre-wrap break-words text-xs text-muted-foreground leading-5">
+      <Text as="div" variant="caption" className="whitespace-pre-wrap break-words text-muted-foreground">
         {e.text}
-      </div>
+      </Text>
     </CollapsibleCard>
   );
 }

@@ -1,3 +1,5 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
+
 export interface ChildEntry {
   id: string;
   title: string;
@@ -40,7 +42,7 @@ export function InsertBeforeChildren({
     const child = children[0]!;
     return (
       <div className="px-2 py-1.5">
-        <label className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground">
+        <Text as="label" variant="caption" className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
           <input
             type="checkbox"
             className="h-3 w-3 cursor-pointer"
@@ -54,7 +56,7 @@ export function InsertBeforeChildren({
               {truncate(child.title, 40)}
             </span>
           </span>
-        </label>
+        </Text>
       </div>
     );
   }
@@ -62,23 +64,25 @@ export function InsertBeforeChildren({
   return (
     <div className="flex flex-col gap-1 px-2 py-1.5">
       <div className="flex items-center justify-between">
-        <span className="text-xs text-muted-foreground">
+        <Text as="span" variant="caption" className="text-muted-foreground">
           Insert before {noneSelected ? "dependents" : `${selectedIds.size} dependent${selectedIds.size === 1 ? "" : "s"}`}
-        </span>
+        </Text>
         <button
           type="button"
           disabled={disabled}
           onClick={toggleAll}
-          className="cursor-pointer text-xs text-muted-foreground underline hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
+          className="text-caption cursor-pointer text-muted-foreground underline hover:text-foreground disabled:pointer-events-none disabled:opacity-50"
         >
           {allSelected ? "None" : "Select all"}
         </button>
       </div>
       <div className="flex flex-col gap-0.5">
         {children.map((child) => (
-          <label
+          <Text
+            as="label"
+            variant="caption"
             key={child.id}
-            className="flex cursor-pointer items-center gap-1.5 text-xs text-muted-foreground"
+            className="flex cursor-pointer items-center gap-1.5 text-muted-foreground"
           >
             <input
               type="checkbox"
@@ -88,7 +92,7 @@ export function InsertBeforeChildren({
               onChange={(e) => toggle(child.id, e.target.checked)}
             />
             <span title={child.title}>{truncate(child.title, 50)}</span>
-          </label>
+          </Text>
         ))}
       </div>
     </div>

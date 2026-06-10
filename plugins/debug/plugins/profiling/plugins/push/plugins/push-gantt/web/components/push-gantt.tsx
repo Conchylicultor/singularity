@@ -223,7 +223,7 @@ function PushAttemptRow({
         <div className={cn("size-2 shrink-0 rounded-full", dotColor)} />
         <span
           className={cn(
-            "truncate text-[11px] text-muted-foreground",
+            "truncate text-2xs text-muted-foreground",
             // Titles read as prose; the opaque worktree id stays monospace.
             group.title ? "" : "font-mono",
           )}
@@ -231,7 +231,7 @@ function PushAttemptRow({
           {group.title ?? group.worktree.replace(/^claude-web\//, "")}
         </span>
       </div>
-      <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
+      <div className="relative h-5 flex-1 overflow-hidden rounded-md bg-muted/30">
         {group.builds.map((build, i) => {
           const status = buildStatus(build);
           const buildLabel =
@@ -253,7 +253,7 @@ function PushAttemptRow({
             <div
               key={buildSpan.id}
               className={cn(
-                "absolute top-0 h-full rounded transition-opacity",
+                "absolute top-0 h-full rounded-md transition-opacity",
                 TYPE_FILL.build,
                 STATUS_TREATMENT[status],
                 isBuildHovered ? "opacity-100" : "opacity-40",
@@ -308,7 +308,7 @@ function PushAttemptRow({
               <div
                 key={push.pushId}
                 className={cn(
-                  "absolute top-0 h-full rounded transition-opacity",
+                  "absolute top-0 h-full rounded-md transition-opacity",
                   TYPE_FILL.push,
                   STATUS_TREATMENT[status],
                   isMarkerHovered ? "opacity-100" : "opacity-70",
@@ -393,7 +393,7 @@ function PushAttemptRow({
                   "absolute top-0 h-full transition-opacity",
                   TYPE_FILL.push,
                   STATUS_TREATMENT[status],
-                  push.waitMs > 0 ? "rounded-r" : "rounded",
+                  push.waitMs > 0 ? "rounded-r" : "rounded-md",
                   isPushHovered ? "opacity-100" : "opacity-70",
                   onPushClick && "cursor-pointer",
                 )}
@@ -419,7 +419,7 @@ function PushAttemptRow({
           );
         })}
       </div>
-      <div className="w-16 shrink-0 text-right font-mono text-[11px] tabular-nums text-muted-foreground">
+      <div className="w-16 shrink-0 text-right font-mono text-2xs tabular-nums text-muted-foreground">
         {formatDuration(totalDuration)}
       </div>
     </div>

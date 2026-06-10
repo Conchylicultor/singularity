@@ -7,6 +7,7 @@ import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;
@@ -37,7 +38,7 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
         Attempts
       </SectionLabel>
       {launches.length === 0 ? (
-        <p className="text-muted-foreground text-sm">No attempts yet.</p>
+        <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
       ) : (
         <ul className="flex flex-col gap-1">
           {launches.map((launch) => {
@@ -62,13 +63,13 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
                   actions={
                     <>
                       {primary ? (
-                        <span className="text-muted-foreground shrink-0 text-xs">
+                        <Text as="span" variant="caption" tone="muted" className="shrink-0">
                           {primary.status}
-                        </span>
+                        </Text>
                       ) : null}
-                      <span className="text-muted-foreground shrink-0 text-xs tabular-nums">
+                      <Text as="span" variant="caption" tone="muted" className="shrink-0 tabular-nums">
                         {formatDate(launch.createdAt)}
-                      </span>
+                      </Text>
                     </>
                   }
                   actionsAlwaysVisible

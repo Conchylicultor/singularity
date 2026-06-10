@@ -1,4 +1,5 @@
 import { useConversations } from "@plugins/conversations/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function ConvCountLabel() {
   const conv = useConversations();
@@ -7,8 +8,8 @@ export function ConvCountLabel() {
   const totalCount = activeCount + conv.totalGoneCount;
 
   return (
-    <span className="ml-1 text-xs text-sidebar-foreground/50 opacity-0 transition-opacity group-hover/label:opacity-100">
+    <Text variant="caption" className="ml-1 text-sidebar-foreground/50 opacity-0 transition-opacity group-hover/label:opacity-100">
       {activeCount}/{totalCount}
-    </span>
+    </Text>
   );
 }

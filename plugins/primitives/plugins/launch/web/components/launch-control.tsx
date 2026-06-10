@@ -143,7 +143,7 @@ export function LaunchControl({
                 e.stopPropagation();
                 void launch(id, e);
               }}
-              className="hover:bg-accent flex size-5 items-center justify-center rounded opacity-0 group-hover/dropdown-menu-item:opacity-100"
+              className="hover:bg-accent flex size-5 items-center justify-center rounded-md opacity-0 group-hover/dropdown-menu-item:opacity-100"
             >
               <MdPlayArrow className="size-3.5" />
             </button>

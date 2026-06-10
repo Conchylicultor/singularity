@@ -56,7 +56,7 @@ export function GroupContainer({
           type="button"
           onClick={() => void onToggleExpanded()}
           aria-label={expanded ? "Collapse group" : "Expand group"}
-          className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+          className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
         >
           <CollapsibleChevron open={effectiveExpanded} className="size-4" />
         </button>

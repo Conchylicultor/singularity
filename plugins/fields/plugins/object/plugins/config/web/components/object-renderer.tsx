@@ -9,6 +9,7 @@ import {
   FieldRenderer,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FieldDef } from "@plugins/config_v2/core";
 import { objectFieldType } from "@plugins/fields/plugins/object/core";
 import type { ObjectFieldDef } from "../../core";
@@ -26,12 +27,12 @@ const ObjectRenderer: FieldRendererComponent<Record<string, unknown>> = ({
         <CollapsibleChevron className="size-4 text-muted-foreground" />
         <div className="flex flex-col gap-0.5 text-left">
           {field.meta.label ? (
-            <span className="text-sm font-medium">{field.meta.label}</span>
+            <Text variant="label">{field.meta.label}</Text>
           ) : null}
           {field.meta.description ? (
-            <span className="text-xs text-muted-foreground">
+            <Text variant="caption" className="text-muted-foreground">
               {field.meta.description}
-            </span>
+            </Text>
           ) : null}
         </div>
       </CollapsibleTrigger>

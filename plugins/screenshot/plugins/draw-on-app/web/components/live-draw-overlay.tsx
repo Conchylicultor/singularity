@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { MdClear, MdUndo } from "react-icons/md";
 import { DrawCanvas, type Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -80,9 +81,9 @@ export function LiveDrawOverlay({
               ))}
             </div>
             <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-muted-foreground">
+              <Text as="span" variant="label" tone="muted">
                 {width}px
-              </span>
+              </Text>
               <input
                 type="range"
                 min={1}

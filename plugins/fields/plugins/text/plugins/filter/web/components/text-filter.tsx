@@ -8,7 +8,7 @@ export function TextFilter(props: FilterControlProps): ReactNode {
   return (
     <input
       type="text"
-      className="w-40 rounded border border-input bg-background px-1.5 py-0.5 text-sm"
+      className="w-40 rounded-md border border-input bg-background px-1.5 py-0.5 text-body"
       placeholder="Contains…"
       value={value.contains ?? ""}
       onChange={(e) =>

@@ -1,6 +1,7 @@
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function MarkdownView({
   worktree,
@@ -27,8 +28,8 @@ export function MarkdownView({
   }
 
   return (
-    <div className="px-4 py-3 text-sm leading-6">
+    <Text as="div" variant="body" className="px-4 py-3">
       <Markdown>{state.content}</Markdown>
-    </div>
+    </Text>
   );
 }

@@ -13,6 +13,7 @@ import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
 
@@ -79,16 +80,16 @@ export function GoogleSetupPane() {
   return (
     <div className="flex flex-col gap-6 p-4 max-w-lg">
       <div>
-        <label className="text-sm font-medium">GCP Project ID</label>
+        <Text as="label" variant="label">GCP Project ID</Text>
         <Input
           className="mt-1"
           placeholder="my-project-123"
           value={projectId}
           onChange={(e) => handleProjectInput(e.target.value)}
         />
-        <p className="mt-1 text-xs text-muted-foreground">
+        <Text as="p" variant="caption" className="mt-1 text-muted-foreground">
           Paste any GCP console URL, or type your project ID
-        </p>
+        </Text>
       </div>
 
       <ol className="flex flex-col gap-4">
@@ -139,22 +140,22 @@ export function GoogleSetupPane() {
               href={`https://console.cloud.google.com/auth/clients/create?project=${projectId}`}
               disabled={!hasProject}
             />
-            <p className="text-xs text-muted-foreground">
+            <Text as="p" variant="caption" className="text-muted-foreground">
               Application type: <span className="font-medium">Desktop app</span>
-            </p>
+            </Text>
             <div className="flex items-center gap-2">
-              <code className="flex-1 rounded bg-muted px-2 py-1 text-xs break-all">
+              <Text as="code" variant="caption" className="flex-1 rounded-md bg-muted px-2 py-1 break-all">
                 {REDIRECT_URI}
-              </code>
+              </Text>
               <CopyButton
                 text={REDIRECT_URI}
                 title="Copy redirect URI"
                 className="shrink-0"
               />
             </div>
-            <p className="text-xs text-muted-foreground">
+            <Text as="p" variant="caption" className="text-muted-foreground">
               Add this as the Authorized redirect URI
-            </p>
+            </Text>
           </div>
         </Step>
 
@@ -166,10 +167,10 @@ export function GoogleSetupPane() {
         >
           <div className="flex flex-col gap-2">
             {credentialsSaved ? (
-              <div className="flex items-center gap-1 text-xs text-success">
+              <Text as="div" variant="caption" className="flex items-center gap-1 text-success">
                 <MdCheck className="h-4 w-4" />
                 Credentials configured
-              </div>
+              </Text>
             ) : (
               <>
                 <Input
@@ -205,11 +206,11 @@ export function GoogleSetupPane() {
         >
           <div className="flex flex-col gap-2">
             {connected ? (
-              <div className="flex items-center gap-1 text-xs text-success">
+              <Text as="div" variant="caption" className="flex items-center gap-1 text-success">
                 <MdCheck className="h-4 w-4" />
                 Connected
                 {status.identity?.email ? ` (${status.identity.email})` : ""}
-              </div>
+              </Text>
             ) : (
               <>
                 <Button
@@ -221,7 +222,7 @@ export function GoogleSetupPane() {
                   {connecting ? "Connecting…" : "Connect with Google"}
                 </Button>
                 {connectError ? (
-                  <p className="text-xs text-destructive">{connectError}</p>
+                  <Text as="p" variant="caption" className="text-destructive">{connectError}</Text>
                 ) : null}
               </>
             )}
@@ -249,17 +250,19 @@ function Step({
     <li
       className={`flex gap-3 ${active ? "opacity-100" : "opacity-40 pointer-events-none"}`}
     >
-      <div
-        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full text-xs font-medium ${
+      <Text
+        as="div"
+        variant="caption"
+        className={`flex h-6 w-6 shrink-0 items-center justify-center rounded-full font-medium ${
           done
             ? "bg-success/15 text-success"
             : "bg-muted text-muted-foreground"
         }`}
       >
         {done ? <MdCheck className="h-3.5 w-3.5" /> : number}
-      </div>
+      </Text>
       <div className="flex flex-col gap-1.5 min-w-0">
-        <span className="text-sm font-medium">{title}</span>
+        <Text as="span" variant="label">{title}</Text>
         {children}
       </div>
     </li>

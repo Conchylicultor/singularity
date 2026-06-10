@@ -8,7 +8,7 @@
 - Web:
   - Slots: `SonataProgress.Marker`
   - Contributes: `Sonata.Transport` "progress-bar" → `ProgressBar`
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/slot-render.renderIsolated`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`
   - Exports: Values: `SonataProgress`
 - Cross-plugin:
   - Slot contributors: `bars`, `keys`, `sections`

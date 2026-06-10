@@ -1,5 +1,6 @@
 import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
@@ -46,19 +47,23 @@ export function SongCard({
           <MdMusicNote className="size-5" />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-semibold text-foreground">
+          <Text
+            as="div"
+            variant="body"
+            className="truncate font-semibold text-foreground"
+          >
             {song.title}
-          </div>
-          <div className="truncate text-xs text-muted-foreground">
+          </Text>
+          <Text as="div" variant="caption" tone="muted" className="truncate">
             {song.composer ?? "Unknown"}
-          </div>
+          </Text>
         </div>
       </div>
 
       <div className="flex items-center justify-between">
-        <span className="flex items-center gap-2 text-xs text-muted-foreground">
+        <Text variant="caption" tone="muted" className="flex items-center gap-2">
           <span className="tabular-nums">{formatDuration(song.durationSec)}</span>
-        </span>
+        </Text>
         <span
           aria-hidden
           className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-primary"

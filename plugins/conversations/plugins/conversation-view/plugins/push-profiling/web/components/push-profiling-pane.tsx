@@ -10,6 +10,7 @@ import {
 import { pushDetailPane } from "@plugins/debug/plugins/profiling/plugins/push/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
 import { ShellCommands } from "@plugins/shell/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { convPushProfilingPane } from "../panes";
 
 const PUSH_PROFILING_PATH = "/api/debug/profiling/push";
@@ -46,9 +47,9 @@ export function PushProfilingPaneBody() {
 
   if (!data || data.groups.length === 0) {
     return (
-      <div className="p-4 text-sm text-muted-foreground">
+      <Text as="div" variant="body" className="p-4 text-muted-foreground">
         No push or build activity for this conversation.
-      </div>
+      </Text>
     );
   }
 

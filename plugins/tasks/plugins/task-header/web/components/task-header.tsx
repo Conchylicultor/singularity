@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { patchTask, setAutoStart, useTask, type AutoStartModel } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
@@ -46,11 +47,11 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           onFocus={titleField.onFocus}
           onBlur={titleField.onBlur}
           placeholder="Untitled"
-          className="flex-1 bg-transparent text-xl font-semibold outline-none placeholder:text-muted-foreground focus:ring-0"
+          className="text-title flex-1 bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
         />
-        <span className="text-muted-foreground pt-1 text-xs">
+        <Text as="span" variant="caption" tone="muted" className="pt-1">
           {titleField.isSaving ? "Saving…" : "Saved"}
-        </span>
+        </Text>
       </div>
       <div className="flex items-center gap-3">
         <SectionLabel as="span">
@@ -76,18 +77,18 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         <SectionLabel as="span">
           Created
         </SectionLabel>
-        <span className="text-xs">
+        <Text as="span" variant="caption">
           <RelativeTime date={new Date(task.createdAt)} />
-        </span>
+        </Text>
       </div>
       {task.finishedAt != null && (
         <div className="flex items-center gap-3">
           <SectionLabel as="span">
             Closed
           </SectionLabel>
-          <span className="text-xs">
+          <Text as="span" variant="caption">
             <RelativeTime date={new Date(task.finishedAt)} />
-          </span>
+          </Text>
         </div>
       )}
       <div className="flex items-center gap-3">

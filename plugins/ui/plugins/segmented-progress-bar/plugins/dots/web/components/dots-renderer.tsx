@@ -1,4 +1,5 @@
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
 
 export function DotsRenderer({
@@ -46,9 +47,9 @@ export function DotsRenderer({
           )}
         </span>
       ))}
-      <span className="ml-0.5 text-xs text-muted-foreground">
+      <Text as="span" variant="caption" className="ml-0.5 text-muted-foreground">
         {activeLabel}
-      </span>
+      </Text>
     </span>
   );
 }

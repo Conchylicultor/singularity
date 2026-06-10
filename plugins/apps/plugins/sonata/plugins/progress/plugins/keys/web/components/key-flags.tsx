@@ -43,6 +43,7 @@ export function KeyFlags({
           className="absolute top-0 flex -translate-x-1/2 flex-col items-center"
           style={{ left: `${beatToFraction(e.beat) * 100}%` }}
         >
+          {/* eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps the compact key flag aligned to its tick; text-3xs carries no line-height of its own */}
           <span className="-mt-3 text-3xs leading-none text-muted-foreground">
             {formatKey(e.key)}
           </span>

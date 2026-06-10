@@ -22,7 +22,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
 - Description: Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
 - Web:
   - Contributes: `Pane.Register` "debug-memory", `DebugApp.Sidebar` "Memory" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/markdown.Markdown`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/section-label.SectionLabel`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/markdown.Markdown`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/section-label.SectionLabel`, `primitives/text.Text`
   - Exports: Values: `memoryPane`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CLAUDE_PROJECTS_DIR`, `infra/worktree.ensureMainWorktreeRoot`

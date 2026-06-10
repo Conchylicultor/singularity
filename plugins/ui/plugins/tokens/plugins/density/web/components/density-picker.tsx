@@ -1,4 +1,5 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { densityConfig } from "../internal/config";
 import { Density } from "../slots";
 
@@ -9,9 +10,9 @@ export function DensityPicker() {
 
   if (presets.length === 0) {
     return (
-      <span className="text-sm text-muted-foreground">
+      <Text variant="body" tone="muted">
         No presets available
-      </span>
+      </Text>
     );
   }
 
@@ -20,7 +21,7 @@ export function DensityPicker() {
       {presets.map((p) => (
         <button
           key={p.id}
-          className={`flex items-center gap-2 px-3 py-1.5 text-sm rounded-md border transition-colors ${
+          className={`flex items-center gap-2 px-3 py-1.5 text-body rounded-md border transition-colors ${
             p.id === activeId
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"

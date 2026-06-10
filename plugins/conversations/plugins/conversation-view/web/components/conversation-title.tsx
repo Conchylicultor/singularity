@@ -1,4 +1,5 @@
 import { useConversationById } from "@plugins/conversations/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationPane } from "../panes";
 
 export function ConversationTitle() {
@@ -6,8 +7,8 @@ export function ConversationTitle() {
   const conversation = useConversationById(convId);
   if (!conversation) return null;
   return (
-    <span className="truncate text-sm font-medium">
+    <Text variant="label" className="truncate">
       {conversation.title ?? conversation.id}
-    </span>
+    </Text>
   );
 }

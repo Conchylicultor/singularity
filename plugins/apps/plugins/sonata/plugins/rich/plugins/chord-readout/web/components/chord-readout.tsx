@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import {
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   Annotation,
   ChordData,
@@ -35,30 +36,32 @@ export function ChordReadout() {
 
   return (
     <div className="rounded-lg border border-border bg-card p-4">
-      <div className="text-[11px] font-semibold uppercase tracking-wide text-muted-foreground">
+      <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Current chord
       </div>
       {current ? (
         <>
+          {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px); exceeds the title token (20px), no equivalent variant */}
           <div className="mt-2 text-4xl font-bold tracking-tight text-foreground">
             {current.data.symbol}
           </div>
-          <div className="mt-1 text-xs text-muted-foreground">
+          <Text as="div" variant="caption" className="mt-1 text-muted-foreground">
             {current.data.spelledSymbol ? `${current.data.spelledSymbol} · ` : ""}
             {current.data.quality}
             {current.confidence !== undefined
               ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
               : ""}
-          </div>
-          <div className="mt-1 text-[11px] tabular-nums text-muted-foreground/70">
+          </Text>
+          <div className="mt-1 text-2xs tabular-nums text-muted-foreground/70">
             beats {current.start.toFixed(2)}–{current.end.toFixed(2)}
           </div>
         </>
       ) : chords.length === 0 ? (
-        <div className="mt-2 text-sm text-muted-foreground">
+        <Text as="div" variant="body" className="mt-2 text-muted-foreground">
           No chords detected.
-        </div>
+        </Text>
       ) : (
+        // eslint-disable-next-line text/no-adhoc-typography -- large placeholder dash matching the 24px display readout; no equivalent variant above the title token (20px)
         <div className="mt-2 text-2xl font-semibold text-muted-foreground/60">
           —
         </div>

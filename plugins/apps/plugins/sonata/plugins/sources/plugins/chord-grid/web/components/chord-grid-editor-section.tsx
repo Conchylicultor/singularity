@@ -81,7 +81,7 @@ export function ChordGridEditorSection() {
           value={currentSongTitle ?? ""}
           onChange={(e) => renameCurrentSong(e.target.value)}
           placeholder="Untitled"
-          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-sm outline-none focus:border-primary"
+          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-body outline-none focus:border-primary"
         />
       </label>
       <ChordGridLoader

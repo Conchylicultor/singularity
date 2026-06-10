@@ -5,6 +5,7 @@ import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { crashesResource } from "@plugins/crashes/core";
 import type { Crash } from "@plugins/crashes/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 function navigateTo(url: string) {
   window.history.pushState({}, "", url);
@@ -19,9 +20,9 @@ export function CrashesView() {
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+      <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
         No crashes recorded yet.
-      </div>
+      </Text>
     );
   }
 
@@ -44,7 +45,7 @@ function CrashRow({ crash: c, serverBuildId }: { crash: Crash; serverBuildId: st
   return (
     <li className="px-3 py-2">
       <div className="flex min-w-0 flex-col gap-1">
-        <div className="flex flex-wrap items-center gap-2 text-xs">
+        <Text as="div" variant="caption" className="flex flex-wrap items-center gap-2">
           <Badge variant="muted" size="md" className="font-mono">
             {c.source}
           </Badge>
@@ -90,8 +91,8 @@ function CrashRow({ crash: c, serverBuildId }: { crash: Crash; serverBuildId: st
               task →
             </button>
           )}
-        </div>
-        <div className="truncate text-sm text-foreground">{line}</div>
+        </Text>
+        <Text as="div" variant="body" className="truncate text-foreground">{line}</Text>
       </div>
     </li>
   );

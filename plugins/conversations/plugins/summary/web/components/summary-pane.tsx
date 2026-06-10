@@ -5,6 +5,7 @@ import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -84,13 +85,13 @@ export function SummaryPane() {
   const isPending = pendingSince !== null;
 
   return (
-    <div className="flex flex-col gap-3 p-3 text-sm">
+    <Text as="div" variant="body" className="flex flex-col gap-3 p-3">
       <Button
         size="sm"
         variant="outline"
         onClick={onSummarize}
         disabled={isPending}
-        className="gap-1.5 self-start text-xs"
+        className="gap-1.5 self-start text-caption"
         aria-label={isPending ? "Summarising" : latest ? "Re-summarise" : "Summarise"}
       >
         <MdAutoAwesome
@@ -102,11 +103,11 @@ export function SummaryPane() {
       {latest ? (
         <SummaryCard summary={latest} />
       ) : (
-        <div className="text-xs text-muted-foreground">
+        <Text as="div" variant="caption" className="text-muted-foreground">
           No summary yet. Click Summarise to generate one.
-        </div>
+        </Text>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -118,12 +119,13 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
         <Badge colorClass={PHASE_CLASSES[summary.phase]}>
           {PHASE_LABEL[summary.phase]}
         </Badge>
-        <span
-          className="text-xs text-muted-foreground"
+        <Text
+          variant="caption"
+          className="text-muted-foreground"
           title={generated.toISOString()}
         >
           {formatRelative(generated)} · {summary.turnCountAtGeneration} turns
-        </span>
+        </Text>
       </div>
 
       {summary.phaseDetail && (
@@ -152,7 +154,7 @@ function Section({
   return (
     <div>
       <div
-        className={`text-[10px] uppercase tracking-wide ${
+        className={`text-3xs uppercase tracking-wide ${
           tone === "warn"
             ? "text-warning"
             : "text-muted-foreground"

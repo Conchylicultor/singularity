@@ -1,5 +1,6 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { TextDiff } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getConfigRawFile } from "../../core";
 
@@ -19,10 +20,10 @@ export function ConflictDiff({ storePath }: { storePath: string }) {
 
   return (
     <div className="mb-2 overflow-hidden rounded-md border border-border">
-      <div className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5 text-xs font-medium text-muted-foreground">
+      <Text as="div" variant="caption" tone="muted" className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5 font-medium">
         <span>Your config</span>
         <span>Upstream defaults</span>
-      </div>
+      </Text>
       <div className="max-h-96 overflow-auto">
         {override === origin ? (
           <Placeholder>No differences in the raw files.</Placeholder>

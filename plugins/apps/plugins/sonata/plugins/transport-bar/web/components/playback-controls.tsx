@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { MdAdd, MdPause, MdPlayArrow, MdRemove } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   beatToSeconds,
@@ -101,9 +102,13 @@ export function PlaybackControls() {
           disabled={tempoScale <= MIN_SCALE}
           onClick={() => setTempoScale(tempoScale - SPEED_STEP)}
         />
-        <span className="min-w-[3rem] border-x border-border px-1 text-center text-xs font-medium tabular-nums">
+        <Text
+          as="span"
+          variant="caption"
+          className="min-w-[3rem] border-x border-border px-1 text-center font-medium tabular-nums"
+        >
           {asPercent(tempoScale)}
-        </span>
+        </Text>
         <StepButton
           icon={MdAdd}
           label="Speed up"
@@ -113,14 +118,16 @@ export function PlaybackControls() {
       </div>
 
       {/* Live playback BPM (reflects the current speed). */}
-      <span
+      <Text
+        as="span"
+        variant="caption"
         className={cn(
-          "tabular-nums text-xs text-muted-foreground",
+          "tabular-nums text-muted-foreground",
           bpm == null && "opacity-40",
         )}
       >
         {bpm == null ? "— bpm" : `${Math.round(bpm)} bpm`}
-      </span>
+      </Text>
     </div>
   );
 }

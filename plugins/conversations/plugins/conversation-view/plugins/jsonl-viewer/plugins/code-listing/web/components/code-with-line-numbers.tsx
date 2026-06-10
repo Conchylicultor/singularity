@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ShikiTransformer } from "shiki";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   getHighlighter,
   languageForPath,
@@ -93,16 +94,16 @@ export function CodeWithLineNumbers({
 
   if (!code) {
     return (
-      <p className="py-1 text-xs italic text-muted-foreground">
+      <Text as="p" variant="caption" className="py-1 italic text-muted-foreground">
         (empty result)
-      </p>
+      </Text>
     );
   }
 
   if (html === null) {
     return (
       <ContentScope>
-        <pre className="max-h-[280px] overflow-auto rounded bg-muted p-3 font-mono text-xs leading-5">
+        <pre className="max-h-[280px] overflow-auto rounded-md bg-muted p-3 font-mono text-caption">
           <code>{code}</code>
         </pre>
       </ContentScope>
@@ -112,7 +113,7 @@ export function CodeWithLineNumbers({
   return (
     <ContentScope>
       <div
-        className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+        className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </ContentScope>

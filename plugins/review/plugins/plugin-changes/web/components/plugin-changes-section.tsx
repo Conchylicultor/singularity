@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { Source } from "@plugins/review/web";
 import { usePluginChanges } from "../use-plugin-changes";
 import { PluginChangeCard } from "./plugin-change-card";
@@ -22,19 +23,19 @@ export function PluginChangesSection({
 
   if (isPending) {
     return (
-      <p className="text-sm text-muted-foreground px-1">Loading plugins...</p>
+      <Text as="p" variant="body" className="text-muted-foreground px-1">Loading plugins...</Text>
     );
   }
   if (error) {
     return (
-      <p className="text-sm text-destructive px-1">Error: {String(error)}</p>
+      <Text as="p" variant="body" className="text-destructive px-1">Error: {String(error)}</Text>
     );
   }
   if (data.plugins.length === 0) {
     return (
-      <p className="text-sm text-muted-foreground px-1">
+      <Text as="p" variant="body" className="text-muted-foreground px-1">
         No plugin API changes detected.
-      </p>
+      </Text>
     );
   }
 

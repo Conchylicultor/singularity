@@ -3,6 +3,7 @@ import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoin
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   getRuntimeProfile,
   resetRuntimeProfile,
@@ -35,9 +36,9 @@ const AGG_COLUMNS: ColumnDef<AggRow>[] = [
     width: "minmax(0,1fr)",
     cell: (row) => (
       <div className="flex min-w-0 flex-col gap-0.5">
-        <span className="truncate font-mono text-xs" title={row.label}>
+        <Text as="span" variant="caption" className="truncate font-mono" title={row.label}>
           {row.label}
-        </span>
+        </Text>
         {row.byParent.length > 0 && <CallerBreakdown parents={row.byParent} />}
       </div>
     ),
@@ -147,7 +148,7 @@ export function RuntimeSection(): ReactElement | null {
     return (
       <div className="flex flex-col gap-3 px-3 py-4">
         <div className="flex items-center justify-between">
-          <span className="text-sm font-medium">Runtime</span>
+          <Text as="span" variant="label">Runtime</Text>
         </div>
         <Placeholder>No spans recorded yet — interact with the app to generate data.</Placeholder>
       </div>
@@ -157,7 +158,7 @@ export function RuntimeSection(): ReactElement | null {
   return (
     <div className="flex flex-col gap-6 py-4">
       <div className="flex items-center justify-between px-3">
-        <span className="text-sm font-medium">Runtime</span>
+        <Text as="span" variant="label">Runtime</Text>
         <Button
           variant="ghost"
           size="xs"
@@ -186,9 +187,9 @@ function KindTable({
 }): ReactElement {
   return (
     <div className="flex flex-col gap-1">
-      <div className="px-3 text-xs font-medium uppercase tracking-wider text-muted-foreground">
+      <Text as="div" variant="caption" className="px-3 font-medium uppercase tracking-wider text-muted-foreground">
         {title}
-      </div>
+      </Text>
       <DataTable
         data={rows}
         columns={AGG_COLUMNS}

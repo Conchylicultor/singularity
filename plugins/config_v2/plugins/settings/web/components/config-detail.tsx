@@ -5,6 +5,7 @@ import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflicts } from "../internal/use-conflicts";
@@ -105,7 +106,7 @@ function ConfigDetailInner({
         {hasAnyModified && !showRaw && (
           confirmReset ? (
             <div className="flex items-center gap-1">
-              <span className="text-xs text-muted-foreground">Reset all fields?</span>
+              <Text variant="caption" tone="muted">Reset all fields?</Text>
               <Button
                 variant="ghost"
                 size="xs"
@@ -148,7 +149,7 @@ function ConfigDetailInner({
         <>
           {conflictEntry && (
             conflictEntry.kind === "invalid" ? (
-              <div className="mb-2 flex flex-col gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-sm text-destructive">
+              <Text as="div" variant="body" className="mb-2 flex flex-col gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive">
                 <div className="flex items-center gap-2">
                   <MdWarning className="size-4 shrink-0" />
                   <span className="flex-1">Stored config is invalid for the current schema</span>
@@ -172,15 +173,15 @@ function ConfigDetailInner({
                   </div>
                 </div>
                 {conflictEntry.issues && conflictEntry.issues.length > 0 && (
-                  <ul className="ml-6 list-disc text-xs text-destructive/80">
+                  <Text as="ul" variant="caption" className="ml-6 list-disc text-destructive/80">
                     {conflictEntry.issues.map((issue, i) => (
                       <li key={i}>{issue}</li>
                     ))}
-                  </ul>
+                  </Text>
                 )}
-              </div>
+              </Text>
             ) : isSoftConflict ? (
-              <div className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+              <Text as="div" variant="body" className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                 <span>Defaults updated — no conflicts</span>
                 <Button
                   variant="ghost"
@@ -190,10 +191,10 @@ function ConfigDetailInner({
                 >
                   Dismiss
                 </Button>
-              </div>
+              </Text>
             ) : (
               <>
-                <div className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-sm text-warning">
+                <Text as="div" variant="body" className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                   <MdWarning className="size-4 shrink-0" />
                   <span className="flex-1">Upstream defaults changed</span>
                   <div className="flex shrink-0 gap-1.5">
@@ -223,7 +224,7 @@ function ConfigDetailInner({
                       Keep my values
                     </Button>
                   </div>
-                </div>
+                </Text>
                 {showDiff && <ConflictDiff storePath={registration.storePath} />}
               </>
             )
@@ -260,14 +261,14 @@ function RawFileView({ storePath }: { storePath: string }) {
     <div className="flex flex-col gap-3">
       {hasOverride && (
         <section>
-          <div className="mb-1 text-xs font-medium text-muted-foreground">Override</div>
+          <Text as="div" variant="caption" tone="muted" className="mb-1 font-medium">Override</Text>
           <HighlightedCode code={data.override!} lang="json" />
         </section>
       )}
       <section>
-        <div className="mb-1 text-xs font-medium text-muted-foreground">
+        <Text as="div" variant="caption" tone="muted" className="mb-1 font-medium">
           {hasOverride ? "Origin (defaults)" : "Origin"}
-        </div>
+        </Text>
         {data.origin ? (
           <HighlightedCode code={data.origin} lang="json" />
         ) : (

@@ -4,6 +4,7 @@ import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
@@ -70,9 +71,9 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
         {resolvedTitle != null &&
           resolvedTitle !== "" &&
           (typeof resolvedTitle === "string" ? (
-            <span className="min-w-0 truncate text-sm font-medium">
+            <Text as="span" variant="label" className="min-w-0 truncate">
               {resolvedTitle}
-            </span>
+            </Text>
           ) : (
             <div className="flex min-w-0 items-center">{resolvedTitle}</div>
           ))}
@@ -276,7 +277,7 @@ function OverflowActionsBar({
         {hasOverflow && (
           <Popover>
             <PopoverTrigger
-              className="inline-flex size-8 items-center justify-center rounded-md text-sm hover:bg-accent hover:text-accent-foreground"
+              className="inline-flex size-8 items-center justify-center rounded-md text-body hover:bg-accent hover:text-accent-foreground"
               aria-label="More actions"
             >
               <MdMoreHoriz className="size-4" />

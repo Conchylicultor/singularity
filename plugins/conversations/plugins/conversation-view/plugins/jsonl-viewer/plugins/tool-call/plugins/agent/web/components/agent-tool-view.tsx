@@ -73,7 +73,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
         <span
           role="button"
           tabIndex={0}
-          className="shrink-0 cursor-pointer rounded p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="shrink-0 cursor-pointer rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={openReport}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -92,7 +92,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
     <ToolCallCard event={event} summary={summary}>
       <div className="mt-2 space-y-2">
         {/* Prompt */}
-        <div className="prose-xs max-h-96 overflow-auto px-3 py-2 text-xs">
+        <div className="prose-xs text-caption max-h-96 overflow-auto px-3 py-2">
           <Markdown>{prompt}</Markdown>
         </div>
 

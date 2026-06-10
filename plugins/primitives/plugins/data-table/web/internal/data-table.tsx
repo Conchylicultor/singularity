@@ -4,6 +4,7 @@ import {
   MdArrowUpward,
   MdUnfoldMore,
 } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { ColumnDef, DataTableProps } from "./types";
 import { useDataTable } from "./use-data-table";
 
@@ -27,9 +28,13 @@ export function DataTable<TRow>({
 
   if (rows.length === 0) {
     return (
-      <div className="flex h-32 items-center justify-center text-xs text-muted-foreground">
+      <Text
+        as="div"
+        variant="caption"
+        className="flex h-32 items-center justify-center text-muted-foreground"
+      >
         {emptyLabel}
-      </div>
+      </Text>
     );
   }
 
@@ -66,7 +71,7 @@ export function DataTable<TRow>({
         <div
           key={rowKey(row, i)}
           className={cn(
-            "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-xs hover:bg-accent/30",
+            "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
             onRowClick && "cursor-pointer",
           )}
           onClick={onRowClick ? () => onRowClick(row) : undefined}

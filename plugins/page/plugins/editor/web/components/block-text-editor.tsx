@@ -96,7 +96,7 @@ export function BlockTextEditor({
           <PlainTextPlugin
             contentEditable={
               <ContentEditable
-                className={cn("outline-none px-3 py-1 text-sm leading-6", contentClassName)}
+                className={cn("outline-none px-3 py-1 text-body", contentClassName)}
                 onFocus={() => {
                   field.onFocus();
                   editor.onFocus();
@@ -106,7 +106,7 @@ export function BlockTextEditor({
             }
             placeholder={
               isEmpty && isFocused && placeholder ? (
-                <div className="text-muted-foreground pointer-events-none absolute left-0 top-0 px-3 py-1 text-sm leading-6">
+                <div className="text-muted-foreground pointer-events-none absolute left-0 top-0 px-3 py-1 text-body">
                   {placeholder}
                 </div>
               ) : null

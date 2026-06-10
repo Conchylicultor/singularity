@@ -1,6 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 
@@ -80,9 +81,9 @@ function FallbackChrome({
   return (
     <div className="flex h-full flex-col">
       <div className="flex h-chrome-pane items-center gap-2 border-b px-chrome">
-        <span className="truncate text-sm font-medium text-muted-foreground">
+        <Text as="span" variant="label" tone="muted" className="truncate">
           {title}
-        </span>
+        </Text>
         <div className="flex-1" />
         {chrome.promote && doPromote && (
           <Button variant="ghost" size="sm" onClick={doPromote} aria-label="Promote">

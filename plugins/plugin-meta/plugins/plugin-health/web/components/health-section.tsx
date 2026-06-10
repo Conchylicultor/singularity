@@ -95,7 +95,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
   return (
     <Section title="Health" count={String(reviews.length)}>
       <div className="overflow-x-auto">
-        <table className="w-full text-[11px]">
+        <table className="w-full text-2xs">
           <thead>
             <tr className="text-left text-muted-foreground/60">
               <th className="pb-1 pr-3 font-medium" />

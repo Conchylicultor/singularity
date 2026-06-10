@@ -10,6 +10,7 @@ import {
   MdFolder,
 } from "react-icons/md";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { BackupTargetResult } from "@plugins/backup/core";
 import { listBackupRuns, runBackup, type BackupRun } from "../../shared/endpoints";
@@ -40,7 +41,7 @@ function StatusIcon({ status }: { status: string }) {
 function TargetResultRow({ result }: { result: BackupTargetResult }) {
   const Icon = result.targetId === "google-drive" ? MdCloudUpload : MdFolder;
   return (
-    <div className="flex items-center gap-2 text-sm">
+    <Text as="div" variant="body" className="flex items-center gap-2">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="font-medium capitalize">{result.targetId}</span>
       {result.ok ? (
@@ -49,11 +50,11 @@ function TargetResultRow({ result }: { result: BackupTargetResult }) {
         <MdError className="size-3.5 text-destructive" />
       )}
       {result.detail && (
-        <span className="text-xs text-muted-foreground truncate">
+        <Text as="span" variant="caption" className="text-muted-foreground truncate">
           {result.detail}
-        </span>
+        </Text>
       )}
-    </div>
+    </Text>
   );
 }
 
@@ -69,10 +70,10 @@ function BackupRunRow({ run }: { run: BackupRun }) {
         <div className="flex items-center gap-3 min-w-0">
           <StatusIcon status={run.status} />
           <div className="min-w-0">
-            <p className="text-sm font-medium truncate">
+            <Text as="p" variant="label" className="truncate">
               {new Date(run.startedAt).toLocaleString()}
-            </p>
-            <p className="text-xs text-muted-foreground">
+            </Text>
+            <Text as="p" variant="caption" className="text-muted-foreground">
               {run.trigger} ·{" "}
               {run.archiveSizeBytes
                 ? formatSize(run.archiveSizeBytes)
@@ -80,7 +81,7 @@ function BackupRunRow({ run }: { run: BackupRun }) {
               {run.manifest?.sources.databases.length
                 ? ` · ${run.manifest.sources.databases.length} DB`
                 : ""}
-            </p>
+            </Text>
           </div>
         </div>
         {expanded ? (
@@ -110,11 +111,11 @@ export function BackupPanel() {
   return (
     <div className="p-6 max-w-2xl space-y-6">
         <div>
-          <h2 className="text-lg font-semibold">Backup</h2>
-          <p className="text-sm text-muted-foreground mt-1">
+          <Text as="h2" variant="heading">Backup</Text>
+          <Text as="p" variant="body" className="text-muted-foreground mt-1">
             Archives the database, secrets, and attachments. Dispatches to
             all enabled storage targets (local, Google Drive).
-          </p>
+          </Text>
         </div>
 
         <Button onClick={() => triggerBackup({})} disabled={isPending}>
@@ -123,15 +124,19 @@ export function BackupPanel() {
         </Button>
 
         <div className="space-y-3">
-          <h3 className="text-sm font-semibold text-muted-foreground uppercase tracking-wide">
+          <Text
+            as="h3"
+            variant="label"
+            className="font-semibold text-muted-foreground uppercase tracking-wide"
+          >
             Backup History
-          </h3>
+          </Text>
           {isLoading ? (
-            <p className="text-sm text-muted-foreground">Loading…</p>
+            <Text as="p" variant="body" className="text-muted-foreground">Loading…</Text>
           ) : !runs || runs.length === 0 ? (
-            <p className="text-sm text-muted-foreground">
+            <Text as="p" variant="body" className="text-muted-foreground">
               No backups yet. Click above to create one.
-            </p>
+            </Text>
           ) : (
             <div className="space-y-2">
               {runs.map((run) => (

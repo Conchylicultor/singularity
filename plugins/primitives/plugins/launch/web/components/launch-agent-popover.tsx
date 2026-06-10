@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";
@@ -51,14 +52,18 @@ export function LaunchAgentPopover({
       contentClassName={`${width} max-w-[90vw] space-y-3 p-3`}
     >
       <div className="space-y-1">
-        <div className="text-sm font-medium">{title}</div>
-        <div className="text-xs text-muted-foreground">{description}</div>
+        <Text as="div" variant="label">
+          {title}
+        </Text>
+        <Text as="div" variant="caption" tone="muted">
+          {description}
+        </Text>
       </div>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
-        className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-sm"
+        className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-body"
         rows={3}
       />
       {showPreprompt && (

@@ -55,6 +55,7 @@ export function SectionBands({
             style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
             title={a.data.name}
           >
+            {/* eslint-disable-next-line text/no-adhoc-typography -- tight chip label: line-height must stay 1 so the band stays slim */}
             <span className="overflow-hidden text-ellipsis whitespace-nowrap text-3xs leading-none text-foreground/70">
               {a.data.name}
             </span>

@@ -1,6 +1,7 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
@@ -18,7 +19,7 @@ export function ServersList() {
   return (
     <div className="flex h-full flex-col">
       <div className="flex items-center justify-between border-b px-4 py-3">
-        <h2 className="text-sm font-semibold">Servers</h2>
+        <Text as="h2" variant="label">Servers</Text>
         <Button
           variant="default"
           size="sm"
@@ -29,9 +30,9 @@ export function ServersList() {
       </div>
       <div className="flex-1 overflow-auto">
         {servers.length === 0 ? (
-          <div className="text-muted-foreground p-4 text-sm">
+          <Text as="div" variant="body" className="text-muted-foreground p-4">
             No servers registered. Add one to get started.
-          </div>
+          </Text>
         ) : (
           <div className="flex flex-col">
             {servers.map((server) => (
@@ -58,10 +59,10 @@ function ServerRow({ server, selected }: { server: Server; selected: boolean }) 
       }`}
     >
       <div className="min-w-0 flex-1">
-        <div className="truncate text-sm font-medium">{server.name}</div>
-        <div className="text-muted-foreground truncate text-xs">
+        <Text as="div" variant="label" className="truncate">{server.name}</Text>
+        <Text as="div" variant="caption" className="text-muted-foreground truncate">
           {server.host}:{server.port}
-        </div>
+        </Text>
       </div>
       <ServerStatusBadge status={server.status} />
     </button>

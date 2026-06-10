@@ -7,7 +7,7 @@
 - Description: Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
 - Web:
   - Contributes: `Pane.Register` "conversations-recover", `DebugApp.Sidebar` "Recovery" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
   - Exports: Values: `recoveryPane`
 - Server:
   - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`

@@ -217,7 +217,7 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
     <div
       title={`${task.title} — ${meta.label}`}
       className={cn(
-        "bg-card text-foreground relative flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2 text-xs shadow-sm transition-colors",
+        "bg-card text-foreground relative flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2 text-caption shadow-sm transition-colors",
         "hover:border-foreground/40 focus:outline-none",
         selected
           ? "border-primary ring-primary/30 ring-2"
@@ -266,7 +266,7 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
             onClick={handleDelete}
             aria-label="Delete task"
           >
-            <span className="text-xs font-medium leading-none">&times;</span>
+            <span className="text-caption font-medium">&times;</span>
           </button>
         </div>
       )}
@@ -293,7 +293,7 @@ function GroupBackground({ data }: NodeProps<GroupBgNode>) {
     >
       <span
         className={cn(
-          "absolute top-1 left-2 max-w-[calc(100%-16px)] truncate text-[10px] font-medium leading-tight",
+          "absolute top-1 left-2 max-w-[calc(100%-16px)] truncate text-3xs font-medium",
           palette.text,
         )}
       >

@@ -1,5 +1,6 @@
 import type { ServerStatus } from "../../shared";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
   online: { bg: "bg-success", label: "Online" },
@@ -10,9 +11,9 @@ const styles: Record<ServerStatus, { bg: string; label: string }> = {
 export function ServerStatusBadge({ status }: { status: ServerStatus }) {
   const { bg, label } = styles[status];
   return (
-    <span className="flex items-center gap-1.5 text-xs">
+    <Text as="span" variant="caption" className="flex items-center gap-1.5">
       <StatusDot colorClass={bg} size="md" className="inline-block" />
       {label}
-    </span>
+    </Text>
   );
 }

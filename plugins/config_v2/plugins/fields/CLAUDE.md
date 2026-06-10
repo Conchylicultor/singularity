@@ -45,7 +45,7 @@ the config-only templates to mirror.
 
 - Description: Field type registry. Sub-plugins contribute field types with core factories and web renderers.
 - Web:
-  - Uses: `primitives/placeholder.Placeholder`, `primitives/slot-render.defineDispatchSlot`
+  - Uses: `primitives/placeholder.Placeholder`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`
   - Exports: Types: `FieldRendererComponent`, `FieldRendererProps`; Values: `ConfigFieldContext`, `FieldHeader`, `FieldRenderer`, `Fields`, `useLocalValue`
 - Cross-plugin:
   - Imported by: `config_v2/settings`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`

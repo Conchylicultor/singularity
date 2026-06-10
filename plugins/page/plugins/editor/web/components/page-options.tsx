@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { MdAddCircleOutline } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { pagesResource, pageData, type Block } from "../../core";
 import { PageIcon } from "./page-icon";
@@ -65,7 +66,9 @@ export function PageOptionsList({
 }) {
   if (options.length === 0) {
     return (
-      <div className="text-muted-foreground px-2 py-1.5 text-sm">No pages found</div>
+      <Text as="div" variant="body" className="text-muted-foreground px-2 py-1.5">
+        No pages found
+      </Text>
     );
   }
   return (

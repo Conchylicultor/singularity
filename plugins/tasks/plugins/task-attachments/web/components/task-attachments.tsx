@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 function formatSize(bytes: number): string {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(0)} KB`;
@@ -36,7 +37,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
               <img
                 src={`/api/attachments/${a.id}`}
                 alt={a.filename}
-                className="h-32 w-auto rounded border object-cover"
+                className="h-32 w-auto rounded-md border object-cover"
               />
             </a>
           ) : (
@@ -49,7 +50,7 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
               hover="muted"
             >
               <span>{a.filename}</span>
-              <span className="text-muted-foreground text-xs">{formatSize(a.size)}</span>
+              <Text as="span" variant="caption" tone="muted">{formatSize(a.size)}</Text>
             </Row>
           ),
         )}

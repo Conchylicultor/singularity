@@ -3,6 +3,7 @@ import { MdSearch } from "react-icons/md";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
@@ -149,7 +150,7 @@ export function CommandPaletteDialog({
                 setActiveIdx(0);
               }}
               onKeyDown={handleKeyDown}
-              className="flex-1 bg-transparent text-sm outline-none placeholder:text-muted-foreground"
+              className="flex-1 bg-transparent text-body outline-none placeholder:text-muted-foreground"
               placeholder="Search commands..."
             />
           </div>
@@ -157,18 +158,26 @@ export function CommandPaletteDialog({
           <ScrollArea className="max-h-80">
             <div className="p-1">
               {flatList.length === 0 && (
-                <p className="px-3 py-6 text-center text-sm text-muted-foreground">
+                <Text
+                  as="p"
+                  variant="body"
+                  className="px-3 py-6 text-center text-muted-foreground"
+                >
                   No commands found.
-                </p>
+                </Text>
               )}
 
               {groups
                 ? groups.map((group) => (
                     <div key={group.label ?? "__ungrouped"}>
                       {group.label && (
-                        <div className="px-2 py-1.5 text-xs font-medium text-muted-foreground">
+                        <Text
+                          as="div"
+                          variant="caption"
+                          className="px-2 py-1.5 font-medium text-muted-foreground"
+                        >
                           {group.label}
-                        </div>
+                        </Text>
                       )}
                       {group.items.map((item) => {
                         const idx = flatIdx++;
@@ -201,7 +210,11 @@ export function CommandPaletteDialog({
             </div>
           </ScrollArea>
 
-          <div className="flex gap-3 border-t px-3 py-1.5 text-xs text-muted-foreground">
+          <Text
+            as="div"
+            variant="caption"
+            className="flex gap-3 border-t px-3 py-1.5 text-muted-foreground"
+          >
             <span>
               <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
                 ↑↓
@@ -220,7 +233,7 @@ export function CommandPaletteDialog({
               </Kbd>{" "}
               close
             </span>
-          </div>
+          </Text>
         </div>
       </DialogContent>
     </Dialog>
@@ -243,7 +256,7 @@ const CommandRow = forwardRef<
       role="option"
       aria-selected={isActive}
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-sm",
+        "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-body",
         isActive && "bg-accent text-accent-foreground",
       )}
       onMouseEnter={onMouseEnter}

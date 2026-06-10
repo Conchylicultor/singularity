@@ -18,7 +18,7 @@ export function SelectionBar({
       <div
         className={cn(
           "absolute top-1 left-1/2 -translate-x-1/2",
-          "flex items-center gap-2.5 whitespace-nowrap rounded-lg border bg-background/95 px-4 py-2 text-sm shadow-lg backdrop-blur",
+          "flex items-center gap-2.5 whitespace-nowrap rounded-lg border bg-background/95 px-4 py-2 text-body shadow-lg backdrop-blur",
           "transition-all duration-200",
           isActive
             ? "translate-y-0 opacity-100"

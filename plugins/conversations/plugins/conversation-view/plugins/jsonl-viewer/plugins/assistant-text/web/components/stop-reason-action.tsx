@@ -7,7 +7,7 @@ export function StopReasonAction({ event }: { event: JsonlEvent }) {
   const e = event as AssistantTextEvent;
   if (!e.stopReason) return null;
   return (
-    <span className="text-[11px] text-muted-foreground/70">
+    <span className="text-2xs text-muted-foreground/70">
       {e.stopReason}
     </span>
   );

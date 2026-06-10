@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type ImgStatus = "loading" | "ok" | "missing";
 
@@ -37,10 +38,10 @@ function Panel({
       ? "border-destructive/40 bg-destructive/5"
       : "border-success/40 bg-success/5";
   return (
-    <div className={`flex flex-1 flex-col overflow-hidden rounded border ${border}`}>
-      <div className="border-b px-3 py-1 text-xs font-medium text-muted-foreground">
+    <div className={`flex flex-1 flex-col overflow-hidden rounded-md border ${border}`}>
+      <Text as="div" variant="caption" className="border-b px-3 py-1 font-medium text-muted-foreground">
         {label}
-      </div>
+      </Text>
       <div className="flex flex-1 items-center justify-center overflow-auto p-4">
         <img
           src={src}
@@ -70,7 +71,7 @@ export function ImageDiffView({
 
   if (oldStatus === "loading" || newStatus === "loading") {
     return (
-      <div className="px-3 py-2 text-sm text-muted-foreground">Loading…</div>
+      <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">Loading…</Text>
     );
   }
 
@@ -102,7 +103,7 @@ export function ImageDiffView({
 
   if (oldStatus === "missing" && newStatus === "missing") {
     return (
-      <div className="px-3 py-2 text-sm text-destructive">Image not found.</div>
+      <Text as="div" variant="body" className="px-3 py-2 text-destructive">Image not found.</Text>
     );
   }
 

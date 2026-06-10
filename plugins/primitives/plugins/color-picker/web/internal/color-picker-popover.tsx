@@ -24,7 +24,7 @@ export function ColorPickerPopover({
       type="button"
       aria-label="Pick color"
       className={cn(
-        "size-6 rounded border border-border outline-none transition-transform",
+        "size-6 rounded-md border border-border outline-none transition-transform",
         "focus-visible:ring-2 focus-visible:ring-ring",
       )}
       style={{ background: pickerProps.value }}
@@ -34,7 +34,7 @@ export function ColorPickerPopover({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
       >
         {trigger}
       </PopoverTrigger>

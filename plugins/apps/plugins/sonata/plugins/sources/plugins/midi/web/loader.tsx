@@ -9,6 +9,7 @@
 import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
 import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface Props {
   onRaw: (raw: unknown) => void;
@@ -89,25 +90,29 @@ export function MidiLoader({ onRaw }: Props) {
       >
         <MdUploadFile className="size-10 text-muted-foreground" />
         <div className="text-center">
-          <p className="text-sm font-medium">
+          <Text as="p" variant="label">
             {fileName ?? "Drop a MIDI file here"}
-          </p>
-          <p className="mt-0.5 text-xs text-muted-foreground">
+          </Text>
+          <Text as="p" variant="caption" className="mt-0.5 text-muted-foreground">
             .mid / .midi — or click to browse
-          </p>
+          </Text>
         </div>
         {fileName ? (
-          <div className="flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-xs text-muted-foreground">
+          <Text
+            as="div"
+            variant="caption"
+            className="flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-muted-foreground"
+          >
             <MdMusicNote className="size-3.5 shrink-0" />
             <span className="truncate max-w-[16rem]">{fileName}</span>
-          </div>
+          </Text>
         ) : null}
       </div>
 
       {error ? (
-        <p className="text-xs text-destructive" role="alert">
+        <Text as="p" variant="caption" className="text-destructive" role="alert">
           {error}
-        </p>
+        </Text>
       ) : null}
 
       <input

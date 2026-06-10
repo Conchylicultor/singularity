@@ -71,7 +71,7 @@ export function TypographySection({ search }: { search: string }) {
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-xs rounded-md border transition-colors ${
+            className={`flex items-center gap-1.5 px-2.5 py-1 text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
@@ -79,7 +79,7 @@ export function TypographySection({ search }: { search: string }) {
             onClick={() => setConfig("preset", p.id)}
           >
             <span
-              className="text-xs font-medium"
+              className="text-caption font-medium"
               style={{ fontFamily: p.light.fontSans }}
             >
               Aa

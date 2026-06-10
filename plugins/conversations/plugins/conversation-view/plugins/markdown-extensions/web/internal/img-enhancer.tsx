@@ -46,7 +46,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
               <img
                 src={src}
                 alt={alt ?? ""}
-                className="my-2 max-w-full rounded border border-border"
+                className="my-2 max-w-full rounded-sm border border-border"
               />
             );
           }
@@ -56,7 +56,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
               <img
                 src={apiSrc}
                 alt={alt ?? ""}
-                className="my-2 max-w-full rounded border border-border"
+                className="my-2 max-w-full rounded-sm border border-border"
               />
             );
           }

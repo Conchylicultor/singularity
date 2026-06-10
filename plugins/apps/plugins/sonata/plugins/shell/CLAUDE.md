@@ -25,7 +25,7 @@ transport bus is empty on the library).
 - Web:
   - Slots: `Sonata.Home`, `Sonata.Toolbar`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Section`, `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
   - Contributes: `Apps.App` "Sonata" → `SonataLayout`
-  - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
   - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `TEMPO_MATH_FLOOR`, `useSonata`
 - Cross-plugin:
   - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`

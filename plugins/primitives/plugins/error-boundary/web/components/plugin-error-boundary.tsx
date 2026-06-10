@@ -1,5 +1,6 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { ErrorBoundary } from "../slots";
 import { callReporter, type BoundaryErrorReport } from "../reporter";
 
@@ -85,7 +86,11 @@ function CrashFallback({
 
   const tag = [report.slot, report.label].filter(Boolean).join(" / ");
   return (
-    <div className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+    <Text
+      as="div"
+      variant="caption"
+      className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-destructive"
+    >
       <span className="font-medium">{tag || "Plugin"} crashed</span>
       <span className="truncate text-destructive/70">{report.error.message}</span>
       <div className="ml-auto flex shrink-0 items-center gap-2">
@@ -98,6 +103,6 @@ function CrashFallback({
           Retry
         </button>
       </div>
-    </div>
+    </Text>
   );
 }

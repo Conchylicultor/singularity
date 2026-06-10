@@ -5,6 +5,7 @@ import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web"
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { workflowNodePane } from "../panes";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
 
@@ -36,12 +37,12 @@ export function WorkflowNodePaneBody() {
     <PaneChrome pane={workflowNodePane} title={title}>
       <div className="space-y-3 p-4">
         {!node ? (
-          <div className="text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="text-muted-foreground">
             {status === "tracing" ? "Parsing workflow…" : "Step not found."}
-          </div>
+          </Text>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-1.5 text-[11px]">
+            <div className="flex flex-wrap items-center gap-1.5 text-2xs">
               {node.phase && (
                 <Badge variant="muted" size="sm">
                   {node.phase}
@@ -64,7 +65,7 @@ export function WorkflowNodePaneBody() {
               )}
             </div>
             {node.deps.length > 0 && (
-              <div className="text-[11px] text-muted-foreground">
+              <div className="text-2xs text-muted-foreground">
                 Depends on:{" "}
                 {node.deps
                   .map((d) => graph?.nodes.find((n) => n.id === d)?.label ?? d)

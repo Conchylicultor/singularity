@@ -1,5 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
 import { serversResource, type Server } from "../shared";
 import { ServersList } from "./components/servers-list";
@@ -66,7 +67,7 @@ function ServerDetailBody() {
   if (!server) {
     return (
       <PaneChrome pane={serverDetailPane} title="Server">
-        <div className="text-muted-foreground p-4 text-sm">Loading…</div>
+        <Text as="div" variant="body" className="text-muted-foreground p-4">Loading…</Text>
       </PaneChrome>
     );
   }
@@ -86,7 +87,7 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
         <Deploy.Section.Render>
           {(s) => (
             <section key={s.id} className="bg-card rounded-lg border p-4">
-              <h2 className="mb-3 text-sm font-medium">{s.title}</h2>
+              <Text as="h2" variant="label" className="mb-3">{s.title}</Text>
               <s.component serverId={serverId} />
             </section>
           )}

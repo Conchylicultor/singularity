@@ -23,7 +23,7 @@ export function NumberFilter(props: FilterControlProps): ReactNode {
     <div className="flex items-center gap-1">
       <input
         type="number"
-        className="w-20 rounded border border-input bg-background px-1.5 py-0.5 text-sm"
+        className="w-20 rounded-md border border-input bg-background px-1.5 py-0.5 text-body"
         placeholder="Min"
         value={value.min ?? ""}
         onChange={(e) => update({ min: parse(e.target.value) })}
@@ -31,7 +31,7 @@ export function NumberFilter(props: FilterControlProps): ReactNode {
       <span className="text-muted-foreground">–</span>
       <input
         type="number"
-        className="w-20 rounded border border-input bg-background px-1.5 py-0.5 text-sm"
+        className="w-20 rounded-md border border-input bg-background px-1.5 py-0.5 text-body"
         placeholder="Max"
         value={value.max ?? ""}
         onChange={(e) => update({ max: parse(e.target.value) })}

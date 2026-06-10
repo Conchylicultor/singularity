@@ -27,16 +27,16 @@ export function SkillToolView({ event }: ToolRendererProps) {
       {(args || injected.length > 0) && (
         <div className="mt-2 space-y-2">
           {args && (
-            <pre className="whitespace-pre-wrap break-words rounded bg-muted/60 p-2 text-xs">
+            <pre className="text-caption whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2">
               {args}
             </pre>
           )}
           {injected.map((ctx, i) => (
-            <details key={i} className="rounded border border-border/40">
-              <summary className="cursor-pointer px-2 py-1 text-xs text-muted-foreground">
+            <details key={i} className="rounded-md border border-border/40">
+              <summary className="text-caption cursor-pointer px-2 py-1 text-muted-foreground">
                 Skill context
               </summary>
-              <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words px-2 py-2 text-xs text-muted-foreground">
+              <pre className="text-caption max-h-96 overflow-auto whitespace-pre-wrap break-words px-2 py-2 text-muted-foreground">
                 {ctx}
               </pre>
             </details>

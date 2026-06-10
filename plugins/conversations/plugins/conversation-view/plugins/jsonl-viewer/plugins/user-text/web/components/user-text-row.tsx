@@ -8,6 +8,7 @@ import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/p
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
@@ -41,8 +42,8 @@ function InlineImage({ mime, data }: { mime: string; data: string }) {
         alt="Attached image"
         className={
           expanded
-            ? "max-h-[80vh] max-w-full rounded border border-border object-contain"
-            : "max-h-40 max-w-xs rounded border border-border object-cover"
+            ? "max-h-[80vh] max-w-full rounded-md border border-border object-contain"
+            : "max-h-40 max-w-xs rounded-md border border-border object-cover"
         }
       />
     </button>
@@ -60,9 +61,9 @@ function SegmentedContent({
     <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
-          <div key={i} className="whitespace-pre-wrap break-words text-sm">
+          <Text as="div" variant="body" key={i} className="whitespace-pre-wrap break-words">
             <FileLinkText text={seg.value} onFileOpen={onFileOpen} />
-          </div>
+          </Text>
         ) : (
           <div key={i} className="mt-1.5">
             <InlineImage mime={seg.mime} data={seg.data} />
@@ -102,16 +103,16 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
           {e.segments ? (
             <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} />
           ) : (
-            <div className="whitespace-pre-wrap break-words text-sm">
+            <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
               <FileLinkText text={e.text} onFileOpen={onFileOpen} />
-            </div>
+            </Text>
           )}
         </div>
         {collapsible ? (
           <button
             type="button"
             onClick={() => setExpanded((v) => { const next = !v; reportSticky(next); return next; })}
-            className="mt-1 flex items-center gap-1 text-xs text-muted-foreground hover:text-foreground"
+            className="text-caption mt-1 flex items-center gap-1 text-muted-foreground hover:text-foreground"
           >
             {expanded ? (
               <>

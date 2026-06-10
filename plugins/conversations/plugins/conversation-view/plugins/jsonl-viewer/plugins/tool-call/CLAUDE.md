@@ -8,7 +8,7 @@
 - Web:
   - Slots: `JsonlViewerTool.Renderer`
   - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-  - Uses: `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/badge.Badge`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`
+  - Uses: `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/badge.Badge`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`, `primitives/text.Text`
   - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`
 - Cross-plugin:
   - Slot contributors: `add-task`, `agent`, `ask-user-question`, `bash`, `edit`, `flag-raise`, `read`, `skill`, `task-tools`, `workflow`, `write`

@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -41,14 +42,14 @@ function FileRow({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="flex w-full items-center gap-2 px-2 py-1.5 text-left text-sm hover:bg-muted/50"
+        className="text-body flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/50"
         aria-expanded={expanded}
       >
         <CollapsibleChevron open={expanded} className="size-3.5 shrink-0 text-muted-foreground" />
         <Badge size="sm" colorClass={statusBadgeColor(file.status)} className="shrink-0">
           {label}
         </Badge>
-        <span className="group/path min-w-0 flex-1 truncate text-xs">
+        <Text as="span" variant="caption" className="group/path min-w-0 flex-1 truncate">
           {from && (
             <>
               <span className="text-muted-foreground line-through">{from}</span>
@@ -64,11 +65,11 @@ function FileRow({
             className="ml-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
             onClick={(e) => e.stopPropagation()}
           />
-        </span>
-        <span className="flex shrink-0 items-center gap-2 text-xs tabular-nums">
+        </Text>
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-2 tabular-nums">
           <span className="text-success">+{file.additions}</span>
           <span className="text-destructive">&minus;{file.deletions}</span>
-        </span>
+        </Text>
       </button>
       {expanded && (
         <div className="bg-background">
@@ -88,13 +89,13 @@ export function FileChangesSection({ conversationId, plugin }: PluginReviewProps
   const conversation = useConversationById(conversationId);
 
   if (!conversation) {
-    return <p className="text-xs text-muted-foreground px-1">Loading&hellip;</p>;
+    return <Text as="p" variant="caption" className="text-muted-foreground px-1">Loading&hellip;</Text>;
   }
 
   if (plugin.files.length === 0) return null;
 
   return (
-    <div className="flex flex-col rounded border border-border/40 overflow-hidden">
+    <div className="flex flex-col rounded-md border border-border/40 overflow-hidden">
       {plugin.files.map((file) => (
         <FileRow key={file.path} file={file} worktree={conversation.attemptId} />
       ))}

@@ -19,6 +19,7 @@ import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Button } from "@/components/ui/button";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 const TaskBindingSchema = z.object({
   taskId: z.string(),
@@ -59,7 +60,7 @@ export function TaskCard({
   if (value?.launchedConvId && value.taskId) {
     return (
       <div className="my-2 flex flex-col gap-1.5">
-        <p className="text-muted-foreground text-sm">{initial}</p>
+        <Text as="p" variant="body" tone="muted">{initial}</Text>
         <LaunchedAttempts taskId={value.taskId} />
       </div>
     );
@@ -103,9 +104,9 @@ export function TaskCard({
       />
       <div className="flex items-center justify-end gap-2">
         {error ? (
-          <span className="text-destructive mr-auto truncate text-xs" title={error}>
+          <Text as="span" variant="caption" tone="destructive" className="mr-auto truncate" title={error}>
             {error}
-          </span>
+          </Text>
         ) : null}
         <Button
           variant="ghost"
@@ -158,9 +159,9 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
 
   if (attempts.length === 0) {
     return (
-      <span className="text-muted-foreground block text-xs">
+      <Text as="span" variant="caption" tone="muted" className="block">
         Launching…
-      </span>
+      </Text>
     );
   }
 
@@ -170,9 +171,9 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
         <div key={attempt.id} className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
             <AttemptStatusBadge status={attempt.status} />
-            <span className="text-muted-foreground truncate font-mono text-xs">
+            <Text as="span" variant="caption" tone="muted" className="truncate font-mono">
               {attempt.worktreePath.split("/").pop()}
-            </span>
+            </Text>
           </div>
           {attempt.conversations.length > 0 && (
             <ul className="flex flex-col gap-0.5">

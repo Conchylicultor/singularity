@@ -3,6 +3,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { agentReportPane } from "../panes";
 
 interface AgentInput {
@@ -32,13 +33,17 @@ export function AgentReportPaneBody() {
     <PaneChrome pane={agentReportPane} title={title}>
       <div className="p-4">
         {!result ? (
-          <div className="text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="text-muted-foreground">
             {!event ? "Event not found." : "Agent is still running…"}
-          </div>
+          </Text>
         ) : result.isError ? (
-          <pre className="whitespace-pre-wrap break-words text-sm text-destructive">
+          <Text
+            as="pre"
+            variant="body"
+            className="whitespace-pre-wrap break-words text-destructive"
+          >
             {result.content}
-          </pre>
+          </Text>
         ) : (
           <div className="prose prose-sm dark:prose-invert max-w-none">
             <Markdown>{result.content}</Markdown>

@@ -14,6 +14,7 @@ import {
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
@@ -172,14 +173,14 @@ export function TaskDraftForm({
       className={`flex w-[480px] flex-col gap-2 ${isAgentWorktree ? "rounded-lg border-2 border-destructive/60 p-3" : ""}`}
     >
       {isAgentWorktree && (
-        <div className="flex items-center gap-1.5 text-xs font-medium text-destructive">
+        <Text as="div" variant="caption" className="flex items-center gap-1.5 font-medium text-destructive">
           <MdScience className="size-3.5" />
           Experimental — tasks target main from an agent worktree
-        </div>
+        </Text>
       )}
-      <div className="text-muted-foreground text-xs font-medium">
+      <Text as="div" variant="caption" className="text-muted-foreground font-medium">
         {heading ?? "Draft tasks"}
-      </div>
+      </Text>
 
       <DndContext
         sensors={sensors}

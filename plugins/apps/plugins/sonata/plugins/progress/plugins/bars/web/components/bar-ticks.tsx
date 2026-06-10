@@ -52,6 +52,7 @@ export function BarTicks({
                 bar instead of overhanging it. */}
             <div className="absolute left-0 top-1/2 h-2.5 w-px -translate-y-1/2 bg-muted-foreground/40" />
             {showLabel && (
+              // eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps the compact tick number aligned to the rail tick; text-3xs carries no line-height of its own
               <span className="absolute left-1 top-0 text-3xs leading-none text-muted-foreground tabular-nums">
                 {index + 1}
               </span>

@@ -4,6 +4,7 @@ import {
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -84,7 +85,7 @@ export function ImportByUrl({
       onOpenChange={setUserOpen}
       className="rounded-lg border border-border/60"
     >
-      <CollapsibleTrigger className="gap-1.5 px-3 py-2 text-sm text-muted-foreground hover:text-foreground">
+      <CollapsibleTrigger className="gap-1.5 px-3 py-2 text-body text-muted-foreground hover:text-foreground">
         <CollapsibleChevron />
         <span className="font-medium">Import by URL</span>
       </CollapsibleTrigger>
@@ -99,7 +100,7 @@ export function ImportByUrl({
               if (e.key === "Enter") handleImport();
             }}
             placeholder="Theme ID or tweakcn URL..."
-            className="flex-1 rounded-md border border-border bg-muted/20 px-3 py-1.5 text-sm text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="flex-1 rounded-md border border-border bg-muted/20 px-3 py-1.5 text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
           <Button
             variant="ghost"
@@ -113,9 +114,9 @@ export function ImportByUrl({
         </div>
 
         {importMutation.isError && (
-          <p className="text-sm text-destructive">
+          <Text as="p" variant="body" tone="destructive">
             {importMutation.error.message}
-          </p>
+          </Text>
         )}
 
         {visible.length > 0 ? (
@@ -125,7 +126,9 @@ export function ImportByUrl({
                 key={theme.id}
                 className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2"
               >
-                <span className="text-sm font-medium">{theme.label}</span>
+                <Text as="span" variant="label">
+                  {theme.label}
+                </Text>
                 <div className="flex gap-1.5">
                   <Button
                     variant="ghost"
@@ -149,10 +152,10 @@ export function ImportByUrl({
             ))}
           </div>
         ) : (
-          <p className="text-sm text-muted-foreground">
+          <Text as="p" variant="body" tone="muted">
             Paste a tweakcn theme ID or URL to import any theme — including ones
             not in the community catalog.
-          </p>
+          </Text>
         )}
       </CollapsibleContent>
     </Collapsible>

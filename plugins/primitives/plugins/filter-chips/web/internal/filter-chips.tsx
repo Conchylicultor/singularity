@@ -1,5 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export interface FilterChipProps {
   active: boolean;
@@ -23,7 +24,9 @@ export interface FilterGroupProps {
 export function FilterGroup({ label, children }: FilterGroupProps) {
   return (
     <div className="flex items-center gap-1">
-      <span className="text-xs text-muted-foreground">{label}:</span>
+      <Text variant="caption" className="text-muted-foreground">
+        {label}:
+      </Text>
       {children}
     </div>
   );

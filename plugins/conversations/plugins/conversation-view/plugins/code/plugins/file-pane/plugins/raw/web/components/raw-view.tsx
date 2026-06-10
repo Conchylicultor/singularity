@@ -102,7 +102,10 @@ export function RawView({
 
   if (highlightError) {
     return (
-      <pre className="whitespace-pre-wrap break-words p-3 font-mono text-xs leading-5">
+      <pre
+        // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
+        className="whitespace-pre-wrap break-words p-3 font-mono text-caption leading-5"
+      >
         {content}
       </pre>
     );
@@ -114,7 +117,8 @@ export function RawView({
   return (
     <div
       ref={containerRef}
-      className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:bg-transparent [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+      // eslint-disable-next-line text/no-adhoc-typography -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
+      className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:bg-transparent [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

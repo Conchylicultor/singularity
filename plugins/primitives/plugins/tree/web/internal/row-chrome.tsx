@@ -43,7 +43,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       : menu;
 
   const dragHandleClass = cn(
-    "absolute top-1/2 z-raised flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded",
+    "absolute top-1/2 z-raised flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded-md",
     "text-muted-foreground hover:bg-background/60 active:cursor-grabbing",
     "opacity-0 group-hover/row:opacity-60",
   );

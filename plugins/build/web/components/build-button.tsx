@@ -11,6 +11,7 @@ import { mainAheadCountResource, buildHistoryResource } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function BuildButton() {
   const [open, setOpen] = useState(false);
@@ -87,7 +88,7 @@ export function BuildButton() {
                 role="button"
                 tabIndex={0}
                 // eslint-disable-next-line row/no-adhoc-row -- nested interactive chip inside the build trigger button; a real button can't nest inside the Button trigger
-                className="ml-0.5 inline-flex items-center gap-0.5 rounded bg-info/15 px-1.5 py-0.5 text-xs font-medium text-info hover:bg-info/25"
+                className="ml-0.5 inline-flex items-center gap-0.5 rounded-md bg-info/15 px-1.5 py-0.5 text-label text-info hover:bg-info/25"
                 onClick={(e) => {
                   e.stopPropagation();
                   window.location.reload();
@@ -112,7 +113,7 @@ export function BuildButton() {
       contentClassName="w-[480px] p-0"
     >
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <span className="text-sm font-medium">Build</span>
+        <Text as="span" variant="label">Build</Text>
         <Button
           variant="ghost"
           size="icon"

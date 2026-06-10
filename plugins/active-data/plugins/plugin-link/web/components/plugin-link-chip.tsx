@@ -59,7 +59,10 @@ export function PluginLinkChip({
   // Not a known plugin (or still loading) — preserve the original code appearance.
   if (!node) {
     return (
-      <code className="rounded bg-muted px-1 py-0.5 font-mono text-xs">
+      <code
+        // eslint-disable-next-line text/no-adhoc-typography -- mono inline-code size matching markdown code base style
+        className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs"
+      >
         {id}
       </code>
     );

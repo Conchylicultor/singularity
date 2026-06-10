@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { useConfig } from "@plugins/config_v2/web";
 import type { Source } from "@plugins/review/web";
@@ -183,7 +184,7 @@ function FileSectionBlock({
 
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="sticky top-0 z-raised gap-2 border-b border-border bg-muted/60 px-3 py-2 text-xs font-medium text-muted-foreground backdrop-blur hover:bg-muted">
+      <CollapsibleTrigger className="sticky top-0 z-raised gap-2 border-b border-border bg-muted/60 px-3 py-2 text-caption font-medium text-muted-foreground backdrop-blur hover:bg-muted">
         <CollapsibleChevron className="size-3.5" />
         <span>{label}</span>
         <span>·</span>
@@ -225,7 +226,7 @@ function ToolbarRow({
 }) {
   return (
     <div className="sticky top-0 z-raised flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
-      <div className="flex items-center gap-2 text-sm font-medium">
+      <Text as="div" variant="label" className="flex items-center gap-2">
         <span className="tabular-nums">{count} files</span>
         <span className="text-success tabular-nums">
           +{additions}
@@ -233,7 +234,7 @@ function ToolbarRow({
         <span className="text-destructive tabular-nums">
           −{deletions}
         </span>
-      </div>
+      </Text>
       <div className="flex flex-1 items-center justify-end gap-1">
         <ExpandAllButton
           variant="full"

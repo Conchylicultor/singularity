@@ -7,6 +7,7 @@ import {
   contributionId,
   type ContributionsFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the contributions facet's own data. Read `node.facets[id]` directly
 // (as every render host does) rather than importing the build-time `facets/core`
@@ -33,9 +34,11 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
           {contribs.map((c, i) => {
             const id = contributionId(c);
             return (
-              <div
+              <Text
+                as="div"
+                variant="caption"
                 key={`${c.slot}:${id ?? i}`}
-                className="flex items-center gap-2 px-2 py-0.5 text-xs"
+                className="flex items-center gap-2 px-2 py-0.5"
               >
                 <code className="font-mono text-foreground">{c.slot}</code>
                 {id && (
@@ -43,18 +46,18 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
                     {id}
                   </code>
                 )}
-              </div>
+              </Text>
             );
           })}
         </div>
       )}
       {slotContributors.length > 0 && (
-        <div className="mt-2 flex items-center gap-2 px-2 py-0.5 text-xs">
+        <Text as="div" variant="caption" className="mt-2 flex items-center gap-2 px-2 py-0.5">
           <span className="shrink-0 text-muted-foreground/60">
             Slot contributors
           </span>
           <ConsumerList names={slotContributors} />
-        </div>
+        </Text>
       )}
     </Section>
   );

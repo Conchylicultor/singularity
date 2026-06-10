@@ -20,6 +20,7 @@ import {
   SegmentedControl,
   ToggleChip,
 } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   ChartState,
   axisProps,
@@ -485,11 +486,11 @@ export function LinesChartsSection() {
         </ToggleChip>
       </div>
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Over time</Text>
         {byType ? <CumulativeLinesBreakdownChart filterKey={filterKey} dedup={filterRebases} /> : <CumulativeLinesChart filterKey={filterKey} dedup={filterRebases} />}
       </div>
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">Per period</h3>
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Per period</Text>
         {byType ? <LinesRateBreakdownChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} filterKey={filterKey} dedup={filterRebases} />}
         <SegmentedControl
           options={BUCKETS}

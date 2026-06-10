@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
 import { CommitsRateChart } from "./rate-chart";
@@ -25,11 +26,9 @@ export function CommitsSection() {
           By category
         </ToggleChip>
         <ToggleChip
-          // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
           active={filterRebases}
           onClick={toggle}
           title={
-            // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition
             filterRebases
               ? "Deduplication on: multi-commit pushes counted once — click to disable"
               : "Deduplication off: every commit counted — click to filter rebases"
@@ -39,13 +38,13 @@ export function CommitsSection() {
         </ToggleChip>
       </div>
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">Over time</h3>
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Over time</Text>
         {byCategory
           ? <CumulativeCommitsCategoryChart dedup={filterRebases} />
           : <CumulativeCommitsChart dedup={filterRebases} />}
       </div>
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">Per period</h3>
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Per period</Text>
         {byCategory
           ? <CommitsRateCategoryChart dedup={filterRebases} />
           : <CommitsRateChart dedup={filterRebases} />}

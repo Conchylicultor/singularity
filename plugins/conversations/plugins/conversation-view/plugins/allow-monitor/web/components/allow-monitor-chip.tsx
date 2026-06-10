@@ -3,6 +3,7 @@ import { useQuery } from "@tanstack/react-query";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function AllowMonitorChip() {
   const { convId } = conversationPane.useParams();
@@ -25,9 +26,9 @@ export function AllowMonitorChip() {
         <>
           <p className="mb-1 font-semibold">Guard bypasses active:</p>
           {allowFiles.map((f) => (
-            <p key={f} className="font-mono text-xs">
+            <Text as="p" variant="caption" key={f} className="font-mono">
               {f}
-            </p>
+            </Text>
           ))}
         </>
       }

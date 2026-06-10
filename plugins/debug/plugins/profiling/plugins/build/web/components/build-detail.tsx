@@ -61,7 +61,7 @@ export function BuildProfileDetailBody(): ReactElement {
           value={{ hovered, setHovered, refreshKey: 0 }}
         >
           <div className="p-2">
-            <div className="overflow-hidden rounded border">
+            <div className="overflow-hidden rounded-md border">
               {(() => {
                 const grouped = groupByPhase(data.spans);
                 return (

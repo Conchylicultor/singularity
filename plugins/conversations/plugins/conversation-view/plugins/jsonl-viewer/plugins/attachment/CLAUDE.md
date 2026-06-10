@@ -8,7 +8,7 @@
 - Web:
   - Slots: `JsonlViewerAttachment.Renderer`
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
-  - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`, `primitives/slot-render.defineDispatchSlot`
+  - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`
   - Exports: Values: `JsonlViewerAttachment`
 - Cross-plugin:
   - Slot contributors: `command-permissions`, `deferred-tools-delta`, `edited-text-file`, `nested-memory`, `skill-listing`, `task-reminder`

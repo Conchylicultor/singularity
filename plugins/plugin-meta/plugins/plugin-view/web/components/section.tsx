@@ -10,11 +10,11 @@ export function Section({ title, count, children }: SectionProps) {
   return (
     <section className="flex flex-col gap-2.5">
       <div className="flex items-baseline justify-between">
-        <SectionLabel as="h2" className="text-[11px] font-semibold tracking-wider text-muted-foreground/70">
+        <SectionLabel as="h2" className="text-2xs font-semibold tracking-wider text-muted-foreground/70">
           {title}
         </SectionLabel>
         {count && (
-          <span className="text-[11px] text-muted-foreground/60">{count}</span>
+          <span className="text-2xs text-muted-foreground/60">{count}</span>
         )}
       </div>
       {children}

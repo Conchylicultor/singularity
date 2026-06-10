@@ -4,6 +4,7 @@ import { cn } from "@/lib/utils";
 import type { Group, TracedGraph, TracedNode } from "../internal/trace-types";
 import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 // A renderable block: either a leaf agent/workflow node or a concurrency group.
 type Block =
@@ -57,7 +58,7 @@ export function WorkflowGraph({
           key={group.id}
           className="rounded-md border border-dashed border-border/70 p-2"
         >
-          <div className="mb-1.5 text-[10px] font-medium tracking-wider text-muted-foreground">
+          <div className="mb-1.5 text-3xs font-medium tracking-wider text-muted-foreground">
             ⇉ parallel ×{count}
             {graph.dynamic && "?"}
           </div>
@@ -73,7 +74,7 @@ export function WorkflowGraph({
         key={group.id}
         className="rounded-md border border-dashed border-border/70 p-2"
       >
-        <div className="mb-1.5 text-[10px] font-medium tracking-wider text-muted-foreground">
+        <div className="mb-1.5 text-3xs font-medium tracking-wider text-muted-foreground">
           → pipeline
         </div>
         <div className="flex flex-col gap-2 lg:flex-row lg:items-stretch">
@@ -117,14 +118,14 @@ export function WorkflowGraph({
         <div key={lane.title || `lane-${i}`}>
           {lane.title && (
             <div className="mb-1.5 flex items-baseline gap-2">
-              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-[10px] text-categorical-6">
+              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
                 {lane.numberLabel}
               </span>
-              <span className="text-xs font-medium text-foreground">
+              <Text as="span" variant="label" className="text-foreground">
                 {lane.title}
-              </span>
+              </Text>
               {lane.detail && (
-                <span className="min-w-0 truncate text-[11px] text-muted-foreground">
+                <span className="min-w-0 truncate text-2xs text-muted-foreground">
                   {lane.detail}
                 </span>
               )}

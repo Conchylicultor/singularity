@@ -12,7 +12,7 @@ export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainCo
     return (
       <div className="group/connector relative flex h-3 items-center justify-center">
         <div className="border-muted-foreground/20 w-full border-t border-dashed" />
-        <span className="text-muted-foreground/40 absolute text-[10px] uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
+        <span className="text-muted-foreground/40 absolute text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
           ∥ parallel
         </span>
         <button
@@ -31,7 +31,7 @@ export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainCo
 
   return (
     <div className="group/connector relative flex h-3 items-center justify-center">
-      <div className="text-muted-foreground/60 flex items-center gap-0.5 text-[10px] uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
+      <div className="text-muted-foreground/60 flex items-center gap-0.5 text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
         <MdArrowDownward className="size-3" />
         <span>blocks</span>
       </div>

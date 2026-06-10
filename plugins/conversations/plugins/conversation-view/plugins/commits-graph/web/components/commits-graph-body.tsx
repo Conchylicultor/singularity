@@ -4,6 +4,7 @@ import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { MergeBaseMarker, CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { commitsGraphResource } from "../../shared/resources";
 import { convCommitDiffPane, convCommitsGraphPane } from "../panes";
 
@@ -52,8 +53,8 @@ export function CommitsGraphBody() {
   const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
 
   return (
-    <div className="flex h-full flex-col text-sm">
-      <header className="border-b border-border px-4 py-2 text-xs text-muted-foreground">
+    <Text as="div" variant="body" className="flex h-full flex-col">
+      <Text as="header" variant="caption" className="border-b border-border px-4 py-2 text-muted-foreground">
         <div className="flex items-baseline gap-2">
           <span className="font-mono text-foreground">{branchLabel}</span>
           <span>↑{ahead}</span>
@@ -62,7 +63,7 @@ export function CommitsGraphBody() {
           ) : null}
           <span className="ml-auto">vs main</span>
         </div>
-      </header>
+      </Text>
       <ol className="flex-1 overflow-auto">
         {commits.map((commit, idx) => (
           <CommitRowItem
@@ -109,7 +110,7 @@ export function CommitsGraphBody() {
           </>
         )}
       </ol>
-    </div>
+    </Text>
   );
 }
 
@@ -123,11 +124,11 @@ function BehindSeparator({
   return (
     <li className="flex items-center gap-2 border-b border-border/50 px-3 py-1.5">
       <div className="h-px flex-1 bg-border/60" />
-      <span className="shrink-0 text-xs text-muted-foreground/60">
+      <Text as="span" variant="caption" className="shrink-0 text-muted-foreground/60">
         {hasAgentWork
           ? `↓${count} on main`
           : `${count} commits on main`}
-      </span>
+      </Text>
       <div className="h-px flex-1 bg-border/60" />
     </li>
   );

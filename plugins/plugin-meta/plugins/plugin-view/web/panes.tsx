@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "../core/endpoints";
 import type { PluginNode } from "../core/types";
@@ -33,21 +34,29 @@ function PluginViewBody() {
   if (isLoading) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
-        <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+        <Text
+          as="div"
+          variant="body"
+          className="flex h-full items-center justify-center text-muted-foreground"
+        >
           Loading…
-        </div>
+        </Text>
       </PaneChrome>
     );
   }
   if (error) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
-        <div className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center text-sm">
+        <Text
+          as="div"
+          variant="body"
+          className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center"
+        >
           <span className="font-medium text-foreground">
             Failed to load plugin tree
           </span>
           <span className="text-muted-foreground">{String(error)}</span>
-        </div>
+        </Text>
       </PaneChrome>
     );
   }

@@ -4,6 +4,7 @@ import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { conversationsResource, listGoneConversations } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -125,11 +126,11 @@ export function RecoveryView() {
     <div className="flex flex-col h-full">
       <div className="flex items-center justify-between px-4 py-3 border-b gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-sm font-semibold shrink-0">Recovery</h2>
+          <Text as="h2" variant="label" className="font-semibold shrink-0">Recovery</Text>
           {items.length > 0 && (
-            <span className="text-xs text-muted-foreground truncate">
+            <Text as="span" variant="caption" tone="muted" className="truncate">
               {items.length} recently closed
-            </span>
+            </Text>
           )}
         </div>
       </div>
@@ -183,15 +184,15 @@ function ClusterGroup({
     <div className="border-b">
       {isCluster && endedAt && (
         <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
-          <span className="text-xs font-medium">
+          <Text as="span" variant="caption" className="font-medium">
             {formatTime(endedAt)} — {group.length} conversations closed
-          </span>
+          </Text>
           <Button
             size="sm"
             variant="outline"
             onClick={() => onRestore(groupIds)}
             disabled={anyPending}
-            className="h-7 text-xs"
+            className="h-7 text-caption"
           >
             {anyPending ? (
               <>
@@ -235,10 +236,10 @@ function ConversationRow({
     <>
       <div className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30">
         <div className="flex-1 min-w-0 flex flex-col gap-0.5">
-          <span className="truncate text-xs font-medium">
+          <Text as="span" variant="caption" className="truncate font-medium">
             {conversation.title ?? conversation.id}
-          </span>
-          <div className="flex items-center gap-2 text-[10px] text-muted-foreground">
+          </Text>
+          <div className="flex items-center gap-2 text-3xs text-muted-foreground">
             <span>{conversation.model}</span>
             {conversation.endedAt && <span>{formatTime(conversation.endedAt)}</span>}
           </div>
@@ -248,7 +249,7 @@ function ConversationRow({
           variant="outline"
           onClick={onRestore}
           disabled={pending}
-          className="h-7 text-xs"
+          className="h-7 text-caption"
         >
           {pending ? (
             <>
@@ -265,7 +266,7 @@ function ConversationRow({
       </div>
       {error && (
         <div className="px-4 py-1.5 bg-muted/10">
-          <span className="text-xs text-destructive">{error}</span>
+          <Text as="span" variant="caption" tone="destructive">{error}</Text>
         </div>
       )}
     </>

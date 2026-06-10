@@ -8,6 +8,7 @@ import {
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -32,9 +33,9 @@ function Stat({ label, value }: { label: string; value: number }): ReactElement 
       <span className="text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
-      <span className="font-mono text-xs tabular-nums">
+      <Text as="span" variant="caption" className="font-mono tabular-nums">
         {formatDuration(value)}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -61,7 +62,7 @@ function PushStepsGantt({
   );
   return (
     <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
-      <div className="overflow-hidden rounded border">
+      <div className="overflow-hidden rounded-md border">
         <GanttContainer title="Steps" totalMs={totalMs}>
           <div className="space-y-0.5 px-4 py-2">
             {spans.map((s) => (
@@ -112,7 +113,7 @@ export function PushDetailBody(): ReactElement {
       ) : (
         <div className="flex flex-col gap-4 p-4">
           <div className="flex flex-wrap items-center gap-2">
-            <span className="truncate font-mono text-sm">{branchShort}</span>
+            <Text as="span" variant="body" className="truncate font-mono">{branchShort}</Text>
             <Badge variant={outcomeVariant(data.outcome)}>
               {formatStatusLabel(data.outcome)}
             </Badge>
@@ -124,7 +125,7 @@ export function PushDetailBody(): ReactElement {
             )}
           </div>
 
-          <div className="grid grid-cols-4 gap-px overflow-hidden rounded border bg-border">
+          <div className="grid grid-cols-4 gap-px overflow-hidden rounded-md border bg-border">
             <Stat label="Pre-lock" value={data.preLockMs} />
             <Stat label="Wait" value={data.waitMs} />
             <Stat label="Hold" value={data.holdMs} />
@@ -132,8 +133,10 @@ export function PushDetailBody(): ReactElement {
           </div>
 
           {data.conversationId && (
-            <button
-              className="self-start text-xs font-medium text-primary hover:underline"
+            <Text
+              as="button"
+              variant="caption"
+              className="self-start font-medium text-primary hover:underline"
               onClick={() =>
                 openPane(
                   conversationPane,
@@ -143,7 +146,7 @@ export function PushDetailBody(): ReactElement {
               }
             >
               Open conversation →
-            </button>
+            </Text>
           )}
 
           {data.steps.length > 0 ? (

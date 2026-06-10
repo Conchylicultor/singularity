@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useConversations } from "@plugins/conversations/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
@@ -130,8 +131,10 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
           : "Pushing";
 
   return (
-    <div
-      className={`flex items-center gap-2 px-3 py-1.5 text-xs ${
+    <Text
+      as="div"
+      variant="caption"
+      className={`flex items-center gap-2 px-3 py-1.5 ${
         isSelf ? "bg-primary/5" : ""
       }`}
     >
@@ -161,7 +164,7 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
         </span>
       )}
       <span className="shrink-0 font-mono tabular-nums text-muted-foreground">{elapsed}</span>
-    </div>
+    </Text>
   );
 }
 
@@ -188,8 +191,10 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
   const others = rows.length - 1;
 
   return (
-    <div
-      className={`overflow-hidden rounded-md border text-xs ${
+    <Text
+      as="div"
+      variant="caption"
+      className={`overflow-hidden rounded-md border ${
         queued
           ? "border-warning/40 bg-warning/10 text-warning"
           : "border-border bg-muted/30 text-foreground"
@@ -205,7 +210,7 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
         ) : (
           <Spinner className="size-3.5 shrink-0" />
         )}
-        <span className="flex-1 leading-snug">{summaryLabel(op)}</span>
+        <span className="flex-1">{summaryLabel(op)}</span>
         {others > 0 && (
           <span className="shrink-0 text-muted-foreground">
             +{others} other{others === 1 ? "" : "s"}
@@ -238,6 +243,6 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
           ))}
         </div>
       )}
-    </div>
+    </Text>
   );
 }

@@ -5,6 +5,7 @@ import {
   type Stroke,
 } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { getScreenshot } from "../../shared/endpoints";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";
 import { CropOverlay, type CropRect } from "./crop-overlay";
@@ -90,9 +91,13 @@ export function ScreenshotView({ id }: { id: string }) {
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="relative flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-muted/40">
           {error ? (
-            <div className="text-sm text-muted-foreground">{error}</div>
+            <Text as="div" variant="body" tone="muted">
+              {error}
+            </Text>
           ) : !imageBlob ? (
-            <div className="text-sm text-muted-foreground">Loading…</div>
+            <Text as="div" variant="body" tone="muted">
+              Loading…
+            </Text>
           ) : (
             <ImageStage
               blob={imageBlob}

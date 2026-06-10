@@ -4,6 +4,7 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { SonataProgress } from "../slots";
 
 /**
@@ -118,7 +119,7 @@ export function ProgressBar() {
       </div>
 
       {/* Minimal cursor / end readout. */}
-      <span className="shrink-0 tabular-nums text-xs text-muted-foreground">
+      <Text variant="caption" tone="muted" className="shrink-0 tabular-nums">
         {ready ? (
           <>
             {cursorBeat.toFixed(1)} / {endBeat.toFixed(1)}
@@ -126,7 +127,7 @@ export function ProgressBar() {
         ) : (
           "—"
         )}
-      </span>
+      </Text>
     </div>
   );
 }

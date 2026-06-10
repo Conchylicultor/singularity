@@ -42,7 +42,7 @@ export function BuildProfilingSection({ runId }: { runId: string }): ReactElemen
 
   return (
     <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
-      <div className="overflow-hidden rounded border">
+      <div className="overflow-hidden rounded-md border">
         <GanttSection
           title="Build"
           totalMs={data.totalMs}

@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type TaskUpdateInput = {
   taskId?: string;
@@ -26,7 +27,7 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
       {(input.taskId ?? input.id) && (
-        <span className="shrink-0 font-mono text-[11px]">{input.taskId ?? input.id}</span>
+        <span className="shrink-0 font-mono text-2xs">{input.taskId ?? input.id}</span>
       )}
       {input.status && (
         <Badge size="sm" colorClass={statusBadgeClass(input.status)} className="shrink-0">
@@ -39,12 +40,14 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {input.description && (
-        <p className="mt-2 text-xs text-muted-foreground whitespace-pre-wrap">
+        <Text as="p" variant="caption" className="mt-2 text-muted-foreground whitespace-pre-wrap">
           {input.description}
-        </p>
+        </Text>
       )}
       {event.result?.isError && (
-        <p className="mt-2 text-xs text-destructive">{event.result.content}</p>
+        <Text as="p" variant="caption" className="mt-2 text-destructive">
+          {event.result.content}
+        </Text>
       )}
     </ToolCallCard>
   );

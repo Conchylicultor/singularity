@@ -13,6 +13,7 @@ import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
 
@@ -26,7 +27,7 @@ function SideBySideButton({ convId }: { convId: string }) {
         e.stopPropagation();
         openPane(conversationPane, { convId }, { mode: "push" });
       }}
-      className="rounded p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+      className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
     >
       <MdVerticalSplit size={14} />
     </button>
@@ -52,7 +53,7 @@ function AttemptSection({
       <div className="flex items-center gap-1.5 px-2 py-1">
         <span
           className={cn(
-            "min-w-0 flex-1 truncate font-mono text-[11px]",
+            "min-w-0 flex-1 truncate font-mono text-2xs",
             isCurrent ? "font-medium text-foreground" : "text-muted-foreground",
           )}
         >
@@ -63,9 +64,13 @@ function AttemptSection({
         </Badge>
       </div>
       {attempt.conversations.length === 0 ? (
-        <p className="text-muted-foreground px-2 py-0.5 text-xs italic">
+        <Text
+          as="p"
+          variant="caption"
+          className="text-muted-foreground px-2 py-0.5 italic"
+        >
           No conversations
-        </p>
+        </Text>
       ) : (
         <ul className="flex flex-col gap-0.5">
           {attempt.conversations.map((c) => {
@@ -74,14 +79,14 @@ function AttemptSection({
               <li
                 key={c.id}
                 className={cn(
-                  "group flex items-center rounded",
+                  "group flex items-center rounded-md",
                   isActive ? "bg-accent" : "hover:bg-accent",
                 )}
               >
                 <button
                   type="button"
                   onClick={() => onSelect(c.id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-sm"
+                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-body"
                 >
                   <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
                   <span className="min-w-0 flex-1 truncate">
@@ -149,9 +154,9 @@ export function AttemptPane() {
     <PaneChrome pane={attemptPane} title={title}>
       <div className="p-2">
         {taskAttempts.length === 0 ? (
-          <p className="text-muted-foreground px-2 py-1 text-sm">
+          <Text as="p" variant="body" className="text-muted-foreground px-2 py-1">
             No attempts.
-          </p>
+          </Text>
         ) : (
           <div className="flex flex-col gap-2">
             {taskAttempts.map((a) => (

@@ -47,7 +47,7 @@ function TemplateChip({
   sending: boolean;
 }) {
   return (
-    <ButtonGroup className={cn("text-xs", !pinned && "[&>*]:border-dashed")}>
+    <ButtonGroup className={cn("text-caption", !pinned && "[&>*]:border-dashed")}>
       <Button
         variant="outline"
         size="xs"

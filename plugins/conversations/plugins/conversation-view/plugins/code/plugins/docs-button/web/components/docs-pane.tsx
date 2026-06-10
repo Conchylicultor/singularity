@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -59,9 +60,9 @@ function DocsPaneInner({
   const title = (
     <span className="flex items-center gap-2">
       <span>Docs</span>
-      <span className="tabular-nums text-xs text-muted-foreground">
+      <Text variant="caption" className="tabular-nums text-muted-foreground">
         {docs.length}
-      </span>
+      </Text>
     </span>
   );
 
@@ -71,9 +72,13 @@ function DocsPaneInner({
         {docs.length !== 1 && (
           <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-1">
             {docs.length === 0 ? (
-              <div className="px-2 py-1 text-xs text-muted-foreground">
+              <Text
+                as="div"
+                variant="caption"
+                className="px-2 py-1 text-muted-foreground"
+              >
                 No design docs in the diff.
-              </div>
+              </Text>
             ) : (
               docs.map((f) => (
                 <DocRow
@@ -95,9 +100,13 @@ function DocsPaneInner({
                 status={selected.status}
               />
           ) : (
-            <div className="px-3 py-2 text-sm text-muted-foreground">
+            <Text
+              as="div"
+              variant="body"
+              className="px-3 py-2 text-muted-foreground"
+            >
               Select a document above.
-            </div>
+            </Text>
           )}
         </div>
       </div>

@@ -5,6 +5,7 @@ import {
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/color-picker/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export interface TokenRowProps {
   label: string;
@@ -75,21 +76,25 @@ export function TokenRow({
       ) : null}
 
       <div className="flex flex-col flex-1 min-w-0">
-        <span className="text-xs font-medium truncate">{label}</span>
-        <span className="text-[10px] text-muted-foreground truncate font-mono">
+        <Text as="span" variant="label" className="truncate">{label}</Text>
+        <span className="text-3xs text-muted-foreground truncate font-mono">
           {cssVar}
         </span>
       </div>
 
       {isColor ? (
-        <span className="text-xs font-mono text-muted-foreground tabular-nums">
+        <Text
+          as="span"
+          variant="caption"
+          className="font-mono text-muted-foreground tabular-nums"
+        >
           {value}
-        </span>
+        </Text>
       ) : (
         <input
           ref={inputRef}
           type="text"
-          className="text-xs font-mono bg-transparent border border-transparent rounded px-1 py-0.5 text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"
+          className="text-caption font-mono bg-transparent border border-transparent rounded-md px-1 py-0.5 text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           onBlur={handleTextBlur}

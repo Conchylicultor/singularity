@@ -14,6 +14,7 @@ import {
 import { MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBottom, MdVerticalAlignTop } from "react-icons/md";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useConversations } from "@plugins/conversations/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
@@ -79,13 +80,13 @@ function SectionHeader({
         onClick={onToggleExpanded}
         aria-expanded={expanded}
         aria-label={expanded ? `Collapse ${title}` : `Expand ${title}`}
-        className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-accent"
+        className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
       >
         <CollapsibleChevron open={expanded} className="size-4" />
       </button>
-      <div className="min-w-0 flex-1 truncate px-1 py-0.5 text-xs font-semibold text-muted-foreground">
+      <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
         {title}
-      </div>
+      </Text>
       {count > 0 && (
         <Badge size="sm" className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100">
           {count}
@@ -312,9 +313,9 @@ export function QueueView({
 
   if (!conv.pending && waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
-      <div className="px-4 py-8 text-center text-xs text-muted-foreground">
+      <Text as="div" variant="caption" className="px-4 py-8 text-center text-muted-foreground">
         All clear — no conversations are waiting on you.
-      </div>
+      </Text>
     );
   }
 
@@ -406,9 +407,9 @@ export function QueueView({
           )}
           <DragOverlay dropAnimation={null}>
             {draggingConv ? (
-              <div className="flex items-center rounded border border-accent bg-background/90 px-2 py-1.5 text-sm shadow-md">
+              <Text as="div" variant="body" className="flex items-center rounded-md border border-accent bg-background/90 px-2 py-1.5 shadow-md">
                 <ConversationItem conv={draggingConv} />
-              </div>
+              </Text>
             ) : null}
           </DragOverlay>
         </DndContext>
@@ -473,14 +474,14 @@ export function QueueView({
                     <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
                       <button
                         onClick={(e) => { e.stopPropagation(); void fetchEndpoint(rerankQueue, {}, { body: { conversationId: conv.id } }); }}
-                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                        className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
                         aria-label="Add to queue"
                       >
                         <MdOutlineQueue className="size-3.5" />
                       </button>
                       <button
                         onClick={(e: React.MouseEvent) => { e.stopPropagation(); void onCloseConversation(conv.id, e); }}
-                        className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+                        className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
                         aria-label="Close conversation"
                       >
                         <MdClose className="size-3.5" />
@@ -634,7 +635,7 @@ function QueueRow({
           {!isTop && (
             <button
               onClick={(e) => { e.stopPropagation(); void onPromoteToTop(conv.id); }}
-              className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
               aria-label="Move to top"
             >
               <MdVerticalAlignTop className="size-3.5" />
@@ -643,7 +644,7 @@ function QueueRow({
           {canStepDown && (
             <button
               onClick={(e) => { e.stopPropagation(); void onStepDown(conv.id); }}
-              className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
               aria-label="Move down 5"
             >
               <MdKeyboardDoubleArrowDown className="size-3.5" />
@@ -652,7 +653,7 @@ function QueueRow({
           {!isBottom && (
             <button
               onClick={(e) => { e.stopPropagation(); void onSendToBottom(conv.id); }}
-              className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
               aria-label="Move to bottom"
             >
               <MdVerticalAlignBottom className="size-3.5" />
@@ -660,7 +661,7 @@ function QueueRow({
           )}
           <button
             onClick={(e: React.MouseEvent) => void onClose(conv.id, e)}
-            className="flex h-5 w-5 items-center justify-center rounded hover:bg-accent"
+            className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
             aria-label="Close conversation"
           >
             <MdClose className="size-3.5" />

@@ -45,7 +45,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
             placeholder={PLACEHOLDER}
             rows={3}
             spellCheck={false}
-            className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 font-mono text-sm outline-none focus:border-primary"
+            className="w-full resize-y rounded-md border border-border bg-background px-3 py-2 font-mono text-body outline-none focus:border-primary"
           />
         </label>
 
@@ -56,7 +56,7 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
           <select
             value={voicingId}
             onChange={(e) => update({ voicingId: e.target.value })}
-            className="rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+            className="rounded-md border border-border bg-background px-2.5 py-1.5 text-caption outline-none focus:border-primary"
           >
             {VOICINGS.map((v) => (
               <option key={v.id} value={v.id}>
@@ -83,16 +83,16 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
                 ),
               })
             }
-            className="w-16 rounded-md border border-border bg-background px-2.5 py-1.5 text-xs outline-none focus:border-primary"
+            className="w-16 rounded-md border border-border bg-background px-2.5 py-1.5 text-caption outline-none focus:border-primary"
           />
         </label>
       </div>
 
-      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs">
+      <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-caption">
         <span className="text-muted-foreground">
           {events.length} chord{events.length === 1 ? "" : "s"} · each cell is a
-          bar · <code className="rounded bg-muted px-1">( )</code> share a bar ·{" "}
-          <code className="rounded bg-muted px-1">.</code> holds the previous
+          bar · <code className="rounded-md bg-muted px-1">( )</code> share a bar ·{" "}
+          <code className="rounded-md bg-muted px-1">.</code> holds the previous
           chord
         </span>
         {skipped.length > 0 ? (

@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface BashInput {
   command: string;
@@ -24,7 +25,11 @@ export function BashToolView({ event }: ToolRendererProps) {
       summary={input.description || `$ ${input.command}`}
     >
       <ContentScope>
-      <div className="mt-2 overflow-hidden rounded-md border border-border/40 bg-muted font-mono text-xs leading-5">
+      <Text
+        as="div"
+        variant="caption"
+        className="mt-2 overflow-hidden rounded-md border border-border/40 bg-muted font-mono"
+      >
         <div className="flex items-start gap-2 px-3 py-2">
           <span className="select-none text-muted-foreground/40">$</span>
           <span className="flex-1 whitespace-pre-wrap break-words text-foreground">
@@ -35,7 +40,7 @@ export function BashToolView({ event }: ToolRendererProps) {
           <>
             <div className="border-t border-border/30" />
             <pre
-              className={`max-h-72 overflow-auto whitespace-pre-wrap break-words px-3 py-2 leading-5 ${
+              className={`max-h-72 overflow-auto whitespace-pre-wrap break-words px-3 py-2 ${
                 result.isError ? "text-destructive" : "text-muted-foreground"
               }`}
             >
@@ -45,7 +50,7 @@ export function BashToolView({ event }: ToolRendererProps) {
             </pre>
           </>
         )}
-      </div>
+      </Text>
       </ContentScope>
     </ToolCallCard>
   );

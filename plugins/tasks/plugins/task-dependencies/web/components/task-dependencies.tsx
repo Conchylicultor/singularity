@@ -19,6 +19,7 @@ import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";
 
@@ -81,7 +82,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
       </SectionHeaderRow>
       <CollapsibleContent>
         {deps.length === 0 ? (
-          <p className="text-muted-foreground text-sm">No dependencies.</p>
+          <Text as="p" variant="body" tone="muted">No dependencies.</Text>
         ) : (
           <ul className="flex flex-wrap gap-2">
             {deps.map((depId) => (
@@ -127,7 +128,7 @@ function DepChip({
           <button
             type="button"
             onClick={remove}
-            className="hover:bg-destructive/10 hover:text-destructive rounded p-0.5"
+            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-0.5"
             aria-label={`Remove dependency ${title}`}
           >
             <MdClose className="h-3 w-3" />

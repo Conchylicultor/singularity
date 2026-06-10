@@ -49,7 +49,7 @@ export function PageHeader({ pageId }: { pageId: string }) {
         onFocus={title.onFocus}
         onBlur={title.onBlur}
         placeholder="Untitled"
-        className="flex-1 truncate bg-transparent text-2xl font-semibold outline-none"
+        className="text-title flex-1 truncate bg-transparent outline-none"
       />
     </div>
   );

@@ -13,6 +13,7 @@ import {
 import { useConfig } from "@plugins/config_v2/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   useTrackColorMap,
   useHiddenTrackIds,
@@ -116,7 +117,7 @@ function GridLines({
           className="absolute left-0 border-t border-border/60"
           style={{ top: beatToY(b.startBeat), width: laneWidth }}
         >
-          <span className="absolute left-1 top-0.5 select-none text-[10px] tabular-nums text-muted-foreground/70">
+          <span className="absolute left-1 top-0.5 select-none text-3xs tabular-nums text-muted-foreground/70">
             {b.index + 1}
           </span>
         </div>
@@ -360,6 +361,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
               defeat anyway. */}
           {fontPx !== null ? (
             <span
+              // eslint-disable-next-line text/no-adhoc-typography -- per-note glyph sized by inline fontSize (fontPx); tight leading is required to vertically center the note-name on the falling bar
               className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center font-semibold leading-none text-white"
               style={{
                 fontSize: fontPx,
@@ -431,9 +433,9 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
         {/* Empty-score affordance. */}
         {score.notes.length === 0 ? (
           <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <span className="text-sm text-muted-foreground">
+            <Text as="span" variant="body" className="text-muted-foreground">
               No notes to display. Load a source to see the piano roll.
-            </span>
+            </Text>
           </div>
         ) : null}
       </div>

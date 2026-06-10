@@ -1,5 +1,6 @@
 import type React from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 type ModeValue = TaskChainRelateMode | "independent";
@@ -40,7 +41,7 @@ export function RelateModeChip({
     : RELATE_MODES.filter((m) => m.value !== "independent");
 
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <Text as="div" variant="caption" className="flex items-center gap-1.5 text-muted-foreground">
       <span>Mode</span>
       <div
         role="radiogroup"
@@ -70,6 +71,6 @@ export function RelateModeChip({
           );
         })}
       </div>
-    </div>
+    </Text>
   );
 }

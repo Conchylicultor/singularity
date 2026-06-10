@@ -182,7 +182,8 @@ export function DiffRenderer({
   return (
     <div
       ref={containerRef}
-      className="diff-view overflow-auto font-mono text-xs leading-5"
+      // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono diff line-height for gutter alignment, distinct from caption's tighter line-height
+      className="diff-view overflow-auto font-mono text-caption leading-5"
       data-monotonous={fixedSide ? "" : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}

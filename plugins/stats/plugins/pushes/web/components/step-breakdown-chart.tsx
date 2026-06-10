@@ -10,6 +10,7 @@ import {
   YAxis,
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   ChartState,
   axisProps,
@@ -63,9 +64,9 @@ export function StepBreakdownChart({ bucket }: { bucket: string }) {
 
   return (
     <div>
-      <p className="mb-2 text-sm font-medium text-muted-foreground">
+      <Text as="p" variant="label" className="mb-2 text-muted-foreground">
         Avg step duration (seconds)
-      </p>
+      </Text>
       <div className="h-64 w-full">
         <ChartState
           error={error}

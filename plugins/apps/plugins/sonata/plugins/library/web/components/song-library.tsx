@@ -4,6 +4,7 @@ import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { songsResource } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
@@ -90,9 +91,9 @@ export function SongLibrary() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {songs.error ? (
-        <div className="px-6 py-4 text-sm text-destructive">
+        <Text as="div" variant="body" tone="destructive" className="px-6 py-4">
           Failed to load songs: {songs.error.message}
-        </div>
+        </Text>
       ) : null}
       <Library.Sort.Dispatch
         activeSortId={sort}

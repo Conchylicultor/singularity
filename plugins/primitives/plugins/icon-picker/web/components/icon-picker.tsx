@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { MdClose, MdSearch } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import {
@@ -69,7 +70,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
           value={query}
           onChange={(e) => setQuery(e.target.value)}
           placeholder="Search icons…"
-          className="w-full rounded-md border border-input bg-background py-1 pl-7 pr-7 text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+          className="w-full rounded-md border border-input bg-background py-1 pl-7 pr-7 text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
         />
         {query && (
           <button
@@ -85,7 +86,9 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
       {/* Icon grid */}
       <div className="max-h-64 overflow-y-auto px-1 pb-1 space-y-2">
         {!fullSet ? (
-          <p className="py-8 text-center text-xs text-muted-foreground">Loading icons…</p>
+          <Text as="p" variant="caption" className="py-8 text-center text-muted-foreground">
+            Loading icons…
+          </Text>
         ) : isSearching ? (
           searchResults.length > 0 ? (
             <div className="grid grid-cols-9 gap-1">
@@ -94,9 +97,9 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
               ))}
             </div>
           ) : (
-            <p className="py-4 text-center text-xs text-muted-foreground">
+            <Text as="p" variant="caption" className="py-4 text-center text-muted-foreground">
               No icons match &ldquo;{query}&rdquo;
-            </p>
+            </Text>
           )
         ) : (
           fullSet.categories.map((cat) => (

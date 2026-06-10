@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { MdWarning } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -48,13 +49,13 @@ export function CodeReviewSummary({
   if (count === 0 && !hasPastPushes) return null;
 
   return (
-    <span className="flex items-center gap-1.5 text-xs tabular-nums">
+    <Text as="span" variant="caption" className="flex items-center gap-1.5 tabular-nums">
       <span>{count}</span>
       <span className="text-success">+{additions}</span>
       <span className="text-destructive">−{deletions}</span>
       {maxLevel !== "safe" && (
         <MdWarning className={WARNING_ICON_CLASS[maxLevel]} />
       )}
-    </span>
+    </Text>
   );
 }

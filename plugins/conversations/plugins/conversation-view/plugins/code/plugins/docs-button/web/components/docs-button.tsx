@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Button } from "@/components/ui/button";
@@ -37,7 +38,11 @@ export function DocsButton() {
       className="gap-1.5"
     >
       <MdArticle className="size-4" />
-      {count !== null && <span className="tabular-nums text-xs">{count}</span>}
+      {count !== null && (
+        <Text variant="caption" className="tabular-nums">
+          {count}
+        </Text>
+      )}
     </Button>
   );
 }

@@ -61,7 +61,7 @@ export function GroupBox({
             {...listeners}
             type="button"
             aria-label="Reorder group"
-            className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100 touch-none"
+            className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100 touch-none"
           >
             <MdDragIndicator className="size-3.5" />
           </button>
@@ -72,7 +72,7 @@ export function GroupBox({
               void onDelete();
             }}
             aria-label="Delete group"
-            className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
+            className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
             title={
               isEmpty
                 ? "Delete group"
@@ -85,7 +85,7 @@ export function GroupBox({
       }
     >
       {isEmpty ? (
-        <div className="px-2 py-1 text-[11px] text-muted-foreground italic">
+        <div className="px-2 py-1 text-2xs text-muted-foreground italic">
           Empty — drop a conversation here
         </div>
       ) : (

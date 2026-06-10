@@ -44,7 +44,7 @@ export function ColorInput({ color, onChange, className }: ColorInputProps) {
   return (
     <div className={cn("flex items-center gap-2", className)}>
       <span
-        className="size-5 shrink-0 rounded border border-border"
+        className="size-5 shrink-0 rounded-md border border-border"
         style={{ background: color.toOklch() }}
       />
       <input
@@ -55,13 +55,13 @@ export function ColorInput({ color, onChange, className }: ColorInputProps) {
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
         }}
-        className="w-full rounded-md border border-input bg-background px-2 py-1 font-mono text-xs outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+        className="w-full rounded-md border border-input bg-background px-2 py-1 font-mono text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
         spellCheck={false}
       />
       <button
         type="button"
         onClick={cycleFormat}
-        className="w-9 shrink-0 text-center text-[10px] font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground cursor-pointer select-none"
+        className="w-9 shrink-0 text-center text-3xs font-mono uppercase tracking-wider text-muted-foreground hover:text-foreground cursor-pointer select-none"
       >
         {FORMAT_LABELS[format]}
       </button>

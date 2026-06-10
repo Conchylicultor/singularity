@@ -1,5 +1,6 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { MdRefresh } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
@@ -98,7 +99,7 @@ export function MemoryPanel() {
           {grouped.map(({ type, items }) => (
             <div key={type}>
               {type !== "index" && (
-                <div className="px-3 py-1 text-[10px] font-semibold uppercase tracking-widest text-muted-foreground/60">
+                <div className="px-3 py-1 text-3xs font-semibold uppercase tracking-widest text-muted-foreground/60">
                   {type}
                 </div>
               )}
@@ -108,7 +109,7 @@ export function MemoryPanel() {
                   type="button"
                   onClick={() => setSelected(f.name)}
                   className={cn(
-                    "w-full px-3 py-1.5 text-left text-xs transition-colors hover:bg-muted/50 flex items-center gap-1.5 min-w-0",
+                    "w-full px-3 py-1.5 text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-1.5 min-w-0",
                     selected === f.name && "bg-muted font-medium",
                   )}
                 >
@@ -127,12 +128,12 @@ export function MemoryPanel() {
             </div>
           ))}
           {files.length === 0 && (
-            <p className="px-3 py-4 text-xs text-muted-foreground">No memory files found.</p>
+            <Text as="p" variant="caption" className="px-3 py-4 text-muted-foreground">No memory files found.</Text>
           )}
         </div>
         {dir && (
           <div className="border-t px-3 py-2">
-            <p className="truncate font-mono text-[9px] text-muted-foreground/50" title={dir}>{dir}</p>
+            <p className="truncate font-mono text-3xs text-muted-foreground/50" title={dir}>{dir}</p>
           </div>
         )}
       </div>
@@ -140,21 +141,21 @@ export function MemoryPanel() {
       {/* Content */}
       <div className="flex-1 overflow-y-auto">
         {!selected ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             Select a memory file
-          </div>
+          </Text>
         ) : loadingContent ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             Loading…
-          </div>
+          </Text>
         ) : error ? (
-          <div className="flex h-full items-center justify-center text-sm text-destructive">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-destructive">
             {error}
-          </div>
+          </Text>
         ) : content !== null ? (
-          <div className="px-6 py-4 text-sm leading-6">
+          <Text as="div" variant="body" className="px-6 py-4">
             <Markdown>{content}</Markdown>
-          </div>
+          </Text>
         ) : null}
       </div>
     </div>

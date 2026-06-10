@@ -3,12 +3,14 @@
  * "waiting for your input" indicator shown for any `waitingFor` kind that has no
  * contributed variant. Kept generic — no per-kind logic lives here.
  */
+import { Text } from "@plugins/primitives/plugins/text/web";
+
 export function PendingContentIndicator() {
   return (
     <div className="flex items-center gap-2 px-1 py-1">
-      <span className="text-xs text-warning/70">
+      <Text as="span" variant="caption" className="text-warning/70">
         Content pending in terminal — waiting for your input
-      </span>
+      </Text>
     </div>
   );
 }

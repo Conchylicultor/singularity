@@ -1,6 +1,7 @@
 import { useState, useCallback, useMemo } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Button } from "@/components/ui/button";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -97,10 +98,10 @@ export function BroadcastsPanel() {
       {/* Header */}
       <div className="flex items-center justify-between border-b px-4 py-3">
         <div className="min-w-0">
-          <span className="text-sm font-medium">Broadcast Messages</span>
+          <Text as="span" variant="label">Broadcast Messages</Text>
           {filePath && (
             <p
-              className="mt-0.5 truncate font-mono text-[9px] text-muted-foreground/50"
+              className="mt-0.5 truncate font-mono text-3xs text-muted-foreground/50"
               title={filePath}
             >
               {filePath}
@@ -130,9 +131,9 @@ export function BroadcastsPanel() {
 
       {/* Error banner */}
       {error && (
-        <div className="border-b bg-destructive/10 px-4 py-2 text-xs text-destructive">
+        <Text as="div" variant="caption" className="border-b bg-destructive/10 px-4 py-2 text-destructive">
           {error}
-        </div>
+        </Text>
       )}
 
       {/* Add form */}
@@ -140,7 +141,7 @@ export function BroadcastsPanel() {
         <div className="flex flex-col gap-2.5 border-b bg-muted/30 px-4 py-3">
           {/* Severity */}
           <div className="flex items-center gap-2">
-            <span className="w-16 shrink-0 text-xs text-muted-foreground">Severity</span>
+            <Text as="span" variant="caption" className="w-16 shrink-0 text-muted-foreground">Severity</Text>
             <div className="flex gap-1">
               {(["error", "warning", "info"] as BroadcastSeverity[]).map((s) => (
                 <ToggleChip
@@ -159,9 +160,9 @@ export function BroadcastsPanel() {
 
           {/* Message */}
           <div className="flex gap-2">
-            <span className="mt-1.5 w-16 shrink-0 text-xs text-muted-foreground">Message</span>
+            <Text as="span" variant="caption" className="mt-1.5 w-16 shrink-0 text-muted-foreground">Message</Text>
             <textarea
-              className="flex-1 resize-none rounded border bg-background px-2 py-1.5 text-xs leading-relaxed focus:outline-none focus:ring-1 focus:ring-ring"
+              className="flex-1 resize-none rounded-md border bg-background px-2 py-1.5 text-caption focus:outline-none focus:ring-1 focus:ring-ring"
               rows={2}
               placeholder="Rebase required: breaking DB changes landed in abc1234"
               value={form.message}
@@ -171,16 +172,16 @@ export function BroadcastsPanel() {
 
           {/* Since / Until */}
           <div className="flex items-center gap-2">
-            <span className="w-16 shrink-0 text-xs text-muted-foreground">Since</span>
+            <Text as="span" variant="caption" className="w-16 shrink-0 text-muted-foreground">Since</Text>
             <input
-              className="w-28 rounded border bg-background px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-28 rounded-md border bg-background px-2 py-1 font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="abc1234"
               value={form.since}
               onChange={(e) => setForm((f) => ({ ...f, since: e.target.value }))}
             />
-            <span className="text-xs text-muted-foreground">Until</span>
+            <Text as="span" variant="caption" className="text-muted-foreground">Until</Text>
             <input
-              className="w-28 rounded border bg-background px-2 py-1 font-mono text-xs focus:outline-none focus:ring-1 focus:ring-ring"
+              className="w-28 rounded-md border bg-background px-2 py-1 font-mono text-caption focus:outline-none focus:ring-1 focus:ring-ring"
               placeholder="def5678"
               value={form.until}
               onChange={(e) => setForm((f) => ({ ...f, until: e.target.value }))}
@@ -189,7 +190,7 @@ export function BroadcastsPanel() {
 
           {/* Commands filter */}
           <div className="flex items-center gap-2">
-            <span className="w-16 shrink-0 text-xs text-muted-foreground">Commands</span>
+            <Text as="span" variant="caption" className="w-16 shrink-0 text-muted-foreground">Commands</Text>
             <div className="flex items-center gap-2">
               {ALL_COMMANDS.map((cmd) => (
                 <label key={cmd} className="flex cursor-pointer items-center gap-1">
@@ -199,11 +200,11 @@ export function BroadcastsPanel() {
                     checked={form.commands.includes(cmd)}
                     onChange={() => toggleCommand(cmd)}
                   />
-                  <span className="text-xs">{cmd}</span>
+                  <Text as="span" variant="caption">{cmd}</Text>
                 </label>
               ))}
               {form.commands.length === 0 && (
-                <span className="ml-1 text-xs italic text-muted-foreground">(all)</span>
+                <Text as="span" variant="caption" className="ml-1 italic text-muted-foreground">(all)</Text>
               )}
             </div>
           </div>
@@ -236,13 +237,13 @@ export function BroadcastsPanel() {
       {/* Entry list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             Loading…
-          </div>
+          </Text>
         ) : entries.length === 0 ? (
-          <div className="flex h-full items-center justify-center text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             No active broadcasts
-          </div>
+          </Text>
         ) : (
           <ul className="divide-y">
             {entries.map((entry, i) => (
@@ -255,9 +256,9 @@ export function BroadcastsPanel() {
                   {entry.severity}
                 </Badge>
                 <div className="min-w-0 flex-1">
-                  <p className="text-sm">{entry.message}</p>
+                  <Text as="p" variant="body">{entry.message}</Text>
                   {(entry.since ?? entry.until ?? entry.commands) && (
-                    <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-[10px] text-muted-foreground">
+                    <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-3xs text-muted-foreground">
                       {entry.since && <span>since: {entry.since.slice(0, 8)}</span>}
                       {entry.until && <span>until: {entry.until.slice(0, 8)}</span>}
                       {entry.commands && (

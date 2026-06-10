@@ -1,5 +1,6 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { MdReplay } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type MetaPromptEvent = Extract<JsonlEvent, { kind: "meta-prompt" }>;
 
@@ -11,9 +12,9 @@ export function MetaPromptRow({ event }: { event: JsonlEvent }) {
         <MdReplay className="size-3.5" />
         <span>Resumed by harness{e.source ? ` · ${e.source}` : ""}</span>
       </div>
-      <div className="whitespace-pre-wrap text-xs text-muted-foreground">
+      <Text as="div" variant="caption" className="whitespace-pre-wrap text-muted-foreground">
         {e.text}
-      </div>
+      </Text>
     </div>
   );
 }

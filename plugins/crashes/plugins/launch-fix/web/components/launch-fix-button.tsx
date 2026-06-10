@@ -21,7 +21,7 @@ export function LaunchFixButton({
           aria-label="Launch fix agent"
           disabled={disabled}
           // eslint-disable-next-line badge/no-adhoc-chip -- inline action button
-          className="flex items-center gap-1 rounded px-1.5 py-0.5 underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
+          className="flex items-center gap-1 rounded-md px-1.5 py-0.5 underline hover:no-underline disabled:cursor-not-allowed disabled:opacity-60 disabled:no-underline"
         >
           <MdAutoFixHigh className="size-3" />
           Fix

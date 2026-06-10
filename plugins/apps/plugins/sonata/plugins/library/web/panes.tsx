@@ -5,6 +5,7 @@ import {
   type,
 } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import {
   Sonata,
@@ -157,9 +158,9 @@ function SonataPlayerSurface(): ReactElement {
           <Button variant="outline" size="xs" onClick={() => clearRoute()}>
             ← Library
           </Button>
-          <span className="text-sm font-semibold text-foreground">
+          <Text variant="body" className="font-semibold text-foreground">
             {currentSongTitle ?? "Untitled"}
-          </span>
+          </Text>
         </div>
 
         <div className="flex items-center gap-2">
@@ -207,9 +208,14 @@ function SonataPlayerSurface(): ReactElement {
               activeDisplayId={effectiveDisplayId}
             />
           ) : (
-            <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+            <Text
+              as="div"
+              variant="body"
+              tone="muted"
+              className="flex h-full items-center justify-center p-8"
+            >
               No display selected.
-            </div>
+            </Text>
           )}
         </div>
 

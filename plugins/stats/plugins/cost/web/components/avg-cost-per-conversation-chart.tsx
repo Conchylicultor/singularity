@@ -19,6 +19,7 @@ import {
   useFetchJson,
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { formatUsd, formatUsdCompact, formatTokensCompact } from "./format";
 import { useScope, withScope } from "./use-scope";
 
@@ -107,9 +108,9 @@ export function AvgCostPerConversationChart() {
   return (
     <div className="flex flex-col gap-6">
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">
           Avg cost / conversation by model
-        </h3>
+        </Text>
         <div className="h-56 w-full">
           <ChartState
             error={error}
@@ -186,9 +187,9 @@ export function AvgCostPerConversationChart() {
       </div>
 
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">
           Avg tokens / conversation by model
-        </h3>
+        </Text>
         <div className="h-56 w-full">
           <ChartState
             error={error}

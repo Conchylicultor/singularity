@@ -6,6 +6,7 @@ import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Button } from "@/components/ui/button";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { readNdjson } from "../internal/read-ndjson";
 import {
   listWorktrees,
@@ -50,22 +51,22 @@ function StatusBadge({ status }: { status: string }) {
 
 function DirtyIndicator({ entry }: { entry: WorktreeEntry }) {
   if (!entry.dirExists && !entry.dbExists) {
-    return <span className="text-xs text-success">fully clean</span>;
+    return <Text as="span" variant="caption" className="text-success">fully clean</Text>;
   }
   if (!entry.dirExists) {
-    return <span className="text-xs text-muted-foreground italic">no dir</span>;
+    return <Text as="span" variant="caption" className="text-muted-foreground italic">no dir</Text>;
   }
   if (entry.isSafe) {
-    return <span className="text-xs text-muted-foreground">clean</span>;
+    return <Text as="span" variant="caption" className="text-muted-foreground">clean</Text>;
   }
   const parts: string[] = [];
   if (entry.unpushedCount > 0) parts.push(`${entry.unpushedCount} unpushed`);
   if (entry.isDirty) parts.push("uncommitted");
   return (
-    <span className="flex items-center gap-1 text-xs text-warning">
+    <Text as="span" variant="caption" className="flex items-center gap-1 text-warning">
       <MdWarning className="size-3.5 shrink-0" />
       {parts.join(", ")}
-    </span>
+    </Text>
   );
 }
 
@@ -204,11 +205,11 @@ export function WorktreeCleanupPanel() {
       {/* Header */}
       <div className="flex items-center justify-between px-4 py-3 border-b gap-3">
         <div className="flex items-center gap-2 min-w-0">
-          <h2 className="text-sm font-semibold shrink-0">Worktree Cleanup</h2>
+          <Text as="h2" variant="label" className="font-semibold shrink-0">Worktree Cleanup</Text>
           {entries && entries.length > 0 && (
-            <span className="text-xs text-muted-foreground truncate">
+            <Text as="span" variant="caption" className="text-muted-foreground truncate">
               {entries.length} worktree{entries.length !== 1 ? "s" : ""} · {safeCount} safe to delete
-            </span>
+            </Text>
           )}
         </div>
         <div className="flex items-center gap-2 shrink-0">
@@ -229,9 +230,9 @@ export function WorktreeCleanupPanel() {
 
       {/* Bulk result banner */}
       {bulkResult && (
-        <div className="px-4 py-2 text-xs bg-muted text-muted-foreground border-b">
+        <Text as="div" variant="caption" className="px-4 py-2 bg-muted text-muted-foreground border-b">
           {bulkResult}
-        </div>
+        </Text>
       )}
 
       {/* Content */}
@@ -243,9 +244,9 @@ export function WorktreeCleanupPanel() {
         ) : sortedEntries?.length === 0 ? (
           <Placeholder>No worktrees found.</Placeholder>
         ) : (
-          <table className="w-full text-sm">
+          <table className="w-full text-body">
             <thead>
-              <tr className="border-b text-xs text-muted-foreground">
+              <tr className="border-b text-caption text-muted-foreground">
                 <th className="text-left font-medium px-4 py-2">Task</th>
                 <th className="text-left font-medium px-4 py-2">Age</th>
                 <th className="text-left font-medium px-4 py-2">Dirty?</th>
@@ -314,18 +315,18 @@ function EntryRow({
       <tr className={`border-b transition-colors ${highlighted ? "bg-destructive/10" : "hover:bg-muted/30"}`}>
         <td className="px-4 py-2 max-w-[220px]">
           <div className="flex flex-col gap-0.5">
-            <span className="truncate font-medium text-xs" title={entry.taskTitle}>
+            <Text as="span" variant="caption" className="truncate font-medium" title={entry.taskTitle}>
               {entry.taskTitle}
-            </span>
+            </Text>
             <div className="flex items-center gap-1">
               <StatusBadge status={entry.taskStatus} />
-              <span className="text-[10px] text-muted-foreground font-mono truncate">
+              <span className="text-3xs text-muted-foreground font-mono truncate">
                 {branchName}
               </span>
             </div>
           </div>
         </td>
-        <td className="px-4 py-2 text-xs text-muted-foreground whitespace-nowrap">
+        <td className="px-4 py-2 text-caption text-muted-foreground whitespace-nowrap">
           {relativeAge(entry.createdAt)}
         </td>
         <td className="px-4 py-2">
@@ -333,7 +334,7 @@ function EntryRow({
         </td>
         <td className="px-4 py-2 text-right whitespace-nowrap">
           {!entry.dirExists && !entry.dbExists ? (
-            <Button size="sm" variant="ghost" disabled className="h-7 text-xs opacity-40 cursor-default">
+            <Button size="sm" variant="ghost" disabled className="h-7 text-caption opacity-40 cursor-default">
               <MdDelete className="size-3.5 mr-1" />
               Drop DB
             </Button>
@@ -343,7 +344,7 @@ function EntryRow({
               variant={entry.isSafe || !entry.dirExists ? "outline" : "ghost"}
               onClick={onDelete}
               disabled={deletingStep != null}
-              className="h-7 text-xs"
+              className="h-7 text-caption"
             >
               {deletingStep != null ? (
                 <>
@@ -366,14 +367,14 @@ function EntryRow({
         <tr className="border-b bg-warning/5">
           <td colSpan={5} className="px-4 py-2">
             <div className="flex items-center justify-between gap-4">
-              <span className="text-xs text-warning">
+              <Text as="span" variant="caption" className="text-warning">
                 This worktree has unpushed commits or uncommitted changes. Delete anyway?
-              </span>
+              </Text>
               <div className="flex items-center gap-2 shrink-0">
-                <Button size="sm" variant="outline" onClick={onCancelConfirm} className="h-7 text-xs">
+                <Button size="sm" variant="outline" onClick={onCancelConfirm} className="h-7 text-caption">
                   Cancel
                 </Button>
-                <Button size="sm" variant="destructive" onClick={onConfirm} className="h-7 text-xs">
+                <Button size="sm" variant="destructive" onClick={onConfirm} className="h-7 text-caption">
                   Delete
                 </Button>
               </div>
@@ -386,7 +387,7 @@ function EntryRow({
       {error && (
         <tr className="border-b">
           <td colSpan={5} className="px-4 py-1.5">
-            <span className="text-xs text-destructive">{error}</span>
+            <Text as="span" variant="caption" className="text-destructive">{error}</Text>
           </td>
         </tr>
       )}

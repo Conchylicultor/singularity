@@ -139,6 +139,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
             }}
           >
             <span
+              // eslint-disable-next-line text/no-adhoc-typography, typography-tokens/no-arbitrary-font-size -- 9px label tuned to fit a narrow white-key cap; below the 10px token floor, tight leading centers it on the key
               className={`select-none text-[9px] leading-none ${
                 lit ? "text-primary-foreground" : ""
               }`}
@@ -168,6 +169,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
             }}
           >
             <span
+              // eslint-disable-next-line text/no-adhoc-typography, typography-tokens/no-arbitrary-font-size -- 7px label tuned to fit a narrow black-key cap; below the 10px token floor, tight leading centers it on the key
               className={`select-none text-[7px] leading-none ${
                 lit ? "text-primary-foreground" : ""
               }`}

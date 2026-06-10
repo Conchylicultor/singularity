@@ -28,9 +28,9 @@ hard corner, a pill/circle) and are always allowed.
 `cn`/`clsx` argument) carrying a bare `rounded` or an arbitrary `rounded-[…]`.
 Reach for a token-driven scale step instead so Shape presets keep working.
 
-A mechanically-generated `ignores` allowlist in `lint/index.ts` exempts current
-offenders so the rule lands as `error`; burn it down file-by-file. The migrated
-chrome (`row.tsx`, `resize-handle.tsx`) is intentionally NOT allowlisted.
+The rule enforces repo-wide with no `ignores` allowlist — every corner routes
+through the token scale. The legacy offenders were all migrated; a genuinely
+fixed literal escapes per-site via the disable comment below, not a central list.
 
 Escape hatch (rare — a genuinely fixed literal shape):
 

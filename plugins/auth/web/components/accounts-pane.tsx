@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Auth } from "../slots";
 import { useAuthState } from "../hooks";
 import { DefaultProviderRow } from "./default-provider-row";
@@ -10,17 +11,17 @@ export function AccountsPane() {
     <div className="flex flex-col gap-4 p-6">
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-lg font-semibold">Accounts</h1>
-          <p className="text-sm text-muted-foreground">
+          <Text as="h1" variant="heading">Accounts</Text>
+          <Text as="p" variant="body" className="text-muted-foreground">
             Connect third-party services. Tokens are stored encrypted in
             <code className="mx-1">~/.singularity/auth/</code>
             on the main app and shared with all worktrees.
-          </p>
+          </Text>
         </div>
       </div>
 
       {!authState.pending && authState.data.mainOffline ? (
-        <div className="rounded border border-warning/50 bg-warning/10 p-3 text-sm text-warning">
+        <Text as="div" variant="body" className="rounded-md border border-warning/50 bg-warning/10 p-3 text-warning">
           The main app is offline. Worktrees can't read tokens until it comes
           back. Visit{" "}
           <a
@@ -32,21 +33,21 @@ export function AccountsPane() {
             http://singularity.localhost:9000
           </a>{" "}
           to start it.
-        </div>
+        </Text>
       ) : null}
 
       {authState.error ? (
-        <div className="rounded border border-destructive/50 bg-destructive/10 p-3 text-sm text-destructive">
+        <Text as="div" variant="body" className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
           Failed to load auth state: {String(authState.error)}
-        </div>
+        </Text>
       ) : null}
 
-      <div className="flex flex-col divide-y rounded border">
+      <div className="flex flex-col divide-y rounded-md border">
         {providers.length === 0 ? (
-          <div className="p-4 text-sm text-muted-foreground">
+          <Text as="div" variant="body" className="p-4 text-muted-foreground">
             No providers registered. Install an auth provider plugin (e.g.
             <code className="mx-1">auth-google</code>).
-          </div>
+          </Text>
         ) : (
           providers.map((p) => {
             const Row = p.rowComponent ?? DefaultProviderRow;

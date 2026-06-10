@@ -7,7 +7,7 @@
 - Description: Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
 - Web:
   - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/slot-render.renderIsolated`
+  - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`
 - Server:
   - Uses: `config_v2.ConfigV2`
 

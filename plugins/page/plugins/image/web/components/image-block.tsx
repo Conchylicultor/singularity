@@ -142,7 +142,7 @@ function EmptyImageBlock({
           if (file) ingest(file);
         }}
         className={cn(
-          "flex cursor-pointer items-center gap-2 rounded border border-dashed border-border px-3 py-4 text-sm text-muted-foreground transition-colors hover:bg-muted",
+          "flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-4 text-body text-muted-foreground transition-colors hover:bg-muted",
           dragOver && "border-primary bg-muted",
         )}
       >
@@ -207,7 +207,7 @@ function FilledImageBlock({
           src={attachmentUrl(attachmentId)}
           alt={alt ?? ""}
           onClick={() => setLightbox(true)}
-          className="block w-full cursor-zoom-in rounded"
+          className="block w-full cursor-zoom-in rounded-md"
         />
         <button
           type="button"
@@ -223,7 +223,7 @@ function FilledImageBlock({
           onPointerDown={onResizePointerDown}
           className="absolute top-0 right-0 h-full w-2 cursor-ew-resize"
         >
-          <div className="absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded bg-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
+          <div className="absolute top-1/2 right-0.5 h-8 w-1 -translate-y-1/2 rounded-md bg-foreground/30 opacity-0 transition-opacity group-hover:opacity-100" />
         </div>
       </div>
       {lightbox ? (

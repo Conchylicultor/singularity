@@ -31,6 +31,7 @@ const PLAIN = "__plain__";
 const METRICS =
   "p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-words [tab-size:2]";
 // Same contract, projected onto the <pre> shiki injects.
+// eslint-disable-next-line text/no-adhoc-typography -- pinned mono code-editor metric: the shiki <pre> must match METRICS size/line-height exactly so the transparent textarea overlays the highlighted glyphs
 const SHIKI_PRE = cn(
   "[&>pre]:m-0 [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5",
   "[&>pre]:whitespace-pre-wrap [&>pre]:break-words [&>pre]:[tab-size:2]",
@@ -144,14 +145,14 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
 
   return (
     <div className="px-3 py-1">
-      <div className="group relative overflow-hidden rounded bg-muted">
+      <div className="group relative overflow-hidden rounded-md bg-muted">
         {/* Hover/focus toolbar: language picker + copy. */}
         <div className="absolute top-1 right-1 z-raised flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <Select items={langItems} value={language ?? PLAIN} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"
               aria-label="Code language"
-              className="h-6 w-28 bg-background/80 text-xs backdrop-blur"
+              className="h-6 w-28 bg-background/80 text-caption backdrop-blur"
             >
               <SelectValue />
             </SelectTrigger>

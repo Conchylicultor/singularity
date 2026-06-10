@@ -9,6 +9,7 @@ import type { Conversation } from "@plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
@@ -68,9 +69,9 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
           />
         ))}
       </div>
-      <span className="tabular-nums text-xs text-muted-foreground/60">
+      <Text as="span" variant="caption" className="tabular-nums text-muted-foreground/60">
         Working for {formatElapsed(elapsed)}
-      </span>
+      </Text>
     </div>
   );
 }
@@ -217,16 +218,16 @@ export function JsonlPane({
           className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
         >
           {eventsResult.pending ? (
-            <div className="px-3 py-2 text-xs text-muted-foreground">Loading…</div>
+            <Text as="div" variant="caption" className="px-3 py-2 text-muted-foreground">Loading…</Text>
           ) : eventsResult.error ? (
-            <div className="px-3 py-2 text-xs text-destructive">
+            <Text as="div" variant="caption" className="px-3 py-2 text-destructive">
               {eventsResult.error instanceof Error ? eventsResult.error.message : String(eventsResult.error)}
-            </div>
+            </Text>
           ) : events.length === 0 ? (
-            <div className="flex flex-col px-3 py-2 text-xs text-muted-foreground">
+            <Text as="div" variant="caption" className="flex flex-col px-3 py-2 text-muted-foreground">
               <span>No transcript yet. Claude may not have written its session log.</span>
               {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-            </div>
+            </Text>
           ) : (
             <LastAssistantProvider event={lastAssistantEvent}>
               <EventSections events={visibleEvents}>

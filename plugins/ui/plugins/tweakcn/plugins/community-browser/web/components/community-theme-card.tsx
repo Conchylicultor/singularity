@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import type { CatalogTheme } from "../../shared";
 
@@ -57,14 +58,16 @@ export function CommunityThemeCard({
       </div>
 
       <div className="flex items-center gap-1.5 border-t border-border px-2 py-1.5">
-        <span
-          className="flex-1 truncate text-xs font-medium"
+        <Text
+          as="span"
+          variant="label"
+          className="flex-1 truncate"
           style={{ color: fg }}
         >
           {theme.name}
-        </span>
+        </Text>
         {theme.source === "registry" && (
-          <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-[10px] uppercase tracking-wide text-primary">
+          <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-3xs uppercase tracking-wide text-primary">
             curated
           </span>
         )}

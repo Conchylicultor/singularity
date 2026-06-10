@@ -5,6 +5,7 @@ import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
@@ -25,7 +26,7 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
           {open ? <MdExpandLess className="size-4" /> : <MdExpandMore className="size-4" />}
         </span>
         <div className="flex min-w-0 flex-1 flex-col gap-1">
-          <div className="flex flex-wrap items-center gap-2 text-xs">
+          <Text as="div" variant="caption" className="flex flex-wrap items-center gap-2">
             <Badge size="md" colorClass={familyClass(modelMeta.family)}>
               {modelMeta.label}
             </Badge>
@@ -42,56 +43,58 @@ export function CallRow({ call }: { call: ClaudeCliCall }) {
                 error
               </Badge>
             )}
-          </div>
-          <div
+          </Text>
+          <Text
+            as="div"
+            variant="body"
             className={cn(
-              "truncate text-sm",
+              "truncate",
               isError ? "text-destructive" : "text-foreground",
             )}
           >
             {previewText || <span className="text-muted-foreground">&lt;empty&gt;</span>}
-          </div>
+          </Text>
         </div>
       </button>
       {open && (
-        <div id={contentId} className="mt-3 ml-6 space-y-3 text-sm">
+        <Text as="div" variant="body" id={contentId} className="mt-3 ml-6 space-y-3">
           {call.sourceContext && Object.keys(call.sourceContext).length > 0 && (
             <Section label="Source context">
-              <pre className="overflow-auto rounded bg-muted p-2 text-xs">
+              <pre className="overflow-auto rounded-md bg-muted p-2 text-caption">
                 {JSON.stringify(call.sourceContext, null, 2)}
               </pre>
             </Section>
           )}
           {call.system && (
             <Section label="System">
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-xs">
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2 text-caption">
                 {call.system}
               </pre>
             </Section>
           )}
           <Section label="Prompt">
-            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-xs">
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2 text-caption">
               {call.prompt}
             </pre>
           </Section>
           {isError ? (
             <Section label="Error">
-              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded bg-destructive/10 p-2 text-xs text-destructive">
+              <pre className="max-h-64 overflow-auto whitespace-pre-wrap rounded-md bg-destructive/10 p-2 text-caption text-destructive">
                 {call.error}
               </pre>
             </Section>
           ) : (
             <Section label="Output">
-              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded bg-muted p-2 text-xs">
+              <pre className="max-h-96 overflow-auto whitespace-pre-wrap rounded-md bg-muted p-2 text-caption">
                 {call.output ?? ""}
               </pre>
             </Section>
           )}
-          <div className="text-xs text-muted-foreground">
+          <Text as="div" variant="caption" className="text-muted-foreground">
             {call.createdAt.toLocaleString()} · {call.durationMs}ms · id{" "}
             <code className="font-mono">{call.id}</code>
-          </div>
-        </div>
+          </Text>
+        </Text>
       )}
     </li>
   );
@@ -122,9 +125,9 @@ function SourceContextChip({
 function Section({ label, children }: { label: string; children: React.ReactNode }) {
   return (
     <div>
-      <div className="mb-1 text-xs font-medium uppercase text-muted-foreground">
+      <Text as="div" variant="caption" className="mb-1 font-medium uppercase text-muted-foreground">
         {label}
-      </div>
+      </Text>
       {children}
     </div>
   );

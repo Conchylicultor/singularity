@@ -105,7 +105,7 @@ function RuntimeGroup({
 
   return (
     <Collapsible defaultOpen={defaultOpen}>
-      <CollapsibleTrigger className="gap-1 py-0.5 text-xs">
+      <CollapsibleTrigger className="gap-1 py-0.5 text-caption">
         <CollapsibleChevron className="size-3.5 text-muted-foreground" />
         <span className={cn("font-mono font-medium", RUNTIME_COLORS[runtime])}>
           {runtime}

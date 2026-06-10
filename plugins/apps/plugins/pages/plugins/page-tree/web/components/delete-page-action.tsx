@@ -49,7 +49,7 @@ export function DeletePageAction({
         }}
         title="Delete page"
         aria-label="Delete page"
-        className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded"
+        className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md"
       >
         <MdDelete className="size-4" />
       </button>

@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { CostKpis } from "./cost-kpis";
 import { CumulativeCostChart } from "./cumulative-cost-chart";
 import { DailyCostChart } from "./daily-cost-chart";
@@ -9,16 +10,16 @@ export function CostSection() {
       <CostKpis />
       <div className="grid grid-cols-2 gap-6">
         <div>
-          <h3 className="mb-3 text-xs font-medium text-muted-foreground">Daily cost by model</h3>
+          <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Daily cost by model</Text>
           <DailyCostChart />
         </div>
         <div>
-          <h3 className="mb-3 text-xs font-medium text-muted-foreground">Sessions per day by model family</h3>
+          <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Sessions per day by model family</Text>
           <ModelUsageChart />
         </div>
       </div>
       <div>
-        <h3 className="mb-3 text-xs font-medium text-muted-foreground">Cumulative cost over time</h3>
+        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Cumulative cost over time</Text>
         <CumulativeCostChart />
       </div>
     </div>

@@ -13,6 +13,7 @@ import {
   SidebarMenuAction,
 } from "@/components/ui/sidebar";
 import { MdClose } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function HistoryView({
   activeId,
@@ -69,9 +70,9 @@ export function HistoryView({
   return (
     <div className="flex flex-col gap-1">
       {isEmpty && !conv.pending ? (
-        <div className="px-4 py-2 text-xs text-muted-foreground">
+        <Text as="div" variant="caption" className="px-4 py-2 text-muted-foreground">
           No conversations
-        </div>
+        </Text>
       ) : (
         <SidebarMenu>
           {liveItems.map(renderRow)}
@@ -79,9 +80,9 @@ export function HistoryView({
         </SidebarMenu>
       )}
       {isFetchingNextPage && (
-        <div className="px-4 py-2 text-xs text-muted-foreground">
+        <Text as="div" variant="caption" className="px-4 py-2 text-muted-foreground">
           Loading...
-        </div>
+        </Text>
       )}
       <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
     </div>

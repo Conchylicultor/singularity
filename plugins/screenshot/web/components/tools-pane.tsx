@@ -7,6 +7,7 @@ import {
   MdPanTool,
   MdUndo,
 } from "react-icons/md";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 
@@ -36,7 +37,9 @@ interface Props {
 export function ToolsPane(props: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b px-3 py-2 text-sm font-medium">Tools</div>
+      <Text as="div" variant="label" className="border-b px-3 py-2">
+        Tools
+      </Text>
 
       <div className="border-b p-3">
         <div className="grid grid-cols-3 gap-1">
@@ -63,16 +66,18 @@ export function ToolsPane(props: Props) {
 
       {props.tool === "crop" && (
         <div className="border-b p-3">
-          <div className="text-xs text-muted-foreground">
+          <Text as="div" variant="caption" tone="muted">
             Drag a rectangle on the image to crop.
-          </div>
+          </Text>
         </div>
       )}
 
       {props.tool === "draw" && (
         <div className="space-y-3 border-b p-3">
           <div>
-            <div className="mb-1 text-xs font-medium text-muted-foreground">Color</div>
+            <Text as="div" variant="label" tone="muted" className="mb-1">
+              Color
+            </Text>
             <div className="flex flex-wrap gap-1.5">
               {COLORS.map((c) => (
                 <button
@@ -92,10 +97,15 @@ export function ToolsPane(props: Props) {
             </div>
           </div>
           <div>
-            <div className="mb-1 flex items-center justify-between text-xs font-medium text-muted-foreground">
+            <Text
+              as="div"
+              variant="label"
+              tone="muted"
+              className="mb-1 flex items-center justify-between"
+            >
               <span>Width</span>
               <span>{props.drawSettings.width}px</span>
-            </div>
+            </Text>
             <input
               type="range"
               min={1}
@@ -173,7 +183,7 @@ function ToolButton({
       className="flex h-auto flex-col gap-0.5 py-2"
     >
       {icon}
-      <span className="text-[10px]">{label}</span>
+      <span className="text-3xs">{label}</span>
     </Button>
   );
 }

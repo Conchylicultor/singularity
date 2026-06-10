@@ -3,6 +3,7 @@ import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-tabl
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface OutgoingFk {
   constraint_name: string;
@@ -28,28 +29,28 @@ const outgoingColumns: ColumnDef<OutgoingFk>[] = [
     id: "constraint_name",
     header: "Constraint",
     width: "minmax(0,1fr)",
-    cell: (row) => <code className="font-mono text-xs">{row.constraint_name}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.constraint_name}</code>,
     value: (row) => row.constraint_name,
   },
   {
     id: "column_name",
     header: "Column",
     width: "9rem",
-    cell: (row) => <code className="font-mono text-xs">{row.column_name}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.column_name}</code>,
     value: (row) => row.column_name,
   },
   {
     id: "foreign_table",
     header: "Foreign Table",
     width: "10rem",
-    cell: (row) => <code className="font-mono text-xs">{row.foreign_table}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.foreign_table}</code>,
     value: (row) => row.foreign_table,
   },
   {
     id: "foreign_column",
     header: "Foreign Column",
     width: "9rem",
-    cell: (row) => <code className="font-mono text-xs">{row.foreign_column}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.foreign_column}</code>,
     value: (row) => row.foreign_column,
   },
 ];
@@ -59,28 +60,28 @@ const incomingColumns: ColumnDef<IncomingFk>[] = [
     id: "constraint_name",
     header: "Constraint",
     width: "minmax(0,1fr)",
-    cell: (row) => <code className="font-mono text-xs">{row.constraint_name}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.constraint_name}</code>,
     value: (row) => row.constraint_name,
   },
   {
     id: "source_table",
     header: "Source Table",
     width: "10rem",
-    cell: (row) => <code className="font-mono text-xs">{row.source_table}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.source_table}</code>,
     value: (row) => row.source_table,
   },
   {
     id: "source_column",
     header: "Source Column",
     width: "9rem",
-    cell: (row) => <code className="font-mono text-xs">{row.source_column}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.source_column}</code>,
     value: (row) => row.source_column,
   },
   {
     id: "target_column",
     header: "Target Column",
     width: "9rem",
-    cell: (row) => <code className="font-mono text-xs">{row.target_column}</code>,
+    cell: (row) => <code className="font-mono text-caption">{row.target_column}</code>,
     value: (row) => row.target_column,
   },
 ];
@@ -106,10 +107,10 @@ export function ForeignKeysSection({
 
   if (isLoading) {
     return (
-      <div className="flex items-center gap-2 text-xs text-muted-foreground">
+      <Text as="div" variant="caption" className="flex items-center gap-2 text-muted-foreground">
         <Spinner />
         Loading foreign keys…
-      </div>
+      </Text>
     );
   }
 

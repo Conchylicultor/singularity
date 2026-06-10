@@ -42,7 +42,7 @@ export function Lightbox({
         src={attachmentUrl(attachmentId)}
         alt={alt ?? "image"}
         onClick={(e) => e.stopPropagation()}
-        className="max-h-full max-w-full rounded shadow-2xl"
+        className="max-h-full max-w-full rounded-md shadow-2xl"
       />
     </div>,
     document.body,

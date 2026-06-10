@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface DeferredToolsDeltaPayload {
   type: "deferred_tools_delta";
@@ -32,9 +33,11 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
       }
     >
       {added === 0 && removed === 0 ? (
-        <p className="text-xs text-muted-foreground/60 italic">No changes.</p>
+        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+          No changes.
+        </Text>
       ) : (
-        <div className="flex flex-col gap-0.5 text-xs font-mono leading-5">
+        <Text as="div" variant="caption" className="flex flex-col gap-0.5 font-mono">
           {att.addedNames?.map((name) => (
             <p key={name} className="text-muted-foreground">
               <span className="text-success">+</span> {name}
@@ -45,7 +48,7 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
               <span className="text-destructive no-underline">−</span> {name}
             </p>
           ))}
-        </div>
+        </Text>
       )}
     </CollapsibleCard>
   );

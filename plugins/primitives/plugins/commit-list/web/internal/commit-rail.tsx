@@ -1,3 +1,5 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
+
 interface Props {
   isFirst: boolean;
   isLast: boolean;
@@ -55,7 +57,7 @@ export function MergeBaseMarker({
 }) {
   const ROW = ROW_HEIGHT;
   return (
-    <li className="flex items-center text-xs text-muted-foreground">
+    <Text as="li" variant="caption" className="flex items-center text-muted-foreground">
       <svg
         width={28}
         height={ROW}
@@ -91,7 +93,7 @@ export function MergeBaseMarker({
       </svg>
       <span className="ml-2 font-mono">{shortSha ?? "main"}</span>
       <span className="ml-2">merge-base</span>
-    </li>
+    </Text>
   );
 }
 

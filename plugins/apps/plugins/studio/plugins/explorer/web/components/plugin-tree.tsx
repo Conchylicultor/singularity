@@ -4,6 +4,7 @@ import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plug
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { cn } from "@/lib/utils";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Explorer } from "../slots";
 import { PluginTreeProvider, usePluginTree } from "../context";
 
@@ -134,9 +135,9 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
             />
           ))}
           {filtered.length === 0 && (
-            <div className="px-3 py-6 text-center text-xs text-muted-foreground">
+            <Text as="div" variant="caption" className="px-3 py-6 text-center text-muted-foreground">
               No plugins match &quot;{filter}&quot;
-            </div>
+            </Text>
           )}
         </div>
       </div>
@@ -185,7 +186,7 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
               toggle(node.id);
             }}
             aria-label={isOpen ? "Collapse" : "Expand"}
-            className="inline-flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:bg-muted-foreground/10"
+            className="inline-flex size-4 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted-foreground/10"
           >
             {isOpen ? (
               <MdExpandMore className="size-3.5" />
@@ -196,16 +197,18 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
         ) : (
           <span className="size-4 shrink-0" />
         )}
-        <span
+        <Text
+          as="span"
+          variant="caption"
           className={cn(
-            "flex-1 truncate text-xs",
+            "flex-1 truncate",
             isSelected
               ? "font-medium text-foreground"
               : "text-foreground/85",
           )}
         >
           {node.name}
-        </span>
+        </Text>
         <Explorer.TreeRowBadge.Render>
           {(item) => <item.component node={node} />}
         </Explorer.TreeRowBadge.Render>

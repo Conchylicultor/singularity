@@ -18,7 +18,7 @@ export function ChildCountAction({
   if (!hasChildren) return null;
 
   return (
-    <span className="shrink-0 text-[10px] tabular-nums text-muted-foreground">
+    <span className="shrink-0 text-3xs tabular-nums text-muted-foreground">
       {count}
     </span>
   );

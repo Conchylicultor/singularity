@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { cn } from "@/lib/utils";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Section,
   PluginLink,
@@ -62,9 +63,11 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
             {routes.map((r) => {
               const { method, path } = methodAndPath(r);
               return (
-                <div
+                <Text
+                  as="div"
+                  variant="caption"
                   key={`${r.runtime}:${r.type}:${r.route}`}
-                  className="flex items-center gap-2 px-2 py-0.5 text-xs"
+                  className="flex items-center gap-2 px-2 py-0.5"
                 >
                   {method && (
                     <span
@@ -82,7 +85,7 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
                   <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
                     {r.runtime}
                   </span>
-                </div>
+                </Text>
               );
             })}
           </div>

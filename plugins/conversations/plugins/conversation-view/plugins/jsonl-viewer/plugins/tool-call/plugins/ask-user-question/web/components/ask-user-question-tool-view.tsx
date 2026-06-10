@@ -2,6 +2,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -222,7 +223,7 @@ export function Indicator({
       className={`mt-0.5 shrink-0 size-3 border border-primary bg-primary flex items-center justify-center ${shape}`}
     >
       {multi ? (
-        <span className="text-[8px] leading-none text-white">✓</span>
+        <span className="text-3xs text-white">✓</span>
       ) : (
         <span className="block size-1 rounded-full bg-white" />
       )}
@@ -369,11 +370,13 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           return (
             <div key={qi}>
               {questions.length > 1 && (
-                <p className="mb-1 text-[10px] font-medium tracking-wider text-muted-foreground">
+                <p className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground">
                   {q.header}
                 </p>
               )}
-              <p className="mb-1.5 text-xs text-foreground">{q.question}</p>
+              <Text as="p" variant="caption" className="mb-1.5 text-foreground">
+                {q.question}
+              </Text>
               <div className="space-y-1">
                 {q.options.map((opt, oi) => {
                   const isSelected = selected.has(opt.label);
@@ -384,12 +387,14 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                     >
                       <Indicator selected={isSelected} multi={q.multiSelect} />
                       <div className="min-w-0 flex-1">
-                        <p className="text-xs font-medium">{opt.label}</p>
-                        <p className="text-xs text-muted-foreground">
+                        <Text as="p" variant="caption" className="font-medium">
+                          {opt.label}
+                        </Text>
+                        <Text as="p" variant="caption" tone="muted">
                           {opt.description}
-                        </p>
+                        </Text>
                         {opt.preview && (
-                          <pre className="mt-1 whitespace-pre-wrap break-words rounded bg-muted/60 p-1.5 font-mono text-[10px] text-muted-foreground">
+                          <pre className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-1.5 font-mono text-3xs text-muted-foreground">
                             {opt.preview}
                           </pre>
                         )}
@@ -400,19 +405,23 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                 {otherText != null && (
                   <div className="flex gap-2 rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2">
                     <Indicator selected multi={q.multiSelect} />
-                    <p className="text-xs italic text-foreground">
+                    <Text as="p" variant="caption" className="italic text-foreground">
                       {otherText}
-                    </p>
+                    </Text>
                   </div>
                 )}
                 {notes != null && (
                   <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-1 pl-2">
-                    <p className="text-[10px] font-medium tracking-wider text-muted-foreground">
+                    <p className="text-3xs font-medium tracking-wider text-muted-foreground">
                       Note
                     </p>
-                    <p className="whitespace-pre-wrap break-words text-xs text-foreground">
+                    <Text
+                      as="p"
+                      variant="caption"
+                      className="whitespace-pre-wrap break-words text-foreground"
+                    >
                       {notes}
-                    </p>
+                    </Text>
                   </div>
                 )}
               </div>
@@ -420,7 +429,9 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           );
         })}
         {event.result?.isError && !resultIsInterrupt && (
-          <p className="text-xs text-destructive">{event.result.content}</p>
+          <Text as="p" variant="caption" tone="destructive">
+            {event.result.content}
+          </Text>
         )}
       </div>
     </ToolCallCard>

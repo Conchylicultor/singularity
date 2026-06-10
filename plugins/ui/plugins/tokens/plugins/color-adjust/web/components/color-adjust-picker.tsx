@@ -19,7 +19,7 @@ export function ColorAdjustPicker() {
         {presets.map((p) => (
           <button
             key={p.id}
-            className={`px-2.5 py-1 text-xs rounded-md border transition-colors ${
+            className={`px-2.5 py-1 text-caption rounded-md border transition-colors ${
               p.id === activeId
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
@@ -35,7 +35,7 @@ export function ColorAdjustPicker() {
           </button>
         ))}
       </div>
-      <div className="flex flex-col gap-2 text-sm">
+      <div className="flex flex-col gap-2 text-body">
         <label className="flex items-center gap-2">
           <span className="w-24 text-muted-foreground">Hue</span>
           <input

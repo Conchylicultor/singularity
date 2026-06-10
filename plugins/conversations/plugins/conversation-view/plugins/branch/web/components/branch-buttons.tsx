@@ -4,6 +4,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { toast } from "@plugins/notifications/web";
 import {
   MODEL_REGISTRY,
@@ -63,7 +64,7 @@ export function BranchButtons({
       contentClassName="w-[480px]"
     >
       <div className="flex flex-col gap-3 p-3">
-        <div className="text-sm font-medium">Branch from this conversation</div>
+        <Text as="div" variant="label">Branch from this conversation</Text>
         <TextEditor
           value={prompt}
           onChange={setPrompt}

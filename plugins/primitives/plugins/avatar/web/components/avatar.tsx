@@ -58,6 +58,7 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
       {hasSvg ? (
         <SvgIcon nodes={svgNodes!} className={sz.icon} />
       ) : glyph ? (
+        // eslint-disable-next-line text/no-adhoc-typography -- leading-none keeps the fallback glyph optically centered; font size comes from the box's size variant, not text hierarchy
         <span className="font-medium leading-none">{glyph}</span>
       ) : null}
       {statusDot ? (

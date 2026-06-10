@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Section,
   type PluginNode,
@@ -26,9 +27,11 @@ export function ResourcesDetailSection({ node }: { node: PluginNode }) {
     <Section title="Resources" count={String(rows.length)}>
       <div className="flex flex-col gap-0.5">
         {rows.map((r) => (
-          <div
+          <Text
+            as="div"
+            variant="caption"
             key={`${r.runtime}:${r.key}`}
-            className="flex items-center gap-2 px-2 py-0.5 text-xs"
+            className="flex items-center gap-2 px-2 py-0.5"
           >
             <code className="min-w-0 truncate font-mono text-foreground">
               {r.key}
@@ -37,7 +40,7 @@ export function ResourcesDetailSection({ node }: { node: PluginNode }) {
             <span className="ml-auto shrink-0 text-3xs text-muted-foreground/50">
               {r.runtime}
             </span>
-          </div>
+          </Text>
         ))}
       </div>
     </Section>

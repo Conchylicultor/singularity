@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface TaskReminderItem {
   id: string;
@@ -42,11 +43,18 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
       }
     >
       {count === 0 ? (
-        <p className="text-xs text-muted-foreground/60 italic">No active tasks.</p>
+        <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
+          No active tasks.
+        </Text>
       ) : (
         <ul className="flex flex-col gap-1">
           {att.content.map((task) => (
-            <li key={task.id} className="flex items-start gap-2 text-xs leading-5">
+            <Text
+              as="li"
+              variant="caption"
+              key={task.id}
+              className="flex items-start gap-2"
+            >
               <span
                 className={`mt-1.5 size-2 shrink-0 rounded-full ${STATUS_DOT[task.status] ?? DEFAULT_DOT}`}
               />
@@ -58,7 +66,7 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
                   </span>
                 )}
               </span>
-            </li>
+            </Text>
           ))}
         </ul>
       )}

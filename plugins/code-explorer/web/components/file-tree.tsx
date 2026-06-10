@@ -12,6 +12,7 @@ import {
   SearchInput,
 } from "@plugins/primitives/plugins/search/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface FileTreeNode {
   name: string;
@@ -138,7 +139,7 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
   const effectiveExpanded = autoExpanded ?? expanded;
 
   return (
-    <div className="text-sm">
+    <Text as="div" variant="body">
       <div className="sticky top-0 z-raised border-b bg-background p-1.5">
         <SearchInput
           value={query}
@@ -164,7 +165,7 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
           ))
         )}
       </div>
-    </div>
+    </Text>
   );
 }
 

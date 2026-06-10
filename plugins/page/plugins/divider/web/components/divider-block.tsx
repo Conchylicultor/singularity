@@ -62,7 +62,7 @@ export function DividerBlock({ block, isFocused, editor }: BlockRendererProps) {
       aria-label="Divider"
       className={cn(
         "cursor-default px-3 py-2 outline-none",
-        isFocused && "ring-primary/30 rounded ring-1",
+        isFocused && "ring-primary/30 rounded-md ring-1",
       )}
     >
       <hr className="border-border border-t" />

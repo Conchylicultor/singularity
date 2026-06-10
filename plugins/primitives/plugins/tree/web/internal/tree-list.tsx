@@ -25,6 +25,7 @@ import {
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
@@ -344,10 +345,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       </TreeListProvider>
       <DragOverlay dropAnimation={null}>
         {activeOverlay !== null ? (
-          // eslint-disable-next-line badge/no-adhoc-chip -- drag overlay container, not a chip
-          <div className="bg-background/90 border-accent rounded border px-2 py-1 text-sm shadow">
+          <Text as="div" variant="body" className="bg-background/90 border-accent rounded-md border px-2 py-1 shadow">
             {activeOverlay}
-          </div>
+          </Text>
         ) : null}
       </DragOverlay>
     </DndContext>

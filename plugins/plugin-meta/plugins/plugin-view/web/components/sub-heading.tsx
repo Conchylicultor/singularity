@@ -21,7 +21,7 @@ export function SubHeading({
 }) {
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="gap-1 py-0.5 text-xs">
+      <CollapsibleTrigger className="gap-1 py-0.5 text-caption">
         <CollapsibleChevron className="size-3.5 text-muted-foreground" />
         <span className="font-medium text-muted-foreground">{label}</span>
         <span className="text-muted-foreground/50">({count})</span>

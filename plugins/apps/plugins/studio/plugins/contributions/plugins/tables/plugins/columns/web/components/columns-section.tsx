@@ -2,6 +2,7 @@ import { useQuery } from "@tanstack/react-query";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface ColumnRow {
   column_name: string;
@@ -69,10 +70,10 @@ export function ColumnsSection({
 
   if (isPending) {
     return (
-      <div className="flex items-center gap-2 px-3 py-2 text-sm text-muted-foreground">
+      <Text as="div" variant="body" className="flex items-center gap-2 px-3 py-2 text-muted-foreground">
         <Spinner />
         Loading columns…
-      </div>
+      </Text>
     );
   }
 

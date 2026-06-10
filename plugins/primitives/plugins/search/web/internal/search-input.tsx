@@ -24,7 +24,7 @@ export function SearchInput({
     <div className={cn("relative", wrapperClassName)}>
       <MdSearch className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <Input
-        className={cn("h-7 pl-7 text-xs", hasValue && "pr-6", className)}
+        className={cn("h-7 pl-7 text-caption", hasValue && "pr-6", className)}
         {...props}
       />
       {hasValue && (

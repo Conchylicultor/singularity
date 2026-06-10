@@ -7,6 +7,7 @@ import {
   isAttachmentUrl,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 
 // Two-mode description editor:
@@ -54,8 +55,10 @@ export function DescriptionView({
   }
 
   return (
-    <div
-      className="group relative min-h-48 w-full cursor-text rounded border p-3 text-sm"
+    <Text
+      as="div"
+      variant="body"
+      className="group relative min-h-48 w-full cursor-text rounded-md border p-3"
       onClick={() => setEditing(true)}
       role="button"
       tabIndex={0}
@@ -77,7 +80,7 @@ export function DescriptionView({
       >
         <MdEdit className="size-3.5" />
       </Button>
-    </div>
+    </Text>
   );
 }
 

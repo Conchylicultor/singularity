@@ -1,8 +1,14 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
+
 /** Fallback rendered by `Sonata.Display.Dispatch` when no display matches. */
 export function NoDisplay() {
   return (
-    <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+    <Text
+      as="div"
+      variant="body"
+      className="flex h-full items-center justify-center p-8 text-muted-foreground"
+    >
       No display selected.
-    </div>
+    </Text>
   );
 }

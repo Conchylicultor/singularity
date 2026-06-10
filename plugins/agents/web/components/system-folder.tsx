@@ -23,7 +23,7 @@ export function SystemFolder({
 
   return (
     <Collapsible defaultOpen className="mb-2">
-      <CollapsibleTrigger className="hover:bg-accent gap-1 rounded px-1 py-1 text-sm">
+      <CollapsibleTrigger className="hover:bg-accent gap-1 rounded-md px-1 py-1 text-body">
         <span className="flex size-5 shrink-0 items-center justify-center">
           <CollapsibleChevron className="size-4" />
         </span>

@@ -5,6 +5,7 @@ import {
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 type WriteInput = { file_path: string; content: string };
 
@@ -20,7 +21,9 @@ export function WriteToolView({ event }: ToolRendererProps) {
           className="max-h-[280px] overflow-auto"
         />
         {event.result?.isError && (
-          <p className="mt-1 text-xs text-destructive">{event.result.content}</p>
+          <Text as="p" variant="caption" className="mt-1 text-destructive">
+            {event.result.content}
+          </Text>
         )}
       </div>
     </ToolCallCard>

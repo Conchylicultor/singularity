@@ -33,7 +33,7 @@ export function PageIconButton({
   return (
     <Popover open={open} onOpenChange={setOpen}>
       <PopoverTrigger
-        className="text-muted-foreground hover:bg-accent flex size-7 shrink-0 items-center justify-center rounded outline-none focus-visible:ring-2 focus-visible:ring-ring"
+        className="text-muted-foreground hover:bg-accent flex size-7 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         aria-label="Pick page icon"
       >
         <PageIcon nodes={value.iconSvgNodes} className="size-6" />

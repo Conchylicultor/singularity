@@ -90,7 +90,7 @@ export function ReorderGroupBox({
         <button
           type="button"
           onClick={handleToggleExpanded}
-          className="flex size-4 shrink-0 items-center justify-center rounded text-muted-foreground hover:text-foreground"
+          className="flex size-4 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground"
         >
           <CollapsibleChevron open={effectiveExpanded} className="size-3.5" />
         </button>
@@ -107,7 +107,7 @@ export function ReorderGroupBox({
               {...listeners}
               type="button"
               aria-label="Drag group"
-              className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100 touch-none"
+              className="flex size-5 shrink-0 cursor-grab items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100 touch-none"
             >
               <MdDragIndicator className="size-3.5" />
             </button>
@@ -118,7 +118,7 @@ export function ReorderGroupBox({
                 handleDelete();
               }}
               aria-label="Delete group"
-              className="flex size-5 shrink-0 items-center justify-center rounded text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
+              className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
               title="Delete group (items return to ungrouped)"
             >
               <MdClose className="size-3.5" />
@@ -131,7 +131,7 @@ export function ReorderGroupBox({
           {hasChildren ? (
             children
           ) : (
-            <div className="px-1 py-1 text-[11px] text-muted-foreground italic">
+            <div className="px-1 py-1 text-2xs text-muted-foreground italic">
               Drop items here
             </div>
           )}

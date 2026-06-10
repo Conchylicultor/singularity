@@ -7,6 +7,7 @@ import type {
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import type {
   DataViewProps,
@@ -86,7 +87,11 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
         <div className="flex items-center gap-2 px-2 pb-2">
-          {title ? <div className="text-sm font-medium">{title}</div> : null}
+          {title ? (
+            <Text as="div" variant="label">
+              {title}
+            </Text>
+          ) : null}
           {actions ? <div className="ml-auto">{actions}</div> : null}
         </div>
       </div>
@@ -113,7 +118,9 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           visible and clickable rather than sitting under it. */}
       <div className="flex shrink-0 items-center gap-2 pb-2 pl-2 pr-14">
         {title ? (
-          <div className="text-sm font-medium">{title}</div>
+          <Text as="div" variant="label">
+            {title}
+          </Text>
         ) : null}
         <SearchInput
           value={activeState.query}

@@ -30,7 +30,7 @@ export function DeleteTaskAction({
       title={title}
       aria-label="Drop task"
       className={cn(
-        "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded",
+        "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md",
         disabled && "cursor-not-allowed opacity-30 hover:bg-transparent",
       )}
     >

@@ -1,5 +1,6 @@
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 
 export type ChainModel = "queue" | ConversationModel;
 
@@ -11,7 +12,7 @@ export interface ModelChipProps {
 
 export function ModelChip({ value, onChange, disabled }: ModelChipProps) {
   return (
-    <div className="flex items-center gap-1.5 text-xs text-muted-foreground">
+    <Text as="div" variant="caption" className="flex items-center gap-1.5 text-muted-foreground">
       <span>Auto-launch with</span>
       <ModelSelect
         value={value === "queue" ? null : value}
@@ -20,6 +21,6 @@ export function ModelChip({ value, onChange, disabled }: ModelChipProps) {
         ariaLabel="Launch model"
         disabled={disabled}
       />
-    </div>
+    </Text>
   );
 }

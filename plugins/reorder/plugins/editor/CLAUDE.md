@@ -65,7 +65,7 @@ group-drag-id contract) is exported for `reorder`'s group box to reuse.
 
 - Description: Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
 - Web:
-  - Uses: `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Uses: `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/text.Text`
   - Exports: Types: `ReorderAreaCtxValue`, `ReorderEditorProps`, `ReorderEntry`, `ReorderGroupEntry`, `ReorderItemEntry`, `ReorderSpacerEntry`; Values: `DRAG_GROUP_PREFIX`, `ReorderAreaContext`, `ReorderEditor`, `RestoreButton`, `SortableReorderItem`, `SpacerReorderItem`
 - Cross-plugin:
   - Imported by: `fields/reorder-tree/config`, `reorder`

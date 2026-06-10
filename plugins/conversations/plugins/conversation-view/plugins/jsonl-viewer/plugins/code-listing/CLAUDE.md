@@ -6,7 +6,7 @@
 
 - Description: Renders `cat -n`-formatted file content with syntax highlighting and a line-number gutter. Shared by the Read tool renderer and the edited-file attachment renderer.
 - Web:
-  - Uses: `primitives/select-scope.ContentScope`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.languageForPath`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`
+  - Uses: `primitives/select-scope.ContentScope`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.languageForPath`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`
   - Exports: Values: `CodeWithLineNumbers`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/tool-call/read`

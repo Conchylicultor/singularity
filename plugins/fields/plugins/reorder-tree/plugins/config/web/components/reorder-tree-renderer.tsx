@@ -12,6 +12,7 @@ import {
   SortableReorderItem,
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   treeToView,
   reorderTree,
@@ -40,7 +41,9 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
             id: e.id,
             node: (
               <SortableReorderItem itemKey={e.id} editMode label={e.id}>
-                <span className="px-2 py-1 font-mono text-sm">{e.id}</span>
+                <Text variant="body" className="px-2 py-1 font-mono">
+                  {e.id}
+                </Text>
               </SortableReorderItem>
             ),
           },

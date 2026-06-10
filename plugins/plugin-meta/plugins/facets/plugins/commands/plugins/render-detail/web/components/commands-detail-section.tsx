@@ -2,6 +2,7 @@ import {
   Section,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
 
 // Renders the commands facet's own data. Read `node.facets[id]` directly (as
@@ -18,9 +19,11 @@ export function CommandsDetailSection({ node }: { node: PluginNode }) {
     <Section title="Commands" count={String(data.length)}>
       <div className="flex flex-col gap-0.5">
         {data.map((c) => (
-          <div
+          <Text
+            as="div"
+            variant="caption"
             key={c.commandId}
-            className="flex items-center gap-2 px-2 py-0.5 text-xs"
+            className="flex items-center gap-2 px-2 py-0.5"
           >
             <code className="min-w-0 truncate font-mono text-foreground">
               {c.groupName}.{c.memberName}
@@ -28,7 +31,7 @@ export function CommandsDetailSection({ node }: { node: PluginNode }) {
             <span className="ml-auto shrink-0 font-mono text-3xs text-muted-foreground/50">
               {c.commandId}
             </span>
-          </div>
+          </Text>
         ))}
       </div>
     </Section>

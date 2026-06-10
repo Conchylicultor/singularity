@@ -2,6 +2,7 @@ import type { ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { AgentSideBody } from "./components/agent-side-body";
 import { agentsResource, type Agent } from "../shared/resources";
 import { Agents as AgentsSlots } from "./slots";
@@ -82,7 +83,7 @@ function AgentDetailBody(): ReactElement {
           {(v) => (
             <section className="bg-card rounded-lg border p-4">
               {v.title ? (
-                <h2 className="mb-4 text-sm font-medium">{v.title}</h2>
+                <Text as="h2" variant="label" className="mb-4">{v.title}</Text>
               ) : null}
               <v.component agentId={id} />
             </section>
