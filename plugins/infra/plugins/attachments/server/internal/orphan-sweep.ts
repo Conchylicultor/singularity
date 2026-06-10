@@ -2,7 +2,7 @@ import { and, lt, not, or, sql } from "drizzle-orm";
 import { unlink } from "node:fs/promises";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
-import { Log } from "@plugins/debug/plugins/logs/server";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { _attachments } from "./tables";
 import { getRegisteredLinks } from "./define-link";

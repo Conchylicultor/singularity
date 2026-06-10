@@ -15,7 +15,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
+import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
 
 // Mono build-log body: intentional fixed code size + line-height (not on the typography scale).
 const monoLogClass = "font-mono text-xs leading-5";

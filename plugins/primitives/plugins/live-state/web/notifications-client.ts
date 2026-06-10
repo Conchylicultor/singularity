@@ -3,9 +3,38 @@ import type { ZodType } from "zod";
 import {
   SharedWebSocket,
   subscribeWsStatus,
+  subscribeNetDiag,
   type WsStatus,
+  type NetDiagEvent,
 } from "@plugins/primitives/plugins/networking/web";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
+import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { ResourceOrigin } from "../core/resource";
+
+// Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
+// lines route to the `live-state` log channel over plain HTTP via clientLog —
+// decoupled from the notifications WS, so traces still flush even when the WS
+// pipeline this watches is wedged. Each line is stamped with the tab id so a
+// multi-tab leader/follower trail is attributable.
+//
+// Always-on lines are low-volume (transitions and silent-drop anomalies — the
+// exact failure signatures). The per-frame successful apply is high-volume and
+// gated behind a dev-only localStorage flag (see verboseTraceOn).
+function trace(line: string): void {
+  clientLog("live-state", `[${getTabId()}] ${line}`);
+}
+
+// Dev-only verbose toggle for the high-volume per-apply trace. Read straight
+// from localStorage (no config_v2 server plumbing for a debug switch). Wrapped
+// for SSR / denied-storage safety.
+function verboseTraceOn(): boolean {
+  try {
+    return localStorage.getItem("liveState.verboseTrace") === "1";
+  // eslint-disable-next-line promise-safety/no-bare-catch
+  } catch {
+    return false;
+  }
+}
 
 // Drives the TanStack Query cache off server resource notifications. Uses
 // SharedWebSocket, which transparently shares the connection across all tabs
@@ -66,6 +95,38 @@ interface ActiveSub {
   params: ResourceParams;
   version: number;
   socket: SocketKind;
+  /** ms epoch of the last applyUpdate/applyDelta write for this sub (0 = never). */
+  lastAppliedAt: number;
+}
+
+/** One entry per active sub returned by `debugSnapshot()` (Layer 2 inspector). */
+export interface DebugSub {
+  key: string;
+  paramsKey: string;
+  version: number;
+  lastAppliedAt: number;
+  refcount: number;
+  socket: SocketKind;
+}
+
+/** Push-based introspection payload for the live-state-health inspector. */
+export interface DebugSnapshot {
+  subs: DebugSub[];
+  sockets: ChannelStatuses;
+  leader: { worktree: LeaderInfo; central: LeaderInfo };
+}
+
+export interface LeaderInfo {
+  isLeader: boolean;
+  hasLeader: boolean;
+}
+
+/** One entry per active sub returned by `resync()` (watchdog missed-update detection). */
+export interface ResyncSub {
+  key: string;
+  params: ResourceParams;
+  socket: SocketKind;
+  prevVersion: number;
 }
 
 interface SocketChannel {
@@ -93,6 +154,8 @@ export class NotificationsClient {
   private channelStatuses = new Map<string, WsStatus>();
   private statusListeners = new Set<(s: WsStatus) => void>();
   private channelStatusListeners = new Set<(s: ChannelStatuses) => void>();
+  /** Fired on any sub/version/socket/leader change for the Layer-2 inspector. */
+  private debugListeners = new Set<() => void>();
   private unsubscribeFromBus: () => void;
 
   constructor(private queryClient: QueryClient) {
@@ -108,6 +171,17 @@ export class NotificationsClient {
       for (const fn of this.statusListeners) fn(next);
       const channels = this.getChannelStatuses();
       for (const fn of this.channelStatusListeners) fn(channels);
+      this.emitDebug();
+    });
+    // Net-diag forwarder: the networking layer publishes socket/election
+    // transitions to an event bus (it must not depend on log-channels — that
+    // would form networking ↔ log-channels). Forward every event to the trace
+    // channel here, where importing clientLog is legal. The client is a module
+    // singleton, so this single constructor-time subscription never needs
+    // teardown and is never double-mounted.
+    subscribeNetDiag((ev: NetDiagEvent) => {
+      trace(`net-diag ${JSON.stringify(ev)}`);
+      this.emitDebug();
     });
   }
 
@@ -139,6 +213,73 @@ export class NotificationsClient {
     return () => this.channelStatusListeners.delete(fn);
   }
 
+  // --- Layer 2/3 introspection + control API --------------------------------
+
+  /**
+   * Force a re-subscribe of every active sub across both channels (reuses the
+   * reconnect `replaySubs` path). Returns the version each sub held BEFORE the
+   * resync, so the caller (watchdog) can compare it against the post-resync
+   * sub-ack version to detect frames that were silently missed while the tab
+   * was "open" but stale.
+   */
+  resync(): ResyncSub[] {
+    const before: ResyncSub[] = [];
+    for (const channel of Object.values(this.channels)) {
+      for (const sub of channel.subs.values()) {
+        before.push({ key: sub.key, params: sub.params, socket: sub.socket, prevVersion: sub.version });
+      }
+    }
+    trace(`resync subCount=${before.length}`);
+    for (const channel of Object.values(this.channels)) {
+      this.replaySubs(channel);
+    }
+    return before;
+  }
+
+  /**
+   * Push-based snapshot of all active subs plus socket + leader state, for the
+   * live-state-health inspector. Pair with `subscribeDebug` to re-render on
+   * change.
+   */
+  debugSnapshot(): DebugSnapshot {
+    const subs: DebugSub[] = [];
+    for (const channel of Object.values(this.channels)) {
+      for (const [id, sub] of channel.subs) {
+        subs.push({
+          key: sub.key,
+          paramsKey: id.slice(id.indexOf("\0") + 1),
+          version: sub.version,
+          lastAppliedAt: sub.lastAppliedAt,
+          refcount: sub.refcount,
+          socket: sub.socket,
+        });
+      }
+    }
+    return {
+      subs,
+      sockets: this.getChannelStatuses(),
+      leader: {
+        worktree: this.leaderInfo("worktree"),
+        central: this.leaderInfo("central"),
+      },
+    };
+  }
+
+  /** Fires whenever a sub/version/socket/leader state changes. */
+  subscribeDebug(listener: () => void): () => void {
+    this.debugListeners.add(listener);
+    return () => this.debugListeners.delete(listener);
+  }
+
+  private leaderInfo(kind: SocketKind): LeaderInfo {
+    const ws = this.channels[kind].ws;
+    return { isLeader: ws.isLeader, hasLeader: ws.hasLeader };
+  }
+
+  private emitDebug(): void {
+    for (const fn of this.debugListeners) fn();
+  }
+
   destroy(): void {
     this.unsubscribeFromBus();
   }
@@ -155,27 +296,38 @@ export class NotificationsClient {
     if (keyOf) this.keyedKeyOf.set(key, keyOf);
     const kind = socketKindFor(origin);
     const channel = this.channels[kind];
-    const id = `${key}\0${paramsKey(params)}`;
+    const pk = paramsKey(params);
+    const id = `${key}\0${pk}`;
     const existing = channel.subs.get(id);
     if (existing) {
       existing.refcount++;
+      trace(`observe key=${key} params=${pk} refcount=${existing.refcount}`);
+      this.emitDebug();
       return;
     }
-    channel.subs.set(id, { refcount: 1, key, params, version: 0, socket: kind });
+    channel.subs.set(id, { refcount: 1, key, params, version: 0, socket: kind, lastAppliedAt: 0 });
+    trace(`observe key=${key} params=${pk} refcount=1`);
     this.sendSub(channel, key, params);
+    this.emitDebug();
   }
 
   /** Observer count decreased. Unsub on 1→0. */
   unobserve(key: string, params: ResourceParams = {}, origin?: ResourceOrigin): void {
     const kind = socketKindFor(origin);
     const channel = this.channels[kind];
-    const id = `${key}\0${paramsKey(params)}`;
+    const pk = paramsKey(params);
+    const id = `${key}\0${pk}`;
     const existing = channel.subs.get(id);
     if (!existing) return;
     existing.refcount--;
-    if (existing.refcount > 0) return;
+    trace(`unobserve key=${key} params=${pk} refcount=${existing.refcount}`);
+    if (existing.refcount > 0) {
+      this.emitDebug();
+      return;
+    }
     channel.subs.delete(id);
     channel.ws.send(JSON.stringify({ op: "unsub", key, params }));
+    this.emitDebug();
   }
 
   private openChannel(kind: SocketKind): SocketChannel {
@@ -190,6 +342,7 @@ export class NotificationsClient {
         msg = JSON.parse(ev.data);
       } catch (err) {
         if (!(err instanceof SyntaxError)) throw err;
+        trace(`drop reason=parse-error error=${String(err)}`);
         return;
       }
       try {
@@ -200,6 +353,7 @@ export class NotificationsClient {
         // crash reporter observes it as an uncaught error — without importing
         // the crashes plugin (live-state ← crashes would be an import cycle)
         // and without breaking the WS loop for subsequent messages.
+        trace(`drop reason=parse-error key=${msg.kind === "ping" ? "ping" : (msg as { key?: string }).key ?? "?"} error=${String(err)}`);
         queueMicrotask(() => {
           throw err;
         });
@@ -212,13 +366,17 @@ export class NotificationsClient {
     // Fresh connection means the server has no record of our subs. Reset
     // local versions so a new sub-ack (which will come with a possibly lower
     // version if the server process restarted) isn't dropped as stale.
+    trace(`replaySubs socket=${channel === this.channels.central ? "central" : "worktree"} subCount=${channel.subs.size}`);
     for (const sub of channel.subs.values()) {
       sub.version = 0;
       this.sendSub(channel, sub.key, sub.params);
     }
+    this.emitDebug();
   }
 
   private sendSub(channel: SocketChannel, key: string, params: ResourceParams): void {
+    const socket = channel === this.channels.central ? "central" : "worktree";
+    trace(`sendSub key=${key} params=${paramsKey(params)} socket=${socket}`);
     channel.ws.send(
       JSON.stringify({ op: "sub", id: this.nextMsgId++, key, params }),
     );
@@ -245,18 +403,28 @@ export class NotificationsClient {
     // methods rely on. Without this gate a frame for another tab's resource
     // reaches applyUpdate with no schema registered and throws. The version
     // guard + bump also live here, deduped across all three apply paths.
-    const id = `${msg.key}\0${paramsKey(msg.params)}`;
+    const pk = paramsKey(msg.params);
+    const id = `${msg.key}\0${pk}`;
     const entry = channel.subs.get(id);
-    if (!entry) return;
-    if (msg.version <= entry.version) return;
+    if (!entry) {
+      trace(`drop key=${msg.key} params=${pk} version=${msg.version} reason=no-sub`);
+      return;
+    }
+    if (msg.version <= entry.version) {
+      trace(`drop key=${msg.key} params=${pk} msgVersion=${msg.version} haveVersion=${entry.version} reason=stale-version`);
+      return;
+    }
+    if (msg.kind === "sub-ack") {
+      trace(`sub-ack key=${msg.key} params=${pk} version=${msg.version}`);
+    }
     entry.version = msg.version;
 
     if (msg.kind === "sub-ack" || msg.kind === "update") {
-      this.applyUpdate(msg.key, msg.params, msg.value);
+      this.applyUpdate(entry, msg.key, msg.params, msg.value);
       return;
     }
     if (msg.kind === "delta") {
-      this.applyDelta(channel, msg.key, msg.params, msg.upserts, msg.order);
+      this.applyDelta(channel, entry, msg.key, msg.params, msg.upserts, msg.order);
       return;
     }
     // Only remaining case: "invalidate"
@@ -264,6 +432,7 @@ export class NotificationsClient {
   }
 
   private applyUpdate(
+    entry: ActiveSub,
     key: string,
     params: ResourceParams,
     value: unknown,
@@ -280,6 +449,16 @@ export class NotificationsClient {
       );
     }
     this.queryClient.setQueryData(queryKeyFor(key, params), schema.parse(value));
+    this.markApplied(entry, key);
+  }
+
+  /** Stamp the apply time, fire debug listeners, and emit the verbose-gated apply trace. */
+  private markApplied(entry: ActiveSub, key: string): void {
+    entry.lastAppliedAt = Date.now();
+    if (verboseTraceOn()) {
+      trace(`applyUpdate key=${key} params=${paramsKey(entry.params)} version=${entry.version}`);
+    }
+    this.emitDebug();
   }
 
   // Merge a row-keyed delta into the cached array. Unchanged rows keep their
@@ -291,6 +470,7 @@ export class NotificationsClient {
   // The server still ships `deletes` on the wire for clarity and Layer 2 reuse.
   private applyDelta(
     channel: SocketChannel,
+    entry: ActiveSub,
     key: string,
     params: ResourceParams,
     upserts: [string, unknown][],
@@ -300,6 +480,7 @@ export class NotificationsClient {
     // Base-presence guard (load-bearing): never apply a delta onto a missing
     // base. If the cache has no value yet, force a fresh full snapshot.
     if (this.queryClient.getQueryData(queryKey) === undefined) {
+      trace(`applyDelta key=${key} params=${paramsKey(params)} reason=delta-no-base-resub`);
       this.sendSub(channel, key, params);
       return;
     }
@@ -340,6 +521,7 @@ export class NotificationsClient {
       for (const row of prevRows) existingById.set(keyOf(row), row);
       return order.map((rowId) => upsertMap.get(rowId) ?? existingById.get(rowId));
     });
+    this.markApplied(entry, key);
   }
 
   private applyInvalidate(key: string, params: ResourceParams): void {

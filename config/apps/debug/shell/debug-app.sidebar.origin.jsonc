@@ -1,4 +1,4 @@
-// @hash f36fd936f0ac
+// @hash d7a998a294a5
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
@@ -10,6 +10,7 @@
     "debug.memory:memory",
     "debug.crashes:crashes",
     "debug.worktree-cleanup:worktree-cleanup",
+    "debug.live-state-health:live-state-health",
     "debug.logs:logs",
     "debug.profiling:profiling",
     "debug.queue:queue"

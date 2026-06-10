@@ -12,6 +12,7 @@ export const CLIENT_CRASH_SOURCES = [
   "browser-rejection",
   "react-boundary",
   "client-endpoint",
+  "live-state-wedge",
 ] as const;
 export type CrashSource =
   | (typeof SERVER_CRASH_SOURCES)[number]

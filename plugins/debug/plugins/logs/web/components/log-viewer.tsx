@@ -2,8 +2,8 @@ import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getLogChannels } from "@plugins/debug/plugins/logs/core";
-import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/debug/plugins/logs/core";
+import { getLogChannels } from "@plugins/primitives/plugins/log-channels/core";
+import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
 
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 

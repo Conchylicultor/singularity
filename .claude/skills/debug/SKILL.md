@@ -13,6 +13,10 @@ High-level map of where to look. Open the linked `CLAUDE.md` for details.
 Browser + server log lines persisted per worktree to `~/.singularity/worktrees/<wt>/logs/<channel>.jsonl` (survives restarts). Emit from browser via `clientLog(channel, line)`; `tail`/`cat` the file to read.
 → [`plugins/debug/plugins/logs/CLAUDE.md`](../../../plugins/debug/plugins/logs/CLAUDE.md)
 
+## Live-state sync (UI stale / "not updating until refresh")
+When a server change doesn't reach an already-open tab until refresh, the bug is in the client live-state pipeline (WS → cross-tab leader election → BroadcastChannel → query cache), not the server. `NotificationsClient` traces every hop **and every silent drop** to the `live-state` log channel (`[tabId]`-stamped, over plain HTTP so it survives a wedged WS) — `cat logs/live-state.jsonl` and the gap localizes the dead hop. The **Debug → Live State** pane shows live socket/leader/per-resource-version state; a watchdog toasts + files a `live-state-wedge` crash when the pipeline stalls.
+→ [`plugins/primitives/plugins/live-state/CLAUDE.md`](../../../plugins/primitives/plugins/live-state/CLAUDE.md)
+
 ## Profiling (Gantt)
 Build steps, server boot phases, push contention, runtime HTTP/DB/loader, and stats timings. Use to find *slow*, not just *broken*.
 → [`plugins/debug/plugins/profiling/CLAUDE.md`](../../../plugins/debug/plugins/profiling/CLAUDE.md)

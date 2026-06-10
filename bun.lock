@@ -916,6 +916,10 @@
       "name": "@singularity/plugin-debug-crashes",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/live-state-health": {
+      "name": "@singularity/plugin-debug-live-state-health",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/logs": {
       "name": "@singularity/plugin-debug-logs",
       "version": "0.0.1",
@@ -1844,6 +1848,10 @@
     },
     "plugins/primitives/plugins/live-state": {
       "name": "@singularity/plugin-primitives-live-state",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/log-channels": {
+      "name": "@singularity/plugin-primitives-log-channels",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/markdown": {
@@ -3230,6 +3238,8 @@
 
     "@singularity/plugin-debug-crashes": ["@singularity/plugin-debug-crashes@workspace:plugins/debug/plugins/crashes"],
 
+    "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
+
     "@singularity/plugin-debug-logs": ["@singularity/plugin-debug-logs@workspace:plugins/debug/plugins/logs"],
 
     "@singularity/plugin-debug-memory": ["@singularity/plugin-debug-memory@workspace:plugins/debug/plugins/memory"],
@@ -3663,6 +3673,8 @@
     "@singularity/plugin-primitives-link-chip": ["@singularity/plugin-primitives-link-chip@workspace:plugins/primitives/plugins/link-chip"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
+
+    "@singularity/plugin-primitives-log-channels": ["@singularity/plugin-primitives-log-channels@workspace:plugins/primitives/plugins/log-channels"],
 
     "@singularity/plugin-primitives-markdown": ["@singularity/plugin-primitives-markdown@workspace:plugins/primitives/plugins/markdown"],
 

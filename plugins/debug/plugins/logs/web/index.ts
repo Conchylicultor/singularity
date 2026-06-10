@@ -6,7 +6,6 @@ import { MdTerminal } from "react-icons/md";
 import { logsPane, logChannelPane } from "./panes";
 
 export { logsPane, logChannelPane } from "./panes";
-export { clientLog } from "./client-log";
 
 export default {
   description: "System logs pane, opened from the Debug sidebar.",

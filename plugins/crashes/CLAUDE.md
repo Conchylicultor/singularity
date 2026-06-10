@@ -18,7 +18,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Crash`; Values: `crashesResource`, `CrashSchema`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `crashes/endpoint-errors`, `crashes/noise-rules`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `crashes/endpoint-errors`, `crashes/noise-rules`, `health`
 - Sub-plugins:
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.

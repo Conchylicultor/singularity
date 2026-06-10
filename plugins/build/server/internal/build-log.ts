@@ -1,4 +1,4 @@
-import { Log } from "@plugins/debug/plugins/logs/server";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 
 // Single owner of the "build" log channel. `Log.channel` throws on a duplicate
 // id, so the channel is created exactly once here and shared by every build

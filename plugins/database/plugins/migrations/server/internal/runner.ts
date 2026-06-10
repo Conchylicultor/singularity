@@ -2,7 +2,7 @@ import { readdirSync, readFileSync } from "fs";
 import { join } from "path";
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
-import { Log } from "@plugins/debug/plugins/logs/server";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 
 const log = Log.channel("migrations", { persist: true });
 

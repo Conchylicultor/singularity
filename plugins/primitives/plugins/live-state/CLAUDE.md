@@ -12,6 +12,30 @@ seed the cache **before render** with `hydrateResource(resource, params, value)`
 If you ever add a genuinely suspending read (`React.lazy`, `useSuspenseQuery`),
 it has **no ambient boundary** — you must wrap it in your own `<Suspense>`.
 
+## Per-hop tracing (`live-state` log channel)
+
+`NotificationsClient` traces every hop of the update pipeline to the
+`live-state` log channel (`logs/live-state.jsonl`) via `clientLog` — a plain
+HTTP path decoupled from the notifications WS, so traces still flush when that
+WS is wedged (the exact failure this instruments). Each line is stamped with
+`[tabId]`. Read with `tail`/`cat` on the JSONL file.
+
+Always-on lines are low-volume transitions and silent-drop anomalies:
+`observe`/`unobserve`, `sendSub`, `sub-ack`, `replaySubs`, `resync`, net-diag
+socket/election transitions, and every `drop reason=…` (`no-sub`,
+`stale-version`, `parse-error`, `delta-no-base-resub`).
+
+The per-frame successful `applyUpdate` line is **high-volume** and is gated
+behind a dev-only flag — it is silent unless you opt in:
+
+```js
+localStorage.setItem("liveState.verboseTrace", "1"); // enable; "0"/remove to disable
+```
+
+This is intentionally a localStorage flag (read with a try/catch for
+SSR/denied-storage safety), not a `config_v2` server-plumbed setting — it's a
+local debug switch, not user config.
+
 ## One socket per origin, shared across tabs
 
 The `NotificationsClient` talks to the server over a `SharedWebSocket`: a single
@@ -136,10 +160,10 @@ current payloads are small and parse cost is negligible.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
 - Load-bearing: yes
 - Web:
-  - Uses: `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`
-  - Exports: Types: `ChannelStatuses`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`; Values: `centralResourceDescriptor`, `hydrateResource`, `keyedResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsStatus`, `useResource`
+  - Uses: `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
+  - Exports: Types: `ChannelStatuses`, `DebugSnapshot`, `DebugSub`, `LeaderInfo`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResyncSub`; Values: `centralResourceDescriptor`, `getNotificationsClient`, `hydrateResource`, `keyedResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
 - Cross-plugin:
-  - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/workflows/engine`, `attempt-view`, `auth`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `collections`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/model-provider`, `conversations/summary`, `crashes`, `debug/claude-cli-calls`, `debug/crashes`, `debug/queue`, `fields/secret/config`, `floating-bar`, `framework/web-core`, `health`, `infra/claude-cli`, `infra/events`, `infra/jobs`, `notifications`, `page/editor`, `page/inline-page-link`, `page/links`, `page/page-link`, `plugin-meta/plugin-health`, `reorder`, `reorder/groups`, `review`, `review/code-review`, `tasks`, `tasks-core`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/recent`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `worktree-switcher`
+  - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/workflows/engine`, `attempt-view`, `auth`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `collections`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/model-provider`, `conversations/summary`, `crashes`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/queue`, `fields/secret/config`, `floating-bar`, `framework/web-core`, `health`, `infra/claude-cli`, `infra/events`, `infra/jobs`, `notifications`, `page/editor`, `page/inline-page-link`, `page/links`, `page/page-link`, `plugin-meta/plugin-health`, `reorder`, `reorder/groups`, `review`, `review/code-review`, `tasks`, `tasks-core`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/recent`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `worktree-switcher`
 - Core:
   - Exports: Types: `ResourceDescriptor`, `ResourceOrigin`; Values: `centralResourceDescriptor`, `keyedResourceDescriptor`, `resourceDescriptor`, `tolerantEnum`
 

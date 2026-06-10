@@ -1,9 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
-export { NotificationsProvider, useResource, hydrateResource, useNotificationsStatus, useNotificationsChannelStatuses } from "./use-resource";
+export { NotificationsProvider, useResource, hydrateResource, useNotificationsStatus, useNotificationsChannelStatuses, useNotificationsClient, getNotificationsClient } from "./use-resource";
 export type { ResourceResult } from "./use-resource";
 export { NotificationsClient, queryKeyFor } from "./notifications-client";
-export type { ResourceKey, ChannelStatuses } from "./notifications-client";
+export type { ResourceKey, ChannelStatuses, DebugSub, DebugSnapshot, LeaderInfo, ResyncSub } from "./notifications-client";
 export { resourceDescriptor, keyedResourceDescriptor, centralResourceDescriptor } from "../core/resource";
 export type { ResourceDescriptor, ResourceOrigin } from "../core/resource";
 

@@ -1,4 +1,5 @@
 import { publishWsStatus, type WsStatus } from "./ws-status-bus";
+import { publishNetDiag } from "./net-diag-bus";
 import { CrossTabElection } from "./cross-tab-election";
 
 // Drop-in replacement for the string-message subset of the native WebSocket
@@ -54,11 +55,13 @@ export class SharedWebSocket {
           case "open":
             this.readyState = SharedWebSocket.OPEN;
             this.setStatus("open");
+            publishNetDiag({ type: "ws-open", url: this.url });
             this.dispatchOpen();
             break;
           case "close":
             this.readyState = SharedWebSocket.CONNECTING;
             this.setStatus("reconnecting");
+            publishNetDiag({ type: "ws-close", url: this.url });
             break;
           case "tx":
             break;
@@ -136,6 +139,7 @@ export class SharedWebSocket {
         try { ws.send(msg); } catch { /* ignore */ }
       }
       this.setStatus("open");
+      publishNetDiag({ type: "ws-open", url: this.url });
       this.election.broadcast({ kind: "open" });
       this.dispatchOpen();
     };
@@ -156,6 +160,7 @@ export class SharedWebSocket {
       if (this.closed) return;
       this.readyState = SharedWebSocket.CONNECTING;
       this.setStatus("reconnecting");
+      publishNetDiag({ type: "ws-close", url: this.url });
       this.election.broadcast({ kind: "close" });
       this.scheduleReconnect();
     };
@@ -164,6 +169,7 @@ export class SharedWebSocket {
   private scheduleReconnect(): void {
     const delay = BACKOFF_MS[Math.min(this.attempt, BACKOFF_MS.length - 1)]!;
     this.attempt++;
+    publishNetDiag({ type: "ws-reconnect-scheduled", url: this.url, attempt: this.attempt });
     this.retryTimer = setTimeout(this.connectWs, delay);
   }
 
@@ -203,6 +209,23 @@ export class SharedWebSocket {
   private dispatchMessage(data: string): void {
     // eslint-disable-next-line promise-safety/no-bare-catch
     try { this.onmessage?.(new MessageEvent("message", { data })); } catch { /* ignore */ }
+  }
+
+  // --- introspection (read-only; Layer 2 inspector) -------------------------
+
+  /** Last-published status for this socket (null until the first transition). */
+  get status(): WsStatus | null {
+    return this.lastStatus;
+  }
+
+  /** Whether this tab currently owns the real socket (is the election leader). */
+  get isLeader(): boolean {
+    return this.election.isLeader;
+  }
+
+  /** Whether a live leader signal exists (this tab is leader or a leader's heartbeat is fresh). */
+  get hasLeader(): boolean {
+    return this.election.hasLeader();
   }
 
   // --- status bus -----------------------------------------------------------

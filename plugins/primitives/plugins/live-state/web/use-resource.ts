@@ -55,6 +55,13 @@ function getOrCreateNotifications(qc: QueryClient): NotificationsClient {
   return singleton;
 }
 
+// Context-free accessor for the singleton — usable from Core.Root watchers that
+// may mount outside NotificationsProvider (the wedge watchdog). Returns null
+// until the provider has created the client (i.e. before first render).
+export function getNotificationsClient(): NotificationsClient | null {
+  return singleton;
+}
+
 export function useNotificationsStatus(): WsStatus {
   const client = useContext(NotificationsContext);
   if (!client) throw new Error("useNotificationsStatus must be inside NotificationsProvider");
@@ -69,6 +76,15 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
   const [statuses, setStatuses] = useState(() => client.getChannelStatuses());
   useEffect(() => client.subscribeChannelStatuses(setStatuses), [client]);
   return statuses;
+}
+
+// Accessor for the singleton NotificationsClient — consumers (the live-state
+// health pane, the wedge watchdog) use it to reach resync()/debugSnapshot()/
+// subscribeDebug(). Must be called inside NotificationsProvider.
+export function useNotificationsClient(): NotificationsClient {
+  const client = useContext(NotificationsContext);
+  if (!client) throw new Error("useNotificationsClient must be inside NotificationsProvider");
+  return client;
 }
 
 // Seed the default query client's cache for a resource before any component

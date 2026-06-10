@@ -1,7 +1,7 @@
 import { ESLintUtils } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
-  (name) => `https://internal/lint/debug-logs/${name}`,
+  (name) => `https://internal/lint/log-channels/${name}`,
 );
 
 const noConsoleLog = createRule({
@@ -27,7 +27,7 @@ const noConsoleLog = createRule({
 });
 
 export default {
-  name: "debug-logs",
+  name: "log-channels",
   rules: { "no-console-log": noConsoleLog },
   /**
    * Globs where `no-console-log` is not enforced, keyed by rule id. The root

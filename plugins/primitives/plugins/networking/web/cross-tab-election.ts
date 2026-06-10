@@ -1,3 +1,5 @@
+import { publishNetDiag } from "./net-diag-bus";
+
 export interface CrossTabElectionCallbacks<TMsg> {
   onElected(): void;
   onFollowerMessage(msg: TMsg): void;
@@ -83,10 +85,29 @@ export class CrossTabElection<TMsg> {
     this.channel = null;
   }
 
+  // --- introspection (read-only; Layer 2 inspector) -------------------------
+
+  /** Timestamp (ms epoch) of the last leader heartbeat/down signal this tab saw. */
+  get lastLeaderSignalAt(): number {
+    return this.lastLeaderSignal;
+  }
+
+  /**
+   * Whether a live leader signal exists: this tab is the leader, or a leader's
+   * heartbeat has been seen within the staleness timeout. A `false` result on a
+   * follower means the election may be wedged with no leader.
+   */
+  hasLeader(): boolean {
+    if (this.isLeader) return true;
+    if (this.lastLeaderSignal === 0) return false;
+    return Date.now() - this.lastLeaderSignal < this.timeoutMs;
+  }
+
   // --- internal -------------------------------------------------------------
 
   private requestLock(steal: boolean): void {
     if (this.closed || !this.locks) return;
+    if (steal) publishNetDiag({ type: "steal-attempt", name: this.name });
     const opts: LockOptions = { mode: "exclusive", steal };
     this.locks
       .request(this.name, opts, () => {
@@ -110,6 +131,7 @@ export class CrossTabElection<TMsg> {
     this.isLeader = true;
     this.stopTimeout();
     this.startHeartbeat();
+    publishNetDiag({ type: "elected", name: this.name });
     this.callbacks.onElected();
   }
 
@@ -120,6 +142,7 @@ export class CrossTabElection<TMsg> {
       clearInterval(this.heartbeatTimer);
       this.heartbeatTimer = null;
     }
+    publishNetDiag({ type: "demoted", name: this.name });
     this.requestLock(false);
   }
 
@@ -146,6 +169,7 @@ export class CrossTabElection<TMsg> {
     if (this.closed || this.isLeader) return;
     const elapsed = Date.now() - this.lastLeaderSignal;
     if (elapsed >= this.timeoutMs) {
+      publishNetDiag({ type: "leader-timeout", name: this.name });
       this.requestLock(true);
     } else {
       this.timeoutTimer = setTimeout(
@@ -176,7 +200,10 @@ export class CrossTabElection<TMsg> {
         if (!this.isLeader) this.touchLeader();
         return;
       case "hello":
-        if (this.isLeader) this.callbacks.onFollowerJoined();
+        if (this.isLeader) {
+          publishNetDiag({ type: "follower-joined", name: this.name });
+          this.callbacks.onFollowerJoined();
+        }
         return;
     }
   };

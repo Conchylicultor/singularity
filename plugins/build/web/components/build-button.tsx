@@ -6,7 +6,7 @@ import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { clientLog } from "@plugins/debug/plugins/logs/web";
+import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { mainAheadCountResource, buildHistoryResource } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
