@@ -1,6 +1,7 @@
 import {
   Section,
   ConsumerList,
+  PluginLink,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import {
@@ -40,7 +41,15 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
                 key={`${c.slot}:${id ?? i}`}
                 className="flex items-center gap-2 px-2 py-0.5"
               >
-                <code className="font-mono text-foreground">{c.slot}</code>
+                {c.definerPluginId ? (
+                  <PluginLink
+                    name={c.definerPluginId}
+                    label={c.slot}
+                    className="font-mono text-foreground hover:underline"
+                  />
+                ) : (
+                  <code className="font-mono text-foreground">{c.slot}</code>
+                )}
                 {id && (
                   <code className="ml-auto truncate font-mono text-muted-foreground/60">
                     {id}

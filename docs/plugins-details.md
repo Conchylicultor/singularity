@@ -2335,7 +2335,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`render-detail`** — Per-plugin contributions section in the plugin detail pane.
               - Web:
                 - Contributes: `PluginViewSlots.Section` "contributions" → `ContributionsDetailSection`
-                - Uses: `plugin-meta/plugin-view.ConsumerList`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/text.Text`
+                - Uses: `plugin-meta/plugin-view.ConsumerList`, `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the contributions facet (PR review).
               - Web:
                 - Contributes: `PluginChanges.DiffRenderer` "Contributions"

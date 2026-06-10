@@ -6,11 +6,19 @@ import { pluginViewPane } from "../panes";
  * per-facet render-detail sections (exports, cross-refs, …) that surface
  * consumer/importer relationships.
  */
-export function PluginLink({ name, label }: { name: string; label?: string }) {
+export function PluginLink({
+  name,
+  label,
+  className = "font-medium text-muted-foreground hover:text-foreground hover:underline",
+}: {
+  name: string;
+  label?: string;
+  className?: string;
+}) {
   const openPane = useOpenPane();
   return (
     <button
-      className="font-medium text-muted-foreground hover:text-foreground hover:underline"
+      className={className}
       onClick={(e) => {
         e.stopPropagation();
         openPane(pluginViewPane, { pluginId: name }, { mode: "swap" });

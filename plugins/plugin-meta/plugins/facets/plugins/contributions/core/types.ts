@@ -6,6 +6,13 @@ export interface Contribution {
   props: Record<string, string>;
   paneId?: string;
   panePath?: string;
+  /**
+   * The id of the plugin that *defines* the slot this contribution targets —
+   * the owner of `slot`'s group name, filled in `relate()` from the slots
+   * facet. Lets the detail UI link a contribution back to its slot definer.
+   * Unset when the slot is self-defined or its owner can't be resolved.
+   */
+  definerPluginId?: string;
 }
 
 export interface DocMetaContribution {

@@ -148,14 +148,14 @@ export default createFacet<ContributionsFacetData>({
     for (const contributor of tree.byDir.values()) {
       const data = getFacet(contributor, contributionsFacetDef);
       if (!data) continue;
-      const groups = new Set<string>();
       for (const c of data.static) {
         const head = c.slot.split(".")[0];
-        if (head) groups.add(head);
-      }
-      for (const group of groups) {
-        const owner = slotGroupToOwner.get(group);
+        if (!head) continue;
+        const owner = slotGroupToOwner.get(head);
         if (!owner || owner === contributor) continue;
+        // Link each contribution back to the plugin that defines its slot.
+        c.definerPluginId = owner.id;
+        // Reverse index: record this contributor on the slot owner.
         const ownerData = getFacet(owner, contributionsFacetDef);
         if (ownerData && !ownerData.slotContributors.includes(contributor.name)) {
           ownerData.slotContributors.push(contributor.name);
