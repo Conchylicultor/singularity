@@ -251,10 +251,12 @@ function PushAttemptRow({
               onMouseLeave={() => setHovered(null)}
               // Stop the pointerdown reaching GanttContainer's drag-zoom, which
               // would setPointerCapture and retarget the click off this bar.
+              // Guard only on onBuildClick (like the push bars) — NOT on
+              // build.buildId. A build with a null buildId (older log entries
+              // predating the field) is still a bar, and starting a drag-zoom
+              // from inside it is never what the user wants.
               onPointerDown={
-                onBuildClick && build.buildId
-                  ? (e) => e.stopPropagation()
-                  : undefined
+                onBuildClick ? (e) => e.stopPropagation() : undefined
               }
               onClick={
                 onBuildClick && build.buildId
