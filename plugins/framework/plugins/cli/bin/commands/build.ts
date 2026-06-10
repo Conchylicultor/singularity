@@ -604,11 +604,29 @@ export function registerBuild(program: Command) {
       const root = await getWorktreeRoot();
       const name = basename(root);
 
+      // Every build needs ONE stable id, shared by its build-log record, its
+      // build-profile-<id>.json, its build-logs, and the bundle's .build-id —
+      // so the profiling Gantt can open ANY build's detail by id, not just
+      // UI-triggered ones. UI builds already set SINGULARITY_BUILD_ID
+      // (run-build.ts); manual CLI builds (`./singularity build`) get a
+      // generated one here. Write it back into the env so the profiler and
+      // build-logs writers (which read the env var at write time) agree by
+      // construction instead of falling back to id-less default filenames and
+      // a null build-log buildId (which left manual builds un-clickable).
+      const shortCommitProc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
+        cwd: root,
+        stdout: "pipe",
+      });
+      const shortCommit = shortCommitProc.stdout.toString().trim();
+      const buildId =
+        process.env.SINGULARITY_BUILD_ID ?? `${shortCommit || "nocommit"}-${Date.now()}`;
+      process.env.SINGULARITY_BUILD_ID = buildId;
+
       appendBuildLog({
         phase: "started",
         worktree: name,
         branch,
-        buildId: process.env.SINGULARITY_BUILD_ID ?? null,
+        buildId,
         startedAt: buildStartedAt.toISOString(),
         completedAt: null,
         totalMs: 0,
@@ -639,7 +657,7 @@ export function registerBuild(program: Command) {
           phase: "completed",
           worktree: name,
           branch,
-          buildId: process.env.SINGULARITY_BUILD_ID ?? null,
+          buildId,
           startedAt: buildStartedAt.toISOString(),
           completedAt: new Date().toISOString(),
           totalMs: Date.now() - buildStartedAt.getTime(),
@@ -790,16 +808,9 @@ export function registerBuild(program: Command) {
       const slotKind: HostSlotKind = branch === "main" ? "exempt" : "build";
       let endSlotWaitSpan: (() => void) | undefined;
 
-      // Compute a per-build id BEFORE vite runs, so the same value is both
-      // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id —
-      // bundle and server agree by construction (no chicken-and-egg).
-      const shortCommitProc = Bun.spawnSync(["git", "rev-parse", "--short", "HEAD"], {
-        cwd: root,
-        stdout: "pipe",
-      });
-      const shortCommit = shortCommitProc.stdout.toString().trim();
-      const buildId = `${shortCommit || "nocommit"}-${Date.now()}`;
-
+      // buildId (computed up-front, before the "started" build-log record) is
+      // baked into the bundle (VITE_BUILD_ID) and written to dist/.build-id
+      // below — bundle and server agree by construction (no chicken-and-egg).
       const stepResults = await withHostSlot(
         slotKind,
         async () => {
