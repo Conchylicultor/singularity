@@ -112,7 +112,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Plugins:
         - **`boundaries`** — Boundary-rules checker: zone DSL, edge evaluator, and project boundary config
-        - **`checks`** [23 sub-plugins] — Check runner and built-in checks for ./singularity check
+        - **`checks`** [24 sub-plugins] — Check runner and built-in checks for ./singularity check
         - **`codegen`** — Plugin doc generation and registry codegen
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -195,6 +195,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
     - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
+    - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
     - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.

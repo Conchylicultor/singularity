@@ -1910,6 +1910,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
             - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
           - Plugins:
+            - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
@@ -2672,6 +2673,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/prompt-templates`, `floating-bar`
       - Web:
         - Exports: Types: `FloatingActionFadeInProps`, `FloatingActionProps`, `FloatingAnchor`; Values: `FloatingAction`, `FloatingActionFadeIn`
+    - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
