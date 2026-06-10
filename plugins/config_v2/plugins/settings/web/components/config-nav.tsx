@@ -11,6 +11,7 @@ import type { ConfigRegistration } from "@plugins/config_v2/web";
 import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
 import type { ConfigTreeNode as ConfigTreeNodeData } from "../internal/prune-config-tree";
+import { filterConfigTree } from "../internal/filter-config-tree";
 import { ConfigTreeNode } from "./config-tree-node";
 import { ConfigNavRow } from "./config-nav-row";
 
@@ -24,7 +25,7 @@ export function ConfigNav() {
 
   const accessor = useCallback(
     (r: ConfigRegistration) =>
-      `${r.pluginName} ${Object.values(r.descriptor.fields)
+      `${r.pluginName} ${r.descriptor.name} ${Object.values(r.descriptor.fields)
         .map((f) => f.meta.label ?? "")
         .join(" ")}`,
     [],
@@ -34,6 +35,12 @@ export function ConfigNav() {
     items: registrations,
     accessor,
   });
+
+  const matchReg = useCallback(
+    (r: ConfigRegistration) =>
+      accessor(r).toLowerCase().includes(query.trim().toLowerCase()),
+    [accessor, query],
+  );
 
   // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
   // equals `PluginNode.id`, so no slash→dot bridging is needed.
@@ -86,6 +93,15 @@ export function ConfigNav() {
     return pruned;
   }, [payload, byPluginId, registrations]);
 
+  const filteredTree = useMemo(
+    () => filterConfigTree(tree, query, matchReg),
+    [tree, query, matchReg],
+  );
+
+  // Search results force every branch open so matches are never hidden behind
+  // a collapsed ancestor. A stable empty set means "nothing collapsed".
+  const expanded = useMemo(() => new Set<string>(), []);
+
   const handleToggle = useCallback((id: string, open: boolean) => {
     setCollapsed((prev) => {
       const next = new Set(prev);
@@ -108,7 +124,7 @@ export function ConfigNav() {
     [openPane],
   );
 
-  const useFlat = query.length > 0 || showModifiedOnly;
+  const hasQuery = query.trim().length > 0;
 
   return (
     <div className="flex h-full flex-col gap-2 p-2">
@@ -124,25 +140,25 @@ export function ConfigNav() {
         </FilterChip>
       </div>
       <div className="flex-1 overflow-y-auto">
-        {useFlat ? (
+        {showModifiedOnly ? (
           filtered.map((reg) => (
             <ConfigNavRow
               key={reg.storePath}
               registration={reg}
               selected={selectedPath === encodeURIComponent(reg.storePath)}
               onClick={() => handleSelect(reg)}
-              hideIfUnmodified={showModifiedOnly}
+              hideIfUnmodified
             />
           ))
         ) : isPending ? (
           <Placeholder>Loading…</Placeholder>
         ) : (
-          tree.map((item) => (
+          (hasQuery ? filteredTree : tree).map((item) => (
             <ConfigTreeNode
               key={item.node.id}
               item={item}
               depth={0}
-              collapsed={collapsed}
+              collapsed={hasQuery ? expanded : collapsed}
               onToggle={handleToggle}
               selectedPath={selectedPath}
               onSelect={handleSelect}
