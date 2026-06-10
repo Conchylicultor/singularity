@@ -79,10 +79,12 @@ export function CollapsibleCard({
         <button
           {...triggerProps}
           className={cn(
-            // flex-1 (not shrink): the trigger fills the header row so the whole
-            // empty area toggles, not just the chevron+label. Also lets the tool
-            // summary's flex-1 fill as intended, with `aside` pushed to the right.
-            "flex min-w-0 flex-1 items-center gap-2 text-left transition-colors",
+            // Content-sized (min-w-0 so it can shrink + truncate), NOT flex-1:
+            // the trigger hugs its chevron+label so the `aside` (e.g. FilePath)
+            // sits immediately to its right, left-aligned, rather than being
+            // shoved to the far edge. Free space falls to the right, where
+            // `trailing` pins itself via ml-auto.
+            "flex min-w-0 items-center gap-2 text-left transition-colors",
             t.hover,
           )}
         >
