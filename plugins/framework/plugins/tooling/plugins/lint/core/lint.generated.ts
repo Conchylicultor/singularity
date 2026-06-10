@@ -13,7 +13,6 @@ export interface CollectedEntry {
 }
 
 export const lintEntries: CollectedEntry[] = [
-  { pluginPath: "debug/plugins/logs", id: "debug.logs", loader: () => import("@plugins/debug/plugins/logs/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/icon-safety", id: "framework.tooling.lint.icon-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", id: "framework.tooling.lint.promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", id: "framework.tooling.lint.reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },
@@ -23,6 +22,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/control-size", id: "primitives.control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-auto", id: "primitives.icon-auto", loader: () => import("@plugins/primitives/plugins/icon-auto/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/radius", id: "primitives.radius", loader: () => import("@plugins/primitives/plugins/radius/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/row", id: "primitives.row", loader: () => import("@plugins/primitives/plugins/row/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/text", id: "primitives.text", loader: () => import("@plugins/primitives/plugins/text/lint"), dependsOn: [] },

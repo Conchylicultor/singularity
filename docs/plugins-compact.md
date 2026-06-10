@@ -82,6 +82,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
     - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
+    - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
     - **`logs`** — System logs pane, opened from the Debug sidebar.
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
     - **`profiling`** — Gantt chart of build steps and server startup phases.
@@ -202,6 +203,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
     - **`link-chip`** — Inline, clickable navigational chip: bg-muted + text-primary with hover underline, baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
     - **`live-state`** [load-bearing] — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
+    - **`log-channels`** [load-bearing] — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
     - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
     - **`networking`** [load-bearing] — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
