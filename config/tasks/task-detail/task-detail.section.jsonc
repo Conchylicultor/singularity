@@ -1,0 +1,14 @@
+// @hash 7a199a5c2339
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "tasks.task-header:header",
+    "tasks.task-description:description",
+    "tasks.task-dependencies:dependencies",
+    "tasks.task-dependencies:dependents",
+    "tasks.task-events:events",
+    "tasks.task-attachments:attachments",
+    "tasks.task-preprompt:preprompt",
+    "tasks.task-graph:graph"
+  ]
+}

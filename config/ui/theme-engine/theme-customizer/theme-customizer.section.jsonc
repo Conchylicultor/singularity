@@ -1,0 +1,15 @@
+// @hash 020bab39d69a
+{
+  "items": [
+    "ui.tweakcn.community-browser:community-browser",
+    "ui.tokens.color-palette:color-palette",
+    "ui.tokens.color-adjust:color-adjust",
+    "ui.tokens.typography:typography",
+    "ui.tokens.shape:shape",
+    "ui.tokens.density:density",
+    "ui.tokens.sidebar-palette:sidebar-palette",
+    "ui.tokens.shadow:shadow",
+    "ui.tokens.chart:chart",
+    "ui.tokens.categorical:categorical"
+  ]
+}

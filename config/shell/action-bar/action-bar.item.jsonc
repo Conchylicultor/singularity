@@ -1,0 +1,16 @@
+// @hash ae3f7f411da1
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "improve:improve",
+    "build:build",
+    { "spacer": "spacer-1" },
+    "notifications:notifications",
+    "health:health-dot",
+    "screenshot:screenshot",
+    "screenshot.draw-on-app:draw-on-app",
+    "theme:theme-light-dark",
+    "ui.theme-engine.theme-customizer:theme-customizer",
+    "reorder.edit-mode:reorder-pen"
+  ]
+}

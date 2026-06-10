@@ -1,0 +1,7 @@
+// @hash fca88b7a1afe
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "apps.home.app-cards:apps"
+  ]
+}

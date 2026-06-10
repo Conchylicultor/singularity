@@ -1,0 +1,10 @@
+// @hash c283db5ee990
+{
+  "items": [
+    "debug.profiling.boot:boot",
+    "debug.profiling.build:build",
+    "debug.profiling.push:push",
+    "debug.profiling.stats:stats",
+    "debug.profiling.runtime:runtime"
+  ]
+}

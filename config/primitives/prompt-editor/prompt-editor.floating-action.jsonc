@@ -1,0 +1,9 @@
+// @hash a621761bf7d9
+{
+  "items": [
+    "primitives.prompt-editor.voice-input:voice-input",
+    "conversations.conversation-view.prompt-templates:prompt-templates",
+    "conversations.conversation-view.exit-menu:exit-menu",
+    "conversations.conversation-view.push-and-exit:push-and-exit"
+  ]
+}

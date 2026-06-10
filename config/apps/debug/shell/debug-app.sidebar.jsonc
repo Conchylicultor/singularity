@@ -1,0 +1,18 @@
+// @hash f36fd936f0ac
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "debug.logs:logs",
+    "debug.crashes:crashes",
+    "debug.profiling:profiling",
+    "debug.queue:queue",
+    "debug.claude-cli-calls:claude-cli-calls",
+    "debug.broadcasts:broadcasts",
+    "debug.memory:memory",
+    "debug.worktree-cleanup:worktree-cleanup",
+    { "spacer": "spacer-1" },
+    "conversations-recover:conversations-recover",
+    "events-test:events-test",
+    "backup:backup"
+  ]
+}

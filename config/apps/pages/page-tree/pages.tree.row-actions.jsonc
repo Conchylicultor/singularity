@@ -1,0 +1,7 @@
+// @hash 734da42e3720
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "apps.pages.page-tree:delete"
+  ]
+}

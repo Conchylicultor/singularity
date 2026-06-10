@@ -1,0 +1,10 @@
+// @hash 3cd0174d325d
+{
+  "items": [
+    "conversations.conversation-view.dependencies:dependencies",
+    "conversations.conversation-view.branch:branch",
+    "conversations.conversation-view.fork-conversation:fork-conversation",
+    "conversations.conversation-view.launch-prompts:launch-prompts",
+    "conversations.conversation-view.notes:notes-toggle"
+  ]
+}

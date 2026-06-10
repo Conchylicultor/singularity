@@ -1,0 +1,7 @@
+// @hash 7137cb80fcf0
+{
+  "items": [
+    "review.plugin-changes.file-changes:file-changes",
+    "review.plugin-changes.api-changes:api-changes"
+  ]
+}

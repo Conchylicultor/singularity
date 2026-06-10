@@ -1,0 +1,12 @@
+// @hash c35f272196c8
+{
+  "items": [
+    "conversations.conversation-view.jsonl-viewer:timestamp",
+    "conversations.conversation-view.jsonl-viewer:raw-json",
+    "conversations.conversation-view.jsonl-viewer.assistant-text:stop-reason",
+    "conversations.conversation-view.jsonl-viewer.assistant-text:markdown-toggle",
+    "conversations.conversation-view.jsonl-viewer.assistant-text:copy-assistant-text",
+    "conversations.conversation-view.jsonl-viewer.tool-call:copy-tool-result",
+    "conversations.conversation-view.fork-session:fork-session"
+  ]
+}

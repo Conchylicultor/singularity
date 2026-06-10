@@ -44,5 +44,6 @@ export const checkEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/paths", id: "infra.paths", loader: () => import("@plugins/infra/plugins/paths/check"), dependsOn: [] },
   { pluginPath: "plugin-meta/plugins/facets", id: "plugin-meta.facets", loader: () => import("@plugins/plugin-meta/plugins/facets/check"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/check"), dependsOn: [] },
+  { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/check"), dependsOn: [] },
   { pluginPath: "welcome", id: "welcome", loader: () => import("@plugins/welcome/check"), dependsOn: [] },
 ];

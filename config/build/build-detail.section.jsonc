@@ -1,0 +1,10 @@
+// @hash 373010a44394
+{
+  "items": [
+    "build.build-info:info",
+    "build.build-logs:logs",
+    "build.build-commits:commits",
+    "build.build-fix:fix",
+    "build.build-profiling:profiling"
+  ]
+}

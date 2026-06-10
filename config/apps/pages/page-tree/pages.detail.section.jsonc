@@ -1,0 +1,7 @@
+// @hash c6db4b9fe7fd
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  "items": [
+    "apps.pages.page-tree:backlinks"
+  ]
+}

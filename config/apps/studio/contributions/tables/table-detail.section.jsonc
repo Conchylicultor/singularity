@@ -1,0 +1,10 @@
+// @hash 14720ee829f5
+{
+  "items": [
+    "apps.studio.contributions.tables.columns:columns",
+    "apps.studio.contributions.tables.row-count:row-count",
+    "apps.studio.contributions.tables.sample-rows:sample-rows",
+    "apps.studio.contributions.tables.indexes:indexes",
+    "apps.studio.contributions.tables.foreign-keys:foreign-keys"
+  ]
+}

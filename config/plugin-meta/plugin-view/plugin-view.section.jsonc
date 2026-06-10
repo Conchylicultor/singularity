@@ -1,0 +1,20 @@
+// @hash a36b006e44f1
+{
+  "items": [
+    "plugin-meta.plugin-health:health",
+    "plugin-meta.plugin-view.sub-plugins:sub-plugins",
+    "plugin-meta.plugin-view.runtimes:runtimes",
+    "plugin-meta.plugin-view.source-path:source-path",
+    "plugin-meta.plugin-view.file-tree:file-tree",
+    "plugin-meta.facets.contributions.render-detail:contributions",
+    "plugin-meta.facets.resources.render-detail:resources",
+    "plugin-meta.facets.exports.render-detail:exports",
+    "plugin-meta.facets.db-schema.render-detail:db-schema",
+    "plugin-meta.facets.commands.render-detail:commands",
+    "plugin-meta.facets.cross-refs.render-detail:cross-refs",
+    "plugin-meta.facets.slots.render-detail:slots",
+    "plugin-meta.facets.routes.render-detail:routes",
+    "plugin-meta.facets.registrations.render-detail:registrations",
+    "plugin-meta.facets.structure.render-detail:structure"
+  ]
+}

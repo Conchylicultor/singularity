@@ -1,0 +1,14 @@
+// @hash ff962147af57
+{
+  "items": [
+    "stats.commits:commits",
+    "stats.commits:lines",
+    "stats.tasks:tasks-active",
+    "stats.pushes:pushes",
+    "stats.cost:cost-overview",
+    "stats.cost:cost-token-mix",
+    "stats.cost:cost-avg-per-conversation",
+    "stats.cost:cost-distribution",
+    "stats.cost:cost-top-conversations"
+  ]
+}

@@ -1,0 +1,9 @@
+// @hash 504ddb8c8896
+{
+  "items": [
+    "apps.studio.explorer.child-count:child-count",
+    "apps.studio.explorer.load-bearing:load-bearing",
+    "apps.studio.explorer.collapsed:collapsed",
+    "apps.studio.explorer.expand-collapse:expand-collapse"
+  ]
+}
