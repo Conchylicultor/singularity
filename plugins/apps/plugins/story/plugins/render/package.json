@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-render",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks."
+}

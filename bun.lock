@@ -272,6 +272,14 @@
       "name": "@singularity/plugin-apps-story-marker",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/story/plugins/render": {
+      "name": "@singularity/plugin-apps-story-render",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/story/plugins/story-core": {
+      "name": "@singularity/plugin-apps-story-story-core",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio": {
       "name": "@singularity/plugin-apps-studio",
       "version": "0.0.1",
@@ -2873,6 +2881,10 @@
     "@singularity/plugin-apps-story": ["@singularity/plugin-apps-story@workspace:plugins/apps/plugins/story"],
 
     "@singularity/plugin-apps-story-marker": ["@singularity/plugin-apps-story-marker@workspace:plugins/apps/plugins/story/plugins/marker"],
+
+    "@singularity/plugin-apps-story-render": ["@singularity/plugin-apps-story-render@workspace:plugins/apps/plugins/story/plugins/render"],
+
+    "@singularity/plugin-apps-story-story-core": ["@singularity/plugin-apps-story-story-core@workspace:plugins/apps/plugins/story/plugins/story-core"],
 
     "@singularity/plugin-apps-studio": ["@singularity/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
 

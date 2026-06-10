@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-story-core",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Renderer-agnostic StoryNode IR plus buildStoryTree — the single place a block type maps to a structural role (divider → break, else content)."
+}
