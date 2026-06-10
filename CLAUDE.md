@@ -202,6 +202,8 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 - Most features first require a thoughtful design phase. Use the project `plan` SKILL for this phase. This is important to correctly write the plan doc at the right location. Do NOT use `EnterPlanMode` tool.
 - New features should be implemented as plugins in `plugins/`. See [`plugins/framework/plugins/web-sdk/CLAUDE.md`](plugins/framework/plugins/web-sdk/CLAUDE.md) for how to create one.
 - When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
+- Before debugging, read the `debug` SKILL ([`.claude/skills/debug/SKILL.md`](.claude/skills/debug/SKILL.md)) — map of logs, profiling, crashes, DB, and queue surfaces.
+- Before any theming / token / design-standard work, read the `theme` SKILL ([`.claude/skills/theme/SKILL.md`](.claude/skills/theme/SKILL.md)) — design tokens, tweakcn, per-app config, and typography/radius/z-index enforcement.
 - Always edit files in your worktree, not the main branch.
 - **Avoid `find` for file searches.** Unbounded `find` in this repo has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'` instead. Only use `find` with `-maxdepth` or `-prune`.
 - **STOP on unexpected failures; never improvise around them.** If something fails in a way you don't fully understand, surface it and ask — do NOT route around it (e.g. falling back to curl after an MCP call fails). A loud failure is debuggable; a workaround built on a broken assumption is not.
