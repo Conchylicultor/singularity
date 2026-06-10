@@ -1,6 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
+import { dirPathField } from "@plugins/fields/plugins/directory-path/plugins/config/core";
 import { listField } from "@plugins/fields/plugins/list/plugins/config/core";
-import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 
 // The watched-folder registry. Each item is an absolute directory the MIDI
 // folder-watcher mirrors into the Sonata library: `.mid`/`.midi` files are
@@ -19,7 +19,7 @@ export const midiFoldersConfig = defineConfig({
       description:
         "Absolute directories whose .mid/.midi files are auto-imported into the Sonata library and kept in sync.",
       itemFields: {
-        path: textField({ label: "Absolute folder path" }),
+        path: dirPathField({ label: "Absolute folder path" }),
       },
       default: [],
     }),

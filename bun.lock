@@ -1015,6 +1015,14 @@
       "name": "@singularity/plugin-fields-date-table",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/directory-path": {
+      "name": "@singularity/plugin-fields-directory-path",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/directory-path/plugins/config": {
+      "name": "@singularity/plugin-fields-directory-path-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/dynamic-enum": {
       "name": "@singularity/plugin-fields-dynamic-enum",
       "version": "0.0.1",
@@ -1808,6 +1816,10 @@
     },
     "plugins/primitives/plugins/floating-action": {
       "name": "@singularity/plugin-primitives-floating-action",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/folder-picker": {
+      "name": "@singularity/plugin-primitives-folder-picker",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/icon-auto": {
@@ -3268,6 +3280,10 @@
 
     "@singularity/plugin-fields-date-table": ["@singularity/plugin-fields-date-table@workspace:plugins/fields/plugins/date/plugins/table"],
 
+    "@singularity/plugin-fields-directory-path": ["@singularity/plugin-fields-directory-path@workspace:plugins/fields/plugins/directory-path"],
+
+    "@singularity/plugin-fields-directory-path-config": ["@singularity/plugin-fields-directory-path-config@workspace:plugins/fields/plugins/directory-path/plugins/config"],
+
     "@singularity/plugin-fields-dynamic-enum": ["@singularity/plugin-fields-dynamic-enum@workspace:plugins/fields/plugins/dynamic-enum"],
 
     "@singularity/plugin-fields-dynamic-enum-config": ["@singularity/plugin-fields-dynamic-enum-config@workspace:plugins/fields/plugins/dynamic-enum/plugins/config"],
@@ -3633,6 +3649,8 @@
     "@singularity/plugin-primitives-filter-chips": ["@singularity/plugin-primitives-filter-chips@workspace:plugins/primitives/plugins/filter-chips"],
 
     "@singularity/plugin-primitives-floating-action": ["@singularity/plugin-primitives-floating-action@workspace:plugins/primitives/plugins/floating-action"],
+
+    "@singularity/plugin-primitives-folder-picker": ["@singularity/plugin-primitives-folder-picker@workspace:plugins/primitives/plugins/folder-picker"],
 
     "@singularity/plugin-primitives-icon-auto": ["@singularity/plugin-primitives-icon-auto@workspace:plugins/primitives/plugins/icon-auto"],
 

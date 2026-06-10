@@ -6,7 +6,7 @@
 
 - Description: Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
 - Cross-plugin:
-  - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `build`, `conversations-recover`, `conversations/conversation-view/op-status`, `debug/worktree-cleanup`
+  - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `build`, `conversations-recover`, `conversations/conversation-view/op-status`, `debug/worktree-cleanup`, `primitives/folder-picker`
 - Web:
   - Exports: Types: `SpinnerProps`; Values: `Spinner`
 

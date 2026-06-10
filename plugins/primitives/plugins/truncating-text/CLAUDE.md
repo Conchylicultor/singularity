@@ -6,7 +6,7 @@
 
 - Description: Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
 - Cross-plugin:
-  - Imported by: `worktree-switcher`
+  - Imported by: `primitives/folder-picker`, `worktree-switcher`
 - Web:
   - Exports: Types: `TruncatingTextProps`; Values: `TruncatingText`
 

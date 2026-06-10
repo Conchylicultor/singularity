@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-folder-picker",
+  "description": "Folder-picker primitive: browse the host filesystem and pick a directory. Server endpoint lists/validates a host dir; the FolderPickerPopover widget pairs a typeable path input with a breadcrumb browser.",
+  "private": true,
+  "version": "0.0.1"
+}
