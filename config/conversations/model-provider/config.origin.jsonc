@@ -1,9 +1,10 @@
-// @hash d6e5fbd38219
+// @hash 811157b1746b
 {
   // Model fired by the launch button and pre-selected in the dropdown.
-  // Allowed values: "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-4-6"
+  // Allowed values: "fable-5", "opus-4-8", "opus-4-7", "opus-4-6", "sonnet-4-6"
   "defaultModel": "opus-4-8",
   "visibleModels": {
+    "fable-5": true,
     "opus-4-8": true,
     "opus-4-7": false,
     "opus-4-6": false,

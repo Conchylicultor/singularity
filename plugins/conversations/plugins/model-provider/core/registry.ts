@@ -2,6 +2,7 @@ import { z } from "zod";
 import { tolerantEnum } from "@plugins/primitives/plugins/live-state/core";
 
 export const ConversationModelSchema = z.enum([
+  "fable-5",
   "opus-4-8",
   "opus-4-7",
   "opus-4-6",
@@ -13,7 +14,7 @@ export type ConversationModel = z.infer<typeof ConversationModelSchema>;
 export const DEFAULT_MODEL: ConversationModel = "opus-4-8";
 
 /** Capability tiers, ordered cheap/fast → smart. Drives filter chips and tier resolution. */
-export const MODEL_TIERS = ["haiku", "sonnet", "opus"] as const;
+export const MODEL_TIERS = ["haiku", "sonnet", "opus", "fable"] as const;
 export type ModelTier = (typeof MODEL_TIERS)[number];
 
 export type ModelMeta = {
@@ -28,6 +29,7 @@ export type ModelMeta = {
 };
 
 export const MODEL_REGISTRY: Record<ConversationModel, ModelMeta> = {
+  "fable-5": { cliFlag: "claude-fable-5", label: "Fable 5", family: "fable", iconSize: "size-4" },
   "opus-4-8": { cliFlag: "claude-opus-4-8", label: "Opus 4.8", family: "opus", iconSize: "size-4" },
   "opus-4-7": { cliFlag: "claude-opus-4-7", label: "Opus 4.7", family: "opus", iconSize: "size-4", defaultHidden: true },
   "opus-4-6": { cliFlag: "claude-opus-4-6", label: "Opus 4.6", family: "opus", iconSize: "size-4", defaultHidden: true },
@@ -116,6 +118,8 @@ export function cliFlagFor(id: ConversationModel): string {
 /** The canonical (non-defaultHidden) id for a tier. Used by print callers that want "the current model of tier X". */
 export function currentModelForTier(tier: ModelTier): ConversationModel {
   switch (tier) {
+    case "fable":
+      return "fable-5";
     case "opus":
       return "opus-4-8";
     case "sonnet":

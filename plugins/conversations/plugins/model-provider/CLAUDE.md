@@ -1,6 +1,6 @@
 # model-provider
 
-Single source of truth for `ConversationModel` — now **concrete versioned ids** (`opus-4-8`, `opus-4-7`, `opus-4-6`, `sonnet-4-6`). Owns the Zod schema, the `DEFAULT_MODEL`, the `MODEL_REGISTRY` (id → `{ cliFlag, label, family, iconSize, defaultHidden }`), and `normalizeModel()`.
+Single source of truth for `ConversationModel` — now **concrete versioned ids** (`fable-5`, `opus-4-8`, `opus-4-7`, `opus-4-6`, `sonnet-4-6`, `haiku-4-5`). Owns the Zod schema, the `DEFAULT_MODEL`, the `MODEL_REGISTRY` (id → `{ cliFlag, label, family, iconSize, defaultHidden }`), and `normalizeModel()`.
 
 Consumers import the type/registry/`normalizeModel` from `@plugins/conversations/plugins/model-provider/core` (depends only on `live-state/core`, which is zod-only — safe for `tasks-core` and other low-level plugins). Web consumers get config-driven pickers via `useVisibleModels()` / `useDefaultModel()` / `useSetDefaultModel()` from `@plugins/conversations/plugins/model-provider/web`.
 
