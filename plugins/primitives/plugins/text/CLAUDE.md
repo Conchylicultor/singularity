@@ -44,7 +44,7 @@ file-by-file.
 
 - Description: Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
 - Cross-plugin:
-  - Imported by: `apps/story/render`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `primitives/markdown`
+  - Imported by: `apps/story/render`, `apps/story/shell`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `primitives/markdown`
 - Web:
   - Exports: Types: `TextProps`, `TextTone`, `TextVariant`; Values: `Text`
 

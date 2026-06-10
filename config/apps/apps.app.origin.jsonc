@@ -1,4 +1,4 @@
-// @hash 031029ebd675
+// @hash f66e9c7af7f3
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
   "items": [
@@ -10,6 +10,7 @@
     "apps.workflows.shell:workflows",
     "apps.file-explorer.shell:file-explorer",
     "apps.pages.shell:pages",
+    "apps.story.shell:story",
     "apps.debug.shell:debug"
   ]
 }

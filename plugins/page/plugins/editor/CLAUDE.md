@@ -11,7 +11,7 @@
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
 - Cross-plugin:
   - Slot contributors: `bulleted-list`, `code-block`, `divider`, `image`, `page-link`, `text`, `to-do`, `toggle`
-  - Imported by: `apps/pages/page-tree`, `apps/story/marker`, `page/bulleted-list`, `page/code-block`, `page/divider`, `page/image`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/text`, `page/to-do`, `page/toggle`
+  - Imported by: `apps/pages/page-tree`, `apps/story/marker`, `apps/story/shell`, `page/bulleted-list`, `page/code-block`, `page/divider`, `page/image`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/text`, `page/to-do`, `page/toggle`
   - Extended by: `apps/story/marker` (table `page_blocks_ext_story`)
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`

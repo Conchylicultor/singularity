@@ -6,7 +6,7 @@
 
 - Description: Debounced-autosave field hook with focus tracking, flush-on-blur, and self-echo suppression. Used by task/agent detail forms.
 - Cross-plugin:
-  - Imported by: `agents`, `apps/pages/page-tree`, `conversations/conversation-view/notes`, `conversations/conversations-view/grouped`, `page/code-block`, `page/editor`, `reorder`, `tasks/task-description`, `tasks/task-header`
+  - Imported by: `agents`, `apps/pages/page-tree`, `apps/story/shell`, `conversations/conversation-view/notes`, `conversations/conversations-view/grouped`, `page/code-block`, `page/editor`, `reorder`, `tasks/task-description`, `tasks/task-header`
 - Web:
   - Exports: Types: `EditableField`, `UseEditableFieldOptions`; Values: `useEditableField`
 
