@@ -79,7 +79,7 @@ function FallbackChrome({
   const doPromote = paneObject.usePromote();
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-10 items-center gap-2 border-b px-2">
+      <div className="flex h-chrome-pane items-center gap-2 border-b px-chrome">
         <span className="truncate text-sm font-medium text-muted-foreground">
           {title}
         </span>

@@ -1,7 +1,6 @@
 import type { ReactNode } from "react";
 import type { RenderSlot } from "@plugins/primitives/plugins/slot-render/web";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import {
   Sidebar,
   SidebarHeader,
@@ -72,13 +71,8 @@ export function AppShellLayout({
   children: ReactNode;
 }) {
   const toolbar = toolbarSlot && (
-    <header className="flex items-center border-b px-3 h-12 gap-2 bg-background overflow-hidden">
-      {sidebarSlot && (
-        <>
-          <SidebarTrigger />
-          <Separator orientation="vertical" className="h-5" />
-        </>
-      )}
+    <header className="flex items-center border-b px-chrome h-chrome-bar gap-2 bg-background overflow-hidden">
+      {sidebarSlot && <SidebarTrigger />}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}
       </toolbarSlot.Render>
@@ -104,7 +98,7 @@ export function AppShellLayout({
     <SidebarProvider className="h-full min-h-0">
       <Sidebar>
         {header && (
-          <SidebarHeader className="h-12 justify-center border-b px-4 py-0">
+          <SidebarHeader className="h-chrome-bar justify-center border-b px-chrome py-0">
             {header}
           </SidebarHeader>
         )}

@@ -7,7 +7,7 @@
 - Description: Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
 - Web:
   - Contributes: `Core.Root` → `ReconnectWatcher`, `ActionBar.Item` → `HealthDot`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/tooltip.WithTooltip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/networking.subscribeWsStatus`, `primitives/status-dot.StatusDot`, `primitives/tooltip.WithTooltip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
   - Exports: Values: `getHealth`, `waitForRestart`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`

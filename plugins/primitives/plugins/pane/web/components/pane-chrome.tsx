@@ -63,7 +63,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
   return (
     <div className="flex h-full flex-col">
       <div
-        className={`flex h-10 min-w-0 items-center gap-2 ${headerSpill ? "overflow-visible" : "overflow-hidden"} border-b px-2${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
+        className={`flex h-chrome-pane min-w-0 items-center gap-2 ${headerSpill ? "overflow-visible" : "overflow-hidden"} border-b px-chrome${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >

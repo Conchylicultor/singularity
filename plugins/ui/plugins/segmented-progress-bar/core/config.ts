@@ -3,6 +3,6 @@ import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/c
 
 export const segmentedProgressBarConfig = defineConfig({
   fields: {
-    variant: dynamicEnumField({ default: "dots", label: "Progress bar variant" }),
+    variant: dynamicEnumField({ default: "segmented", label: "Progress bar variant" }),
   },
 });

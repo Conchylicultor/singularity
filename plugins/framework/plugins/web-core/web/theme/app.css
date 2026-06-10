@@ -179,6 +179,9 @@
     --control-height-sm: 1.75rem;
     --control-height-md: 2rem;
     --control-height-lg: 2.25rem;
+    --chrome-bar-h: 3rem;
+    --chrome-pane-h: 2.5rem;
+    --chrome-pad-x: 0.75rem;
     --shadow-2xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0px oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
@@ -259,6 +262,9 @@
     --control-height-sm: 1.75rem;
     --control-height-md: 2rem;
     --control-height-lg: 2.25rem;
+    --chrome-bar-h: 3rem;
+    --chrome-pane-h: 2.5rem;
+    --chrome-pad-x: 0.75rem;
     --shadow-2xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-xs: 0 1px 3px 0px oklch(0 0 0 / 0.05);
     --shadow-sm: 0 1px 3px 0px oklch(0 0 0 / 0.10), 0 1px 2px -1px oklch(0 0 0 / 0.10);
@@ -317,6 +323,16 @@
 @utility control-icon-sm { height: var(--control-height-sm); width: var(--control-height-sm); }
 @utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); }
 @utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); }
+
+/* Chrome dimension utilities — the single source of truth for app-chrome
+ * heights and horizontal padding (toolbar, sidebar header, pane headers).
+ * Values come from the density token group (--chrome-* runtime vars,
+ * overridden by ThemeInjector), so chrome scales with the active density
+ * preset. Two-tier heights: h-chrome-bar for the toolbar/sidebar header,
+ * h-chrome-pane for pane headers; px-chrome is the shared left/right inset. */
+@utility h-chrome-bar { height: var(--chrome-bar-h); }
+@utility h-chrome-pane { height: var(--chrome-pane-h); }
+@utility px-chrome { padding-left: var(--chrome-pad-x); padding-right: var(--chrome-pad-x); }
 
 /* Semantic typography role utilities — the single source of truth for text
  * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height

@@ -7,7 +7,7 @@
 - Description: Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
 - Web:
   - Contributes: `ActionBar.Item` → `BellButton`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
   - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`

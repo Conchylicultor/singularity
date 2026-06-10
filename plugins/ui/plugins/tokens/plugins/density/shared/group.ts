@@ -11,6 +11,9 @@ export const densityGroup = defineTokenGroup("density", {
   controlHeightSm: { default: "1.75rem", label: "Control height SM" },
   controlHeightMd: { default: "2rem", label: "Control height MD" },
   controlHeightLg: { default: "2.25rem", label: "Control height LG" },
+  chromeBarH: { default: "3rem", label: "Chrome bar height" },
+  chromePaneH: { default: "2.5rem", label: "Chrome pane header height" },
+  chromePadX: { default: "0.75rem", label: "Chrome padding X" },
 });
 
 export type DensityTokenValues = {

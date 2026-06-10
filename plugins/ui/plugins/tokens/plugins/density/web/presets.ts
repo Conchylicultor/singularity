@@ -25,6 +25,9 @@ export const comfortablePreset: Preset = {
     controlHeightSm: "1.75rem",
     controlHeightMd: "2rem",
     controlHeightLg: "2.25rem",
+    chromeBarH: "3rem",
+    chromePaneH: "2.5rem",
+    chromePadX: "0.75rem",
   }),
 };
 
@@ -42,6 +45,9 @@ export const cozyPreset: Preset = {
     controlHeightSm: "1.625rem",
     controlHeightMd: "1.875rem",
     controlHeightLg: "2.125rem",
+    chromeBarH: "2.75rem",
+    chromePaneH: "2.25rem",
+    chromePadX: "0.625rem",
   }),
 };
 
@@ -59,6 +65,9 @@ export const compactPreset: Preset = {
     controlHeightSm: "1.5rem",
     controlHeightMd: "1.75rem",
     controlHeightLg: "2rem",
+    chromeBarH: "2.5rem",
+    chromePaneH: "2rem",
+    chromePadX: "0.5rem",
   }),
 };
 

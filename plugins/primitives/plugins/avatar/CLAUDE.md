@@ -5,15 +5,22 @@ optional status dot overlay (Slack-style). Pure web; no server, no slots.
 
 ## Components
 
-- `<Avatar icon? color? size? statusDot? />` — renders a round badge.
-  - `icon`: key into `AVATAR_ICONS` (e.g. `"robot"`, `"rocket"`). Falls back
-    to a blank disc when null/unknown.
+- `<Avatar icon? color? size? statusDot? fallbackGlyph? fallbackKey? colorless? />`
+  — renders a round badge.
+  - `icon`: key into `AVATAR_ICONS` (e.g. `"robot"`, `"rocket"`).
   - `color`: key into `AVATAR_COLORS` (Tailwind hue names). Falls back to a
-    deterministic muted color when null.
+    deterministic auto-color derived from `fallbackKey` (or `icon`) when null.
   - `size`: `"xs" | "sm" | "md" | "lg"`.
   - `statusDot`: a Tailwind background class (e.g. `bg-amber-500`). When
     set, renders a small dot bottom-right with a ring matching the surface
     bg, like Slack's presence indicator.
+  - `fallbackGlyph`: a single character (first char used, uppercased) rendered
+    centered when there is no icon/svg, so the disc is never blank. Sized per
+    size variant via the box's own `text-*` class. Providing it also tints the
+    disc via the deterministic auto-color (unless `color` is set or `colorless`).
+  - `fallbackKey`: stable key feeding the deterministic auto-color hash.
+  - `colorless`: forces the neutral muted disc, ignoring `color`, the
+    auto-color, and any `fallbackGlyph` tint.
 - `<AvatarPicker value onChange children />` — popover trigger that opens
   a color row + the shared `<IconPicker>` (from the `icon-picker` primitive) +
   a clear row. Calls `onChange` immediately on selection (no submit). The

@@ -7,6 +7,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import { dismissNotification, dismissAllNotifications, markAllNotificationsRead } from "../../shared/endpoints";
@@ -165,18 +166,18 @@ export function BellButton() {
       open={open}
       onOpenChange={onOpenChange}
       trigger={
-        <button className="relative flex items-center justify-center size-8 cursor-default">
-          {unreadCount > 0 ? (
-            <MdNotifications className="size-5" />
-          ) : (
-            <MdNotificationsNone className="size-5 text-muted-foreground" />
-          )}
+        <span className="relative inline-flex">
+          <IconButton
+            icon={unreadCount > 0 ? MdNotifications : MdNotificationsNone}
+            label="Notifications"
+            className={unreadCount > 0 ? undefined : "text-muted-foreground"}
+          />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums">
+            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-[10px] font-bold tabular-nums pointer-events-none">
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
-        </button>
+        </span>
       }
       align="end"
       contentClassName="w-80 p-0"

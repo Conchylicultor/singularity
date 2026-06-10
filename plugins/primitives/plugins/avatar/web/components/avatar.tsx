@@ -15,6 +15,13 @@ export interface AvatarProps {
   statusDot?: string | null;
   /** Used as a stable key for the deterministic color fallback when `color` is null. */
   fallbackKey?: string;
+  /**
+   * Single character rendered centered when there is no icon/svg, so the disc is
+   * never blank. Only the first char is used, uppercased. Providing this also
+   * tints the disc via the deterministic auto-color (from `fallbackKey`) unless
+   * an explicit `color` is set or `colorless` is true.
+   */
+  fallbackGlyph?: string;
   /** Force a neutral (muted) disc, ignoring `color` and the auto-color fallback. */
   colorless?: boolean;
   className?: string;
@@ -29,12 +36,13 @@ const SIZE_MAP: Record<AvatarSize, { box: string; icon: string; dot: string; rin
 };
 
 export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
-  { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, colorless, className, title },
+  { icon, color, svgNodes, size = "sm", statusDot, fallbackKey, fallbackGlyph, colorless, className, title },
   ref,
 ) {
   const sz = SIZE_MAP[size];
   const hasSvg = svgNodes != null && svgNodes.length > 0;
-  const filled = !colorless && (hasSvg || color != null);
+  const glyph = fallbackGlyph ? fallbackGlyph.charAt(0).toUpperCase() : null;
+  const filled = !colorless && (hasSvg || color != null || glyph != null);
   const bg = filled ? avatarColorClass(color, fallbackKey ?? icon ?? undefined) : "bg-muted";
   return (
     <span
@@ -47,7 +55,11 @@ export const Avatar = forwardRef<HTMLSpanElement, AvatarProps>(function Avatar(
         className,
       )}
     >
-      {hasSvg ? <SvgIcon nodes={svgNodes!} className={sz.icon} /> : null}
+      {hasSvg ? (
+        <SvgIcon nodes={svgNodes!} className={sz.icon} />
+      ) : glyph ? (
+        <span className="font-medium leading-none">{glyph}</span>
+      ) : null}
       {statusDot ? (
         <span
           className={cn(

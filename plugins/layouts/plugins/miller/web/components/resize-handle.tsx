@@ -33,9 +33,10 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
       role="separator"
       aria-orientation="vertical"
       onPointerDown={onPointerDown}
-      className="group relative w-1 shrink-0 cursor-col-resize bg-border/60 hover:bg-primary/40"
+      className="group relative w-1 shrink-0 cursor-col-resize"
       style={{ touchAction: "none" }}
     >
+      <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-border group-hover:bg-primary/40" />
       {onCollapse && (
         <button
           type="button"
@@ -45,7 +46,7 @@ export function ResizeHandle({ onResize, onCollapse }: ResizeHandleProps) {
             onCollapse();
           }}
           aria-label="Collapse column"
-          className="absolute left-1/2 top-2 z-raised flex size-5 -translate-x-1/2 items-center justify-center rounded border bg-background text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:opacity-100"
+          className="absolute left-1/2 top-2 z-raised flex size-5 -translate-x-1/2 items-center justify-center rounded-md border bg-background text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover:opacity-100"
         >
           <MdChevronLeft className="size-3" />
         </button>

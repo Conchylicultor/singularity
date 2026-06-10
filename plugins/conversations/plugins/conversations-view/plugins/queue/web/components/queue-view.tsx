@@ -612,7 +612,7 @@ function QueueRow({
         className={cn(
           "relative",
           draggable.isDragging && "opacity-40",
-          isTop && "rounded-md ring-1 ring-border/80 shadow-[0_6px_16px_rgba(0,0,0,0.45),0_2px_4px_rgba(0,0,0,0.25)] -translate-y-px bg-sidebar",
+          isTop && "rounded-md ring-1 ring-border shadow-md bg-sidebar",
         )}
       >
         <SidebarMenuButton

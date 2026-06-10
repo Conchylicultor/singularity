@@ -1858,6 +1858,10 @@
       "name": "@singularity/plugin-primitives-prompt-editor-voice-input",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/radius": {
+      "name": "@singularity/plugin-primitives-radius",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/rank": {
       "name": "@singularity/plugin-primitives-rank",
       "version": "0.0.1",
@@ -3635,6 +3639,8 @@
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 
     "@singularity/plugin-primitives-prompt-editor-voice-input": ["@singularity/plugin-primitives-prompt-editor-voice-input@workspace:plugins/primitives/plugins/prompt-editor/plugins/voice-input"],
+
+    "@singularity/plugin-primitives-radius": ["@singularity/plugin-primitives-radius@workspace:plugins/primitives/plugins/radius"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
