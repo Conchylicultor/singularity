@@ -9,6 +9,7 @@ import {
 } from "@plugins/debug/plugins/profiling/plugins/push/plugins/push-gantt/web";
 import { pushDetailPane } from "@plugins/debug/plugins/profiling/plugins/push/web";
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
+import { ShellCommands } from "@plugins/shell/web";
 import { convPushProfilingPane } from "../panes";
 
 const PUSH_PROFILING_PATH = "/api/debug/profiling/push";
@@ -60,7 +61,13 @@ export function PushProfilingPaneBody() {
         openPane(pushDetailPane, { pushId: push.pushId }, { mode: "push" })
       }
       onBuildClick={(build) => {
-        if (!build.buildId) return;
+        if (!build.buildId) {
+          ShellCommands.Toast({
+            description: "No build profile for this build (logged before profiling).",
+            variant: "info",
+          });
+          return;
+        }
         openPane(
           buildProfileDetailPane,
           { worktree: build.worktree, buildId: build.buildId },

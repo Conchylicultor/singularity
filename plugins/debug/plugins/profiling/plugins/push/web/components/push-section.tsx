@@ -3,6 +3,7 @@ import { useProfilingContext } from "@plugins/debug/plugins/profiling/web";
 import { attemptPane } from "@plugins/attempt-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { ShellCommands } from "@plugins/shell/web";
 import {
   PushGantt,
   type PushData,
@@ -40,7 +41,13 @@ export function PushSection(): ReactElement | null {
         openPane(pushDetailPane, { pushId: push.pushId }, { mode: "push" })
       }
       onBuildClick={(build) => {
-        if (!build.buildId) return;
+        if (!build.buildId) {
+          ShellCommands.Toast({
+            description: "No build profile for this build (logged before profiling).",
+            variant: "info",
+          });
+          return;
+        }
         openPane(
           buildProfileDetailPane,
           { worktree: build.worktree, buildId: build.buildId },

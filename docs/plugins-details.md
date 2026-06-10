@@ -1161,7 +1161,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
           - Web:
             - Contributes: `Pane.Register` "conv-push-profiling", `Conversation.ActionBar` → `PushProfilingButton`
-            - Uses: `attempt-view.attemptPane`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push.pushDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`
+            - Uses: `attempt-view.attemptPane`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push.pushDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `shell.ShellCommands`
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Web:
             - Uses: `conversations.useConversation`, `notifications.toast`
@@ -1474,7 +1474,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
           - Web:
             - Contributes: `Profiling.Section` → `PushSection`, `Pane.Register` "debug-profiling-push-detail"
-            - Uses: `attempt-view.attemptPane`, `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`
+            - Uses: `attempt-view.attemptPane`, `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `shell.ShellCommands`
             - Exports: Values: `pushDetailPane`
           - Server:
             - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
@@ -2980,7 +2980,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
   - Cross-plugin:
     - Slot contributors: `action-bar`, `agents`, `auth`, `code-explorer`, `conversations-view`, `settings`, `stats`, `task-detail`, `worktree-switcher`
-    - Imported by: `agents`, `apps/agent-manager/shell`, `auth`, `code-explorer`, `config_v2/settings`, `conversations/conversations-view`, `health`, `notifications`, `shell/action-bar`, `shell/toaster`, `stats`, `tasks/task-detail`, `worktree-switcher`
+    - Imported by: `agents`, `apps/agent-manager/shell`, `auth`, `code-explorer`, `config_v2/settings`, `conversations/conversation-view/push-profiling`, `conversations/conversations-view`, `debug/profiling/push`, `health`, `notifications`, `shell/action-bar`, `shell/toaster`, `stats`, `tasks/task-detail`, `worktree-switcher`
   - Plugins:
     - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.
       - Web:

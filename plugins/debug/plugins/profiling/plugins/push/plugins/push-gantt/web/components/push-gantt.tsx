@@ -51,7 +51,13 @@ export interface PushGanttProps {
   ) => void;
   /** Open the detail pane for a single push event (bar click). */
   onPushClick?: (push: PushEntry) => void;
-  /** Open the detail pane for a single build event (bar click). Only fired when the build has a buildId. */
+  /**
+   * Handle a click on a build bar. Always fired (so the click never silently
+   * falls through to the row's onWorktreeClick); the consumer decides what to
+   * do — open the detail pane when build.buildId is present, or surface a
+   * "no profile" message when it isn't (e.g. legacy log entries predating the
+   * buildId field).
+   */
   onBuildClick?: (build: BuildEntry) => void;
 }
 
@@ -239,7 +245,7 @@ function PushAttemptRow({
                 TYPE_FILL.build,
                 STATUS_TREATMENT[status],
                 isBuildHovered ? "opacity-100" : "opacity-40",
-                onBuildClick && build.buildId && "cursor-pointer",
+                onBuildClick && "cursor-pointer",
               )}
               style={{
                 left: toLeftPct(build.startMs, totalMs),
@@ -251,15 +257,17 @@ function PushAttemptRow({
               onMouseLeave={() => setHovered(null)}
               // Stop the pointerdown reaching GanttContainer's drag-zoom, which
               // would setPointerCapture and retarget the click off this bar.
-              // Guard only on onBuildClick (like the push bars) — NOT on
-              // build.buildId. A build with a null buildId (older log entries
-              // predating the field) is still a bar, and starting a drag-zoom
-              // from inside it is never what the user wants.
               onPointerDown={
                 onBuildClick ? (e) => e.stopPropagation() : undefined
               }
+              // Always handle the click when onBuildClick is set — including
+              // builds with a null buildId (older log entries predating the
+              // field). stopPropagation keeps the click from falling through to
+              // the row's onWorktreeClick (which would open the conversation, a
+              // surprising silent redirect); the consumer surfaces a "no
+              // profile" message for the id-less case instead.
               onClick={
-                onBuildClick && build.buildId
+                onBuildClick
                   ? (e) => {
                       e.stopPropagation();
                       onBuildClick(build);
