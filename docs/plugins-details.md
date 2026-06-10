@@ -1374,7 +1374,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `BackupInfo`, `TableStat`; Values: `backupDatabase`, `connectionString`, `countActiveConnections`, `databaseExists`, `dropDatabase`, `forkDatabase`, `inspectBackup`, `listDatabases`, `openShortLivedClient`
       - Cross-plugin:
-        - Imported by: `backup`, `database/fork`, `database/query`, `debug/worktree-cleanup`, `infra/jobs`
+        - Imported by: `backup`, `database/fork`, `database/query`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/jobs`
     - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
       - Server:
         - Exports: Values: `PG_DATA_DIR`, `PG_DIR`, `PG_LOG_FILE`, `PG_PORT`, `PG_SOCKET_DIR`, `PG_USER`
@@ -1485,7 +1485,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `attempt-view.attemptPane`, `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `shell.ShellCommands`
             - Exports: Values: `pushDetailPane`
           - Server:
-            - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
+            - Uses: `database/admin.openShortLivedClient`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/push-profiling`
           - Shared:

@@ -2,6 +2,7 @@ import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getPushProfiling } from "../../shared/endpoints";
 import { readContentionRecords } from "./read-contention";
 import { readBuildLogRecords } from "./read-build-log";
+import { resolveConversationTitles } from "./resolve-conversation-titles";
 
 interface PushEntry {
   pushId: string;
@@ -26,6 +27,8 @@ interface BuildEntry {
 
 interface WorktreeGroup {
   worktree: string;
+  conversationId: string | null;
+  title: string | null;
   pushes: PushEntry[];
   builds: BuildEntry[];
 }
@@ -76,7 +79,7 @@ function computeWorktreeWindow(
 
 export const handlePushProfiling = implement(
   getPushProfiling,
-  ({ query }) => {
+  async ({ query }) => {
     const allPushRecords = readContentionRecords();
     const allBuildRecords = readBuildLogRecords();
 
@@ -179,9 +182,30 @@ export const handlePushProfiling = implement(
       });
     }
 
+    // Each worktree's label should read as the human title of the conversation
+    // that drove it. Pushes are appended in chronological order, so the first
+    // push carrying a conversationId is "the first conversation that added an
+    // event". (Builds carry no conversationId, so only pushes attribute a row.)
+    const byWorktreeConvId = new Map<string, string | null>();
+    for (const [worktree, data] of byWorktree) {
+      const firstWithConv = data.pushes.find((p) => p.conversationId != null);
+      byWorktreeConvId.set(worktree, firstWithConv?.conversationId ?? null);
+    }
+
+    const titles = await resolveConversationTitles(
+      [...byWorktreeConvId.values()].filter((id): id is string => id != null),
+    );
+
     const groups: WorktreeGroup[] = [];
     for (const [worktree, data] of byWorktree) {
-      groups.push({ worktree, pushes: data.pushes, builds: data.builds });
+      const conversationId = byWorktreeConvId.get(worktree) ?? null;
+      groups.push({
+        worktree,
+        conversationId,
+        title: conversationId ? (titles.get(conversationId) ?? null) : null,
+        pushes: data.pushes,
+        builds: data.builds,
+      });
     }
 
     const pushEnds = recentPushes.map((r) => {

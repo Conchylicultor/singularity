@@ -24,6 +24,12 @@ const BuildEntrySchema = z.object({
 
 const WorktreeGroupSchema = z.object({
   worktree: z.string(),
+  // The conversation that drove this worktree's work — the first event's
+  // conversationId — and its human title, resolved from the main DB. Null when
+  // no event carried a conversationId (e.g. build-only rows) or the title is
+  // unset. The bar label falls back to the bare worktree id when title is null.
+  conversationId: z.string().nullable(),
+  title: z.string().nullable(),
   pushes: z.array(PushEntrySchema),
   builds: z.array(BuildEntrySchema),
 });

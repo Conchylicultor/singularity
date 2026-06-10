@@ -31,6 +31,8 @@ export interface BuildEntry {
 
 export interface WorktreeGroup {
   worktree: string;
+  conversationId: string | null;
+  title: string | null;
   pushes: PushEntry[];
   builds: BuildEntry[];
 }
@@ -213,10 +215,20 @@ function PushAttemptRow({
       )}
       onClick={handleClick}
     >
-      <div className="flex w-40 shrink-0 items-center gap-1.5 truncate">
+      <div
+        className="flex w-40 shrink-0 items-center gap-1.5 truncate"
+        // Bare worktree id stays discoverable on hover even when a title shows.
+        title={group.worktree.replace(/^claude-web\//, "")}
+      >
         <div className={cn("size-2 shrink-0 rounded-full", dotColor)} />
-        <span className="truncate font-mono text-[11px] text-muted-foreground">
-          {group.worktree.replace(/^claude-web\//, "")}
+        <span
+          className={cn(
+            "truncate text-[11px] text-muted-foreground",
+            // Titles read as prose; the opaque worktree id stays monospace.
+            group.title ? "" : "font-mono",
+          )}
+        >
+          {group.title ?? group.worktree.replace(/^claude-web\//, "")}
         </span>
       </div>
       <div className="relative h-5 flex-1 overflow-hidden rounded bg-muted/30">
