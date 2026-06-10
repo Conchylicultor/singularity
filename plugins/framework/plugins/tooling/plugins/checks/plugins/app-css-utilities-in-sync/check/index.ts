@@ -46,7 +46,7 @@ function declaredUtilities(css: string): Set<string> {
 function expectedUtilities(ts: string): Set<string> {
   const out = new Set<string>();
 
-  for (const name of ["CONTROL_HEIGHT_UTILITIES", "CONTROL_ICON_UTILITIES", "PAD_UTILITIES"]) {
+  for (const name of ["CONTROL_HEIGHT_UTILITIES", "CONTROL_ICON_UTILITIES", "CONTROL_MIN_UTILITIES", "PAD_UTILITIES"]) {
     const arrayMatch = ts.match(new RegExp(`${name}\\s*=\\s*\\[([^\\]]*)\\]`));
     const body = arrayMatch?.[1];
     if (body) {
