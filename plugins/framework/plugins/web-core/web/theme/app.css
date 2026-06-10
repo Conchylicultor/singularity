@@ -323,6 +323,13 @@
 @utility control-icon-sm { height: var(--control-height-sm); width: var(--control-height-sm); }
 @utility control-icon-md { height: var(--control-height-md); width: var(--control-height-md); }
 @utility control-icon-lg { height: var(--control-height-lg); width: var(--control-height-lg); }
+/* Min-height variants — for chrome that wraps variable-height content but should
+ * share the control scale's floor (e.g. reorder edit-mode item boxes), so the
+ * wrapper lines up with fixed-height controls instead of hugging its content. */
+@utility control-min-xs { min-height: var(--control-height-xs); }
+@utility control-min-sm { min-height: var(--control-height-sm); }
+@utility control-min-md { min-height: var(--control-height-md); }
+@utility control-min-lg { min-height: var(--control-height-lg); }
 
 /* Chrome dimension utilities — the single source of truth for app-chrome
  * heights and horizontal padding (toolbar, sidebar header, pane headers).

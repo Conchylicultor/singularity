@@ -100,7 +100,13 @@ export function SortableReorderItem({
         editMode
           ? ({ isDragging }) =>
               cn(
-                "group/reorder-item relative cursor-grab rounded-md ring-1 ring-primary/50",
+                // `control-min-sm` + centered content gives every edit-mode box
+                // a uniform height floor (matching the spacer and Add button)
+                // so heterogeneous contributions don't render ragged rings.
+                // Horizontal boxes hug their content; vertical boxes span the
+                // column (`w-full`) like the un-wrapped list rows they replace.
+                "group/reorder-item relative flex control-min-sm items-center cursor-grab rounded-md ring-1 ring-primary/50",
+                isHorizontal ? "" : "w-full",
                 wrapperClassName,
                 isDragging && "opacity-40",
               )
@@ -121,7 +127,11 @@ export function SortableReorderItem({
           )}
           <div
             ref={contentRef}
-            className={cn(editMode ? "pointer-events-none" : "contents")}
+            className={cn(
+              editMode ? "pointer-events-none" : "contents",
+              // Fill the box so full-width vertical rows keep spanning the column.
+              editMode && !isHorizontal && "w-full",
+            )}
           >
             {children}
           </div>
@@ -172,7 +182,7 @@ export function SpacerReorderItem({
       {({ isDragging }) => (
         <div
           className={cn(
-            "group relative flex h-7 min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-2",
+            "group relative flex control-min-sm min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-2",
             isDragging && "opacity-40",
           )}
         >
