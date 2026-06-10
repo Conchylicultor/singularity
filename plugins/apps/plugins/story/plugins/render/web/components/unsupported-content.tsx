@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 
 /**
@@ -7,8 +8,8 @@ import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/c
  */
 export function UnsupportedContent({ node }: { node: StoryNode }) {
   return (
-    <div className="px-3 py-2 text-sm text-muted-foreground">
+    <Text as="div" variant="body" tone="muted" className="px-3 py-2">
       ⛔ {node.type} — not shown in this view
-    </div>
+    </Text>
   );
 }

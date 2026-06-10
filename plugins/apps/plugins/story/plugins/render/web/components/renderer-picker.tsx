@@ -1,4 +1,5 @@
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
 import { Story } from "../slots";
 
 /**
@@ -17,7 +18,11 @@ export function RendererPicker({
   const renderers = Story.Renderer.useContributions();
 
   if (renderers.length === 0) {
-    return <span className="text-xs text-muted-foreground">No renderers</span>;
+    return (
+      <Text variant="caption" tone="muted">
+        No renderers
+      </Text>
+    );
   }
   return (
     <SegmentedControl

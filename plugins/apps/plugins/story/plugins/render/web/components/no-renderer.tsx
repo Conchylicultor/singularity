@@ -1,3 +1,4 @@
+import { Text } from "@plugins/primitives/plugins/text/web";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 
 /**
@@ -7,8 +8,13 @@ import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/c
  */
 export function NoRenderer(_props: { story: StoryNode[]; activeRendererId: string }) {
   return (
-    <div className="flex h-full items-center justify-center p-8 text-sm text-muted-foreground">
+    <Text
+      as="div"
+      variant="body"
+      tone="muted"
+      className="flex h-full items-center justify-center p-8"
+    >
       No renderer available
-    </div>
+    </Text>
   );
 }
