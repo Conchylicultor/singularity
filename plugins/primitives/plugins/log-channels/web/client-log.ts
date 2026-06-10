@@ -1,6 +1,6 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { emitLogs } from "../core/endpoints";
+import { emitLogs, MAX_EMIT_LINES } from "../core/endpoints";
 
 // Browser console.log-style logging that persists to a per-worktree JSONL file
 // the agent can read with `tail`/`cat` — no browser/Playwright needed. Lines are
@@ -39,22 +39,25 @@ function scheduleFlush(): void {
 
 async function flush(): Promise<void> {
   for (const [channel, lines] of buffer) {
-    if (lines.length === 0) continue;
-    // Drain this channel; re-queue on failure so lines emitted while the backend
-    // was down get retried on the next flush / reconnect.
-    const drained = lines.splice(0, lines.length);
-    try {
-      await fetchEndpoint(emitLogs, {}, { body: { channel, lines: drained } });
-    } catch (err) {
-      // Deliberate, self-correcting re-queue: the backend may be mid-restart
-      // (the `./singularity build` case). Put the lines back, preserving order
-      // ahead of anything newly buffered, and let reconnect-flush retry.
-      lines.unshift(...drained);
-      // Surface the failure for visibility without breaking the retry loop.
-      if (err instanceof Error) {
-        console.debug("[clientLog] flush failed, will retry on reconnect:", err.message);
-      } else {
-        throw err;
+    // Drain this channel in batches the server will accept (≤ MAX_EMIT_LINES).
+    // A single over-cap POST would be rejected with 400 on every retry forever,
+    // so the chunk size — not the accumulated buffer length — bounds each request.
+    while (lines.length > 0) {
+      const drained = lines.splice(0, MAX_EMIT_LINES);
+      try {
+        await fetchEndpoint(emitLogs, {}, { body: { channel, lines: drained } });
+      } catch (err) {
+        // Deliberate, self-correcting re-queue: the backend may be mid-restart
+        // (the `./singularity build` case). Put the lines back, preserving order
+        // ahead of anything newly buffered, and let reconnect-flush retry.
+        lines.unshift(...drained);
+        // Surface the failure for visibility without breaking the retry loop.
+        if (err instanceof Error) {
+          console.debug("[clientLog] flush failed, will retry on reconnect:", err.message);
+          break; // Stop draining this channel; retry the rest on the next flush.
+        } else {
+          throw err;
+        }
       }
     }
   }

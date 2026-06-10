@@ -6,6 +6,10 @@ export const getLogChannels = defineEndpoint({
   response: z.object({ channels: z.array(z.string()) }),
 });
 
+// Max lines accepted per emit request. Shared so the client chunks its flush to
+// this size and can never form a batch the server will reject (see client-log.ts).
+export const MAX_EMIT_LINES = 500;
+
 export const EmitLogsBodySchema = z.object({
   channel: z.string().min(1).max(128),
   lines: z
@@ -17,7 +21,7 @@ export const EmitLogsBodySchema = z.object({
       }),
     )
     .min(1)
-    .max(500),
+    .max(MAX_EMIT_LINES),
 });
 export type EmitLogsBody = z.infer<typeof EmitLogsBodySchema>;
 
