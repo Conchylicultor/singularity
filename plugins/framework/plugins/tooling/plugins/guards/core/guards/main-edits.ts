@@ -16,11 +16,17 @@ export const mainEditsGuard = defineGuard<FileInput>({
 
     if (/^\/tmp\//.test(f)) return null;
 
-    const memoryPrefix = `${HOME_DIR}/.claude/projects/`;
-    if (f.startsWith(memoryPrefix)) {
-      const rest = f.slice(memoryPrefix.length);
+    const projectsPrefix = `${HOME_DIR}/.claude/projects/`;
+    if (f.startsWith(projectsPrefix)) {
+      const rest = f.slice(projectsPrefix.length);
       const slash = rest.indexOf("/");
+      // Per-project auto-memory files: ~/.claude/projects/<slug>/memory/**
       if (slash !== -1 && rest.slice(slash + 1).startsWith("memory/")) {
+        return null;
+      }
+      // Persisted Workflow scripts the Workflow tool tells agents to edit in
+      // place: ~/.claude/projects/<slug>/<session>/workflows/scripts/**
+      if (rest.includes("/workflows/scripts/")) {
         return null;
       }
     }
