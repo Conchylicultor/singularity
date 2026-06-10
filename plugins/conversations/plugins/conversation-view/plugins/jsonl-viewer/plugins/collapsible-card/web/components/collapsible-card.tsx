@@ -79,7 +79,10 @@ export function CollapsibleCard({
         <button
           {...triggerProps}
           className={cn(
-            "flex min-w-0 shrink items-center gap-2 text-left transition-colors",
+            // flex-1 (not shrink): the trigger fills the header row so the whole
+            // empty area toggles, not just the chevron+label. Also lets the tool
+            // summary's flex-1 fill as intended, with `aside` pushed to the right.
+            "flex min-w-0 flex-1 items-center gap-2 text-left transition-colors",
             t.hover,
           )}
         >
