@@ -40,7 +40,7 @@ export function SystemFolder({
               key={d.id}
               selected={selected}
               indent={16 + 4}
-              icon={<Icon className="text-muted-foreground size-4 shrink-0" />}
+              icon={<Icon className="text-muted-foreground shrink-0" />}
               onClick={() => openPane(systemAgentDetailPane, { systemId: d.id }, { mode: "push" })}
             >
               <span className="truncate">{d.name}</span>

@@ -101,7 +101,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
     <span className="flex min-w-0 items-center gap-2">
-      <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree className="size-3" />} className="shrink-0 font-mono">
+      <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="shrink-0 font-mono">
         {name ?? "workflow"}
       </Badge>
       {phases.length > 0 && (

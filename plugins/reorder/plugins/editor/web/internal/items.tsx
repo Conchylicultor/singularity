@@ -252,7 +252,7 @@ export function RestoreButton({
                 key={item.key}
                 size="sm"
                 hover="accent"
-                icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
+                icon={<MdAdd className="shrink-0 text-muted-foreground" />}
                 onClick={() => {
                   handleRestore(item.key);
                   if (hiddenItems.length <= 1) setOpen(false);
@@ -269,7 +269,7 @@ export function RestoreButton({
             <Row
               size="sm"
               hover="accent"
-              icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
+              icon={<MdAdd className="shrink-0 text-muted-foreground" />}
               onClick={() => {
                 onAddGroup();
                 setOpen(false);
@@ -281,7 +281,7 @@ export function RestoreButton({
           <Row
             size="sm"
             hover="accent"
-            icon={<MdAdd className="size-3.5 shrink-0 text-muted-foreground" />}
+            icon={<MdAdd className="shrink-0 text-muted-foreground" />}
             onClick={() => {
               onAddSpacer();
               setOpen(false);
@@ -314,7 +314,7 @@ export function RestoreButton({
             size="sm"
             hover="accent"
             disabled
-            icon={<MdAdd className="size-3.5 shrink-0" />}
+            icon={<MdAdd className="shrink-0" />}
           >
             Create custom plugin
           </Row>

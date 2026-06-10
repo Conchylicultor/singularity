@@ -32,6 +32,8 @@ const buttonVariants = cva(
         "icon-sm":
           "control-icon-sm rounded-[min(var(--radius-md),12px)] in-data-[slot=button-group]:rounded-lg",
         "icon-lg": "control-icon-lg",
+        inline:
+          "h-auto rounded-[min(var(--radius-md),8px)] p-0.5 align-middle text-[1em] [&_svg:not([class*='size-'])]:icon-auto",
       },
       shape: {
         default: "",

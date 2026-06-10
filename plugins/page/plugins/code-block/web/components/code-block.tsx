@@ -167,7 +167,8 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
           <CopyButton
             text={code}
             title="Copy code"
-            className="size-6 bg-background/80 backdrop-blur"
+            size="icon-sm"
+            className="bg-background/80 backdrop-blur"
           />
         </div>
 

@@ -88,7 +88,7 @@ export function PageOptionsList({
           <Row
             key="__create__"
             selected={i === activeIndex}
-            icon={<MdAddCircleOutline className="size-4 text-muted-foreground" />}
+            icon={<MdAddCircleOutline className="text-muted-foreground" />}
             onMouseEnter={() => onHoverIndex?.(i)}
             onMouseDown={(e: React.MouseEvent) => {
               e.preventDefault();

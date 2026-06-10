@@ -34,7 +34,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
               }))}
               actions={
                 node.loadBearing ? (
-                  <Badge variant="warning" size="sm" icon={<MdBolt className="size-3" />} className="ml-1">
+                  <Badge variant="warning" size="sm" icon={<MdBolt />} className="ml-1">
                     Load-bearing
                   </Badge>
                 ) : undefined

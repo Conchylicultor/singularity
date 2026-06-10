@@ -1191,6 +1191,10 @@
       "name": "@singularity/plugin-framework-tooling-checks",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync",
       "version": "0.0.1",
@@ -1804,6 +1808,10 @@
     },
     "plugins/primitives/plugins/floating-action": {
       "name": "@singularity/plugin-primitives-floating-action",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/icon-auto": {
+      "name": "@singularity/plugin-primitives-icon-auto",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/icon-button": {
@@ -3338,6 +3346,8 @@
 
     "@singularity/plugin-framework-tooling-checks": ["@singularity/plugin-framework-tooling-checks@workspace:plugins/framework/plugins/tooling/plugins/checks"],
 
+    "@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync": ["@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync"],
+
     "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync": ["@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
@@ -3623,6 +3633,8 @@
     "@singularity/plugin-primitives-filter-chips": ["@singularity/plugin-primitives-filter-chips@workspace:plugins/primitives/plugins/filter-chips"],
 
     "@singularity/plugin-primitives-floating-action": ["@singularity/plugin-primitives-floating-action@workspace:plugins/primitives/plugins/floating-action"],
+
+    "@singularity/plugin-primitives-icon-auto": ["@singularity/plugin-primitives-icon-auto@workspace:plugins/primitives/plugins/icon-auto"],
 
     "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
 

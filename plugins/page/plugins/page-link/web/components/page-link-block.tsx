@@ -86,7 +86,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
             <Row
               hover="muted"
               className="text-muted-foreground"
-              icon={<MdLink className="size-4" />}
+              icon={<MdLink />}
             >
               Select a page…
             </Row>
@@ -105,7 +105,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
           trigger={
             <Row
               hover="muted"
-              icon={<MdLink className="size-4 text-muted-foreground" />}
+              icon={<MdLink className="text-muted-foreground" />}
             >
               <Placeholder>(page not found)</Placeholder>
             </Row>

@@ -154,7 +154,7 @@ function InstrumentPicker({
           size="sm"
           hover="muted"
           selected={!customized}
-          icon={<MdAutoMode className="size-3.5 shrink-0" />}
+          icon={<MdAutoMode className="shrink-0" />}
           actions={
             !customized ? <MdCheck className="size-3.5 text-primary" /> : undefined
           }

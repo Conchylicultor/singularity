@@ -47,8 +47,8 @@ export function FilePath({ filePath }: FilePathProps) {
       <CopyButton
         text={relativePath}
         title="Copy path"
-        className="size-5 opacity-0 group-hover/path:opacity-100 transition-opacity shrink-0"
-        iconClassName="size-2.5"
+        size="inline"
+        className="opacity-0 group-hover/path:opacity-100 transition-opacity shrink-0"
         onClick={(e) => e.stopPropagation()}
       />
     </span>

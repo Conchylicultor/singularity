@@ -104,7 +104,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
             bordered
             onClick={openReport}
             className="rounded-md border-border/40 text-muted-foreground"
-            icon={<MdArticle className="size-3.5 shrink-0" />}
+            icon={<MdArticle className="shrink-0" />}
           >
             <span className="font-medium">
               {result.isError ? "View error" : "View report"}

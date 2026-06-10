@@ -35,7 +35,7 @@ export function AllowMonitorChip() {
       <Badge
         as="button"
         colorClass="bg-destructive/90 text-white hover:bg-destructive"
-        icon={<MdWarning className="size-3.5" />}
+        icon={<MdWarning />}
         className="animate-pulse cursor-default"
         aria-label="Security bypass active"
       >

@@ -149,8 +149,7 @@ export function GoogleSetupPane() {
               <CopyButton
                 text={REDIRECT_URI}
                 title="Copy redirect URI"
-                className="shrink-0 size-8"
-                iconClassName="h-4 w-4"
+                className="shrink-0"
               />
             </div>
             <p className="text-xs text-muted-foreground">

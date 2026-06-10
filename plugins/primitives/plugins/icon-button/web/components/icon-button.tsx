@@ -37,7 +37,7 @@ export function IconButton({
   return (
     <WithTooltip content={content} side={side}>
       <Button variant={variant} size={size} aria-label={label} {...props}>
-        <Icon className="size-4" />
+        <Icon />
       </Button>
     </WithTooltip>
   );

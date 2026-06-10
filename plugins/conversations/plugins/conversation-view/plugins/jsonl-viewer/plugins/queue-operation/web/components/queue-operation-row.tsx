@@ -65,7 +65,7 @@ export function QueueOperationRow({ event }: { event: JsonlEvent }) {
             variant={STATUS_VARIANT[task.status] ?? "muted"}
             size="sm"
             className="shrink-0"
-            icon={<MdNotificationsActive className="size-3" />}
+            icon={<MdNotificationsActive />}
           >
             task {task.status}
           </Badge>

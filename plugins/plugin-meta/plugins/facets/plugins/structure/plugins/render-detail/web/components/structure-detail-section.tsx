@@ -38,7 +38,7 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
             key={`folder:${f.name}`}
             size="sm"
             variant="warning"
-            icon={<MdWarningAmber className="size-3" />}
+            icon={<MdWarningAmber />}
           >
             {f.name}/
           </Badge>
@@ -48,7 +48,7 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
             key={`file:${name}`}
             size="sm"
             variant="warning"
-            icon={<MdWarningAmber className="size-3" />}
+            icon={<MdWarningAmber />}
           >
             {name}
           </Badge>

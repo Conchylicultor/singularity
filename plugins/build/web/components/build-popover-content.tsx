@@ -110,7 +110,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           disabled={entries.length === 0}
           aria-label="Copy logs"
         >
-          <MdContentCopy className="size-3" />
+          <MdContentCopy />
         </Button>
       </div>
       <div

@@ -53,7 +53,7 @@ export function BlockActionsMenu({
         <div className="bg-border my-0.5 h-px" />
         <Row
           className="text-destructive"
-          icon={<MdDelete className="size-4" />}
+          icon={<MdDelete />}
           onMouseDown={(e: React.MouseEvent) => {
             e.preventDefault();
             api.remove();

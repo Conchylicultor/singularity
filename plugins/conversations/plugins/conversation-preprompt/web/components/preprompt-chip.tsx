@@ -25,7 +25,7 @@ export function PrepromptChip() {
           as="button"
           className="hover:opacity-80"
           aria-label={`Preprompt: ${record.title}`}
-          icon={<PrepromptIcon record={record} className="size-3" />}
+          icon={<PrepromptIcon record={record} />}
         >
           <span className="max-w-32 truncate">{record.title}</span>
         </Badge>

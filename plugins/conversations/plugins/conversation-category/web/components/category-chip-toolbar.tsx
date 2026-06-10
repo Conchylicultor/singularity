@@ -122,7 +122,7 @@ export function CategoryChipToolbar() {
           disabled={busy !== null}
           icon={
             <MdAutoAwesome
-              className={`size-3 ${busy === "classify" ? "animate-pulse" : ""}`}
+              className={busy === "classify" ? "animate-pulse" : undefined}
             />
           }
         >

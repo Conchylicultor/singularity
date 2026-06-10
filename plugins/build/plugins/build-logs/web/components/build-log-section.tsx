@@ -52,7 +52,7 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
           onClick={copyAll}
           aria-label="Copy logs"
         >
-          <MdContentCopy className="size-3" />
+          <MdContentCopy />
         </Button>
       </div>
       {steps.map((step) => (
@@ -167,7 +167,7 @@ function LiveLogs(): ReactElement {
           disabled={entries.length === 0}
           aria-label="Copy logs"
         >
-          <MdContentCopy className="size-3" />
+          <MdContentCopy />
         </Button>
       </div>
       <div

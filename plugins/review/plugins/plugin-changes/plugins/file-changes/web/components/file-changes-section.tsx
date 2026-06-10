@@ -60,8 +60,8 @@ function FileRow({
           <CopyButton
             text={file.path}
             title="Copy path"
-            className="ml-1 translate-y-px size-4 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
-            iconClassName="size-3"
+            size="inline"
+            className="ml-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
             onClick={(e) => e.stopPropagation()}
           />
         </span>

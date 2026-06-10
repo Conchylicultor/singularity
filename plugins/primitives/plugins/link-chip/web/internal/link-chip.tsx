@@ -28,7 +28,7 @@ export function LinkChip({
       onClick={onClick}
       title={title}
       className={cn(
-        "inline-flex max-w-full items-center gap-1.5 rounded-md bg-muted p-chip align-baseline text-xs text-primary hover:bg-muted/80 hover:underline",
+        "inline-flex max-w-full items-center gap-1.5 rounded-md bg-muted p-chip align-baseline text-xs text-primary hover:bg-muted/80 hover:underline [&_svg:not([class*='size-'])]:icon-auto",
         className,
       )}
     >

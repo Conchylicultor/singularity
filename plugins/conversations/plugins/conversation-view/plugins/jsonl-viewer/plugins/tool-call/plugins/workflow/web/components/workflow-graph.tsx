@@ -101,7 +101,7 @@ export function WorkflowGraph({
       {(graph.truncated || graph.dynamic) && (
         <div className="flex flex-col gap-1">
           {graph.truncated && (
-            <Badge colorClass="bg-warning/10 text-warning" size="sm" icon={<MdWarningAmber className="size-3.5" />}>
+            <Badge colorClass="bg-warning/10 text-warning" size="sm" icon={<MdWarningAmber />}>
               Graph truncated at the preview cap — see full script below.
             </Badge>
           )}

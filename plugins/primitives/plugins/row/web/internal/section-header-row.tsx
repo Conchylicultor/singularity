@@ -63,7 +63,7 @@ export function SectionHeaderRow({
       actionsAlwaysVisible
       hover="muted"
       actions={actions}
-      icon={<CollapsibleChevron open={open} className="size-4" />}
+      icon={<CollapsibleChevron open={open} />}
       className={cn(VARIANT_CLASS[variant], className)}
       {...rest}
     >
