@@ -4,7 +4,7 @@ import type {
   DataViewRenderProps,
   FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import type { GalleryViewOptions } from "../../core";
+import type { CoverContent, GalleryViewOptions } from "../../core";
 import { DataCard } from "./data-card";
 
 /**
@@ -39,23 +39,50 @@ function renderFieldContent<TRow>(
   return String(field.value?.(row) ?? "");
 }
 
+/** Paint a structured cover descriptor into a uniform `aspect-video` frame. */
+function renderCover(cover: CoverContent): ReactNode {
+  switch (cover.kind) {
+    case "image":
+      return (
+        <img
+          src={cover.src}
+          alt=""
+          className="aspect-video w-full rounded-md object-cover"
+        />
+      );
+    case "icon":
+      return (
+        <div className="flex aspect-video w-full items-center justify-center rounded-md bg-primary/10 text-primary">
+          {cover.icon}
+        </div>
+      );
+    case "node":
+      return (
+        <div className="aspect-video w-full overflow-hidden rounded-md border border-border bg-muted/40">
+          {cover.node}
+        </div>
+      );
+  }
+}
+
 function renderMedia<TRow>(
-  field: FieldDef<TRow> | undefined,
+  options: GalleryViewOptions<TRow>,
+  coverFieldDef: FieldDef<TRow> | undefined,
   row: TRow,
 ): ReactNode {
-  if (!field) return null;
-  const raw = field.value?.(row);
+  // The structured cover producer wins — the sanctioned icon/node/image path.
+  if (options.cover) {
+    const cover = options.cover(row);
+    return cover ? renderCover(cover) : null;
+  }
+  // Else fall back to the field-driven image cover.
+  if (!coverFieldDef) return null;
+  const raw = coverFieldDef.value?.(row);
   if (typeof raw === "string" && raw.length > 0) {
-    return (
-      <img
-        src={raw}
-        alt={field.label}
-        className="aspect-video w-full rounded-md object-cover"
-      />
-    );
+    return renderCover({ kind: "image", src: raw });
   }
   // Non-URL media (or custom cell) falls back to the field's renderer.
-  return field.cell ? <div>{field.cell(row)}</div> : null;
+  return coverFieldDef.cell ? <div>{coverFieldDef.cell(row)}</div> : null;
 }
 
 /**
@@ -97,7 +124,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           return <div key={key}>{options.renderCard(row)}</div>;
         }
 
-        const media = renderMedia(coverField, row);
+        const media = renderMedia(options, coverField, row);
         const bodyFields = fields.filter(
           (f) => f.id !== titleField?.id && f.id !== coverField?.id,
         );

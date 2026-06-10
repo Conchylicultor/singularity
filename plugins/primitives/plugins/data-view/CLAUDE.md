@@ -56,7 +56,7 @@ zero consumer changes — exactly the segmented-progress-bar collection model.
   - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
 - Cross-plugin:
   - Slot contributors: `filter`, `gallery`, `table`
-  - Imported by: `apps/sonata/library`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`
+  - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/story/shell`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`
 - Core:
   - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
 - Sub-plugins:

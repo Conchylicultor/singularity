@@ -124,7 +124,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`app-cards`** — Launcher grid of one card per installed app, plus the new-app placeholder.
           - Web:
             - Contributes: `Home.Section` "Apps" → `AppGrid`
-            - Uses: `apps.Apps`, `apps.useCurrentAppId`, `apps/home/shell.Home`
+            - Uses: `apps.ActiveApp`, `apps.Apps`, `apps.useCurrentAppId`, `apps/home/shell.Home`, `primitives/data-view.DataView`, `primitives/icon-button.IconButton`
         - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
           - Web:
             - Slots: `Home.Section`
@@ -340,7 +340,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).
           - Web:
             - Contributes: `Apps.App` "Story" → `StoryLayout`, `Pane.Register` "story-gallery", `Pane.Register` "story-detail"
-            - Uses: `apps.Apps`, `apps/story/marker.markStory`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/relative-time.formatRelativeTime`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
+            - Uses: `apps.Apps`, `apps/story/marker.markStory`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/data-view.DataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/relative-time.formatRelativeTime`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
         - **`story-core`** — Renderer-agnostic StoryNode IR plus buildStoryTree — the single place a block type maps to a structural role (divider → break, else content).
           - Core:
             - Uses: `page/divider.DIVIDER_TYPE`, `primitives/rank.Rank`, `primitives/tree.buildTree`, `primitives/tree.TreeNode`
@@ -2602,7 +2602,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
       - Cross-plugin:
         - Slot contributors: `filter`, `gallery`, `table`
-        - Imported by: `apps/sonata/library`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`
+        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/story/shell`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`
       - Core:
         - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
       - Plugins:
@@ -2610,9 +2610,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
             - Uses: `primitives/data-view.DataViewSlots`
-            - Exports: Types: `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`, `galleryOptions`
+            - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`, `galleryOptions`
           - Core:
-            - Exports: Types: `GalleryViewOptions`; Values: `galleryOptions`
+            - Exports: Types: `CoverContent`, `GalleryViewOptions`; Values: `galleryOptions`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
@@ -2667,7 +2667,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
+        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/section-label.SectionLabel`
