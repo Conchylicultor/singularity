@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
-import { getNotificationsClient } from "@plugins/primitives/plugins/live-state/web";
+import { getNotificationsClient, liveStateSocketKind } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { report } from "@plugins/crashes/web";
 
@@ -22,18 +22,12 @@ type WedgeKind = "socket-down" | "missed-updates";
 // crash fingerprint is sha256(errorType + stack), and wedges carry no stack — so
 // this is what keeps the failure modes from collapsing into one fingerprint and
 // one growing-count task. socket-down splits by channel (worktree vs central —
-// distinct failure domains, only two values); missed-updates stays kind-only so
+// distinct failure domains, only two values), classified authoritatively by
+// live-state rather than sniffed from the url; missed-updates stays kind-only so
 // a broad pipeline wedge files ONE task, not one per stuck resource (the key
 // stays in the message + count for triage). No volatile data (versions, params)
 // enters this, so each mode still dedups into a single task.
-function discriminator(kind: WedgeKind, detail: string): string {
-  if (kind === "socket-down") {
-    return detail.includes("central") ? "socket-down:central" : "socket-down:worktree";
-  }
-  return "missed-updates";
-}
-
-function wedge(kind: WedgeKind, detail: string): void {
+function wedge(kind: WedgeKind, discriminator: string, detail: string): void {
   const now = Date.now();
   const prev = lastWedgeAt.get(kind);
   if (prev !== undefined && now - prev < WEDGE_COOLDOWN_MS) return;
@@ -51,7 +45,7 @@ function wedge(kind: WedgeKind, detail: string): void {
   // a given mode into one growing-count task.
   void report({
     source: "live-state-wedge",
-    errorType: `LiveStateWedge:${discriminator(kind, detail)}`,
+    errorType: `LiveStateWedge:${discriminator}`,
     message: `live-state wedged: ${kind} — ${detail}`,
     label: "live-state.watchdog",
     url: location.href,
@@ -79,13 +73,19 @@ export function WedgeWatchdog() {
     };
 
     const unsubWs = subscribeWsStatus(({ url, status }) => {
+      // The status bus is global across EVERY app socket (logs, terminal,
+      // build, …). Only the live-state pipeline sockets count toward a
+      // live-state wedge — an unrelated socket's downtime (e.g. a build popover
+      // left open while the server restarts) must not file a live-state crash.
+      const channelKind = liveStateSocketKind(url);
+      if (channelKind === null) return;
       if (status === "open") {
         clearDownTimer(url);
       } else if (status === "reconnecting" || status === "closed") {
         if (downTimers.has(url)) return; // already armed for this url
         const timer = setTimeout(() => {
           downTimers.delete(url);
-          wedge("socket-down", url);
+          wedge("socket-down", `socket-down:${channelKind}`, url);
         }, SOCKET_DOWN_MS);
         downTimers.set(url, timer);
       }
@@ -109,7 +109,7 @@ export function WedgeWatchdog() {
           if (missed.length === 0) return;
           const m = missed[0]!;
           const more = missed.length > 1 ? ` (+${missed.length - 1} more)` : "";
-          wedge("missed-updates", `${m.key} ${m.prevVersion}->${m.ackVersion}${more}`);
+          wedge("missed-updates", "missed-updates", `${m.key} ${m.prevVersion}->${m.ackVersion}${more}`);
         })
         .finally(() => {
           probing = false;

@@ -66,6 +66,24 @@ type SocketKind = keyof typeof WS_URLS;
 
 export type ChannelStatuses = { worktree: WsStatus; central: WsStatus };
 
+/** Live-state pipeline socket kind, as classified from a ws-status-bus url. */
+export type LiveStateSocketKind = SocketKind;
+
+/**
+ * Classify a ws-status-bus url as a live-state pipeline socket, or return null
+ * if it belongs to some other socket (logs, terminal, build) that merely shares
+ * the global status bus. This is the single source of truth for "which sockets
+ * are the live-state pipeline" — both this client's own bus filter and the
+ * health watchdog gate on it, so an unrelated socket's downtime is never
+ * mis-attributed to live-state.
+ */
+export function liveStateSocketKind(url: string): LiveStateSocketKind | null {
+  for (const kind of Object.keys(WS_URLS) as SocketKind[]) {
+    if (url === WS_URLS[kind]) return kind;
+  }
+  return null;
+}
+
 function socketKindFor(origin: ResourceOrigin | undefined): SocketKind {
   return origin === "central" ? "central" : "worktree";
 }
@@ -207,9 +225,8 @@ export class NotificationsClient {
       worktree: this.openChannel("worktree"),
       central: this.openChannel("central"),
     };
-    const ownedUrls = new Set<string>(Object.values(WS_URLS));
     this.unsubscribeFromBus = subscribeWsStatus(({ url, status }) => {
-      if (!ownedUrls.has(url)) return;
+      if (liveStateSocketKind(url) === null) return;
       this.channelStatuses.set(url, status);
       const next = this.getStatus();
       for (const fn of this.statusListeners) fn(next);
