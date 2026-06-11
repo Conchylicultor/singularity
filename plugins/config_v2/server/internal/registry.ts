@@ -1,4 +1,4 @@
-import { readFileSync, unlinkSync } from "node:fs";
+import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join, relative } from "node:path";
 import type {
   ConfigDescriptor,
@@ -551,5 +551,8 @@ export function deleteOverrideByPath(storePath: string, scopeId?: string): void 
   const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
   if (!entry) throw new Error(`No cache entry for "${storePath}"`);
 
-  unlinkSync(entry.userOverwritesPath);
+  // Idempotent: an "invalid" conflict can surface with no override on disk
+  // (the origin itself fails the current schema). Deleting a non-existent
+  // override is a no-op — defaults are already in effect.
+  if (existsSync(entry.userOverwritesPath)) unlinkSync(entry.userOverwritesPath);
 }

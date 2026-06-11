@@ -32,6 +32,7 @@ export {
   generateConfigOrigins,
   propagateConfigToUser,
   renderConfigOriginContent,
+  loadConfigDescriptorsByOriginPath,
   resolveOriginAnnotations,
   setDefaultOriginAnnotations,
   setDefaultOriginAnnotationsPreparer,

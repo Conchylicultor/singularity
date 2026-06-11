@@ -1,9 +1,12 @@
 import { existsSync, readFileSync } from "fs";
 import { join, relative } from "path";
-import { renderConfigOriginContent } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import {
+  renderConfigOriginContent,
+  loadConfigDescriptorsByOriginPath,
+} from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { computeHash } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
-import type { JsonValue } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -18,10 +21,36 @@ async function getRoot(): Promise<string> {
 
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
+// Validate a config file's content against its descriptor's Zod schema. Returns
+// a failure when the parsed document fails — the same `safeParse` the runtime
+// applies in `readTypedConfig`, lifted to check time so a schema that drifts
+// from stored data is caught at `./singularity check`, not silently surfaced
+// months later as a `kind: "invalid"` conflict banner (and an HTTP 400 on the
+// reset button) the first time someone opens the file in settings.
+function validateSchema(
+  descriptor: ConfigDescriptor,
+  raw: string,
+  rel: string,
+): CheckResult {
+  const match = HASH_RE.exec(raw);
+  const body = match ? raw.slice(match[0].length) : raw;
+  const content = parseJsonc(body) as JsonValue;
+  const result = descriptor.schema.safeParse(content);
+  if (result.success) return { ok: true };
+  const issues = result.error.issues
+    .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
+    .join("; ");
+  return {
+    ok: false,
+    message: `${rel} fails the "${descriptor.name}" config schema: ${issues}`,
+    hint: "A field's schema changed under stored data. Migrate the file's values to the current schema (or run `./singularity build` to regenerate the origin).",
+  };
+}
+
 const check: Check = {
   id: "config-origins-in-sync",
   description:
-    "config/ origin files match defineConfig defaults and overwrite hashes are consistent",
+    "config/ origin files match defineConfig defaults, overwrite hashes are consistent, and all content validates against its schema",
   async run() {
     const root = await getRoot();
     const configDir = join(root, "config");
@@ -30,6 +59,7 @@ const check: Check = {
     // injects the exact same comment lines the build wrote into committed
     // origins. With no provider registered this is byte-identical to before.
     const expected = await renderConfigOriginContent({ root });
+    const descriptorsByOriginRel = await loadConfigDescriptorsByOriginPath({ root });
 
     for (const [relPath, content] of expected) {
       const filePath = join(configDir, relPath);
@@ -41,12 +71,18 @@ const check: Check = {
           hint: "Run `./singularity build` to generate it.",
         };
       }
-      if (readFileSync(filePath, "utf8") !== content) {
+      const raw = readFileSync(filePath, "utf8");
+      if (raw !== content) {
         return {
           ok: false,
           message: `${rel} is out of sync with defineConfig defaults`,
           hint: "Run `./singularity build` and commit the regenerated file.",
         };
+      }
+      const descriptor = descriptorsByOriginRel.get(relPath);
+      if (descriptor) {
+        const valid = validateSchema(descriptor, raw, rel);
+        if (!valid.ok) return valid;
       }
     }
 
@@ -120,6 +156,20 @@ const check: Check = {
           message: `${relFromRoot} has a stale @hash (got ${hash}, expected ${expectedHash})`,
           hint: `The origin defaults changed. Review ${originRel}, update the overwrites, and set // @hash ${expectedHash} to acknowledge.`,
         };
+      }
+
+      // Validate the override document against its schema. A correct @hash only
+      // proves the override was written against the current origin's *content* —
+      // not that its values still satisfy the current *schema*. This is the gap
+      // that let a legacy spacer node sit in a committed override until it blew
+      // up at runtime.
+      const overrideOriginRel = relFromRoot
+        .replace(/^config\//, "")
+        .replace(/\.jsonc$/, ".origin.jsonc");
+      const descriptor = descriptorsByOriginRel.get(overrideOriginRel);
+      if (descriptor) {
+        const valid = validateSchema(descriptor, raw, relFromRoot);
+        if (!valid.ok) return valid;
       }
     }
 

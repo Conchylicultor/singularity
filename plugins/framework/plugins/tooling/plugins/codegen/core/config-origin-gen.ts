@@ -309,6 +309,23 @@ export async function renderConfigOriginContent(opts: {
   return result;
 }
 
+/**
+ * Map every config's origin relPath (`<hierarchyPath>/<name>.origin.jsonc`) to
+ * its owning {@link ConfigDescriptor}, so callers can validate on-disk content
+ * against `descriptor.schema`. Same discovery + keying as
+ * {@link renderConfigOriginContent}, so the two maps zip by key.
+ */
+export async function loadConfigDescriptorsByOriginPath(opts: {
+  root: string;
+}): Promise<Map<string, ConfigDescriptor>> {
+  const configs = await discoverConfigs(opts.root);
+  const result = new Map<string, ConfigDescriptor>();
+  for (const { hierarchyPath, descriptor } of configs) {
+    result.set(`${hierarchyPath}/${descriptor.name}.origin.jsonc`, descriptor);
+  }
+  return result;
+}
+
 export async function generateConfigOrigins(opts: {
   root: string;
   originAnnotations?: OriginAnnotationsProvider;
