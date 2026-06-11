@@ -14,6 +14,7 @@
   - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `tasks_ext_preprompt`)
   - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
+  - Routes: `PUT /api/task-preprompts/:taskId`, `DELETE /api/task-preprompts/:taskId`
 - Cross-plugin:
   - Imported by: `conversations`, `conversations/conversation-preprompt`, `plugin-meta/plugin-health`, `tasks`
 - Shared:

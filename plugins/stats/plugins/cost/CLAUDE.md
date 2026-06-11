@@ -24,6 +24,7 @@ Each chart reads it via `useConfigValues` and passes `scope` in the typed
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `conversations/conversation-view.conversationPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
 - Server:
   - Uses: `config_v2.ConfigV2`, `database.db`, `infra/endpoints.implement`, `infra/paths.CLAUDE_PROJECTS_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core._conversations`
+  - Routes: `GET /api/stats/cost/daily`, `GET /api/stats/cost/daily-by-family`, `GET /api/stats/cost/cumulative`, `GET /api/stats/cost/token-mix`, `GET /api/stats/cost/totals`, `GET /api/stats/cost/sessions`, `GET /api/stats/cost/distribution`, `GET /api/stats/cost/avg-per-conversation`
 - Shared:
   - Exports: Values: `costConfig`, `getCostAvgPerConversation`, `getCostCumulative`, `getCostDaily`, `getCostDailyByFamily`, `getCostDistribution`, `getCostSessions`, `getCostTokenMix`, `getCostTotals`
 

@@ -11,6 +11,7 @@
   - Exports: Values: `worktreeCleanupPane`
 - Server:
   - Uses: `database/admin.dropDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
+  - Routes: `GET /api/debug/worktrees`, `POST /api/debug/worktrees/bulk-delete`, `DELETE /api/debug/worktrees/:id`
 - Shared:
   - Exports: Types: `BulkDeleteWorktreesBody`; Values: `bulkDeleteWorktrees`, `BulkDeleteWorktreesBodySchema`, `deleteWorktree`, `listWorktrees`
 

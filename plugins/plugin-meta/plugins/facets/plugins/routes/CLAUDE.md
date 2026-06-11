@@ -1,8 +1,10 @@
 # routes
 
-Extracts HTTP routes (from `defineEndpoint()` calls in each plugin's `core/`) and WS
-routes (literal keys in `server/` and `central/` barrels). Captures both literal string
-keys and `[endpoint.route]` computed keys used by the `defineEndpoint` pattern.
+Extracts HTTP routes (from `defineEndpoint()` calls in each plugin's `core/` or
+`shared/` — the two runtimes an endpoint can live in, since it must be importable
+from both web and server) and WS routes (literal keys in `server/` and `central/`
+barrels). Captures both literal string keys and `[endpoint.route]` computed keys
+used by the `defineEndpoint` pattern.
 
 `relate()` builds the `endpointCallers` reverse index from the extracted route data.
 This facet is the single source of truth for route metadata.

@@ -54,6 +54,7 @@ plus a per-song reset.
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`
   - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
   - Exports: Values: `_trackView`, `trackViewLiveResource`
+  - Routes: `POST /api/sonata/songs/:songId/track-view`, `DELETE /api/sonata/songs/:songId/track-view`
 - Cross-plugin:
   - Imported by: `apps/sonata/audio/engine`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`
 

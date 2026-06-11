@@ -10,6 +10,7 @@
   - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
+  - Routes: `POST /api/conversations/:id/hold-and-exit`
 - Shared:
   - Exports: Values: `holdAndExit`
 

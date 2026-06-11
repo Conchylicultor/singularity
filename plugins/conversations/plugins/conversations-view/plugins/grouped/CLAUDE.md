@@ -12,6 +12,7 @@
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
   - Exports: Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
+  - Routes: `POST /api/conversation-groups`, `PATCH /api/conversation-groups/:id`, `DELETE /api/conversation-groups/:id`, `POST /api/conversation-groups/:id/members`, `DELETE /api/conversation-groups/members/:conversationId`
 - Cross-plugin:
   - Imported by: `improve`
 - Shared:

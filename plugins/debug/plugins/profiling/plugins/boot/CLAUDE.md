@@ -10,6 +10,7 @@
   - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.Profiling`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`
 - Server:
   - Uses: `infra/endpoints.implement`
+  - Routes: `GET /api/debug/profiling/boot`
 - Shared:
   - Exports: Values: `getBootProfiling`
 

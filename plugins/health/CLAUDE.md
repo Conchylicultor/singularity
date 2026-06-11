@@ -11,6 +11,7 @@
   - Exports: Values: `getHealth`, `waitForRestart`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Routes: `GET /api/health`, `GET /api/health/ready`
 - Shared:
   - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
 

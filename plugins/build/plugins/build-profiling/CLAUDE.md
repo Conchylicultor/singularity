@@ -10,6 +10,7 @@
   - Uses: `build.BuildDetailSlots`, `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `infra/endpoints.useEndpoint`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Routes: `GET /api/build/runs/:id/profile`
 - Shared:
   - Exports: Values: `getBuildRunProfile`
 

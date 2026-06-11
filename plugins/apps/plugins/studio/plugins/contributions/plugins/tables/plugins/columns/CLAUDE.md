@@ -10,6 +10,7 @@
   - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Routes: `GET /api/studio/tables/:tableName/columns`
 - Shared:
   - Exports: Values: `getTableColumns`
 

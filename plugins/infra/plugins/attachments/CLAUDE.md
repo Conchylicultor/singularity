@@ -43,7 +43,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
   - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`, `plugins/infra/plugins/attachments/server/internal/tables.ts`
   - Exports: Types: `AttachmentLink`; Values: `_attachments`, `Attachments`, `createAttachment`, `deleteAttachment`, `getAttachment`
   - Register: `defineJob('attachments.orphan-sweep')`
-  - Routes: `GET /api/attachments/by/:ownerType/:id`
+  - Routes: `POST /api/attachments`, `GET /api/attachments/:id`, `DELETE /api/attachments/:id`, `GET /api/attachments/by/:ownerType/:id`
 - Core:
   - Uses: `infra/endpoints.dateString`, `infra/endpoints.defineEndpoint`
   - Exports: Types: `Attachment`; Values: `AttachmentSchema`, `listAttachmentsEndpoint`

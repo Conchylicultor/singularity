@@ -14,8 +14,10 @@ Example: clicking `task-detail/panes.tsx` resolves to `plugins/tasks/plugins/tas
   - Exports: Types: `ResolvedFileState`; Values: `FileDisambiguation`, `useResolvedFile`
 - Server:
   - Uses: `code-explorer.resolveWorktreePath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`
+  - Routes: `GET /api/code/:worktree/resolve`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/code/file-pane`
+  - Endpoint callers: `diff`, `image`, `markdown-extensions`, `read`
 - Shared:
   - Exports: Values: `resolveFile`
 

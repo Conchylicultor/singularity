@@ -15,6 +15,7 @@
   - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
   - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
   - Resources: `queue-ranks` (push)
+  - Routes: `POST /api/conversations-queue/reorder`, `POST /api/conversations-queue/promote`, `POST /api/conversations-queue/demote`, `POST /api/conversations-queue/step-down`, `POST /api/conversations-queue/rerank`
 - Shared:
   - Exports: Types: `QueueData`, `QueueRankRow`; Values: `demoteQueue`, `promoteQueue`, `queueRanksResource`, `reorderQueue`, `rerankQueue`, `stepDownQueue`
 

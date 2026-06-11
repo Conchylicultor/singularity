@@ -14,6 +14,7 @@
   - Exports: Values: `_conversationSummaries`, `conversationSummariesResource`
   - Register: `mcpTool('submit_conversation_summary')`
   - Resources: `conversation-summaries` (push)
+  - Routes: `POST /api/conversation-summary/:conversationId/generate`
 - Shared:
   - Exports: Types: `ConversationSummary`, `Phase`; Values: `conversationSummariesResource`, `generateConversationSummary`
 

@@ -14,6 +14,7 @@
   - DB schema: `plugins/backup/server/internal/tables.ts`
   - Exports: Values: `_backupRuns`, `BackupTarget`
   - Register: `defineJob('backup.run')`
+  - Routes: `POST /api/backup/run`, `GET /api/backup/runs`
 - Cross-plugin:
   - Imported by: `backup/google-drive`, `backup/local`
 - Core:

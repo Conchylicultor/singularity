@@ -13,6 +13,7 @@
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
   - Entity extension of: `tasks-core` (table `conversations_ext_notes`)
   - Exports: Values: `conversationNotes`, `conversationNotesResource`
+  - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`
 - Shared:
   - Exports: Types: `ConversationNote`, `ConversationNotesPayload`; Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`, `deleteNote`, `upsertNote`
 

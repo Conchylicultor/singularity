@@ -13,6 +13,7 @@
   - DB schema: `plugins/apps/plugins/story/plugins/marker/server/internal/tables.ts`
   - Entity extension of: `page/editor` (table `page_blocks_ext_story`)
   - Exports: Values: `getStoryMark`, `setStoryMark`, `storiesResource`, `storyMark`
+  - Routes: `PUT /api/stories/:pageId`, `DELETE /api/stories/:pageId`
 - Cross-plugin:
   - Imported by: `apps/story/shell`
 - Shared:

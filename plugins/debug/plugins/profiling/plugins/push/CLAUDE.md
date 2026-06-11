@@ -13,6 +13,7 @@ Push contention profiling sub-plugin for Debug > Profiling. Reads `~/.singularit
   - Exports: Values: `getPushProfiling`, `pushDetailPane`
 - Server:
   - Uses: `database/admin.openShortLivedClient`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
+  - Routes: `GET /api/debug/profiling/push`, `GET /api/debug/profiling/push/:pushId`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/push-profiling`
 - Shared:

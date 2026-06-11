@@ -11,6 +11,7 @@
   - Exports: Values: `captureApp`, `screenshotPane`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
+  - Routes: `POST /api/screenshots/:id`, `GET /api/screenshots/:id`, `POST /api/screenshots/:id/file`
 - Cross-plugin:
   - Imported by: `screenshot/draw-on-app`
 - Shared:

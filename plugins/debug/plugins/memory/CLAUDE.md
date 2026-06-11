@@ -26,6 +26,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
   - Exports: Values: `memoryPane`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CLAUDE_PROJECTS_DIR`, `infra/worktree.ensureMainWorktreeRoot`
+  - Routes: `GET /api/debug/memory`
 - Shared:
   - Exports: Values: `listMemoryFiles`, `readMemoryFile`
 

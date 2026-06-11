@@ -101,6 +101,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`
             - DB schema: `plugins/apps/plugins/deploy/plugins/servers/server/internal/tables.ts`
             - Exports: Values: `_deployServers`, `serversResource`
+            - Routes: `GET /api/deploy/servers`, `POST /api/deploy/servers`, `GET /api/deploy/servers/:id`, `PATCH /api/deploy/servers/:id`, `DELETE /api/deploy/servers/:id`
           - Shared:
             - Exports: Types: `CreateServerBody`, `Server`, `ServerStatus`, `UpdateServerBody`; Values: `createServer`, `CreateServerBodySchema`, `deleteServer`, `getServer`, `listServers`, `ServerSchema`, `serversResource`, `ServerStatusSchema`, `updateServer`, `UpdateServerBodySchema`
         - **`shell`** — App shell for the deploy platform.
@@ -215,6 +216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/apps/plugins/sonata/plugins/playback-history/server/internal/tables.ts`
             - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_playback`)
             - Exports: Values: `playbackHistoryLiveResource`, `songPlayback`
+            - Routes: `POST /api/sonata/songs/:id/play`
         - **`primitives`** — Umbrella for Sonata-local client primitives.
           - Plugins:
             - **`inertial-drag`** — 1-D pointer drag-to-scrub hook with exponential-friction release momentum (flick → coast → settle).
@@ -286,6 +288,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_chord_grid`)
                 - Exports: Values: `songChordGrid`
+                - Routes: `POST /api/sonata/songs/chord-grid`, `GET /api/sonata/songs/:id/chord-grid`, `PUT /api/sonata/songs/:id/chord-grid`
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes: `Sonata.Source` "MIDI File", `Library.Source` "midi", `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
@@ -296,6 +299,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
                 - Exports: Types: `ImportMidiSongInput`; Values: `getSongMidiBySourcePath`, `importMidiSong`, `listFolderImportedSongs`, `setSourceMissing`, `songMidi`, `songMidiLiveResource`
+                - Routes: `POST /api/sonata/songs/midi`, `GET /api/sonata/songs/:id/midi`
               - Cross-plugin:
                 - Imported by: `apps/sonata/sources/midi/folders`
               - Plugins:
@@ -319,6 +323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`
             - DB schema: `plugins/apps/plugins/sonata/plugins/track-mixer/server/internal/tables.ts`
             - Exports: Values: `_trackView`, `trackViewLiveResource`
+            - Routes: `POST /api/sonata/songs/:songId/track-view`, `DELETE /api/sonata/songs/:songId/track-view`
           - Cross-plugin:
             - Imported by: `apps/sonata/audio/engine`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to Sonata.Toolbar.
@@ -336,6 +341,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/apps/plugins/story/plugins/marker/server/internal/tables.ts`
             - Entity extension of: `page/editor` (table `page_blocks_ext_story`)
             - Exports: Values: `getStoryMark`, `setStoryMark`, `storiesResource`, `storyMark`
+            - Routes: `PUT /api/stories/:pageId`, `DELETE /api/stories/:pageId`
           - Cross-plugin:
             - Imported by: `apps/story/shell`
           - Shared:
@@ -380,6 +386,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+                    - Routes: `GET /api/studio/tables/:tableName/columns`
                   - Shared:
                     - Exports: Values: `getTableColumns`
                 - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
@@ -388,6 +395,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/section-label.SectionLabel`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+                    - Routes: `GET /api/studio/tables/:tableName/foreign-keys`
                   - Shared:
                     - Exports: Values: `getTableForeignKeys`
                 - **`indexes`** — Table indexes section in the table detail view.
@@ -396,6 +404,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+                    - Routes: `GET /api/studio/tables/:tableName/indexes`
                   - Shared:
                     - Exports: Values: `getTableIndexes`
                 - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
@@ -404,6 +413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+                    - Routes: `GET /api/studio/tables/:tableName/row-count`
                   - Shared:
                     - Exports: Values: `getTableRowCount`
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
@@ -412,6 +422,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
+                    - Routes: `GET /api/studio/tables/:tableName/sample`
                   - Shared:
                     - Exports: Values: `getTableSampleRows`
         - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
@@ -551,6 +562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/backup/server/internal/tables.ts`
     - Exports: Values: `_backupRuns`, `BackupTarget`
     - Register: `defineJob('backup.run')`
+    - Routes: `POST /api/backup/run`, `GET /api/backup/runs`
   - Cross-plugin:
     - Imported by: `backup/google-drive`, `backup/local`
   - Core:
@@ -629,6 +641,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `build.BuildDetailSlots`, `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `infra/endpoints.useEndpoint`
       - Server:
         - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+        - Routes: `GET /api/build/runs/:id/profile`
       - Shared:
         - Exports: Values: `getBuildRunProfile`
 
@@ -653,8 +666,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ResolvedFileState`; Values: `FileDisambiguation`, `useResolvedFile`
       - Server:
         - Uses: `code-explorer.resolveWorktreePath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`
+        - Routes: `GET /api/code/:worktree/resolve`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/code/file-pane`
+        - Endpoint callers: `diff`, `image`, `markdown-extensions`, `read`
       - Shared:
         - Exports: Values: `resolveFile`
 
@@ -732,6 +747,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Entity extension of: `tasks-core` (table `conversations_ext_category`)
         - Exports: Values: `classifyConversationJob`, `conversationCategoriesResource`, `conversationCategory`, `conversationCategoryConfig`
         - Register: `defineJob('conversation-category.classify')`
+        - Routes: `POST /api/conversation-category/:conversationId/classify`, `POST /api/conversation-category/:conversationId`, `DELETE /api/conversation-category/:conversationId`
       - Cross-plugin:
         - Imported by: `stats/commits`
       - Shared:
@@ -792,6 +808,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
           - Server:
             - Uses: `infra/endpoints.implement`, `tasks-core.getConversation`
+            - Routes: `GET /api/conversations/:id/allow-files`
           - Shared:
             - Exports: Values: `getAllowFiles`
         - **`branch`** — Forks the current Claude session into a background conversation with the typed draft as the opening prompt.
@@ -876,6 +893,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/live-state.useResource`
           - Server:
             - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.dropTaskTree`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`
+            - Routes: `POST /api/conversations/:id/drop-dependents`
           - Shared:
             - Exports: Values: `dropDependents`
         - **`exit`** — Exit-menu entry that closes the conversation without changing any task state.
@@ -918,6 +936,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`
           - Server:
             - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
+            - Routes: `POST /api/conversations/:id/hold-and-exit`
           - Shared:
             - Exports: Values: `holdAndExit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
@@ -1062,6 +1081,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                     - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `primitives/text.Text`
                   - Server:
                     - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
+                    - Routes: `POST /api/conversations/:id/answer-question`, `POST /api/conversations/:id/flush-question`
                   - Shared:
                     - Exports: Values: `ANSWER_MARKER`, `answerAskUserQuestion`, `AnswerAskUserQuestionBodySchema`, `flushQuestion`
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
@@ -1136,6 +1156,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`
             - Entity extension of: `tasks-core` (table `conversations_ext_notes`)
             - Exports: Values: `conversationNotes`, `conversationNotesResource`
+            - Routes: `PUT /api/conversation-notes/:conversationId`, `DELETE /api/conversation-notes/:conversationId`
           - Shared:
             - Exports: Types: `ConversationNote`, `ConversationNotesPayload`; Values: `ConversationNoteSchema`, `ConversationNotesPayloadSchema`, `conversationNotesResource`, `deleteNote`, `upsertNote`
         - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
@@ -1170,6 +1191,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
             - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
+            - Routes: `POST /api/conversations/:id/push-and-exit`
           - Shared:
             - Exports: Values: `pushAndExitConfig`, `startPushAndExit`
         - **`push-counter`**
@@ -1237,6 +1259,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
             - Exports: Values: `_conversationGroupMembers`, `_conversationGroups`, `addMemberToGroup`, `conversationGroupsResource`
+            - Routes: `POST /api/conversation-groups`, `PATCH /api/conversation-groups/:id`, `DELETE /api/conversation-groups/:id`, `POST /api/conversation-groups/:id/members`, `DELETE /api/conversation-groups/members/:conversationId`
           - Cross-plugin:
             - Imported by: `improve`
           - Shared:
@@ -1256,6 +1279,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `conversationsQueue`, `endRank`, `findTaskIdForConversation`, `lockDeck`, `queueRanksResource`, `rankAdjacentTo`, `rankAfterBlockers`, `rankAfterN`, `rankForBottom`, `rankForTop`, `rankJoiningGroup`, `reseatGroupMembers`, `seedRankJob`, `upsertRank`
             - Register: `defineJob('queue.seed-rank')`, `defineJob('queue.validate-pin')`, `defineJob('queue.advance-pin')`, `defineJob('queue.task-status-pin')`
             - Resources: `queue-ranks` (push)
+            - Routes: `POST /api/conversations-queue/reorder`, `POST /api/conversations-queue/promote`, `POST /api/conversations-queue/demote`, `POST /api/conversations-queue/step-down`, `POST /api/conversations-queue/rerank`
           - Shared:
             - Exports: Types: `QueueData`, `QueueRankRow`; Values: `demoteQueue`, `promoteQueue`, `queueRanksResource`, `reorderQueue`, `rerankQueue`, `stepDownQueue`
     - **`model-provider`** — Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
@@ -1305,11 +1329,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `_conversationSummaries`, `conversationSummariesResource`
         - Register: `mcpTool('submit_conversation_summary')`
         - Resources: `conversation-summaries` (push)
+        - Routes: `POST /api/conversation-summary/:conversationId/generate`
       - Shared:
         - Exports: Types: `ConversationSummary`, `Phase`; Values: `conversationSummariesResource`, `generateConversationSummary`
     - **`transcript-api`** — Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.
       - Server:
         - Uses: `conversations/transcript-watcher.findTranscriptPath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversationClaudeSessionId`
+        - Routes: `GET /api/conversations/:id/transcript`
       - Shared:
         - Exports: Values: `getConversationTranscript`
     - **`transcript-retention`** — Keeps active conversations' Claude session JSONL alive by refreshing their mtime daily, so Claude Code's cleanupPeriodDays sweep never deletes a live transcript.
@@ -1332,6 +1358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Values: `recoveryPane`
   - Server:
     - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`
+    - Routes: `POST /api/conversations-recover/restore-batch`
   - Shared:
     - Exports: Types: `RestoreBatchBody`; Values: `restoreBatch`, `RestoreBatchBodySchema`
 
@@ -1345,6 +1372,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
     - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
     - Resources: `crashes` (push)
+    - Routes: `POST /api/crashes`
   - Core:
     - Uses: `primitives/live-state.resourceDescriptor`
     - Exports: Types: `Crash`; Values: `crashesResource`, `CrashSchema`
@@ -1422,6 +1450,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `broadcastsPane`
       - Server:
         - Uses: `infra/endpoints.implement`, `infra/worktree.ensureMainWorktreeRoot`
+        - Routes: `GET /api/debug/broadcasts`, `PUT /api/debug/broadcasts`
       - Shared:
         - Exports: Types: `WriteBroadcastsBody`; Values: `getBroadcasts`, `writeBroadcasts`, `WriteBroadcastsBodySchema`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
@@ -1451,6 +1480,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `memoryPane`
       - Server:
         - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.CLAUDE_PROJECTS_DIR`, `infra/worktree.ensureMainWorktreeRoot`
+        - Routes: `GET /api/debug/memory`
       - Shared:
         - Exports: Values: `listMemoryFiles`, `readMemoryFile`
     - **`profiling`** — Gantt chart of build steps and server startup phases.
@@ -1469,6 +1499,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.Profiling`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`
           - Server:
             - Uses: `infra/endpoints.implement`
+            - Routes: `GET /api/debug/profiling/boot`
           - Shared:
             - Exports: Values: `getBootProfiling`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
@@ -1478,6 +1509,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `buildProfileDetailPane`
           - Server:
             - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+            - Routes: `GET /api/debug/profiling/build`, `GET /api/debug/profiling/build/:worktree/:buildId`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/push-profiling`, `debug/profiling/push`
           - Shared:
@@ -1489,6 +1521,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getPushProfiling`, `pushDetailPane`
           - Server:
             - Uses: `database/admin.openShortLivedClient`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
+            - Routes: `GET /api/debug/profiling/push`, `GET /api/debug/profiling/push/:pushId`
           - Cross-plugin:
             - Imported by: `conversations/conversation-view/push-profiling`
           - Shared:
@@ -1507,12 +1540,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Server:
             - Uses: `infra/endpoints.implement`, `infra/mcp.Mcp`
             - Register: `mcpTool('get_runtime_profile')`
+            - Routes: `GET /api/debug/profiling/runtime`, `POST /api/debug/profiling/runtime/reset`
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
           - Web:
             - Contributes: `Profiling.Section` → `StatsSection`
             - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.PhaseConfig`, `debug/profiling.Profiling`, `debug/profiling.Span`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`
           - Server:
             - Uses: `infra/endpoints.implement`
+            - Routes: `GET /api/debug/profiling/stats`
           - Shared:
             - Exports: Values: `getStatsProfiling`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
@@ -1527,6 +1562,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `worktreeCleanupPane`
       - Server:
         - Uses: `database/admin.dropDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `tasks-core.getAttempt`, `tasks-core.listAttempts`, `tasks-core.listTasks`
+        - Routes: `GET /api/debug/worktrees`, `POST /api/debug/worktrees/bulk-delete`, `DELETE /api/debug/worktrees/:id`
       - Shared:
         - Exports: Types: `BulkDeleteWorktreesBody`; Values: `bulkDeleteWorktrees`, `BulkDeleteWorktreesBodySchema`, `deleteWorktree`, `listWorktrees`
 
@@ -1539,6 +1575,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/events.deleteTrigger`, `infra/events.deleteTriggersFor`, `infra/events.trigger`, `infra/jobs.defineJob`, `infra/jobs.UNSAFE_sweepStuckLocks`
     - DB schema: `plugins/events-test/server/internal/tables.ts`
     - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
+    - Routes: `POST /api/events-test/subscribe`, `POST /api/events-test/emit`, `POST /api/events-test/direct-enqueue`, `GET /api/events-test/log`, `POST /api/events-test/reset`, `DELETE /api/events-test/trigger/:id`, `POST /api/events-test/delete-targeting`, `GET /api/events-test/triggers`, `GET /api/events-test/wait-idle`, `POST /api/events-test/crash-recovery`
   - Shared:
     - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
 
@@ -1984,6 +2021,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Values: `getHealth`, `waitForRestart`
   - Server:
     - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
+    - Routes: `GET /api/health`, `GET /api/health/ready`
   - Shared:
     - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
 
@@ -2020,7 +2058,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`, `plugins/infra/plugins/attachments/server/internal/tables.ts`
         - Exports: Types: `AttachmentLink`; Values: `_attachments`, `Attachments`, `createAttachment`, `deleteAttachment`, `getAttachment`
         - Register: `defineJob('attachments.orphan-sweep')`
-        - Routes: `GET /api/attachments/by/:ownerType/:id`
+        - Routes: `POST /api/attachments`, `GET /api/attachments/:id`, `DELETE /api/attachments/:id`, `GET /api/attachments/by/:ownerType/:id`
       - Core:
         - Uses: `infra/endpoints.dateString`, `infra/endpoints.defineEndpoint`
         - Exports: Types: `Attachment`; Values: `AttachmentSchema`, `listAttachmentsEndpoint`
@@ -2099,6 +2137,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
       - Server:
         - Exports: Types: `McpTool`, `McpToolContext`, `McpToolResult`; Values: `Mcp`
+        - Routes: `POST /api/mcp/:conversationId`
       - Shared:
         - Exports: Values: `mcpRequest`
     - **`paths`**
@@ -2161,6 +2200,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`
     - Register: `defineJob('notifications.ttl-cleanup')`
     - Resources: `notifications` (push)
+    - Routes: `POST /api/notifications`, `POST /api/notifications/dismiss-all`, `POST /api/notifications/mark-all-read`, `POST /api/notifications/:id/dismiss`
   - Cross-plugin:
     - Imported by: `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `crashes`, `crashes/mutation-errors`, `database/fork`, `debug/queue`, `events-test`, `floating-bar`, `screenshot`, `screenshot/draw-on-app`, `tasks/task-draft-form`, `tasks/task-preprompt`
   - Shared:
@@ -3037,6 +3077,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Values: `captureApp`, `screenshotPane`
   - Server:
     - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`
+    - Routes: `POST /api/screenshots/:id`, `GET /api/screenshots/:id`, `POST /api/screenshots/:id/file`
   - Cross-plugin:
     - Imported by: `screenshot/draw-on-app`
   - Shared:
@@ -3093,8 +3134,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `yAxisFormatter`
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/conversation-category.conversationCategory`, `conversations/conversation-category.conversationCategoryConfig`, `database.db`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`
+        - Routes: `GET /api/stats/commits/cumulative`, `GET /api/stats/commits/rate`, `GET /api/stats/commits/lines/cumulative`, `GET /api/stats/commits/lines/rate`
       - Cross-plugin:
         - Imported by: `stats/cost`, `stats/pushes`, `stats/tasks`
+        - Endpoint callers: `stats`
       - Shared:
         - Exports: Values: `commitsConfig`, `getCommitsCumulative`, `getCommitsLinesCumulative`, `getCommitsLinesRate`, `getCommitsRate`
     - **`cost`** — Token usage and dollar cost across Claude Code sessions, with per-conversation breakdown. Token usage and dollar cost across Claude Code sessions, sourced from ccusage.
@@ -3103,6 +3146,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `conversations/conversation-view.conversationPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
       - Server:
         - Uses: `config_v2.ConfigV2`, `database.db`, `infra/endpoints.implement`, `infra/paths.CLAUDE_PROJECTS_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core._conversations`
+        - Routes: `GET /api/stats/cost/daily`, `GET /api/stats/cost/daily-by-family`, `GET /api/stats/cost/cumulative`, `GET /api/stats/cost/token-mix`, `GET /api/stats/cost/totals`, `GET /api/stats/cost/sessions`, `GET /api/stats/cost/distribution`, `GET /api/stats/cost/avg-per-conversation`
       - Shared:
         - Exports: Values: `costConfig`, `getCostAvgPerConversation`, `getCostCumulative`, `getCostDaily`, `getCostDailyByFamily`, `getCostDistribution`, `getCostSessions`, `getCostTokenMix`, `getCostTotals`
     - **`pushes`** — Push contention stats: wait time, throughput, and step breakdown charts. Push contention stats: wait time, throughput, and step breakdown.
@@ -3111,6 +3155,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
       - Server:
         - Uses: `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+        - Routes: `GET /api/stats/pushes/wait-time`, `GET /api/stats/pushes/throughput`, `GET /api/stats/pushes/step-breakdown`
       - Shared:
         - Exports: Values: `getPushesStepBreakdown`, `getPushesThroughput`, `getPushesWaitTime`
     - **`tasks`** — Task-based stats: active (open) tasks over time.
@@ -3119,6 +3164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/text.Text`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
       - Server:
         - Uses: `infra/endpoints.implement`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
+        - Routes: `GET /api/stats/tasks/cumulative`, `GET /api/stats/tasks/daily`
       - Shared:
         - Exports: Values: `getTasksCumulative`, `getTasksDaily`
 
@@ -3224,6 +3270,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - DB schema: `plugins/tasks/plugins/task-preprompt/server/internal/tables.ts`
         - Entity extension of: `tasks-core` (table `tasks_ext_preprompt`)
         - Exports: Values: `getTaskPreprompt`, `inheritTaskPreprompt`, `setTaskPreprompt`, `taskPrepromptsResource`, `tasksPreprompt`
+        - Routes: `PUT /api/task-preprompts/:taskId`, `DELETE /api/task-preprompts/:taskId`
       - Cross-plugin:
         - Imported by: `conversations`, `conversations/conversation-preprompt`, `plugin-meta/plugin-health`, `tasks`
       - Shared:

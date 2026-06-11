@@ -11,6 +11,7 @@
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
   - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`
+  - Routes: `POST /api/conversations/:id/push-and-exit`
 - Shared:
   - Exports: Values: `pushAndExitConfig`, `startPushAndExit`
 

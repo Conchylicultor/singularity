@@ -11,6 +11,7 @@
   - Exports: Values: `buildProfileDetailPane`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
+  - Routes: `GET /api/debug/profiling/build`, `GET /api/debug/profiling/build/:worktree/:buildId`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/push-profiling`, `debug/profiling/push`
 - Shared:

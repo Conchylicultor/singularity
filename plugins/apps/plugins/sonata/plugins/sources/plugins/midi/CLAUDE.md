@@ -14,6 +14,7 @@
   - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
   - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
   - Exports: Types: `ImportMidiSongInput`; Values: `getSongMidiBySourcePath`, `importMidiSong`, `listFolderImportedSongs`, `setSourceMissing`, `songMidi`, `songMidiLiveResource`
+  - Routes: `POST /api/sonata/songs/midi`, `GET /api/sonata/songs/:id/midi`
 - Cross-plugin:
   - Imported by: `apps/sonata/sources/midi/folders`
 - Sub-plugins:

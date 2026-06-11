@@ -15,6 +15,7 @@
   - Exports: Types: `RecordNotificationInput`; Values: `_notifications`, `notificationsResource`, `recordNotification`
   - Register: `defineJob('notifications.ttl-cleanup')`
   - Resources: `notifications` (push)
+  - Routes: `POST /api/notifications`, `POST /api/notifications/dismiss-all`, `POST /api/notifications/mark-all-read`, `POST /api/notifications/:id/dismiss`
 - Cross-plugin:
   - Imported by: `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `crashes`, `crashes/mutation-errors`, `database/fork`, `debug/queue`, `events-test`, `floating-bar`, `screenshot`, `screenshot/draw-on-app`, `tasks/task-draft-form`, `tasks/task-preprompt`
 - Shared:

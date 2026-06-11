@@ -13,6 +13,7 @@
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/events.deleteTrigger`, `infra/events.deleteTriggersFor`, `infra/events.trigger`, `infra/jobs.defineJob`, `infra/jobs.UNSAFE_sweepStuckLocks`
   - DB schema: `plugins/events-test/server/internal/tables.ts`
   - Register: `defineJob('events_test.log')`, `defineTriggerEvent('events_test.pinged')`
+  - Routes: `POST /api/events-test/subscribe`, `POST /api/events-test/emit`, `POST /api/events-test/direct-enqueue`, `GET /api/events-test/log`, `POST /api/events-test/reset`, `DELETE /api/events-test/trigger/:id`, `POST /api/events-test/delete-targeting`, `GET /api/events-test/triggers`, `GET /api/events-test/wait-idle`, `POST /api/events-test/crash-recovery`
 - Shared:
   - Exports: Types: `DeleteTargetingBody`, `DirectEnqueueBody`, `EmitBody`, `SubscribeBody`; Values: `crashRecoveryEventsTest`, `deleteEventsTestTargeting`, `deleteEventsTestTrigger`, `DeleteTargetingBodySchema`, `DirectEnqueueBodySchema`, `directEnqueueEventsTest`, `EmitBodySchema`, `emitEventsTest`, `getEventsTestLog`, `listEventsTestTriggers`, `resetEventsTest`, `SubscribeBodySchema`, `subscribeEventsTest`, `waitEventsTestIdle`
 

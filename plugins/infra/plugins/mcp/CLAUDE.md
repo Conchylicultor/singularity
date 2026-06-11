@@ -10,6 +10,7 @@
   - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
 - Server:
   - Exports: Types: `McpTool`, `McpToolContext`, `McpToolResult`; Values: `Mcp`
+  - Routes: `POST /api/mcp/:conversationId`
 - Shared:
   - Exports: Values: `mcpRequest`
 

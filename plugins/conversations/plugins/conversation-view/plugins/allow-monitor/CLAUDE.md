@@ -23,6 +23,7 @@ Polls every 3 seconds via a plain `useQuery` with `refetchInterval` — no WebSo
   - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
 - Server:
   - Uses: `infra/endpoints.implement`, `tasks-core.getConversation`
+  - Routes: `GET /api/conversations/:id/allow-files`
 - Shared:
   - Exports: Values: `getAllowFiles`
 

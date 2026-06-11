@@ -11,6 +11,7 @@
   - Exports: Values: `recoveryPane`
 - Server:
   - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`
+  - Routes: `POST /api/conversations-recover/restore-batch`
 - Shared:
   - Exports: Types: `RestoreBatchBody`; Values: `restoreBatch`, `RestoreBatchBodySchema`
 

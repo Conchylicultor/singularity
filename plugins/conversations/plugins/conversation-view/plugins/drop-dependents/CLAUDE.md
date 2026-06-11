@@ -10,6 +10,7 @@
   - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/live-state.useResource`
 - Server:
   - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.dropTaskTree`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`
+  - Routes: `POST /api/conversations/:id/drop-dependents`
 - Shared:
   - Exports: Values: `dropDependents`
 

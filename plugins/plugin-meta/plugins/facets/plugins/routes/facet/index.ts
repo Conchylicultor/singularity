@@ -23,12 +23,18 @@ export default createFacet<RoutesData>({
   extract(ctx) {
     const routes: RouteDef[] = [];
 
-    // ── HTTP routes: collect defineEndpoint({ route: "..." }) from core/**/*.ts
-    const coreFiles: string[] = [];
-    walkFiles(join(ctx.dir, "core"), coreFiles);
+    // ── HTTP routes: collect defineEndpoint({ route: "..." }) from the two
+    //    runtimes an endpoint can live in. Endpoints must be importable from
+    //    both web and server, so they sit in `core/` (when imported
+    //    cross-plugin) or `shared/` (plugin-private web+server). Scan both, or
+    //    `[endpoint.route]` computed keys whose definition lives in `shared/`
+    //    (e.g. notifications, crashes) get silently dropped.
+    const endpointFiles: string[] = [];
+    walkFiles(join(ctx.dir, "core"), endpointFiles);
+    walkFiles(join(ctx.dir, "shared"), endpointFiles);
 
     const endpointRoutes = new Map<string, string>(); // exportName → routeString
-    for (const file of coreFiles) {
+    for (const file of endpointFiles) {
       if (!file.endsWith(".ts")) continue;
       const raw = readIfExists(file);
       if (!raw) continue;

@@ -14,6 +14,7 @@
   - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
   - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
   - Resources: `crashes` (push)
+  - Routes: `POST /api/crashes`
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Crash`; Values: `crashesResource`, `CrashSchema`

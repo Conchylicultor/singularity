@@ -11,6 +11,7 @@
   - Exports: Values: `broadcastsPane`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/worktree.ensureMainWorktreeRoot`
+  - Routes: `GET /api/debug/broadcasts`, `PUT /api/debug/broadcasts`
 - Shared:
   - Exports: Types: `WriteBroadcastsBody`; Values: `getBroadcasts`, `writeBroadcasts`, `WriteBroadcastsBodySchema`
 
