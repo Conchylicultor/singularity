@@ -2,6 +2,7 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { BlockSchema } from "./schemas";
+import { BlockOpSchema } from "./block-ops";
 import { SerializedBlockSchema } from "./serialized-block";
 
 export const CreateBlockBodySchema = z.object({
@@ -29,13 +30,6 @@ export const MoveBlockBodySchema = z.object({
   rank: RankSchema,
 });
 export type MoveBlockBody = z.infer<typeof MoveBlockBodySchema>;
-
-export const SplitBlockBodySchema = z.object({
-  position: z.number().int().nonnegative(),
-  asChild: z.boolean().optional(),
-  childType: z.string().optional(),
-});
-export type SplitBlockBody = z.infer<typeof SplitBlockBodySchema>;
 
 export const BulkDeleteBlocksBodySchema = z.object({
   ids: z.array(z.string()),
@@ -107,25 +101,13 @@ export const moveBlock = defineEndpoint({
   response: BlockSchema,
 });
 
-export const splitBlock = defineEndpoint({
-  route: "POST /api/blocks/:id/split",
-  body: SplitBlockBodySchema,
-  response: z.object({ original: BlockSchema, created: BlockSchema }),
-});
-
-export const mergeBlocks = defineEndpoint({
-  route: "POST /api/blocks/:id/merge",
-  response: BlockSchema,
-});
-
-export const indentBlock = defineEndpoint({
-  route: "POST /api/blocks/:id/indent",
-  response: BlockSchema,
-});
-
-export const outdentBlock = defineEndpoint({
-  route: "POST /api/blocks/:id/outdent",
-  response: BlockSchema,
+// Single authoritative structural edit: load the page's blocks, apply the pure
+// `applyBlockOp` reducer, reconcile + persist the diff, and return the resulting
+// block list. Replaces the per-keystroke split/merge/indent/outdent endpoints.
+export const applyBlockOpEndpoint = defineEndpoint({
+  route: "POST /api/pages/:pageId/blocks/op",
+  body: BlockOpSchema,
+  response: z.object({ blocks: z.array(BlockSchema) }),
 });
 
 export const bulkDeleteBlocks = defineEndpoint({

@@ -33,8 +33,12 @@ type FetchOpts<TBody, TQuery> = {
   keepalive?: boolean;
   /** Default true. `false` skips reportEndpointError (e.g. the crash beacon). */
   report?: boolean;
-} & (TBody extends void ? { body?: never } : { body: TBody }) &
-  (TQuery extends void ? { query?: never } : { query: TQuery });
+  // `[T] extends [void]` (tuple-wrapped) keeps the conditional non-distributive
+  // so a union body type (e.g. a discriminated `BlockOp`) stays one `body: TBody`
+  // requirement instead of distributing into `{body: A} | {body: B} | …`, which
+  // would reject the whole-union value.
+} & ([TBody] extends [void] ? { body?: never } : { body: TBody }) &
+  ([TQuery] extends [void] ? { query?: never } : { query: TQuery });
 
 /**
  * Typed fetch wrapper for endpoint definitions.

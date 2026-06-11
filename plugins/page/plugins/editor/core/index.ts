@@ -10,10 +10,7 @@ export {
   updateBlock,
   deleteBlock,
   moveBlock,
-  splitBlock,
-  mergeBlocks,
-  indentBlock,
-  outdentBlock,
+  applyBlockOpEndpoint,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
@@ -21,7 +18,6 @@ export {
   CreateBlockBodySchema,
   UpdateBlockBodySchema,
   MoveBlockBodySchema,
-  SplitBlockBodySchema,
   BulkDeleteBlocksBodySchema,
   BulkMoveBlocksBodySchema,
   BulkDuplicateBlocksBodySchema,
@@ -31,12 +27,14 @@ export type {
   CreateBlockBody,
   UpdateBlockBody,
   MoveBlockBody,
-  SplitBlockBody,
   BulkDeleteBlocksBody,
   BulkMoveBlocksBody,
   BulkDuplicateBlocksBody,
   PasteBlocksBody,
 } from "./endpoints";
+
+export { BlockOpSchema, applyBlockOp, childrenOf } from "./block-ops";
+export type { BlockOp, BlockNode } from "./block-ops";
 
 export { SerializedBlockSchema } from "./serialized-block";
 export type { SerializedBlock } from "./serialized-block";

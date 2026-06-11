@@ -6,10 +6,7 @@ import { handleCreateBlock } from "./internal/handle-create-block";
 import { handleUpdateBlock } from "./internal/handle-update-block";
 import { handleDeleteBlock } from "./internal/handle-delete-block";
 import { handleMoveBlock } from "./internal/handle-move-block";
-import { handleSplitBlock } from "./internal/handle-split-block";
-import { handleMergeBlocks } from "./internal/handle-merge-blocks";
-import { handleIndentBlock } from "./internal/handle-indent-block";
-import { handleOutdentBlock } from "./internal/handle-outdent-block";
+import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
 import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
 import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
@@ -23,10 +20,7 @@ import {
   updateBlock,
   deleteBlock,
   moveBlock,
-  splitBlock,
-  mergeBlocks,
-  indentBlock,
-  outdentBlock,
+  applyBlockOpEndpoint,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
@@ -51,10 +45,7 @@ export default {
     [updateBlock.route]: handleUpdateBlock,
     [deleteBlock.route]: handleDeleteBlock,
     [moveBlock.route]: handleMoveBlock,
-    [splitBlock.route]: handleSplitBlock,
-    [mergeBlocks.route]: handleMergeBlocks,
-    [indentBlock.route]: handleIndentBlock,
-    [outdentBlock.route]: handleOutdentBlock,
+    [applyBlockOpEndpoint.route]: handleApplyBlockOp,
     [bulkDeleteBlocks.route]: handleBulkDeleteBlock,
     [bulkMoveBlocks.route]: handleBulkMoveBlock,
     [bulkDuplicateBlocks.route]: handleBulkDuplicateBlock,

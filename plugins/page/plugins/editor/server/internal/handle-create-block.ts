@@ -16,7 +16,7 @@ export const handleCreateBlock = implement(createBlock, async ({ body }) => {
 
   if (body.afterId) {
     // Insert immediately after an existing block: same parent, rank between it
-    // and its next sibling at that parent. Mirrors handle-split-block's logic.
+    // and its next sibling at that parent (same shape as the reducer's insert).
     const [after] = await db
       .select()
       .from(_blocks)

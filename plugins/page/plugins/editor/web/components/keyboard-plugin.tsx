@@ -113,12 +113,16 @@ export function KeyboardPlugin({
 
     const unregisterBackspace = lexicalEditor.registerCommand<KeyboardEvent | null>(
       KEY_BACKSPACE_COMMAND,
-      () => {
+      (event) => {
         let shouldMerge = false;
         lexicalEditor.getEditorState().read(() => {
           shouldMerge = isAtStart();
         });
         if (shouldMerge) {
+          // Prevent the native backspace: `merge()` may de-indent or move the
+          // caret to the previous block, and an unprevented default would then
+          // delete a character from whatever block ends up focused.
+          event?.preventDefault();
           editorRef.current.merge();
           return true;
         }

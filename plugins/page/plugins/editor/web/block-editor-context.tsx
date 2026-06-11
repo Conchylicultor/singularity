@@ -7,25 +7,42 @@ import {
   type MutableRefObject,
   type ReactNode,
 } from "react";
-import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
-  createBlock,
   updateBlock,
-  splitBlock,
-  mergeBlocks,
-  deleteBlock,
-  indentBlock,
-  outdentBlock,
   moveBlock,
+  applyBlockOpEndpoint,
+  childrenOf,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
   pasteBlocks,
   type Block,
+  type BlockNode,
+  type BlockOp,
   type SerializedBlock,
 } from "../core";
 import type { BlockEditorAPI } from "./types";
+
+/**
+ * Project full `Block` rows to the reducer's JSON-pure `BlockNode` shape. The
+ * only structural mismatch is `rank`: a `Block` carries a `Rank` instance while
+ * a `BlockNode` carries its stored string form, so we serialize it. This lets us
+ * reuse `childrenOf` (and its rank-sorted sibling math) on the live `rowsRef`
+ * when resolving split/merge intent client-side.
+ */
+function toNodes(rows: Block[]): BlockNode[] {
+  return rows.map((b) => ({
+    id: b.id,
+    pageId: b.pageId,
+    parentId: b.parentId,
+    type: b.type,
+    data: b.data,
+    rank: String(b.rank),
+    expanded: b.expanded,
+  }));
+}
 
 interface BlockEditorContextValue {
   pageId: string;
@@ -174,28 +191,41 @@ export function BlockEditorProvider({
     [],
   );
 
-  // Insert a new block at the end of the page. Top-level page content is
-  // parented to the page block (`parentId: pageId`), since `computePageId(null)`
-  // is null. Omitting `rank` lets the server append it after the last existing
-  // sibling. Once the live resource re-renders and the new block registers its
-  // focus handle, focus it.
-  const insert = useCallback(
-    (type: string, data: unknown) => {
-      void (async () => {
-        const created = await fetchEndpoint(
-          createBlock,
-          {},
-          { body: { parentId: pageId, type, data } },
-        );
-        pendingFocusRef.current = created.id;
-        const handle = focusHandlesRef.current.get(created.id);
-        if (handle) {
-          pendingFocusRef.current = null;
-          handle.focus();
-        }
-      })();
+  // Fire-and-forget a single tree op to the server. The reducer recomputes the
+  // page structure; the live `blocksResource` push re-renders the list. New
+  // blocks carry client-minted ids, so callers can mint + focus up front without
+  // awaiting the response.
+  const dispatchOp = useCallback(
+    (op: BlockOp) => {
+      void fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: op });
     },
     [pageId],
+  );
+
+  // Focus a freshly-minted block by its known id. If its text editor has already
+  // mounted, focus immediately; otherwise queue it so `registerFocusHandle`
+  // focuses it on mount (the live push will mount it shortly).
+  const focusNew = useCallback((id: string) => {
+    pendingFocusRef.current = id;
+    const handle = focusHandlesRef.current.get(id);
+    if (handle) {
+      pendingFocusRef.current = null;
+      handle.focus();
+    }
+  }, []);
+
+  // Insert a new block at the end of the page. Top-level page content is
+  // parented to the page block (`parentId: pageId`), since `computePageId(null)`
+  // is null. Omitting `afterId` lets the reducer append it after the last
+  // existing sibling under the page. The id is minted up front so focus does not
+  // wait on the server round-trip.
+  const insert = useCallback(
+    (type: string, data: unknown) => {
+      const newId = crypto.randomUUID();
+      focusNew(newId);
+      dispatchOp({ kind: "insert", newId, type, data, parentId: pageId });
+    },
+    [pageId, dispatchOp, focusNew],
   );
 
   const makeBlockAPI = useCallback(
@@ -210,70 +240,92 @@ export function BlockEditorProvider({
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { type, data, ...(opts ?? {}) } });
       },
       insertAfter(type: string, data: unknown) {
-        void (async () => {
-          const created = await fetchEndpoint(
-            createBlock,
-            {},
-            { body: { type, data, afterId: blockId } },
-          );
-          pendingFocusRef.current = created.id;
-          const handle = focusHandlesRef.current.get(created.id);
-          if (handle) {
-            pendingFocusRef.current = null;
-            handle.focus();
-          }
-        })();
+        const newId = crypto.randomUUID();
+        focusNew(newId);
+        dispatchOp({ kind: "insert", newId, type, data, afterId: blockId });
       },
       split(position: number, opts?: { asChild?: boolean; childType?: string }) {
-        void (async () => {
-          const result = await fetchEndpoint(
-            splitBlock,
-            { id: blockId },
-            { body: { position, ...(opts ?? {}) } },
-          );
-          pendingFocusRef.current = result.created.id;
-          const handle = focusHandlesRef.current.get(result.created.id);
-          if (handle) {
-            pendingFocusRef.current = null;
-            handle.focus();
-          }
-        })();
+        // Resolve `asChild` here against the live page tree. The new block's id
+        // is minted up front so we can focus it without awaiting the response.
+        const nodes = toNodes(rowsRef.current);
+        const block = nodes.find((b) => b.id === blockId);
+        const data = block?.data as Record<string, unknown> | null | undefined;
+        const textLength =
+          data && typeof data.text === "string" ? data.text.length : 0;
+        const hasExpandedChildren =
+          !!block?.expanded && childrenOf(nodes, blockId).length > 0;
+        // Honor an explicit contributor `asChild`; otherwise nest the split-off
+        // content as the first child only when splitting at the very end of a
+        // block that has visible children (Notion's Enter-at-end behavior).
+        const asChild =
+          opts?.asChild ?? (hasExpandedChildren && position === textLength);
+
+        const newId = crypto.randomUUID();
+        focusNew(newId);
+        dispatchOp({
+          kind: "split",
+          blockId,
+          position,
+          newId,
+          asChild,
+          childType: opts?.childType,
+        });
       },
       merge() {
-        void (async () => {
-          try {
-            const merged = await fetchEndpoint(mergeBlocks, { id: blockId });
-            focusHandlesRef.current.get(merged.id)?.focus();
-          } catch (err: unknown) {
-            if (err instanceof EndpointError && err.status === 400) return;
-            throw err;
-          }
-        })();
+        // Resolve de-indent vs. merge against the live page tree. Keyboard only
+        // calls this at caret-start-of-line, so this owns the structural intent.
+        const nodes = toNodes(rowsRef.current);
+        const block = nodes.find((b) => b.id === blockId);
+        if (!block) return;
+
+        // "Indented" = parented to a normal content block (not the page itself).
+        // The page's direct children carry `parentId === pageId`; anything with a
+        // deeper parent is an indented block that should de-indent instead.
+        const isIndented =
+          block.parentId !== null && block.parentId !== pageId;
+        if (isIndented) {
+          // De-indent (outdent) and keep the caret on the same block.
+          dispatchOp({ kind: "outdent", blockId });
+          focusBlock(blockId);
+          return;
+        }
+
+        // Top level (or directly under page): merge into the previous sibling.
+        const siblings = childrenOf(nodes, block.parentId);
+        const idx = siblings.findIndex((s) => s.id === blockId);
+        const prev = idx > 0 ? siblings[idx - 1] : null;
+        if (!prev) return; // first block, nothing to merge into — no-op
+        dispatchOp({ kind: "merge", blockId });
+        // Defer focusing the prev sibling to after the current keydown: moving
+        // DOM focus synchronously mid-event lets the native backspace land on the
+        // newly-focused block. The prev sibling already exists client-side.
+        const prevId = prev.id;
+        queueMicrotask(() => focusHandlesRef.current.get(prevId)?.focus());
       },
       remove() {
-        void fetchEndpoint(deleteBlock, { id: blockId });
+        dispatchOp({ kind: "delete", blockId });
       },
       indent() {
-        void (async () => {
-          try {
-            await fetchEndpoint(indentBlock, { id: blockId });
-          } catch (err: unknown) {
-            // 400 = no previous sibling to indent under; benign no-op.
-            if (err instanceof EndpointError && err.status === 400) return;
-            throw err;
-          }
-        })();
+        // Pre-guard: indenting requires a previous sibling to nest under.
+        // Skipping the dispatch when there is none mirrors today's benign no-op.
+        const nodes = toNodes(rowsRef.current);
+        const block = nodes.find((b) => b.id === blockId);
+        if (!block) return;
+        const siblings = childrenOf(nodes, block.parentId);
+        const idx = siblings.findIndex((s) => s.id === blockId);
+        if (idx <= 0) return; // no previous sibling — no-op
+        dispatchOp({ kind: "indent", blockId });
+        focusBlock(blockId);
       },
       outdent() {
-        void (async () => {
-          try {
-            await fetchEndpoint(outdentBlock, { id: blockId });
-          } catch (err: unknown) {
-            // 400 = already at top level; benign no-op.
-            if (err instanceof EndpointError && err.status === 400) return;
-            throw err;
-          }
-        })();
+        // Pre-guard: a block already at top level (directly under the page) has
+        // nowhere to outdent to. Mirrors today's benign no-op.
+        const nodes = toNodes(rowsRef.current);
+        const block = nodes.find((b) => b.id === blockId);
+        if (!block) return;
+        if (block.parentId === null || block.parentId === pageId) return;
+        dispatchOp({ kind: "outdent", blockId });
+        focusBlock(blockId);
       },
       focusUp() {
         const flat = flatOrderRef.current;
@@ -295,7 +347,7 @@ export function BlockEditorProvider({
         setFocusedBlockId(blockId);
       },
     }),
-    [],
+    [pageId, dispatchOp, focusNew, focusBlock],
   );
 
   return (
