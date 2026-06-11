@@ -2,7 +2,6 @@ import { useMemo, useState } from "react";
 import {
   useEndpoint,
   useEndpointMutation,
-  fetchEndpoint,
 } from "@plugins/infra/plugins/endpoints/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { setConfigField } from "@plugins/config_v2/core";
@@ -30,6 +29,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
   const applyMutation = useEndpointMutation(applyCatalogTheme, {
     invalidates: [listTweakcnThemes],
   });
+  const { mutate: setConfigMutation } = useEndpointMutation(setConfigField);
 
   const sortedTags = useMemo(() => {
     if (!themes) return [];
@@ -87,7 +87,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
           (r) => r.descriptor === group.configDescriptor,
         );
         if (reg) {
-          void fetchEndpoint(setConfigField, {}, {
+          setConfigMutation({
             body: scopeId
               ? { storePath: reg.storePath, key: "preset", value: presetId, scopeId }
               : { storePath: reg.storePath, key: "preset", value: presetId },

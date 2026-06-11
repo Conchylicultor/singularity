@@ -11,7 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   createConversationGroup,
   patchConversationGroup,
@@ -89,6 +89,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     onCloseConversation,
   } = props;
 
+  const { mutate: removeMemberMutation } = useEndpointMutation(removeConversationGroupMember);
   const groupsResult = useResource(conversationGroupsResource);
   const { groups, members } = groupsResult.pending ? { groups: [], members: [] } : groupsResult.data;
 
@@ -370,8 +371,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             <SidebarMenuAction
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
-                // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): explicit remove-from-group button; migrate to useEndpointMutation so failure surfaces a toast.
-                void fetchEndpoint(removeConversationGroupMember, { conversationId: conv.id });
+                removeMemberMutation({ params: { conversationId: conv.id } });
               }}
               className="right-7 opacity-0 group-hover/menu-item:opacity-100"
               aria-label="Remove from group"

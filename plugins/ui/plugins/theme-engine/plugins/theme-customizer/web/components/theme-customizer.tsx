@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { useConfig, useSetConfig, useConfigRegistrations, useScopeForked } from "@plugins/config_v2/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField, forkScope, deleteScope } from "@plugins/config_v2/core";
 import { useCurrentAppId } from "@plugins/apps/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -138,14 +138,14 @@ function CustomizeForAppToggle({
   scopeId: string;
   forked: boolean;
 }) {
+  const { mutate: deleteScopeMutation } = useEndpointMutation(deleteScope);
+  const { mutate: forkScopeMutation } = useEndpointMutation(forkScope);
   const appLabel = appId.charAt(0).toUpperCase() + appId.slice(1);
   const onToggle = () => {
     if (forked) {
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): "customize for app" toggle; migrate to useEndpointMutation so failure surfaces a toast.
-      void fetchEndpoint(deleteScope, {}, { body: { scopeId } });
+      deleteScopeMutation({ body: { scopeId } });
     } else {
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): "customize for app" toggle; migrate to useEndpointMutation so failure surfaces a toast.
-      void fetchEndpoint(forkScope, {}, { body: { scopeId } });
+      forkScopeMutation({ body: { scopeId } });
     }
   };
   return (

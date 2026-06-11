@@ -54,14 +54,6 @@ export default {
       // Play-count telemetry; an off-by-one on failure has no UX consequence.
       "plugins/apps/plugins/sonata/plugins/playback-history/web/components/record-play-observer.tsx",
 
-      // BURNDOWN — user-triggered mutations that should surface a toast; migrate
-      // to useEndpointMutation and remove from this list. Tracked by
-      // task-1781184772731-0e1w2e. Do NOT add new entries here; keep the rule
-      // green by migrating, not exempting. (Mixed files carry their BURNDOWN
-      // lines as inline disables tagged with the same task.)
-      "plugins/ui/plugins/tweakcn/plugins/community-browser/web/components/community-browser-section.tsx",
-      "plugins/conversations/plugins/conversations-view/plugins/queue/web/components/queue-view.tsx",
-      "plugins/apps/plugins/sonata/plugins/library/web/components/song-card.tsx",
     ],
   },
 };

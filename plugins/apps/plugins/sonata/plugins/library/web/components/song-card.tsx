@@ -1,7 +1,7 @@
 import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
@@ -27,6 +27,7 @@ export function SongCard({
   song: Song;
   onOpen: (song: Song) => void;
 }) {
+  const { mutate: deleteSongMutation } = useEndpointMutation(deleteSong);
   return (
     <Card
       interactive
@@ -88,7 +89,7 @@ export function SongCard({
         onClick={(e) => {
           // Don't let the delete bubble up and open the song.
           e.stopPropagation();
-          void fetchEndpoint(deleteSong, { id: song.id });
+          deleteSongMutation({ params: { id: song.id } });
         }}
       >
         <MdDelete className="size-4" />

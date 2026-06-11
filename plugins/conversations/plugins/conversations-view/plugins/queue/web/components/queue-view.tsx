@@ -21,7 +21,7 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import type { Conversation } from "@plugins/tasks-core/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
 import { queueRanksResource } from "../../shared/resources";
 import { applyReorder, type ReorderVars } from "./apply-reorder";
@@ -116,6 +116,7 @@ export function QueueView({
   });
   const rankRows = queueData.ranks;
   const pinnedConversationId = queueData.pinnedConversationId;
+  const { mutate: rerankMutation } = useEndpointMutation(rerankQueue);
   const tasksResult = useResource(tasksResource);
 
   // Unified task-group logic across all statuses.
@@ -482,7 +483,7 @@ export function QueueView({
                     </SidebarMenuButton>
                     <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
                       <button
-                        onClick={(e) => { e.stopPropagation(); void fetchEndpoint(rerankQueue, {}, { body: { conversationId: conv.id } }); }}
+                        onClick={(e) => { e.stopPropagation(); rerankMutation({ body: { conversationId: conv.id } }); }}
                         className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
                         aria-label="Add to queue"
                       >
