@@ -107,7 +107,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Deploy.Section`
             - Contributes: `Apps.App` "Deploy" → `DeployLayout`
-            - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/slot-render.defineRenderSlot`
+            - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
             - Exports: Values: `Deploy`
           - Cross-plugin:
             - Imported by: `apps/deploy/servers`
@@ -2547,7 +2547,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `AppShellSidebarItem`, `AppShellToolbarItem`, `FramingContribution`, `SidebarFramingProps`; Values: `AppShell`, `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
       - Cross-plugin:
         - Slot contributors: `sidebar-framing`
-        - Imported by: `agents`, `apps/agent-manager/shell`, `apps/debug/shell`, `apps/file-explorer/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/shell`, `apps/workflows/shell`, `auth`, `backup`, `code-explorer`, `conversations-recover`, `conversations/conversations-view`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `stats`, `tasks/task-detail`, `ui/sidebar-framing`
+        - Imported by: `agents`, `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/shell`, `apps/workflows/shell`, `auth`, `backup`, `code-explorer`, `conversations-recover`, `conversations/conversations-view`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `stats`, `tasks/task-detail`, `ui/sidebar-framing`
       - Core:
         - Exports: Types: `SidebarFramingProps`
     - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
