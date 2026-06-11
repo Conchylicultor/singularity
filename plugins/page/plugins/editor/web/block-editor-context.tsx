@@ -34,6 +34,21 @@ import {
 } from "./internal/optimistic-block-ops";
 import type { BlockEditorAPI } from "./types";
 
+/**
+ * A block's focus capabilities, registered by its renderer. Every focusable
+ * block provides `focus`; text editors additionally provide caret-precise
+ * placement so the coordinator can land the caret at a pixel column or boundary.
+ * Void/textarea blocks (divider, code) register `focus` only.
+ */
+export interface BlockFocusHandle {
+  /** Focus the block's editor, restoring its last selection. */
+  focus: () => void;
+  /** Place the caret at viewport column `x` on the block's top/bottom visual line. */
+  focusAtColumn?: (x: number, edge: "top" | "bottom") => void;
+  /** Collapse the caret to the block's very start/end. */
+  focusBoundary?: (edge: "start" | "end") => void;
+}
+
 interface BlockEditorContextValue {
   pageId: string;
   /** Server truth with all pending structural ops replayed optimistically. */
@@ -44,7 +59,7 @@ interface BlockEditorContextValue {
   frozenIds: ReadonlySet<string>;
   focusedBlockId: string | null;
   setFocusedBlockId: (id: string | null) => void;
-  registerFocusHandle: (id: string, handle: { focus: () => void }) => () => void;
+  registerFocusHandle: (id: string, handle: BlockFocusHandle) => () => void;
   makeBlockAPI: (blockId: string) => BlockEditorAPI;
   setFlatOrder: (blocks: Block[]) => void;
   /** All blocks of the page (incl. collapsed), kept current for bulk ops. */
@@ -97,7 +112,7 @@ export function BlockEditorProvider({
   children: ReactNode;
 }) {
   const [focusedBlockId, setFocusedBlockId] = useState<string | null>(null);
-  const focusHandlesRef = useRef(new Map<string, { focus: () => void }>());
+  const focusHandlesRef = useRef(new Map<string, BlockFocusHandle>());
   const flatOrderRef = useRef<Block[]>([]);
   const rowsRef = useRef<Block[]>([]);
   const pendingFocusRef = useRef<string | null>(null);
@@ -124,7 +139,7 @@ export function BlockEditorProvider({
   );
 
   const registerFocusHandle = useCallback(
-    (id: string, handle: { focus: () => void }) => {
+    (id: string, handle: BlockFocusHandle) => {
       focusHandlesRef.current.set(id, handle);
       if (pendingFocusRef.current === id) {
         pendingFocusRef.current = null;
@@ -271,21 +286,9 @@ export function BlockEditorProvider({
         position: number,
         opts?: { asChild?: boolean; childType?: string; text?: string },
       ) {
-        // Resolve `asChild` here against the live page tree. The new block's id
+        // Thin executor: the asChild decision is owned by `resolveKeystroke`
+        // (the single intent step) and passed in explicitly. The new block's id
         // is minted up front so we can focus it without awaiting the response.
-        const nodes = toNodes(rowsRef.current);
-        const block = nodes.find((b) => b.id === blockId);
-        const data = block?.data as Record<string, unknown> | null | undefined;
-        const textLength =
-          data && typeof data.text === "string" ? data.text.length : 0;
-        const hasExpandedChildren =
-          !!block?.expanded && childrenOf(nodes, blockId).length > 0;
-        // Honor an explicit contributor `asChild`; otherwise nest the split-off
-        // content as the first child only when splitting at the very end of a
-        // block that has visible children (Notion's Enter-at-end behavior).
-        const asChild =
-          opts?.asChild ?? (hasExpandedChildren && position === textLength);
-
         const newId = crypto.randomUUID();
         focusNew(newId);
         dispatchOp({
@@ -293,35 +296,22 @@ export function BlockEditorProvider({
           blockId,
           position,
           newId,
-          asChild,
+          asChild: opts?.asChild ?? false,
           childType: opts?.childType,
           text: opts?.text,
         });
       },
       merge(opts?: { text?: string }) {
-        // Resolve de-indent vs. merge against the live page tree. Keyboard only
-        // calls this at caret-start-of-line, so this owns the structural intent.
+        // Thin executor: `resolveKeystroke` already decided this is a merge (not
+        // an outdent) and that a previous sibling exists. We re-find it only to
+        // move the caret there once the keydown settles.
         const nodes = toNodes(rowsRef.current);
         const block = nodes.find((b) => b.id === blockId);
         if (!block) return;
-
-        // "Indented" = parented to a normal content block (not the page itself).
-        // The page's direct children carry `parentId === pageId`; anything with a
-        // deeper parent is an indented block that should de-indent instead.
-        const isIndented =
-          block.parentId !== null && block.parentId !== pageId;
-        if (isIndented) {
-          // De-indent (outdent) and keep the caret on the same block.
-          dispatchOp({ kind: "outdent", blockId });
-          focusBlock(blockId);
-          return;
-        }
-
-        // Top level (or directly under page): merge into the previous sibling.
         const siblings = childrenOf(nodes, block.parentId);
         const idx = siblings.findIndex((s) => s.id === blockId);
         const prev = idx > 0 ? siblings[idx - 1] : null;
-        if (!prev) return; // first block, nothing to merge into — no-op
+        if (!prev) return; // defensive: nothing to merge into
         dispatchOp({ kind: "merge", blockId, text: opts?.text });
         // Defer focusing the prev sibling to after the current keydown: moving
         // DOM focus synchronously mid-event lets the native backspace land on the
@@ -333,48 +323,57 @@ export function BlockEditorProvider({
         dispatchOp({ kind: "delete", blockId });
       },
       indent() {
-        // Pre-guard: indenting requires a previous sibling to nest under.
-        // Skipping the dispatch when there is none mirrors today's benign no-op.
-        const nodes = toNodes(rowsRef.current);
-        const block = nodes.find((b) => b.id === blockId);
-        if (!block) return;
-        const siblings = childrenOf(nodes, block.parentId);
-        const idx = siblings.findIndex((s) => s.id === blockId);
-        if (idx <= 0) return; // no previous sibling — no-op
+        // Thin executor: the "has a previous sibling to nest under" guard is owned
+        // by `resolveKeystroke`; the reducer is a no-op if it somehow isn't.
         dispatchOp({ kind: "indent", blockId });
         focusBlock(blockId);
       },
       outdent() {
-        // Pre-guard: a block already at top level (directly under the page) has
-        // nowhere to outdent to. Mirrors today's benign no-op.
-        const nodes = toNodes(rowsRef.current);
-        const block = nodes.find((b) => b.id === blockId);
-        if (!block) return;
-        if (block.parentId === null || block.parentId === pageId) return;
+        // Thin executor: the "is indented" guard is owned by `resolveKeystroke`;
+        // the reducer is a no-op for a top-level block.
         dispatchOp({ kind: "outdent", blockId });
         focusBlock(blockId);
       },
-      focusUp() {
+      navigate(dir, caret) {
         const flat = flatOrderRef.current;
         const idx = flat.findIndex((b) => b.id === blockId);
-        if (idx > 0) {
-          const targetId = flat[idx - 1]!.id;
-          focusHandlesRef.current.get(targetId)?.focus();
+        if (idx < 0) return;
+        // Skip void blocks with no registered focus handle (e.g. images), landing
+        // on the nearest focusable block in this direction.
+        const step = dir === "up" || dir === "left" ? -1 : 1;
+        let j = idx + step;
+        while (
+          j >= 0 &&
+          j < flat.length &&
+          !focusHandlesRef.current.has(flat[j]!.id)
+        ) {
+          j += step;
         }
-      },
-      focusDown() {
-        const flat = flatOrderRef.current;
-        const idx = flat.findIndex((b) => b.id === blockId);
-        if (idx >= 0 && idx < flat.length - 1) {
-          const targetId = flat[idx + 1]!.id;
-          focusHandlesRef.current.get(targetId)?.focus();
+        const target = flat[j];
+        if (!target) return;
+        const handle = focusHandlesRef.current.get(target.id);
+        if (!handle) return;
+        if (dir === "up") {
+          if (caret && handle.focusAtColumn) handle.focusAtColumn(caret.caretX, "bottom");
+          else if (handle.focusBoundary) handle.focusBoundary("end");
+          else handle.focus();
+        } else if (dir === "down") {
+          if (caret && handle.focusAtColumn) handle.focusAtColumn(caret.caretX, "top");
+          else if (handle.focusBoundary) handle.focusBoundary("start");
+          else handle.focus();
+        } else if (dir === "left") {
+          if (handle.focusBoundary) handle.focusBoundary("end");
+          else handle.focus();
+        } else {
+          if (handle.focusBoundary) handle.focusBoundary("start");
+          else handle.focus();
         }
       },
       onFocus() {
         setFocusedBlockId(blockId);
       },
     }),
-    [pageId, dispatchOp, focusNew, focusBlock, updateBlockMutation],
+    [dispatchOp, focusNew, focusBlock, updateBlockMutation],
   );
 
   return (

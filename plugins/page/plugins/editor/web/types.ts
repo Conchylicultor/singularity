@@ -1,4 +1,5 @@
 import type { Block } from "../core";
+import type { CaretContext } from "./internal/caret-geometry";
 
 export interface BlockEditorAPI {
   update(data: unknown): void;
@@ -36,8 +37,14 @@ export interface BlockEditorAPI {
   remove(): void;
   indent(): void;
   outdent(): void;
-  focusUp(): void;
-  focusDown(): void;
+  /**
+   * Move the caret to the nearest focusable block in `dir`, skipping void blocks
+   * with no caret. Up/Down preserve the caret's pixel column (`caret.caretX`);
+   * Left/Right land at the previous block's end / next block's start. `caret` is
+   * omitted by void/textarea blocks (divider, code) that have no Lexical caret —
+   * the target then lands at its boundary edge.
+   */
+  navigate(dir: "up" | "down" | "left" | "right", caret?: CaretContext): void;
   onFocus(): void;
 }
 

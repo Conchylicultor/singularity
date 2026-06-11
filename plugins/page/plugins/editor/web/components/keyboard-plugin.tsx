@@ -1,77 +1,37 @@
 import { useEffect, useRef } from "react";
 import {
-  $getRoot,
-  $getSelection,
-  $isRangeSelection,
   COMMAND_PRIORITY_HIGH,
   KEY_ARROW_DOWN_COMMAND,
+  KEY_ARROW_LEFT_COMMAND,
+  KEY_ARROW_RIGHT_COMMAND,
   KEY_ARROW_UP_COMMAND,
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
   KEY_TAB_COMMAND,
+  type LexicalCommand,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { BlockEditorAPI } from "../types";
+import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { serializeBlockText } from "../internal/block-text-extensions";
+import { readCaretContext, type CaretContext } from "../internal/caret-geometry";
+import { toNodes } from "../internal/optimistic-block-ops";
+import {
+  resolveKeystroke,
+  type KeyIntent,
+  type KeystrokeKey,
+} from "../internal/keystroke-intent";
 
-function getAbsoluteOffset(): number | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection)) return null;
-
-  const anchor = selection.anchor;
-  const root = $getRoot();
-  const children = root.getChildren();
-  let offset = 0;
-
-  for (const child of children) {
-    if (child.getKey() === anchor.getNode().getKey() ||
-        child.getKey() === anchor.getNode().getParent()?.getKey()) {
-      return offset + anchor.offset;
-    }
-    offset += child.getTextContent().length + 1;
-  }
-
-  return null;
-}
-
-function isAtStart(): boolean {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection)) return false;
-  if (!selection.isCollapsed()) return false;
-
-  const anchor = selection.anchor;
-  if (anchor.offset !== 0) return false;
-
-  const root = $getRoot();
-  const firstChild = root.getFirstChild();
-  if (!firstChild) return true;
-
-  const anchorNode = anchor.getNode();
-  return anchorNode.getKey() === firstChild.getKey() ||
-    anchorNode.getParent()?.getKey() === firstChild.getKey();
-}
-
-function isAtEnd(): boolean {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection)) return false;
-  if (!selection.isCollapsed()) return false;
-
-  const root = $getRoot();
-  const lastChild = root.getLastChild();
-  if (!lastChild) return true;
-
-  const anchor = selection.anchor;
-  const anchorNode = anchor.getNode();
-  const inLastParagraph =
-    anchorNode.getKey() === lastChild.getKey() ||
-    anchorNode.getParent()?.getKey() === lastChild.getKey();
-  if (!inLastParagraph) return false;
-
-  return anchor.offset === lastChild.getTextContent().length;
-}
-
+/**
+ * Translates every caret-affecting keystroke into a structural op or a cross-block
+ * caret move. The plugin is intentionally thin: it reads the caret geometry, hands
+ * `(key, caret, block context)` to the single `resolveKeystroke` intent step, and
+ * executes the returned intent against the block API. All the decisions (split
+ * asChild, merge-vs-outdent, indent/outdent guards, when an arrow crosses blocks)
+ * live in `resolveKeystroke`, not here.
+ */
 export function KeyboardPlugin({
   blockId,
   editor,
@@ -82,6 +42,7 @@ export function KeyboardPlugin({
   splitOptions?: { asChild?: boolean; childType?: string };
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
+  const { rowsRef, pageId } = useBlockEditor();
   const editorRef = useRef(editor);
   editorRef.current = editor;
   const splitOptionsRef = useRef(splitOptions);
@@ -91,128 +52,104 @@ export function KeyboardPlugin({
   selectionRef.current = selection;
   const blockIdRef = useRef(blockId);
   blockIdRef.current = blockId;
+  const pageIdRef = useRef(pageId);
+  pageIdRef.current = pageId;
 
   useEffect(() => {
-    const unregisterEnter = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_ENTER_COMMAND,
-      (event) => {
-        if (!event) return false;
-        if (event.isComposing) return false;
-        if (event.shiftKey) return false;
-
-        event.preventDefault();
-        let offset: number | null = null;
-        lexicalEditor.getEditorState().read(() => {
-          offset = getAbsoluteOffset();
-        });
-        if (offset !== null) {
-          // Serialize OUTSIDE the read above — `serializeBlockText` opens its
-          // own read, and nested reads would throw.
+    function execute(
+      intent: KeyIntent,
+      event: KeyboardEvent,
+      caret: CaretContext,
+    ): boolean {
+      const api = editorRef.current;
+      switch (intent.type) {
+        case "passthrough":
+          return false;
+        case "noop":
+          // Ours, but nothing to do — consume the event (e.g. Tab at a boundary
+          // must not move focus or insert a tab character).
+          event.preventDefault();
+          return true;
+        case "split": {
+          event.preventDefault();
+          // Serialize the live text so the reducer splits the authoritative
+          // (possibly not-yet-autosaved) string.
           const text = serializeBlockText(lexicalEditor);
-          editorRef.current.split(offset, { ...splitOptionsRef.current, text });
+          api.split(intent.position, {
+            asChild: intent.asChild,
+            childType: intent.childType,
+            text,
+          });
+          return true;
         }
-        return true;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
+        case "merge": {
+          event.preventDefault();
+          const text = serializeBlockText(lexicalEditor);
+          api.merge({ text });
+          return true;
+        }
+        case "outdent":
+          event.preventDefault();
+          api.outdent();
+          return true;
+        case "indent":
+          event.preventDefault();
+          api.indent();
+          return true;
+        case "nav":
+          event.preventDefault();
+          api.navigate(intent.dir, caret);
+          return true;
+        case "selectBlock":
+          if (!selectionRef.current) return false;
+          event.preventDefault();
+          selectionRef.current.enterSelectionMode(blockIdRef.current, intent.extend);
+          return true;
+      }
+    }
 
-    const unregisterBackspace = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_BACKSPACE_COMMAND,
-      (event) => {
-        let shouldMerge = false;
-        lexicalEditor.getEditorState().read(() => {
-          shouldMerge = isAtStart();
-        });
-        if (shouldMerge) {
-          // Prevent the native backspace: `merge()` may de-indent or move the
-          // caret to the previous block, and an unprevented default would then
-          // delete a character from whatever block ends up focused.
+    function handle(key: KeystrokeKey, event: KeyboardEvent | null): boolean {
+      if (!event || event.isComposing) return false;
+      const caret = readCaretContext(lexicalEditor);
+      if (!caret) return false;
+      const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
+        nodes: toNodes(rowsRef.current),
+        blockId: blockIdRef.current,
+        pageId: pageIdRef.current,
+        splitOptions: splitOptionsRef.current,
+      });
+      return execute(intent, event, caret);
+    }
+
+    const reg = (cmd: LexicalCommand<KeyboardEvent | null>, key: KeystrokeKey) =>
+      lexicalEditor.registerCommand(cmd, (e) => handle(key, e), COMMAND_PRIORITY_HIGH);
+
+    const unregister = [
+      reg(KEY_ENTER_COMMAND, "Enter"),
+      reg(KEY_BACKSPACE_COMMAND, "Backspace"),
+      reg(KEY_TAB_COMMAND, "Tab"),
+      reg(KEY_ARROW_UP_COMMAND, "ArrowUp"),
+      reg(KEY_ARROW_DOWN_COMMAND, "ArrowDown"),
+      reg(KEY_ARROW_LEFT_COMMAND, "ArrowLeft"),
+      reg(KEY_ARROW_RIGHT_COMMAND, "ArrowRight"),
+      // Escape leaves text editing and selects the whole block — not a caret move,
+      // so it stays a direct handler rather than flowing through the resolver.
+      lexicalEditor.registerCommand<KeyboardEvent | null>(
+        KEY_ESCAPE_COMMAND,
+        (event) => {
+          if (!selectionRef.current) return false;
           event?.preventDefault();
-          const text = serializeBlockText(lexicalEditor);
-          editorRef.current.merge({ text });
+          selectionRef.current.enterSelectionMode(blockIdRef.current);
           return true;
-        }
-        return false;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
-
-    const unregisterTab = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_TAB_COMMAND,
-      (event) => {
-        if (!event) return false;
-        event.preventDefault();
-        if (event.shiftKey) {
-          editorRef.current.outdent();
-        } else {
-          editorRef.current.indent();
-        }
-        return true;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
-
-    const unregisterArrowUp = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_ARROW_UP_COMMAND,
-      (event) => {
-        let atStart = false;
-        lexicalEditor.getEditorState().read(() => {
-          atStart = isAtStart();
-        });
-        if (!atStart) return false;
-        // Shift+Up at the top of a block starts a block selection toward the
-        // previous block; plain Up moves the caret to it.
-        if (event?.shiftKey && selectionRef.current) {
-          event.preventDefault();
-          selectionRef.current.enterSelectionMode(blockIdRef.current, "up");
-          return true;
-        }
-        editorRef.current.focusUp();
-        return true;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
-
-    const unregisterArrowDown = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_ARROW_DOWN_COMMAND,
-      (event) => {
-        let atEnd = false;
-        lexicalEditor.getEditorState().read(() => {
-          atEnd = isAtEnd();
-        });
-        if (!atEnd) return false;
-        if (event?.shiftKey && selectionRef.current) {
-          event.preventDefault();
-          selectionRef.current.enterSelectionMode(blockIdRef.current, "down");
-          return true;
-        }
-        editorRef.current.focusDown();
-        return true;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
-
-    const unregisterEscape = lexicalEditor.registerCommand<KeyboardEvent | null>(
-      KEY_ESCAPE_COMMAND,
-      (event) => {
-        if (!selectionRef.current) return false;
-        event?.preventDefault();
-        // Leave text editing and select this whole block (block-selection mode).
-        selectionRef.current.enterSelectionMode(blockIdRef.current);
-        return true;
-      },
-      COMMAND_PRIORITY_HIGH,
-    );
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+    ];
 
     return () => {
-      unregisterEnter();
-      unregisterBackspace();
-      unregisterTab();
-      unregisterArrowUp();
-      unregisterArrowDown();
-      unregisterEscape();
+      for (const u of unregister) u();
     };
-  }, [lexicalEditor]);
+  }, [lexicalEditor, rowsRef]);
 
   return null;
 }

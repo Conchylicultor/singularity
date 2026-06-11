@@ -116,7 +116,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       ta.selectionEnd === 0
     ) {
       e.preventDefault();
-      editor.focusUp();
+      editor.navigate("up");
       return;
     }
     if (
@@ -125,7 +125,7 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       ta.selectionEnd === code.length
     ) {
       e.preventDefault();
-      editor.focusDown();
+      editor.navigate("down");
     }
   }
 

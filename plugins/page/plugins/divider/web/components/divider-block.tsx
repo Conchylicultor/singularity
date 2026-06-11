@@ -36,14 +36,14 @@ export function DividerBlock({ block, isFocused, editor }: BlockRendererProps) {
   function onKeyDown(e: React.KeyboardEvent) {
     if (e.key === "Backspace" || e.key === "Delete") {
       e.preventDefault();
-      editor.focusUp(); // land the caret on the block above…
+      editor.navigate("up"); // land the caret on the block above…
       editor.remove(); // …then delete this divider
     } else if (e.key === "ArrowUp") {
       e.preventDefault();
-      editor.focusUp();
+      editor.navigate("up");
     } else if (e.key === "ArrowDown") {
       e.preventDefault();
-      editor.focusDown();
+      editor.navigate("down");
     } else if (e.key === "Enter") {
       e.preventDefault();
       // Continue typing on a new line below. The editor deliberately does not

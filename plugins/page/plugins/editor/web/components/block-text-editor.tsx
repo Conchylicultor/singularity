@@ -16,6 +16,7 @@ import { KeyboardPlugin } from "./keyboard-plugin";
 import { SlashMenuPlugin } from "./slash-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
+import { placeCaretAtBoundary, placeCaretAtColumn } from "../internal/caret-geometry";
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditor | null> }) {
   const [editor] = useLexicalComposerContext();
@@ -89,6 +90,14 @@ export function BlockTextEditor({
   useEffect(() => {
     return registerFocusHandle(block.id, {
       focus: () => lexicalEditorRef.current?.focus(),
+      focusAtColumn: (x, edge) => {
+        const ed = lexicalEditorRef.current;
+        if (ed) placeCaretAtColumn(ed, x, edge);
+      },
+      focusBoundary: (edge) => {
+        const ed = lexicalEditorRef.current;
+        if (ed) placeCaretAtBoundary(ed, edge);
+      },
     });
   }, [block.id, registerFocusHandle]);
 
