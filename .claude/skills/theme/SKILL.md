@@ -30,6 +30,11 @@ Theme config uses `scope: "app"` + `useScopeForked`, so each app carries its own
 Components contribute `ThemeEngine.VariantGroup`; variant sub-plugins are switched from the customizer. Canonical example: `segmented-progress-bar` (dots vs segmented).
 → [`plugins/ui/plugins/segmented-progress-bar/CLAUDE.md`](../../../plugins/ui/plugins/segmented-progress-bar/CLAUDE.md)
 
+## Custom `@utility` classes ⇄ tailwind-merge
+Mental model: **every custom `@utility` in `app.css` must be registered with tailwind-merge, or `cn()` silently strips it.** twMerge classifies a class by its *name*; a custom utility whose suffix is a word (`text-caption`, `z-base`, `h-chrome-bar`, …) gets misfiled into a built-in group — `text-*` falls into text-color — and is dropped when a real class from that group appears later in the string (e.g. a Badge variant's `text-muted-foreground` deleting `text-caption`).
+The single source of truth is `CUSTOM_UTILITY_REGISTRY` in [`plugins/framework/plugins/web-core/web/theme/custom-utilities.ts`](../../../plugins/framework/plugins/web-core/web/theme/custom-utilities.ts): each utility family declares its twMerge wiring as data — `extend` a built-in group (mutual conflict, e.g. text roles → `font-size`), a synthetic `group` + `conflictsWith` (multi-property, e.g. `icon-auto` → w+h+size), or `standalone` with a reason (no collision, e.g. `focus-ring`). `lib/utils.ts` *derives* the whole twMerge config from the registry — never hand-edit the conflict map.
+To add a `@utility`: declare it in `app.css` **and** add it to a `*_UTILITIES` array + a registry entry. The `app-css-utilities-in-sync` check is **total** — any unregistered `@utility` fails `./singularity check`, so the silent-strip class cannot recur.
+
 ## Design-standard enforcement (lint, fails `./singularity check`)
 Use the primitive instead of raw Tailwind classes — each ad-hoc class is banned:
 - **Typography** → `<Text variant>`, bans raw `text-{sm,lg,...}`/`leading-*` — [`plugins/primitives/plugins/text/CLAUDE.md`](../../../plugins/primitives/plugins/text/CLAUDE.md)
