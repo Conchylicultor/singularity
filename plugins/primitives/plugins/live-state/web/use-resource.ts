@@ -105,6 +105,15 @@ export function hydrateResource<T, P extends ResourceParams = ResourceParams>(
   getDefaultQueryClient().setQueryData(queryKeyFor(resource.key, params), parsed);
 }
 
+// Seed an arbitrary query on the app's default QueryClient before mount — the
+// non-resource companion to hydrateResource, for boot tasks that pre-fetch
+// plain query data (e.g. endpoints' hydrateEndpoint). The caller owns the key
+// shape; this only guarantees the write lands on the SAME client the app's
+// QueryClientProvider mounts.
+export function hydrateQuery(queryKey: unknown[], data: unknown): void {
+  getDefaultQueryClient().setQueryData(queryKey, data);
+}
+
 export type ResourceResult<T> =
   | { pending: true; error: Error | null; refetch: () => Promise<void> }
   | { pending: false; data: T; error: Error | null; refetch: () => Promise<void> };

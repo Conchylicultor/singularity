@@ -22,6 +22,11 @@ Imports tweakcn themes as dynamic presets across all token groups; `community-br
 Central slot bus (`ThemeEngine.{TokenGroup,VariantGroup,GlobalPreset,PresetSource,ColorTransform}`) and the customizer settings pane. Owns the per-app theme config (`globalPreset`, `colorMode`).
 → [`plugins/ui/plugins/theme-engine/CLAUDE.md`](../../../plugins/ui/plugins/theme-engine/CLAUDE.md)
 
+Pre-paint behavior (no FOUC / no preset flash on refresh):
+- ThemeInjector consolidates every group's rendered CSS into a localStorage envelope ([`theme-cache.ts`](../../../plugins/ui/plugins/theme-engine/web/internal/theme-cache.ts), key `theme-engine:critical-css`); a generic inline replay script in [`web-core/web/index.html`](../../../plugins/framework/plugins/web-core/web/index.html) re-injects the `<style>` elements (same ids, adopted in place by GroupStyle) before first paint. Key + envelope shape are a contract between those two files — change them together.
+- Dynamic preset sources (`ThemeEngine.PresetSource.usePresets`) return `undefined` while loading and MUST hydrate via a `Core.Boot` task (see tweakcn's `web/boot.ts` + live-state's `hydrateEndpoint`); the injector skips style injection while any source is pending instead of falling back to the default preset and overwriting the replayed CSS.
+- `<html>` carries no hardcoded `dark` class — the replay script sets it (cached resolved mode, or `prefers-color-scheme` on a cold cache over the `html { background: Canvas }` floor); `ColorModeApplier` owns it after mount.
+
 ## Per-app theme via config_v2
 Theme config uses `scope: "app"` + `useScopeForked`, so each app carries its own preset and light/dark mode. The light/dark toggle lives in the top-level `theme` plugin.
 → [`plugins/config_v2/CLAUDE.md`](../../../plugins/config_v2/CLAUDE.md) · config at [`plugins/ui/plugins/theme-engine/core/config.ts`](../../../plugins/ui/plugins/theme-engine/core/config.ts)

@@ -1,5 +1,5 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { ThemeEngine, useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
@@ -19,7 +19,7 @@ export default {
   contributions: [
     ConfigV2.WebRegister({ descriptor: colorPaletteConfig }),
     DynamicEnum.Options({ field: colorPaletteConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("color-palette").map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresetOptions("color-palette")
     }),
     ...builtInPresets.map((p) => ColorPalette.Preset(p)),
     ThemeEngine.TokenGroup({

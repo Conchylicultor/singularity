@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { categoricalGroup } from "../shared";
 import { categoricalConfig } from "./internal/config";
@@ -19,7 +19,7 @@ export default {
     ...builtInPresets.map((p) => Categorical.Preset(p)),
     ConfigV2.WebRegister({ descriptor: categoricalConfig }),
     DynamicEnum.Options({ field: categoricalConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("categorical").map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresetOptions("categorical")
     }),
     ThemeEngine.TokenGroup({
       id: "categorical",

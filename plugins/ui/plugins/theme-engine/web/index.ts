@@ -6,11 +6,12 @@ import { ThemeInjector } from "./components/theme-injector";
 import { themeScopeBootTask } from "./internal/boot";
 import { ThemeEngine } from "./slots";
 
-export { ThemeEngine, useTokenGroupPresets } from "./slots";
+export { ThemeEngine, useTokenGroupPresets, useTokenGroupPresetOptions } from "./slots";
 export type {
   VariantGroupContribution,
   TokenGroupContribution,
   TokenGroupPreset,
+  TokenGroupPresets,
   GlobalPresetContribution,
   ColorAdjustment,
   ColorTransformContribution,

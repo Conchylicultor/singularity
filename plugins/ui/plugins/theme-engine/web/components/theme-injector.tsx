@@ -79,13 +79,23 @@ function WithAdjustment({
 function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId?: string }) {
   const adjustment = useContext(ColorAdjustContext);
   const report = useContext(CssReportContext);
-  const presets = useTokenGroupPresets(group.id);
+  const state = useTokenGroupPresets(group.id);
   const config = useConfig(group.configDescriptor, { scopeId }) as {
     preset: string;
     overrides: Record<string, unknown>;
   };
-  const active =
-    presets.find((p) => p.id === config.preset) ?? presets[0] ?? null;
+  // While a dynamic preset source is still loading, inject NOTHING — falling
+  // back to the default preset here would overwrite the pre-paint replayed CSS
+  // (same ids, adopted in place) with wrong values for one window. The styles
+  // replayed by index.html stay authoritative until the sources resolve; in
+  // practice they resolve pre-render via Core.Boot hydration (see tweakcn's
+  // boot task). Once resolved, a missing preset id (genuinely deleted) falls
+  // back to the first preset, as before.
+  const active = state.pending
+    ? null
+    : (state.presets.find((p) => p.id === config.preset) ??
+      state.presets[0] ??
+      null);
 
   const { mergedLight, mergedDark } = useMemo(() => {
     if (!active) return { mergedLight: null, mergedDark: null };

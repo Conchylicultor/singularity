@@ -58,13 +58,17 @@ function ensurePreconnect(): void {
 }
 
 export function GoogleFontsLoader() {
-  const presets = useTokenGroupPresets("font-family");
+  const state = useTokenGroupPresets("font-family");
   const config = useConfig(fontFamilyConfig) as {
     preset: string;
     overrides: { light?: Record<string, string>; dark?: Record<string, string> };
   };
 
-  const active = presets.find((p) => p.id === config.preset) ?? presets[0] ?? null;
+  // While a dynamic preset source is loading there is nothing to preload yet;
+  // fonts kick off as soon as the sources resolve.
+  const active = state.pending
+    ? null
+    : (state.presets.find((p) => p.id === config.preset) ?? state.presets[0] ?? null);
 
   const fontsToLoad = useMemo(() => {
     if (!active) return [];

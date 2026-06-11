@@ -46,18 +46,42 @@ export interface ColorTransformContribution {
 }
 
 export interface PresetSourceContribution {
-  usePresets: (groupId: string) => TokenGroupPreset[];
+  // undefined = the source is still loading — distinct from "no presets for
+  // this group". GroupStyle skips injection while any source is pending, so a
+  // dynamic source must never report a half-loaded list as final.
+  usePresets: (groupId: string) => TokenGroupPreset[] | undefined;
 }
 
-export function useTokenGroupPresets(groupId: string): TokenGroupPreset[] {
+export type TokenGroupPresets =
+  | { pending: true }
+  | { pending: false; presets: TokenGroupPreset[] };
+
+export function useTokenGroupPresets(groupId: string): TokenGroupPresets {
   const group = ThemeEngine.TokenGroup.useContributions().find(
     (g) => g.id === groupId,
   );
   const staticPresets = group?.usePresets() ?? [];
   // eslint-disable-next-line react-hooks/rules-of-hooks -- PresetSource contributions are static slot entries; count never changes
   const dynamic = ThemeEngine.PresetSource.useContributions()
-    .flatMap((s) => s.usePresets(groupId));
-  return [...staticPresets, ...dynamic];
+    .map((s) => s.usePresets(groupId));
+  if (dynamic.some((d) => d === undefined)) return { pending: true };
+  return {
+    pending: false,
+    presets: [...staticPresets, ...dynamic.flatMap((d) => d!)],
+  };
+}
+
+// Options-shaped read for the token groups' DynamicEnum preset pickers. The
+// pending state (a dynamic source still loading) renders as an empty option
+// list and self-fills on resolve — that decision lives here once, not in each
+// token-group plugin. (In practice pending is never observed: dynamic sources
+// hydrate via Core.Boot before first render.)
+export function useTokenGroupPresetOptions(
+  groupId: string,
+): { value: string; label: string }[] {
+  const state = useTokenGroupPresets(groupId);
+  if (state.pending) return [];
+  return state.presets.map((p) => ({ value: p.id, label: p.label }));
 }
 
 export const ThemeEngine = {

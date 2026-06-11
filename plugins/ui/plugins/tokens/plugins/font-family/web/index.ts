@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { fontFamilyGroup } from "../shared";
 import { fontFamilyConfig } from "./internal/config";
@@ -20,7 +20,7 @@ export default {
     ...builtInPresets.map((p) => FontFamily.Preset(p)),
     ConfigV2.WebRegister({ descriptor: fontFamilyConfig }),
     DynamicEnum.Options({ field: fontFamilyConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("font-family").map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresetOptions("font-family")
     }),
     ThemeEngine.TokenGroup({
       id: "font-family",

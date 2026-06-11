@@ -1,6 +1,7 @@
 import { useQuery, type UseQueryResult, type UseQueryOptions } from "@tanstack/react-query";
 import type { EndpointDef } from "../../core/define-endpoint";
 import { fetchEndpoint, EndpointError } from "./fetch-endpoint";
+import { endpointQueryKey } from "./query-key";
 
 /**
  * TanStack Query wrapper for GET endpoints.
@@ -23,12 +24,7 @@ export function useEndpoint<
   const { query, ...queryOptions } = opts ?? {};
 
   return useQuery({
-    queryKey: [
-      "endpoint",
-      endpoint.route,
-      JSON.stringify(params ?? {}),
-      JSON.stringify(query ?? {}),
-    ],
+    queryKey: endpointQueryKey(endpoint, params, query),
     queryFn: async ({ signal }) => {
       const fetchOpts = query != null
         ? { query, signal } as { query: TQuery; signal: AbortSignal }

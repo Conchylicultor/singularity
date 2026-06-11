@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import { chartGroup } from "../shared";
 import { chartConfig } from "./internal/config";
@@ -19,7 +19,7 @@ export default {
     ...builtInPresets.map((p) => Chart.Preset(p)),
     ConfigV2.WebRegister({ descriptor: chartConfig }),
     DynamicEnum.Options({ field: chartConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("chart").map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresetOptions("chart")
     }),
     ThemeEngine.TokenGroup({
       id: "chart",

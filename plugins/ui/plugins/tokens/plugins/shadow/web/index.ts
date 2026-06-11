@@ -1,7 +1,7 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
-import { ThemeEngine, useTokenGroupPresets } from "@plugins/ui/plugins/theme-engine/web";
+import { ThemeEngine, useTokenGroupPresetOptions } from "@plugins/ui/plugins/theme-engine/web";
 import { ThemeCustomizer } from "@plugins/ui/plugins/theme-engine/plugins/theme-customizer/web";
 import type { ShadowParams } from "../shared";
 import { shadowGroup, buildShadowTiers, DEFAULT_SHADOW_PARAMS } from "../shared";
@@ -19,7 +19,7 @@ export default {
   contributions: [
     ...builtInPresets.map((p) => Shadow.Preset(p)),
     DynamicEnum.Options({ field: shadowConfig.fields.preset, useOptions: () =>
-      useTokenGroupPresets("shadow").map((p) => ({ value: p.id, label: p.label }))
+      useTokenGroupPresetOptions("shadow")
     }),
     ConfigV2.WebRegister({ descriptor: shadowConfig }),
     ThemeEngine.TokenGroup({
