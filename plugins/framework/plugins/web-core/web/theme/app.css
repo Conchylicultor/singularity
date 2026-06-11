@@ -212,7 +212,7 @@
  * ToggleChip/Breadcrumb leading+actions) track the slot's font-size instead of a
  * hardcoded size-N. 1.15em reads as slightly larger than cap height: next to
  * text-xs (12px) -> ~13.8px, matching today's dominant size-3.5 (14px) better
- * than bare 1em. Kept in sync with control-utilities.ts via the
+ * than bare 1em. Kept in sync with custom-utilities.ts via the
  * app-css-utilities-in-sync check. */
 @utility icon-auto { width: 1.15em; height: 1.15em; }
 

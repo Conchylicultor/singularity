@@ -20,7 +20,7 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * assertion), not this static check.
  *
  * Disjoint from `app-css-utilities-in-sync` (which reconciles `@utility` class
- * names against control-utilities.ts) — complementary, no overlap.
+ * names against custom-utilities.ts) — complementary, no overlap.
  */
 
 async function getRoot(): Promise<string> {

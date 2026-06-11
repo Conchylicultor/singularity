@@ -1,29 +1,28 @@
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-import { CONTROL_UTILITY_GROUPS } from "@/theme/control-utilities";
+import { CUSTOM_UTILITY_REGISTRY, type CustomGroupId } from "@/theme/custom-utilities";
 
-const { controlHeight, controlIcon, controlMin, pad } = CONTROL_UTILITY_GROUPS;
-
-type CustomGroupId =
-  (typeof CONTROL_UTILITY_GROUPS)[keyof typeof CONTROL_UTILITY_GROUPS]["groupId"];
+// Derive the twMerge extension from the single-source registry so adding a custom
+// @utility never requires a separate hand-edit of the conflict map (the coupling
+// that let role utilities like `text-caption` get silently stripped). See
+// custom-utilities.ts for the wiring semantics.
+const classGroups: Record<string, string[]> = {};
+const conflictingClassGroups: Record<string, string[]> = {};
+for (const entry of CUSTOM_UTILITY_REGISTRY) {
+  if ("extend" in entry) {
+    (classGroups[entry.extend] ??= []).push(...entry.classes);
+  } else if ("group" in entry) {
+    classGroups[entry.group] = [...entry.classes];
+    for (const conflict of entry.conflictsWith) {
+      (conflictingClassGroups[conflict] ??= []).push(entry.group);
+    }
+  }
+  // standalone entries are intentionally invisible to twMerge.
+}
 
 const twMerge = extendTailwindMerge<CustomGroupId>({
-  extend: {
-    classGroups: {
-      [controlHeight.groupId]: [...controlHeight.classes],
-      [controlIcon.groupId]: [...controlIcon.classes],
-      [controlMin.groupId]: [...controlMin.classes],
-      [pad.groupId]: [...pad.classes],
-    },
-    conflictingClassGroups: {
-      size: [controlHeight.groupId, controlIcon.groupId],
-      h: [controlHeight.groupId, controlIcon.groupId],
-      w: [controlIcon.groupId],
-      "min-h": [controlMin.groupId],
-      p: [pad.groupId],
-    },
-  },
+  extend: { classGroups, conflictingClassGroups },
 });
 
 export function cn(...inputs: ClassValue[]) {

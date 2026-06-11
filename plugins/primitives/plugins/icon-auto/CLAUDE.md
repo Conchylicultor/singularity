@@ -11,7 +11,7 @@ The `@utility icon-auto { width: 1.15em; height: 1.15em; }` lives in
 all `@utility`/token CSS lives in the web-core theme folder). `1.15em` reads as
 slightly larger than cap height — next to `text-xs` (12px) it renders ~13.8px,
 matching the dominant `size-3.5` (14px) better than a bare `1em`. The name is
-registered in `web-core/web/theme/control-utilities.ts` (its twMerge conflict
+registered in `web-core/web/theme/custom-utilities.ts` (its twMerge conflict
 group), kept in sync by the `app-css-utilities-in-sync` check.
 
 This plugin owns only the **lint rule + convention** — the CSS and the twMerge

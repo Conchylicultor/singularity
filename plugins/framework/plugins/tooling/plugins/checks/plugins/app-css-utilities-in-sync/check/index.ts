@@ -13,13 +13,7 @@ async function getRoot(): Promise<string> {
 }
 
 const APP_CSS = "plugins/framework/plugins/web-core/web/theme/app.css";
-const CONTROL_UTILITIES = "plugins/framework/plugins/web-core/web/theme/control-utilities.ts";
-
-// Reverse-guard patterns: declarations in app.css owned by control-utilities.ts.
-// Any @utility matching one of these MUST appear in the expected set, else it is
-// an orphan registration the twMerge config never learned about.
-const OWNED = [/^control-/, /^p-(chip|control|row)$/];
-const OWNED_EXACT = new Set(["icon-auto"]);
+const CUSTOM_UTILITIES = "plugins/framework/plugins/web-core/web/theme/custom-utilities.ts";
 
 /**
  * Extract every `@utility <name>` declaration from app.css. CSS block comments
@@ -37,67 +31,59 @@ function declaredUtilities(css: string): Set<string> {
 }
 
 /**
- * Extract the expected utility names from control-utilities.ts by text-parsing
- * the quoted string literals inside the exported array literals
- * (CONTROL_HEIGHT_UTILITIES / CONTROL_ICON_UTILITIES / PAD_UTILITIES) plus the
- * `ICON_AUTO_UTILITY = "..."` scalar. Text-parse (not import) to avoid any
- * runtime/boundary question.
+ * Extract the registered utility names from custom-utilities.ts by text-parsing
+ * the string literals inside every `const <NAME>_UTILITIES = [ … ]` array. The
+ * `*_UTILITIES` suffix convention is what makes the registry total: any new family
+ * is picked up automatically. Text-parse (not import) to avoid runtime/boundary
+ * questions. Group ids / conflict ids are scalar fields, never inside these
+ * arrays, so they are correctly excluded.
  */
-function expectedUtilities(ts: string): Set<string> {
+function registeredUtilities(ts: string): Set<string> {
   const out = new Set<string>();
-
-  for (const name of ["CONTROL_HEIGHT_UTILITIES", "CONTROL_ICON_UTILITIES", "CONTROL_MIN_UTILITIES", "PAD_UTILITIES"]) {
-    const arrayMatch = ts.match(new RegExp(`${name}\\s*=\\s*\\[([^\\]]*)\\]`));
-    const body = arrayMatch?.[1];
-    if (body) {
-      for (const lit of body.matchAll(/["'`]([\w-]+)["'`]/g)) {
-        const token = lit[1];
-        if (token) out.add(token);
-      }
+  for (const arr of ts.matchAll(/\w+_UTILITIES\s*=\s*\[([^\]]*)\]/g)) {
+    const body = arr[1];
+    if (!body) continue;
+    for (const lit of body.matchAll(/["'`]([\w-]+)["'`]/g)) {
+      const token = lit[1];
+      if (token) out.add(token);
     }
   }
-
-  const scalar = ts.match(/ICON_AUTO_UTILITY\s*=\s*["'`]([\w-]+)["'`]/);
-  const scalarName = scalar?.[1];
-  if (scalarName) out.add(scalarName);
-
   return out;
 }
 
 const check: Check = {
   id: "app-css-utilities-in-sync",
   description:
-    "Custom @utility classes in app.css must stay in sync with control-utilities.ts (the twMerge mirror)",
+    "Every custom @utility in app.css must be registered in custom-utilities.ts (the twMerge source of truth), and vice versa",
   async run() {
     const root = await getRoot();
     const css = readFileSync(join(root, APP_CSS), "utf8");
-    const ts = readFileSync(join(root, CONTROL_UTILITIES), "utf8");
+    const ts = readFileSync(join(root, CUSTOM_UTILITIES), "utf8");
 
     const declared = declaredUtilities(css);
-    const expected = expectedUtilities(ts);
+    const registered = registeredUtilities(ts);
 
-    // Forward: every expected name must be declared in app.css.
-    const missing = [...expected].filter((name) => !declared.has(name));
+    // Forward: every registered name must be declared in app.css.
+    const missing = [...registered].filter((name) => !declared.has(name));
     if (missing.length > 0) {
       return {
         ok: false,
         message: `app.css missing @utility: ${missing.join(", ")}`,
-        hint: "Add the @utility to app.css or update control-utilities.ts.",
+        hint: "Add the @utility to app.css or remove it from custom-utilities.ts.",
       };
     }
 
-    // Reverse: every owned-namespace declaration must be registered in
-    // control-utilities.ts (so its twMerge conflict is configured).
-    const unregistered = [...declared].filter((name) => {
-      if (expected.has(name)) return false;
-      const owned = OWNED_EXACT.has(name) || OWNED.some((re) => re.test(name));
-      return owned;
-    });
+    // Reverse (total): every @utility declared in app.css must be registered, so
+    // cn()/twMerge knows about it. An unregistered custom utility is the
+    // silent-strip / fail-to-dedupe bug class — fail loudly instead.
+    const unregistered = [...declared].filter((name) => !registered.has(name));
     if (unregistered.length > 0) {
       return {
         ok: false,
-        message: `app.css declares unregistered utility: ${unregistered.join(", ")}`,
-        hint: "Register it in control-utilities.ts and add its twMerge conflict in web-core/web/lib/utils.ts.",
+        message: `app.css declares unregistered @utility: ${unregistered.join(", ")}`,
+        hint:
+          "Add it to a *_UTILITIES array in web-core/web/theme/custom-utilities.ts and give it a CUSTOM_UTILITY_REGISTRY entry " +
+          "(extend a built-in group, a synthetic group + conflictsWith, or standalone with a reason).",
       };
     }
 
