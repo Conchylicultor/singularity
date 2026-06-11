@@ -88,6 +88,18 @@
       "name": "@singularity/plugin-apps-agent-manager-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/app-rail-framing": {
+      "name": "@singularity/plugin-apps-app-rail-framing",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/app-rail-framing/plugins/hidden": {
+      "name": "@singularity/plugin-apps-app-rail-framing-hidden",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/app-rail-framing/plugins/rail": {
+      "name": "@singularity/plugin-apps-app-rail-framing-rail",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/debug": {
       "name": "@singularity/plugin-apps-debug",
       "version": "0.0.1",
@@ -2892,6 +2904,12 @@
     "@singularity/plugin-apps-agent-manager": ["@singularity/plugin-apps-agent-manager@workspace:plugins/apps/plugins/agent-manager"],
 
     "@singularity/plugin-apps-agent-manager-shell": ["@singularity/plugin-apps-agent-manager-shell@workspace:plugins/apps/plugins/agent-manager/plugins/shell"],
+
+    "@singularity/plugin-apps-app-rail-framing": ["@singularity/plugin-apps-app-rail-framing@workspace:plugins/apps/plugins/app-rail-framing"],
+
+    "@singularity/plugin-apps-app-rail-framing-hidden": ["@singularity/plugin-apps-app-rail-framing-hidden@workspace:plugins/apps/plugins/app-rail-framing/plugins/hidden"],
+
+    "@singularity/plugin-apps-app-rail-framing-rail": ["@singularity/plugin-apps-app-rail-framing-rail@workspace:plugins/apps/plugins/app-rail-framing/plugins/rail"],
 
     "@singularity/plugin-apps-debug": ["@singularity/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
 

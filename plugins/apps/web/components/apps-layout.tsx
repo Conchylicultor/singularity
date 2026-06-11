@@ -7,6 +7,7 @@ import {
   setBasePath,
   useSyncPaneRegistry,
 } from "@plugins/primitives/plugins/pane/web";
+import type { RailFramingProps } from "../../core";
 import { Apps } from "../slots";
 import { useActiveApp, usePathname } from "../internal/use-active-app";
 import { AppRail } from "./app-rail";
@@ -16,6 +17,23 @@ function redirectTo(url: string) {
   window.history.replaceState({}, "", url);
   window.dispatchEvent(new PopStateEvent("popstate"));
   window.dispatchEvent(new CustomEvent("shell:navigate"));
+}
+
+/**
+ * Inline fallback when no app-rail-framing plugin is loaded — the default
+ * 2.5rem icon rail. Mirrors DefaultFlushFraming in app-shell. The rail variant
+ * owns the flex wrapper and the `--app-rail-width` contract the sidebar reads.
+ */
+function DefaultRailFraming({ body }: RailFramingProps) {
+  return (
+    <div
+      className="flex h-full min-h-0"
+      style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
+    >
+      <AppRail />
+      {body}
+    </div>
+  );
 }
 
 export function AppsLayout() {
@@ -55,24 +73,34 @@ export function AppsLayout() {
   }, [basePath]);
   useSyncPaneRegistry();
 
+  // The active app's content; the rail framing variant lays this out beside the
+  // (optional) rail and owns the `--app-rail-width` var the sidebar consumes.
+  const body = (
+    <div className="min-w-0 flex-1">
+      {activeApp && (
+        <PaneBasePathContext.Provider value={basePath}>
+          {renderIsolated(Apps.App.id, activeApp as unknown as Contribution)}
+        </PaneBasePathContext.Provider>
+      )}
+    </div>
+  );
+
+  const framing = Apps.RailFraming.useContributions()[0];
+  const props: RailFramingProps = { body };
+
+  // TooltipProvider stays outermost — AppRail uses WithTooltip and must sit
+  // inside it; harmless over the rail-less `hidden` variant.
   return (
     <TooltipProvider delay={300}>
-      <div
-        className="flex h-full min-h-0"
-        style={{ "--app-rail-width": "2.5rem" } as React.CSSProperties}
-      >
-        <AppRail activeAppId={activeApp?.id} />
-        <div className="min-w-0 flex-1">
-          {activeApp && (
-            <PaneBasePathContext.Provider value={basePath}>
-              {renderIsolated(
-                Apps.App.id,
-                activeApp as unknown as Contribution,
-              )}
-            </PaneBasePathContext.Provider>
-          )}
-        </div>
-      </div>
+      {framing ? (
+        renderIsolated(
+          Apps.RailFraming.id,
+          framing as unknown as Contribution,
+          props,
+        )
+      ) : (
+        <DefaultRailFraming {...props} />
+      )}
     </TooltipProvider>
   );
 }

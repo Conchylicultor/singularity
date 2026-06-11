@@ -1,5 +1,12 @@
 import type { ComponentType } from "react";
+import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import type { RailFramingProps } from "../core";
+
+/** One framing host that wraps the rail + app content; see RailFramingProps. */
+export interface RailFramingContribution {
+  component: ComponentType<RailFramingProps>;
+}
 
 export const Apps = {
   App: defineRenderSlot<{
@@ -18,5 +25,10 @@ export const Apps = {
     fallback?: boolean;
   }>("apps.app", {
     docLabel: (p) => p.tooltip,
+  }),
+  /** The far-left app-rail framing (rail / hidden). The active variant owns the
+   * outer wrapper and the `--app-rail-width` contract the sidebar reads. */
+  RailFraming: defineSlot<RailFramingContribution>("apps.rail-framing", {
+    docLabel: () => "Rail framing",
   }),
 };

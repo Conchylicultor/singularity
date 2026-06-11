@@ -7,15 +7,18 @@
 - Description: App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
 - Load-bearing: yes
 - Web:
-  - Slots: `Apps.App`
+  - Slots: `Apps.App`, `Apps.RailFraming`
   - Contributes: `Core.Root` → `AppsLayout`
   - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
-  - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
+  - Exports: Types: `ActiveApp`, `RailFramingContribution`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
-  - Slot contributors: `shell`
-  - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
+  - Slot contributors: `app-rail-framing`, `shell`
+  - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
+- Core:
+  - Exports: Types: `RailFramingProps`
 - Sub-plugins:
   - **`agent-manager`** — Agent manager app shell and layout.
+  - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
   - **`debug`** — Debug app.
   - **`deploy`** — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
   - **`file-explorer`** — File explorer app.

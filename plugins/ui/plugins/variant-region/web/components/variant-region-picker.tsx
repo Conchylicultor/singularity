@@ -18,7 +18,13 @@ export function createPicker<Props>(
   slot: Slot<VariantContribution<Props>>,
 ): ComponentType {
   function Picker() {
-    const scopeId = useThemeScopeId();
+    const themeScope = useThemeScopeId();
+    // A global region (no per-app scope) is read from base config by the live
+    // `Region` host, so its picker must edit base too — otherwise edits land in
+    // `app:<id>` (once an app's theme is forked) while the host keeps reading
+    // base, and the toggle silently no-ops. App-scoped regions keep editing the
+    // customizer's editing tier, exactly as before.
+    const scopeId = core.scope === "app" ? themeScope : undefined;
     const variants = slot.useContributions();
     const { variant: activeId } = useConfig(core.config, { scopeId });
     const setConfig = useSetConfig(core.config, { scopeId });
