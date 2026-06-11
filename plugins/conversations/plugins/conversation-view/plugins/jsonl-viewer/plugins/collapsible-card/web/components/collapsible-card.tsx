@@ -67,6 +67,7 @@ export function CollapsibleCard({
 }: CollapsibleCardProps) {
   const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
   const t = TONE[tone];
+  const sideContent = aside ?? (filePath ? <FilePath filePath={filePath} /> : null);
   return (
     <div
       className={cn(
@@ -75,26 +76,38 @@ export function CollapsibleCard({
         className,
       )}
     >
-      <div className={cn("flex w-full items-center gap-2", t.header)}>
+      {/* The toggle is a full-bleed overlay sitting BEHIND the content, not a
+          flex sibling. This decouples the click target (the whole header row)
+          from the layout (content-sized, left-aligned) — the two roles that,
+          fused onto one <button>, pulled in opposite directions and made the
+          flex-1 ↔ content-sized fixes cancel each other out. Hovering anywhere
+          in the row drives `t.hover` (it bubbles to this ancestor). */}
+      <div
+        className={cn("relative flex w-full items-center gap-2", t.header, t.hover)}
+      >
         <button
           {...triggerProps}
-          className={cn(
-            // Content-sized (min-w-0 so it can shrink + truncate), NOT flex-1:
-            // the trigger hugs its chevron+label so the `aside` (e.g. FilePath)
-            // sits immediately to its right, left-aligned, rather than being
-            // shoved to the far edge. Free space falls to the right, where
-            // `trailing` pins itself via ml-auto.
-            "flex min-w-0 items-center gap-2 text-left transition-colors",
-            t.hover,
-          )}
-        >
+          aria-label={open ? "Collapse" : "Expand"}
+          className="absolute inset-0 cursor-pointer transition-colors"
+        />
+        {/* Non-interactive: pointer-events-none lets clicks fall through to the
+            overlay button beneath, so the chevron+label area toggles too. */}
+        <span className="pointer-events-none relative flex min-w-0 items-center gap-2">
           <CollapsibleChevron open={open} className="size-3" />
           <span className="flex min-w-0 items-center gap-2 truncate">
             {label}
           </span>
-        </button>
-        {aside ?? (filePath && <FilePath filePath={filePath} />)}
-        {trailing && <span className="ml-auto shrink-0">{trailing}</span>}
+        </span>
+        {/* Interactive siblings opt back in: pointer-events-auto captures their
+            own clicks, and `relative` paints them above the overlay. */}
+        {sideContent && (
+          <span className="pointer-events-auto relative">{sideContent}</span>
+        )}
+        {trailing && (
+          <span className="pointer-events-auto relative ml-auto shrink-0">
+            {trailing}
+          </span>
+        )}
       </div>
       {open &&
         (t.body ? (
