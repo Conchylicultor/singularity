@@ -7,11 +7,7 @@
 - Description: Tree-view tab for the task list.
 - Web:
   - Contributes: `Tasks.View` "Tree" → `TasksList`
-<<<<<<< .merge_file_jioTjh
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/tree.hideTerminalSubtrees`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
-=======
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/placeholder.Placeholder`, `primitives/tree.hideTerminalSubtrees`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `primitives/ui-kit.cn`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
->>>>>>> .merge_file_GY73ES
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/tree.hideTerminalSubtrees`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `primitives/ui-kit.cn`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
   - Exports: Values: `TasksList`
 - Cross-plugin:
   - Imported by: `tasks/task-detail`

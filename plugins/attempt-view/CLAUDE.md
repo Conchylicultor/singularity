@@ -7,11 +7,7 @@
 - Description: Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 - Web:
   - Contributes: `Pane.Register` "attempt", `Conversation.ActionBar` → `AttemptSwitchButton`
-<<<<<<< .merge_file_oeANTW
-  - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneInstanceContext`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
-=======
-  - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneInstanceContext`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
->>>>>>> .merge_file_qZg9uD
+  - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneInstanceContext`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
   - Exports: Values: `attemptPane`
 - Cross-plugin:
   - Imported by: `active-data/attempt`, `conversations/conversation-view/push-profiling`, `debug/profiling/push`
