@@ -1,8 +1,10 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { CommitRowSchema } from "@plugins/primitives/plugins/commit-list/core";
 
 export const MainAheadCountSchema = z.object({
   count: z.number().int(),
+  commits: z.array(CommitRowSchema),
 });
 
 export type MainAheadCount = z.infer<typeof MainAheadCountSchema>;
@@ -10,7 +12,7 @@ export type MainAheadCount = z.infer<typeof MainAheadCountSchema>;
 export const mainAheadCountResource = resourceDescriptor<MainAheadCount>(
   "build.mainAheadCount",
   MainAheadCountSchema,
-  { count: 0 },
+  { count: 0, commits: [] },
 );
 
 export const FrontendHashSchema = z.object({ hash: z.string(), buildId: z.string() });

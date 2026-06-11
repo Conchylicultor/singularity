@@ -12,7 +12,14 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { buildHistoryResource } from "../../shared";
+import {
+  Collapsible,
+  CollapsibleTrigger,
+  CollapsibleContent,
+  CollapsibleChevron,
+} from "@plugins/primitives/plugins/collapsible/web";
+import { CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
+import { buildHistoryResource, mainAheadCountResource } from "../../shared";
 import type { BuildRun } from "../../shared";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
 
@@ -27,6 +34,38 @@ function formatDuration(start: Date, end: Date | null): string {
   if (s < 60) return `${s}s`;
   const m = Math.floor(s / 60);
   return `${m}m ${s % 60}s`;
+}
+
+const BRANCH_COLOR = "var(--warning)";
+
+function MainAheadSection() {
+  const result = useResource(mainAheadCountResource);
+  const { count, commits } = result.pending ? { count: 0, commits: [] } : result.data;
+  if (count === 0) return null;
+
+  return (
+    <Collapsible className="border-b">
+      <CollapsibleTrigger className="gap-2 px-3 py-2 hover:bg-accent/50">
+        <CollapsibleChevron className="size-4 text-muted-foreground" />
+        <Text as="span" variant="label">
+          main is {count} commit{count !== 1 ? "s" : ""} ahead
+        </Text>
+      </CollapsibleTrigger>
+      <CollapsibleContent>
+        <ol>
+          {commits.map((commit, idx) => (
+            <CommitRowItem
+              key={commit.sha}
+              commit={commit}
+              isFirst={idx === 0}
+              isLast={idx === commits.length - 1}
+              color={BRANCH_COLOR}
+            />
+          ))}
+        </ol>
+      </CollapsibleContent>
+    </Collapsible>
+  );
 }
 
 function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void }) {
@@ -244,6 +283,7 @@ export function BuildPopoverContent({
 
   return (
     <div className={cn("flex flex-col", variant === "pane" && "h-full")}>
+      <MainAheadSection />
       <BuildControls building={building} onBuild={handleBuild} />
       {variant === "popover" && <BuildLogView variant={variant} />}
       <BuildHistoryList variant={variant} selectedRunId={selectedRunId} onRunClick={onRunClick} />

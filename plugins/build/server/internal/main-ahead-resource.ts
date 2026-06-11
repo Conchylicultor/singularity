@@ -1,7 +1,7 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
 import { MainAheadCountSchema } from "../../shared";
-import { getMainAheadCount } from "./git-status";
+import { getMainAhead } from "./git-status";
 
 export const mainAheadCountResource = defineResource({
   key: "build.mainAheadCount",
@@ -14,5 +14,5 @@ export const mainAheadCountResource = defineResource({
         params.refName === "refs/heads/main" ? [{}] : [],
     },
   ],
-  loader: async () => ({ count: await getMainAheadCount() }),
+  loader: async () => getMainAhead(),
 });

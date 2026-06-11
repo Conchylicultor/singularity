@@ -7,7 +7,7 @@ import { ConfigV2, getConfig } from "@plugins/config_v2/server";
 import { handleBuild } from "./internal/handle-build";
 import { reconcileOrphanBuilds } from "./internal/run-build";
 import { buildRunJob } from "./internal/build-run-job";
-import { getMainAheadCount } from "./internal/git-status";
+import { getMainAhead } from "./internal/git-status";
 import { mainAheadCountResource } from "./internal/main-ahead-resource";
 import { buildHistoryResource } from "./internal/build-history-resource";
 import { frontendHashResource } from "./internal/frontend-hash-resource";
@@ -32,8 +32,8 @@ export default {
 
     const { autoBuild } = getConfig(buildConfig);
     if (autoBuild) {
-      const aheadCount = await getMainAheadCount();
-      if (aheadCount > 0) {
+      const { count } = await getMainAhead();
+      if (count > 0) {
         await buildRunJob.enqueue({});
       }
     }

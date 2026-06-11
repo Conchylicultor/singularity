@@ -7,7 +7,7 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
-import { mainAheadCountResource, buildHistoryResource } from "../../shared";
+import { buildHistoryResource } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
@@ -19,10 +19,6 @@ export function BuildButton() {
 
   // --- Stale-tab detection (baked build id vs server's current build id) ---
   const { stale: staleTab } = useStaleFrontend();
-
-  // --- Main ahead count ---
-  const aheadResult = useResource(mainAheadCountResource);
-  const mainAheadCount = aheadResult.pending ? 0 : aheadResult.data.count;
 
   // --- Worktree live-state channel status (backend liveness) ---
   // During a build the `./singularity build` process restarts this very backend,
@@ -37,7 +33,6 @@ export function BuildButton() {
   const building = latestRun?.finishedAt === null;
   const failed =
     !building && latestRun != null && latestRun.exitCode !== null && latestRun.exitCode !== 0;
-  const loaded = !aheadResult.pending;
 
   // Priority: a stale tab (new frontend already served) needs a reload regardless
   // of build state; otherwise reflect the active build, then the last outcome.
@@ -82,7 +77,7 @@ export function BuildButton() {
         >
           {spinning && <Spinner spinning className="size-4" />}
           {label}
-          {status === "updated" ? (
+          {status === "updated" && (
             <WithTooltip content="Server was rebuilt — click to reload this tab">
               <span
                 role="button"
@@ -98,15 +93,7 @@ export function BuildButton() {
                 Reload
               </span>
             </WithTooltip>
-          ) : mainAheadCount > 0 ? (
-            <WithTooltip content={`main is ${mainAheadCount} commit${mainAheadCount !== 1 ? "s" : ""} ahead of this worktree`}>
-              <span className="block size-2 rounded-full bg-warning" />
-            </WithTooltip>
-          ) : loaded ? (
-            <WithTooltip content="Synced to HEAD">
-              <span className="block size-2 rounded-full bg-muted-foreground" />
-            </WithTooltip>
-          ) : null}
+          )}
         </Button>
       }
       align="end"
