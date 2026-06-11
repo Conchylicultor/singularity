@@ -1930,10 +1930,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`css-vars-single-owner`**
             - **`css-vars-supplied`**
             - **`data-migration-dml-only`**
-            - **`eslint`**
-              - Core:
-                - Uses: `infra/paths.SINGULARITY_DIR`
-                - Exports: Types: `EslintClosureCache`, `FingerprintResult`, `ImportGraphs`; Values: `buildImportGraphs`, `computeClosureFingerprints`, `findLintFiles`, `globalConfigFingerprint`, `isLintable`, `openEslintClosureCache`, `resolveSpecifier`, `safeRead`
             - **`migration-hashes-unique`**
             - **`migrations-in-sync`**
             - **`no-hardcoded-colors`**
@@ -2110,7 +2106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `mcpRequest`
     - **`paths`**
       - Cross-plugin:
-        - Imported by: `backup`, `backup/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `conversations`, `conversations/conversation-progress`, `conversations/conversation-view/code`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `crashes`, `database/admin`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/checks/eslint`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`, `terminal`
+        - Imported by: `backup`, `backup/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `conversations`, `conversations/conversation-progress`, `conversations/conversation-view/code`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `crashes`, `database/admin`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`, `terminal`
       - Server:
         - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `CRASHES_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`
       - Core:

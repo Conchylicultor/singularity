@@ -26,25 +26,11 @@ export async function worktreePathFor(id: string): Promise<string> {
   return `${root}/.claude/worktrees/${id}`;
 }
 
-async function copyEslintCacheToWorktree(repoRoot: string, wtPath: string): Promise<void> {
-  const newLocation = join(repoRoot, ".cache", "eslint");
-  const legacyLocation = join(repoRoot, "node_modules", ".cache", "eslint");
-  const sourcePath = existsSync(newLocation) ? newLocation : legacyLocation;
-  if (!existsSync(sourcePath)) return;
-
-  const raw = await Bun.file(sourcePath).text();
-  const rewritten = raw.split(repoRoot).join(wtPath);
-
-  const destPath = join(wtPath, ".cache", "eslint");
-  await mkdir(join(wtPath, ".cache"), { recursive: true });
-  await Bun.write(destPath, rewritten);
-}
-
 // Seed the worktree's incremental TypeScript caches from main so the first
 // build type-checks only its own diff instead of the whole tree. One file per
-// tsc target; `.tsbuildinfo` embeds absolute source paths, so rewrite them the
-// same way the eslint cache copy does. A version/options mismatch just makes
-// tsc fall back to a full check — best-effort, never wrong.
+// tsc target; `.tsbuildinfo` embeds absolute source paths, so rewrite the
+// embedded absolute paths to the worktree root. A version/options mismatch just
+// makes tsc fall back to a full check — best-effort, never wrong.
 async function copyTsBuildInfoToWorktree(repoRoot: string, wtPath: string): Promise<void> {
   const sourceDir = join(repoRoot, ".cache", "tsbuildinfo");
   if (!existsSync(sourceDir)) return;
@@ -66,10 +52,6 @@ export async function setupWorktree(id: string, wtPath: string): Promise<void> {
     [GIT, "-C", repoRoot, "worktree", "add", "-b", branch, wtPath, "main"],
     { stdout: "pipe", stderr: "pipe" },
   ).exited;
-  try {
-    await copyEslintCacheToWorktree(repoRoot, wtPath);
-  // eslint-disable-next-line promise-safety/no-bare-catch
-  } catch {}
   try {
     await copyTsBuildInfoToWorktree(repoRoot, wtPath);
   // eslint-disable-next-line promise-safety/no-bare-catch

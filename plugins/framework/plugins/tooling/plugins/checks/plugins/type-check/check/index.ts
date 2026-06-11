@@ -24,11 +24,9 @@ import {
   tsBuildInfoPath,
   type TscTarget,
 } from "@plugins/framework/plugins/tooling/plugins/checks/core";
-import {
-  buildImportGraphs,
-  computeClosureFingerprints,
-  openEslintClosureCache,
-} from "@plugins/framework/plugins/tooling/plugins/checks/plugins/eslint/core";
+import { buildImportGraphs } from "./import-graph";
+import { computeClosureFingerprints } from "./fingerprint";
+import { openClosureCache } from "./closure-cache";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -153,7 +151,7 @@ const check: Check = {
 
     // Closure cache: lint only files whose import closure changed since the last
     // recorded PASS. tsc still runs for every target regardless.
-    const cache = openEslintClosureCache();
+    const cache = openClosureCache();
     const lintByTarget = new Map<string, string[]>();
     for (const rel of graphs.files) {
       const fp = perFile.get(rel);

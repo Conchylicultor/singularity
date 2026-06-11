@@ -128,7 +128,7 @@ Plugins can also contribute their own checks (no codegen, no registry edits — 
 Available built-in checks:
 
 - `migrations-in-sync` — fails if plugin `tables.ts` / `schema.ts` changes would generate a new migration not yet committed. Fix by running `./singularity build` and committing the generated file.
-- `eslint` — runs `bunx eslint .` if `eslint.config.ts` exists. Plugin-contributed rules in `plugins/<name>/lint/` are auto-registered.
+- `type-check` — unified TypeScript + type-aware-ESLint check: builds each tsconfig target's TS program once and reads both tsc diagnostics and lint results off it. Plugin-contributed rules in `plugins/<name>/lint/` are auto-registered into the shared lint config.
 
 ### Push
 

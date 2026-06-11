@@ -1232,10 +1232,6 @@
       "name": "@singularity/plugin-framework-tooling-checks-data-migration-dml-only",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/eslint": {
-      "name": "@singularity/plugin-framework-tooling-checks-eslint",
-      "version": "0.0.1",
-    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique": {
       "name": "@singularity/plugin-framework-tooling-checks-migration-hashes-unique",
       "version": "0.0.1",
@@ -3436,8 +3432,6 @@
     "@singularity/plugin-framework-tooling-checks-css-vars-supplied": ["@singularity/plugin-framework-tooling-checks-css-vars-supplied@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied"],
 
     "@singularity/plugin-framework-tooling-checks-data-migration-dml-only": ["@singularity/plugin-framework-tooling-checks-data-migration-dml-only@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only"],
-
-    "@singularity/plugin-framework-tooling-checks-eslint": ["@singularity/plugin-framework-tooling-checks-eslint@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/eslint"],
 
     "@singularity/plugin-framework-tooling-checks-migration-hashes-unique": ["@singularity/plugin-framework-tooling-checks-migration-hashes-unique@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/migration-hashes-unique"],
 
