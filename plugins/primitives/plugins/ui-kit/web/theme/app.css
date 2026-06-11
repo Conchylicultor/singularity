@@ -192,6 +192,96 @@
  * header never sits under the bar without hand-reserving a pr-14. */
 @utility pr-floating-bar { padding-right: var(--floating-bar-safe-area, var(--chrome-pad-x)); }
 
+/* Spacing scale utilities — the single source of truth for layout gap + padding
+ * rhythm (<Stack gap> / <Inset pad> primitives, plugins/primitives/plugins/spacing).
+ * One closed 8-step ramp (none | 2xs | xs | sm | md | lg | xl | 2xl) backed by the
+ * density token group's --space-* runtime vars (overridden by ThemeInjector), so
+ * gaps + insets tighten together with the active density preset — unlike raw
+ * Tailwind gap-N/p-N, which are fixed. `none` is the constant 0 (no token). The
+ * `no-adhoc-spacing` lint rule (spacing plugin) bans raw gap-/p-/m-/space- numerics
+ * so every spacing decision routes through these named steps. Kept in sync with
+ * custom-utilities.ts via the app-css-utilities-in-sync check. */
+@utility gap-none { gap: 0; }
+@utility gap-2xs  { gap: var(--space-2xs); }
+@utility gap-xs   { gap: var(--space-xs); }
+@utility gap-sm   { gap: var(--space-sm); }
+@utility gap-md   { gap: var(--space-md); }
+@utility gap-lg   { gap: var(--space-lg); }
+@utility gap-xl   { gap: var(--space-xl); }
+@utility gap-2xl  { gap: var(--space-2xl); }
+@utility gap-x-none { column-gap: 0; }
+@utility gap-x-2xs  { column-gap: var(--space-2xs); }
+@utility gap-x-xs   { column-gap: var(--space-xs); }
+@utility gap-x-sm   { column-gap: var(--space-sm); }
+@utility gap-x-md   { column-gap: var(--space-md); }
+@utility gap-x-lg   { column-gap: var(--space-lg); }
+@utility gap-x-xl   { column-gap: var(--space-xl); }
+@utility gap-x-2xl  { column-gap: var(--space-2xl); }
+@utility gap-y-none { row-gap: 0; }
+@utility gap-y-2xs  { row-gap: var(--space-2xs); }
+@utility gap-y-xs   { row-gap: var(--space-xs); }
+@utility gap-y-sm   { row-gap: var(--space-sm); }
+@utility gap-y-md   { row-gap: var(--space-md); }
+@utility gap-y-lg   { row-gap: var(--space-lg); }
+@utility gap-y-xl   { row-gap: var(--space-xl); }
+@utility gap-y-2xl  { row-gap: var(--space-2xl); }
+@utility p-none { padding: 0; }
+@utility p-2xs  { padding: var(--space-2xs); }
+@utility p-xs   { padding: var(--space-xs); }
+@utility p-sm   { padding: var(--space-sm); }
+@utility p-md   { padding: var(--space-md); }
+@utility p-lg   { padding: var(--space-lg); }
+@utility p-xl   { padding: var(--space-xl); }
+@utility p-2xl  { padding: var(--space-2xl); }
+@utility px-none { padding-left: 0; padding-right: 0; }
+@utility px-2xs  { padding-left: var(--space-2xs); padding-right: var(--space-2xs); }
+@utility px-xs   { padding-left: var(--space-xs);  padding-right: var(--space-xs); }
+@utility px-sm   { padding-left: var(--space-sm);  padding-right: var(--space-sm); }
+@utility px-md   { padding-left: var(--space-md);  padding-right: var(--space-md); }
+@utility px-lg   { padding-left: var(--space-lg);  padding-right: var(--space-lg); }
+@utility px-xl   { padding-left: var(--space-xl);  padding-right: var(--space-xl); }
+@utility px-2xl  { padding-left: var(--space-2xl); padding-right: var(--space-2xl); }
+@utility py-none { padding-top: 0; padding-bottom: 0; }
+@utility py-2xs  { padding-top: var(--space-2xs); padding-bottom: var(--space-2xs); }
+@utility py-xs   { padding-top: var(--space-xs);  padding-bottom: var(--space-xs); }
+@utility py-sm   { padding-top: var(--space-sm);  padding-bottom: var(--space-sm); }
+@utility py-md   { padding-top: var(--space-md);  padding-bottom: var(--space-md); }
+@utility py-lg   { padding-top: var(--space-lg);  padding-bottom: var(--space-lg); }
+@utility py-xl   { padding-top: var(--space-xl);  padding-bottom: var(--space-xl); }
+@utility py-2xl  { padding-top: var(--space-2xl); padding-bottom: var(--space-2xl); }
+@utility pt-none { padding-top: 0; }
+@utility pt-2xs  { padding-top: var(--space-2xs); }
+@utility pt-xs   { padding-top: var(--space-xs); }
+@utility pt-sm   { padding-top: var(--space-sm); }
+@utility pt-md   { padding-top: var(--space-md); }
+@utility pt-lg   { padding-top: var(--space-lg); }
+@utility pt-xl   { padding-top: var(--space-xl); }
+@utility pt-2xl  { padding-top: var(--space-2xl); }
+@utility pr-none { padding-right: 0; }
+@utility pr-2xs  { padding-right: var(--space-2xs); }
+@utility pr-xs   { padding-right: var(--space-xs); }
+@utility pr-sm   { padding-right: var(--space-sm); }
+@utility pr-md   { padding-right: var(--space-md); }
+@utility pr-lg   { padding-right: var(--space-lg); }
+@utility pr-xl   { padding-right: var(--space-xl); }
+@utility pr-2xl  { padding-right: var(--space-2xl); }
+@utility pb-none { padding-bottom: 0; }
+@utility pb-2xs  { padding-bottom: var(--space-2xs); }
+@utility pb-xs   { padding-bottom: var(--space-xs); }
+@utility pb-sm   { padding-bottom: var(--space-sm); }
+@utility pb-md   { padding-bottom: var(--space-md); }
+@utility pb-lg   { padding-bottom: var(--space-lg); }
+@utility pb-xl   { padding-bottom: var(--space-xl); }
+@utility pb-2xl  { padding-bottom: var(--space-2xl); }
+@utility pl-none { padding-left: 0; }
+@utility pl-2xs  { padding-left: var(--space-2xs); }
+@utility pl-xs   { padding-left: var(--space-xs); }
+@utility pl-sm   { padding-left: var(--space-sm); }
+@utility pl-md   { padding-left: var(--space-md); }
+@utility pl-lg   { padding-left: var(--space-lg); }
+@utility pl-xl   { padding-left: var(--space-xl); }
+@utility pl-2xl  { padding-left: var(--space-2xl); }
+
 /* Semantic typography role utilities — the single source of truth for text
  * hierarchy (Text primitive). Each role is a frozen bundle of size + line-height
  * + weight (+ tracking) read DIRECTLY from the typography token group's

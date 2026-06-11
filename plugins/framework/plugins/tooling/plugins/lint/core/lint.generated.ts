@@ -29,6 +29,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/radius", id: "primitives.radius", loader: () => import("@plugins/primitives/plugins/radius/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/row", id: "primitives.row", loader: () => import("@plugins/primitives/plugins/row/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/spacing", id: "primitives.spacing", loader: () => import("@plugins/primitives/plugins/spacing/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/text", id: "primitives.text", loader: () => import("@plugins/primitives/plugins/text/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/z-layers", id: "primitives.z-layers", loader: () => import("@plugins/primitives/plugins/z-layers/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/lint"), dependsOn: [] },

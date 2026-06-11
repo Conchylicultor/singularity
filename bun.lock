@@ -1988,6 +1988,10 @@
       "name": "@singularity/plugin-primitives-sortable-list",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/spacing": {
+      "name": "@singularity/plugin-primitives-spacing",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/spinner": {
       "name": "@singularity/plugin-primitives-spinner",
       "version": "0.0.1",
@@ -3843,6 +3847,8 @@
     "@singularity/plugin-primitives-slot-render": ["@singularity/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
 
     "@singularity/plugin-primitives-sortable-list": ["@singularity/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
+
+    "@singularity/plugin-primitives-spacing": ["@singularity/plugin-primitives-spacing@workspace:plugins/primitives/plugins/spacing"],
 
     "@singularity/plugin-primitives-spinner": ["@singularity/plugin-primitives-spinner@workspace:plugins/primitives/plugins/spinner"],
 

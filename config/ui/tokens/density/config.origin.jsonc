@@ -1,4 +1,4 @@
-// @hash 41834b46e339
+// @hash 76bb69b9020d
 {
   "preset": "comfortable",
   "overrides": {
@@ -15,7 +15,14 @@
       "controlHeightLg": "",
       "chromeBarH": "",
       "chromePaneH": "",
-      "chromePadX": ""
+      "chromePadX": "",
+      "space-2xs": "",
+      "space-xs": "",
+      "space-sm": "",
+      "space-md": "",
+      "space-lg": "",
+      "space-xl": "",
+      "space-2xl": ""
     },
     "dark": {
       "padChipX": "",
@@ -30,7 +37,14 @@
       "controlHeightLg": "",
       "chromeBarH": "",
       "chromePaneH": "",
-      "chromePadX": ""
+      "chromePadX": "",
+      "space-2xs": "",
+      "space-xs": "",
+      "space-sm": "",
+      "space-md": "",
+      "space-lg": "",
+      "space-xl": "",
+      "space-2xl": ""
     }
   }
 }

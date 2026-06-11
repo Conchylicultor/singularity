@@ -365,6 +365,7 @@ export const webEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/shortcuts", id: "primitives.shortcuts", loader: () => import("@plugins/primitives/plugins/shortcuts/web"), dependsOn: [] },
   { pluginPath: "primitives/plugins/slot-render", id: "primitives.slot-render", loader: () => import("@plugins/primitives/plugins/slot-render/web"), dependsOn: ["primitives/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/sortable-list", id: "primitives.sortable-list", loader: () => import("@plugins/primitives/plugins/sortable-list/web"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/spacing", id: "primitives.spacing", loader: () => import("@plugins/primitives/plugins/spacing/web"), dependsOn: ["primitives/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/spinner", id: "primitives.spinner", loader: () => import("@plugins/primitives/plugins/spinner/web"), dependsOn: ["primitives/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/status-dot", id: "primitives.status-dot", loader: () => import("@plugins/primitives/plugins/status-dot/web"), dependsOn: ["primitives/plugins/ui-kit"] },
   { pluginPath: "primitives/plugins/syntax-highlight", id: "primitives.syntax-highlight", loader: () => import("@plugins/primitives/plugins/syntax-highlight/web"), dependsOn: ["primitives/plugins/select-scope"] },

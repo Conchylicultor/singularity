@@ -11,7 +11,7 @@ export const TOKEN_GROUP_VARS: Record<string, readonly string[]> = {
   "categorical": ["--categorical-1", "--categorical-10", "--categorical-2", "--categorical-3", "--categorical-4", "--categorical-5", "--categorical-6", "--categorical-7", "--categorical-8", "--categorical-9"],
   "chart": ["--chart-1", "--chart-2", "--chart-3", "--chart-4", "--chart-5"],
   "color-palette": ["--accent", "--accent-foreground", "--background", "--border", "--card", "--card-foreground", "--destructive", "--destructive-foreground", "--foreground", "--info", "--info-foreground", "--input", "--muted", "--muted-foreground", "--popover", "--popover-foreground", "--primary", "--primary-foreground", "--ring", "--secondary", "--secondary-foreground", "--success", "--success-foreground", "--warning", "--warning-foreground"],
-  "density": ["--chrome-bar-h", "--chrome-pad-x", "--chrome-pane-h", "--control-height-lg", "--control-height-md", "--control-height-sm", "--control-height-xs", "--pad-chip-x", "--pad-chip-y", "--pad-control-x", "--pad-control-y", "--pad-row-x", "--pad-row-y"],
+  "density": ["--chrome-bar-h", "--chrome-pad-x", "--chrome-pane-h", "--control-height-lg", "--control-height-md", "--control-height-sm", "--control-height-xs", "--pad-chip-x", "--pad-chip-y", "--pad-control-x", "--pad-control-y", "--pad-row-x", "--pad-row-y", "--space-2xl", "--space-2xs", "--space-lg", "--space-md", "--space-sm", "--space-xl", "--space-xs"],
   "font-family": ["--font-mono", "--font-sans", "--font-serif", "--letter-spacing"],
   "shadow": ["--shadow", "--shadow-2xl", "--shadow-2xs", "--shadow-lg", "--shadow-md", "--shadow-sm", "--shadow-xl", "--shadow-xs"],
   "shape": ["--radius", "--spacing"],
