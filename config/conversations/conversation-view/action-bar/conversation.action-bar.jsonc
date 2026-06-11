@@ -5,7 +5,7 @@
     "conversations.conversation-view.jsonl-viewer.event-counter:event-counter",
     "conversations.conversation-view.commits-graph:commits-graph",
     "conversations.conversation-view.dependent-count:dependent-count",
-    { "spacer": "spacer-1" },
+    { "type": "spacer", "id": "spacer-1" },
     "conversations.conversation-view.tasks-panel:tasks",
     "conversations.conversation-view.terminal-pane:terminal",
     "conversations.conversation-view.open-app:open-app",

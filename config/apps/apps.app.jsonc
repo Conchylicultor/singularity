@@ -1,6 +1,6 @@
 // @hash f66e9c7af7f3
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "apps.agent-manager.shell:agent-manager",
     "apps.home.shell:home",
@@ -8,7 +8,7 @@
     "apps.story.shell:story",
     "apps.workflows.shell:workflows",
     "apps.sonata.shell:sonata",
-    { "spacer": "spacer-1" },
+    { "type": "spacer", "id": "spacer-1" },
     "apps.file-explorer.shell:file-explorer",
     "apps.studio.shell:studio",
     "apps.deploy.shell:deploy",

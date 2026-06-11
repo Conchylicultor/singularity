@@ -1,10 +1,10 @@
 // @hash ae3f7f411da1
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "improve:improve",
     "build:build",
-    { "spacer": "spacer-1" },
+    { "type": "spacer", "id": "spacer-1" },
     "notifications:notifications",
     "health:health-dot",
     "screenshot:screenshot",

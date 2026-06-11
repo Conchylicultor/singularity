@@ -1,6 +1,6 @@
 // @hash 24dec803da18
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "tasks.task-detail:tasks",
     "agents:agents",

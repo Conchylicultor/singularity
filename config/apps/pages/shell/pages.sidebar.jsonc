@@ -1,6 +1,6 @@
 // @hash d0bc804a545b
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "apps.pages.page-tree:pages"
   ]

@@ -1,6 +1,6 @@
 // @hash 7a199a5c2339
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "tasks.task-header:header",
     "tasks.task-description:description",

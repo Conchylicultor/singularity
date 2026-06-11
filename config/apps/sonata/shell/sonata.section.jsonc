@@ -1,6 +1,6 @@
 // @hash dfe15328ec08
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "apps.sonata.audio.engine:audio",
     "apps.sonata.track-mixer:track-mixer",

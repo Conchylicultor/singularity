@@ -1,6 +1,6 @@
 // @hash 2c76f578b3cd
 {
-  // Hide: { "item": "<key>", "hidden": true }. Gap: { "spacer": "<unique-id>" }.
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "tasks.task-list:launch-agent",
     "tasks.auto-start:queued-chip",

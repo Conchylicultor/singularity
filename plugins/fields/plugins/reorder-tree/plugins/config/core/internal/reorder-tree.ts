@@ -22,7 +22,8 @@ const nodeSchema: z.ZodType<ReorderNode> = z.lazy(() =>
         id: z.string().optional(),
         items: z.array(nodeSchema).optional(),
       })
-      // per-type payload + back-compat `{spacer}` reads survive passthrough.
+      // per-type payload survives passthrough; validated downstream by the
+      // node type's own schema, not here.
       .passthrough(),
   ]),
 );
@@ -68,12 +69,6 @@ export function normalizeNode(node: ReorderNode): NormalizedNode {
     // discriminated narrowing here, so read the item-node shape explicitly.
     const itemNode = node as { item: string; hidden?: boolean };
     return { kind: "item", item: itemNode.item, hidden: itemNode.hidden ?? false };
-  }
-  // Back-compat read for old files: legacy `{ spacer }` nodes (emit-new only —
-  // the format type no longer has this arm, hence the localized cast).
-  if ("spacer" in node) {
-    const spacer = (node as unknown as { spacer: string }).spacer;
-    return { kind: "node", type: "spacer", id: spacer, payload: {} };
   }
   if ("type" in node) {
     const { type, id, items, ...payload } = node;
