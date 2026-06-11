@@ -50,7 +50,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
   ) : undefined;
 
   return (
-    <ToolCallCard event={event} summary={summary} aside={skillChip}>
+    <ToolCallCard event={event} summary={summary} leading={skillChip}>
       {(args || injected.length > 0) && (
         <div className="mt-2 space-y-2">
           {args && (

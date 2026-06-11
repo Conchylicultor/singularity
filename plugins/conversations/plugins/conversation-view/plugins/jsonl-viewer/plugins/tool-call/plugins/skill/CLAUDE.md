@@ -2,7 +2,7 @@
 
 Renderer for `Skill` tool calls in the JSONL viewer.
 
-Collapsed: shows an args preview in the summary line plus a clickable skill-name chip (a `LinkChip`). Clicking the chip opens the skill's `.claude/skills/<name>/SKILL.md` in the file-peek side pane — never toggles the card (the chip lives in the card's `aside`, not its trigger).
+Collapsed: shows the generic tool badge, then a clickable skill-name chip (a `LinkChip`), then an args preview in the summary line. Clicking the chip opens the skill's `.claude/skills/<name>/SKILL.md` in the file-peek side pane — never toggles the card (the chip is passed as `ToolCallCard`'s `leading`, which renders it between the badge and the summary; it opts back into pointer events so it stays clickable while the rest of the row toggles).
 Expanded: shows the full args text block + the injected skill context (the SKILL.md content injected by the harness via an `isMeta=true` user message) directly — no second collapse to open.
 
 ## Plugin reference
