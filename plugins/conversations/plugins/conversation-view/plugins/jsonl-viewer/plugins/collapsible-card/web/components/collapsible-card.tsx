@@ -9,15 +9,39 @@ import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugi
 
 export type CollapsibleCardTone = "muted" | "primary" | "tool";
 
+/**
+ * Wrapper that makes header content interactive inside the card's click-through
+ * trigger area. The whole header row sits over a full-bleed toggle button
+ * (`pointer-events-none` content falls through to it), so anything that needs
+ * its OWN click — a chip, a FilePath — must opt back in: `pointer-events-auto`
+ * to receive events, `relative` to paint above the overlay. This is the single
+ * sanctioned home for that idiom; never hand-roll the className pair, and never
+ * place a raw interactive element in `label`/`aside` without it.
+ */
+export function CardHeaderAction({
+  children,
+  className,
+}: {
+  children: ReactNode;
+  className?: string;
+}) {
+  return (
+    <span className={cn("pointer-events-auto relative", className)}>
+      {children}
+    </span>
+  );
+}
+
 export interface CollapsibleCardProps {
   /** In-trigger content after the built-in chevron (label, or badge+summary).
-   *  Natural case — never all-caps (jsonl-viewer rule). Interactive content
-   *  (FilePath, chips) MUST go in `aside`, never here. */
+   *  Natural case — never all-caps (jsonl-viewer rule). Display content is
+   *  click-through (toggles the card); interactive content placed here MUST be
+   *  wrapped in `<CardHeaderAction>` so it keeps its own click. */
   label: ReactNode;
   /** Convenience: render a clickable FilePath as the sibling aside. */
   filePath?: string;
-  /** Sibling affordance next to (never inside) the trigger. Overrides filePath.
-   *  Interactive content (FilePath, chips) MUST go here, never in `label`. */
+  /** Sibling affordance after the label. Overrides filePath. Wrapped in
+   *  `<CardHeaderAction>` automatically, so pass the raw element. */
   aside?: ReactNode;
   /** Far-right sibling of the header row (e.g. running-dots). */
   trailing?: ReactNode;
@@ -99,15 +123,12 @@ export function CollapsibleCard({
             {label}
           </span>
         </span>
-        {/* Interactive siblings opt back in: pointer-events-auto captures their
-            own clicks, and `relative` paints them above the overlay. */}
-        {sideContent && (
-          <span className="pointer-events-auto relative">{sideContent}</span>
-        )}
+        {/* Interactive siblings opt back in via CardHeaderAction. */}
+        {sideContent && <CardHeaderAction>{sideContent}</CardHeaderAction>}
         {trailing && (
-          <span className="pointer-events-auto relative ml-auto shrink-0">
+          <CardHeaderAction className="ml-auto shrink-0">
             {trailing}
-          </span>
+          </CardHeaderAction>
         )}
       </div>
       {open &&

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export {
   CollapsibleCard,
+  CardHeaderAction,
   type CollapsibleCardProps,
   type CollapsibleCardTone,
 } from "./components/collapsible-card";

@@ -1,13 +1,16 @@
 import { type ReactNode } from "react";
 import type { ToolCallEvent } from "../../core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
+import {
+  CollapsibleCard,
+  CardHeaderAction,
+} from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 
 interface ToolCallCardProps {
   event: ToolCallEvent;
   summary?: ReactNode;
   /** Interactive chip rendered right after the tool-name badge and before the
-   *  summary — e.g. a skill-name chip. It opts back into pointer events so it
+   *  summary — e.g. a skill-name chip. Wrapped in `<CardHeaderAction>` so it
    *  stays clickable while the rest of the row still toggles the card. */
   leading?: ReactNode;
   /** Sibling affordance next to (never inside) the trigger — e.g. a clickable
@@ -70,10 +73,8 @@ export function ToolCallCard({
             {event.name || "tool_call"}
           </Badge>
           {/* Interactive chip sits inside the (click-through) label, so it opts
-              back into pointer events to keep its own onClick. */}
-          {leading && (
-            <span className="pointer-events-auto relative shrink-0">{leading}</span>
-          )}
+              back into pointer events via CardHeaderAction to keep its onClick. */}
+          {leading && <CardHeaderAction className="shrink-0">{leading}</CardHeaderAction>}
           {summary && (
             <span className="min-w-0 flex-1 truncate opacity-70">{summary}</span>
           )}
