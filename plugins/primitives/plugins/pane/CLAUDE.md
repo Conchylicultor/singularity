@@ -217,6 +217,27 @@ back to the pane's `chrome.title` config (`string | (params) =>
 string`). Use the prop when the title needs loaded data; use the config
 when it's static or derivable from URL params.
 
+#### Title typography is container-owned
+
+PaneChrome wraps the title region — string **or** node — in the
+canonical `<Text variant="label">` baseline (see `pane-chrome.tsx`). A
+title node therefore inherits the pane-title size by CSS inheritance and
+**must not set its own typography size** — per-segment weight/color
+(e.g. a breadcrumb's `font-medium`/muted) still composes on top, but the
+*size* comes from the container. This is the same container-enforced
+pattern as `control-size` (density via context) and `icon-auto`
+(em-based slot icons): the container declares it once so every title
+lands on the same size with zero per-pane effort.
+
+Enforced by `lint/no-adhoc-pane-title.ts` — an inline `<Text variant>`
+inside a `PaneChrome title={…}` node fails `./singularity check` (raw
+`text-*`/`leading-*` is already banned everywhere by
+`text/no-adhoc-typography`; this closes the `<Text variant>` escape for
+titles specifically). Scope mirrors `no-adhoc-slot-icon-size`: inline
+JSX only, owner must be `PaneChrome`, no variable tracing. A deliberate
+override escapes per-site via
+`// eslint-disable-next-line pane/no-adhoc-pane-title -- reason`.
+
 ### Scroll responsibility
 
 PaneChrome's content wrapper is `overflow-y-auto` — it scrolls by

@@ -75,7 +75,15 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
               {resolvedTitle}
             </Text>
           ) : (
-            <div className="flex min-w-0 items-center">{resolvedTitle}</div>
+            // Node titles get the SAME `label` typography baseline as string
+            // titles, so a title node inherits the canonical pane-title size
+            // instead of drifting to the ambient body size. The size is
+            // enforced by the container (CSS inheritance), so title nodes need
+            // not — and should not — set their own size; per-segment weight/
+            // color (e.g. breadcrumb) still applies on top.
+            <Text as="div" variant="label" className="flex min-w-0 items-center">
+              {resolvedTitle}
+            </Text>
           ))}
         <PaneActionsSlot pane={pane} position="left" />
         {hideRightActions ? (
