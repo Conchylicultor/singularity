@@ -119,16 +119,22 @@ function lastOf<T>(arr: readonly T[]): T | null {
   return arr.length > 0 ? arr[arr.length - 1]! : null;
 }
 
+/** Coerce a block's jsonb payload (typed `unknown`) into a plain object. */
+function asObject(value: unknown): Record<string, unknown> {
+  return typeof value === "object" && value !== null
+    ? (value as Record<string, unknown>)
+    : {};
+}
+
 /** The block's text payload, or "" when it has none. */
 export function textOf(node: BlockNode): string {
-  const data = node.data as Record<string, unknown> | null | undefined;
-  return data && typeof data.text === "string" ? data.text : "";
+  const obj = asObject(node.data);
+  return typeof obj.text === "string" ? obj.text : "";
 }
 
 /** A copy of `node` with `data.text` set to `text` (spreads existing data). */
 export function withText(node: BlockNode, text: string): BlockNode {
-  const data = (node.data ?? {}) as Record<string, unknown>;
-  return { ...node, data: { ...data, text } };
+  return { ...node, data: { ...asObject(node.data), text } };
 }
 
 /** Immutable replace: return a new array with the node of `next.id` swapped. */
@@ -211,7 +217,7 @@ function applySplit(
 
   next = replace(next, updatedBlock);
 
-  const newData = { ...((block.data ?? {}) as Record<string, unknown>), text: afterText };
+  const newData = { ...asObject(block.data), text: afterText };
   const newNode: BlockNode = {
     id: op.newId,
     pageId: block.pageId,
