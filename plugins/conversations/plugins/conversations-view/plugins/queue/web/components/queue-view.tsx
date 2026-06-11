@@ -20,9 +20,11 @@ import type { ViewProps } from "@plugins/conversations/plugins/conversations-vie
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
 import { queueRanksResource } from "../../shared/resources";
+import { applyReorder, type ReorderVars } from "./apply-reorder";
 import { tasksResource } from "@plugins/tasks/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -104,8 +106,14 @@ export function QueueView({
   const conv = useConversations();
   const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
   const recentGone = conv.pending ? [] : conv.recentGone;
-  const queueResult = useResource(queueRanksResource);
-  const queueData = queueResult.pending ? { ranks: [], pinnedConversationId: null } : queueResult.data;
+  const { data: queueData, dispatch: dispatchReorder } = useOptimisticResource<
+    typeof queueRanksResource.initialData,
+    ReorderVars
+  >({
+    resource: queueRanksResource,
+    apply: applyReorder,
+    mutate: (vars) => fetchEndpoint(reorderQueue, {}, { body: vars }),
+  });
   const rankRows = queueData.ranks;
   const pinnedConversationId = queueData.pinnedConversationId;
   const tasksResult = useResource(tasksResource);
@@ -291,13 +299,14 @@ export function QueueView({
     setDraggingId(parseDragId(event.active.id));
   }, []);
 
-  const onDragEnd = useCallback(async (event: DragEndEvent) => {
+  const onDragEnd = useCallback((event: DragEndEvent) => {
     setDraggingId(null);
     const conversationId = parseDragId(event.active.id);
     const drop = event.over?.data.current as DropData | undefined;
     if (!conversationId || !drop || drop.targetId === conversationId) return;
-    await fetchEndpoint(reorderQueue, {}, { body: { conversationId, targetId: drop.targetId, zone: drop.zone } });
-  }, []);
+    // Optimistic: the dragged row re-ranks immediately; the WS push reconciles.
+    dispatchReorder({ conversationId, targetId: drop.targetId, zone: drop.zone });
+  }, [dispatchReorder]);
 
   const pinnedCluster = useMemo(
     () => {

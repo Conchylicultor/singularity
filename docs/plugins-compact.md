@@ -207,6 +207,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
     - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
     - **`networking`** [load-bearing] — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
+    - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay), with coarse and content-based confirmation and automatic rollback on reject.
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define and chrome components.
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
     - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
