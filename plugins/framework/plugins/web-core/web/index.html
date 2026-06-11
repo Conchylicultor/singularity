@@ -7,40 +7,62 @@
          written by ThemeInjector (key + envelope shape owned by theme-engine's
          theme-cache.ts) so a warm reload paints the correct theme on frame 0.
          No token/group/preset knowledge here — it just replays <style> elements
-         by id (which ThemeInjector then adopts) and sets the .dark class. On a
+         by id (which ThemeInjector then adopts) and sets the .dark class.
+         The cache is keyed by app path: it longest-prefix matches the current
+         pathname (mirroring apps' appMatchesPath) and falls back to the ""
+         (global) entry, so a forked app's reload replays its own theme. The
+         entry stores the CONFIGURED color mode, re-resolved against the OS here
+         so a "system" setting tracks an OS scheme flip between sessions. On a
          cold cache it only picks the color scheme from the OS so the neutral
          loading floor (app.css: html { background: Canvas }) paints in the right
          shade; ThemeInjector supplies real values once React mounts. -->
     <script>
       (function () {
+        var prefersDark = false;
         try {
-          var raw = localStorage.getItem("theme-engine:critical-css");
-          if (raw) {
-            var env = JSON.parse(raw);
-            var styles = (env && env.styles) || {};
-            for (var id in styles) {
-              if (!Object.prototype.hasOwnProperty.call(styles, id)) continue;
-              var el = document.createElement("style");
-              el.id = id;
-              el.textContent = styles[id];
-              document.head.appendChild(el);
-            }
-            document.documentElement.classList.toggle("dark", !!(env && env.dark));
-            return;
-          }
-        } catch (e) {
-          /* corrupt/unavailable cache → fall through to the cold floor */
-        }
-        try {
-          if (
-            window.matchMedia &&
-            window.matchMedia("(prefers-color-scheme: dark)").matches
-          ) {
-            document.documentElement.classList.add("dark");
-          }
+          prefersDark =
+            !!window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches;
         } catch (e) {
           /* matchMedia unavailable → default light floor */
         }
+        try {
+          var env = JSON.parse(
+            localStorage.getItem("theme-engine:critical-css"),
+          );
+          if (env && env.v === 2 && env.entries) {
+            var path = location.pathname;
+            var keys = [];
+            for (var k in env.entries) {
+              if (k !== "" && (path === k || path.indexOf(k + "/") === 0)) {
+                keys.push(k);
+              }
+            }
+            keys.sort(function (a, b) {
+              return b.length - a.length; // longest prefix wins
+            });
+            var entry = (keys[0] && env.entries[keys[0]]) || env.entries[""];
+            if (entry && entry.styles) {
+              for (var id in entry.styles) {
+                if (!Object.prototype.hasOwnProperty.call(entry.styles, id))
+                  continue;
+                var el = document.createElement("style");
+                el.id = id;
+                el.textContent = entry.styles[id];
+                document.head.appendChild(el);
+              }
+              var m = entry.mode;
+              document.documentElement.classList.toggle(
+                "dark",
+                m === "dark" || (m !== "light" && prefersDark),
+              );
+              return;
+            }
+          }
+        } catch (e) {
+          /* corrupt / pre-v2 / unavailable cache → fall through to the cold floor */
+        }
+        if (prefersDark) document.documentElement.classList.add("dark");
       })();
     </script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />

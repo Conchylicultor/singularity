@@ -8,8 +8,9 @@ import {
   useRef,
 } from "react";
 import { useConfig, useScopeForked } from "@plugins/config_v2/web";
-import { useCurrentAppId } from "@plugins/apps/web";
+import { useActiveApp } from "@plugins/apps/web";
 import { useResolvedColorMode, type ColorMode } from "../use-color-mode";
+import { themeEngineConfig } from "../../core";
 import { persistActiveForkedScope } from "../internal/active-scope-storage";
 import { ThemeScopeProvider } from "./theme-scope-context";
 import { ThemeEngine, useTokenGroupPresets } from "../slots";
@@ -21,7 +22,7 @@ import type {
 import { transformValues } from "../internal/transform";
 import { mergeGroupValues } from "../internal/merge-group-values";
 import { renderGroupBlock } from "../internal/serialize-vars";
-import { writeCriticalCss } from "../internal/theme-cache";
+import { writeCriticalCss, type CachedColorMode } from "../internal/theme-cache";
 
 // styleId for a token group's <style>, shared by the runtime injector, the
 // localStorage cache, and the pre-paint replay script (web-core/index.html).
@@ -156,7 +157,7 @@ function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId
 
 // Reads the active app's resolved color mode and toggles the single global `.dark`
 // class. Only one app is mounted at a time (AppsLayout), so a global class is
-// correct — no per-app DOM scoping. Switching apps re-runs useCurrentAppId
+// correct — no per-app DOM scoping. Switching apps re-runs useActiveApp
 // (pathname store) and re-resolves the mode automatically. The resolution itself
 // lives in useResolvedColorMode so the class and prop-themed components never drift.
 function ColorModeApplier({ resolved }: { resolved: ColorMode }) {
@@ -168,7 +169,8 @@ function ColorModeApplier({ resolved }: { resolved: ColorMode }) {
 }
 
 export function ThemeInjector() {
-  const appId = useCurrentAppId();
+  const active = useActiveApp();
+  const appId = active?.id;
   const scopeId = appId ? `app:${appId}` : undefined;
 
   // Persist the active app's scope (only when forked) so the pre-paint boot task
@@ -182,36 +184,42 @@ export function ThemeInjector() {
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
   const resolved = useResolvedColorMode(scopeId);
+  // The CONFIGURED color mode (not the resolved light/dark) is what the cache
+  // stores, so the pre-paint script can re-resolve "system" against live
+  // matchMedia each load. The live `.dark` class still uses `resolved` above.
+  const { colorMode } = useConfig(themeEngineConfig, { scopeId }) as {
+    colorMode: CachedColorMode;
+  };
+  const appPath = active?.path;
 
-  // Collect each group's rendered CSS text and write a single consolidated
-  // localStorage envelope, which the pre-paint script in web-core/index.html
-  // replays before first paint so a warm reload is themed on frame 0. This is a
-  // pure side effect (localStorage) — it intentionally uses a ref + microtask
-  // flush rather than React state, so reporting can never schedule a re-render
-  // (which from a layout effect would loop). One atomic write (never per-group)
-  // avoids a torn cache; we wait until every live group has reported. See
-  // theme-cache.
-  const cacheRef = useRef<{ styles: Map<string, string>; dark: boolean }>({
-    styles: new Map(),
-    dark: false,
-  });
-  cacheRef.current.dark = resolved === "dark";
+  // Collect each group's rendered CSS text and write the per-app-path localStorage
+  // envelope, which the pre-paint script in web-core/index.html replays before
+  // first paint so a warm reload is themed on frame 0. This is a pure side effect
+  // (localStorage) — it intentionally uses refs + a microtask flush rather than
+  // React state, so reporting can never schedule a re-render (which from a layout
+  // effect would loop). One atomic write per app (never per-group) avoids a torn
+  // cache; we wait until every live group has reported. The paint context is set
+  // in the render body (not an effect) so it is current before the flush
+  // microtask. See theme-cache.
+  const stylesRef = useRef<Map<string, string>>(new Map());
+  const ctxRef = useRef<{
+    appPath: string | undefined;
+    mode: CachedColorMode;
+    forked: boolean;
+  }>({ appPath, mode: colorMode, forked });
+  ctxRef.current = { appPath, mode: colorMode, forked };
   const groupCountRef = useRef(0);
   groupCountRef.current = groups.length;
   const flushScheduledRef = useRef(false);
 
   const flush = useCallback(() => {
     flushScheduledRef.current = false;
-    const { styles: map, dark } = cacheRef.current;
+    const map = stylesRef.current;
     if (map.size < groupCountRef.current) return; // torn cache — wait for all groups
     const styles: Record<string, string> = {};
     for (const [groupId, text] of map) styles[styleIdFor(groupId)] = text;
-    writeCriticalCss({
-      v: 1,
-      groups: [...map.keys()].sort((a, b) => a.localeCompare(b)),
-      styles,
-      dark,
-    });
+    const { appPath, mode, forked } = ctxRef.current;
+    writeCriticalCss({ appPath, styles, mode, forked });
   }, []);
 
   const scheduleFlush = useCallback(() => {
@@ -222,7 +230,7 @@ export function ThemeInjector() {
 
   const report = useCallback<CssReporter>(
     (groupId, text) => {
-      const map = cacheRef.current.styles;
+      const map = stylesRef.current;
       if (text === null) {
         if (!map.delete(groupId)) return;
       } else if (map.get(groupId) === text) {
@@ -235,8 +243,10 @@ export function ThemeInjector() {
     [scheduleFlush],
   );
 
-  // Re-flush when the resolved color mode changes (cache stores the .dark bit).
-  useEffect(scheduleFlush, [resolved, scheduleFlush]);
+  // Re-flush when the paint context changes even if no group's CSS text did —
+  // e.g. switching to an app with an identical theme, a fork toggle, or a
+  // configured-mode change. The flush reads the latest context from ctxRef.
+  useEffect(scheduleFlush, [appPath, colorMode, forked, scheduleFlush]);
 
   // Prune orphaned <style> elements left by the replay script for token groups
   // that no longer exist (stale cache after a group was removed). No GroupStyle

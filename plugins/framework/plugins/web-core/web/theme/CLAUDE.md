@@ -17,7 +17,11 @@ round-trip):
   every group to `localStorage` (`theme-engine`'s `theme-cache.ts`); a generic
   inline replay script in `index.html` re-injects it as `<style id="theme-engine-*">`
   before first paint. `ThemeInjector` then adopts those same elements by id, so
-  there is no flash and no duplicate styles.
+  there is no flash and no duplicate styles. The envelope is keyed by app path
+  (a forked app's reload replays its own theme; the script longest-prefix matches
+  the pathname and falls back to the `""` global entry) and stores the *configured*
+  color mode, so the script re-resolves a `"system"` setting against the live OS
+  scheme each load.
 - **Cold path (first-ever visit, incognito, cleared storage):** no cache, so the
   inline script only sets `color-scheme` from the OS preference and the page shows
   the neutral `html { background: Canvas }` loading floor below (the app is blank
