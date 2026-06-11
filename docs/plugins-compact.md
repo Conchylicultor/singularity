@@ -13,6 +13,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
+    - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
+      - Plugins:
+        - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
+        - **`rail`** — App-rail framing — the default 2.5rem icon rail.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.

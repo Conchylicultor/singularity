@@ -65,13 +65,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`apps`** — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Web:
-    - Slots: `Apps.App`
+    - Slots: `Apps.App`, `Apps.RailFraming`
     - Contributes: `Core.Root` → `AppsLayout`
     - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
-    - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
+    - Exports: Types: `ActiveApp`, `RailFramingContribution`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`
   - Cross-plugin:
-    - Slot contributors: `shell`
-    - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
+    - Slot contributors: `app-rail-framing`, `shell`
+    - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
+  - Core:
+    - Exports: Types: `RailFramingProps`
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
@@ -79,6 +81,27 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
             - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/text.Text`, `shell.Shell`
+    - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
+      - Web:
+        - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "App rail variant", `ThemeEngine.VariantGroup` "App rail" → `Picker`, `Apps.RailFraming` "Rail framing" → `Region`
+        - Uses: `apps.Apps`, `ui/variant-region.defineVariantRegionWeb`
+        - Exports: Values: `AppRailFraming`
+      - Server:
+        - Uses: `ui/variant-region.variantRegionServerContribution`
+      - Core:
+        - Uses: `ui/variant-region.defineVariantRegion`
+        - Exports: Values: `appRailFraming`
+      - Cross-plugin:
+        - Imported by: `apps/app-rail-framing/hidden`, `apps/app-rail-framing/rail`
+      - Plugins:
+        - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
+          - Web:
+            - Contributes: `AppRailFraming.Variant` "Hidden" → `HiddenFraming`
+            - Uses: `apps/app-rail-framing.AppRailFraming`
+        - **`rail`** — App-rail framing — the default 2.5rem icon rail.
+          - Web:
+            - Contributes: `AppRailFraming.Variant` "Rail" → `RailFraming`
+            - Uses: `apps.AppRail`, `apps/app-rail-framing.AppRailFraming`
     - **`debug`** — Debug app.
       - Plugins:
         - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
@@ -3545,7 +3568,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`
         - Exports: Types: `VariantRegionCore`, `VariantRegionFields`; Values: `defineVariantRegion`
       - Cross-plugin:
-        - Imported by: `ui/sidebar-framing`
+        - Imported by: `apps/app-rail-framing`, `ui/sidebar-framing`
 
 - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
   - Web:

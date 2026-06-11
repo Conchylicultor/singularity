@@ -15,6 +15,7 @@ export interface CollectedEntry {
 export const serverEntries: CollectedEntry[] = [
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/server"), dependsOn: ["database", "infra/plugins/endpoints", "tasks-core"] },
   { pluginPath: "agents", id: "agents", loader: () => import("@plugins/agents/server"), dependsOn: ["conversations", "conversations/plugins/model-provider", "database", "infra/plugins/attachments", "infra/plugins/endpoints", "primitives/plugins/icon-picker", "primitives/plugins/rank", "tasks-core"] },
+  { pluginPath: "apps/plugins/app-rail-framing", id: "apps.app-rail-framing", loader: () => import("@plugins/apps/plugins/app-rail-framing/server"), dependsOn: ["ui/plugins/variant-region"] },
   { pluginPath: "apps/plugins/deploy/plugins/servers", id: "apps.deploy.servers", loader: () => import("@plugins/apps/plugins/deploy/plugins/servers/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/secrets"] },
   { pluginPath: "apps/plugins/sonata/plugins/audio/plugins/piano", id: "apps.sonata.audio.piano", loader: () => import("@plugins/apps/plugins/sonata/plugins/audio/plugins/piano/server"), dependsOn: ["infra/plugins/asset-mirror"] },
   { pluginPath: "apps/plugins/sonata/plugins/audio/plugins/soundfont", id: "apps.sonata.audio.soundfont", loader: () => import("@plugins/apps/plugins/sonata/plugins/audio/plugins/soundfont/server"), dependsOn: ["infra/plugins/asset-mirror"] },
