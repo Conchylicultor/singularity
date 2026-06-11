@@ -95,7 +95,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <ContentScope>
-      <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
         <div
           className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
           style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}

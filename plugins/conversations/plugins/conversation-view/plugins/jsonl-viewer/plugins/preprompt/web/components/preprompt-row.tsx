@@ -10,12 +10,12 @@ export function PrepromptRow({ event }: { event: JsonlEvent }) {
 
   return (
     <CollapsibleCard
-      tone="primary"
+      className="border-primary/30 bg-primary/5"
       label={
-        <>
+        <span className="flex items-center gap-1.5 text-primary">
           <MdCampaign className="size-3.5" />
-          <span>Instructions</span>
-        </>
+          Instructions
+        </span>
       }
     >
       <Text as="div" variant="caption" className="whitespace-pre-wrap break-words text-muted-foreground">

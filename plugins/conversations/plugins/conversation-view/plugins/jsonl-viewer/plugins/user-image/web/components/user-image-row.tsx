@@ -9,7 +9,7 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
   const [expanded, setExpanded] = useState(false);
   const src = `data:${e.mime};base64,${e.data}`;
   return (
-    <div className="rounded-md border border-border/60 bg-muted/40 px-3 py-2">
+    <div className="rounded-md border border-border/60 bg-background px-3 py-2">
       <SectionLabel className="mb-1 flex items-center gap-2 text-3xs">
         <span>User image</span>
         <span>{e.mime}</span>

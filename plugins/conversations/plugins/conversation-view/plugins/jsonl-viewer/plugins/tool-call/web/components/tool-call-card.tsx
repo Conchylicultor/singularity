@@ -54,7 +54,6 @@ export function ToolCallCard({
   const isRunning = !event.result;
   return (
     <CollapsibleCard
-      tone="tool"
       error={hasError}
       defaultOpen={defaultOpen}
       aside={aside}

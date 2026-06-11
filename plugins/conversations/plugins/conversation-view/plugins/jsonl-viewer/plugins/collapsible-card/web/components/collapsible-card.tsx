@@ -7,8 +7,6 @@ import {
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 
-export type CollapsibleCardTone = "muted" | "primary" | "tool";
-
 /**
  * Wrapper that makes header content interactive inside the card's click-through
  * trigger area. The whole header row sits over a full-bleed toggle button
@@ -45,8 +43,6 @@ export interface CollapsibleCardProps {
   aside?: ReactNode;
   /** Far-right sibling of the header row (e.g. running-dots). */
   trailing?: ReactNode;
-  /** Chrome scheme. Default "muted". */
-  tone?: CollapsibleCardTone;
   /** Destructive chrome override (tool failures). */
   error?: boolean;
   /** Open on first render. Default false. */
@@ -56,48 +52,32 @@ export interface CollapsibleCardProps {
   children?: ReactNode;
 }
 
-const TONE = {
-  muted: {
-    card: "border-border/40 bg-muted/20",
-    header: "text-3xs tracking-wide text-muted-foreground",
-    hover: "hover:text-foreground",
-    body: "mt-2 border-l-2 border-muted-foreground/20 pl-3",
-  },
-  primary: {
-    card: "border-primary/30 bg-primary/5",
-    header: "text-xs tracking-wide text-primary/80",
-    hover: "hover:text-primary",
-    body: "mt-2 border-l-2 border-primary/20 pl-3",
-  },
-  tool: {
-    card: "border-border/60 bg-background",
-    header: "text-xs text-muted-foreground",
-    hover: "",
-    body: "",
-  },
-} as const;
-
+// One canonical chrome for every transcript card. Semantic accents live in the
+// label content (e.g. a primary tool-name Badge), the `error` flag (destructive
+// chrome), and the call-site `className` (the single Instructions callout) — never
+// in a per-family tone. See research/2026-06-12-conversations-transcript-card-design-system.md.
+const CARD_CHROME = "border-border/50 bg-muted/20";
 const ERROR_CARD = "border-destructive/60 bg-destructive/5";
+const HEADER =
+  "relative flex w-full items-center gap-2 text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
   label,
   filePath,
   aside,
   trailing,
-  tone = "muted",
   error,
   defaultOpen,
   className,
   children,
 }: CollapsibleCardProps) {
   const { open, triggerProps, contentId } = useCollapsible({ defaultOpen });
-  const t = TONE[tone];
   const sideContent = aside ?? (filePath ? <FilePath filePath={filePath} /> : null);
   return (
     <Card
       className={cn(
         "group px-3 py-2",
-        error ? ERROR_CARD : t.card,
+        error ? ERROR_CARD : CARD_CHROME,
         className,
       )}
     >
@@ -107,9 +87,7 @@ export function CollapsibleCard({
           fused onto one <button>, pulled in opposite directions and made the
           flex-1 ↔ content-sized fixes cancel each other out. Hovering anywhere
           in the row drives `t.hover` (it bubbles to this ancestor). */}
-      <div
-        className={cn("relative flex w-full items-center gap-2", t.header, t.hover)}
-      >
+      <div className={HEADER}>
         <button
           {...triggerProps}
           aria-label={open ? "Collapse" : "Expand"}
@@ -138,14 +116,11 @@ export function CollapsibleCard({
           </CardHeaderAction>
         )}
       </div>
-      {open &&
-        (t.body ? (
-          <div id={contentId} className={t.body}>
-            {children}
-          </div>
-        ) : (
-          <div id={contentId}>{children}</div>
-        ))}
+      {open && (
+        <div id={contentId} className="mt-2">
+          {children}
+        </div>
+      )}
     </Card>
   );
 }

@@ -4,10 +4,10 @@
 
 ## Plugin reference
 
-- Description: Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body, in muted or primary tone.
+- Description: Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className.
 - Web:
   - Uses: `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `primitives/card.Card`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/ui-kit.cn`
-  - Exports: Types: `CollapsibleCardProps`, `CollapsibleCardTone`; Values: `CardHeaderAction`, `CollapsibleCard`
+  - Exports: Types: `CollapsibleCardProps`; Values: `CardHeaderAction`, `CollapsibleCard`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-thinking`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/preprompt`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/unknown`
 
