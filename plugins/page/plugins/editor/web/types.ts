@@ -17,15 +17,22 @@ export interface BlockEditorAPI {
    * of a block that has visible (expanded) children, the new block is nested as
    * the first child instead of inserted as a following sibling. Pass
    * `opts.asChild`/`opts.childType` to force nesting (and the child's type).
+   * `opts.text` carries the editor's authoritative current text so the reducer
+   * splits the live string rather than the (possibly stale) stored text.
    */
-  split(position: number, opts?: { asChild?: boolean; childType?: string }): void;
+  split(
+    position: number,
+    opts?: { asChild?: boolean; childType?: string; text?: string },
+  ): void;
   /**
    * Backspace-at-start intent. If this block is indented (its parent is a normal
    * content block, not the page), this de-indents (outdents) it and keeps focus.
    * Otherwise it merges this block's text into the previous sibling and focuses
-   * that sibling. No-op for the first block at top level.
+   * that sibling. No-op for the first block at top level. `opts.text` carries the
+   * editor's authoritative current text so the reducer merges the live string
+   * rather than the (possibly stale) stored text.
    */
-  merge(): void;
+  merge(opts?: { text?: string }): void;
   remove(): void;
   indent(): void;
   outdent(): void;

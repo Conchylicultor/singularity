@@ -58,7 +58,7 @@ export function BlockTextEditor({
 }) {
   const data = textDataSchema.parse(block.data);
   const isEmpty = data.text.length === 0;
-  const { registerFocusHandle } = useBlockEditor();
+  const { registerFocusHandle, frozenIds } = useBlockEditor();
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
 
   const field = useEditableField({
@@ -67,6 +67,10 @@ export function BlockTextEditor({
     // to-do's `checked`) so saving text never clobbers it.
     onSave: (next) =>
       editor.update({ ...(block.data as Record<string, unknown>), text: next }),
+    // While a structural op owns this block's text (split/merge in flight), the
+    // server owns the field: mirror incoming `value`, never autosave — so a stale
+    // blur-flush can't clobber the reducer's text edit.
+    frozen: frozenIds.has(block.id),
   });
 
   const initialConfig = useMemo(

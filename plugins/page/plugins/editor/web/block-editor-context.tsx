@@ -2,50 +2,46 @@ import {
   createContext,
   useCallback,
   useContext,
+  useMemo,
   useRef,
   useState,
   type MutableRefObject,
   type ReactNode,
 } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   updateBlock,
   moveBlock,
   applyBlockOpEndpoint,
+  blocksResource,
   childrenOf,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
   pasteBlocks,
   type Block,
-  type BlockNode,
   type BlockOp,
   type SerializedBlock,
 } from "../core";
+import {
+  applyOverlayOp,
+  buildOverlayOp,
+  isReflected,
+  toNodes,
+  type BlockOverlayOp,
+} from "./internal/optimistic-block-ops";
 import type { BlockEditorAPI } from "./types";
-
-/**
- * Project full `Block` rows to the reducer's JSON-pure `BlockNode` shape. The
- * only structural mismatch is `rank`: a `Block` carries a `Rank` instance while
- * a `BlockNode` carries its stored string form, so we serialize it. This lets us
- * reuse `childrenOf` (and its rank-sorted sibling math) on the live `rowsRef`
- * when resolving split/merge intent client-side.
- */
-function toNodes(rows: Block[]): BlockNode[] {
-  return rows.map((b) => ({
-    id: b.id,
-    pageId: b.pageId,
-    parentId: b.parentId,
-    type: b.type,
-    data: b.data,
-    rank: String(b.rank),
-    expanded: b.expanded,
-  }));
-}
 
 interface BlockEditorContextValue {
   pageId: string;
+  /** Server truth with all pending structural ops replayed optimistically. */
+  blocks: Block[];
+  /** True until the first authoritative blocks snapshot arrives. */
+  pending: boolean;
+  /** Block ids whose text an in-flight structural op owns (freeze autosave). */
+  frozenIds: ReadonlySet<string>;
   focusedBlockId: string | null;
   setFocusedBlockId: (id: string | null) => void;
   registerFocusHandle: (id: string, handle: { focus: () => void }) => () => void;
@@ -105,6 +101,27 @@ export function BlockEditorProvider({
   const flatOrderRef = useRef<Block[]>([]);
   const rowsRef = useRef<Block[]>([]);
   const pendingFocusRef = useRef<string | null>(null);
+
+  // Structural keystroke ops apply optimistically: the client runs the SAME
+  // `applyBlockOp` reducer the server runs, overlaid on live-state truth and
+  // reconciled by the WS push. The captured `effect` drives both the idempotency
+  // apply-guard (in `applyOverlayOp`) and content-based confirmation here.
+  const params = useMemo(() => ({ pageId }), [pageId]);
+  const optimistic = useOptimisticResource<Block[], BlockOverlayOp, { pageId: string }>({
+    resource: blocksResource,
+    params,
+    apply: applyOverlayOp,
+    mutate: (v) =>
+      fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then(() => undefined),
+    isConfirmedBy: (serverData, v) => isReflected(serverData, v.effect),
+  });
+
+  // Block ids whose text any in-flight op owns — `BlockTextEditor` freezes their
+  // autosave so a stale `flush()` can't clobber the reducer's text edit.
+  const frozenIds = useMemo(
+    () => new Set(optimistic.inFlight.flatMap((o) => o.vars.textOwners)),
+    [optimistic.inFlight],
+  );
 
   const registerFocusHandle = useCallback(
     (id: string, handle: { focus: () => void }) => {
@@ -194,16 +211,15 @@ export function BlockEditorProvider({
     [],
   );
 
-  // Fire-and-forget a single tree op to the server. The reducer recomputes the
-  // page structure; the live `blocksResource` push re-renders the list. New
-  // blocks carry client-minted ids, so callers can mint + focus up front without
-  // awaiting the response.
+  // Apply a single tree op optimistically. The effect + textOwners are captured
+  // from the CURRENT optimistic rows (`rowsRef.current`), so chained keystrokes
+  // compose; `optimistic.dispatch` overlays the prediction and fires the network
+  // call. New blocks carry client-minted ids, so callers mint + focus up front.
   const dispatchOp = useCallback(
     (op: BlockOp) => {
-      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: single tree op; reducer + blocksResource push re-renders (see comment above).
-      void fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: op });
+      optimistic.dispatch(buildOverlayOp(op, rowsRef.current));
     },
-    [pageId],
+    [optimistic],
   );
 
   // Focus a freshly-minted block by its known id. If its text editor has already
@@ -251,7 +267,10 @@ export function BlockEditorProvider({
         focusNew(newId);
         dispatchOp({ kind: "insert", newId, type, data, afterId: blockId });
       },
-      split(position: number, opts?: { asChild?: boolean; childType?: string }) {
+      split(
+        position: number,
+        opts?: { asChild?: boolean; childType?: string; text?: string },
+      ) {
         // Resolve `asChild` here against the live page tree. The new block's id
         // is minted up front so we can focus it without awaiting the response.
         const nodes = toNodes(rowsRef.current);
@@ -276,9 +295,10 @@ export function BlockEditorProvider({
           newId,
           asChild,
           childType: opts?.childType,
+          text: opts?.text,
         });
       },
-      merge() {
+      merge(opts?: { text?: string }) {
         // Resolve de-indent vs. merge against the live page tree. Keyboard only
         // calls this at caret-start-of-line, so this owns the structural intent.
         const nodes = toNodes(rowsRef.current);
@@ -302,7 +322,7 @@ export function BlockEditorProvider({
         const idx = siblings.findIndex((s) => s.id === blockId);
         const prev = idx > 0 ? siblings[idx - 1] : null;
         if (!prev) return; // first block, nothing to merge into — no-op
-        dispatchOp({ kind: "merge", blockId });
+        dispatchOp({ kind: "merge", blockId, text: opts?.text });
         // Defer focusing the prev sibling to after the current keydown: moving
         // DOM focus synchronously mid-event lets the native backspace land on the
         // newly-focused block. The prev sibling already exists client-side.
@@ -361,6 +381,9 @@ export function BlockEditorProvider({
     <BlockEditorContext.Provider
       value={{
         pageId,
+        blocks: optimistic.data,
+        pending: optimistic.pending,
+        frozenIds,
         focusedBlockId,
         setFocusedBlockId,
         registerFocusHandle,

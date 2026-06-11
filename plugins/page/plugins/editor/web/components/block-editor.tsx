@@ -11,7 +11,6 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   buildTree,
@@ -28,7 +27,7 @@ import {
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { blocksResource, type Block, type SerializedBlock } from "../../core";
+import { type Block, type SerializedBlock } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { serializeForest } from "../serialize-blocks";
@@ -103,19 +102,21 @@ export function BlockEditor({
 }
 
 function BlockEditorInner() {
-  const { pageId, setFlatOrder, setRows } = useBlockEditor();
-  const result = useResource(blocksResource, { pageId });
+  // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
+  // (set by the effect below) tracks optimistic state — required for chained-op
+  // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
+  const { setFlatOrder, setRows, blocks, pending } = useBlockEditor();
 
   const { rows, flat } = useMemo(() => {
-    if (result.pending) {
+    if (pending) {
       return { rows: [] as Block[], flat: [] as FlatBlock[] };
     }
-    const sorted = [...result.data].sort((a, b) => Rank.compare(a.rank, b.rank));
+    const sorted = [...blocks].sort((a, b) => Rank.compare(a.rank, b.rank));
     const tree = buildTree(sorted);
     const out: FlatBlock[] = [];
     flattenTree(tree, 0, out);
     return { rows: sorted, flat: out };
-  }, [result]);
+  }, [blocks, pending]);
 
   useEffect(() => {
     setFlatOrder(flat.map((f) => f.block));
@@ -124,7 +125,7 @@ function BlockEditorInner() {
 
   const orderedIds = useMemo(() => flat.map((f) => f.block.id), [flat]);
 
-  if (result.pending) {
+  if (pending) {
     return (
       <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
         Loading...

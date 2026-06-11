@@ -14,6 +14,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { BlockEditorAPI } from "../types";
 import { useSelectionControl } from "../selection-control";
+import { serializeBlockText } from "../internal/block-text-extensions";
 
 function getAbsoluteOffset(): number | null {
   const selection = $getSelection();
@@ -100,12 +101,16 @@ export function KeyboardPlugin({
         if (event.shiftKey) return false;
 
         event.preventDefault();
+        let offset: number | null = null;
         lexicalEditor.getEditorState().read(() => {
-          const offset = getAbsoluteOffset();
-          if (offset !== null) {
-            editorRef.current.split(offset, splitOptionsRef.current);
-          }
+          offset = getAbsoluteOffset();
         });
+        if (offset !== null) {
+          // Serialize OUTSIDE the read above — `serializeBlockText` opens its
+          // own read, and nested reads would throw.
+          const text = serializeBlockText(lexicalEditor);
+          editorRef.current.split(offset, { ...splitOptionsRef.current, text });
+        }
         return true;
       },
       COMMAND_PRIORITY_HIGH,
@@ -123,7 +128,8 @@ export function KeyboardPlugin({
           // caret to the previous block, and an unprevented default would then
           // delete a character from whatever block ends up focused.
           event?.preventDefault();
-          editorRef.current.merge();
+          const text = serializeBlockText(lexicalEditor);
+          editorRef.current.merge({ text });
           return true;
         }
         return false;

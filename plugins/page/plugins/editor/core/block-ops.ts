@@ -32,8 +32,22 @@ export type BlockOp =
       newId: string;
       asChild?: boolean;
       childType?: string;
+      /**
+       * Authoritative current text from the editor; falls back to the stored
+       * block text when absent. Lets the reducer split the live (possibly
+       * not-yet-autosaved) string rather than stale stored text.
+       */
+      text?: string;
     }
-  | { kind: "merge"; blockId: string } // merge into prev sibling
+  | {
+      kind: "merge";
+      blockId: string;
+      /**
+       * Authoritative current text of the merging block from the editor; falls
+       * back to the stored block text when absent.
+       */
+      text?: string;
+    } // merge into prev sibling
   | { kind: "indent"; blockId: string }
   | { kind: "outdent"; blockId: string }
   | {
@@ -61,8 +75,9 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     newId: z.string(),
     asChild: z.boolean().optional(),
     childType: z.string().optional(),
+    text: z.string().optional(),
   }),
-  z.object({ kind: z.literal("merge"), blockId: z.string() }),
+  z.object({ kind: z.literal("merge"), blockId: z.string(), text: z.string().optional() }),
   z.object({ kind: z.literal("indent"), blockId: z.string() }),
   z.object({ kind: z.literal("outdent"), blockId: z.string() }),
   z.object({
@@ -188,7 +203,7 @@ function applySplit(
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
 
-  const text = textOf(block);
+  const text = op.text ?? textOf(block);
   const position = Math.min(op.position, text.length);
   const beforeText = text.slice(0, position);
   const afterText = text.slice(position);
@@ -240,7 +255,7 @@ function applyMerge(
   if (!prev) return blocks; // no-op
 
   // Concatenate text into prev.
-  let mergedPrev = withText(prev, textOf(prev) + textOf(block));
+  let mergedPrev = withText(prev, textOf(prev) + (op.text ?? textOf(block)));
 
   // Adopt the block's children under prev, appended after prev's existing
   // children, order-preserving.
