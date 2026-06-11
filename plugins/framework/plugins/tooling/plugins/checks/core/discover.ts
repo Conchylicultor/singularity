@@ -51,6 +51,19 @@ export function discoverTscTargets(root: string): TscTarget[] {
     });
   }
 
+  // Root-level test project: owns every `*.test.ts(x)` / `__tests__/**` file,
+  // which the runtime tsconfigs now exclude. Without it those files belong to
+  // no program — type-checked here (matching the dedicated test project main
+  // references via `tsc -b`) and linted via the same program.
+  if (existsSync(join(root, "tsconfig.test.json"))) {
+    targets.push({
+      name: "test",
+      dir: root,
+      args: ["-p", "tsconfig.test.json"],
+      hasEntrypoint: false,
+    });
+  }
+
   return targets.sort((a, b) => a.name.localeCompare(b.name));
 }
 
