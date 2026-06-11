@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useResource, useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
-import { MdOpenInFull, MdRefresh } from "react-icons/md";
+import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -47,7 +47,7 @@ export function BuildButton() {
           : "idle";
 
   const label = {
-    idle: "Build",
+    idle: "Builds",
     building: "Building…",
     restarting: "Server restarting…",
     updated: "Server updated",
@@ -76,6 +76,7 @@ export function BuildButton() {
           className={status === "failed" ? "text-destructive" : undefined}
         >
           {spinning && <Spinner spinning className="size-4" />}
+          {status === "idle" && <MdBuild className="size-4" />}
           {label}
           {status === "updated" && (
             <WithTooltip content="Server was rebuilt — click to reload this tab">
