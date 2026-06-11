@@ -124,6 +124,28 @@ async function fetchResourceValue<T, P extends ResourceParams>(
   return resource.schema.parse(body.value) as T;
 }
 
+// Optional read options for useResource.
+export interface UseResourceOptions<T, S> {
+  /**
+   * Derive a slice of the resource payload. The component then re-renders
+   * **only when the selected slice changes** (React Query runs `replaceEqualDeep`
+   * on the select output, so a deeply-equal slice keeps its previous reference
+   * and the observer is not notified). This is how a point/derived read of a
+   * large list resource — e.g. one row out of `conversations` — avoids the
+   * O(C²) re-render storm where every subscriber re-renders on every push.
+   *
+   * When `select` is set, notifications are scoped to data/error changes
+   * (`notifyOnChangeProps`), so the per-push `dataUpdatedAt` bump no longer
+   * forces a re-render. Consequence: `pending` flips to `false` silently (no
+   * re-render) if the selected slice is identical across the
+   * initialData→first-real-data boundary — harmless for point lookups, where
+   * the caller sees the same value either way.
+   *
+   * Pass a **stable** selector (`useCallback`) so it is not re-run every render.
+   */
+  select: (data: T) => S;
+}
+
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
 // `data` is only accessible after narrowing `result.pending === false`.
 // The generic T is inferred from the ResourceDescriptor — casting silently hides type
@@ -131,7 +153,17 @@ async function fetchResourceValue<T, P extends ResourceParams>(
 export function useResource<T, P extends ResourceParams = ResourceParams>(
   resource: ResourceDescriptor<T, P>,
   params?: P,
-): ResourceResult<T> {
+): ResourceResult<T>;
+export function useResource<T, S, P extends ResourceParams = ResourceParams>(
+  resource: ResourceDescriptor<T, P>,
+  params: P | undefined,
+  options: UseResourceOptions<T, S>,
+): ResourceResult<S>;
+export function useResource<T, S, P extends ResourceParams = ResourceParams>(
+  resource: ResourceDescriptor<T, P>,
+  params?: P,
+  options?: UseResourceOptions<T, S>,
+): ResourceResult<T | S> {
   const notifications = useContext(NotificationsContext);
   if (!notifications) {
     throw new Error("useResource must be used within a NotificationsProvider");
@@ -141,6 +173,7 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
   const p = (params ?? ({} as P)) as ResourceParams;
 
   const schema = resource.schema;
+  const select = options?.select;
 
   // Refcount sub/unsub on mount/unmount.
   useEffect(() => {
@@ -157,16 +190,23 @@ export function useResource<T, P extends ResourceParams = ResourceParams>(
     initialData: resource.initialData as NonUndefinedGuard<T>,
     // Seeded at epoch 0 so `dataUpdatedAt === 0` means only initialData has been seen.
     initialDataUpdatedAt: 0,
+    // With a selector, narrow re-renders to the selected slice: structural
+    // sharing keeps a deeply-equal slice's reference, and limiting
+    // notifyOnChangeProps to data/error stops the per-push `dataUpdatedAt`
+    // bump (which fires on every push) from forcing a re-render. We still read
+    // `q.dataUpdatedAt` below for `pending` — reading a prop does not re-enable
+    // it once notifyOnChangeProps is an explicit list.
+    ...(select ? { select, notifyOnChangeProps: ["data", "error"] as const } : {}),
   });
 
   const pending = q.dataUpdatedAt === 0;
-  const data = q.data;
+  const data = q.data as T | S;
   const error = q.error as Error | null;
   const refetchRef = useRef(q.refetch);
   refetchRef.current = q.refetch;
 
   return useMemo(
-    (): ResourceResult<T> =>
+    (): ResourceResult<T | S> =>
       pending
         ? { pending: true, error, refetch: () => refetchRef.current().then(() => {}) }
         : { pending: false, data, error, refetch: () => refetchRef.current().then(() => {}) },

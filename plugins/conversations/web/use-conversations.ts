@@ -1,6 +1,7 @@
+import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { ConversationSchema } from "@plugins/tasks-core/core";
+import { ConversationSchema, type ConversationListPayload } from "@plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { getConversation } from "../core/endpoints";
@@ -32,10 +33,22 @@ export function useConversations(): ConversationsState {
   };
 }
 
+// Point lookup by id. Subscribes to a derived SLICE of the conversations list
+// (just this id's row) via useResource's `select`, so the component re-renders
+// only when THAT conversation changes — not on every push to the shared list.
+// This is the load-bearing fix for the O(C²) re-render storm where ~175
+// per-conversation toolbar components all observe the same global list.
 export function useConversation(id: string): ConversationEntry | null {
-  const c = useConversations();
-  if (c.pending) return null;
-  return [...c.active, ...c.recentGone, ...c.system].find((x) => x.id === id) ?? null;
+  const select = useCallback(
+    (p: ConversationListPayload): ConversationEntry | null =>
+      p.active.find((x) => x.id === id) ??
+      p.recentGone.find((x) => x.id === id) ??
+      p.system.find((x) => x.id === id) ??
+      null,
+    [id],
+  );
+  const q = useResource(conversationsResource, undefined, { select });
+  return q.pending ? null : q.data;
 }
 
 // Point lookup by id. Checks the live WS-backed resource first (real-time
