@@ -123,8 +123,12 @@ export function CollapsibleCard({
             {label}
           </span>
         </span>
-        {/* Interactive siblings opt back in via CardHeaderAction. */}
-        {sideContent && <CardHeaderAction>{sideContent}</CardHeaderAction>}
+        {/* Interactive siblings opt back in via CardHeaderAction. min-w-0 lets
+            the aside (typically a FilePath with its own overflow ellipsis)
+            shrink below its content width instead of overflowing the card. */}
+        {sideContent && (
+          <CardHeaderAction className="min-w-0">{sideContent}</CardHeaderAction>
+        )}
         {trailing && (
           <CardHeaderAction className="ml-auto shrink-0">
             {trailing}

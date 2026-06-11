@@ -5,7 +5,10 @@ import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/p
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 
 export function toRelativePath(filePath: string, attemptId: string): string {
-  const marker = `/${attemptId}/`;
+  // The attempt id can sit at a path boundary (`/att-xxx/…`) or as the suffix
+  // of an encoded worktree-dir segment (`…-worktrees-att-xxx/…`), so anchor on
+  // `<attemptId>/` rather than requiring a leading slash.
+  const marker = `${attemptId}/`;
   const idx = filePath.indexOf(marker);
   return idx >= 0 ? filePath.slice(idx + marker.length) : filePath;
 }
