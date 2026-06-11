@@ -1866,6 +1866,10 @@
       "name": "@singularity/plugin-primitives-live-state",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/loading": {
+      "name": "@singularity/plugin-primitives-loading",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/log-channels": {
       "name": "@singularity/plugin-primitives-log-channels",
       "version": "0.0.1",
@@ -3736,6 +3740,8 @@
     "@singularity/plugin-primitives-link-chip": ["@singularity/plugin-primitives-link-chip@workspace:plugins/primitives/plugins/link-chip"],
 
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
+
+    "@singularity/plugin-primitives-loading": ["@singularity/plugin-primitives-loading@workspace:plugins/primitives/plugins/loading"],
 
     "@singularity/plugin-primitives-log-channels": ["@singularity/plugin-primitives-log-channels@workspace:plugins/primitives/plugins/log-channels"],
 

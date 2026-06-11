@@ -3,7 +3,7 @@ import { MdCheckCircle, MdDeleteForever, MdExitToApp } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useHasActiveSiblings } from "@plugins/conversations/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
@@ -16,13 +16,21 @@ export function DropAndExitItem({
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const pushesResult = useResource(pushesResource);
+  const siblingsResult = useHasActiveSiblings(conversation.taskId, conversation.id);
+  // The label/destructiveness decision reads TWO independently-arriving
+  // resources; gate on both so the destructive "Drop & Exit" default can never
+  // show (or be clicked) while either is still loading.
+  const decision = useCombinedResources({
+    pushes: pushesResult,
+    hasOtherActive: siblingsResult,
+  });
 
   const hasPush = useMemo(
-    () => pushesResult.pending ? false : pushesResult.data.some((p) => p.attemptId === conversation.attemptId),
-    [pushesResult, conversation.attemptId],
+    () =>
+      !decision.pending &&
+      decision.data.pushes.some((p) => p.attemptId === conversation.attemptId),
+    [decision, conversation.attemptId],
   );
-
-  const hasOtherActive = useHasActiveSiblings(conversation.taskId, conversation.id);
 
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {
     onSuccess: (data) => {
@@ -38,13 +46,16 @@ export function DropAndExitItem({
     }),
   });
 
-  const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
+  const disabled = isPending || decision.pending || live.status === "gone" || live.status === "done" || live.status === "starting";
 
-  const { Icon, label, variant } = hasPush
-    ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Exit", variant: "default" as const }
-    : hasOtherActive
-      ? { Icon: MdExitToApp, label: isPending ? "Closing…" : "Exit", variant: "default" as const }
-      : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Exit", variant: "destructive" as const };
+  // Neutral while loading — never the destructive default.
+  const { Icon, label, variant } = decision.pending
+    ? { Icon: MdExitToApp, label: "Exit", variant: "default" as const }
+    : hasPush
+      ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Exit", variant: "default" as const }
+      : decision.data.hasOtherActive
+        ? { Icon: MdExitToApp, label: isPending ? "Closing…" : "Exit", variant: "default" as const }
+        : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Exit", variant: "destructive" as const };
 
   return (
     <DropdownMenuItem

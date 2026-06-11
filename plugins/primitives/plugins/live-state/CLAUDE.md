@@ -186,6 +186,52 @@ bumps (resurrection / decrement above 0) are silent on the always-on path so a
 per-row list doesn't storm the low-volume channel; `emitDebug()` still fires on
 every change so the live-state-health inspector stays accurate.
 
+## Readiness gates — never collapse `pending` into a default
+
+`useResource` returns a discriminated union: `.data` does not exist while
+`pending`. Do **not** defeat it with `r.pending ? [] : r.data` — that collapses
+"still loading" and "genuinely empty" into the same value, and downstream UI
+renders a confidently-wrong state (empty lists, zero counts, destructive
+default button modes) during the load window. The
+`live-state/no-pending-data-collapse` lint rule bans the idiom (BURNDOWN
+allowlist in `lint/index.ts` — migrate entries, never add).
+
+Sanctioned patterns, in order of preference:
+
+```tsx
+// One resource, JSX — children only ever run with settled data.
+<ResourceView resource={songs} fallback={<Loading variant="cards" />}>
+  {(rows) => <Grid rows={rows} />}
+</ResourceView>
+
+// One resource, expression position.
+matchResource(songs, { ready: (rows) => …, pending: () => … })
+
+// SEVERAL resources — all-or-nothing, so a view can never render from a
+// half-loaded snapshot (the queue "Unranked" bug class). Accepts useResource
+// results, useOptimisticResource results, and nested combined results.
+const all = useCombinedResources({ conv, ranks, tasks });
+if (all.pending) return <Loading variant="rows" />;
+const { conv: c, ranks: r, tasks: t } = all.data;
+
+// Early return — plain narrowing is always fine.
+if (r.pending) return <Loading />;
+
+// List/grid surfaces: DataView's `loading` prop — emptyState requires
+// confirmed-empty, the skeleton renders while loading.
+<DataView rows={rows} loading={result.pending} … />
+```
+
+Defaults: `<ResourceView>`/`matchResource` fall back to `<Loading/>` (delayed
+~120ms — a warm WS load paints content with zero flash) and an error
+`Placeholder`. Data-dependent **action buttons** (label/destructiveness varies
+with data) render disabled-neutral while pending — never a default mode, and
+especially never the destructive one (see push-and-exit / drop-and-exit).
+
+**Gate restriction:** feed only whole-resource results into gates — never a
+`select` result (silent-flip caveat below). For a select-based readiness read,
+pass `gate: true` (next section).
+
 ## Slice selectors (`useResource(resource, params, { select })`)
 
 A **point or derived read of a list resource** — e.g. one row out of the
@@ -223,6 +269,14 @@ the selected slice is identical across the initialData→first-real-data boundar
 Harmless for point lookups — the caller sees the same value either way. Pass a
 **stable** selector (`useCallback`) so it is not re-run every render.
 
+**`gate: true`** fixes that caveat for select-based READINESS reads (e.g.
+`useHasActiveSiblings`, whose boolean decides a destructive button mode): the
+subscription stays un-scoped until the first authoritative value arrives — at
+most a couple of pushes — so the pending→settled flip always re-renders, then
+narrows to the select-scoped subscription with steady-state behavior identical
+to plain `select`. Without it, a gate built on a select result can wedge as
+pending forever.
+
 This narrows re-renders, not the WS subscription: N callers of the same
 `(key, params)` still share one refcounted sub (deduped server-side). The
 residual cost is the selector's own `find` (cheap, no React work); if a list
@@ -237,8 +291,8 @@ reaching for a heavier entity cache.
 - Description: Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
 - Load-bearing: yes
 - Web:
-  - Uses: `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
-  - Exports: Types: `ChannelStatuses`, `DebugSnapshot`, `DebugSub`, `LeaderInfo`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResyncSub`; Values: `centralResourceDescriptor`, `getNotificationsClient`, `hydrateResource`, `keyedResourceDescriptor`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
+  - Uses: `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/placeholder.Placeholder`, `primitives/tab-id.getTabId`
+  - Exports: Types: `ChannelStatuses`, `CombinedResources`, `DebugSnapshot`, `DebugSub`, `GateDataOf`, `GateInput`, `LeaderInfo`, `MatchResourceHandlers`, `ResourceDescriptor`, `ResourceKey`, `ResourceOrigin`, `ResourceResult`, `ResourceViewProps`, `ResyncSub`; Values: `centralResourceDescriptor`, `combineResources`, `getNotificationsClient`, `hydrateResource`, `keyedResourceDescriptor`, `matchResource`, `NotificationsClient`, `NotificationsProvider`, `queryKeyFor`, `resourceDescriptor`, `ResourceView`, `useCombinedResources`, `useNotificationsChannelStatuses`, `useNotificationsClient`, `useNotificationsStatus`, `useResource`
 - Cross-plugin:
   - Imported by: `active-data`, `active-data/attempt`, `active-data/task`, `active-data/task-link`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/render`, `apps/story/shell`, `apps/workflows/engine`, `attempt-view`, `auth`, `auth/google/setup-wizard`, `build`, `build/build-fix`, `build/build-info`, `collections`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/event-counter`, `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/notes`, `conversations/conversation-view/op-status`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/model-provider`, `conversations/summary`, `crashes`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/queue`, `fields/secret/config`, `floating-bar`, `framework/web-core`, `health`, `infra/claude-cli`, `infra/events`, `infra/jobs`, `notifications`, `page/editor`, `page/inline-page-link`, `page/links`, `page/page-link`, `plugin-meta/plugin-health`, `primitives/optimistic-mutation`, `review`, `review/code-review`, `tasks`, `tasks-core`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/recent`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `worktree-switcher`
 - Core:

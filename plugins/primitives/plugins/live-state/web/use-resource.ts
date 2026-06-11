@@ -144,6 +144,17 @@ export interface UseResourceOptions<T, S> {
    * Pass a **stable** selector (`useCallback`) so it is not re-run every render.
    */
   select: (data: T) => S;
+  /**
+   * Make the `pending` → settled flip reliable for READINESS GATES built on a
+   * `select` read. Without it, the flip is silent (no re-render) when the
+   * selected slice is identical across the initialData→first-real-data
+   * boundary — harmless for point lookups, fatal for a gate (it can wedge as
+   * pending forever). With `gate: true`, the subscription stays un-scoped
+   * (full notifications) until the first authoritative value arrives — at most
+   * a couple of pushes — then narrows to the select-scoped subscription, so
+   * the steady-state re-render behavior is identical to plain `select`.
+   */
+  gate?: boolean;
 }
 
 // AGENT RULE: Never cast the `data` returned by useResource (e.g. `data as Foo[]`).
@@ -174,6 +185,7 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
 
   const schema = resource.schema;
   const select = options?.select;
+  const gate = options?.gate === true;
 
   // Refcount sub/unsub on mount/unmount.
   useEffect(() => {
@@ -181,6 +193,14 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     return () => notifications.unobserve(key, p, origin);
     // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; callers pass small flat objects
   }, [notifications, key, origin, schema, JSON.stringify(p)]);
+
+  // `gate`: keep the subscription un-scoped until this (key, params) has
+  // settled once, so the pending→settled flip is guaranteed to re-render (a
+  // select-scoped sub flips silently when the slice is identical across the
+  // boundary). Keyed by query key so a param change re-gates.
+  const keyStr = JSON.stringify(queryKeyFor(key, p));
+  const [settledKey, setSettledKey] = useState<string | null>(null);
+  const selectActive = select !== undefined && (!gate || settledKey === keyStr);
 
   const q = useQuery({
     queryKey: queryKeyFor(key, p),
@@ -196,11 +216,19 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
     // bump (which fires on every push) from forcing a re-render. We still read
     // `q.dataUpdatedAt` below for `pending` — reading a prop does not re-enable
     // it once notifyOnChangeProps is an explicit list.
-    ...(select ? { select, notifyOnChangeProps: ["data", "error"] as const } : {}),
+    ...(selectActive ? { select, notifyOnChangeProps: ["data", "error"] as const } : {}),
   });
 
   const pending = q.dataUpdatedAt === 0;
-  const data = q.data as T | S;
+  useEffect(() => {
+    if (gate && !pending && settledKey !== keyStr) setSettledKey(keyStr);
+  }, [gate, pending, settledKey, keyStr]);
+
+  // Gate transition render (settled, but the select-scoped sub not applied
+  // yet): apply the selector manually so callers always see the slice type.
+  const data = (select !== undefined && !selectActive && !pending
+    ? select(q.data as T)
+    : q.data) as T | S;
   const error = q.error as Error | null;
   const refetchRef = useRef(q.refetch);
   refetchRef.current = q.refetch;

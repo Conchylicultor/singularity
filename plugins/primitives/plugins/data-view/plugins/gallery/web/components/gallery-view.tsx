@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type {
   DataViewRenderProps,
   FieldDef,
@@ -97,6 +98,11 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   const rows = props.rows;
   const fields = props.fields;
   const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
+
+  // Loading wins over empty: emptyState requires confirmed-empty.
+  if (props.loading) {
+    return <>{props.loadingState ?? <Loading variant="cards" count={8} />}</>;
+  }
 
   if (rows.length === 0) {
     return (

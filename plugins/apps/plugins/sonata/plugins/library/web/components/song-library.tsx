@@ -1,5 +1,5 @@
 import { useMemo, useState } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
@@ -88,6 +88,54 @@ export function SongLibrary() {
     [],
   );
 
+  // One render path for both states: while loading, DataView renders its
+  // skeleton (`loading`) and the chrome (title / search / add actions) stays
+  // stable — the "No songs yet" empty state requires confirmed-empty.
+  const renderLibrary = (rows: Song[], loading: boolean) => (
+    <Library.Sort.Dispatch
+      activeSortId={sort}
+      songs={rows}
+      render={(ordered) => (
+        <DataView<Song>
+          rows={ordered}
+          fields={fields}
+          rowKey={(s) => s.id}
+          views={["gallery", "table"]}
+          defaultView="gallery"
+          storageKey="sonata:library"
+          title="Library"
+          loading={loading}
+          actions={
+            <>
+              {rows.length > 0 ? (
+                <SegmentedControl
+                  options={sortOptions}
+                  value={sort}
+                  onChange={setSort}
+                  variant="ghost"
+                  size="sm"
+                />
+              ) : null}
+              {/* Per-source "add a song" affordances (e.g. MIDI Import). */}
+              {sources.map((s) =>
+                s.AddAction ? <s.AddAction key={s.sourceId} /> : null,
+              )}
+            </>
+          }
+          onRowActivate={(s) => void openSong(s)}
+          emptyState={<>No songs yet — add one to get started.</>}
+          viewOptions={{
+            gallery: {
+              renderCard: (s: Song) => (
+                <SongCard song={s} onOpen={(x) => void openSong(x)} />
+              ),
+            },
+          }}
+        />
+      )}
+    />
+  );
+
   return (
     <div className="flex h-full min-h-0 flex-col">
       {songs.error ? (
@@ -95,47 +143,13 @@ export function SongLibrary() {
           Failed to load songs: {songs.error.message}
         </Text>
       ) : null}
-      <Library.Sort.Dispatch
-        activeSortId={sort}
-        songs={songs.pending ? [] : songs.data}
-        render={(ordered) => (
-          <DataView<Song>
-            rows={ordered}
-            fields={fields}
-            rowKey={(s) => s.id}
-            views={["gallery", "table"]}
-            defaultView="gallery"
-            storageKey="sonata:library"
-            title="Library"
-            actions={
-              <>
-                {!songs.pending && songs.data.length > 0 ? (
-                  <SegmentedControl
-                    options={sortOptions}
-                    value={sort}
-                    onChange={setSort}
-                    variant="ghost"
-                    size="sm"
-                  />
-                ) : null}
-                {/* Per-source "add a song" affordances (e.g. MIDI Import). */}
-                {sources.map((s) =>
-                  s.AddAction ? <s.AddAction key={s.sourceId} /> : null,
-                )}
-              </>
-            }
-            onRowActivate={(s) => void openSong(s)}
-            emptyState={<>No songs yet — add one to get started.</>}
-            viewOptions={{
-              gallery: {
-                renderCard: (s: Song) => (
-                  <SongCard song={s} onOpen={(x) => void openSong(x)} />
-                ),
-              },
-            }}
-          />
-        )}
-      />
+      {matchResource(songs, {
+        pending: () => renderLibrary([], true),
+        // The error banner above already covers the failed-load case; keep the
+        // (skeleton) chrome underneath it rather than a second error block.
+        error: () => renderLibrary([], true),
+        ready: (rows) => renderLibrary(rows, false),
+      })}
     </div>
   );
 }

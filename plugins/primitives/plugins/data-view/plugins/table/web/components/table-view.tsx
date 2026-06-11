@@ -4,6 +4,7 @@ import {
   type ColumnDef,
   type SortState as TableSortState,
 } from "@plugins/primitives/plugins/data-table/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useResolveCell,
   type DataViewRenderProps,
@@ -28,6 +29,11 @@ function mapSort(sort: SortState | null): TableSortState | null {
 export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
   const resolveCell = useResolveCell();
+
+  // Loading wins over empty: emptyState requires confirmed-empty.
+  if (props.loading) {
+    return <>{props.loadingState ?? <Loading variant="rows" count={6} />}</>;
+  }
 
   // DataTable's `emptyLabel` is string-only; render a custom empty node here so
   // the host-provided `emptyState` (ReactNode) is honored.

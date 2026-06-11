@@ -113,5 +113,9 @@ export function useOptimisticResource<
     [pending],
   );
 
-  return { data, pending: result.pending, dispatch, inFlight };
+  // Stable identity so the result can feed memo deps / combineResources gates.
+  return useMemo(
+    () => ({ data, pending: result.pending, dispatch, inFlight }),
+    [data, result.pending, dispatch, inFlight],
+  );
 }

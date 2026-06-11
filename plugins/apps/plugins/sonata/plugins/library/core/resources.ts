@@ -4,10 +4,10 @@ import { SongSchema } from "./schemas";
 import type { Song } from "./schemas";
 
 /**
- * The reactive list of saved songs, ordered newest-first. Seeded with `[]` so
- * the gallery renders an empty grid (no pending flash) before the first push.
- * The server backs this with a `push`-mode live resource that `.notify()`s
- * after every create/delete mutation.
+ * The reactive list of saved songs, ordered newest-first. The server backs
+ * this with a `push`-mode live resource that `.notify()`s after every
+ * create/delete mutation. While `pending`, the library renders DataView's
+ * loading skeleton — never the empty state.
  */
 export const songsResource = resourceDescriptor<Song[]>(
   "sonata-songs",

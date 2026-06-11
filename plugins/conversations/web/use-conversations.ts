@@ -1,6 +1,6 @@
 import { useCallback } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, type ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { ConversationSchema, type ConversationListPayload } from "@plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
@@ -57,22 +57,30 @@ export function useConversation(id: string): ConversationEntry | null {
 // Derived SLICE: does this task have another active conversation? Subscribes
 // only to that boolean via `select`, so the component re-renders only when the
 // answer flips — not on every conversations push. Used by drop-and-exit.
-export function useHasActiveSiblings(taskId: string, excludeId: string): boolean {
+//
+// Returns the gateable result (NOT a bare boolean): the answer decides a
+// DESTRUCTIVE action, so callers must distinguish "loading" from "no sibling"
+// — collapsing pending to `false` is exactly the wrong-default-while-loading
+// bug. `gate: true` makes the pending→settled flip re-render reliably.
+export function useHasActiveSiblings(
+  taskId: string,
+  excludeId: string,
+): ResourceResult<boolean> {
   const select = useCallback(
     (p: ConversationListPayload) =>
       p.active.some((c) => c.taskId === taskId && c.id !== excludeId),
     [taskId, excludeId],
   );
-  const q = useResource(conversationsResource, undefined, { select });
-  return q.pending ? false : q.data;
+  return useResource(conversationsResource, undefined, { select, gate: true });
 }
 
 // Derived SLICE: is there another active conversation in this worktree? Used by
-// push-and-exit to decide between Exit and Drop & Exit.
+// push-and-exit to decide between Exit and Drop & Exit. Gateable for the same
+// reason as useHasActiveSiblings — the answer picks a destructive default.
 export function useHasActiveSiblingInWorktree(
   worktreePath: string,
   excludeId: string,
-): boolean {
+): ResourceResult<boolean> {
   const select = useCallback(
     (p: ConversationListPayload) =>
       p.active.some(
@@ -83,8 +91,7 @@ export function useHasActiveSiblingInWorktree(
       ),
     [worktreePath, excludeId],
   );
-  const q = useResource(conversationsResource, undefined, { select });
-  return q.pending ? false : q.data;
+  return useResource(conversationsResource, undefined, { select, gate: true });
 }
 
 // Derived SLICE: the active list only. Narrows away recentGone/system/gone-count

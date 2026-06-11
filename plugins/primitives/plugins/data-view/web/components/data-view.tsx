@@ -34,6 +34,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     searchAccessor,
     onRowActivate,
     emptyState,
+    loading,
+    loadingState,
     viewOptions,
   } = props;
 
@@ -109,6 +111,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     onRowActivate: onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
     options: viewOptions?.[activeViewId],
     emptyState,
+    loading,
+    loadingState,
   };
 
   return (

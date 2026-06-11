@@ -11,7 +11,7 @@ import { exitConversation } from "@plugins/conversations/plugins/conversation-vi
 import { dropAndExit } from "@plugins/conversations/plugins/conversation-view/plugins/drop-and-exit/core";
 import { toast } from "@plugins/notifications/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
@@ -89,36 +89,46 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   // Derived slice: only re-renders when this worktree's sibling-active answer
   // flips, not on every conversations push. `conversation` may be null on first
   // render — the value is only consumed below after the `!conversation` guard.
-  const hasOtherActiveInWorktree = useHasActiveSiblingInWorktree(
+  const siblingResult = useHasActiveSiblingInWorktree(
     conversation?.worktreePath ?? "",
     convId,
   );
+  // The exit-vs-drop decision reads TWO independently-arriving resources
+  // (pushes + the conversations slice). Gate on both together: while either is
+  // loading the button shows a neutral disabled "Exit" instead of falling
+  // through to the destructive "Drop & Exit" default.
+  const exitDecision = useCombinedResources({
+    pushes: pushesResult,
+    hasSibling: siblingResult,
+  });
 
   const isNotRunning = live?.status === "gone" || live?.status === "done";
 
-  const mode: Mode = useMemo(() => {
-    if (!conversation || !live) return "exit";
-    if (isNotRunning) return "restore";
-    if (!isDraftEmpty(draft)) return "send";
-    if (live.status === "working") return "stop";
+  const { mode, provisional } = useMemo((): { mode: Mode; provisional: boolean } => {
+    if (!conversation || !live) return { mode: "exit", provisional: false };
+    if (isNotRunning) return { mode: "restore", provisional: false };
+    if (!isDraftEmpty(draft)) return { mode: "send", provisional: false };
+    if (live.status === "working") return { mode: "stop", provisional: false };
     if (files.length > 0) {
-      if (files.every((f) => f.path.startsWith("research/"))) return "go";
-      return "push-and-exit";
+      if (files.every((f) => f.path.startsWith("research/"))) return { mode: "go", provisional: false };
+      return { mode: "push-and-exit", provisional: false };
     }
-    const pushes = pushesResult.pending ? [] : pushesResult.data;
+    if (exitDecision.pending) return { mode: "exit", provisional: true };
+    const { pushes, hasSibling } = exitDecision.data;
     const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
-    if (hasPush) return "exit";
-    return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [isNotRunning, draft, files, pushesResult, hasOtherActiveInWorktree, conversation, live]);
+    if (hasPush) return { mode: "exit", provisional: false };
+    return { mode: hasSibling ? "exit" : "drop-and-exit", provisional: false };
+  }, [isNotRunning, draft, files, exitDecision, conversation, live]);
 
   if (!conversation || !live) return null;
 
   const hasSession = !!live.claudeSessionId;
   // `busy` (any in-flight POST) gives uniform double-click protection across
   // every action — the same guard `send` always relied on, now shared by all.
+  // `provisional` (data still loading) keeps the neutral mode un-clickable.
   const disabled = mode === "restore"
     ? busy || !hasSession
-    : busy || live.status === "starting";
+    : busy || live.status === "starting" || provisional;
 
   function specFor(m: Mode): ActionSpec | null {
     switch (m) {

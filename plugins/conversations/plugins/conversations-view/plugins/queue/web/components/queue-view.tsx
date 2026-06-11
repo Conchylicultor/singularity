@@ -15,11 +15,12 @@ import { MdClose, MdKeyboardDoubleArrowDown, MdOutlineQueue, MdVerticalAlignBott
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { useConversations } from "@plugins/conversations/web";
+import { conversationsResource } from "@plugins/conversations/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks-core/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
@@ -103,10 +104,8 @@ export function QueueView({
   onNavigate,
   onCloseConversation,
 }: ViewProps) {
-  const conv = useConversations();
-  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
-  const recentGone = conv.pending ? [] : conv.recentGone;
-  const { data: queueData, dispatch: dispatchReorder } = useOptimisticResource<
+  const convResult = useResource(conversationsResource);
+  const queueResult = useOptimisticResource<
     typeof queueRanksResource.initialData,
     ReorderVars
   >({
@@ -114,16 +113,48 @@ export function QueueView({
     apply: applyReorder,
     mutate: (vars) => fetchEndpoint(reorderQueue, {}, { body: vars }),
   });
-  const rankRows = queueData.ranks;
-  const pinnedConversationId = queueData.pinnedConversationId;
+  const dispatchReorder = queueResult.dispatch;
   const { mutate: rerankMutation } = useEndpointMutation(rerankQueue);
   const tasksResult = useResource(tasksResource);
+  // The section assignment reads THREE independently-arriving resources
+  // (conversations, queue ranks, tasks). Gate on all of them together: a
+  // half-loaded snapshot (conversations present, ranks still empty) would
+  // bucket every waiting conversation as "Unranked".
+  const all = useCombinedResources({
+    conv: convResult,
+    queue: queueResult,
+    tasks: tasksResult,
+  });
 
-  // Unified task-group logic across all statuses.
-  const { waitingGroups, workingGroups, allWaitingCount, blockedIds, unranked } = useMemo(() => {
-    const ranks = new Map(rankRows.map((r) => [r.conversationId, r.rank]));
-    const taskRows = tasksResult.pending ? [] : tasksResult.data;
-    const taskStatusMap = new Map(taskRows.map((t) => [t.id, t.status]));
+  // Unified task-group logic across all statuses — computed only from a
+  // mutually-consistent settled snapshot (empty until `all` settles; the
+  // component early-returns a skeleton before rendering in that state).
+  const {
+    waitingGroups,
+    workingGroups,
+    allWaitingCount,
+    blockedIds,
+    unranked,
+    disconnected,
+    recentGone,
+    pinnedConversationId,
+  } = useMemo(() => {
+    if (all.pending) {
+      return {
+        waitingGroups: [] as TaskGroup[],
+        workingGroups: [] as TaskGroup[],
+        allWaitingCount: 0,
+        blockedIds: new Set<string>(),
+        unranked: [] as Conversation[],
+        disconnected: [] as Conversation[],
+        recentGone: [] as Conversation[],
+        pinnedConversationId: null as string | null,
+      };
+    }
+    const { conv, queue, tasks } = all.data;
+    const active = conv.active;
+    const ranks = new Map(queue.ranks.map((r) => [r.conversationId, r.rank]));
+    const taskStatusMap = new Map(tasks.map((t) => [t.id, t.status]));
     const ranked: RankedConversation[] = [];
     const blocked = new Set<string>();
     const noRank: Conversation[] = [];
@@ -175,13 +206,11 @@ export function QueueView({
       allWaitingCount: waitingCount,
       blockedIds: blocked,
       unranked: noRank,
+      disconnected: active.filter((c) => c.status === "gone"),
+      recentGone: conv.recentGone,
+      pinnedConversationId: queue.pinnedConversationId,
     };
-  }, [active, rankRows, tasksResult]);
-
-  const disconnected = useMemo(
-    () => active.filter((c) => c.status === "gone"),
-    [active],
-  );
+  }, [all]);
 
   const [workingExpanded, setWorkingExpanded] = useState<boolean>(() => {
     try {
@@ -321,7 +350,13 @@ export function QueueView({
     [waitingGroups, pinnedCluster],
   );
 
-  if (!conv.pending && waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
+  // All three resources gate together; the delayed skeleton means a warm
+  // (<100ms) load paints the real sections directly with no flash.
+  if (all.pending) {
+    return <Loading variant="rows" count={5} className="px-1" />;
+  }
+
+  if (waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
       <Text as="div" variant="caption" className="px-4 py-8 text-center text-muted-foreground">
         All clear — no conversations are waiting on you.
@@ -356,7 +391,7 @@ export function QueueView({
     <div className="flex flex-col isolate">
       {/* Queue */}
       <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
-      {queueExpanded && !conv.pending && waitingGroups.length === 0 && (
+      {queueExpanded && waitingGroups.length === 0 && (
         <div className="px-2 py-1 pl-2 text-2xs italic text-muted-foreground">
           No conversations waiting
         </div>

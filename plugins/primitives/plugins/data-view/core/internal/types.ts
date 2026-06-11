@@ -57,6 +57,14 @@ export interface DataViewRenderProps<TRow> {
   /** viewOptions[activeViewId] — opaque to the host, typed by each view. */
   options: unknown;
   emptyState?: ReactNode;
+  /**
+   * True while the backing data is still loading. Views render `loadingState`
+   * (default: a skeleton) and NEVER `emptyState` — empty requires
+   * confirmed-empty (`!loading && rows.length === 0`).
+   */
+  loading?: boolean;
+  /** Override the loading render; default is each view's own skeleton shape. */
+  loadingState?: ReactNode;
 }
 
 /**
@@ -100,6 +108,14 @@ export interface DataViewProps<TRow> {
   searchAccessor?: (row: TRow) => string;
   onRowActivate?: (row: TRow) => void;
   emptyState?: ReactNode;
+  /**
+   * True while the backing data is still loading. The active view renders
+   * `loadingState` (default: a skeleton) instead of `emptyState`, so a
+   * loading list can never masquerade as a confirmed-empty one.
+   */
+  loading?: boolean;
+  /** Override the loading render; default is each view's own skeleton shape. */
+  loadingState?: ReactNode;
   /** Opaque per-view options channel, keyed by view id. */
   viewOptions?: Record<string, unknown>;
 }

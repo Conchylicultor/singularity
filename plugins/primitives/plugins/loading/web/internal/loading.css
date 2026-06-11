@@ -1,0 +1,23 @@
+/* Delay-before-show: the node mounts invisible and fades in only after 120ms.
+   Live-state resources usually settle over the WS in <100ms, so on the common
+   path the data arrives first and the loading node unmounts before it ever
+   paints — zero flash. The fade only appears on genuinely slow loads (WS down,
+   HTTP fallback). Pure CSS — no JS timers. Plugin-local per the theme rule:
+   keyframes live in the consuming plugin, not app.css. */
+@keyframes loading-fade-in {
+  to {
+    opacity: 1;
+  }
+}
+
+.loading-delayed {
+  opacity: 0;
+  animation: loading-fade-in 150ms ease-out 120ms forwards;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .loading-delayed {
+    /* Still delayed (opacity snaps at the delay boundary), just no fade. */
+    animation-duration: 0ms;
+  }
+}
