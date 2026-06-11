@@ -1,0 +1,187 @@
+# Token-group CSS var single-owner guard
+
+## Context
+
+Every CSS theme variable (`--x`) should have exactly **one declaring owner**. Token
+*value* resolution is a deliberate layered cascade (default → preset → override, with
+total intentional precedence). Token *declaration* is the opposite: it must be
+single-owner, and any overlap there is a real, ambiguous conflict.
+
+Today nothing enforces this. Two failure modes exist with no guard:
+
+1. **Two token groups declaring the same `--<kebab>` var.** `ThemeInjector`
+   (`plugins/ui/plugins/theme-engine/web/components/theme-injector.tsx`) emits one
+   `<style id="theme-engine-<groupId>">` block per group. If two groups claimed the
+   same var, whichever `<style>` is injected last silently wins — order-dependent, no
+   error. (Currently the 8 groups happen to be disjoint, but nothing keeps them so.)
+
+2. **A token-group var also declared in static CSS.** `web/theme/CLAUDE.md` already
+   states the intended invariant — *"the only place where CSS custom properties may be
+   defined … plugins consume tokens, never define them"* — but it's prose, unenforced.
+   And the supposed single source itself duplicates: `plugins/framework/plugins/web-core/web/theme/app.css`
+   carries a 167-line `:root`/`.dark` block (lines 109–276, comment *"Default theme
+   values — overridden at runtime by ThemeInjector"*) that statically re-declares **all
+   79 token-group vars** as a pre-JS fallback. So every token-group var currently has
+   two owners: its token group (runtime) and this static block (build-time).
+
+**Outcome:** a build check makes overlapping var ownership fail loudly, so every theme
+token has exactly one declaring owner. To make the codebase actually satisfy it, the
+static fallback duplication is removed and the token-group descriptors become the sole
+declaration source. The check reads the **real descriptors** (not a text-parse), fixing
+the abstraction `css-vars-supplied` worked around.
+
+Decisions locked with the user:
+- **Delete the static `:root`/`.dark` token fallback entirely** (ThemeInjector becomes
+  the sole declarer; accept a brief unstyled flash before the injector mounts — this is
+  a no-SSR SPA).
+- **Source token-group vars from the real descriptors via a generated manifest**
+  (codegen imports the actual `defineTokenGroup` descriptors), not regex text-parsing.
+
+## Background: how token-group vars are declared
+
+- `defineTokenGroup(id, schema)` (`plugins/ui/plugins/theme-engine/core/define-token-group.ts`)
+  is a **pure** function. It computes `descriptor.vars = { key: "--" + camelToKebab(key) }`.
+- Each group's web barrel (e.g. `plugins/ui/plugins/tokens/plugins/shape/web/index.ts`)
+  contributes `ThemeEngine.TokenGroup({ id, label, descriptor: shapeGroup, … })` — so
+  the real `descriptor.vars` is reachable through the **public web-barrel contribution**
+  (slot id `ui.theme-engine.token-group`). The descriptor also lives in `shared/group.ts`,
+  but `shared/` is plugin-private (boundary R10) — not importable cross-plugin.
+- A build check in `framework/tooling/checks` must not import `@plugins/ui/...`
+  descriptors at runtime (inverts framework→ui layering). But **codegen** already
+  imports plugin web barrels at build time via `importBarrel` + `registerBarrelStubs`
+  (`plugins/plugin-meta/plugins/barrel-import/core`) — exactly how
+  `facets:render-complete` and the contributions facet read live contributions. That is
+  the boundary-clean path to the real descriptors.
+
+## Design
+
+### 1. Codegen: generated manifest from real descriptors
+
+New generator mirroring `reorderable-slots-gen.ts`
+(`plugins/framework/plugins/tooling/plugins/codegen/core/`):
+
+- New file `token-group-vars-gen.ts`:
+  - `registerBarrelStubs(root)`, enumerate plugin dirs (reuse `buildPluginTree(..., { skipBarrelImport: true })` or `collectAllPlugins`), `importBarrel(web/index.ts)` for each.
+  - Generically collect every contribution whose slot id is `ui.theme-engine.token-group`
+    (the TokenGroup slot's own registry — not naming specific groups), reading
+    `contribution.id` and `contribution.descriptor.vars`. This auto-discovers any token
+    group anywhere, satisfying collection-consumer separation.
+  - Produce `Record<groupId, string[]>` (vars sorted; groups sorted). Per-group
+    structure is kept so cross-group collisions are representable.
+  - `renderTokenGroupVarsManifest(root)` → file contents; `generateTokenGroupVars({ root })`
+    writes if drifted; `tokenGroupVarsManifestPath(root)`. Export all three from
+    `codegen/core/index.ts`. Wire `generateTokenGroupVars` into the codegen build step
+    next to `generateReorderableSlots`.
+- Committed manifest `plugins/framework/plugins/tooling/plugins/checks/core/token-group-vars.generated.ts`
+  (consumed only by build-time checks in this plugin; committed for PR-visibility and
+  drift enforcement, per the reorderable-slots precedent). Shape:
+  ```ts
+  // DO NOT EDIT — autogenerated by `./singularity build`
+  export const TOKEN_GROUP_VARS: Record<string, readonly string[]> = {
+    "categorical": ["--categorical-1", …],
+    "color-palette": ["--background", …, "--ring"],
+    …
+  };
+  ```
+  Export it from `checks/core/index.ts`.
+
+> A facet was rejected: `facets:render-complete` forces every facet to add three render
+> sub-plugins (diff/detail/contributions) — heavy ceremony for build-only data. The
+> generator uses `importBarrel` directly, like the render-complete check already does.
+
+### 2. New check: `token-group-vars-in-sync` (drift guard for the manifest)
+
+`plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync/check/index.ts`
+— re-render via `renderTokenGroupVarsManifest(root)`, compare to the committed file,
+fail on drift with a "run `./singularity build`" hint. Byte-for-byte the
+`reorderable-slots-in-sync` pattern. (Standard scaffold: `package.json`, `CLAUDE.md`,
+`check/index.ts`; discovered automatically by the `check` collected-dir on next build.)
+
+### 3. New check: `css-vars-single-owner` (the guard — task deliverable)
+
+`plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-single-owner/check/index.ts`.
+Consumes `TOKEN_GROUP_VARS` and fails if a var has more than one owner:
+
+- **(a) Cross-group:** any `--x` appearing in two or more groups → list the var + the
+  groups that claim it. Hint: rename one group's schema key.
+- **(b) Static-CSS overlap:** scan tracked CSS (`git ls-files 'plugins/**/*.css'` plus
+  the web app.css), comment-stripped, for `--x:` **declarations** (not `var(--x)`
+  references). Flag any declared `--x` that is a token-group var. **Exclude
+  declarations inside `@theme { … }` / `@theme inline { … }` blocks** — these are
+  Tailwind's build-time utility-token layer (e.g. `--color-primary: var(--primary)`
+  bridges to a *different* name; `--font-sans`/`--font-weight-*`/`--shadow-*` are
+  required by Tailwind for utility generation and sit in a defined lower-precedence
+  position, not an ambiguous same-`:root` conflict). The guard targets ambiguous
+  same-level runtime declarations (`:root`, `.dark`, ordinary selectors). Block-range
+  detection can reuse brace matching from `plugin-meta/parse-utils` (`matchBracket`/`maskSource`).
+  Hint: plugin/base CSS must reference tokens via `var(--x)`, never declare them;
+  a token's only declaring owner is its token group.
+
+After step 5 (fallback deletion) the only remaining token-group-name declarations are in
+`@theme`/`@theme inline` (excluded), so the check passes green.
+
+### 4. Refactor `css-vars-supplied` to consume the manifest
+
+`plugins/.../checks/plugins/css-vars-supplied/check/index.ts`: replace the
+`group.ts` glob + regex + re-implemented `camelToKebab` (lines ~45–97) with
+`import { TOKEN_GROUP_VARS }` flattened into the supply set. Keeps the CSS-declaration
+supply source unchanged. Update its `CLAUDE.md` (the "text-parsed … group.ts" paragraph).
+This removes the duplicated parsing the user flagged.
+
+### 5. Delete the static token fallback (make the codebase satisfy the guard)
+
+In `plugins/framework/plugins/web-core/web/theme/app.css`, remove the **token-var
+declaration lines** from the `:root` (109–193) and `.dark` (195–276) blocks. **Preserve**
+`color-scheme: light` / `color-scheme: dark` (and the `.dark` selector itself — the
+dark-mode toggle). The blocks collapse to just their `color-scheme` declaration.
+Leave `@theme` and `@theme inline` untouched (Tailwind layer). `ThemeInjector` already
+emits every group's resolved light+dark values on mount, so runtime behavior is
+unchanged post-hydration; the only effect is the (accepted) pre-injection flash.
+
+### 6. Update docs
+
+- `plugins/framework/plugins/web-core/web/theme/CLAUDE.md`: token **values** are now
+  declared solely by token-group descriptors (emitted by `ThemeInjector`); app.css holds
+  only non-token base styles (`@theme` Tailwind tokens, `@theme inline` bridges,
+  `color-scheme`, keyframes/base). The "plugins consume tokens, never define them" rule
+  is now machine-enforced by `css-vars-single-owner`.
+- Add `CLAUDE.md` for the two new check plugins.
+- `plugins-doc-in-sync` / `plugins-compact.md` / `plugins-details.md` regenerate via build.
+
+## Critical files
+
+| Role | Path |
+|------|------|
+| Manifest generator (new) | `plugins/framework/plugins/tooling/plugins/codegen/core/token-group-vars-gen.ts` |
+| Codegen barrel (edit) | `plugins/framework/plugins/tooling/plugins/codegen/core/index.ts` + build-step wiring |
+| Committed manifest (new) | `plugins/framework/plugins/tooling/plugins/checks/core/token-group-vars.generated.ts` |
+| checks/core barrel (edit) | `plugins/framework/plugins/tooling/plugins/checks/core/index.ts` |
+| In-sync check (new) | `plugins/framework/plugins/tooling/plugins/checks/plugins/token-group-vars-in-sync/` |
+| Single-owner guard (new) | `plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-single-owner/` |
+| css-vars-supplied (edit) | `plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied/{check/index.ts,CLAUDE.md}` |
+| Static fallback deletion (edit) | `plugins/framework/plugins/web-core/web/theme/app.css` |
+| Theme doc (edit) | `plugins/framework/plugins/web-core/web/theme/CLAUDE.md` |
+
+Precedents to mirror: `codegen/core/reorderable-slots-gen.ts`, the
+`reorderable-slots-in-sync` check, `barrel-import/core` (`importBarrel`,
+`registerBarrelStubs`), `css-vars-supplied/check/index.ts` (git/CSS scanning helpers).
+
+## Verification
+
+1. `./singularity build` — regenerates the manifest + `check.generated.ts` (picks up the
+   two new checks), rebuilds web. Confirm `token-group-vars.generated.ts` lists all 8
+   groups with the expected vars.
+2. `./singularity check css-vars-single-owner` → green (post-deletion, no var has two
+   owners). `./singularity check token-group-vars-in-sync` → green. `./singularity check
+   css-vars-supplied` → green (manifest-backed). `./singularity check` → all pass
+   (incl. `plugin-boundaries`, confirming no illegal framework→ui or `shared/` import).
+3. **Cross-group collision proves it fails:** temporarily add a key colliding with another
+   group (e.g. `ring: …` in `sidebar-palette/shared/group.ts`), `./singularity build`,
+   then `./singularity check css-vars-single-owner` → fails naming `--ring` + both groups.
+   Revert.
+4. **Static-CSS overlap proves it fails:** temporarily add `--primary: red;` to a
+   `:root` in any plugin `.css` → `css-vars-single-owner` fails naming `--primary` + the
+   file. Add it inside an `@theme` block instead → passes (excluded). Revert.
+5. **Visual sanity** at `http://att-1781164986-97h9.localhost:9000`: light/dark toggle and
+   themed surfaces render correctly after the fallback deletion (ThemeInjector supplies
+   all vars); native scrollbars/controls still follow `color-scheme`.

@@ -5,7 +5,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs, generateReorderableSlots } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs, generateReorderableSlots, generateTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
@@ -774,6 +774,15 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("reorderableSlots", "build:codegen", "reorderable slots manifest");
       console.log("Generating reorderable-slots manifest...");
       await generateReorderableSlots({ root });
+      endSpan();
+
+      // 4a''. Generate the token-group-vars manifest from the real
+      // `defineTokenGroup` descriptors (read via web-barrel contributions to the
+      // `ui.theme-engine.token-group` slot). Consumed by the build-time CSS
+      // single-owner checks (`css-vars-single-owner`, `css-vars-supplied`).
+      endSpan = buildProfilerStart("tokenGroupVars", "build:codegen", "token-group vars manifest");
+      console.log("Generating token-group-vars manifest...");
+      await generateTokenGroupVars({ root });
       endSpan();
 
       // 4b. Generate config origin files from defineConfig contributions

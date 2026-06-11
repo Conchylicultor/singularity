@@ -60,3 +60,9 @@ export {
   renderBarrelStubs,
   barrelStubsPath,
 } from "./barrel-stubs-gen";
+
+export {
+  generateTokenGroupVars,
+  renderTokenGroupVarsManifest,
+  tokenGroupVarsManifestPath,
+} from "./token-group-vars-gen";

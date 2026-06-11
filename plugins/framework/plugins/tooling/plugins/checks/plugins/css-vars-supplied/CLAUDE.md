@@ -2,21 +2,21 @@
 
 Fails `./singularity check` when a **fallback-less** `var(--x)` reference in any
 repo CSS (`git ls-files 'plugins/**/*.css'`) points at a token that **nothing
-supplies** — neither a token-group schema key nor a `--x:` CSS declaration.
+supplies** — neither a token-group var nor a `--x:` CSS declaration.
 
-All inputs are **text-parsed** (no TS import) to dodge runtime/boundary
-questions:
-
-- **DEMAND** — across every repo CSS file (comment-stripped first): every
-  `var(--x)` whose closing delimiter is `)` (no fallback). `var(--x, <fallback>)`
-  refs are inherently safe and excluded — this is why `pr-floating-bar`'s
-  `var(--floating-bar-safe-area, var(--chrome-pad-x))` needs no allowlist.
-  `--tw-*` (Tailwind internals) are dropped.
+- **DEMAND** — text-parsed across every repo CSS file (comment-stripped first):
+  every `var(--x)` whose closing delimiter is `)` (no fallback).
+  `var(--x, <fallback>)` refs are inherently safe and excluded — this is why
+  `pr-floating-bar`'s `var(--floating-bar-safe-area, var(--chrome-pad-x))` needs
+  no allowlist. `--tw-*` (Tailwind internals) are dropped.
 - **SUPPLY** — the union of:
-  - Token-group schema keys from `plugins/ui/plugins/tokens/plugins/*/shared/group.ts`,
-    kebab-cased to `--<kebab>` (e.g. `fontSizeCaption` → `--font-size-caption`).
-  - Every `--x:` declaration across all repo CSS files (covers `@theme` bridges,
-    derived `--radius-*`, and the static `:root`/`.dark` literals).
+  - Every token-group var, read from the generated `TOKEN_GROUP_VARS` manifest
+    (`framework/tooling/checks/core/token-group-vars.generated.ts`) — the **real**
+    `defineTokenGroup` descriptors, collected at build time via their
+    `ui.theme-engine.token-group` web-slot contributions. This replaces the old
+    text-parse of `*/shared/group.ts`, fixing the abstraction it worked around.
+  - Every `--x:` declaration across all repo CSS files (covers `@theme` bridges
+    and derived `--radius-*`).
 
 A fallback-less reference with no supplier fails with the offending var + its
 file and a hint to add the token, declare it in app.css, or give the reference a
@@ -27,7 +27,7 @@ fallback.
 This checks the **source-demand** class (references to tokens nothing declares —
 typos, renames, orphaned runtime-only vars). It does **not** catch
 runtime-supply gaps like a sparse preset failing to emit a declared token-group
-var (e.g. the caption bug — `--font-size-caption` is a token-group key, hence in
+var (e.g. the caption bug — `--font-size-caption` is a token-group var, hence in
 SUPPLY; the injector is responsible for actually emitting it). Disjoint from
 `app-css-utilities-in-sync` (which reconciles `@utility` class names).
 

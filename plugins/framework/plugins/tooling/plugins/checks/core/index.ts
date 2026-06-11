@@ -9,3 +9,4 @@ export { openCheckCache } from "./cache";
 export type { CheckCache } from "./cache";
 export { grepCode } from "./grep-code";
 export type { CodeMatch } from "./grep-code";
+export { TOKEN_GROUP_VARS } from "./token-group-vars.generated";
