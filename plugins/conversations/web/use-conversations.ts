@@ -4,8 +4,11 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { ConversationSchema, type ConversationListPayload } from "@plugins/tasks-core/core";
 import { cursorPageSchema } from "@plugins/primitives/plugins/cursor-pagination/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { isActiveStatus } from "../core";
 import { getConversation } from "../core/endpoints";
 import { conversationsResource, type ConversationEntry } from "../core/resources";
+
+const EMPTY_CONVERSATIONS: ConversationEntry[] = [];
 
 export const GonePageSchema = cursorPageSchema(ConversationSchema);
 
@@ -49,6 +52,48 @@ export function useConversation(id: string): ConversationEntry | null {
   );
   const q = useResource(conversationsResource, undefined, { select });
   return q.pending ? null : q.data;
+}
+
+// Derived SLICE: does this task have another active conversation? Subscribes
+// only to that boolean via `select`, so the component re-renders only when the
+// answer flips — not on every conversations push. Used by drop-and-exit.
+export function useHasActiveSiblings(taskId: string, excludeId: string): boolean {
+  const select = useCallback(
+    (p: ConversationListPayload) =>
+      p.active.some((c) => c.taskId === taskId && c.id !== excludeId),
+    [taskId, excludeId],
+  );
+  const q = useResource(conversationsResource, undefined, { select });
+  return q.pending ? false : q.data;
+}
+
+// Derived SLICE: is there another active conversation in this worktree? Used by
+// push-and-exit to decide between Exit and Drop & Exit.
+export function useHasActiveSiblingInWorktree(
+  worktreePath: string,
+  excludeId: string,
+): boolean {
+  const select = useCallback(
+    (p: ConversationListPayload) =>
+      p.active.some(
+        (c) =>
+          c.id !== excludeId &&
+          c.worktreePath === worktreePath &&
+          isActiveStatus(c.status),
+      ),
+    [worktreePath, excludeId],
+  );
+  const q = useResource(conversationsResource, undefined, { select });
+  return q.pending ? false : q.data;
+}
+
+// Derived SLICE: the active list only. Narrows away recentGone/system/gone-count
+// churn so consumers re-render only when an active row changes. Used by the
+// dependencies button's cross-task picker.
+export function useActiveConversations(): ConversationEntry[] {
+  const select = useCallback((p: ConversationListPayload) => p.active, []);
+  const q = useResource(conversationsResource, undefined, { select });
+  return q.pending ? EMPTY_CONVERSATIONS : q.data;
 }
 
 // Point lookup by id. Checks the live WS-backed resource first (real-time

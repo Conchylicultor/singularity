@@ -710,7 +710,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Contributes: `ConfigV2.WebRegister`
     - Uses: `config_v2.ConfigV2`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
-    - Exports: Types: `ConversationsState`; Values: `GonePageSchema`, `useConversation`, `useConversationById`, `useConversations`
+    - Exports: Types: `ConversationsState`; Values: `GonePageSchema`, `useActiveConversations`, `useConversation`, `useConversationById`, `useConversations`, `useHasActiveSiblingInWorktree`, `useHasActiveSiblings`
   - Server:
     - Uses: `config_v2.ConfigV2`, `config_v2.forkConfig`, `config_v2.getConfig`, `conversations/preprompts.resolvePreprompt`, `conversations/transcript-watcher.findTranscriptPath`, `conversations/transcript-watcher.watchTranscript`, `crashes.recordCrash`, `database.db`, `database.isTransientDbError`, `database/fork.databaseForkJob`, `infra/attachments.getAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `infra/events.Trigger`, `infra/jobs.defineJob`, `infra/paths.isMain`, `infra/worktree.setupWorktree`, `infra/worktree.worktreePathFor`, `notifications.recordNotification`, `tasks-core.adoptOrphanConversation`, `tasks-core.conversationAttachments`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.createAttempt`, `tasks-core.createTask`, `tasks-core.deleteAttempt`, `tasks-core.deleteConversationRow`, `tasks-core.ensureMetaTask`, `tasks-core.getAttempt`, `tasks-core.getConversation`, `tasks-core.getConversationClaudeSessionId`, `tasks-core.getConversationRuntime`, `tasks-core.getTask`, `tasks-core.hasBlockingDep`, `tasks-core.insertConversation`, `tasks-core.listArmedDependentsOf`, `tasks-core.listAttemptsForTask`, `tasks-core.listConversationsForDisplay`, `tasks-core.listConversationsForInfra`, `tasks-core.listGoneConversations`, `tasks-core.markConversationClosed`, `tasks-core.markConversationGone`, `tasks-core.notifyConversationsChanged`, `tasks-core.taskStatusChanged`, `tasks-core.updateConversation`, `tasks-core.updateTask`, `tasks-core.updateTaskTitle`, `tasks/auto-start.claimAutoStart`, `tasks/auto-start.getTaskAutoStart`, `tasks/task-preprompt.getTaskPreprompt`
     - DB schema: `plugins/conversations/server/internal/tables-created-event.ts`, `plugins/conversations/server/internal/tables-turn-completed-event.ts`, `plugins/conversations/server/internal/tables-user-turn-sent-event.ts`
@@ -858,7 +858,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
             - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
-            - Uses: `conversations.useConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.Conversation`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `tasks.useTask`
+            - Uses: `conversations.useActiveConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.Conversation`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `tasks.useTask`
         - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
           - Web:
             - Contributes: `Conversation.ActionBar` → `DependentCountChip`
@@ -866,7 +866,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
-            - Uses: `conversations.useConversation`, `conversations.useConversations`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/live-state.useResource`
+            - Uses: `conversations.useConversation`, `conversations.useHasActiveSiblings`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/live-state.useResource`
           - Server:
             - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
             - Routes: `POST /api/conversations/:id/drop-and-exit`
@@ -1144,7 +1144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`op-status`** — Banner above the prompt input showing the worktree's in-flight build/push, with elapsed time and a 'queued / waiting for lock' phase for pushes. Also a sidebar row chip flagging the same op (Building / Pushing / Waiting for lock). Watches the per-worktree build/push op markers and pushes them to a live-state resource. Renders a banner above the prompt input showing the in-flight operation (build / push / push queued waiting for lock) with elapsed time.
           - Web:
             - Contributes: `Conversation.AbovePromptInput` → `OpStatusBanner`, `Item.Chips` → `OpStatusChip`
-            - Uses: `conversations.useConversation`, `conversations.useConversations`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.Conversation`, `primitives/live-state.useResource`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
+            - Uses: `conversations.useConversation`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.Conversation`, `primitives/live-state.useResource`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
           - Server:
             - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/worktree.resolveActiveWorktreeOps`, `infra/worktree.WorktreeOp`, `infra/worktree.worktreesDir`
             - Exports: Values: `worktreeOpsResource`
@@ -1169,7 +1169,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push-and-exit`** — Toolbar button that asks Claude to push the branch and close the conversation; surfaces Claude's flag if it has anything to raise.
           - Web:
             - Contributes: `PromptEditorSlots.FloatingAction` → `PushAndExitButton`, `ConfigV2.WebRegister`
-            - Uses: `config_v2.ConfigV2`, `conversations.useConversation`, `conversations.useConversationById`, `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view.isDraftEmpty`, `conversations/conversation-view/code.useEditedFiles`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `primitives/prompt-editor.PromptEditorSlots`
+            - Uses: `config_v2.ConfigV2`, `conversations.useConversation`, `conversations.useConversationById`, `conversations.useHasActiveSiblingInWorktree`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view.isDraftEmpty`, `conversations/conversation-view/code.useEditedFiles`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `primitives/prompt-editor.PromptEditorSlots`
           - Server:
             - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.afterTurn`, `conversations.deleteConversation`, `conversations.sendTurn`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `notifications.recordNotification`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateConversation`
             - Register: `defineJob('push_and_exit.exit_clean_finalize')`, `mcpTool('exit_clean')`, `mcpTool('flag_raise')`

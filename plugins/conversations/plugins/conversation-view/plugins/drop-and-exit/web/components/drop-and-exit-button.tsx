@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import { MdCheckCircle, MdDeleteForever, MdExitToApp } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversation, useConversations } from "@plugins/conversations/web";
+import { useConversation, useHasActiveSiblings } from "@plugins/conversations/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
@@ -16,17 +16,13 @@ export function DropAndExitItem({
 }) {
   const live = useConversation(conversation.id) ?? conversation;
   const pushesResult = useResource(pushesResource);
-  const conv = useConversations();
 
   const hasPush = useMemo(
     () => pushesResult.pending ? false : pushesResult.data.some((p) => p.attemptId === conversation.attemptId),
     [pushesResult, conversation.attemptId],
   );
 
-  const hasOtherActive = useMemo(
-    () => conv.pending ? false : conv.active.some((c) => c.taskId === conversation.taskId && c.id !== conversation.id),
-    [conv, conversation.taskId, conversation.id],
-  );
+  const hasOtherActive = useHasActiveSiblings(conversation.taskId, conversation.id);
 
   const { mutate, isPending } = useEndpointMutation(dropAndExit, {
     onSuccess: (data) => {
@@ -43,8 +39,6 @@ export function DropAndExitItem({
   });
 
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
-
-  if (conv.pending) return null;
 
   const { Icon, label, variant } = hasPush
     ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Exit", variant: "default" as const }

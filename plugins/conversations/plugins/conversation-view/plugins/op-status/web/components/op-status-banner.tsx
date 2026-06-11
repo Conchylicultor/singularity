@@ -1,9 +1,9 @@
-import { useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { useConversations } from "@plugins/conversations/web";
+import { conversationsResource, type ConversationListPayload } from "@plugins/conversations/core";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { worktreeOpsResource, type WorktreeOp } from "../../shared";
 
@@ -20,20 +20,24 @@ function slugOf(worktreePath: string): string {
 // conversations resource (in the agent-manager that's the full main-DB set);
 // rows with no match (e.g. the main `singularity` build, or a push from a
 // conversation outside the recent window) fall back to the slug.
+const EMPTY_TITLES: Record<string, string> = {};
+
 function useTitleBySlug(): Record<string, string> {
-  const conv = useConversations();
-  return useMemo(() => {
-    const active = conv.pending ? [] : conv.active;
-    const recentGone = conv.pending ? [] : conv.recentGone;
-    const system = conv.pending ? [] : conv.system;
+  // Subscribe to a derived SLICE — the slug→title map — via `select`, so the
+  // banner re-renders only when a mapping actually changes (structural sharing
+  // deep-compares the Record), not on every status flip in the conversations
+  // list.
+  const select = useCallback((p: ConversationListPayload): Record<string, string> => {
     const map: Record<string, string> = {};
     // Lowest-priority first so a live `active` title wins over a stale one.
-    for (const c of [...system, ...recentGone, ...active]) {
+    for (const c of [...p.system, ...p.recentGone, ...p.active]) {
       const title = c.title?.trim();
       if (title) map[slugOf(c.worktreePath)] = title;
     }
     return map;
-  }, [conv]);
+  }, []);
+  const q = useResource(conversationsResource, undefined, { select });
+  return q.pending ? EMPTY_TITLES : q.data;
 }
 
 // Presentational 1s ticker: the op STATE is push-driven via the resource; this

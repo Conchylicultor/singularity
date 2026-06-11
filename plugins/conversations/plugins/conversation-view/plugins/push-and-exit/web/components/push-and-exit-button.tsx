@@ -2,8 +2,8 @@ import { useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { MdDeleteForever, MdLogout, MdPlayArrow, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversations, useConversation, useConversationById } from "@plugins/conversations/web";
-import { isActiveStatus, postConversationTurn, stopConversation } from "@plugins/conversations/core";
+import { useHasActiveSiblingInWorktree, useConversation, useConversationById } from "@plugins/conversations/web";
+import { postConversationTurn, stopConversation } from "@plugins/conversations/core";
 import { fetchEndpoint, getEndpointErrorMessage, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { startPushAndExit } from "../../shared";
 import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
@@ -86,9 +86,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
 
   const { files } = useEditedFiles(convId);
   const pushesResult = useResource(pushesResource);
-  const conv = useConversations();
-  const conversationsLoading = conv.pending;
-  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
+  // Derived slice: only re-renders when this worktree's sibling-active answer
+  // flips, not on every conversations push. `conversation` may be null on first
+  // render — the value is only consumed below after the `!conversation` guard.
+  const hasOtherActiveInWorktree = useHasActiveSiblingInWorktree(
+    conversation?.worktreePath ?? "",
+    convId,
+  );
 
   const isNotRunning = live?.status === "gone" || live?.status === "done";
 
@@ -97,9 +101,6 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     if (isNotRunning) return "restore";
     if (!isDraftEmpty(draft)) return "send";
     if (live.status === "working") return "stop";
-    if (conversationsLoading) {
-      return "push-and-exit";
-    }
     if (files.length > 0) {
       if (files.every((f) => f.path.startsWith("research/"))) return "go";
       return "push-and-exit";
@@ -107,14 +108,8 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     const pushes = pushesResult.pending ? [] : pushesResult.data;
     const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
     if (hasPush) return "exit";
-    const hasOtherActiveInWorktree = active.some(
-      (c) =>
-        c.id !== convId &&
-        c.worktreePath === conversation.worktreePath &&
-        isActiveStatus(c.status),
-    );
     return hasOtherActiveInWorktree ? "exit" : "drop-and-exit";
-  }, [isNotRunning, draft, files, pushesResult, active, conversationsLoading, conversation, convId, live]);
+  }, [isNotRunning, draft, files, pushesResult, hasOtherActiveInWorktree, conversation, live]);
 
   if (!conversation || !live) return null;
 

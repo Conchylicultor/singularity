@@ -1,7 +1,7 @@
 import { useState, useMemo, useCallback } from "react";
 import { MdLink } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversations } from "@plugins/conversations/web";
+import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource } from "@plugins/tasks/core";
@@ -24,8 +24,7 @@ export function DependenciesButton({
   const [busy, setBusy] = useState<string | null>(null);
 
   const task = useTask(conversation.taskId);
-  const conv = useConversations();
-  const active = useMemo(() => (conv.pending ? [] : conv.active), [conv]);
+  const active = useActiveConversations();
   const tasksResult = useResource(tasksResource);
   const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
 

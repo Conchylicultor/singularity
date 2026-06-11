@@ -6,6 +6,9 @@ export {
   useConversations,
   useConversation,
   useConversationById,
+  useHasActiveSiblings,
+  useHasActiveSiblingInWorktree,
+  useActiveConversations,
   GonePageSchema,
 } from "./use-conversations";
 export type { ConversationsState } from "./use-conversations";
