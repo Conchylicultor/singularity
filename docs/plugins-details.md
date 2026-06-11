@@ -2027,6 +2027,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
             - **`token-group-vars-in-sync`**
+            - **`tsconfig-alias-single-owner`**
             - **`type-check`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:

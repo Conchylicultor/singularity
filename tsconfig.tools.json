@@ -2,10 +2,7 @@
   "extends": "./tsconfig.base.json",
   "compilerOptions": {
     "lib": ["ES2023"],
-    "types": ["node", "@types/bun"],
-    "paths": {
-      "@plugins/*": ["./plugins/*"]
-    }
+    "types": ["node", "@types/bun"]
   },
   "exclude": [
     "**/node_modules",

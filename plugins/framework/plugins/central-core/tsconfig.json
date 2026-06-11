@@ -1,10 +1,7 @@
 {
   "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["@types/bun"],
-    "paths": {
-      "@plugins/*": ["../../../*"]
-    }
+    "types": ["@types/bun"]
   },
   "exclude": [
     "../../../framework/plugins/web-sdk/**",

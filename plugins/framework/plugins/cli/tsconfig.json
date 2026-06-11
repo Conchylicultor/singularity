@@ -1,10 +1,7 @@
 {
   "extends": "../../../../tsconfig.base.json",
   "compilerOptions": {
-    "types": ["@types/bun"],
-    "paths": {
-      "@plugins/*": ["../../../../plugins/*"]
-    }
+    "types": ["@types/bun"]
   },
   "include": ["bin", "../../../../plugins/packages/plugins/*/shared"]
 }

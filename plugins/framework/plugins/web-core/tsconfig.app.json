@@ -5,10 +5,7 @@
     "useDefineForClassFields": true,
     "lib": ["ES2020", "DOM", "DOM.Iterable"],
     "allowImportingTsExtensions": true,
-    "moduleDetection": "force",
-    "paths": {
-      "@plugins/*": ["../../../*"]
-    }
+    "moduleDetection": "force"
   },
   "exclude": [
     "../../../plugin-meta/plugins/plugin-tree/**",

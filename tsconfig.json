@@ -1,9 +1,5 @@
 {
-  "compilerOptions": {
-    "paths": {
-      "@plugins/*": ["./plugins/*"]
-    }
-  },
+  "extends": "./tsconfig.base.json",
   "files": [],
   "references": [
     { "path": "./plugins/framework/plugins/web-core" },

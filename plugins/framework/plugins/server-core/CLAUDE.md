@@ -124,9 +124,7 @@ export default plugin;
 
 ## Path Aliases
 
-Configured in `tsconfig.json`:
-
-- `@plugins/*` → `../../../*` (plugin tree)
+- `@plugins/*` (plugin tree) — declared **once** in the root `tsconfig.base.json` and inherited here via `extends`; never redeclared. It resolves relative to the base file (`<repo-root>/plugins/*`), so the same entry is correct at every depth. The `tsconfig-alias-single-owner` check fails any tsconfig that re-adds a local copy.
 
 The `include` field covers `../../../*/server`, `../../../*/core`, and `../../../*/shared` so plugin server code and shared types are type-checked together with the server.
 
