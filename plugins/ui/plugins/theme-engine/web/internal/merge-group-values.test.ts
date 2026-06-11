@@ -1,4 +1,4 @@
-import { it, expect } from "vitest";
+import { it, expect } from "bun:test";
 
 import { mergeGroupValues } from "./merge-group-values";
 import type { TokenGroupSchema } from "../../core";

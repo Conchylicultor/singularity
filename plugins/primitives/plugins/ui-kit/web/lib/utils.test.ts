@@ -1,4 +1,4 @@
-import { it, expect } from "vitest";
+import { it, expect } from "bun:test";
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils";
 

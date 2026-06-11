@@ -216,6 +216,19 @@ Independent projects that live in `sidequests/`, not directly related to Singula
      - `flag_raise({ reason })` — something needs my attention (caveats, partial outcomes, follow-ups, skipped work, or the push didn't land). Use `reason` for short bullets describing what I should know.
   2. Write your final wrap up message, including things like summary, issues encountered, existing caveats, follow ups.
 
+### Testing
+
+Tests are **optional and manual** — nothing runs them automatically (no `./singularity check`, no CI, no `build`/`push` gate). When you do run tests, always pass an **explicit file or folder path** — there is no blanket "run everything" target.
+
+- **`bun:test` is the default runner.** Every `*.test.ts(x)` in the repo is a `bun:test` unit test (pure logic / lint / check / server / web-logic), except the one vitest suite below. Run a specific file or folder:
+  ```bash
+  bun test plugins/page/plugins/editor/core/block-ops.test.ts
+  bun test plugins/page/plugins/editor                 # a folder
+  ```
+- **`vitest` is reserved for the one browser/DOM suite** — `plugins/framework/plugins/web-core/web/__tests__/plugin-render.test.tsx` (jsdom + React + the `@` SPA alias + the full plugin graph). Run it via web-core's `test` script — see [`plugins/framework/plugins/web-core/CLAUDE.md`](plugins/framework/plugins/web-core/CLAUDE.md).
+- **Prerequisite:** `node_modules` must be populated. Any `./singularity` invocation (and `build` as step 1) runs `bun install` — so run tests after a build, or `bun install` first.
+- Do **not** run a blanket `bun test` from the repo root: it would also try to load the vitest file and fail. If you ever need a broad sweep, scope it to a folder or pass `--path-ignore-patterns='**/web-core/web/__tests__/**'`.
+
 ### Coding Style
 
 This is the single most important coding principle:

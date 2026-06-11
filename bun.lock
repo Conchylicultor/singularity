@@ -2283,9 +2283,6 @@
     "plugins/ui/plugins/theme-engine": {
       "name": "@singularity/plugin-ui-theme-engine",
       "version": "0.0.1",
-      "devDependencies": {
-        "vitest": "^4.1.4",
-      },
     },
     "plugins/ui/plugins/theme-engine/plugins/theme-customizer": {
       "name": "@singularity/plugin-ui-theme-engine-theme-customizer",
