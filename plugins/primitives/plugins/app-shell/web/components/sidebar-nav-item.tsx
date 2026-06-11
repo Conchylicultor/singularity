@@ -1,9 +1,5 @@
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentType } from "react";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-} from "@/components/ui/sidebar";
 import type { AppShellSidebarItem } from "./app-shell-layout";
 
 export function SidebarNavItem({

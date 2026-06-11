@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
 export type DropTarget =
   | { kind: "conv"; convId: string }

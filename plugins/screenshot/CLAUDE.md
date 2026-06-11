@@ -7,7 +7,11 @@
 - Description: Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
 - Web:
   - Contributes: `Pane.Register` "screenshot", `ActionBar.Item` → `ScreenshotButton`
+<<<<<<< .merge_file_vCyWYi
   - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/icon-button.IconButton`, `primitives/launch.LaunchControl`, `primitives/launch.LaunchRequest`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `screenshot/draw-canvas.applyStrokes`, `screenshot/draw-canvas.DrawCanvas`, `screenshot/draw-canvas.Stroke`, `shell/action-bar.ActionBar`
+=======
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/icon-button.IconButton`, `primitives/launch.LaunchControl`, `primitives/launch.LaunchRequest`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `screenshot/draw-canvas.applyStrokes`, `screenshot/draw-canvas.DrawCanvas`, `screenshot/draw-canvas.Stroke`, `shell/action-bar.ActionBar`
+>>>>>>> .merge_file_4qlYaP
   - Exports: Values: `captureApp`, `screenshotPane`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`

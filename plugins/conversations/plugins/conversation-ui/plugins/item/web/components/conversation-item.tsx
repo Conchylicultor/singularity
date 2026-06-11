@@ -1,10 +1,10 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ConversationKind } from "@plugins/tasks-core/core";
 import type { ConversationStatus } from "@plugins/conversations/core";
 import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 import { Item } from "../slots";
 
 export { formatRelativeTime };

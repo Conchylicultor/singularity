@@ -8,8 +8,8 @@
  * Parse problems (unrecognised tokens) are surfaced visibly — never swallowed.
  */
 
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";
 import { parseGrid } from "./parse-grid";
 import { VOICINGS } from "./voicings";

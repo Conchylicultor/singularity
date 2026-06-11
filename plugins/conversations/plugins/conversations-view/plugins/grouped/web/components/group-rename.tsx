@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useRef } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { cn } from "@/lib/utils";
 
 export function GroupRename({
   value,

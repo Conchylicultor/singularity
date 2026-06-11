@@ -1,5 +1,5 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { toast } from "@plugins/notifications/web";
 import { currentWorktreeName, startConnectFlow } from "../connect";
 

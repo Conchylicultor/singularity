@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/agents/core";
 

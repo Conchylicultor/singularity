@@ -1,7 +1,7 @@
+import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentProps } from "react";
 
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 
 type ContentPositionerProps = Pick<
   ComponentProps<typeof PopoverContent>,

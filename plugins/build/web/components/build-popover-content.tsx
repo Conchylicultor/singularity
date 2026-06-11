@@ -1,9 +1,8 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { triggerBuildEndpoint } from "../../core/endpoints";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { MdContentCopy, MdPlayArrow } from "react-icons/md";
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";

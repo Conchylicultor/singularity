@@ -1,11 +1,10 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";

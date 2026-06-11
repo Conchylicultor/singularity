@@ -1,6 +1,5 @@
-import { cn } from "@/lib/utils";
+import { cn, type ControlSize, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
 import type React from "react";
-import { useControlSize, type ControlSize } from "@/theme/control-size";
 
 export type ToggleChipVariant = "solid" | "ghost";
 export type ToggleChipSize = "sm" | "md";

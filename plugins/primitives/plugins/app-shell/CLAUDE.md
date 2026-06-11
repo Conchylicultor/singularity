@@ -7,7 +7,7 @@
 - Description: Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
 - Web:
   - Slots: `AppShell.Framing`
-  - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`
+  - Uses: `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/ui-kit.Button`, `primitives/ui-kit.Sidebar`, `primitives/ui-kit.SidebarGroup`, `primitives/ui-kit.SidebarGroupContent`, `primitives/ui-kit.SidebarGroupLabel`, `primitives/ui-kit.SidebarHeader`, `primitives/ui-kit.SidebarInset`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`, `primitives/ui-kit.SidebarProvider`, `primitives/ui-kit.SidebarTrigger`
   - Exports: Types: `AppShellSidebarItem`, `AppShellToolbarItem`, `FramingContribution`, `SidebarFramingProps`; Values: `AppShell`, `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
 - Cross-plugin:
   - Slot contributors: `sidebar-framing`

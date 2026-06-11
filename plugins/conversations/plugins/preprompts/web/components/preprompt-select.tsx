@@ -1,12 +1,5 @@
+import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { prepromptsConfig } from "../../shared/config";
 import { PrepromptGlyph } from "./preprompt-glyph";
 

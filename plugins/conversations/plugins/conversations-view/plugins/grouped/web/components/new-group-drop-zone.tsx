@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useDroppable } from "@dnd-kit/core";
-import { cn } from "@/lib/utils";
 
 export function NewGroupDropZone({ visible }: { visible: boolean }) {
   const droppable = useDroppable({

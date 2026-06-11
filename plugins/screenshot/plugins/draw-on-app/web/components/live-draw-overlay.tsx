@@ -1,9 +1,8 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { MdClear, MdUndo } from "react-icons/md";
 import { DrawCanvas, type Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 const COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#000000", "#ffffff"];
 

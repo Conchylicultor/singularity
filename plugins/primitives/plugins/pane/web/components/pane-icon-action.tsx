@@ -1,8 +1,7 @@
+import { Button, iconSizeFor, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
 import { forwardRef, type ComponentType, type ReactNode } from "react";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { useControlSize, iconSizeFor } from "@/theme/control-size";
 
 interface PaneIconActionProps {
   label: string;

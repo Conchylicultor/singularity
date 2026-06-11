@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { setAudioVolume, useAudioState } from "../audio-store";
 

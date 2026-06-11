@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   MdCancel,
   MdCheckCircle,
@@ -12,7 +13,6 @@ import type { TaskStatus } from "@plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 
 /**
  * States that warrant a colored filled badge (they need the user's attention).

@@ -1,7 +1,7 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { ChartState } from "@plugins/stats/plugins/commits/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCostSessions } from "../../shared/endpoints";
-import { cn } from "@/lib/utils";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { formatTokensCompact, formatUsd } from "./format";

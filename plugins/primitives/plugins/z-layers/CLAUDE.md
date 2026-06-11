@@ -8,7 +8,7 @@ plus the lint rule that keeps it the single source of truth.
 z-index is **structural**, not runtime-themeable, so the layers live in the
 static `@theme { }` block as `--z-{base,raised,nav,float,overlay,popover,draw,max}`
 vars, exposed as the matching `z-*` `@utility` classes (both defined in
-`plugins/framework/plugins/web-core/web/theme/app.css`).
+`plugins/primitives/plugins/ui-kit/web/theme/app.css`).
 
 | Utility      | Value | Role                                                   |
 | ------------ | ----- | ------------------------------------------------------ |

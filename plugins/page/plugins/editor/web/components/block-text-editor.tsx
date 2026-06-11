@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
@@ -6,7 +7,6 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { LexicalEditor } from "lexical";
-import { cn } from "@/lib/utils";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { textDataSchema, type Block } from "../../core";
 import type { BlockEditorAPI } from "../types";

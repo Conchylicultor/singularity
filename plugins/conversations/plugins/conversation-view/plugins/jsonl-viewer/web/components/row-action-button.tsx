@@ -1,6 +1,5 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ComponentPropsWithoutRef, type ReactNode } from "react";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 // Shared button styling for the JSONL row action strip. The strip handles
 // hover-reveal — individual buttons stay simple. Use `rowActionClass()` when

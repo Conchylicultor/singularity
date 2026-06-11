@@ -6,7 +6,7 @@
 
 - Description: Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
 - Web:
-  - Uses: `conversations.useConversation`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `notifications.toast`
+  - Uses: `conversations.useConversation`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/ui-kit.Button`
 - Server:
   - Uses: `conversations.resumeConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`
   - Routes: `POST /api/conversations/:id/resume`

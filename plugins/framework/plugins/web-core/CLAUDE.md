@@ -1,22 +1,31 @@
 # Web
 
-Single-page application (SPA). No SSR, no SEO concerns.
+The SPA composition root. This plugin is **only** bootstrap — it owns the Vite /
+Tailwind / TypeScript build for the whole frontend and the React entry point, and
+nothing else. No SSR, no SEO concerns.
+
+The foundational UI layer (the `cn()` util, the shadcn/ui primitives, the global
+`theme/app.css` stylesheet, and the `ControlSize` affordance-sizing context) used
+to live here behind an ambient `@/*` alias. It now lives in its own boundary-legal
+plugin, [`primitives/ui-kit`](../../../primitives/plugins/ui-kit/CLAUDE.md);
+consumers import `@plugins/primitives/plugins/ui-kit/web`. The `@/*` alias has been
+deleted, so a stray `@/` import is now an unresolved-module error at build time.
 
 ## Stack
 
-- **Vite** — Build tool and dev server
+- **Vite** — Build tool and dev server (this plugin is the build root)
 - **React 19** + **TypeScript**
-- **Tailwind CSS v4** — Styling (via `@tailwindcss/vite` plugin)
-- **shadcn/ui** — UI components (base-ui based, copy-pasted into `web/components/ui/`)
-- **react-icons** — Icons (predominantly `react-icons/md`; not Lucide despite shadcn defaults)
+- **Tailwind CSS v4** — `@tailwindcss/vite` plugin; the global stylesheet
+  (`app.css`) lives in `primitives/ui-kit` and is imported from `web/main.tsx`.
+- **react-icons** — Icons (predominantly `react-icons/md`; not Lucide)
 
 ## Structure
 
-- `web/` — Application source
-  - `components/ui/` — shadcn/ui components (generated, do not edit manually)
-  - `components/` — App-level components
-  - `lib/` — Utilities
-- `@` path alias resolves to `web/`
+- `web/` — SPA bootstrap only
+  - `App.tsx` / `main.tsx` / `index.html` — the React entry + plugin loader
+  - `components/plugin-load-errors.tsx` — boot-error surface
+  - `__tests__/` — render smoke tests
+  - `public/` — static assets
 
 ## Commands
 
@@ -27,7 +36,7 @@ Always go through `./singularity build` from the repo root — it runs `bun run 
 ## Plugin reference
 
 - Web:
-  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/select-scope.ContentScope`, `primitives/text.Text`
+  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`, `primitives/ui-kit`, `primitives/ui-kit.SidebarProvider`, `primitives/ui-kit.TooltipProvider`
 - Structure:
   - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
   - Composition root: yes

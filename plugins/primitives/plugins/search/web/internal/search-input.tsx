@@ -1,6 +1,5 @@
+import { cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdClose, MdSearch } from "react-icons/md";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 
 export interface SearchInputProps
   extends React.InputHTMLAttributes<HTMLInputElement> {

@@ -1,3 +1,4 @@
+import { DropdownMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { MdCheckCircle, MdDeleteForever, MdExitToApp } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -6,7 +7,6 @@ import { useConversation, useHasActiveSiblings } from "@plugins/conversations/we
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { toast } from "@plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { dropAndExit } from "../../core";
 
 export function DropAndExitItem({

@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import dagre from "dagre";
 import {
@@ -22,7 +23,6 @@ import { tasksResource, type TaskListItem, addTaskDependency } from "@plugins/ta
 import { patchTask } from "@plugins/tasks/web";
 import { taskDetailPane, useTaskNavigate } from "@plugins/tasks/plugins/task-detail/web";
 import { STATUS_META } from "@plugins/tasks/plugins/task-status/web";
-import { cn } from "@/lib/utils";
 import { InsertableEdge, type InsertableEdgeData } from "./insertable-edge";
 
 const NODE_WIDTH = 200;

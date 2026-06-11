@@ -5,23 +5,23 @@ import { mergeProps } from "@base-ui/react/merge-props"
 import { useRender } from "@base-ui/react/use-render"
 import { cva, type VariantProps } from "class-variance-authority"
 
-import { useIsMobile } from "@/hooks/use-mobile"
-import { cn } from "@/lib/utils"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Separator } from "@/components/ui/separator"
+import { useIsMobile } from "@plugins/primitives/plugins/ui-kit/web/hooks/use-mobile"
+import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
+import { Button } from "@plugins/primitives/plugins/ui-kit/web/components/ui/button"
+import { Input } from "@plugins/primitives/plugins/ui-kit/web/components/ui/input"
+import { Separator } from "@plugins/primitives/plugins/ui-kit/web/components/ui/separator"
 import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-} from "@/components/ui/sheet"
+} from "@plugins/primitives/plugins/ui-kit/web/components/ui/sheet"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
-} from "@/components/ui/tooltip"
+} from "@plugins/primitives/plugins/ui-kit/web/components/ui/tooltip"
 import { MdMenu } from "react-icons/md"
 
 // Local shimmer atom (was components/ui/skeleton.tsx — deleted; feature code

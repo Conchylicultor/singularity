@@ -1,8 +1,8 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useEffect } from "react";
 import { useResource, useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
-import { Button } from "@/components/ui/button";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

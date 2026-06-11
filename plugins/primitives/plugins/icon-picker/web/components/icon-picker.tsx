@@ -1,9 +1,9 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useRef, useEffect } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { MdClose, MdSearch } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import {
   loadFullIconSet,
   extractSvgNodes,

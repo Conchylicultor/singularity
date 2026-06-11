@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
-import { cn } from "@/lib/utils";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Section,

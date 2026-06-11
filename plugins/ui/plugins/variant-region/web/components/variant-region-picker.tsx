@@ -1,9 +1,9 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentType } from "react";
 import type { Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
-import { cn } from "@/lib/utils";
 import type { VariantRegionCore } from "../../core";
 import type { VariantContribution } from "../slots";
 

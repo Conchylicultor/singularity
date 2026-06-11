@@ -1,13 +1,9 @@
+import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
 
 export interface PageIconValue {
   icon: string | null;

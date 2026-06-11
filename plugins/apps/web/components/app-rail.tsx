@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
-import { cn } from "@/lib/utils";
 import { Apps } from "../slots";
 import { useActiveApp } from "../internal/use-active-app";
 

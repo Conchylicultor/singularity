@@ -4,8 +4,7 @@
     "lib": ["ES2023"],
     "types": ["node", "@types/bun"],
     "paths": {
-      "@plugins/*": ["./plugins/*"],
-      "@/*": ["./plugins/framework/plugins/web-core/web/*"]
+      "@plugins/*": ["./plugins/*"]
     }
   },
   "exclude": [

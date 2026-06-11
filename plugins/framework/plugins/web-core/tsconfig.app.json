@@ -7,7 +7,6 @@
     "allowImportingTsExtensions": true,
     "moduleDetection": "force",
     "paths": {
-      "@/*": ["./web/*"],
       "@plugins/*": ["../../../*"]
     }
   },

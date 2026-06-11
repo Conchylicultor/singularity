@@ -27,7 +27,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
 
 - Description: Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
 - Web:
-  - Uses: `primitives/select-scope.selectScopeProps`
+  - Uses: `primitives/select-scope.selectScopeProps`, `primitives/ui-kit.cn`
   - Exports: Types: `CardProps`; Values: `Card`
 - Cross-plugin:
   - Imported by: `active-data/task`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/track-mixer`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `primitives/data-view/gallery`, `review/plugin-changes`, `welcome`

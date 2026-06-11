@@ -1,7 +1,6 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactElement, ReactNode } from "react";
 import { MdExpandMore } from "react-icons/md";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 import type { StickyScrollHandle } from "./use-sticky-scroll";
 
 export interface JumpToBottomButtonProps {

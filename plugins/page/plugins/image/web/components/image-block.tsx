@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { MdClose, MdImage } from "react-icons/md";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
@@ -7,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
-import { cn } from "@/lib/utils";
 import { imageBlock } from "../../core";
 
 const MIN_W = 80;

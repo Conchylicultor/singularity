@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useRef, useState } from "react";
 import { MdUndo } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
@@ -7,7 +8,6 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import {
   Color,
   ColorPickerPopover,

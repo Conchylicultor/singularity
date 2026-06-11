@@ -1,9 +1,9 @@
+import { DropdownMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdLogout } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
-import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { exitConversation } from "../../core";
 
 export function ExitItem({

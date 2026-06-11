@@ -6,7 +6,7 @@
 
 - Description: Factory for slot-backed tab-host views with localStorage persistence.
 - Web:
-  - Uses: `primitives/slot-render.renderIsolated`
+  - Uses: `primitives/slot-render.renderIsolated`, `primitives/ui-kit.cn`
   - Exports: Types: `TabbedView`, `TabContribution`; Values: `defineTabbedView`
 - Cross-plugin:
   - Imported by: `conversations/conversations-view`, `tasks/task-list`

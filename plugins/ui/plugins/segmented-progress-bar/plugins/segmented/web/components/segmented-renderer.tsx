@@ -1,8 +1,4 @@
-import {
-  Tooltip,
-  TooltipContent,
-  TooltipTrigger,
-} from "@/components/ui/tooltip";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import type { SegmentedProgressBarProps } from "@plugins/ui/plugins/segmented-progress-bar/core";
 
 export function SegmentedRenderer({

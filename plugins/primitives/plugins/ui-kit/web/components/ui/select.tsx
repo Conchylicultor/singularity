@@ -1,7 +1,7 @@
 import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md"
 
 const Select = SelectPrimitive.Root

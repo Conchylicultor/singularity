@@ -1,3 +1,4 @@
+import { Button, ButtonGroup, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
 import { useOpenPane, type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
@@ -16,15 +17,6 @@ import {
 } from "@plugins/conversations/plugins/model-provider/web";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
-import { cn } from "@/lib/utils";
 
 export type LaunchRequest = {
   prompt?: string;

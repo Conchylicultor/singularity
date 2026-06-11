@@ -1,14 +1,9 @@
+import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { AVATAR_COLOR_KEYS, AVATAR_COLORS, type AvatarColor } from "../internal/colors";
 
 export interface AvatarSpec {

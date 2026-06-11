@@ -1,3 +1,4 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { toast } from "@plugins/notifications/web";
@@ -9,9 +10,7 @@ import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, de
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
-import { cn } from "@/lib/utils";
 
 type Tab = "jobs" | "events" | "triggers";
 

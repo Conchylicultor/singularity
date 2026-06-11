@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
@@ -6,7 +7,6 @@ import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { $getRoot, $getSelection, $isRangeSelection } from "lexical";
-import { cn } from "@/lib/utils";
 import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "../internal/decorator-nav-plugin";

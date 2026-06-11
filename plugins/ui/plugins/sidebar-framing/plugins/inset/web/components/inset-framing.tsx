@@ -1,10 +1,5 @@
+import { Sidebar, SidebarHeader, SidebarInset, SidebarProvider } from "@plugins/primitives/plugins/ui-kit/web";
 import type { SidebarFramingProps } from "@plugins/primitives/plugins/app-shell/core";
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarInset,
-  SidebarProvider,
-} from "@/components/ui/sidebar";
 
 /**
  * Inset framing — the main area floats as a rounded inset card (shadcn's

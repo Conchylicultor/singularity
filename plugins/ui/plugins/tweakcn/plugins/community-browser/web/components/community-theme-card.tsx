@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import type { CatalogTheme } from "../../shared";

@@ -1,6 +1,6 @@
+import { Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { MdCancel, MdCheckCircle, MdFolderOpen } from "react-icons/md";
-import { Input } from "@/components/ui/input";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { FolderPicker } from "./folder-picker";

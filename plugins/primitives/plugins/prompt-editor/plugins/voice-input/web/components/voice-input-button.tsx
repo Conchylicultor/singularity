@@ -1,7 +1,7 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdMic } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
-import { cn } from "@/lib/utils";
 import { useSpeechRecognition } from "./use-speech-recognition";
 
 export function VoiceInputButton({ insertText }: PromptEditorActionProps) {

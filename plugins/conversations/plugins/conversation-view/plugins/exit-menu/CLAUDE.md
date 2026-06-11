@@ -27,7 +27,7 @@ hide itself based on conversation state.
 - Web:
   - Slots: `ExitMenu.Item`
   - Contributes: `PromptEditorSlots.FloatingAction` → `ExitMenuButton`
-  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `primitives/prompt-editor.PromptEditorSlots`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`
+  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `primitives/prompt-editor.PromptEditorSlots`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/ui-kit.Button`, `primitives/ui-kit.DropdownMenu`, `primitives/ui-kit.DropdownMenuContent`, `primitives/ui-kit.DropdownMenuTrigger`
   - Exports: Values: `ExitMenu`
 - Cross-plugin:
   - Slot contributors: `drop-and-exit`, `drop-dependents`, `exit`, `hold-and-exit`

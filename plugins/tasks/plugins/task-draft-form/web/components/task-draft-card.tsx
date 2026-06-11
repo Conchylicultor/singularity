@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type CSSProperties } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
@@ -5,7 +6,6 @@ import { CSS } from "@dnd-kit/utilities";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 import { ModelChip, type ChainModel } from "./model-chip";
 import { RelateModeChip } from "./relate-mode-chip";
 import {

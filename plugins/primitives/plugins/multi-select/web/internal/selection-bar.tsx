@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactElement, ReactNode } from "react";
-import { cn } from "@/lib/utils";
 import { useMultiSelect } from "./use-multi-select";
 
 export type SelectionBarProps = {

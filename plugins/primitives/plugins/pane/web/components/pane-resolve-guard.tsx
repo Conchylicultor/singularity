@@ -1,9 +1,9 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentType, ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 
 interface Props {

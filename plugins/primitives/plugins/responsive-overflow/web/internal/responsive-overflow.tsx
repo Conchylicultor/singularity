@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   useLayoutEffect,
   useRef,
@@ -6,7 +7,6 @@ import {
   type RefObject,
 } from "react";
 import { createPortal } from "react-dom";
-import { cn } from "@/lib/utils";
 
 export interface UseResponsiveOverflowOptions {
   count: number;

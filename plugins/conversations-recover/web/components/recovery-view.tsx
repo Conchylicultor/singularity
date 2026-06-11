@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -6,7 +7,6 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import { conversationsResource, listGoneConversations } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { restoreBatch } from "../../shared/endpoints";

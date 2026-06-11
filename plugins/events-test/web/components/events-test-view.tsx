@@ -1,11 +1,9 @@
+import { Button, cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { toast } from "@plugins/notifications/web";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { cn } from "@/lib/utils";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   subscribeEventsTest,

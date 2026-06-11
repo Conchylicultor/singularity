@@ -16,12 +16,12 @@ export default createRule({
     type: "problem",
     docs: {
       description:
-        "Disallow imports of the deleted @/components/ui/skeleton — use the loading primitive instead.",
+        "Disallow imports of the deleted ui-kit components/ui/skeleton — use the loading primitive instead.",
     },
     schema: [],
     messages: {
       shadcnSkeleton:
-        "'@/components/ui/skeleton' was deleted. Use <Loading variant=\"block\"> (or rows/cards) from " +
+        "'components/ui/skeleton' was deleted. Use <Loading variant=\"block\"> (or rows/cards) from " +
         "@plugins/primitives/plugins/loading/web.",
     },
   },
@@ -29,7 +29,10 @@ export default createRule({
   create(context) {
     return {
       ImportDeclaration(node) {
-        if (node.source.value === "@/components/ui/skeleton") {
+        if (
+          typeof node.source.value === "string" &&
+          node.source.value.endsWith("/components/ui/skeleton")
+        ) {
           context.report({ node, messageId: "shadcnSkeleton" });
         }
       },

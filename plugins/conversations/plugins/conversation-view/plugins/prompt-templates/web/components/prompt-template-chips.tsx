@@ -1,8 +1,6 @@
+import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useMemo } from "react";
 import { MdEdit, MdSend } from "react-icons/md";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
-import { ButtonGroup } from "@/components/ui/button-group";
 import {
   FloatingAction,
   FloatingActionFadeIn,

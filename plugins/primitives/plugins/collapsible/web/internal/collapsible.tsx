@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   createContext,
   useContext,
@@ -5,7 +6,6 @@ import {
   type ReactNode,
 } from "react";
 import { MdChevronRight } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { useCollapsible, type UseCollapsibleOptions } from "./use-collapsible";
 
 export interface CollapsibleCtx {

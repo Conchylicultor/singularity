@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactElement, useEffect, useState } from "react";
 import {
   Pane,
@@ -6,7 +7,6 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import {
   Sonata,
   TEMPO_MATH_FLOOR,

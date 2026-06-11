@@ -1,9 +1,5 @@
+import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ComponentType, type ReactNode } from "react";
-import {
-  SidebarGroup,
-  SidebarGroupContent,
-  SidebarGroupLabel,
-} from "@/components/ui/sidebar";
 import {
   useCollapsible,
   CollapsibleChevron,

@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdChevronLeft } from "react-icons/md";
-import { Button } from "@/components/ui/button";
 import { clearRoute } from "@plugins/primitives/plugins/pane/web";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
 import { StoryRender } from "@plugins/apps/plugins/story/plugins/render/web";

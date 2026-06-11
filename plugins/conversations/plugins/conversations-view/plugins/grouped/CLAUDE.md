@@ -7,7 +7,11 @@
 - Description: User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
 - Web:
   - Contributes: `ConversationsView.View` "Grouped" → `GroupedView`
+<<<<<<< .merge_file_tpnJM8
   - Uses: `conversations.useConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversations-view.ConversationsView`, `conversations/conversations-view.useGoneConversationsPagination`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/collapsible.CollapsibleChevron`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/editable-field.useEditableField`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/text.Text`
+=======
+  - Uses: `conversations.useConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversations-view.ConversationsView`, `conversations/conversations-view.useGoneConversationsPagination`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/collapsible.CollapsibleChevron`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/text.Text`, `primitives/ui-kit.cn`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuAction`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`, `primitives/ui-kit.SidebarMenuSub`, `primitives/ui-kit.SidebarMenuSubButton`, `primitives/ui-kit.SidebarMenuSubItem`
+>>>>>>> .merge_file_YiyXuQ
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`

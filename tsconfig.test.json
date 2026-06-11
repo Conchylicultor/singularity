@@ -6,8 +6,7 @@
     "allowImportingTsExtensions": true,
     "moduleDetection": "force",
     "paths": {
-      "@plugins/*": ["./plugins/*"],
-      "@/*": ["./plugins/framework/plugins/web-core/web/*"]
+      "@plugins/*": ["./plugins/*"]
     }
   },
   "exclude": ["**/node_modules"],

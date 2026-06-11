@@ -1,3 +1,4 @@
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdPlaylistPlay } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
@@ -6,13 +7,6 @@ import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/notifications/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { createConversation } from "@plugins/conversations/core";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
-import { Button } from "@/components/ui/button";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { launchPromptsConfig } from "../../shared/config";

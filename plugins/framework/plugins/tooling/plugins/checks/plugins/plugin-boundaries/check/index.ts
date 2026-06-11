@@ -272,8 +272,19 @@ const check: Check = {
           });
         }
 
+        // Cross-plugin asset imports (e.g. a global `.css` stylesheet) are
+        // side-effect references to a non-JS file. They cannot be routed through
+        // a JS barrel — a stylesheet is not an exported symbol — so the
+        // barrel-grammar rule (R4) doesn't apply. The DAG edge is still tracked
+        // below (R6), so a cyclic asset dependency is still caught.
+        const isAssetImport = imp.kind === "side-effect" && isAssetSpecifier(imp.path);
+
         // R4: grammar — the import must end at `<runtime>`, nothing deeper.
-        if (!frameworkExempt && (!runtimeNames.has(resolved.suffixHead) || resolved.tail !== "")) {
+        if (
+          !frameworkExempt &&
+          !isAssetImport &&
+          (!runtimeNames.has(resolved.suffixHead) || resolved.tail !== "")
+        ) {
           violations.push({
             rule: "grammar",
             file: relFile,
@@ -883,6 +894,17 @@ function extractPluginImports(rawSrc: string): Imp[] {
   }
 
   return results;
+}
+
+/**
+ * A non-JS asset specifier (stylesheet, font, image, …) imported for its side
+ * effect. Such files are not JS modules and have no exportable symbol, so they
+ * cannot be proxied through a plugin's barrel — they are referenced by their
+ * real path. The barrel-grammar rule is therefore inapplicable to them.
+ */
+const ASSET_EXTENSIONS = [".css", ".scss", ".sass", ".png", ".jpg", ".jpeg", ".svg", ".woff", ".woff2"];
+function isAssetSpecifier(specifier: string): boolean {
+  return ASSET_EXTENSIONS.some((ext) => specifier.endsWith(ext));
 }
 
 function looksLikeImportOrReexport(keyword: string, body: string): boolean {

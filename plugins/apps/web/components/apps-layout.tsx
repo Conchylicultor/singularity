@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { TooltipProvider } from "@plugins/primitives/plugins/tooltip/web";
+import { TooltipProvider } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   PaneBasePathContext,
   setBasePath,

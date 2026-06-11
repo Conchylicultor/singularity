@@ -13,11 +13,11 @@
   "iconLibrary": "react-icons/md",
   "rtl": false,
   "aliases": {
-    "components": "@/components",
-    "utils": "@/lib/utils",
-    "ui": "@/components/ui",
-    "lib": "@/lib",
-    "hooks": "@/hooks"
+    "components": "@plugins/primitives/plugins/ui-kit/web/components",
+    "utils": "@plugins/primitives/plugins/ui-kit/web/lib/utils",
+    "ui": "@plugins/primitives/plugins/ui-kit/web/components/ui",
+    "lib": "@plugins/primitives/plugins/ui-kit/web/lib",
+    "hooks": "@plugins/primitives/plugins/ui-kit/web/hooks"
   },
   "menuColor": "default",
   "menuAccent": "subtle",

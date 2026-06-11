@@ -1,9 +1,9 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { MdAdd, MdChevronRight, MdDragIndicator } from "react-icons/md";
 import { useDraggable, useDroppable } from "@dnd-kit/core";
 import type { DropZone } from "@plugins/primitives/plugins/tree/core";
 import { useMultiSelectItem } from "@plugins/primitives/plugins/multi-select/web";
-import { cn } from "@/lib/utils";
 import type { Block } from "../../core";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";

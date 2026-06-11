@@ -1,7 +1,6 @@
+import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
-import { Button } from "@/components/ui/button";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { Input } from "@/components/ui/input";
 import {
   useAccountStatus,
   startConnectFlow,

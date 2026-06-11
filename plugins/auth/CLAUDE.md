@@ -82,7 +82,12 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Load-bearing: yes
 - Web:
   - Slots: `Auth.Provider`
+<<<<<<< .merge_file_TTl16C
   - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `primitives/text.Text`
+=======
+  - Contributes: `Pane.Register` "accounts", `Shell.Sidebar` "Accounts" → `component`
+  - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/ui-kit.Button`, `shell.Shell`
+>>>>>>> .merge_file_ZTO614
   - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
 - Cross-plugin:
   - Slot contributors: `google`, `notion`

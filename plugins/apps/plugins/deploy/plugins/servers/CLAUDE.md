@@ -7,7 +7,11 @@
 - Description: Server registry for the deployment platform. Server registry for the deployment platform.
 - Web:
   - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-add-server", `Pane.Register` "deploy-server-detail"
+<<<<<<< .merge_file_hUHd5b
   - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
+=======
+  - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.Button`
+>>>>>>> .merge_file_vxXuuy
   - Exports: Types: `Server`; Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`

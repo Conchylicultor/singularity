@@ -35,7 +35,7 @@ Plugin slot.
 - Description: Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
 - Web:
   - Slots: `TextEditorSlots.Plugin`
-  - Uses: `primitives/slot-render.defineRenderSlot`
+  - Uses: `primitives/slot-render.defineRenderSlot`, `primitives/ui-kit.cn`
   - Exports: Types: `NodeExtension`, `TextEditorPluginProps`; Values: `registerNodeExtension`, `TextEditor`, `TextEditorSlots`
 - Cross-plugin:
   - Slot contributors: `paste-images`

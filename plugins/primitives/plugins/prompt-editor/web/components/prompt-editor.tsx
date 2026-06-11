@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useState } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
@@ -6,7 +7,6 @@ import {
   $getSelection,
   $isRangeSelection,
 } from "lexical";
-import { cn } from "@/lib/utils";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { PromptEditorSlots } from "../slots";
 

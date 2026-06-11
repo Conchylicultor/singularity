@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   type ComponentProps,
   useCallback,
@@ -5,7 +6,6 @@ import {
   useRef,
   useState,
 } from "react";
-import { cn } from "@/lib/utils";
 
 const TRANSITION_DURATION = 200;
 

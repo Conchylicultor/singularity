@@ -1,7 +1,7 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdAdd } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { Button } from "@/components/ui/button";
 import { Improve } from "../commands";
 import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
 

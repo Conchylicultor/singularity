@@ -1,14 +1,8 @@
+import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactNode } from "react";
 import { MdAdd, MdDragIndicator } from "react-icons/md";
 import type { IconType } from "react-icons";
-import {
-  DropdownMenu,
-  DropdownMenuTrigger,
-  DropdownMenuContent,
-  DropdownMenuItem,
-} from "@/components/ui/dropdown-menu";
 import { Row as RowPrimitive } from "@plugins/primitives/plugins/row/web";
-import { cn } from "@/lib/utils";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";

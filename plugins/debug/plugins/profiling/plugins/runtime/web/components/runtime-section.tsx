@@ -1,8 +1,8 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactElement } from "react";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Button } from "@/components/ui/button";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   getRuntimeProfile,

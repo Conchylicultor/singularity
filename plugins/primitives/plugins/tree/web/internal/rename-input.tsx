@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
 import { pendingFocus } from "./pending-focus";
 import { useTreeListContext } from "./use-tree-row";
 

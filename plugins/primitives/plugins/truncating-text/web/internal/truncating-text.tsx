@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ElementType, ReactNode } from "react";
-import { cn } from "@/lib/utils";
 
 export interface TruncatingTextProps {
   children: ReactNode;

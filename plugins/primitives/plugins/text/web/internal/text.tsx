@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 
 /**
  * The closed set of semantic typographic roles. Each role maps to a frozen

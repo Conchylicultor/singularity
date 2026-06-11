@@ -1,7 +1,7 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 
 type HeaderPayload = { label?: string; collapsed?: boolean };
 

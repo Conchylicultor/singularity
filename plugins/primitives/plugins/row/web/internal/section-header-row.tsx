@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type React from "react";
 import {
   CollapsibleChevron,

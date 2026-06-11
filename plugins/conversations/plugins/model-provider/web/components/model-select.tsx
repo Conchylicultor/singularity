@@ -1,17 +1,10 @@
+import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   MODEL_REGISTRY,
   normalizeModel,
   type ConversationModel,
 } from "../../core";
 import { useVisibleModels } from "../internal/hooks";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 
 const OFF = "none";
 

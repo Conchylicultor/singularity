@@ -1,6 +1,5 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useRef, useCallback, useEffect, type ReactElement } from "react";
-import { cn } from "@/lib/utils";
-import { Button } from "@/components/ui/button";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
 import { toast } from "@plugins/notifications/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";

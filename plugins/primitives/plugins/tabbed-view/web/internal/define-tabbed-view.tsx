@@ -1,8 +1,8 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { cn } from "@/lib/utils";
 
 export interface TabContribution<ViewProps> {
   id: string;

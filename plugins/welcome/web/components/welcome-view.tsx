@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdArrowForward } from "react-icons/md";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -7,7 +8,6 @@ import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 
 export function WelcomeView() {
   const conv = useConversations();

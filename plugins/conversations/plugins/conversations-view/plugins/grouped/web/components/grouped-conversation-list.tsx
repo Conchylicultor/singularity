@@ -1,3 +1,4 @@
+import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState, useCallback, Fragment, type ReactNode } from "react";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -26,19 +27,9 @@ import { tasksResource } from "@plugins/tasks/core";
 import type { ConversationGroup, ConversationGroupMember } from "../../shared";
 import { useTaskAutoGroups } from "./use-task-auto-groups";
 import { AutoGroupBox } from "./auto-group-box";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuAction,
-  SidebarMenuSub,
-  SidebarMenuSubItem,
-  SidebarMenuSubButton,
-} from "@/components/ui/sidebar";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { MdChevronRight, MdClose, MdFolder, MdRemoveCircleOutline } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";
 import { GroupContainer } from "./group-container";

@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
-import { cn } from "@/lib/utils";
 import {
   Collapsible,
   CollapsibleChevron,

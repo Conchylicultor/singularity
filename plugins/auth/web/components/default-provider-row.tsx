@@ -1,9 +1,9 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { Button } from "@/components/ui/button";
 import { toast } from "@plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "@plugins/config_v2/plugins/settings/web";

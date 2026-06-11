@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -21,7 +22,6 @@ import {
   SelectionBar,
   SelectionCheckbox,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { cn } from "@/lib/utils";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
 type Task = TreeItem & {

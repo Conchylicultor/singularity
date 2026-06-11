@@ -1,10 +1,10 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdSplitscreen } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import { attemptPane } from "../panes";
 
 export function AttemptSwitchButton() {

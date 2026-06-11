@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { forwardRef } from "react";
-import { cn } from "@/lib/utils";
 import { SvgIcon } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { avatarColorClass } from "../internal/colors";

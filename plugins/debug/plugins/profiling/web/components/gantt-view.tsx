@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, type ReactElement } from "react";
 import { MdRefresh } from "react-icons/md";
-import { Button } from "@/components/ui/button";
 import { Profiling } from "../slots";
 import { ProfilingContext, SpanDetail } from "./shared";
 import type { Span } from "./shared";

@@ -1,8 +1,8 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdAdd } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { Button } from "@/components/ui/button";
 
 export function NewChildTaskAction() {
   const { convId } = conversationPane.useParams();

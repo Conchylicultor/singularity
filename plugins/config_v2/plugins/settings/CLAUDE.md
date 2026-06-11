@@ -6,9 +6,15 @@
 
 - Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
 - Web:
+<<<<<<< .merge_file_rCV3fy
   - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail"
   - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/tree.TreeRowChrome`
   - Exports: Values: `configDetailPane`, `ConfigNav`, `configNavPane`, `ConfigSidebarButton`
+=======
+  - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
+  - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/tree.TreeRowChrome`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`, `shell.Shell`
+  - Exports: Values: `configDetailPane`, `configNavPane`
+>>>>>>> .merge_file_aAIWPT
 - Server:
   - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
   - Routes: `POST /api/config-v2/reset-field`, `POST /api/config-v2/acknowledge-conflict`, `POST /api/config-v2/delete-override`, `GET /api/config-v2/raw-file`

@@ -1,17 +1,11 @@
+import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { useConversations } from "@plugins/conversations/web";
 import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
-import { cn } from "@/lib/utils";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import type { Conversation } from "@plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import {
-  SidebarMenu,
-  SidebarMenuButton,
-  SidebarMenuItem,
-  SidebarMenuAction,
-} from "@/components/ui/sidebar";
 import { MdClose } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";

@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactNode, useMemo, useState } from "react";
 import { MdFilterList } from "react-icons/md";
 import type {
@@ -8,7 +9,6 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 import type {
   DataViewProps,
   DataViewRenderProps,

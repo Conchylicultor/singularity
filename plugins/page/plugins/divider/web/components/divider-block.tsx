@@ -1,10 +1,10 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useRef } from "react";
 import {
   useBlockEditor,
   type BlockRendererProps,
 } from "@plugins/page/plugins/editor/web";
 import { textBlock } from "@plugins/page/plugins/text/core";
-import { cn } from "@/lib/utils";
 
 /**
  * A divider is a *void* block: it has no editable content, so unlike code/image

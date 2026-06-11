@@ -1,8 +1,8 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { createElement } from "react";
 import type { ReactNode } from "react";
 import { MdCampaign } from "react-icons/md";
 import type { AvatarSpec } from "@plugins/fields/plugins/avatar/core";
-import { cn } from "@/lib/utils";
 
 type SvgNode = NonNullable<AvatarSpec["svgNodes"]>[number];
 

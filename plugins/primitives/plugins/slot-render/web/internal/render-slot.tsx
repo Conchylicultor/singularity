@@ -1,3 +1,4 @@
+import { type ControlSize, ControlSizeProvider } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   createElement,
   Fragment,
@@ -18,7 +19,6 @@ import {
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { ControlSizeProvider, type ControlSize } from "@/theme/control-size";
 import {
   getSlotItemMiddlewares,
   getSlotListMiddlewares,

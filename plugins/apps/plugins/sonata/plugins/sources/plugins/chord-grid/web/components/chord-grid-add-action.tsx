@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdGridView } from "react-icons/md";
-import { Button } from "@/components/ui/button";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   beatToSeconds,

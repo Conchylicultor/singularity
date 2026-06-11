@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Fragment, useState } from "react";
 import { MdEdit } from "react-icons/md";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
@@ -8,7 +9,6 @@ import {
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 
 // Two-mode description editor:
 //   - Display: markdown rendered as plain text (with FileLinkText routing inline

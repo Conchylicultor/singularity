@@ -1,3 +1,4 @@
+import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef, useState } from "react";
 import type { BundledLanguage } from "shiki";
 import {
@@ -10,14 +11,6 @@ import {
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { cn } from "@/lib/utils";
 import { codeBlock } from "../../core";
 
 // Sentinel for the "no language" (plain text) option — Select needs a string value.

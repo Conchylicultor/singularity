@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useDroppable } from "@dnd-kit/core";
-import { cn } from "@/lib/utils";
 import type { DropTarget } from "./draggable-row";
 
 export function GroupGapZone({

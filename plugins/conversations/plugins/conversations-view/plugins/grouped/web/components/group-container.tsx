@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
-import { cn } from "@/lib/utils";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 

@@ -1,4 +1,4 @@
-import { Input } from "@/components/ui/input";
+import { Input } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   FieldHeader,
   useLocalValue,

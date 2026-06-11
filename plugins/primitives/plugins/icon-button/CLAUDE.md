@@ -6,7 +6,7 @@
 
 - Description: Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
 - Web:
-  - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
+  - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Button`, `primitives/ui-kit.iconSizeFor`, `primitives/ui-kit.useControlSize`
   - Exports: Types: `IconButtonProps`; Values: `IconButton`
 - Cross-plugin:
   - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`

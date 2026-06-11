@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { MdDeleteForever, MdLogout, MdPlayArrow, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
@@ -15,7 +16,6 @@ import { useResource, useCombinedResources } from "@plugins/primitives/plugins/l
 import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
-import { Button } from "@/components/ui/button";
 
 type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
 

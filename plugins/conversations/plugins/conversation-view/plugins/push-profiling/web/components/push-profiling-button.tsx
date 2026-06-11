@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdTimeline } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { Button } from "@/components/ui/button";
 import { convPushProfilingPane } from "../panes";
 
 export function PushProfilingButton() {

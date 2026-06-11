@@ -1,7 +1,7 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdChecklist } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { Button } from "@/components/ui/button";
 import { useTask } from "@plugins/tasks/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { convTasksPane } from "../panes";

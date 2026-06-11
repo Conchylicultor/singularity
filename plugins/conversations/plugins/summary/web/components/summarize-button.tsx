@@ -1,7 +1,7 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Button } from "@/components/ui/button";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   conversationSummariesResource,

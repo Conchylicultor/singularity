@@ -1,10 +1,5 @@
+import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, type ReactNode } from "react";
-import {
-  Popover,
-  PopoverContent,
-  PopoverTrigger,
-} from "@/components/ui/popover";
-import { cn } from "@/lib/utils";
 import { ColorPicker, type ColorPickerProps } from "./color-picker";
 
 export interface ColorPickerPopoverProps extends ColorPickerProps {

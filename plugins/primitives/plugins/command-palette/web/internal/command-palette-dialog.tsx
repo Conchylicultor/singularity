@@ -1,10 +1,8 @@
+import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "react";
 import { MdSearch } from "react-icons/md";
-import { Dialog, DialogContent } from "@/components/ui/dialog";
-import { ScrollArea } from "@/components/ui/scroll-area";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
 

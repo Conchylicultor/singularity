@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState, type ReactElement } from "react";
 import {
   formatDuration,
@@ -6,7 +7,6 @@ import {
   useGanttContainerContext,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
-import { cn } from "@/lib/utils";
 
 export interface PushEntry {
   pushId: string;

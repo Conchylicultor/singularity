@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdRateReview } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { Button } from "@/components/ui/button";
 import { convReviewPane } from "../panes";
 import { Review } from "../slots";
 

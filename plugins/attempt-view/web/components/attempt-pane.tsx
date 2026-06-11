@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdVerticalSplit } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import {
@@ -14,7 +15,6 @@ import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
 
 function SideBySideButton({ convId }: { convId: string }) {

@@ -1,8 +1,8 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";

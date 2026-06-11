@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Fragment, useEffect, useMemo, useState, type ReactNode } from "react";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { MdAdd, MdScience } from "react-icons/md";
@@ -13,7 +14,6 @@ import {
   arrayMove,
   verticalListSortingStrategy,
 } from "@dnd-kit/sortable";
-import { Button } from "@/components/ui/button";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { TaskDraftCard } from "./task-draft-card";
 import { ChainConnector } from "./chain-connector";

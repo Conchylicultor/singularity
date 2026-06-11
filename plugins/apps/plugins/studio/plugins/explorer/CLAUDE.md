@@ -20,7 +20,11 @@ served by the plugin-meta/plugin-view plugin.
 - Web:
   - Slots: `Explorer.TreeRowBadge`
   - Contributes: `Pane.Register` "explorer", `Studio.Sidebar` "Explorer" → `component`
+<<<<<<< .merge_file_C5rzEW
   - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/collapsible.ExpandAllButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
+=======
+  - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/collapsible.ExpandAllButton`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/ui-kit.cn`
+>>>>>>> .merge_file_EpN2fq
   - Exports: Types: `TreeRowBadgeContribution`; Values: `Explorer`, `usePluginTree`
 - Cross-plugin:
   - Slot contributors: `child-count`, `collapsed`, `expand-collapse`, `load-bearing`

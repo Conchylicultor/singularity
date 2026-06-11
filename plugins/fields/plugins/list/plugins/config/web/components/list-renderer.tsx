@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
-import { Button } from "@/components/ui/button";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";

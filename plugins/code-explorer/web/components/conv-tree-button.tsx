@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdFolderOpen } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { Button } from "@/components/ui/button";
 import { convFileTreePane } from "../panes";
 
 export function ConvTreeButton() {

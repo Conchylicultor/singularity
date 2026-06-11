@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback } from "react";
 import { MdDragIndicator, MdClose } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldsRecord, FieldDef } from "@plugins/config_v2/core";

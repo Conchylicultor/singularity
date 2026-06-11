@@ -6,9 +6,9 @@
  * Errors are surfaced visibly — never swallowed.
  */
 
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 interface Props {

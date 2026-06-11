@@ -1,4 +1,3 @@
-import { cn } from "@/lib/utils";
 import type { KeyboardEvent, ReactNode } from "react";
 
 /**
@@ -43,7 +42,7 @@ export const selectScopeProps = {
  */
 export function ContentScope({ children, fill = true }: { children: ReactNode; fill?: boolean }) {
   return (
-    <div {...selectScopeProps} className={cn("outline-none", fill && "h-full")}>
+    <div {...selectScopeProps} className={fill ? "outline-none h-full" : "outline-none"}>
       {children}
     </div>
   );

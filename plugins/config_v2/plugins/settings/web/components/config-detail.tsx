@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md";
-import { Button } from "@/components/ui/button";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";

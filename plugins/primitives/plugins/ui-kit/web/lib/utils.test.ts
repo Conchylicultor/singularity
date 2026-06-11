@@ -1,6 +1,6 @@
 import { it, expect } from "vitest";
 
-import { cn } from "@/lib/utils";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils";
 
 it("a trailing size-* strips an earlier custom control-icon utility", () => {
   expect(cn("control-icon-md", "size-5")).toBe("size-5");

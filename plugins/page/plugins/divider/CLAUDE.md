@@ -7,7 +7,7 @@
 - Description: Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
 - Web:
   - Contributes: `Editor.Block` "divider" → `DividerBlock`
-  - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`
+  - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `primitives/ui-kit.cn`
   - Exports: Values: `DIVIDER_TYPE`, `dividerBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

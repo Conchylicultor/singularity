@@ -1,11 +1,10 @@
+import { Button, iconSizeFor, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
-import { Button } from "@/components/ui/button";
 import {
   WithTooltip,
   Kbd,
 } from "@plugins/primitives/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import { useControlSize, iconSizeFor } from "@/theme/control-size";
 
 export interface IconButtonProps
   extends Omit<ComponentProps<typeof Button>, "children"> {

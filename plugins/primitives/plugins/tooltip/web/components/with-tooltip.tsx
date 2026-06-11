@@ -1,9 +1,5 @@
+import { Tooltip, TooltipContent, TooltipTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactElement, ReactNode } from "react";
-import {
-  Tooltip,
-  TooltipTrigger,
-  TooltipContent,
-} from "@/components/ui/tooltip";
 
 export interface WithTooltipProps {
   content: ReactNode;

@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import {
   MdAdd,
@@ -26,7 +27,6 @@ import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
 import type { TreeItem } from "./types";

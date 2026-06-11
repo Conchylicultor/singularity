@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
 import { patchTask } from "@plugins/tasks/web";
-import { cn } from "@/lib/utils";
 
 // "Delete" is a soft drop: it marks the task dropped (reversible via the
 // task header's Undrop), never removing the row. Tasks are never hard-deleted.

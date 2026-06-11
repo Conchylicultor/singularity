@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -8,7 +9,6 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Button } from "@/components/ui/button";
 import {
   tasksResource,
   type TaskListItem,

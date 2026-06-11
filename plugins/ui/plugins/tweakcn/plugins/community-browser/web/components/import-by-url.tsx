@@ -1,9 +1,9 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import {
   useEndpoint,
   useEndpointMutation,
 } from "@plugins/infra/plugins/endpoints/web";
-import { Button } from "@/components/ui/button";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Collapsible,

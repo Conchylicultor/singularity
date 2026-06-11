@@ -15,7 +15,6 @@ export default defineConfig({
   },
   resolve: {
     alias: {
-      "@": path.resolve(__dirname, "./web"),
       "@plugins": path.resolve(__dirname, "../../../"),
     },
   },

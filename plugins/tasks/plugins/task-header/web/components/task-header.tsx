@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
@@ -9,7 +10,6 @@ import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
-import { Button } from "@/components/ui/button";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {

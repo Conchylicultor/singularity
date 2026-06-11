@@ -1,10 +1,10 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useCallback, useMemo } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
-import { Button } from "@/components/ui/button";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   getBroadcasts,

@@ -1,3 +1,4 @@
+import { Button, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { Fragment, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
@@ -5,8 +6,6 @@ import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
-import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
 

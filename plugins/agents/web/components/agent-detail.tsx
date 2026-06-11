@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
@@ -12,7 +13,6 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { Button } from "@/components/ui/button";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { launchAgent, updateAgent } from "@plugins/agents/core";
 import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";

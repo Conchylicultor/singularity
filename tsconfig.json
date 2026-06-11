@@ -1,7 +1,6 @@
 {
   "compilerOptions": {
     "paths": {
-      "@/*": ["./plugins/framework/plugins/web-core/web/*"],
       "@plugins/*": ["./plugins/*"]
     }
   },

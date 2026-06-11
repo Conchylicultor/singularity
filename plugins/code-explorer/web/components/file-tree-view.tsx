@@ -1,10 +1,6 @@
+import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import {
-  ResizableHandle,
-  ResizablePanel,
-  ResizablePanelGroup,
-} from "@/components/ui/resizable";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";

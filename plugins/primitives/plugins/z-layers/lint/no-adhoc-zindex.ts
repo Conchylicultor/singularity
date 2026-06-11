@@ -8,7 +8,7 @@ const createRule = ESLintUtils.RuleCreator(
  * Z-layer standardization guardrail.
  *
  * Stacking order must come from ONE ordered, named ladder: the semantic
- * `--z-*` scale defined in `plugins/framework/plugins/web-core/web/theme/app.css`
+ * `--z-*` scale defined in `plugins/primitives/plugins/ui-kit/web/theme/app.css`
  * and exposed as the `z-base / z-raised / z-nav / z-float / z-overlay / z-popover
  * / z-draw / z-max` `@utility` classes. A raw `z-<n>` / `z-[…]` value is opaque
  * intent — it can't say *which* layer it means — and scattering raw numbers
@@ -96,7 +96,7 @@ export default createRule({
     schema: [],
     messages: {
       adhocZindex:
-        "Use a semantic z-layer utility (z-raised, z-nav, z-float, z-overlay, z-popover, z-draw, z-max) from the z-layers scale instead of a raw z-index. See plugins/framework/plugins/web-core/web/theme/app.css.",
+        "Use a semantic z-layer utility (z-raised, z-nav, z-float, z-overlay, z-popover, z-draw, z-max) from the z-layers scale instead of a raw z-index. See plugins/primitives/plugins/ui-kit/web/theme/app.css.",
     },
   },
   defaultOptions: [],

@@ -1,3 +1,4 @@
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   MdContentCopy,
   MdCrop,
@@ -8,8 +9,6 @@ import {
   MdUndo,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
 
 export type Tool = "none" | "crop" | "draw";
 

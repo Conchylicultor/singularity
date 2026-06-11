@@ -6,7 +6,7 @@
 
 - Description: Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
 - Web:
-  - Uses: `primitives/persistent-draft.useDraft`, `primitives/section-label.SectionLabel`
+  - Uses: `primitives/persistent-draft.useDraft`, `primitives/section-label.SectionLabel`, `primitives/ui-kit.cn`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
   - Exports: Types: `AlphaSliderProps`, `ColorAreaProps`, `ColorInputProps`, `ColorPickerPopoverProps`, `ColorPickerProps`, `HueSliderProps`, `SwatchGridProps`; Values: `AlphaSlider`, `Color`, `ColorArea`, `ColorInput`, `ColorPicker`, `ColorPickerPopover`, `HueSlider`, `MAX_CHROMA`, `SwatchGrid`
 - Cross-plugin:
   - Imported by: `apps/sonata/track-mixer`, `fields/color/config`, `ui/theme-engine/theme-customizer`, `ui/tokens/shadow`

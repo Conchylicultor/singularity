@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   useCallback,
   useLayoutEffect,
@@ -15,7 +16,6 @@ import {
 } from "@plugins/reorder/web";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { cn } from "@/lib/utils";
 
 export interface CollapsibleWrapProps {
   /** The single <Slot.Render> element — never indexed or duplicated. */

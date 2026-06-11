@@ -1,3 +1,4 @@
+import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
@@ -28,12 +29,6 @@ import { queueRanksResource } from "../../shared/resources";
 import { applyReorder, type ReorderVars } from "./apply-reorder";
 import { tasksResource } from "@plugins/tasks/core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
-import {
-  SidebarMenu,
-  SidebarMenuAction,
-  SidebarMenuButton,
-} from "@/components/ui/sidebar";
-import { cn } from "@/lib/utils";
 
 type RankedConversation = Conversation & { rank: Rank };
 

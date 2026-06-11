@@ -1,9 +1,8 @@
+import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { toast } from "@plugins/notifications/web";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
 import { Indicator, type Question } from "./ask-user-question-tool-view";
 

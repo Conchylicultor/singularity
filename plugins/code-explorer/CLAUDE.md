@@ -7,7 +7,11 @@
 - Description: Worktree-scoped file browser: sidebar entry opens the main worktree; conversation toolbar opens the agent's worktree. Worktree-scoped file browser and viewer: tree listing plus raw/diff/image content by attempt id or the reserved `main` sentinel.
 - Web:
   - Contributes: `Pane.Register` "global-file-tree", `Pane.Register` "conv-file-tree", `Shell.Sidebar` "Explorer" → `component`, `Conversation.ActionBar` → `ConvTreeButton`
+<<<<<<< .merge_file_gAsIoQ
   - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/text.Text`, `shell.Shell`
+=======
+  - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.ResizableHandle`, `primitives/ui-kit.ResizablePanel`, `primitives/ui-kit.ResizablePanelGroup`, `shell.Shell`
+>>>>>>> .merge_file_mNnL5F
   - Exports: Values: `FileTree`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`

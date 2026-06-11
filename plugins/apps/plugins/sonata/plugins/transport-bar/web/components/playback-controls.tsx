@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { MdAdd, MdPause, MdPlayArrow, MdRemove } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";

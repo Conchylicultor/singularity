@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
@@ -6,7 +7,6 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { cn } from "@/lib/utils";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {
   const { open, triggerProps, contentId } = useCollapsible();

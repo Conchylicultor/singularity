@@ -7,7 +7,7 @@
 - Description: Exit-menu entry that marks the task as held and closes the conversation.
 - Web:
   - Contributes: `ExitMenu.Item` "hold-and-exit" → `HoldAndExitItem`
-  - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`
+  - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/ui-kit.DropdownMenuItem`
 - Server:
   - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversation`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
   - Routes: `POST /api/conversations/:id/hold-and-exit`

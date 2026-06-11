@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdArticle } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusDot } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 

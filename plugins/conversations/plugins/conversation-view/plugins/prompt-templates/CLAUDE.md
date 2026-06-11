@@ -7,7 +7,7 @@
 - Description: Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
 - Web:
   - Contributes: `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigGearButton`, `conversations.useConversation`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/floating-action.FloatingAction`, `primitives/floating-action.FloatingActionFadeIn`, `primitives/prompt-editor.PromptEditorSlots`, `primitives/responsive-overflow.ResponsiveOverflow`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigGearButton`, `conversations.useConversation`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/floating-action.FloatingAction`, `primitives/floating-action.FloatingActionFadeIn`, `primitives/prompt-editor.PromptEditorSlots`, `primitives/responsive-overflow.ResponsiveOverflow`, `primitives/ui-kit.Button`, `primitives/ui-kit.ButtonGroup`, `primitives/ui-kit.cn`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Shared:

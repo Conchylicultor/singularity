@@ -1,6 +1,6 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useRef, useState } from "react";
 import { MdFileUpload } from "react-icons/md";
-import { Button } from "@/components/ui/button";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenSong } from "@plugins/apps/plugins/sonata/plugins/library/web";

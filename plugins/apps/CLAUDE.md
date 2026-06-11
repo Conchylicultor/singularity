@@ -9,7 +9,7 @@
 - Web:
   - Slots: `Apps.App`, `Apps.RailFraming`
   - Contributes: `Core.Root` → `AppsLayout`
-  - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
+  - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
   - Exports: Types: `ActiveApp`, `RailFramingContribution`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
   - Slot contributors: `app-rail-framing`, `shell`

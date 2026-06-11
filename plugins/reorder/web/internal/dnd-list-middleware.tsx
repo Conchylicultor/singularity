@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   Fragment,
   useCallback,
@@ -12,7 +13,6 @@ import { MdTune } from "react-icons/md";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { rectSortingStrategy } from "@plugins/primitives/plugins/sortable-list/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Button } from "@/components/ui/button";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import type {

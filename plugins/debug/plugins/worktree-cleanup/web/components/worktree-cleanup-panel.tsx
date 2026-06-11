@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
@@ -6,7 +7,6 @@ import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
-import { Button } from "@/components/ui/button";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { readNdjson } from "../internal/read-ndjson";
 import {

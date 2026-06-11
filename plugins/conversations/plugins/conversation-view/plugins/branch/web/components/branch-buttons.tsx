@@ -1,3 +1,4 @@
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdCallSplit } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
@@ -14,7 +15,6 @@ import {
   useVisibleModels,
   useDefaultModel,
 } from "@plugins/conversations/plugins/model-provider/web";
-import { Button } from "@/components/ui/button";
 
 export function BranchButtons({
   conversation,

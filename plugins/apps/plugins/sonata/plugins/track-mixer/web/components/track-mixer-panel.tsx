@@ -1,3 +1,4 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState, type ComponentType } from "react";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import {
@@ -10,7 +11,6 @@ import {
   MdVolumeOff,
   MdVolumeUp,
 } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { selectScopeProps } from "@plugins/primitives/plugins/select-scope/web";
-import { cn } from "@/lib/utils";
 import type React from "react";
 
 /**

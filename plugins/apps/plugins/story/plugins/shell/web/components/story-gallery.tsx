@@ -1,5 +1,5 @@
 import { MdAdd, MdAutoStories } from "react-icons/md";
-import { Button } from "@/components/ui/button";
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";

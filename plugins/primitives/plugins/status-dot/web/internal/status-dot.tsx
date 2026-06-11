@@ -1,4 +1,4 @@
-import { cn } from "@/lib/utils";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 
 export interface StatusDotProps {
   colorClass: string;

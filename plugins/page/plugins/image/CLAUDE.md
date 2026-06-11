@@ -7,7 +7,7 @@
 - Description: Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
 - Web:
   - Contributes: `Editor.Block` "image" → `ImageBlock`
-  - Uses: `infra/attachments.uploadAttachment`, `page/editor.Editor`, `primitives/placeholder.Placeholder`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
+  - Uses: `infra/attachments.uploadAttachment`, `page/editor.Editor`, `primitives/placeholder.Placeholder`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`, `primitives/ui-kit.cn`
   - Exports: Values: `imageBlock`
 - Server:
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.blocksChanged`

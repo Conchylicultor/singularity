@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdWarningAmber } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import type { Group, TracedGraph, TracedNode } from "../internal/trace-types";
 import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/badge/web";

@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Card } from "@plugins/primitives/plugins/card/web";

@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactElement } from "react";
-import { cn } from "@/lib/utils";
 import { useMultiSelectItem } from "./use-multi-select-item";
 
 export type SelectionCheckboxProps = {

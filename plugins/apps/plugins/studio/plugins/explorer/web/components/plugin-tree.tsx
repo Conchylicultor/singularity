@@ -1,8 +1,8 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useMemo, useState } from "react";
 import { MdChevronRight, MdExpandMore } from "react-icons/md";
 import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
-import { cn } from "@/lib/utils";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Explorer } from "../slots";

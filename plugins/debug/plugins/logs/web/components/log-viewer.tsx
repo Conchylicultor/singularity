@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useRef, useState } from "react";
-import { cn } from "@/lib/utils";
 import { ReconnectingEventSource, useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getLogChannels } from "@plugins/primitives/plugins/log-channels/core";

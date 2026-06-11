@@ -1,3 +1,4 @@
+import { Button, Dialog, DialogContent, DialogDescription, DialogTitle } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
@@ -6,13 +7,6 @@ import {
   pagesResource,
   deleteBlock,
 } from "@plugins/page/plugins/editor/core";
-import {
-  Dialog,
-  DialogContent,
-  DialogTitle,
-  DialogDescription,
-} from "@/components/ui/dialog";
-import { Button } from "@/components/ui/button";
 
 /**
  * Subtree delete is destructive: deleting a page FK-cascades its blocks AND

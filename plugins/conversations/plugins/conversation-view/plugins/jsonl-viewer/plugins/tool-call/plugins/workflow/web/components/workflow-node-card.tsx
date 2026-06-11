@@ -1,5 +1,5 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdAccountTree } from "react-icons/md";
-import { cn } from "@/lib/utils";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import type { TracedNode } from "../internal/trace-types";

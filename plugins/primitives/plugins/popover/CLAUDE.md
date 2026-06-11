@@ -6,7 +6,7 @@
 
 - Description: Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
 - Web:
-  - Uses: `primitives/tooltip.WithTooltip`
+  - Uses: `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
   - Exports: Types: `InlinePopoverProps`; Values: `InlinePopover`
 - Cross-plugin:
   - Imported by: `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/folder-picker`, `primitives/launch`, `reorder`, `reorder/editor`, `tasks/task-draft-form`

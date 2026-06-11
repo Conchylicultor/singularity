@@ -1,6 +1,6 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
-import { cn } from "@/lib/utils"
+import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {

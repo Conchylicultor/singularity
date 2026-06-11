@@ -1,3 +1,4 @@
+import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -6,14 +7,6 @@ import {
 } from "@plugins/primitives/plugins/slot-render/web";
 import type { SidebarFramingProps } from "../../core";
 import { AppShell } from "../slots";
-import { Button } from "@/components/ui/button";
-import {
-  Sidebar,
-  SidebarHeader,
-  SidebarInset,
-  SidebarProvider,
-  SidebarTrigger,
-} from "@/components/ui/sidebar";
 export type AppShellSidebarItem = {
   title: string;
   icon: React.ComponentType<{ className?: string }>;

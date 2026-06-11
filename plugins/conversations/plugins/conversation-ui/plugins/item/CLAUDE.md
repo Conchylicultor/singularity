@@ -23,7 +23,7 @@ exported alongside so surfaces with bespoke layouts can compose directly.
 - Description: Visual primitive for rendering a Conversation as a row or inline chip. Used by every surface that lists conversations.
 - Web:
   - Slots: `Item.Chips`, `Item.Avatar`
-  - Uses: `primitives/avatar.Avatar`, `primitives/badge.Badge`, `primitives/relative-time.formatRelativeTime`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
+  - Uses: `primitives/avatar.Avatar`, `primitives/badge.Badge`, `primitives/relative-time.formatRelativeTime`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.cn`
   - Exports: Types: `ConversationItemConv`, `ConversationItemProps`; Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
 - Cross-plugin:
   - Slot contributors: `agents`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `op-status`

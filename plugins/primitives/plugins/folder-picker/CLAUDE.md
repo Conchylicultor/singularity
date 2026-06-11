@@ -38,7 +38,11 @@ has **no** config_v2 dependency — the `directory-path` config field type wraps
 
 - Description: Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
 - Web:
+<<<<<<< .merge_file_wtFCbO
   - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/truncating-text.TruncatingText`
+=======
+  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/icon-button.IconButton`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.Button`, `primitives/ui-kit.Input`
+>>>>>>> .merge_file_htz5VQ
   - Exports: Types: `FolderPickerPopoverProps`, `FolderPickerProps`; Values: `FolderPicker`, `FolderPickerPopover`, `useHostDir`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`

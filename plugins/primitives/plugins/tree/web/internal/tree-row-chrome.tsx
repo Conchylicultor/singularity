@@ -1,6 +1,6 @@
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactNode, type Ref } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
-import { cn } from "@/lib/utils";
 
 export type TreeRowChromeProps = {
   depth: number;
