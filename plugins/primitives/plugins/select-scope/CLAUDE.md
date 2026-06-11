@@ -4,13 +4,9 @@
 
 ## Plugin reference
 
-<<<<<<< .merge_file_i30GXQ
-- Description: Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.
-- Cross-plugin:
-  - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `page/editor`, `primitives/pane`, `primitives/syntax-highlight`
-=======
 - Description: Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
->>>>>>> .merge_file_CK5jeY
+- Cross-plugin:
+  - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `framework/web-core`, `page/editor`, `primitives/card`, `primitives/pane`, `primitives/syntax-highlight`, `shell/toaster`
 - Web:
   - Exports: Values: `ContentScope`, `selectScopeProps`
 

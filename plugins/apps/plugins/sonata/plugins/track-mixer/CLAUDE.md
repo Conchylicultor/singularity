@@ -48,7 +48,7 @@ plus a per-song reset.
 - Description: Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
 - Web:
   - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/color-picker.SwatchGrid`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/text.Text`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`, `primitives/color-picker.SwatchGrid`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/text.Text`
   - Exports: Types: `TrackMixerEntry`; Values: `useHiddenTrackIds`, `useMutedTrackIds`, `useTrackColorMap`, `useTrackInstrumentMap`, `useTrackMixerEntries`
 - Server:
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`

@@ -40,7 +40,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
-        - Uses: `active-data.ActiveData`, `active-data.useActiveDataBinding`, `conversations.useConversationById`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/side-task.taskSidePane`, `infra/endpoints.fetchEndpoint`, `primitives/launch.LaunchControl`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `tasks/attempt-status.AttemptStatusBadge`
+        - Uses: `active-data.ActiveData`, `active-data.useActiveDataBinding`, `conversations.useConversationById`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/side-task.taskSidePane`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`, `primitives/launch.LaunchControl`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `tasks/attempt-status.AttemptStatusBadge`
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
       - Web:
         - Contributes: `ActiveData.Tag` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b" → `TaskLinkChip`
@@ -158,7 +158,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume and aggregate load status.
               - Web:
                 - Contributes: `Sonata.Effect` "audio-engine" → `AudioEngine`, `Sonata.Section` "Audio" → `AudioPanel`
-                - Uses: `apps/sonata/shell.InstrumentVoices`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackInstrumentMap`
+                - Uses: `apps/sonata/shell.InstrumentVoices`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackInstrumentMap`, `primitives/card.Card`
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
                 - Contributes: `Sonata.Instrument` "Acoustic Piano"
@@ -179,7 +179,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Library.CardMeta`, `Library.Source`, `Library.Sort`
             - Contributes: `Sonata.Home` "library" → `SongLibrary`, `Pane.Register` "sonata-library", `Pane.Register` "sonata-player"
-            - Uses: `apps/sonata/shell.publishSonataTransport`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/data-view.DataView`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
+            - Uses: `apps/sonata/shell.publishSonataTransport`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`, `primitives/data-view.DataView`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
             - Exports: Types: `SortOrderProps`; Values: `Library`, `useOpenSong`
           - Cross-plugin:
             - Slot contributors: `chord-grid`, `folders`, `midi`, `playback-history`
@@ -260,7 +260,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
-                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/text.Text`
+                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/text.Text`
         - **`score`**
           - Cross-plugin:
             - Imported by: `apps/sonata/theory`
@@ -280,7 +280,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. compile() derives notes from them via the selected voicing strategy. Persists per-song grid text/voicing/octave and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text, voicing, and octave. Creates chord-grid–backed songs and persists edits (syncing the parent song's title/duration).
               - Web:
                 - Contributes: `Sonata.Source` "Chord Grid", `Library.Source` "chord-grid", `Sonata.Section` "Chord Grid" → `ChordGridEditorSection`
-                - Uses: `apps/sonata/library.Library`, `apps/sonata/library.useOpenSong`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`
+                - Uses: `apps/sonata/library.Library`, `apps/sonata/library.useOpenSong`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`
               - Server:
                 - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.updateSongMeta`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/server/internal/tables.ts`
@@ -313,7 +313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
             - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
-            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/color-picker.SwatchGrid`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/text.Text`
+            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`, `primitives/color-picker.SwatchGrid`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/text.Text`
             - Exports: Types: `TrackMixerEntry`; Values: `useHiddenTrackIds`, `useMutedTrackIds`, `useTrackColorMap`, `useTrackInstrumentMap`, `useTrackMixerEntries`
           - Server:
             - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`
@@ -927,7 +927,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `JsonlViewer.RowAction`, `JsonlViewer.Overlay`, `JsonlViewer.EventFilter`, `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-            - Uses: `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
+            - Uses: `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
             - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
             - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `preprompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
@@ -991,7 +991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/tool-call/read`
             - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body, in muted or primary tone.
               - Web:
-                - Uses: `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`
+                - Uses: `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `primitives/card.Card`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`
                 - Exports: Types: `CollapsibleCardProps`, `CollapsibleCardTone`; Values: `CollapsibleCard`
               - Cross-plugin:
                 - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-thinking`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/preprompt`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/unknown`
@@ -1094,7 +1094,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`, `Pane.Register` "workflow-node"
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/collapsible.useCollapsible`, `primitives/live-state.useResource`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/card.Card`, `primitives/collapsible.useCollapsible`, `primitives/live-state.useResource`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
@@ -1973,7 +1973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
     - **`web-core`**
       - Web:
-        - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`
+        - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/select-scope.ContentScope`, `primitives/text.Text`
       - Structure:
         - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
         - Composition root: yes
@@ -2571,6 +2571,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `plugin-meta/plugin-view`, `primitives/filepath-breadcrumb`
       - Web:
         - Exports: Types: `BreadcrumbProps`, `BreadcrumbSegment`; Values: `Breadcrumb`
+    - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
+      - Web:
+        - Uses: `primitives/select-scope.selectScopeProps`
+        - Exports: Types: `CardProps`; Values: `Card`
+      - Cross-plugin:
+        - Imported by: `active-data/task`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/track-mixer`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `primitives/data-view/gallery`, `review/plugin-changes`, `welcome`
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
       - Cross-plugin:
         - Imported by: `agents`, `apps/studio/explorer`, `build`, `build/build-logs`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `debug/claude-cli-calls`, `fields/object/config`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/detail-sections`, `primitives/row`, `primitives/tree`, `reorder/node-types/header`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list`, `tasks/task-preprompt`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tweakcn/community-browser`
@@ -2639,7 +2645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: `primitives/data-view.DataViewSlots`, `primitives/text.Text`
+            - Uses: `primitives/card.Card`, `primitives/data-view.DataViewSlots`, `primitives/text.Text`
             - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`, `galleryOptions`
           - Core:
             - Exports: Types: `CoverContent`, `GalleryViewOptions`; Values: `galleryOptions`
@@ -2850,11 +2856,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `agents`, `apps/studio/contributions/tables/foreign-keys`, `config_v2/config-link`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/user-image`, `debug/live-state-health`, `debug/memory`, `debug/profiling`, `page/links`, `plugin-meta/plugin-view`, `primitives/avatar`, `primitives/color-picker`, `primitives/icon-picker`, `tasks/task-header`
       - Web:
         - Exports: Types: `SectionLabelProps`; Values: `SectionLabel`
-    - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.
+    - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
       - Cross-plugin:
-        - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `page/editor`, `primitives/pane`, `primitives/syntax-highlight`
+        - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `framework/web-core`, `page/editor`, `primitives/card`, `primitives/pane`, `primitives/syntax-highlight`, `shell/toaster`
       - Web:
-        - Exports: Values: `ContentScope`
+        - Exports: Values: `ContentScope`, `selectScopeProps`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
         - Slots: `Shortcuts.Shortcut`
@@ -3009,7 +3015,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `PluginChanges.Section`, `PluginChanges.DiffRenderer`
         - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
-        - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `review.ReviewSlots`
+        - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/card.Card`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `review.ReviewSlots`
         - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
       - Server:
         - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `tasks-core.getConversation`, `tasks-core.listPushesByPushId`
@@ -3073,7 +3079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
       - Web:
         - Contributes: `Core.Root` → `ToasterRoot`
-        - Uses: `shell.ShellCommands`, `shell.ToastArgs`, `ui/theme-engine.useColorMode`
+        - Uses: `primitives/select-scope.ContentScope`, `shell.ShellCommands`, `shell.ToastArgs`, `ui/theme-engine.useColorMode`
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Web:
@@ -3487,7 +3493,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
   - Web:
     - Contributes: `Pane.Register` "welcome"
-    - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `primitives/launch.LaunchControl`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
+    - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `primitives/card.Card`, `primitives/launch.LaunchControl`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
     - Exports: Values: `welcomePane`
 
 - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
