@@ -2,6 +2,7 @@ import type { ConfigProxy } from "./config-proxy";
 import { computeHash } from "./config-proxy";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "./types";
 import type { JsonValue } from "./types";
+import type { ConfigV2ValidationIssue } from "./resource";
 
 export function effective(
   origin: ConfigProxy,
@@ -89,12 +90,12 @@ export function validationIssues(
   descriptor: ConfigDescriptor,
   origin: ConfigProxy,
   overwrites: ConfigProxy,
-): string[] | null {
+): ConfigV2ValidationIssue[] | null {
   const raw = effective(origin, overwrites);
   if (raw === undefined) return null; // absent document ≠ invalid
   const result = descriptor.schema.safeParse(raw);
   if (result.success) return null;
-  return result.error.issues.map(
-    (i) => `${i.path.join(".") || "(root)"}: ${i.message}`,
-  );
+  // Keep the zod path as an array so the UI can drill the offending value out of
+  // the stored document; readTypedConfig joins it inline only for its warn log.
+  return result.error.issues.map((i) => ({ path: [...i.path], message: i.message }));
 }

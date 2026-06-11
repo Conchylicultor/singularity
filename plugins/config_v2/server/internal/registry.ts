@@ -1,5 +1,5 @@
 import { readFileSync, unlinkSync } from "node:fs";
-import { join } from "node:path";
+import { join, relative } from "node:path";
 import type {
   ConfigDescriptor,
   ConfigValues,
@@ -19,6 +19,8 @@ import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
+import { CONFIG_DIR } from "./config-dir";
 
 interface CacheEntry {
   scopeId: string;
@@ -491,7 +493,19 @@ export function acknowledgeConflictByPath(storePath: string, scopeId?: string): 
   userOverwrites.write(ow.content, newHash);
 }
 
-export function getRawFileContent(storePath: string, scopeId?: string): { origin: string | null; override: string | null } {
+export function getRawFileContent(
+  storePath: string,
+  scopeId?: string,
+): {
+  override: string | null;
+  overridePath: string;
+  origin: string | null;
+  originPath: string;
+  gitOverride: string | null;
+  gitOverridePath: string;
+  gitOrigin: string | null;
+  gitOriginPath: string;
+} {
   const descriptor = getDescriptorByStorePath(storePath);
   if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
 
@@ -507,9 +521,26 @@ export function getRawFileContent(storePath: string, scopeId?: string): { origin
     }
   };
 
+  // Git-layer files live in the repo, not the per-worktree user dir. They are
+  // repo-wide (never scope-forked), so scopeId only affects the user-layer paths.
+  const parts = storePath.replace(/\.jsonc$/, "").split("/");
+  const dir = parts.slice(0, -1).join("/");
+  const name = parts[parts.length - 1]!;
+  const gitOverridePath = join(REPO_ROOT, "config", dir, `${name}.jsonc`);
+  const gitOriginPath = join(REPO_ROOT, "config", dir, `${name}.origin.jsonc`);
+
+  // Paths are returned relative to their layer root (user config dir / repo root)
+  // so the UI can label each section with a compact, non-wrapping location rather
+  // than a noisy absolute path. The label already names the layer.
   return {
-    origin: readRaw(entry.userOriginPath),
     override: readRaw(entry.userOverwritesPath),
+    overridePath: relative(CONFIG_DIR, entry.userOverwritesPath),
+    origin: readRaw(entry.userOriginPath),
+    originPath: relative(CONFIG_DIR, entry.userOriginPath),
+    gitOverride: readRaw(gitOverridePath),
+    gitOverridePath: relative(REPO_ROOT, gitOverridePath),
+    gitOrigin: readRaw(gitOriginPath),
+    gitOriginPath: relative(REPO_ROOT, gitOriginPath),
   };
 }
 

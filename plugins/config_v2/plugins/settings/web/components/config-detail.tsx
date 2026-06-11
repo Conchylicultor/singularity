@@ -12,6 +12,22 @@ import { useConflicts } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
 import { ConfigFieldRow } from "./config-field-row";
 import { ConflictDiff } from "./conflict-diff";
+import { InvalidDiff } from "./invalid-diff";
+
+// Walks a structured zod issue path (["items", 6]) into the stored document to
+// recover the offending value, so the invalid banner can show exactly what's
+// wrong. Returns MISSING when the path doesn't resolve (e.g. a required-but-absent
+// key), which renders as "(value missing)" rather than a misleading `undefined`.
+const MISSING = Symbol("missing");
+function drillPath(root: unknown, path: (string | number)[]): unknown {
+  let cur: unknown = root;
+  for (const seg of path) {
+    if (cur === null || typeof cur !== "object") return MISSING;
+    cur = (cur as Record<string | number, unknown>)[seg];
+    if (cur === undefined) return MISSING;
+  }
+  return cur;
+}
 
 export function ConfigDetail() {
   const configPath = configDetailPane.useRouteEntry()?.params.configPath;
@@ -149,37 +165,64 @@ function ConfigDetailInner({
         <>
           {conflictEntry && (
             conflictEntry.kind === "invalid" ? (
-              <Text as="div" variant="body" className="mb-2 flex flex-col gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive">
-                <div className="flex items-center gap-2">
-                  <MdWarning className="size-4 shrink-0" />
-                  <span className="flex-1">Stored config is invalid for the current schema</span>
-                  <div className="flex shrink-0 gap-1.5">
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={() => setShowRaw(true)}
-                      className="bg-destructive/20 hover:bg-destructive/30"
-                    >
-                      View raw
-                    </Button>
-                    <Button
-                      variant="ghost"
-                      size="xs"
-                      onClick={handleAcceptAll}
-                      className="bg-destructive/20 hover:bg-destructive/30"
-                    >
-                      Reset to defaults
-                    </Button>
+              <>
+                <Text as="div" variant="body" className="mb-2 flex flex-col gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive">
+                  <div className="flex items-center gap-2">
+                    <MdWarning className="size-4 shrink-0" />
+                    <span className="flex-1">Stored config is invalid for the current schema</span>
+                    <div className="flex shrink-0 gap-1.5">
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setShowDiff((v) => !v)}
+                        className="bg-destructive/20 hover:bg-destructive/30"
+                      >
+                        <MdDifference className="size-3.5" />
+                        {showDiff ? "Hide diff" : "View diff"}
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={() => setShowRaw(true)}
+                        className="bg-destructive/20 hover:bg-destructive/30"
+                      >
+                        View raw
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={handleAcceptAll}
+                        className="bg-destructive/20 hover:bg-destructive/30"
+                      >
+                        Reset to defaults
+                      </Button>
+                    </div>
                   </div>
-                </div>
-                {conflictEntry.issues && conflictEntry.issues.length > 0 && (
-                  <Text as="ul" variant="caption" className="ml-6 list-disc text-destructive/80">
-                    {conflictEntry.issues.map((issue, i) => (
-                      <li key={i}>{issue}</li>
-                    ))}
-                  </Text>
-                )}
-              </Text>
+                  {conflictEntry.issues && conflictEntry.issues.length > 0 && (
+                    <div className="ml-6 flex flex-col gap-2">
+                      {conflictEntry.issues.map((issue, i) => {
+                        const value = drillPath(conflictEntry.overrideValues, issue.path);
+                        const label = issue.path.length > 0 ? issue.path.join(".") : "(root)";
+                        return (
+                          <div key={i} className="flex flex-col gap-1">
+                            <Text as="div" variant="caption" className="text-destructive/90">
+                              <code className="rounded-sm bg-destructive/15 px-1 font-medium">{label}</code>
+                              {" — "}
+                              {issue.message}
+                            </Text>
+                            {value === MISSING ? (
+                              <Text as="div" variant="caption" tone="muted">(value missing)</Text>
+                            ) : (
+                              <HighlightedCode code={JSON.stringify(value, null, 2)} lang="json" />
+                            )}
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+                </Text>
+                {showDiff && <InvalidDiff storePath={registration.storePath} />}
+              </>
             ) : isSoftConflict ? (
               <Text as="div" variant="body" className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                 <span>Defaults updated — no conflicts</span>
@@ -255,26 +298,35 @@ function RawFileView({ storePath }: { storePath: string }) {
   if (isPending) return <Placeholder>Loading…</Placeholder>;
   if (!data) return <Placeholder>No data</Placeholder>;
 
-  const hasOverride = data.override !== null;
+  // The running app resolves to the user-layer origin (the propagated git config).
+  // It normally equals the git origin; when it diverges a build/propagation is
+  // pending, and that file is the one the app actually reads — worth surfacing.
+  const showResolved = data.origin !== null && data.origin !== data.gitOrigin;
 
   return (
     <div className="flex flex-col gap-3">
-      {hasOverride && (
-        <section>
-          <Text as="div" variant="caption" tone="muted" className="mb-1 font-medium">Override</Text>
-          <HighlightedCode code={data.override!} lang="json" />
-        </section>
+      <RawSection label="User override" path={data.overridePath} code={data.override} />
+      <RawSection label="Git override" path={data.gitOverridePath} code={data.gitOverride} />
+      <RawSection label="Origin (defaults)" path={data.gitOriginPath} code={data.gitOrigin} />
+      {showResolved && (
+        <RawSection label="Resolved origin (app reads — build pending)" path={data.originPath} code={data.origin} />
       )}
-      <section>
-        <Text as="div" variant="caption" tone="muted" className="mb-1 font-medium">
-          {hasOverride ? "Origin (defaults)" : "Origin"}
-        </Text>
-        {data.origin ? (
-          <HighlightedCode code={data.origin} lang="json" />
-        ) : (
-          <Placeholder>No origin file on disk</Placeholder>
-        )}
-      </section>
     </div>
+  );
+}
+
+function RawSection({ label, path, code }: { label: string; path: string; code: string | null }) {
+  return (
+    <section>
+      <Text as="div" variant="caption" tone="muted" className="mb-1 flex items-baseline gap-2">
+        <span className="shrink-0 whitespace-nowrap font-medium">{label}</span>
+        <span className="min-w-0 truncate font-mono opacity-70" title={path}>{path}</span>
+      </Text>
+      {code !== null ? (
+        <HighlightedCode code={code} lang="json" />
+      ) : (
+        <Placeholder>not set</Placeholder>
+      )}
+    </section>
   );
 }

@@ -15,6 +15,7 @@ export type {
 export {
   configV2Resource,
   configV2ValuesSchema,
+  configV2ValidationIssueSchema,
   configV2ConflictEntrySchema,
   configV2ConflictsSchema,
   configV2ConflictsResource,
@@ -23,7 +24,7 @@ export {
   configV2ScopeForkedSchema,
   configV2ScopeForkedResource,
 } from "./internal/resource";
-export type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "./internal/resource";
+export type { ConfigV2Values, ConfigV2ValidationIssue, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,

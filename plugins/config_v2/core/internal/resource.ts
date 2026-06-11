@@ -10,6 +10,15 @@ export const configV2Resource = resourceDescriptor<ConfigV2Values, { path: strin
   {},
 );
 
+// A single structured validation failure. `path` is the zod issue path as an
+// array (`["items", 6]`) so consumers can drill the offending value out of the
+// stored document and render it inline; `message` is the human zod message.
+export const configV2ValidationIssueSchema = z.object({
+  path: z.array(z.union([z.string(), z.number()])),
+  message: z.string(),
+});
+export type ConfigV2ValidationIssue = z.infer<typeof configV2ValidationIssueSchema>;
+
 export const configV2ConflictEntrySchema = z.object({
   // "hash"    — the override's @hash is stale vs its origin (upstream defaults
   //             moved); the app resolves to origin until reconciled.
@@ -24,8 +33,10 @@ export const configV2ConflictEntrySchema = z.object({
   // to this so the user can see and reconcile what they configured, independent
   // of what the app currently resolves to.
   overrideValues: z.record(z.unknown()),
-  // Human-readable zod issues, present only when kind === "invalid".
-  issues: z.array(z.string()).optional(),
+  // Structured zod issues, present only when kind === "invalid". Each carries the
+  // path (as an array) and message so the UI can pinpoint and render the offending
+  // value drilled from `overrideValues`.
+  issues: z.array(configV2ValidationIssueSchema).optional(),
 });
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
