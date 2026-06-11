@@ -152,6 +152,26 @@
       "name": "@singularity/plugin-apps-pages-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/settings": {
+      "name": "@singularity/plugin-apps-settings",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/settings/plugins/accounts": {
+      "name": "@singularity/plugin-apps-settings-accounts",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/settings/plugins/appearance": {
+      "name": "@singularity/plugin-apps-settings-appearance",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/settings/plugins/config": {
+      "name": "@singularity/plugin-apps-settings-config",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/settings/plugins/shell": {
+      "name": "@singularity/plugin-apps-settings-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata": {
       "name": "@singularity/plugin-apps-sonata",
       "version": "0.0.1",
@@ -2936,6 +2956,16 @@
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-shell": ["@singularity/plugin-apps-pages-shell@workspace:plugins/apps/plugins/pages/plugins/shell"],
+
+    "@singularity/plugin-apps-settings": ["@singularity/plugin-apps-settings@workspace:plugins/apps/plugins/settings"],
+
+    "@singularity/plugin-apps-settings-accounts": ["@singularity/plugin-apps-settings-accounts@workspace:plugins/apps/plugins/settings/plugins/accounts"],
+
+    "@singularity/plugin-apps-settings-appearance": ["@singularity/plugin-apps-settings-appearance@workspace:plugins/apps/plugins/settings/plugins/appearance"],
+
+    "@singularity/plugin-apps-settings-config": ["@singularity/plugin-apps-settings-config@workspace:plugins/apps/plugins/settings/plugins/config"],
+
+    "@singularity/plugin-apps-settings-shell": ["@singularity/plugin-apps-settings-shell@workspace:plugins/apps/plugins/settings/plugins/shell"],
 
     "@singularity/plugin-apps-sonata": ["@singularity/plugin-apps-sonata@workspace:plugins/apps/plugins/sonata"],
 

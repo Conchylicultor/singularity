@@ -1,0 +1,7 @@
+// @hash 6b520c8a1b5c
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  "items": [
+    "apps.settings.config:config-conflicts"
+  ]
+}

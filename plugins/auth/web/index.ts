@@ -1,9 +1,4 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
-import { Shell } from "@plugins/shell/web";
-import { MdKey } from "react-icons/md";
-import { accountsPane } from "./panes";
 
 export { Auth } from "./slots";
 export type {
@@ -20,13 +15,7 @@ export type { ConnectArgs, ConnectResult } from "./connect";
 export default {
   collapsed: true,
   description:
-    "Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot.",
+    "Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry.",
   loadBearing: true,
-  contributions: [
-    Pane.Register({ pane: accountsPane }),
-    Shell.Sidebar({
-      id: "accounts",
-      ...sidebarNavItem({ title: "Accounts", icon: MdKey, onClick: () => openPane(accountsPane, {}, { mode: "root" }) }),
-    }),
-  ],
+  contributions: [],
 } satisfies PluginDefinition;

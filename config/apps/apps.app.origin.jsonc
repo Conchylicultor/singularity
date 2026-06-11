@@ -1,10 +1,11 @@
-// @hash f66e9c7af7f3
+// @hash 0ea5a74c7c68
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.agent-manager.shell:agent-manager",
+    "apps.settings.shell:settings",
     "apps.home.shell:home",
     "apps.studio.shell:studio",
     "apps.deploy.shell:deploy",

@@ -1,0 +1,9 @@
+// @hash 975115c32348
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  "items": [
+    "apps.settings.config:config",
+    "apps.settings.accounts:accounts",
+    "apps.settings.appearance:appearance"
+  ]
+}

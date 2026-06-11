@@ -23,6 +23,10 @@ export const Apps = {
      * (e.g. `/c/:id`). The router canonicalizes such paths into this app's
      * namespace. Exactly one app should set this. */
     fallback?: boolean;
+    /** Optional overlay rendered on the app's rail icon (e.g. an attention
+     * dot). Painted at the icon's top-right corner; render `null` when there's
+     * nothing to surface so the corner stays empty. */
+    badge?: ComponentType<{ className?: string }>;
   }>("apps.app", {
     docLabel: (p) => p.tooltip,
   }),

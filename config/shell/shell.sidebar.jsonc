@@ -1,4 +1,4 @@
-// @hash 24dec803da18
+// @hash 345dbe4fc909
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -6,8 +6,6 @@
     "agents:agents",
     "conversations.conversations-view:conversations",
     "code-explorer:code-explorer",
-    "stats:stats",
-    "auth:accounts",
-    "config_v2.settings:config-v2"
+    "stats:stats"
   ]
 }

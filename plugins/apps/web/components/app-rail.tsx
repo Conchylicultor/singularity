@@ -23,12 +23,17 @@ export function AppRail() {
             <button
               onClick={app.onClick ?? (() => navigateToPath(app.path))}
               className={cn(
-                "flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
+                "relative flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 app.id === activeAppId &&
                   "bg-sidebar-accent text-sidebar-accent-foreground",
               )}
             >
               <app.icon className="size-4" />
+              {app.badge && (
+                <span className="pointer-events-none absolute right-1 top-1">
+                  <app.badge />
+                </span>
+              )}
             </button>
           </WithTooltip>
         )}

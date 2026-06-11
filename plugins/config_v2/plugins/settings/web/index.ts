@@ -1,22 +1,16 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { MdTune } from "react-icons/md";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Shell } from "@plugins/shell/web";
 import { configNavPane, configDetailPane } from "./internal/panes";
-import { ConfigSidebarButton } from "./components/config-sidebar-button";
 
 export { configNavPane, configDetailPane } from "./internal/panes";
+export { ConfigNav } from "./components/config-nav";
+export { ConfigSidebarButton } from "./components/config-sidebar-button";
 
 export default {
-  description: "Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields.",
+  description:
+    "Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app.",
   contributions: [
     Pane.Register({ pane: configNavPane }),
     Pane.Register({ pane: configDetailPane }),
-    Shell.Sidebar({
-      id: "config-v2",
-      title: "Config",
-      icon: MdTune,
-      component: ConfigSidebarButton,
-    }),
   ],
 } satisfies PluginDefinition;

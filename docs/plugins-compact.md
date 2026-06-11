@@ -28,6 +28,12 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
+    - **`settings`** — Settings app.
+      - Plugins:
+        - **`accounts`** — Account settings surface: registers the accounts pane and its Settings sidebar entry.
+        - **`appearance`** — Appearance settings surface: the light/dark theme toggle as a Settings sidebar entry.
+        - **`config`** — Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
+        - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
     - **`sonata`** [29 sub-plugins] — Sonata — extensible piano and music app.
     - **`story`** [4 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
@@ -52,7 +58,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 
-- **`auth`** [load-bearing] [3 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Surfaces an Accounts sidebar entry; provider sub-plugins extend the Auth.Provider slot. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
+- **`auth`** [load-bearing] [3 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 
 - **`backup`** [2 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
 

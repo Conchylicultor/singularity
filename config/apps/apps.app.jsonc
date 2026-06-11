@@ -1,4 +1,4 @@
-// @hash f66e9c7af7f3
+// @hash 0ea5a74c7c68
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -12,6 +12,7 @@
     "apps.file-explorer.shell:file-explorer",
     "apps.studio.shell:studio",
     "apps.deploy.shell:deploy",
+    "apps.settings.shell:settings",
     "apps.debug.shell:debug"
   ]
 }

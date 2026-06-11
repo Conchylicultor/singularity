@@ -13,7 +13,7 @@
   - Exports: Types: `ActiveApp`, `RailFramingContribution`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
   - Slot contributors: `app-rail-framing`, `shell`
-  - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
+  - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
 - Core:
   - Exports: Types: `RailFramingProps`
 - Sub-plugins:
@@ -24,6 +24,7 @@
   - **`file-explorer`** — File explorer app.
   - **`home`** — Home — app launcher and entry point.
   - **`pages`** — Notion-like pages app.
+  - **`settings`** — Settings app.
   - **`sonata`** — Sonata — extensible piano and music app.
   - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.
   - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.

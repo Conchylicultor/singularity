@@ -1,12 +1,10 @@
-// @hash 24dec803da18
+// @hash 345dbe4fc909
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "config_v2.settings:config-v2",
     "tasks.task-detail:tasks",
-    "auth:accounts",
     "agents:agents",
     "conversations.conversations-view:conversations",
     "code-explorer:code-explorer",

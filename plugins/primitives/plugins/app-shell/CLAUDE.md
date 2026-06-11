@@ -11,7 +11,7 @@
   - Exports: Types: `AppShellSidebarItem`, `AppShellToolbarItem`, `FramingContribution`, `SidebarFramingProps`; Values: `AppShell`, `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
 - Cross-plugin:
   - Slot contributors: `sidebar-framing`
-  - Imported by: `agents`, `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/shell`, `apps/workflows/shell`, `auth`, `backup`, `code-explorer`, `conversations-recover`, `conversations/conversations-view`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `stats`, `tasks/task-detail`, `ui/sidebar-framing`
+  - Imported by: `agents`, `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/settings/accounts`, `apps/settings/shell`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/shell`, `apps/workflows/shell`, `backup`, `code-explorer`, `conversations-recover`, `conversations/conversations-view`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `stats`, `tasks/task-detail`, `ui/sidebar-framing`
 - Core:
   - Exports: Types: `SidebarFramingProps`
 
