@@ -119,9 +119,12 @@ export function CollapsibleCard({
             overlay button beneath, so the chevron+label area toggles too. */}
         <span className="pointer-events-none relative flex min-w-0 items-center gap-2">
           <CollapsibleChevron open={open} className="size-3" />
-          <span className="flex min-w-0 items-center gap-2 truncate">
-            {label}
-          </span>
+          {/* No `truncate` here: this row holds identity chips (e.g. the
+              tool-name Badge, `shrink-0`) next to free text. `overflow:hidden`
+              would clip the chips too once the row gets tight. Truncation is the
+              job of the flexible leaf (a `flex-1 truncate` summary span), never
+              the container — so chips stay whole and only the text ellipsizes. */}
+          <span className="flex min-w-0 items-center gap-2">{label}</span>
         </span>
         {/* Interactive siblings opt back in via CardHeaderAction. min-w-0 lets
             the aside (typically a FilePath with its own overflow ellipsis)
