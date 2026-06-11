@@ -12,7 +12,7 @@
   - Exports: Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`; Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
 - Cross-plugin:
   - Slot contributors: `diff`, `image`, `markdown`, `raw`
-  - Imported by: `code-explorer`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/image`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/markdown-extensions`, `plugin-meta/plugin-view/file-tree`, `tasks/task-description`
+  - Imported by: `code-explorer`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/image`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/markdown-extensions`, `plugin-meta/plugin-view/file-tree`, `tasks/task-description`
 - Sub-plugins:
   - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
   - **`image`** — Image preview for .png, .jpg, .gif, .webp, .svg, and similar files.

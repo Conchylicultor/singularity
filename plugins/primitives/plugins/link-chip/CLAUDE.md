@@ -6,7 +6,7 @@
 
 - Description: Inline, clickable navigational chip: bg-muted + text-primary with hover underline, baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
 - Cross-plugin:
-  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps/studio/contributions`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/markdown-extensions`, `page/inline-page-link`, `primitives/file-links`
+  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps/studio/contributions`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/markdown-extensions`, `page/inline-page-link`, `primitives/file-links`
 - Web:
   - Exports: Types: `LinkChipProps`; Values: `LinkChip`
 
