@@ -880,7 +880,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`markdown`** — Rendered markdown preview for .md and .mdx files.
                   - Web:
                     - Contributes: `FilePane.Renderer` "Markdown" → `MarkdownView`
-                    - Uses: `conversations/conversation-view/code/file-pane.FilePane`, `conversations/conversation-view/code/file-pane.useFileContent`, `primitives/markdown.Markdown`, `primitives/placeholder.Placeholder`, `primitives/text.Text`
+                    - Uses: `conversations/conversation-view/code/file-pane.FilePane`, `conversations/conversation-view/code/file-pane.useFileContent`, `primitives/card.Card`, `primitives/markdown.Markdown`, `primitives/placeholder.Placeholder`, `primitives/section-label.SectionLabel`, `primitives/text.Text`
                 - **`raw`** — Plain file renderer with syntax highlighting. Fallback tab for any text file.
                   - Web:
                     - Contributes: `FilePane.Renderer` "Raw" → `RawView`
@@ -2634,7 +2634,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/select-scope.selectScopeProps`
         - Exports: Types: `CardProps`; Values: `Card`
       - Cross-plugin:
-        - Imported by: `active-data/task`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/track-mixer`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `primitives/data-view/gallery`, `review/plugin-changes`, `welcome`
+        - Imported by: `active-data/task`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/track-mixer`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `primitives/data-view/gallery`, `review/plugin-changes`, `welcome`
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
       - Cross-plugin:
         - Imported by: `agents`, `apps/studio/explorer`, `build`, `build/build-logs`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `debug/claude-cli-calls`, `fields/object/config`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/sub-plugins`, `primitives/app-shell`, `primitives/detail-sections`, `primitives/row`, `primitives/tree`, `reorder/node-types/header`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-list`, `tasks/task-preprompt`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`
@@ -2917,7 +2917,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`; Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`
     - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
       - Cross-plugin:
-        - Imported by: `agents`, `apps/studio/contributions/tables/foreign-keys`, `config_v2/config-link`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/user-image`, `debug/live-state-health`, `debug/memory`, `debug/profiling`, `page/links`, `plugin-meta/plugin-view`, `primitives/avatar`, `primitives/color-picker`, `primitives/icon-picker`, `tasks/task-header`
+        - Imported by: `agents`, `apps/studio/contributions/tables/foreign-keys`, `config_v2/config-link`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/user-image`, `debug/live-state-health`, `debug/memory`, `debug/profiling`, `page/links`, `plugin-meta/plugin-view`, `primitives/avatar`, `primitives/color-picker`, `primitives/icon-picker`, `tasks/task-header`
       - Web:
         - Exports: Types: `SectionLabelProps`; Values: `SectionLabel`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.

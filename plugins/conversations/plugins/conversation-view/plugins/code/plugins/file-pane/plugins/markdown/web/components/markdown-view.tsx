@@ -2,6 +2,8 @@ import { useFileContent } from "@plugins/conversations/plugins/conversation-view
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { splitFrontmatter } from "../internal/frontmatter";
+import { FrontmatterCard } from "./frontmatter-card";
 
 export function MarkdownView({
   worktree,
@@ -27,9 +29,14 @@ export function MarkdownView({
     return <Placeholder tone="error">{message}</Placeholder>;
   }
 
+  const split = splitFrontmatter(state.content);
+
   return (
     <Text as="div" variant="body" className="px-4 py-3">
-      <Markdown>{state.content}</Markdown>
+      {split && <FrontmatterCard fields={split.fields} />}
+      {(split ? split.body : state.content).trim() && (
+        <Markdown>{split ? split.body : state.content}</Markdown>
+      )}
     </Text>
   );
 }
