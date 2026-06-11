@@ -1,8 +1,48 @@
 <!doctype html>
-<html lang="en" class="dark">
+<html lang="en">
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <!-- Pre-paint theme replay. Generic DOM replay of the localStorage cache
+         written by ThemeInjector (key + envelope shape owned by theme-engine's
+         theme-cache.ts) so a warm reload paints the correct theme on frame 0.
+         No token/group/preset knowledge here — it just replays <style> elements
+         by id (which ThemeInjector then adopts) and sets the .dark class. On a
+         cold cache it only picks the color scheme from the OS so the neutral
+         loading floor (app.css: html { background: Canvas }) paints in the right
+         shade; ThemeInjector supplies real values once React mounts. -->
+    <script>
+      (function () {
+        try {
+          var raw = localStorage.getItem("theme-engine:critical-css");
+          if (raw) {
+            var env = JSON.parse(raw);
+            var styles = (env && env.styles) || {};
+            for (var id in styles) {
+              if (!Object.prototype.hasOwnProperty.call(styles, id)) continue;
+              var el = document.createElement("style");
+              el.id = id;
+              el.textContent = styles[id];
+              document.head.appendChild(el);
+            }
+            document.documentElement.classList.toggle("dark", !!(env && env.dark));
+            return;
+          }
+        } catch (e) {
+          /* corrupt/unavailable cache → fall through to the cold floor */
+        }
+        try {
+          if (
+            window.matchMedia &&
+            window.matchMedia("(prefers-color-scheme: dark)").matches
+          ) {
+            document.documentElement.classList.add("dark");
+          }
+        } catch (e) {
+          /* matchMedia unavailable → default light floor */
+        }
+      })();
+    </script>
     <link rel="icon" type="image/svg+xml" href="/icon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/icon_32x32.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/icon_16x16.png" />

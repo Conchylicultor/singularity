@@ -241,5 +241,14 @@
     }
   html {
     @apply font-sans;
+    /* Neutral, theme-free loading floor for the cold-cache first paint (no
+       localStorage theme cache yet — first-ever visit, incognito, cleared
+       storage). `Canvas` is a CSS system color that follows `color-scheme`
+       (set on :root/.dark above), so the floor is light under light and dark
+       under dark. It is a CONSUMED system color, not a declared token, so the
+       css-vars-single-owner check is unaffected. `body`'s `bg-background` paints
+       over it the moment ThemeInjector (or the pre-paint replay) supplies
+       `--background`. */
+    background: Canvas;
     }
 }
