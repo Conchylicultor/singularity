@@ -1,6 +1,6 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";
-import { getCodeTree } from "../../shared/endpoints";
+import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { resolveWorktreePath } from "./resolve-worktree-path";
 
 export const handleTree = implement(getCodeTree, async ({ params }) => {

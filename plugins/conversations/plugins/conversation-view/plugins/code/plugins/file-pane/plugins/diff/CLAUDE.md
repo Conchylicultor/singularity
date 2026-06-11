@@ -7,7 +7,7 @@
 - Description: Side-by-side diff of the file vs HEAD in the conversation's worktree.
 - Web:
   - Contributes: `FilePane.Renderer` "Diff" → `DiffOrImageView`
-  - Uses: `conversations/conversation-view/code/file-pane.FilePane`, `infra/endpoints.fetchEndpoint`, `primitives/placeholder.Placeholder`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.languageForPath`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`
+  - Uses: `conversations/conversation-view/code/file-pane.FilePane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/placeholder.Placeholder`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.languageForPath`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`
   - Exports: Types: `DiffTokens`, `ShikiTokenNode`; Values: `buildSideTokenMap`, `DiffOrImageView`, `DiffRenderer`, `DiffView`, `TextDiff`
 - Cross-plugin:
   - Imported by: `config_v2/settings`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `review/code-review`, `review/plugin-changes/file-changes`

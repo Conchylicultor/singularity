@@ -10,5 +10,6 @@ export type ResolveFileResult = z.infer<typeof ResolveFileResultSchema>;
 
 export const resolveFile = defineEndpoint({
   route: "GET /api/code/:worktree/resolve",
+  query: z.object({ path: z.string() }),
   response: ResolveFileResultSchema,
 });

@@ -1,5 +1,5 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
+import { getAttachmentFile } from "@plugins/infra/plugins/attachments/web";
 import { getSongMidi } from "../shared/endpoints";
 
 /**
@@ -10,9 +10,6 @@ import { getSongMidi } from "../shared/endpoints";
 export async function hydrate(songId: string): Promise<ArrayBuffer | undefined> {
   const midi = await fetchEndpoint(getSongMidi, { id: songId });
   if (!midi) return undefined;
-  const res = await fetch(attachmentUrl(midi.attachmentId));
-  if (!res.ok) {
-    throw new Error(`Failed to load MIDI for song ${songId} (${res.status})`);
-  }
-  return res.arrayBuffer();
+  const blob = await fetchEndpoint(getAttachmentFile, { id: midi.attachmentId });
+  return blob.arrayBuffer();
 }

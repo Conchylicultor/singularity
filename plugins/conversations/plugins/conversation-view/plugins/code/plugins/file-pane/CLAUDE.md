@@ -8,7 +8,7 @@
 - Web:
   - Slots: `FilePane.Renderer`
   - Contributes: `Pane.Register` "file-peek"
-  - Uses: `code-explorer/file-resolve.FileDisambiguation`, `code-explorer/file-resolve.useResolvedFile`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code.useEditedFiles`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
+  - Uses: `code-explorer/file-resolve.FileDisambiguation`, `code-explorer/file-resolve.useResolvedFile`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code.useEditedFiles`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
   - Exports: Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`; Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
 - Cross-plugin:
   - Slot contributors: `diff`, `image`, `markdown`, `raw`

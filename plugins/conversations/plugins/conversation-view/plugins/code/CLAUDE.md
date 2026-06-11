@@ -16,7 +16,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`
 - Cross-plugin:
-  - Imported by: `code-explorer`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/push-and-exit`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`
+  - Imported by: `code-explorer/code-api`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/push-and-exit`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`
 - Sub-plugins:
   - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
   - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.

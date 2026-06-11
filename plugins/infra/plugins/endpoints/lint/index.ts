@@ -25,31 +25,9 @@ export default {
       // useEndpoint resources are built on; it cannot depend on itself.
       "plugins/primitives/plugins/live-state/web/use-resource.ts",
 
-      // (c) BURNDOWN — legacy holdouts to migrate to typed endpoints and then
-      // remove from this list. Tracked by task-1781117125527-ygvwcu. Do NOT add
-      // new entries here; the rule must stay green by migrating, not exempting.
-      "plugins/debug/plugins/profiling/plugins/build/web/components/build-detail.tsx",
-      "plugins/debug/plugins/profiling/plugins/push/web/components/push-detail.tsx",
-      "plugins/auth/web/connect.ts",
-      "plugins/active-data/web/internal/use-active-data-binding.ts",
-      "plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web/hydrate.ts",
-      "plugins/code-explorer/plugins/file-resolve/web/internal/use-resolved-file.ts",
-      "plugins/conversations/plugins/summary/web/components/summary-pane.tsx",
-      "plugins/conversations/plugins/conversation-category/web/internal/api.ts",
-      "plugins/conversations/plugins/conversation-view/plugins/commits-graph/web/use-commit-files.ts",
-      "plugins/conversations/plugins/conversation-view/plugins/push-profiling/web/components/push-profiling-pane.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/allow-monitor/web/components/allow-monitor-chip.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/dependencies/web/components/dependencies-button.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/resume/web/components/resume-button.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web/use-file-content.ts",
-      "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/indexes/web/components/indexes-section.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/prompt-input/web/components/prompt-input.tsx",
-      "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/columns/web/components/columns-section.tsx",
-      "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web/use-diff-tokens.ts",
-      "plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web/use-file-diff.ts",
-      "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count/web/components/row-count-section.tsx",
-      "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows/web/components/sample-rows-section.tsx",
-      "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys/web/components/foreign-keys-section.tsx",
+      // The (c) BURNDOWN list is now empty — every legacy holdout has been
+      // migrated to a typed endpoint. Do NOT add new entries here; the rule
+      // must stay green by migrating to fetchEndpoint/useEndpoint, not exempting.
     ],
     "no-void-fetch-endpoint": [
       // PERMANENT — whole-file genuine fire-and-forget: every fetchEndpoint here

@@ -6,10 +6,12 @@ import {
   groupByPhase,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { BUILD_PHASE_ORDER, BUILD_PHASE_CONFIG } from "../phases";
 import { buildProfileDetailPane } from "../panes";
+import { getBuildRunProfileByWorktree } from "../../shared/endpoints";
 
 interface BuildData {
   spans: Span[];
@@ -24,19 +26,11 @@ export function BuildProfileDetailBody(): ReactElement {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/debug/profiling/build/${encodeURIComponent(
-          worktree,
-        )}/${encodeURIComponent(buildId)}`,
-      );
-      if (!res.ok) {
-        setError(true);
-        return;
-      }
-      setData((await res.json()) as BuildData);
+      const result = await fetchEndpoint(getBuildRunProfileByWorktree, { worktree, buildId });
+      setData(result);
     } catch (err) {
       if (err instanceof TypeError) return;
-      throw err;
+      setError(true);
     }
   }, [worktree, buildId]);
 

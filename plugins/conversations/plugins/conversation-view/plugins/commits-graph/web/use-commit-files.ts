@@ -1,5 +1,7 @@
 import { useEffect, useState } from "react";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { getCommitFiles } from "@plugins/code-explorer/plugins/code-api/core";
 
 export type CommitFiles = {
   files: EditedFile[];
@@ -18,22 +20,18 @@ export function useCommitFiles(worktree: string, sha: string): CommitFilesState 
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    fetch(
-      `/api/code/${encodeURIComponent(worktree)}/commit?sha=${encodeURIComponent(sha)}`,
-    )
-      .then(async (res) => {
+    fetchEndpoint(getCommitFiles, { worktree }, { query: { sha } })
+      .then((data) => {
         if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({ kind: "error", message: text || res.statusText });
-          return;
-        }
-        const data = (await res.json()) as CommitFiles;
         setState({ kind: "ok", data });
       })
       .catch((err) => {
         if (cancelled) return;
-        setState({ kind: "error", message: String(err) });
+        if (err instanceof EndpointError) {
+          setState({ kind: "error", message: `HTTP ${err.status}` });
+        } else {
+          setState({ kind: "error", message: String(err) });
+        }
       });
     return () => {
       cancelled = true;

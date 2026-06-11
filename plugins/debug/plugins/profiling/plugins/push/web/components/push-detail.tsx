@@ -7,6 +7,7 @@ import {
   formatDuration,
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -16,6 +17,7 @@ import type {
   PushDetail,
   PushStep,
 } from "../../shared/endpoints";
+import { getPushDetail } from "../../shared/endpoints";
 import { pushDetailPane } from "../panes";
 
 function outcomeVariant(
@@ -84,17 +86,11 @@ export function PushDetailBody(): ReactElement {
 
   const load = useCallback(async () => {
     try {
-      const res = await fetch(
-        `/api/debug/profiling/push/${encodeURIComponent(pushId)}`,
-      );
-      if (!res.ok) {
-        setError(true);
-        return;
-      }
-      setData((await res.json()) as PushDetail);
+      const result = await fetchEndpoint(getPushDetail, { pushId });
+      setData(result);
     } catch (err) {
       if (err instanceof TypeError) return;
-      throw err;
+      setError(true);
     }
   }, [pushId]);
 

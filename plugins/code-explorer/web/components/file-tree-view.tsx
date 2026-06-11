@@ -7,7 +7,7 @@ import {
 } from "@/components/ui/resizable";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { getCodeTree } from "../../shared/endpoints";
+import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { FileTree } from "./file-tree";
 
 interface FileTreeViewProps {

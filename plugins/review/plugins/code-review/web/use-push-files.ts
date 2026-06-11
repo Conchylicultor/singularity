@@ -1,6 +1,6 @@
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getPushFiles } from "@plugins/code-explorer/core";
+import { getPushFiles } from "@plugins/code-explorer/plugins/code-api/core";
 
 export type PushFiles = {
   files: EditedFile[];

@@ -1,5 +1,5 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { getPushFiles } from "../../shared/endpoints";
+import { getPushFiles } from "@plugins/code-explorer/plugins/code-api/core";
 import { listPushesByPushId } from "@plugins/tasks-core/server";
 import { getRangeFiles, resolveParentSha } from "./get-push-files";
 import { resolveWorktreePath } from "./resolve-worktree-path";

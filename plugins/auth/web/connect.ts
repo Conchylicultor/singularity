@@ -1,3 +1,6 @@
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { disconnect as disconnectEndpoint } from "@plugins/auth/core";
+
 /**
  * Open the OAuth popup. Returns a promise that resolves on `singularity.auth.complete`
  * postMessage from the popup, or rejects on cancellation/timeout.
@@ -84,16 +87,13 @@ export async function disconnect(
   providerId: string,
   accountId?: string,
 ): Promise<void> {
-  const res = await fetch(
-    `/api/auth/disconnect/${encodeURIComponent(providerId)}`,
-    {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ accountId }),
-    },
-  );
-  if (!res.ok) {
-    throw new Error(`disconnect ${providerId}: ${res.status} ${await res.text()}`);
+  try {
+    await fetchEndpoint(disconnectEndpoint, { provider: providerId }, { body: { accountId } });
+  } catch (err) {
+    if (err instanceof EndpointError) {
+      throw new Error(`disconnect ${providerId}: ${err.status} ${typeof err.body === "string" ? err.body : JSON.stringify(err.body)}`);
+    }
+    throw err;
   }
 }
 

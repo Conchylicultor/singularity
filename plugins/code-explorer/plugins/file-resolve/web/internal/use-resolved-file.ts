@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { resolveFile } from "../../shared/endpoints";
 
 export type ResolvedFileState =
   | { status: "loading" }
@@ -16,23 +18,16 @@ export function useResolvedFile(
   useEffect(() => {
     let cancelled = false;
     setState({ status: "loading" });
-    const url = `/api/code/${encodeURIComponent(worktree)}/resolve?path=${encodeURIComponent(path)}`;
-    fetch(url)
-      .then(async (res) => {
+    fetchEndpoint(resolveFile, { worktree }, { query: { path } })
+      .then((result) => {
         if (cancelled) return;
-        if (!res.ok) {
-          setState({ status: "not-found" });
-          return;
-        }
-        const body = await res.json();
-        if (body.kind === "exact") {
+        if (result.kind === "exact") {
           setState({ status: "exact", path });
-        } else if (body.kind === "resolved") {
-          const matches = body.matches as string[];
-          if (matches.length === 1) {
-            setState({ status: "resolved", path: matches[0]! });
+        } else if (result.kind === "resolved") {
+          if (result.matches.length === 1) {
+            setState({ status: "resolved", path: result.matches[0]! });
           } else {
-            setState({ status: "ambiguous", matches });
+            setState({ status: "ambiguous", matches: result.matches });
           }
         } else {
           setState({ status: "not-found" });

@@ -1,15 +1,13 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { getCommitFiles } from "../../shared/endpoints";
+import { getCommitFiles } from "@plugins/code-explorer/plugins/code-api/core";
 import { getRangeFiles, resolveParentSha } from "./get-push-files";
 import { resolveWorktreePath } from "./resolve-worktree-path";
 
-export const handleCommitFiles = implement(getCommitFiles, async ({ params, req }) => {
+export const handleCommitFiles = implement(getCommitFiles, async ({ params, query }) => {
   const { worktree } = params;
   if (!worktree) throw new HttpError(400, "Missing worktree");
 
-  const url = new URL(req.url);
-  const sha = url.searchParams.get("sha");
-  if (!sha) throw new HttpError(400, "Missing sha");
+  const { sha } = query;
 
   const wtPath = await resolveWorktreePath(worktree);
   if (!wtPath) throw new HttpError(404, "Not found");

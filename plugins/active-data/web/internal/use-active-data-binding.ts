@@ -1,8 +1,22 @@
 import { useCallback, useMemo } from "react";
 import type { ZodType } from "zod";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { activeDataBindingsResource } from "@plugins/active-data/core";
-import { useActiveDataIdentity } from "./identity-context";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { activeDataBindingsResource, putBinding, deleteBinding } from "@plugins/active-data/core";
+import { useActiveDataIdentity, type ActiveDataIdentity } from "./identity-context";
+
+/**
+ * Route params for the binding endpoints. The route templates `:occurrenceIndex`
+ * as a string segment, so the numeric identity field is serialized here.
+ */
+function bindingParams(identity: ActiveDataIdentity) {
+  return {
+    conversationId: identity.conversationId,
+    messageId: identity.messageId,
+    tag: identity.tag,
+    occurrenceIndex: String(identity.occurrenceIndex),
+  };
+}
 
 interface ActiveDataBindingBase<T> {
   /** Whether identity is available (false in legacy logs without messageId). */
@@ -20,15 +34,6 @@ export type ActiveDataBindingHandle<T> =
       /** Persisted, schema-validated payload for this widget instance, or null. */
       value: T | null;
     });
-
-function bindingPath(p: {
-  conversationId: string;
-  messageId: string;
-  tag: string;
-  occurrenceIndex: number;
-}): string {
-  return `/api/active-data/bindings/${encodeURIComponent(p.conversationId)}/${encodeURIComponent(p.messageId)}/${encodeURIComponent(p.tag)}/${p.occurrenceIndex}`;
-}
 
 export function useActiveDataBinding<T>(
   schema: ZodType<T>,
@@ -55,16 +60,18 @@ export function useActiveDataBinding<T>(
   const set = useCallback(
     async (next: T) => {
       if (!identity) return;
-      const res = await fetch(bindingPath(identity), {
-        method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ payload: next }),
-      });
-      if (!res.ok) {
-        const detail = await res.text().catch(() => "");
-        throw new Error(
-          `Save binding failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-        );
+      try {
+        await fetchEndpoint(putBinding, bindingParams(identity), {
+          body: { payload: next },
+        });
+      } catch (err) {
+        if (err instanceof EndpointError) {
+          const detail = typeof err.body === "string" ? err.body : "";
+          throw new Error(
+            `Save binding failed (${err.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+          );
+        }
+        throw err;
       }
     },
     [identity],
@@ -72,12 +79,16 @@ export function useActiveDataBinding<T>(
 
   const clear = useCallback(async () => {
     if (!identity) return;
-    const res = await fetch(bindingPath(identity), { method: "DELETE" });
-    if (!res.ok) {
-      const detail = await res.text().catch(() => "");
-      throw new Error(
-        `Clear binding failed (${res.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
-      );
+    try {
+      await fetchEndpoint(deleteBinding, bindingParams(identity));
+    } catch (err) {
+      if (err instanceof EndpointError) {
+        const detail = typeof err.body === "string" ? err.body : "";
+        throw new Error(
+          `Clear binding failed (${err.status})${detail ? `: ${detail.slice(0, 200)}` : ""}`,
+        );
+      }
+      throw err;
     }
   }, [identity]);
 

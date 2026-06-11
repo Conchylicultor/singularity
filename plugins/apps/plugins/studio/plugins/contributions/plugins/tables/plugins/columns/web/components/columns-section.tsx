@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getTableColumns } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -56,17 +57,7 @@ export function ColumnsSection({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isPending, isError } = useQuery<{ columns: ColumnRow[] }>({
-    queryKey: ["studio-table-columns", tableName],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/studio/tables/${encodeURIComponent(tableName)}/columns`,
-      );
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<{ columns: ColumnRow[] }>;
-    },
-    staleTime: 60_000,
-  });
+  const { data, isPending, isError } = useEndpoint(getTableColumns, { tableName }, { staleTime: 60_000 });
 
   if (isPending) {
     return (

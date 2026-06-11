@@ -1,6 +1,6 @@
-import { useQuery, type UseQueryResult } from "@tanstack/react-query";
+import { useQuery, type UseQueryResult, type UseQueryOptions } from "@tanstack/react-query";
 import type { EndpointDef } from "../../core/define-endpoint";
-import { fetchEndpoint } from "./fetch-endpoint";
+import { fetchEndpoint, EndpointError } from "./fetch-endpoint";
 
 /**
  * TanStack Query wrapper for GET endpoints.
@@ -15,10 +15,12 @@ export function useEndpoint<
 >(
   endpoint: EndpointDef<Route, TParams, void, TResponse, TQuery>,
   params: TParams,
-  opts?: { query?: TQuery; enabled?: boolean },
+  opts?: { query?: TQuery } & Omit<
+    UseQueryOptions<TResponse, EndpointError, TResponse>,
+    "queryKey" | "queryFn"
+  >,
 ): UseQueryResult<TResponse> {
-  const query = opts?.query;
-  const enabled = opts?.enabled;
+  const { query, ...queryOptions } = opts ?? {};
 
   return useQuery({
     queryKey: [
@@ -39,6 +41,6 @@ export function useEndpoint<
       );
       return result as TResponse;
     },
-    enabled,
+    ...queryOptions,
   });
 }

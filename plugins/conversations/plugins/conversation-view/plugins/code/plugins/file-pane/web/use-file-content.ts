@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 
 export type FileContentState =
   | { kind: "loading" }
@@ -14,25 +16,25 @@ export function useFileContent(
   useEffect(() => {
     let cancelled = false;
     setState({ kind: "loading" });
-    const url = `/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(path)}`;
-    fetch(url)
-      .then(async (res) => {
+    fetchEndpoint(getFileContent, { worktree }, { query: { path } })
+      .then(({ content }) => {
         if (cancelled) return;
-        if (!res.ok) {
-          const text = await res.text().catch(() => "");
-          setState({
-            kind: "error",
-            status: res.status,
-            message: text || res.statusText,
-          });
-          return;
-        }
-        const body = (await res.json()) as { content: string };
-        setState({ kind: "ok", content: body.content });
+        setState({ kind: "ok", content });
       })
       .catch((err) => {
         if (cancelled) return;
-        setState({ kind: "error", status: 0, message: String(err) });
+        if (err instanceof EndpointError) {
+          setState({
+            kind: "error",
+            status: err.status,
+            message:
+              typeof err.body === "string"
+                ? err.body
+                : `HTTP ${err.status}`,
+          });
+        } else {
+          setState({ kind: "error", status: 0, message: String(err) });
+        }
       });
     return () => {
       cancelled = true;

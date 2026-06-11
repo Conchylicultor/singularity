@@ -8,7 +8,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `ActiveData.Tag`
     - Contributes: `MarkdownEnhancerSlot`
-    - Uses: `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`
+    - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`
     - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
   - Cross-plugin:
     - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
@@ -289,7 +289,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`midi`** — MIDI file input source for Sonata. Dropzone accepts .mid/.midi files; compile() parses them into a Score via @tonejs/midi. Persists per-song MIDI (attachment + track count) and contributes the library Import affordance, hydration, and card track count. Owns the sonata_songs_ext_midi side-table: per-song MIDI attachment + track count. Creates MIDI-backed songs, serves the reactive MIDI rollup, and seeds the bundled public-domain MIDI starters at boot.
               - Web:
                 - Contributes: `Sonata.Source` "MIDI File", `Library.Source` "midi", `Library.CardMeta` "midi-track-count" → `MidiCardMeta`
-                - Uses: `apps/sonata/library.Library`, `apps/sonata/library.useOpenSong`, `apps/sonata/shell.Sonata`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/text.Text`
+                - Uses: `apps/sonata/library.Library`, `apps/sonata/library.useOpenSong`, `apps/sonata/shell.Sonata`, `infra/attachments.getAttachmentFile`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/text.Text`
                 - Exports: Values: `MIDI_SOURCE_ID`, `useSongMidi`
               - Server:
                 - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.songAttachments`, `database.db`, `infra/attachments.createAttachment`, `infra/attachments.getAttachment`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
@@ -377,7 +377,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`columns`** — Table column definitions section in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "columns" → `ColumnsSection`
-                    - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
+                    - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
                   - Shared:
@@ -385,7 +385,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`foreign-keys`** — FK relationships section (outgoing and incoming) in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
-                    - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/section-label.SectionLabel`, `primitives/spinner.Spinner`, `primitives/text.Text`
+                    - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/section-label.SectionLabel`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
                   - Shared:
@@ -393,7 +393,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`indexes`** — Table indexes section in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "indexes" → `IndexesSection`
-                    - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
+                    - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
                   - Shared:
@@ -401,7 +401,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`row-count`** — Live row count section (estimated from pg_stat_user_tables) in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "row-count" → `RowCountSection`
-                    - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
+                    - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
                   - Shared:
@@ -409,7 +409,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`sample-rows`** — Sample rows section (first 10 rows) in the table detail view.
                   - Web:
                     - Contributes: `TableDetail.Section` "sample-rows" → `SampleRowsSection`
-                    - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
+                    - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
                   - Server:
                     - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
                   - Shared:
@@ -496,7 +496,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `Auth.Provider`
     - Contributes: `Pane.Register` "accounts", `Shell.Sidebar` "Accounts" → `component`
-    - Uses: `config_v2/settings.configNavPane`, `notifications.toast`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `shell.Shell`
+    - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `shell.Shell`
     - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
   - Cross-plugin:
     - Slot contributors: `google`, `notion`
@@ -640,19 +640,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Server:
     - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core.getAttempt`, `tasks-core.listPushesByPushId`
     - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
-    - Routes: `GET /api/code/:worktree/tree`, `GET /api/code/:worktree/file`, `GET /api/code/:worktree/diff`, `GET /api/code/:worktree/image`, `GET /api/code/:worktree/push`, `GET /api/code/:worktree/commit`
-  - Core:
-    - Uses: `conversations/conversation-view/code.EditedFileSchema`, `infra/endpoints.defineEndpoint`
-    - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
   - Cross-plugin:
     - Imported by: `code-explorer/file-resolve`, `plugin-meta/plugin-view/file-tree`, `review/plugin-changes`
-    - Endpoint callers: `commits-graph`, `diff`, `file-pane`, `file-resolve`, `image`, `markdown-extensions`, `read`
-  - Shared:
-    - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
   - Plugins:
+    - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
+      - Core:
+        - Uses: `conversations/conversation-view/code.EditedFileSchema`, `infra/endpoints.defineEndpoint`
+        - Exports: Values: `getCodeTree`, `getCommitFiles`, `getFileContent`, `getFileDiff`, `getImageContent`, `getPushFiles`
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
       - Web:
-        - Uses: `primitives/row.Row`, `primitives/text.Text`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/row.Row`, `primitives/text.Text`
         - Exports: Types: `ResolvedFileState`; Values: `FileDisambiguation`, `useResolvedFile`
       - Server:
         - Uses: `code-explorer.resolveWorktreePath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`
@@ -722,12 +719,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `ConversationEntry`, `ConversationListPayload`, `ConversationStatus`, `CreateConversationBody`, `DeleteConversationQuery`, `ListGoneQuery`, `ListTurnsQuery`, `PostTurnBody`; Values: `closeConversation`, `conversationsResource`, `ConversationStatusSchema`, `createConversation`, `CreateConversationBodySchema`, `deleteConversation`, `DeleteConversationQuerySchema`, `getConversation`, `hasLiveProcess`, `isActiveStatus`, `listConversations`, `listConversationTurns`, `listGoneConversations`, `ListGoneQuerySchema`, `ListTurnsQuerySchema`, `postConversationTurn`, `PostTurnBodySchema`, `stopConversation`
   - Cross-plugin:
     - Imported by: `active-data/conv`, `active-data/task`, `agents`, `attempt-view`, `code-explorer`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/exit-menu`, `conversations/conversation-view/fork-session`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/model`, `conversations/conversation-view/new-child-task`, `conversations/conversation-view/op-status`, `conversations/conversation-view/open-app`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/resume`, `conversations/conversation-view/status`, `conversations/conversation-view/tasks-panel`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/turn-summary`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `conversations/runtime-api`, `conversations/runtime-tmux`, `conversations/summary`, `improve`, `review`, `review/code-review`, `review/plugin-changes/file-changes`, `tasks`, `tasks/task-header`, `tasks/task-title`, `welcome`
-    - Endpoint callers: `allow-monitor`, `prompt-input`, `resume`, `transcript-api`
+    - Endpoint callers: `transcript-api`
   - Plugins:
     - **`conversation-category`** — Per-conversation category chip in the sidebar row and conversation toolbar. Auto-classified by Haiku after each turn; manual override via the toolbar chip's popover. Classifies each conversation into one of a configurable list of categories using Haiku. Surfaces the result as a chip in the sidebar row and the conversation toolbar.
       - Web:
         - Contributes: `Conversation.Header` → `CategoryChipToolbar`, `ConfigV2.WebRegister`, `Item.Avatar` → `CategoryAvatarRow`
-        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigPopoverHeader`, `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `notifications.toast`, `primitives/avatar.Avatar`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`
+        - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2/config-link.ConfigPopoverHeader`, `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/avatar.Avatar`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`
         - Exports: Types: `ColorKey`; Values: `autoColorKey`, `useCategoryAvatars`
       - Server:
         - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks-core._conversations`, `tasks-core.getConversation`
@@ -792,7 +789,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`allow-monitor`** — Flags when an agent has created an allow-file (.allow-main, .allow-migrations) to bypass security guards.
           - Web:
             - Contributes: `Conversation.Header` → `AllowMonitorChip`
-            - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `primitives/badge.Badge`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
+            - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
           - Server:
             - Uses: `infra/endpoints.implement`, `tasks-core.getConversation`
           - Shared:
@@ -813,7 +810,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/live-state.resourceDescriptor`
             - Exports: Types: `EditedFile`, `EditedFilesResponse`, `EditedFileStatus`; Values: `EditedFileSchema`, `editedFilesResource`
           - Cross-plugin:
-            - Imported by: `code-explorer`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/push-and-exit`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`
+            - Imported by: `code-explorer/code-api`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/push-and-exit`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`
           - Plugins:
             - **`docs-button`** — Toolbar button that opens a sidebar listing edited markdown design docs in the conversation worktree.
               - Web:
@@ -823,7 +820,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots: `FilePane.Renderer`
                 - Contributes: `Pane.Register` "file-peek"
-                - Uses: `code-explorer/file-resolve.FileDisambiguation`, `code-explorer/file-resolve.useResolvedFile`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code.useEditedFiles`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
+                - Uses: `code-explorer/file-resolve.FileDisambiguation`, `code-explorer/file-resolve.useResolvedFile`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code.useEditedFiles`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
                 - Exports: Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`; Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
               - Cross-plugin:
                 - Slot contributors: `diff`, `image`, `markdown`, `raw`
@@ -832,7 +829,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.
                   - Web:
                     - Contributes: `FilePane.Renderer` "Diff" → `DiffOrImageView`
-                    - Uses: `conversations/conversation-view/code/file-pane.FilePane`, `infra/endpoints.fetchEndpoint`, `primitives/placeholder.Placeholder`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.languageForPath`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`
+                    - Uses: `conversations/conversation-view/code/file-pane.FilePane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/placeholder.Placeholder`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.languageForPath`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`
                     - Exports: Types: `DiffTokens`, `ShikiTokenNode`; Values: `buildSideTokenMap`, `DiffOrImageView`, `DiffRenderer`, `DiffView`, `TextDiff`
                   - Cross-plugin:
                     - Imported by: `config_v2/settings`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `review/code-review`, `review/plugin-changes/file-changes`
@@ -851,14 +848,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`commits-graph`** — Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD. Toolbar chip showing commits ahead/behind main; opens a side pane with the chain of commits between merge-base and HEAD.
           - Web:
             - Contributes: `Pane.Register` "conv-commits-graph", `Pane.Register` "conv-commit-diff", `Conversation.ActionBar` → `CommitsChip`
-            - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane/diff.DiffOrImageView`, `primitives/collapsible.CollapsibleChevron`, `primitives/commit-list.CommitRowItem`, `primitives/commit-list.MergeBaseMarker`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`
+            - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane/diff.DiffOrImageView`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/commit-list.CommitRowItem`, `primitives/commit-list.MergeBaseMarker`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`
           - Server:
             - Uses: `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `tasks-core.getAttempt`, `tasks-core.listPushesForAttempt`, `tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
             - Contributes: `Conversation.PromptBar` "Deps" → `DependenciesButton`
-            - Uses: `conversations.useActiveConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.Conversation`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `tasks.useTask`
+            - Uses: `conversations.useActiveConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.Conversation`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `tasks.useTask`
         - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
           - Web:
             - Contributes: `Conversation.ActionBar` → `DependentCountChip`
@@ -1157,7 +1154,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`prompt-input`** — Free-form text input at the bottom of the conversation view. Enter sends a turn; fork buttons reuse the draft as the new conversation's initial prompt.
           - Web:
             - Contributes: `Conversation.PromptInput` → `PromptInput`
-            - Uses: `conversations.useConversation`, `conversations/conversation-view.Conversation`, `conversations/conversation-view.ConversationRecord`, `conversations/conversation-view.isDraftEmpty`, `conversations/conversation-view.usePromptInsert`, `notifications.toast`, `primitives/persistent-draft.useDraft`, `primitives/prompt-editor.PromptEditor`
+            - Uses: `conversations.useConversation`, `conversations/conversation-view.Conversation`, `conversations/conversation-view.ConversationRecord`, `conversations/conversation-view.isDraftEmpty`, `conversations/conversation-view.usePromptInsert`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/persistent-draft.useDraft`, `primitives/prompt-editor.PromptEditor`
         - **`prompt-templates`** — Template chips inside the prompt editor that prepend text to the draft. A floating icon expands on hover to reveal available templates. Named template chips that prepend text to the conversation prompt editor for editing before sending.
           - Web:
             - Contributes: `PromptEditorSlots.FloatingAction` → `FloatingTemplateChips`, `ConfigV2.WebRegister`
@@ -1179,10 +1176,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`push-profiling`** — Toolbar button showing push/build Gantt scoped to the last hour.
           - Web:
             - Contributes: `Pane.Register` "conv-push-profiling", `Conversation.ActionBar` → `PushProfilingButton`
-            - Uses: `attempt-view.attemptPane`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push.pushDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `shell.ShellCommands`
+            - Uses: `attempt-view.attemptPane`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push.getPushProfiling`, `debug/profiling/push.pushDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `shell.ShellCommands`
         - **`resume`** — Toolbar button that resumes a gone conversation via `claude --resume <claude-id>`.
           - Web:
-            - Uses: `conversations.useConversation`, `notifications.toast`
+            - Uses: `conversations.useConversation`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `notifications.toast`
           - Server:
             - Uses: `conversations.resumeConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.notifyConversationsChanged`
             - Routes: `POST /api/conversations/:id/resume`
@@ -1301,7 +1298,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
         - Contributes: `Pane.Register` "conv-summary"
-        - Uses: `conversations/conversation-view.conversationPane`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/text.Text`
+        - Uses: `conversations/conversation-view.conversationPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/text.Text`
       - Server:
         - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks-core.getConversation`, `tasks-core.getTask`
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
@@ -1489,7 +1486,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Profiling.Section` → `PushSection`, `Pane.Register` "debug-profiling-push-detail"
             - Uses: `attempt-view.attemptPane`, `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `shell.ShellCommands`
-            - Exports: Values: `pushDetailPane`
+            - Exports: Values: `getPushProfiling`, `pushDetailPane`
           - Server:
             - Uses: `database/admin.openShortLivedClient`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.isMain`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.isWorktreeOpActive`
           - Cross-plugin:
@@ -2017,7 +2014,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`attachments`** — Polymorphic file attachments. Exposes uploadAttachment() helper; storage/serve on the server plugin. Attachments on disk (UUID-named under ~/.singularity/attachments/). Consumers declare ownership with Attachments.defineLink(ownerTable); orphan sweep reclaims unreferenced rows past TTL.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`
-        - Exports: Types: `UploadedAttachment`; Values: `uploadAttachment`
+        - Exports: Types: `UploadedAttachment`; Values: `getAttachmentFile`, `uploadAttachment`
       - Server:
         - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.ATTACHMENTS_DIR`, `primitives/log-channels.Log`
         - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`, `plugins/infra/plugins/attachments/server/internal/tables.ts`
@@ -2046,7 +2043,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/runtime-profiler.recordEntrySpan`
         - Exports: Types: `Codec`, `EndpointDef`, `ExtractParams`; Values: `blob`, `dateString`, `defineEndpoint`, `extractMethod`, `extractPath`, `HttpError`, `implement`, `interpolatePath`, `isCodec`, `multipart`
       - Cross-plugin:
-        - Imported by: `active-data`, `active-data/plugin-link`, `active-data/task`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/workflows/engine`, `auth`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-fix`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-view`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/notes`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `conversations/transcript-api`, `crashes`, `crashes/endpoint-errors`, `crashes/mutation-errors`, `debug/broadcasts`, `debug/logs`, `debug/memory`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/profiling/stats`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `health`, `infra/attachments`, `infra/events`, `infra/jobs`, `infra/secrets`, `notifications`, `page/editor`, `page/inline-page-link`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `primitives/folder-picker`, `primitives/launch`, `primitives/log-channels`, `review/code-review`, `review/plugin-changes`, `screenshot`, `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`, `tasks`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tweakcn`, `ui/tweakcn/community-browser`
+        - Imported by: `active-data`, `active-data/plugin-link`, `active-data/task`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/playback-history`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/story/marker`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/workflows/engine`, `auth`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-fix`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/code-api`, `code-explorer/file-resolve`, `config_v2`, `config_v2/settings`, `conversations`, `conversations-recover`, `conversations/conversation-category`, `conversations/conversation-view`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/notes`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/resume`, `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `conversations/transcript-api`, `crashes`, `crashes/endpoint-errors`, `crashes/mutation-errors`, `debug/broadcasts`, `debug/logs`, `debug/memory`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/profiling/stats`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `health`, `infra/attachments`, `infra/events`, `infra/jobs`, `infra/secrets`, `notifications`, `page/editor`, `page/inline-page-link`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `primitives/folder-picker`, `primitives/launch`, `primitives/log-channels`, `review/code-review`, `review/plugin-changes`, `screenshot`, `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`, `tasks`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-list`, `tasks/task-list/tree`, `tasks/task-preprompt`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tweakcn`, `ui/tweakcn/community-browser`
       - Web:
         - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:
@@ -3139,7 +3136,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `AddDependencyBody`, `Attempt`, `AttemptWithConversations`, `ConversationSummary`, `CreateTaskBody`, `InsertBetweenBody`, `Push`, `SetAutoStartBody`, `Task`, `TaskChainCard`, `TaskChainLaunch`, `TaskChainRelate`, `TaskChainRelateMode`, `TaskChainSubmitBody`, `TaskChainSubmitResponse`, `TaskChainTarget`, `TaskListItem`, `UpdateTaskBody`; Values: `AddDependencyBodySchema`, `addTaskDependency`, `attemptsResource`, `clearTaskAutoStart`, `countTransitiveDependents`, `createTask`, `CreateTaskBodySchema`, `createTaskChain`, `getRepoInfo`, `getTask`, `InsertBetweenBodySchema`, `insertTaskBetween`, `listTasks`, `pushesResource`, `removeTaskDependency`, `SetAutoStartBodySchema`, `setTaskAutoStart`, `TaskChainCardSchema`, `TaskChainLaunchSchema`, `TaskChainRelateModeSchema`, `TaskChainRelateSchema`, `TaskChainSubmitBodySchema`, `TaskChainSubmitResponseSchema`, `TaskChainTargetSchema`, `taskDetailResource`, `tasksResource`, `updateTask`, `UpdateTaskBodySchema`
   - Cross-plugin:
     - Imported by: `conversations/conversation-view/dependencies`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `tasks/auto-start`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-list`, `tasks/task-list/tree`
-    - Endpoint callers: `dependencies`
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
       - Web:

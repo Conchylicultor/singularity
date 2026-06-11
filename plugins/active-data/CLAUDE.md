@@ -69,7 +69,7 @@ Behavior:
 - Web:
   - Slots: `ActiveData.Tag`
   - Contributes: `MarkdownEnhancerSlot`
-  - Uses: `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`
   - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Cross-plugin:
   - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`

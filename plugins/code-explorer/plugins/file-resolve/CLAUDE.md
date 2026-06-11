@@ -10,7 +10,7 @@ Example: clicking `task-detail/panes.tsx` resolves to `plugins/tasks/plugins/tas
 
 - Description: Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 - Web:
-  - Uses: `primitives/row.Row`, `primitives/text.Text`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/row.Row`, `primitives/text.Text`
   - Exports: Types: `ResolvedFileState`; Values: `FileDisambiguation`, `useResolvedFile`
 - Server:
   - Uses: `code-explorer.resolveWorktreePath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`

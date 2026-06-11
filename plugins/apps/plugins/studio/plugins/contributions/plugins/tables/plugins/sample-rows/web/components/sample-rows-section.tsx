@@ -1,14 +1,10 @@
 import { useMemo } from "react";
-import { useQuery } from "@tanstack/react-query";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getTableSampleRows } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-
-interface SampleRowsResponse {
-  columns: string[];
-  rows: Record<string, unknown>[];
-}
 
 export function SampleRowsSection({
   tableName,
@@ -16,17 +12,7 @@ export function SampleRowsSection({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isLoading, isError } = useQuery<SampleRowsResponse>({
-    queryKey: ["studio-tables-sample-rows", tableName],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/studio/tables/${encodeURIComponent(tableName)}/sample`,
-      );
-      if (!res.ok) throw new Error(`Failed to fetch sample rows: ${res.status}`);
-      return res.json() as Promise<SampleRowsResponse>;
-    },
-    staleTime: 60_000,
-  });
+  const { data, isLoading, isError } = useEndpoint(getTableSampleRows, { tableName }, { staleTime: 60_000 });
 
   const columns: ColumnDef<Record<string, unknown>>[] = useMemo(
     () =>

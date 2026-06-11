@@ -5,7 +5,7 @@ import { handleFileDiff } from "./internal/file-diff-handler";
 import { handleImageContent } from "./internal/image-handler";
 import { handlePushFiles } from "./internal/push-handler";
 import { handleTree } from "./internal/tree-handler";
-import { getCodeTree, getFileContent, getFileDiff, getImageContent, getPushFiles, getCommitFiles } from "../shared/endpoints";
+import { getCodeTree, getFileContent, getFileDiff, getImageContent, getPushFiles, getCommitFiles } from "@plugins/code-explorer/plugins/code-api/core";
 
 export { resolveWorktreePath } from "./internal/resolve-worktree-path";
 export { resolveParentSha, getRangeFiles } from "./internal/get-push-files";

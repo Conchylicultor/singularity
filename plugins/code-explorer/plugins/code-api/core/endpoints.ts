@@ -18,6 +18,12 @@ export const getFileContent = defineEndpoint({
 
 export const getFileDiff = defineEndpoint({
   route: "GET /api/code/:worktree/diff",
+  query: z.object({
+    path: z.string(),
+    base: z.string().optional(),
+    head: z.string().optional(),
+    from: z.string().optional(),
+  }),
   response: z.object({ diff: z.string() }),
 });
 
@@ -38,6 +44,7 @@ export const getPushFiles = defineEndpoint({
 
 export const getCommitFiles = defineEndpoint({
   route: "GET /api/code/:worktree/commit",
+  query: z.object({ sha: z.string() }),
   response: z.object({
     files: z.array(EditedFileSchema),
     baseSha: z.string(),

@@ -4,7 +4,8 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource, addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -86,22 +87,14 @@ export function DependenciesButton({
       const depTaskId = selectedConv.taskId!;
       setBusy(depTaskId);
       try {
-        const res = await fetch(
-          `/api/tasks/${encodeURIComponent(conversation.taskId)}/dependencies`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ dependsOnTaskId: depTaskId }),
-          },
-        );
-        if (!res.ok && res.status !== 204) {
-          toast({
-            type: "conversation",
-            title: "Failed to add dependency",
-            description: (await res.text()) || `Server responded ${res.status}`,
-            variant: "error",
-          });
-        }
+        await fetchEndpoint(addTaskDependency, { id: conversation.taskId }, { body: { dependsOnTaskId: depTaskId } });
+      } catch (err) {
+        toast({
+          type: "conversation",
+          title: "Failed to add dependency",
+          description: err instanceof EndpointError ? (typeof err.body === "string" ? err.body : `Server responded ${err.status}`) : String(err),
+          variant: "error",
+        });
       } finally {
         setBusy(null);
       }
@@ -113,10 +106,7 @@ export function DependenciesButton({
     async (depTaskId: string) => {
       setBusy(depTaskId);
       try {
-        await fetch(
-          `/api/tasks/${encodeURIComponent(conversation.taskId)}/dependencies/${encodeURIComponent(depTaskId)}`,
-          { method: "DELETE" },
-        );
+        await fetchEndpoint(removeTaskDependency, { id: conversation.taskId, depId: depTaskId });
       } finally {
         setBusy(null);
       }
@@ -129,22 +119,14 @@ export function DependenciesButton({
       const blockedTaskId = selectedConv.taskId!;
       setBusy(blockedTaskId);
       try {
-        const res = await fetch(
-          `/api/tasks/${encodeURIComponent(blockedTaskId)}/dependencies`,
-          {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ dependsOnTaskId: conversation.taskId }),
-          },
-        );
-        if (!res.ok && res.status !== 204) {
-          toast({
-            type: "conversation",
-            title: "Failed to add dependency",
-            description: (await res.text()) || `Server responded ${res.status}`,
-            variant: "error",
-          });
-        }
+        await fetchEndpoint(addTaskDependency, { id: blockedTaskId }, { body: { dependsOnTaskId: conversation.taskId } });
+      } catch (err) {
+        toast({
+          type: "conversation",
+          title: "Failed to add dependency",
+          description: err instanceof EndpointError ? (typeof err.body === "string" ? err.body : `Server responded ${err.status}`) : String(err),
+          variant: "error",
+        });
       } finally {
         setBusy(null);
       }
@@ -156,10 +138,7 @@ export function DependenciesButton({
     async (blockedTaskId: string) => {
       setBusy(blockedTaskId);
       try {
-        await fetch(
-          `/api/tasks/${encodeURIComponent(blockedTaskId)}/dependencies/${encodeURIComponent(conversation.taskId)}`,
-          { method: "DELETE" },
-        );
+        await fetchEndpoint(removeTaskDependency, { id: blockedTaskId, depId: conversation.taskId });
       } finally {
         setBusy(null);
       }

@@ -1,8 +1,9 @@
-import { useState } from "react";
 import { MdReplay } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
+import { useEndpointMutation, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
+import { resumeConversationEndpoint } from "@plugins/conversations/plugins/conversation-view/plugins/resume/core";
 import { Button } from "@/components/ui/button";
 
 export function ResumeButton({
@@ -11,12 +12,27 @@ export function ResumeButton({
   conversation: ConversationRecord;
 }) {
   const live = useConversation(conversation.id) ?? conversation;
-  const [busy, setBusy] = useState(false);
+  const resume = useEndpointMutation(resumeConversationEndpoint, {
+    onSuccess: () =>
+      toast({
+        type: "conversation",
+        title: "Resuming conversation",
+        description: "Reconnecting the agent session…",
+        variant: "success",
+      }),
+    onError: (err) =>
+      toast({
+        type: "conversation",
+        title: "Resume failed",
+        description: getEndpointErrorMessage(err),
+        variant: "error",
+      }),
+  });
 
   const isNotRunning = live.status === "gone" || live.status === "done";
   const hasSession = !!live.claudeSessionId;
   const canResume = isNotRunning && hasSession;
-  const disabled = busy || !canResume;
+  const disabled = resume.isPending || !canResume;
 
   const tooltip = !isNotRunning
     ? "Resume is available once the session has exited"
@@ -24,36 +40,16 @@ export function ResumeButton({
       ? "No saved Claude session to resume"
       : "Resume conversation (claude --resume)";
 
-  async function onClick() {
+  function onClick() {
     if (disabled) return;
-    setBusy(true);
-    try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/resume`,
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        const text = await res.text();
-        throw new Error(text || `HTTP ${res.status}`);
-      }
-      toast({ type: "conversation", title: "Resuming conversation", description: "Reconnecting the agent session…", variant: "success" });
-    } catch (err) {
-      toast({
-        type: "conversation",
-        title: "Resume failed",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
-    } finally {
-      setBusy(false);
-    }
+    resume.mutate({ params: { id: conversation.id } });
   }
 
   return (
     <Button
       variant="outline"
       size="icon-sm"
-      title={busy ? "Resuming…" : tooltip}
+      title={resume.isPending ? "Resuming…" : tooltip}
       aria-label="Resume"
       disabled={disabled}
       onClick={onClick}

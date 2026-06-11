@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { defineEndpoint, multipart } from "@plugins/infra/plugins/endpoints/core";
+import { defineEndpoint, multipart, blob } from "@plugins/infra/plugins/endpoints/core";
 
 export const UploadedAttachmentSchema = z.object({
   id: z.string(),
@@ -16,6 +16,7 @@ export const uploadAttachment = defineEndpoint({
 
 export const getAttachmentFile = defineEndpoint({
   route: "GET /api/attachments/:id",
+  response: blob(),
 });
 
 export const deleteAttachmentEndpoint = defineEndpoint({

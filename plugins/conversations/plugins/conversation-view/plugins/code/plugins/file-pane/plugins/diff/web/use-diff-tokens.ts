@@ -7,6 +7,8 @@ import {
   SHIKI_LANGS,
   themeForMode,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 
 export type ShikiTokenNode = {
   type: "shiki";
@@ -36,14 +38,11 @@ async function fetchFileContent(
   path: string,
   ref?: string,
 ): Promise<string | null> {
-  const refQuery = ref ? `&ref=${encodeURIComponent(ref)}` : "";
-  const url = `/api/code/${encodeURIComponent(worktree)}/file?path=${encodeURIComponent(path)}${refQuery}`;
   try {
-    const res = await fetch(url);
-    if (!res.ok) return null;
-    const body = (await res.json()) as { content?: string };
-    return body.content ?? null;
+    const { content } = await fetchEndpoint(getFileContent, { worktree }, { query: { path, ref } });
+    return content ?? null;
   } catch (err) {
+    if (err instanceof EndpointError) return null;
     // Network errors are expected (offline, deleted file, server restarting)
     if (!(err instanceof TypeError)) throw err;
     return null;

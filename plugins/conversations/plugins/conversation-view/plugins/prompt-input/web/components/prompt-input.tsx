@@ -5,6 +5,8 @@ import {
   usePromptInsert,
 } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
+import { postConversationTurn } from "@plugins/conversations/core";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/notifications/web";
@@ -34,15 +36,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     if (isDraftEmpty(current) || disabled || sending) return;
     setSending(true);
     try {
-      const res = await fetch(
-        `/api/conversations/${encodeURIComponent(conversation.id)}/turn`,
-        {
-          method: "POST",
-          headers: { "content-type": "application/json" },
-          body: JSON.stringify({ text: current }),
-        },
-      );
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
+      await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text: current } });
       clearDraft();
     } catch (err) {
       toast({

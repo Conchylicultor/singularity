@@ -37,7 +37,7 @@ The handle does expose `.table` — but only as a same-plugin escape for live-st
 - Load-bearing: yes
 - Web:
   - Uses: `infra/endpoints.fetchEndpoint`
-  - Exports: Types: `UploadedAttachment`; Values: `uploadAttachment`
+  - Exports: Types: `UploadedAttachment`; Values: `getAttachmentFile`, `uploadAttachment`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.ATTACHMENTS_DIR`, `primitives/log-channels.Log`
   - DB schema: `plugins/infra/plugins/attachments/server/internal/define-link.ts`, `plugins/infra/plugins/attachments/server/internal/tables.ts`

@@ -1,7 +1,7 @@
 import { useMemo, useState } from "react";
 import { Section, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { FileTree } from "@plugins/code-explorer/web";
-import { getCodeTree } from "@plugins/code-explorer/core";
+import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";

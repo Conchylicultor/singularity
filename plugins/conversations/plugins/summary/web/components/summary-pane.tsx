@@ -3,6 +3,7 @@ import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { toast } from "@plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useEndpointMutation, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -10,6 +11,7 @@ import {
   conversationSummariesResource,
   type ConversationSummary,
 } from "../../shared/resources";
+import { generateConversationSummary } from "../../shared/endpoints";
 import { PHASE_CLASSES, PHASE_LABEL } from "./phase-styles";
 import { convSummaryPane } from "../panes";
 
@@ -26,6 +28,16 @@ export function SummaryPane() {
   const summaries: ConversationSummary[] | undefined =
     summariesResult.pending ? undefined : summariesResult.data[convId ?? ""];
   const latest = summaries?.[0];
+
+  const generate = useEndpointMutation(generateConversationSummary, {
+    onError: (err) =>
+      toast({
+        type: "summary",
+        title: "Summarise failed",
+        description: getEndpointErrorMessage(err),
+        variant: "error",
+      }),
+  });
 
   const [pendingSince, setPendingSince] = useState<number | null>(null);
 
@@ -63,22 +75,10 @@ export function SummaryPane() {
     if (!convId) return;
     setPendingSince(Date.now());
     try {
-      const res = await fetch(
-        `/api/conversation-summary/${encodeURIComponent(convId)}/generate`,
-        { method: "POST" },
-      );
-      if (!res.ok) {
-        const body = await res.json().catch(() => ({}));
-        throw new Error(body?.error ?? `HTTP ${res.status}`);
-      }
-    } catch (err) {
+      await generate.mutateAsync({ params: { conversationId: convId } });
+    } catch (_err) {
+      // onError handler fires the toast; reset pendingSince so the button re-enables after failure.
       setPendingSince(null);
-      toast({
-        type: "summary",
-        title: "Summarise failed",
-        description: err instanceof Error ? err.message : String(err),
-        variant: "error",
-      });
     }
   }
 

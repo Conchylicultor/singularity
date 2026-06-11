@@ -7,7 +7,7 @@
 - Description: Sample rows section (first 10 rows) in the table detail view.
 - Web:
   - Contributes: `TableDetail.Section` "sample-rows" → `SampleRowsSection`
-  - Uses: `apps/studio/contributions/tables.TableDetail`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
+  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
 - Shared:

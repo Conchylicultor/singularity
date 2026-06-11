@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getTableForeignKeys } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -17,11 +18,6 @@ interface IncomingFk {
   source_table: string;
   source_column: string;
   target_column: string;
-}
-
-interface ForeignKeysResponse {
-  outgoing: OutgoingFk[];
-  incoming: IncomingFk[];
 }
 
 const outgoingColumns: ColumnDef<OutgoingFk>[] = [
@@ -93,17 +89,7 @@ export function ForeignKeysSection({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isLoading, isError } = useQuery<ForeignKeysResponse>({
-    queryKey: ["studio-tables-foreign-keys", tableName],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/studio/tables/${encodeURIComponent(tableName)}/foreign-keys`,
-      );
-      if (!res.ok) throw new Error(`Failed to fetch FK data: ${res.status}`);
-      return res.json() as Promise<ForeignKeysResponse>;
-    },
-    staleTime: 60_000,
-  });
+  const { data, isLoading, isError } = useEndpoint(getTableForeignKeys, { tableName }, { staleTime: 60_000 });
 
   if (isLoading) {
     return (

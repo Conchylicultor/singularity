@@ -27,12 +27,11 @@ function isSuffixMatch(query: string[], file: string[]): boolean {
   return true;
 }
 
-export const handleResolve = implement(resolveFile, async ({ params, req }) => {
+export const handleResolve = implement(resolveFile, async ({ params, query }) => {
   const { worktree } = params;
   if (!worktree) throw new HttpError(400, "Missing worktree");
 
-  const url = new URL(req.url);
-  const rawPath = url.searchParams.get("path");
+  const rawPath = query.path;
   if (!rawPath || rawPath.includes("\0"))
     return { kind: "not-found" as const };
 

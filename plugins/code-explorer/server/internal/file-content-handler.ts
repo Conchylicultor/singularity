@@ -1,5 +1,5 @@
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
-import { getFileContent as getFileContentEndpoint } from "../../shared/endpoints";
+import { getFileContent as getFileContentEndpoint } from "@plugins/code-explorer/plugins/code-api/core";
 import { getFileContent, getFileContentAtRef } from "./get-file-content";
 import { ALLOWED_REFS, resolveRef } from "./resolve-ref";
 import { resolveWorktreePath } from "./resolve-worktree-path";

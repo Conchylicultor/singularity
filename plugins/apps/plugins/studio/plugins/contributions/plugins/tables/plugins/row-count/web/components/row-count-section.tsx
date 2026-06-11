@@ -1,11 +1,8 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getTableRowCount } from "../../shared/endpoints";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-
-interface RowCountResponse {
-  estimate: number | null;
-}
 
 export function RowCountSection({
   tableName,
@@ -13,17 +10,7 @@ export function RowCountSection({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isPending, isError } = useQuery<RowCountResponse>({
-    queryKey: ["studio-table-row-count", tableName],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/studio/tables/${encodeURIComponent(tableName)}/row-count`,
-      );
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<RowCountResponse>;
-    },
-    staleTime: 60_000,
-  });
+  const { data, isPending, isError } = useEndpoint(getTableRowCount, { tableName }, { staleTime: 60_000 });
 
   if (isPending) {
     return (

@@ -13,7 +13,7 @@ import "react-diff-view/style/index.css";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { getFileContent } from "@plugins/code-explorer/core";
+import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { useFileDiff } from "../use-file-diff";
 import { useDiffTokens } from "../use-diff-tokens";
 import type { DiffTokens } from "../use-diff-tokens";

@@ -5,6 +5,7 @@ import { PushSection } from "./components/push-section";
 import { pushDetailPane } from "./panes";
 
 export { pushDetailPane } from "./panes";
+export { getPushProfiling } from "../shared/endpoints";
 
 export default {
   description: "Push contention profiling for the Gantt debug pane.",

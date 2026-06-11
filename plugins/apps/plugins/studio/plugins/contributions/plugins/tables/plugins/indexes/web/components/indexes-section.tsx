@@ -1,4 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
+import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { getTableIndexes } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -36,17 +37,7 @@ export function IndexesSection({
   tableName: string;
   pluginId: string;
 }) {
-  const { data, isLoading, isError } = useQuery<{ indexes: IndexRow[] }>({
-    queryKey: ["studio-table-indexes", tableName],
-    queryFn: async () => {
-      const res = await fetch(
-        `/api/studio/tables/${encodeURIComponent(tableName)}/indexes`,
-      );
-      if (!res.ok) throw new Error(await res.text());
-      return res.json() as Promise<{ indexes: IndexRow[] }>;
-    },
-    staleTime: 60_000,
-  });
+  const { data, isLoading, isError } = useEndpoint(getTableIndexes, { tableName }, { staleTime: 60_000 });
 
   if (isLoading) {
     return (
