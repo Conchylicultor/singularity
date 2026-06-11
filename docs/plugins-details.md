@@ -1921,12 +1921,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`checks`** — Check runner and built-in checks for ./singularity check
           - Core:
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
-            - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
+            - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `TOKEN_GROUP_VARS`, `tsBuildInfoPath`
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
+            - **`css-vars-single-owner`**
             - **`css-vars-supplied`**
             - **`data-migration-dml-only`**
             - **`eslint`**
@@ -1950,11 +1951,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`plugins-registry-in-sync`**
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
+            - **`token-group-vars-in-sync`**
             - **`type-check`**
         - **`codegen`** — Plugin doc generation and registry codegen
           - Core:
             - Uses: `config_v2.computeHash`, `config_v2.effective`, `config_v2.propagate`, `config_v2.readonlyProxy`, `config_v2.stringifyConfigValue`, `framework/plugin-id.asPath`, `framework/plugin-id.asPluginId`, `plugin-meta/barrel-import.AUTO_STUB_CSS`, `plugin-meta/barrel-import.AUTO_STUB_PACKAGES`, `plugin-meta/barrel-import.AutoStubEntry`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.DocFact`, `plugin-meta/facets.Facet`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/parse-utils.findMarkerCalls`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginNode`, `plugin-meta/plugin-tree.PluginTree`
-            - Exports: Types: `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PluginNode`, `PluginTree`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `reorderableSlotsManifestPath`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`
+            - Exports: Types: `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PluginNode`, `PluginTree`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
             - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `plugin-meta/facets`
