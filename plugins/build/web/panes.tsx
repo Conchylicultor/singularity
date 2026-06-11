@@ -23,7 +23,7 @@ function BuildPaneBody(): ReactElement {
   const selectedRunId = buildDetailPane.useRouteEntry()?.params.runId;
 
   return (
-    <PaneChrome pane={buildPane} title="Build">
+    <PaneChrome pane={buildPane} title="Builds">
       <BuildPopoverContent
         variant="pane"
         selectedRunId={selectedRunId}

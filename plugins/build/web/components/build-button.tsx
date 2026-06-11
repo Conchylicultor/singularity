@@ -101,7 +101,7 @@ export function BuildButton() {
       contentClassName="w-[480px] p-0"
     >
       <div className="flex items-center justify-between border-b px-3 py-2">
-        <Text as="span" variant="label">Build</Text>
+        <Text as="span" variant="label">Builds</Text>
         <Button
           variant="ghost"
           size="icon"
