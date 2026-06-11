@@ -101,8 +101,19 @@ export function AnswerForm({
     m.mutate({ params: { id: convId }, body: { text } });
   };
 
+  // Enter submits once every question is answered, from anywhere in the form
+  // (option buttons, the "Other" input, or no focus). Shift+Enter is left alone.
+  // While the form is incomplete, Enter falls through so a focused option button
+  // still toggles via its own activation.
+  const handleKeyDown = (e: React.KeyboardEvent) => {
+    if (e.key === "Enter" && !e.shiftKey && canSubmit) {
+      e.preventDefault();
+      handleSubmit();
+    }
+  };
+
   return (
-    <div className="mt-2 space-y-3">
+    <div className="mt-2 space-y-3" onKeyDown={handleKeyDown}>
       {questions.map((q, qi) => {
         const answer = answers[qi]!;
         return (
