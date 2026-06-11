@@ -2206,7 +2206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
         - Slots: `Editor.Block`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`, `primitives/text.Text`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`, `primitives/text.Text`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
       - Cross-plugin:
         - Slot contributors: `bulleted-list`, `code-block`, `divider`, `image`, `page-link`, `text`, `to-do`, `toggle`
@@ -2779,7 +2779,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/live-state.queryKeyFor`, `primitives/live-state.useResource`
         - Exports: Types: `UseOptimisticResourceArgs`, `UseOptimisticResourceResult`; Values: `OpNoLongerApplies`, `useOptimisticResource`
       - Cross-plugin:
-        - Imported by: `conversations/conversations-view/queue`
+        - Imported by: `conversations/conversations-view/queue`, `page/editor`
     - **`pane`** — Unified pane primitive: Pane.define and chrome components.
       - Web:
         - Slots: `Pane.Register`
