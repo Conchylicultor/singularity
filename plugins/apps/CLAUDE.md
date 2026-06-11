@@ -9,7 +9,7 @@
 - Web:
   - Slots: `Apps.App`
   - Contributes: `Core.Root` → `AppsLayout`
-  - Uses: `primitives/pane.PaneBasePathContext`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
+  - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
   - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
 - Cross-plugin:
   - Slot contributors: `shell`

@@ -1,10 +1,11 @@
+import { PaneOverlayHost } from "@plugins/layouts/plugins/miller/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 import { Home } from "../slots";
 
 export function HomeLayout() {
   return (
-    <div className="flex h-full flex-col bg-background">
+    <div className="relative flex h-full flex-col bg-background">
       <div className="mx-auto flex h-full w-full max-w-5xl flex-col px-8 py-10">
         <header className="mb-8 shrink-0">
           <Text as="h1" variant="title" className="tracking-tight">
@@ -20,6 +21,10 @@ export function HomeLayout() {
           <Home.Section.Render />
         </div>
       </div>
+      {/* Bespoke full-surface layout: mount the pane overlay so global actions
+          that open panes (e.g. the theme customizer) sync the registry and
+          render here instead of throwing "Unknown pane". */}
+      <PaneOverlayHost />
     </div>
   );
 }

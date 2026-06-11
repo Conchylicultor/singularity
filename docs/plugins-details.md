@@ -67,7 +67,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `Apps.App`
     - Contributes: `Core.Root` → `AppsLayout`
-    - Uses: `primitives/pane.PaneBasePathContext`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
+    - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.TooltipProvider`, `primitives/tooltip.WithTooltip`
     - Exports: Types: `ActiveApp`; Values: `Apps`, `useActiveApp`, `useCurrentAppId`
   - Cross-plugin:
     - Slot contributors: `shell`
@@ -129,7 +129,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `Home.Section`
             - Contributes: `Apps.App` "Home" → `HomeLayout`
-            - Uses: `apps.Apps`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
+            - Uses: `apps.Apps`, `layouts/miller.PaneOverlayHost`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
             - Exports: Values: `Home`
           - Cross-plugin:
             - Slot contributors: `app-cards`
@@ -2151,7 +2151,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.getRoute`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.reorderRoute`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
         - Exports: Values: `MillerColumns`, `PaneOverlayHost`
       - Cross-plugin:
-        - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/pages/shell`, `apps/studio/shell`, `apps/workflows/shell`, `layouts/host`
+        - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/shell`, `apps/studio/shell`, `apps/workflows/shell`, `layouts/host`
 
 - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - Web:
