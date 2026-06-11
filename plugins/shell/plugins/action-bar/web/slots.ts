@@ -10,5 +10,10 @@ import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
  * so both surfaces stay in sync automatically.
  */
 export const ActionBar = {
-  Item: defineRenderSlot<{ component: ComponentType }>("action-bar.item"),
+  // Size-owning: both surfaces (agent-manager toolbar + floating bar) render this
+  // slot, so declaring `sm` here keeps every action button one consistent height.
+  // Contributions should omit `size` and inherit.
+  Item: defineRenderSlot<{ component: ComponentType }>("action-bar.item", {
+    controlSize: "sm",
+  }),
 };

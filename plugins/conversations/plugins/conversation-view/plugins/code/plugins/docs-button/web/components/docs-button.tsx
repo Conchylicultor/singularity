@@ -29,7 +29,6 @@ export function DocsButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title="Design docs"
       aria-label="Design docs"
       aria-pressed={isOpen}

@@ -1,8 +1,18 @@
 import { cn } from "@/lib/utils";
 import type React from "react";
+import { useControlSize, type ControlSize } from "@/theme/control-size";
 
 export type ToggleChipVariant = "solid" | "ghost";
 export type ToggleChipSize = "sm" | "md";
+
+// The chip's two-level scale sits one notch under the control scale by design
+// (chips read slightly smaller than the buttons beside them): "sm" → control-xs,
+// "md" → control-sm. Map the ambient 4-level density onto it so an unsized chip in
+// a toolbar matches a same-density button's height as closely as the scale allows
+// (`sm` density → "md" → control-sm = a `sm` button). Above `sm` it caps at "md".
+function chipSizeForDensity(density: ControlSize): ToggleChipSize {
+  return density === "xs" ? "sm" : "md";
+}
 
 const VARIANT_CLASS: Record<
   ToggleChipVariant,
@@ -43,7 +53,7 @@ export interface ToggleChipProps {
 export function ToggleChip({
   active,
   variant = "solid",
-  size = "md",
+  size,
   icon,
   as: As = "button",
   disabled,
@@ -51,6 +61,9 @@ export function ToggleChip({
   children,
   ...rest
 }: ToggleChipProps) {
+  // No explicit `size` → inherit the ambient density (defaults to "md" → "md").
+  const density = useControlSize();
+  const effectiveSize = size ?? chipSizeForDensity(density);
   const isButton = As === "button";
   // Auto toggle semantics for plain buttons; defer to the caller's role
   // (e.g. SegmentedControl's role="radio" + aria-checked) when one is supplied.
@@ -64,8 +77,8 @@ export function ToggleChip({
       className={cn(
         "inline-flex items-center gap-1.5 rounded-full font-medium transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
-        size === "sm" && "control-xs p-chip text-2xs",
-        size === "md" && "control-sm p-control text-caption",
+        effectiveSize === "sm" && "control-xs p-chip text-2xs",
+        effectiveSize === "md" && "control-sm p-control text-caption",
         active ? VARIANT_CLASS[variant].active : VARIANT_CLASS[variant].inactive,
         className,
       )}

@@ -13,7 +13,6 @@ export function PushProfilingButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title="Push profiling"
       aria-label="Push profiling"
       aria-pressed={isOpen}

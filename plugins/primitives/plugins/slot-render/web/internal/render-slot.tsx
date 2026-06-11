@@ -18,6 +18,7 @@ import {
   type SealedComponent,
 } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { ControlSizeProvider, type ControlSize } from "@/theme/control-size";
 import {
   getSlotItemMiddlewares,
   getSlotListMiddlewares,
@@ -31,6 +32,16 @@ export interface RenderSlotConfig<P> {
    * draggable/reorderable. Defaults to `true`.
    */
   reorder?: boolean;
+  /**
+   * Declares this slot size-owning: `.Render` wraps every contribution in a
+   * `ControlSizeProvider` of this density, so each contributed control inherits
+   * one height (text → `control-sm`, icon → `control-icon-sm`, chip → its `sm`)
+   * instead of declaring its own `size`. This is how a toolbar enforces a
+   * consistent size across opaque contributions — declaring it here IS the
+   * enforcement; a host cannot forget. Items should omit `size`; an explicit
+   * `size` on a contribution still wins (escape hatch).
+   */
+  controlSize?: ControlSize;
 }
 
 /**
@@ -83,6 +94,7 @@ export function defineRenderSlot<P>(
 
   const renderSlot = slot as unknown as RenderSlot<P>;
   const reorder = config?.reorder ?? true;
+  const controlSize = config?.controlSize;
 
   renderSlot.Render = function SlotRender({
     children,
@@ -191,15 +203,26 @@ export function defineRenderSlot<P>(
       </>
     );
 
+    // Size-owning slot: one provider wraps the whole contribution list so every
+    // item inherits the declared density (see `controlSize` config).
+    const withDensity =
+      controlSize !== undefined ? (
+        <ControlSizeProvider size={controlSize}>
+          {withSentinel}
+        </ControlSizeProvider>
+      ) : (
+        withSentinel
+      );
+
     if (subId !== undefined) {
       return (
         <RenderSlotSubIdContext.Provider value={subId}>
-          {withSentinel}
+          {withDensity}
         </RenderSlotSubIdContext.Provider>
       );
     }
 
-    return withSentinel;
+    return withDensity;
   };
 
   return renderSlot;

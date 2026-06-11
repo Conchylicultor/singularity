@@ -35,11 +35,19 @@ Mental model: **every custom `@utility` in `app.css` must be registered with tai
 The single source of truth is `CUSTOM_UTILITY_REGISTRY` in [`plugins/framework/plugins/web-core/web/theme/custom-utilities.ts`](../../../plugins/framework/plugins/web-core/web/theme/custom-utilities.ts): each utility family declares its twMerge wiring as data — `extend` a built-in group (mutual conflict, e.g. text roles → `font-size`), a synthetic `group` + `conflictsWith` (multi-property, e.g. `icon-auto` → w+h+size), or `standalone` with a reason (no collision, e.g. `focus-ring`). `lib/utils.ts` *derives* the whole twMerge config from the registry — never hand-edit the conflict map.
 To add a `@utility`: declare it in `app.css` **and** add it to a `*_UTILITIES` array + a registry entry. The `app-css-utilities-in-sync` check is **total** — any unregistered `@utility` fails `./singularity check`, so the silent-strip class cannot recur.
 
+## Control size = density inherited from context
+A control's size is a **bundle** (height + padding + radius + text + gap + icon), named by a density `ControlSize = xs|sm|md|lg`. Don't size buttons individually.
+- A **toolbar/slot declares density once** — `defineRenderSlot(id, { controlSize })` (auto-wraps contributions; a host can't forget), or wrap a subtree in `<ControlSizeProvider size>`. Every control inside inherits via React context.
+- Each control maps that density to **its own shape**: text→`control-sm`, icon→`control-icon-sm`, chip→its `sm`. Same height, different shapes.
+- Controls (`Button`/`IconButton`/`PaneIconAction`/`ToggleChip`) **omit `size`** to inherit. An explicit `size` is the escape hatch — fine for standalone controls (forms/dialogs), wrong inside a toolbar.
+- Runtime home: web-core `@/theme/control-size` (`ControlSizeProvider`, `useControlSize`, `iconSizeFor`/`textSizeFor`) — co-located with the ambient ui-kit, not the primitive, so foundational `Button` reads it without inverting layers. The CSS `control-*` scale + `no-adhoc-control` lint live in the `control-size` primitive.
+→ [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
+
 ## Design-standard enforcement (lint, fails `./singularity check`)
 Use the primitive instead of raw Tailwind classes — each ad-hoc class is banned:
 - **Typography** → `<Text variant>`, bans raw `text-{sm,lg,...}`/`leading-*` — [`plugins/primitives/plugins/text/CLAUDE.md`](../../../plugins/primitives/plugins/text/CLAUDE.md)
 - **Radius** → `rounded-*` from `--radius`, bans bare/arbitrary — [`plugins/primitives/plugins/radius/CLAUDE.md`](../../../plugins/primitives/plugins/radius/CLAUDE.md)
-- **Control size** → `control-{xs,sm,md,lg}` — [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
+- **Control size** → `control-{xs,sm,md,lg}` height scale + density-from-context (above) — [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
 - **Z-index** → `z-base..z-max`, bans raw `z-*` — [`plugins/primitives/plugins/z-layers/CLAUDE.md`](../../../plugins/primitives/plugins/z-layers/CLAUDE.md)
 - **Icons** → no direct `lucide-react` — [`plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/CLAUDE.md`](../../../plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/CLAUDE.md)
 

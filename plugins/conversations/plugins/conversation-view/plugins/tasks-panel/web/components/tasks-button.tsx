@@ -29,7 +29,6 @@ export function TasksButton() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title={task ? `Tasks · ${task.status.replace(/_/g, " ")}` : "Tasks"}
       aria-label="Tasks"
       aria-pressed={isOpen}

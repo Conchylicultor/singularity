@@ -5,6 +5,7 @@ import {
   Kbd,
 } from "@plugins/primitives/plugins/tooltip/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
+import { useControlSize, iconSizeFor } from "@/theme/control-size";
 
 export interface IconButtonProps
   extends Omit<ComponentProps<typeof Button>, "children"> {
@@ -21,10 +22,13 @@ export function IconButton({
   tooltip,
   shortcut,
   variant = "ghost",
-  size = "icon",
+  size,
   side,
   ...props
 }: IconButtonProps) {
+  // No explicit `size` → inherit the ambient density as the square icon shape.
+  const density = useControlSize();
+  const resolvedSize = size ?? iconSizeFor(density);
   const content = shortcut ? (
     <>
       {tooltip ?? label}
@@ -36,7 +40,7 @@ export function IconButton({
 
   return (
     <WithTooltip content={content} side={side}>
-      <Button variant={variant} size={size} aria-label={label} {...props}>
+      <Button variant={variant} size={resolvedSize} aria-label={label} {...props}>
         <Icon />
       </Button>
     </WithTooltip>

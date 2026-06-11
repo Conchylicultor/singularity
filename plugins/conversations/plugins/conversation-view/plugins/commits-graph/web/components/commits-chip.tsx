@@ -38,7 +38,6 @@ export function CommitsChip() {
   return (
     <Button
       variant={isOpen ? "secondary" : "ghost"}
-      size="sm"
       title={title}
       aria-label={title}
       aria-pressed={isOpen}
