@@ -79,8 +79,8 @@ export function useNotificationsChannelStatuses(): ChannelStatuses {
 }
 
 // Accessor for the singleton NotificationsClient — consumers (the live-state
-// health pane, the wedge watchdog) use it to reach resync()/debugSnapshot()/
-// subscribeDebug(). Must be called inside NotificationsProvider.
+// health pane, the wedge watchdog) use it to reach probeMissedUpdates()/
+// debugSnapshot()/subscribeDebug(). Must be called inside NotificationsProvider.
 export function useNotificationsClient(): NotificationsClient {
   const client = useContext(NotificationsContext);
   if (!client) throw new Error("useNotificationsClient must be inside NotificationsProvider");

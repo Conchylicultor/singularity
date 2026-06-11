@@ -107,11 +107,27 @@ interface ActiveSub {
    * nothing applied yet — the baseline a fresh or replayed sub starts from, so
    * the first sub-ack always passes the `<=` staleness guard (including a
    * never-notified resource's version-0 sub-ack). The server bumps the version
-   * only on a real notify, never on (re)subscribe, so this advancing past its
-   * pre-resync value means a push landed while we were hidden — the exact
-   * signal the missed-update watchdog reads.
+   * only on a real notify, never on (re)subscribe. Both `lastAckVersion` and
+   * `liveFrameSeq` below are derived from this stream and are what the missed-
+   * update watchdog (`probeMissedUpdates`) actually reads.
    */
   version: number;
+  /**
+   * Version delivered by the most recent `sub-ack` (server truth at the moment
+   * of (re)subscribe). Distinct from `version`, which a live `update` frame also
+   * advances — `lastAckVersion` moves *only* on a sub-ack. `probeMissedUpdates`
+   * compares this (not `version`) against the pre-resync baseline so a live
+   * frame arriving during the settle window can't masquerade as a missed one.
+   * `-1` = no ack applied since the last (re)subscribe.
+   */
+  lastAckVersion: number;
+  /**
+   * Monotonic count of live, server-initiated frames applied — `update`/`delta`/
+   * `invalidate`, never `sub-ack`. Never reset. `probeMissedUpdates` diffs it
+   * across the probe: if it advanced, a live frame landed during the window, so
+   * any version gap is healthy delivery, not a miss.
+   */
+  liveFrameSeq: number;
   socket: SocketKind;
   /** ms epoch of the last applyUpdate/applyDelta write for this sub (0 = never). */
   lastAppliedAt: number;
@@ -139,12 +155,15 @@ export interface LeaderInfo {
   hasLeader: boolean;
 }
 
-/** One entry per active sub returned by `resync()` (watchdog missed-update detection). */
-export interface ResyncSub {
+/** One genuinely-missed sub returned by `probeMissedUpdates()` (watchdog). */
+export interface MissedFrame {
   key: string;
   params: ResourceParams;
   socket: SocketKind;
+  /** Version this tab had applied before the probe's forced resync. */
   prevVersion: number;
+  /** Higher version the resync sub-ack revealed — the frames we missed. */
+  ackVersion: number;
 }
 
 interface SocketChannel {
@@ -241,24 +260,63 @@ export class NotificationsClient {
   // --- Layer 2/3 introspection + control API --------------------------------
 
   /**
-   * Force a re-subscribe of every active sub across both channels (reuses the
-   * reconnect `replaySubs` path). Returns the version each sub held BEFORE the
-   * resync, so the caller (watchdog) can compare it against the post-resync
-   * sub-ack version to detect frames that were silently missed while the tab
-   * was "open" but stale.
+   * Probe for live frames silently missed while the tab was hidden. Forces a
+   * resync of every active sub (reuses the reconnect `replaySubs` path — also a
+   * cheap stale-cache self-heal), waits `settleMs` for the sub-acks to land, then
+   * returns only the subs that were genuinely behind.
+   *
+   * A sub is a genuine miss iff all three hold:
+   *  - it had a baseline before the probe (`prevVersion >= 0`),
+   *  - its resync sub-ack revealed a higher server version
+   *    (`lastAckVersion > prevVersion`) — the gap, AND
+   *  - no live frame landed for it during the probe (`liveFrameSeq` unchanged) —
+   *    so the advance was revealed *only* by the ack, not delivered live.
+   *
+   * Comparing the sub-ack version (not the running `version`) excludes any live
+   * frame that arrives during the settle window; the `liveFrameSeq` guard closes
+   * the residual ~1-RTT race where a notify lands between the re-sub and its ack.
    */
-  resync(): ResyncSub[] {
-    const before: ResyncSub[] = [];
-    for (const channel of Object.values(this.channels)) {
-      for (const sub of channel.subs.values()) {
-        before.push({ key: sub.key, params: sub.params, socket: sub.socket, prevVersion: sub.version });
+  async probeMissedUpdates(settleMs = 1_500): Promise<MissedFrame[]> {
+    const before: {
+      id: string;
+      socket: SocketKind;
+      prevVersion: number;
+      prevLiveSeq: number;
+    }[] = [];
+    for (const [kind, channel] of Object.entries(this.channels) as [SocketKind, SocketChannel][]) {
+      for (const [id, sub] of channel.subs) {
+        before.push({ id, socket: kind, prevVersion: sub.version, prevLiveSeq: sub.liveFrameSeq });
       }
     }
-    trace(`resync subCount=${before.length}`);
+    if (before.length === 0) return [];
+    trace(`probeMissedUpdates subCount=${before.length}`);
     for (const channel of Object.values(this.channels)) {
       this.replaySubs(channel);
     }
-    return before;
+    // One-shot wait for the sub-ack round-trip — not a poll. The ack landing is
+    // what `lastAckVersion` captures.
+    await new Promise<void>((resolve) => setTimeout(resolve, settleMs));
+
+    const missed: MissedFrame[] = [];
+    for (const b of before) {
+      // Re-look up by id: a refcount-0 sub may have torn down mid-probe.
+      const sub = this.channels[b.socket].subs.get(b.id);
+      if (!sub) continue;
+      if (
+        b.prevVersion >= 0 &&
+        sub.lastAckVersion > b.prevVersion &&
+        sub.liveFrameSeq === b.prevLiveSeq
+      ) {
+        missed.push({
+          key: sub.key,
+          params: sub.params,
+          socket: sub.socket,
+          prevVersion: b.prevVersion,
+          ackVersion: sub.lastAckVersion,
+        });
+      }
+    }
+    return missed;
   }
 
   /**
@@ -338,7 +396,7 @@ export class NotificationsClient {
       this.emitDebug();
       return;
     }
-    channel.subs.set(id, { refcount: 1, key, params, version: -1, socket: kind, lastAppliedAt: 0 });
+    channel.subs.set(id, { refcount: 1, key, params, version: -1, lastAckVersion: -1, liveFrameSeq: 0, socket: kind, lastAppliedAt: 0 });
     trace(`observe key=${key} params=${pk} refcount=1`);
     this.sendSub(channel, key, params);
     this.emitDebug();
@@ -426,6 +484,10 @@ export class NotificationsClient {
     // timer still fires and tears them down on schedule, independent of reconnect.
     for (const sub of channel.subs.values()) {
       sub.version = -1;
+      // The server has no record of our subs; the next sub-ack is the fresh
+      // baseline. Clear it so a stale pre-resync ack can't be read as the
+      // resync's (liveFrameSeq is a monotonic counter and is never reset).
+      sub.lastAckVersion = -1;
       this.sendSub(channel, sub.key, sub.params);
     }
     this.emitDebug();
@@ -475,6 +537,14 @@ export class NotificationsClient {
       trace(`sub-ack key=${msg.key} params=${pk} version=${msg.version}`);
     }
     entry.version = msg.version;
+    // Split the two causes of a version advance so the wedge probe can tell them
+    // apart: a sub-ack carries server truth at (re)subscribe; every other kind is
+    // a live, server-initiated frame.
+    if (msg.kind === "sub-ack") {
+      entry.lastAckVersion = msg.version;
+    } else {
+      entry.liveFrameSeq++;
+    }
 
     if (msg.kind === "sub-ack" || msg.kind === "update") {
       this.applyUpdate(entry, msg.key, msg.params, msg.value);

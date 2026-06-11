@@ -167,8 +167,9 @@ interface RegistryEntry {
    * in flushNotifies — a real state change. sub-acks and the HTTP fallback
    * REPORT this value without bumping (a read is not a change), so a forced
    * resync (which re-subscribes every sub) does not make the version appear to
-   * advance. The client compares it across a hidden→visible resync to detect
-   * frames it missed while hidden — that only works if subscribing is inert.
+   * advance. The client's probeMissedUpdates compares it across a hidden→visible
+   * resync to detect frames it missed while hidden — that only works if
+   * subscribing is inert.
    */
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
@@ -828,7 +829,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
     // Report the CURRENT version without bumping: a sub-ack delivers existing
     // state, it is not a state change. Bumping here made the version climb on
-    // every (re)subscribe, which broke the missed-update watchdog — `resync()`
+    // every (re)subscribe, which broke the missed-update watchdog — the probe
     // re-subscribes every sub, so the version always appeared to advance even
     // when nothing was missed. Mirrors handleResourceHttp (also unbumped). The
     // version advances only in flushNotifies. A never-notified pk reports 0; the

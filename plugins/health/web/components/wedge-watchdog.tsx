@@ -9,11 +9,6 @@ import { report } from "@plugins/crashes/web";
 // only a truly stuck socket survives it.
 const SOCKET_DOWN_MS = 15_000;
 
-// After a hidden→visible transition we force a resync, then wait this long for
-// the sub-acks to land before comparing versions. A version that jumped while
-// the tab was "open" but hidden proves we missed live frames.
-const RESYNC_SETTLE_MS = 1_500;
-
 // Per-kind cooldown so a flapping pipeline doesn't spam toasts + crash reports.
 const WEDGE_COOLDOWN_MS = 60_000;
 
@@ -22,6 +17,21 @@ const WEDGE_COOLDOWN_MS = 60_000;
 const lastWedgeAt = new Map<string, number>();
 
 type WedgeKind = "socket-down" | "missed-updates";
+
+// Stable per-failure-mode discriminator folded into the crash `errorType`. The
+// crash fingerprint is sha256(errorType + stack), and wedges carry no stack — so
+// this is what keeps the failure modes from collapsing into one fingerprint and
+// one growing-count task. socket-down splits by channel (worktree vs central —
+// distinct failure domains, only two values); missed-updates stays kind-only so
+// a broad pipeline wedge files ONE task, not one per stuck resource (the key
+// stays in the message + count for triage). No volatile data (versions, params)
+// enters this, so each mode still dedups into a single task.
+function discriminator(kind: WedgeKind, detail: string): string {
+  if (kind === "socket-down") {
+    return detail.includes("central") ? "socket-down:central" : "socket-down:worktree";
+  }
+  return "missed-updates";
+}
 
 function wedge(kind: WedgeKind, detail: string): void {
   const now = Date.now();
@@ -36,11 +46,12 @@ function wedge(kind: WedgeKind, detail: string): void {
   });
 
   // report() never throws (it swallows beacon failures internally), but we still
-  // void it to satisfy promise-safety lint. Stable message/label so the crashes
-  // plugin dedups every repeat into one growing-count task.
+  // void it to satisfy promise-safety lint. The discriminator gives each failure
+  // mode a distinct fingerprint; the stable message/label still dedups repeats of
+  // a given mode into one growing-count task.
   void report({
     source: "live-state-wedge",
-    errorType: "LiveStateWedge",
+    errorType: `LiveStateWedge:${discriminator(kind, detail)}`,
     message: `live-state wedged: ${kind} — ${detail}`,
     label: "live-state.watchdog",
     url: location.href,
@@ -81,39 +92,28 @@ export function WedgeWatchdog() {
     });
 
     // --- Signal 2: missed-updates wedge + self-heal ---
-    // On hidden→visible, force a resync (also fixes a stale cache — cheap
-    // self-heal) and arm a single settle timeout to compare versions.
-    let settleTimer: ReturnType<typeof setTimeout> | null = null;
+    // On hidden→visible, run the client probe (forces a resync — also a cheap
+    // stale-cache self-heal — and reports only genuinely-missed subs). The probe
+    // self-resolves after its settle window; an in-flight guard ignores rapid
+    // re-focus while one is running.
+    let probing = false;
 
     const onVisibility = () => {
-      if (document.visibilityState !== "visible") return;
+      if (document.visibilityState !== "visible" || probing) return;
       const client = getNotificationsClient();
       if (!client) return; // before first render / outside provider
-      const before = client.resync();
-      if (before.length === 0) return;
-
-      if (settleTimer) clearTimeout(settleTimer);
-      settleTimer = setTimeout(() => {
-        settleTimer = null;
-        const after = getNotificationsClient();
-        if (!after) return;
-        const snapshot = after.debugSnapshot();
-
-        for (const prev of before) {
-          // Match the pre-resync sub by key; if its version climbed past what we
-          // last applied, a push arrived only via the forced resync — we missed
-          // it live while hidden, which is the exact bug.
-          const matches = snapshot.subs.filter((s) => s.key === prev.key);
-          for (const s of matches) {
-            // prevVersion < 0 means this sub had not applied its first frame
-            // before the resync — no baseline to have "missed" a push from.
-            if (prev.prevVersion >= 0 && s.version > prev.prevVersion) {
-              wedge("missed-updates", `${prev.key} ${prev.prevVersion}->${s.version}`);
-              return;
-            }
-          }
-        }
-      }, RESYNC_SETTLE_MS);
+      probing = true;
+      void client
+        .probeMissedUpdates()
+        .then((missed) => {
+          if (missed.length === 0) return;
+          const m = missed[0]!;
+          const more = missed.length > 1 ? ` (+${missed.length - 1} more)` : "";
+          wedge("missed-updates", `${m.key} ${m.prevVersion}->${m.ackVersion}${more}`);
+        })
+        .finally(() => {
+          probing = false;
+        });
     };
 
     document.addEventListener("visibilitychange", onVisibility);
@@ -122,7 +122,6 @@ export function WedgeWatchdog() {
       unsubWs();
       for (const t of downTimers.values()) clearTimeout(t);
       downTimers.clear();
-      if (settleTimer) clearTimeout(settleTimer);
       document.removeEventListener("visibilitychange", onVisibility);
     };
   }, []);
