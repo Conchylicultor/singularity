@@ -22,6 +22,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`barrel-stubs-in-sync`**
   - **`config-origins-in-sync`**
   - **`conversation-trailer`**
+  - **`css-vars-supplied`**
   - **`data-migration-dml-only`**
   - **`eslint`**
   - **`migration-hashes-unique`**

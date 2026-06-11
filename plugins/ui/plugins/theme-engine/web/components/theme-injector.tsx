@@ -11,6 +11,7 @@ import type {
   ColorTransformContribution,
 } from "../slots";
 import { transformValues } from "../internal/transform";
+import { mergeGroupValues } from "../internal/merge-group-values";
 
 const DEFAULT_ADJUSTMENT: ColorAdjustment = {
   hueShift: 0,
@@ -32,6 +33,27 @@ function buildVarsBlock(
     })
     .filter(Boolean)
     .join("\n");
+}
+
+function assertComplete(
+  group: TokenGroupContribution,
+  light: Record<string, string>,
+  dark: Record<string, string>,
+): void {
+  const keys = Object.keys(group.descriptor.schema);
+  const missingIn = (values: Record<string, string>) =>
+    keys.filter((k) => values[k] === undefined || values[k] === "");
+  const missingLight = missingIn(light);
+  const missingDark = missingIn(dark);
+  if (missingLight.length === 0 && missingDark.length === 0) return;
+  const parts: string[] = [];
+  if (missingLight.length) parts.push(`light: ${missingLight.join(", ")}`);
+  if (missingDark.length) parts.push(`dark: ${missingDark.join(", ")}`);
+  throw new Error(
+    `Token group "${group.id}" produced incomplete values after merge — ` +
+      `missing/empty schema keys (${parts.join("; ")}). Every declared token ` +
+      `must resolve in both modes; check the schema defaults and any resolve() path.`,
+  );
 }
 
 function WithAdjustment({
@@ -62,24 +84,33 @@ function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId
   const { mergedLight, mergedDark } = useMemo(() => {
     if (!active) return { mergedLight: null, mergedDark: null };
 
+    let mergedLight: Record<string, string>;
+    let mergedDark: Record<string, string>;
+
     if (group.resolve) {
       const resolved = group.resolve(active, config.overrides);
-      return { mergedLight: resolved.light, mergedDark: resolved.dark };
+      mergedLight = resolved.light;
+      mergedDark = resolved.dark;
+    } else {
+      const merged = mergeGroupValues(
+        group.descriptor.schema,
+        active,
+        config.overrides as {
+          light?: Record<string, string>;
+          dark?: Record<string, string>;
+        },
+      );
+      mergedLight = merged.light;
+      mergedDark = merged.dark;
     }
 
-    const ov = config.overrides as {
-      light?: Record<string, string>;
-      dark?: Record<string, string>;
-    };
-    const light = { ...active.light };
-    const dark = { ...active.dark };
-    for (const [k, v] of Object.entries(ov.light ?? {})) {
-      if (v !== "") light[k] = v;
-    }
-    for (const [k, v] of Object.entries(ov.dark ?? {})) {
-      if (v !== "") dark[k] = v;
-    }
-    return { mergedLight: light, mergedDark: dark };
+    // Loud completeness backstop: every declared token var must resolve in
+    // both modes. With schema defaults as the merge base this never fires for
+    // sparse presets (by construction) — it catches developer bugs: an empty
+    // schema `default`, or a `resolve` path dropping a key.
+    assertComplete(group, mergedLight, mergedDark);
+
+    return { mergedLight, mergedDark };
   }, [active, config.overrides, group]);
 
   useLayoutEffect(() => {

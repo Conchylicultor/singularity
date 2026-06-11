@@ -1219,6 +1219,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-conversation-trailer",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied": {
+      "name": "@singularity/plugin-framework-tooling-checks-css-vars-supplied",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only": {
       "name": "@singularity/plugin-framework-tooling-checks-data-migration-dml-only",
       "version": "0.0.1",
@@ -2221,6 +2225,9 @@
     "plugins/ui/plugins/theme-engine": {
       "name": "@singularity/plugin-ui-theme-engine",
       "version": "0.0.1",
+      "devDependencies": {
+        "vitest": "^4.1.4",
+      },
     },
     "plugins/ui/plugins/theme-engine/plugins/theme-customizer": {
       "name": "@singularity/plugin-ui-theme-engine-theme-customizer",
@@ -3407,6 +3414,8 @@
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-conversation-trailer": ["@singularity/plugin-framework-tooling-checks-conversation-trailer@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer"],
+
+    "@singularity/plugin-framework-tooling-checks-css-vars-supplied": ["@singularity/plugin-framework-tooling-checks-css-vars-supplied@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied"],
 
     "@singularity/plugin-framework-tooling-checks-data-migration-dml-only": ["@singularity/plugin-framework-tooling-checks-data-migration-dml-only@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only"],
 

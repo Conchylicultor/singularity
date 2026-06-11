@@ -1,5 +1,8 @@
 {
   "name": "@singularity/plugin-ui-theme-engine",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "devDependencies": {
+    "vitest": "^4.1.4"
+  }
 }
