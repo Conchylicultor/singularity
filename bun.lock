@@ -1300,8 +1300,8 @@
       "name": "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact",
       "version": "0.0.1",
     },
-    "plugins/framework/plugins/tooling/plugins/checks/plugins/typescript": {
-      "name": "@singularity/plugin-framework-tooling-checks-typescript",
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/type-check": {
+      "name": "@singularity/plugin-framework-tooling-checks-type-check",
       "version": "0.0.1",
     },
     "plugins/framework/plugins/tooling/plugins/codegen": {
@@ -3455,7 +3455,7 @@
 
     "@singularity/plugin-framework-tooling-checks-snapshot-chain-intact": ["@singularity/plugin-framework-tooling-checks-snapshot-chain-intact@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/snapshot-chain-intact"],
 
-    "@singularity/plugin-framework-tooling-checks-typescript": ["@singularity/plugin-framework-tooling-checks-typescript@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/typescript"],
+    "@singularity/plugin-framework-tooling-checks-type-check": ["@singularity/plugin-framework-tooling-checks-type-check@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/type-check"],
 
     "@singularity/plugin-framework-tooling-codegen": ["@singularity/plugin-framework-tooling-codegen@workspace:plugins/framework/plugins/tooling/plugins/codegen"],
 

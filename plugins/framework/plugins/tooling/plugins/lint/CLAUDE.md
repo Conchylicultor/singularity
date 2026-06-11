@@ -6,7 +6,7 @@
 
 - Description: Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
 - Core:
-  - Exports: Values: `findPluginDirs`, `lintCollectedDir`
+  - Exports: Types: `BuildLintConfigOptions`, `ParserTypeSource`; Values: `buildLintConfig`, `findPluginDirs`, `lintCollectedDir`
 - Sub-plugins:
   - **`icon-safety`** — icon-safety lint rules: no-lucide-react
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch

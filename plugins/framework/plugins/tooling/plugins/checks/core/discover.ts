@@ -23,6 +23,19 @@ export function discoverTscTargets(root: string): TscTarget[] {
       args: hasApp ? ["-p", "tsconfig.app.json"] : [],
       hasEntrypoint: existsSync(join(dir, "bin", "index.ts")),
     });
+
+    // A sibling `tsconfig.node.json` (web-core's vite/vitest config files) owns
+    // lintable files no other project includes; give it its own target so the
+    // type-check covers and lints them. Not a runtime entrypoint — the build's
+    // per-entrypoint tsc loop filters it out via hasEntrypoint.
+    if (existsSync(join(dir, "tsconfig.node.json"))) {
+      targets.push({
+        name: `${entry.name}-node`,
+        dir,
+        args: ["-p", "tsconfig.node.json"],
+        hasEntrypoint: false,
+      });
+    }
   }
 
   // Root-level tools project: owns the build-time files (lint barrels, plugin
