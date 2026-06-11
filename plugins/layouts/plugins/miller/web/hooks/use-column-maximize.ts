@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 let maximizedId: string | null = null;
 const subscribers = new Set<() => void>();
@@ -17,16 +17,14 @@ export function clearMaximize() {
 }
 
 export function useColumnMaximize(paneId: string): [isMaximized: boolean, toggle: () => void] {
-  const [, force] = useState(0);
-  useEffect(() => {
-    const fn = () => force((n) => n + 1);
-    subscribers.add(fn);
-    return () => {
-      subscribers.delete(fn);
-    };
-  }, []);
-
-  const isMaximized = maximizedId === paneId;
+  const isMaximized = useSyncExternalStore(
+    (cb) => {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
+    },
+    () => maximizedId === paneId,
+    () => false,
+  );
   const toggle = () => {
     maximizedId = isMaximized ? null : paneId;
     notify();

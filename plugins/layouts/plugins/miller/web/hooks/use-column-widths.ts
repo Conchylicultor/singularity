@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const MIN_WIDTH = 200;
 
@@ -39,23 +39,25 @@ function persistWidth(paneId: string, width: number) {
 
 type WidthUpdater = number | ((prev: number) => number);
 
+function getWidth(paneId: string, defaultWidth: number): number {
+  if (!widthState.has(paneId)) {
+    widthState.set(paneId, readStored(paneId) ?? defaultWidth);
+  }
+  return widthState.get(paneId)!;
+}
+
 export function useColumnWidth(
   paneId: string,
   defaultWidth: number,
 ): [number, (next: WidthUpdater) => void] {
-  const [, force] = useState(0);
-  useEffect(() => {
-    const fn = () => force((n) => n + 1);
-    subscribers.add(fn);
-    return () => {
-      subscribers.delete(fn);
-    };
-  }, []);
-
-  if (!widthState.has(paneId)) {
-    widthState.set(paneId, readStored(paneId) ?? defaultWidth);
-  }
-  const width = widthState.get(paneId)!;
+  const width = useSyncExternalStore(
+    (cb) => {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
+    },
+    () => getWidth(paneId, defaultWidth),
+    () => defaultWidth,
+  );
 
   const setWidth = (next: WidthUpdater) => {
     const current = widthState.get(paneId)!;

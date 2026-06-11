@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useSyncExternalStore } from "react";
 
 const KEY = (id: string) => `miller.collapse.${id}`;
 
@@ -27,16 +27,14 @@ function read(paneId: string): boolean {
 }
 
 export function useColumnCollapse(paneId: string): [boolean, () => void] {
-  const [, force] = useState(0);
-  useEffect(() => {
-    const fn = () => force((n) => n + 1);
-    subscribers.add(fn);
-    return () => {
-      subscribers.delete(fn);
-    };
-  }, []);
-
-  const collapsed = read(paneId);
+  const collapsed = useSyncExternalStore(
+    (cb) => {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
+    },
+    () => read(paneId),
+    () => false,
+  );
 
   const toggle = () => {
     const next = !collapseState.get(paneId);
