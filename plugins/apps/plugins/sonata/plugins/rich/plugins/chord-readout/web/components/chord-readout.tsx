@@ -3,6 +3,7 @@ import {
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import type {
   Annotation,
   ChordData,
@@ -35,7 +36,7 @@ export function ChordReadout() {
   );
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card className="rounded-lg p-4">
       <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Current chord
       </div>
@@ -66,6 +67,6 @@ export function ChordReadout() {
           —
         </div>
       )}
-    </div>
+    </Card>
   );
 }

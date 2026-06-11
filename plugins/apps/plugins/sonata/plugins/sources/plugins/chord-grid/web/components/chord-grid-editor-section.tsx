@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -71,7 +72,7 @@ export function ChordGridEditorSection() {
   if (rawValue === undefined) return null;
 
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-card p-4">
+    <Card className="space-y-3 rounded-lg p-4">
       <label className="flex flex-col gap-1">
         <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
           Title
@@ -88,6 +89,6 @@ export function ChordGridEditorSection() {
         raw={rawValue}
         onRaw={(r) => setSourceRaw(CHORD_GRID_SOURCE_ID, r)}
       />
-    </div>
+    </Card>
   );
 }

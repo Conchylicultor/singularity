@@ -1,6 +1,7 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@/lib/utils"
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
   return <PopoverPrimitive.Root {...props} />
@@ -16,6 +17,7 @@ function PopoverContent({
   side = "bottom",
   sideOffset = 4,
   className,
+  children,
   ...props
 }: PopoverPrimitive.Popup.Props &
   Pick<
@@ -38,7 +40,9 @@ function PopoverContent({
             className,
           )}
           {...props}
-        />
+        >
+          <ContentScope fill={false}>{children}</ContentScope>
+        </PopoverPrimitive.Popup>
       </PopoverPrimitive.Positioner>
     </PopoverPrimitive.Portal>
   )

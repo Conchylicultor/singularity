@@ -11,6 +11,7 @@
   - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
   - **`badge`** — Semantic badge primitive: size × variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.
   - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
+  - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
   - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
   - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
   - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
@@ -52,7 +53,7 @@
   - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
   - **`search`** — Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
   - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
-  - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope> to prevent page-wide selection when focus is inside it.
+  - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
   - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
   - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
   - **`sortable-list`** — Generic sortable list primitive with smooth displacement animations. Wraps @dnd-kit/sortable into SortableList + SortableItem components.

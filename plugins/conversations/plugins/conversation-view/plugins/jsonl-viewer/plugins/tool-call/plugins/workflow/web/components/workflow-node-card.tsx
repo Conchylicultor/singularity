@@ -5,6 +5,7 @@ import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/m
 import type { TracedNode } from "../internal/trace-types";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
@@ -33,14 +34,14 @@ export function WorkflowNodeCard({
     : null;
 
   return (
-    <button
+    <Card
+      as="button"
       type="button"
       onClick={() => onOpen(node.id)}
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
-      // eslint-disable-next-line row/no-adhoc-row -- DAG node card: flex-col layout with border-color hover and bg-card; Row is flex-row only
       className={cn(
-        "flex w-full min-w-0 flex-col gap-1 rounded-md border border-border bg-card px-2.5 py-2 text-left transition-all",
+        "flex w-full min-w-0 flex-col gap-1 px-2.5 py-2 text-left transition-all",
         "hover:border-foreground/40",
         emphasis === "dim" && "opacity-40",
         emphasis === "active" && "border-primary ring-2 ring-primary/30",
@@ -73,6 +74,6 @@ export function WorkflowNodeCard({
           {node.promptPreview}
         </span>
       )}
-    </button>
+    </Card>
   );
 }

@@ -1,4 +1,5 @@
 import { cn } from "@/lib/utils";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import { setAudioVolume, useAudioState } from "../audio-store";
 
 /**
@@ -15,7 +16,7 @@ export function AudioPanel() {
   const { volume, status, loadError } = useAudioState();
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card className="rounded-lg p-4">
       <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Audio
       </div>
@@ -51,6 +52,6 @@ export function AudioPanel() {
               ? "Ready"
               : "Loading instrument…"}
       </div>
-    </div>
+    </Card>
   );
 }

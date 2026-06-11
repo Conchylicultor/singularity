@@ -1,4 +1,5 @@
 import { MdArrowForward } from "react-icons/md";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
@@ -45,9 +46,9 @@ export function WelcomeView() {
               { label: "Active", value: activeCount },
               { label: "Working", value: workingCount },
             ].map((stat) => (
-              <div
+              <Card
                 key={stat.label}
-                className="flex-1 rounded-lg border bg-card p-3 text-center"
+                className="flex-1 rounded-lg p-3 text-center"
               >
                 <Text as="div" variant="title" className="text-foreground">
                   {stat.value}
@@ -55,7 +56,7 @@ export function WelcomeView() {
                 <div className="text-2xs text-muted-foreground">
                   {stat.label}
                 </div>
-              </div>
+              </Card>
             ))}
           </div>
         )}
@@ -71,7 +72,7 @@ export function WelcomeView() {
                 Recent conversations
               </Text>
             </div>
-            <div className="flex flex-col rounded-lg border bg-card overflow-hidden divide-y">
+            <Card className="flex flex-col rounded-lg overflow-hidden divide-y p-0">
               {recentConversations.map((conversation) => (
                 <button
                   key={conversation.id}
@@ -97,7 +98,7 @@ export function WelcomeView() {
                   <MdArrowForward className="size-3.5 text-muted-foreground/50 shrink-0" />
                 </button>
               ))}
-            </div>
+            </Card>
           </div>
         )}
       </div>

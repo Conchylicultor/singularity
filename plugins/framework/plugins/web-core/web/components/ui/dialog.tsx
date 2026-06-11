@@ -1,6 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {
   return <DialogPrimitive.Root data-slot="dialog" {...props} />
@@ -47,7 +48,7 @@ function DialogContent({
         )}
         {...props}
       >
-        {children}
+        <ContentScope fill={false}>{children}</ContentScope>
       </DialogPrimitive.Popup>
     </DialogPortal>
   )

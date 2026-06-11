@@ -1,5 +1,6 @@
 import { type ReactNode } from "react";
 import { cn } from "@/lib/utils";
+import { Card } from "@plugins/primitives/plugins/card/web";
 
 export interface DataCardProps {
   /** Card click + Enter/Space (role=button, tabIndex=0). */
@@ -24,12 +25,8 @@ export function DataCard(props: DataCardProps) {
   const { onActivate, media, actions, footer, children, className } = props;
 
   return (
-    <div
-      className={cn(
-        "group relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4",
-        "cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40",
-        className,
-      )}
+    <Card
+      interactive
       role="button"
       tabIndex={0}
       onClick={onActivate}
@@ -39,6 +36,7 @@ export function DataCard(props: DataCardProps) {
           onActivate?.();
         }
       }}
+      className={cn("group relative flex flex-col gap-3 rounded-lg p-4", className)}
     >
       {media}
       <div className="min-w-0 flex-1">{children}</div>
@@ -55,6 +53,6 @@ export function DataCard(props: DataCardProps) {
           {actions}
         </div>
       ) : null}
-    </div>
+    </Card>
   );
 }

@@ -2,6 +2,7 @@ import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
@@ -27,11 +28,8 @@ export function SongCard({
   onOpen: (song: Song) => void;
 }) {
   return (
-    <div
-      className={cn(
-        "group relative flex flex-col gap-3 rounded-lg border border-border bg-card p-4",
-        "cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40",
-      )}
+    <Card
+      interactive
       role="button"
       tabIndex={0}
       onClick={() => onOpen(song)}
@@ -41,6 +39,7 @@ export function SongCard({
           onOpen(song);
         }
       }}
+      className="group relative flex flex-col gap-3 rounded-lg p-4"
     >
       <div className="flex items-start gap-3">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
@@ -94,6 +93,6 @@ export function SongCard({
       >
         <MdDelete className="size-4" />
       </button>
-    </div>
+    </Card>
   );
 }

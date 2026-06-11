@@ -1,6 +1,7 @@
 import { MdExpandMore, MdExpandLess } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import type { PluginReviewProps } from "../../core";
 import { PluginChanges } from "../slots";
 
@@ -16,7 +17,7 @@ export function PluginChangeCard({
   );
 
   return (
-    <div className="rounded-lg border border-border/60 overflow-hidden">
+    <Card className="rounded-lg border-border/60 overflow-hidden p-0 bg-transparent">
       <button
         onClick={onToggle}
         className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/30"
@@ -54,6 +55,6 @@ export function PluginChangeCard({
           </PluginChanges.Section.Render>
         </div>
       )}
-    </div>
+    </Card>
   );
 }

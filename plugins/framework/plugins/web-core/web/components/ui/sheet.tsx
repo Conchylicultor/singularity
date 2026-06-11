@@ -2,6 +2,7 @@ import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
 import { cn } from "@/lib/utils"
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 import { Button } from "@/components/ui/button"
 import { MdClose } from "react-icons/md"
 
@@ -56,7 +57,7 @@ function SheetContent({
         )}
         {...props}
       >
-        {children}
+        <ContentScope fill={false}>{children}</ContentScope>
         {showCloseButton && (
           <SheetPrimitive.Close
             data-slot="sheet-close"

@@ -1,3 +1,4 @@
+import { cn } from "@/lib/utils";
 import type { KeyboardEvent, ReactNode } from "react";
 
 /**
@@ -24,9 +25,25 @@ function handleSelectAllScope(e: KeyboardEvent<HTMLElement>) {
   }
 }
 
-export function ContentScope({ children }: { children: ReactNode }) {
+/**
+ * Spreadable keydown wiring so any element can BE a select-scope without an
+ * extra wrapper div. Spread onto a focusable root (`<div {...selectScopeProps}>`,
+ * a `<Card>` root, …): the element becomes focusable (`tabIndex=-1`) and its
+ * `onKeyDown` intercepts Ctrl/Cmd+A to select only its own DOM subtree.
+ */
+export const selectScopeProps = {
+  tabIndex: -1 as const,
+  onKeyDown: handleSelectAllScope,
+};
+
+/**
+ * Wrapper element that scopes Ctrl+A to its subtree. `fill` (default `true`)
+ * keeps `h-full` for layout callers like pane-chrome; pass `fill={false}` for
+ * in-flow surfaces (overlays, toasts) that must not stretch.
+ */
+export function ContentScope({ children, fill = true }: { children: ReactNode; fill?: boolean }) {
   return (
-    <div tabIndex={-1} onKeyDown={handleSelectAllScope} className="outline-none h-full">
+    <div {...selectScopeProps} className={cn("outline-none", fill && "h-full")}>
       {children}
     </div>
   );

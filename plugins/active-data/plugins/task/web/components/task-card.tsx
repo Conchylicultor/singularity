@@ -20,6 +20,7 @@ import { Button } from "@/components/ui/button";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 
 const TaskBindingSchema = z.object({
   taskId: z.string(),
@@ -92,7 +93,7 @@ export function TaskCard({
   };
 
   return (
-    <div className="border-border bg-background my-2 flex flex-col gap-2 rounded-md border p-2">
+    <Card className="bg-background my-2 flex flex-col gap-2 p-2">
       <TextEditor
         value={prompt}
         onChange={setPrompt}
@@ -135,7 +136,7 @@ export function TaskCard({
           }}
         />
       </div>
-    </div>
+    </Card>
   );
 }
 
@@ -166,7 +167,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   }
 
   return (
-    <div className="border-border flex flex-col gap-2 rounded-md border px-3 py-2">
+    <Card className="flex flex-col gap-2 px-3 py-2 bg-transparent">
       {attempts.map((attempt) => (
         <div key={attempt.id} className="flex flex-col gap-1">
           <div className="flex items-center gap-2">
@@ -200,7 +201,7 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
           )}
         </div>
       ))}
-    </div>
+    </Card>
   );
 }
 

@@ -1,15 +1,18 @@
 import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { ShellCommands, type ToastArgs } from "@plugins/shell/web";
 import { useColorMode } from "@plugins/ui/plugins/theme-engine/web";
+import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 
 export function ToasterRoot() {
   const colorMode = useColorMode();
 
   ShellCommands.Toast.useHandler(({ title, description, variant }: ToastArgs) => {
-    const opts = { description: title ? description : undefined };
-    const message = title ?? description;
+    const rawMessage = title ?? description;
+    const rawDescription = title ? description : undefined;
     const fn = variant && variant !== "default" ? sonnerToast[variant] : sonnerToast;
-    fn(message, opts);
+    fn(<ContentScope fill={false}>{rawMessage}</ContentScope>, {
+      description: rawDescription ? <ContentScope fill={false}>{rawDescription}</ContentScope> : undefined,
+    });
   });
 
   return (

@@ -4,6 +4,7 @@ import {
   useCollapsible,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 
 export type CollapsibleCardTone = "muted" | "primary" | "tool";
@@ -69,9 +70,9 @@ export function CollapsibleCard({
   const t = TONE[tone];
   const sideContent = aside ?? (filePath ? <FilePath filePath={filePath} /> : null);
   return (
-    <div
+    <Card
       className={cn(
-        "group rounded-md border px-3 py-2",
+        "group px-3 py-2",
         error ? ERROR_CARD : t.card,
         className,
       )}
@@ -117,6 +118,6 @@ export function CollapsibleCard({
         ) : (
           <div id={contentId}>{children}</div>
         ))}
-    </div>
+    </Card>
   );
 }

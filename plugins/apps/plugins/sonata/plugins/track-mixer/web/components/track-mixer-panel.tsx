@@ -1,4 +1,5 @@
 import { useMemo, useState, type ComponentType } from "react";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import {
   MdAutoMode,
   MdCheck,
@@ -298,7 +299,7 @@ export function TrackMixerPanel() {
   const anyCustomized = entries.some((e) => e.customized);
 
   return (
-    <div className="rounded-lg border border-border bg-card p-4">
+    <Card className="rounded-lg p-4">
       <div className="flex items-center justify-between">
         <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
           Tracks
@@ -322,6 +323,6 @@ export function TrackMixerPanel() {
           />
         ))}
       </div>
-    </div>
+    </Card>
   );
 }
