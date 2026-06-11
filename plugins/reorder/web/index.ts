@@ -15,6 +15,7 @@ export {
 } from "./internal/edit-mode-store";
 export { ReorderLayoutContext } from "./internal/reorder-layout";
 export type { ReorderLayout } from "./internal/reorder-layout";
+export { ReorderHoist } from "./internal/dnd-list-middleware";
 
 export default {
   description:
