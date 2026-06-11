@@ -4,6 +4,7 @@ import { createMidiSong, getSongMidi } from "../shared/endpoints";
 import { handleCreateMidiSong, handleGetSongMidi } from "./internal/routes";
 import { songMidiLiveResource } from "./internal/resource";
 import { seedMidiStarters } from "./internal/seed";
+import { backfillContentHashes } from "./internal/import";
 
 export { songMidi } from "./internal/tables";
 export { songMidiLiveResource } from "./internal/resource";
@@ -25,5 +26,6 @@ export default {
   contributions: [Resource.Declare(songMidiLiveResource)],
   onReady: async () => {
     await seedMidiStarters();
+    await backfillContentHashes();
   },
 } satisfies ServerPluginDefinition;

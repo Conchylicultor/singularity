@@ -1,0 +1,1 @@
+ALTER TABLE "sonata_songs_ext_midi" ADD COLUMN "content_hash" text;

@@ -17,5 +17,10 @@ export const songMidi = defineExtension(_songs, "midi", {
   // (and stays playable from its copied attachment) but is badged "source
   // deleted". Always false for manual imports.
   sourceMissing: boolean("source_missing").notNull().default(false),
+  // SHA-256 hex of the raw `.mid` bytes — the content-dedup key. The same file
+  // moved to another folder, re-scanned, or re-uploaded collapses into the one
+  // song carrying this hash. Null = imported before content-hash dedup existed
+  // (backfilled at boot) or its backing attachment file is gone.
+  contentHash: text("content_hash"),
 });
 export const _songMidiExt = songMidi.table; // drizzle-kit discovery

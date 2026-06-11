@@ -6,6 +6,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/library/server";
 import { songMidi } from "./tables";
 import { songMidiLiveResource } from "./resource";
+import { hashMidiBytes } from "./import";
 import { STARTERS } from "./starters";
 
 /**
@@ -39,11 +40,8 @@ export async function seedMidiStarters(): Promise<void> {
     // Quarter-note beats: seconds × (bpm / 60).
     const endBeat = (durationSec * starter.bpm) / 60;
 
-    const att = await createAttachment(
-      midi.toArray(),
-      `${starter.id}.mid`,
-      "audio/midi",
-    );
+    const bytes = midi.toArray();
+    const att = await createAttachment(bytes, `${starter.id}.mid`, "audio/midi");
     await createSongRow({
       id: starter.id,
       title: starter.title,
@@ -54,6 +52,7 @@ export async function seedMidiStarters(): Promise<void> {
     await songMidi.upsert(starter.id, {
       attachmentId: att.id,
       trackCount: midi.tracks.length,
+      contentHash: hashMidiBytes(bytes),
     });
     await songAttachments.add(starter.id, [att.id]);
     seeded = true;

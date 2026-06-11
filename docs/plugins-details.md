@@ -292,7 +292,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `apps/sonata/library.Library`, `apps/sonata/library.useOpenSong`, `apps/sonata/shell.Sonata`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/text.Text`
                 - Exports: Values: `MIDI_SOURCE_ID`, `useSongMidi`
               - Server:
-                - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.songAttachments`, `database.db`, `infra/attachments.createAttachment`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
+                - Uses: `apps/sonata/library._songs`, `apps/sonata/library.createSongRow`, `apps/sonata/library.songAttachments`, `database.db`, `infra/attachments.createAttachment`, `infra/attachments.getAttachment`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`
                 - DB schema: `plugins/apps/plugins/sonata/plugins/sources/plugins/midi/server/internal/tables.ts`
                 - Entity extension of: `apps/sonata/library` (table `sonata_songs_ext_midi`)
                 - Exports: Types: `ImportMidiSongInput`; Values: `getSongMidiBySourcePath`, `importMidiSong`, `listFolderImportedSongs`, `setSourceMissing`, `songMidi`, `songMidiLiveResource`
