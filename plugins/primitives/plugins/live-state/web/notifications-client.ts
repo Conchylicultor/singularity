@@ -102,6 +102,15 @@ interface ActiveSub {
   refcount: number;
   key: string;
   params: ResourceParams;
+  /**
+   * Highest server version (state-change count) this sub has applied. `-1` =
+   * nothing applied yet — the baseline a fresh or replayed sub starts from, so
+   * the first sub-ack always passes the `<=` staleness guard (including a
+   * never-notified resource's version-0 sub-ack). The server bumps the version
+   * only on a real notify, never on (re)subscribe, so this advancing past its
+   * pre-resync value means a push landed while we were hidden — the exact
+   * signal the missed-update watchdog reads.
+   */
   version: number;
   socket: SocketKind;
   /** ms epoch of the last applyUpdate/applyDelta write for this sub (0 = never). */
@@ -329,7 +338,7 @@ export class NotificationsClient {
       this.emitDebug();
       return;
     }
-    channel.subs.set(id, { refcount: 1, key, params, version: 0, socket: kind, lastAppliedAt: 0 });
+    channel.subs.set(id, { refcount: 1, key, params, version: -1, socket: kind, lastAppliedAt: 0 });
     trace(`observe key=${key} params=${pk} refcount=1`);
     this.sendSub(channel, key, params);
     this.emitDebug();
@@ -407,15 +416,16 @@ export class NotificationsClient {
   }
 
   private replaySubs(channel: SocketChannel): void {
-    // Fresh connection means the server has no record of our subs. Reset
-    // local versions so a new sub-ack (which will come with a possibly lower
-    // version if the server process restarted) isn't dropped as stale.
+    // Fresh connection means the server has no record of our subs. Reset local
+    // versions to the -1 "nothing applied yet" baseline so the next sub-ack
+    // always applies — even a never-notified resource's version-0 sub-ack, and
+    // even a lower version after a server restart reset its counters.
     trace(`replaySubs socket=${channel === this.channels.central ? "central" : "worktree"} subCount=${channel.subs.size}`);
     // Subs in their keep-alive window (refcount 0, still in `channel.subs`) are
     // resent here too. That's intentional and harmless: their pendingTeardown
     // timer still fires and tears them down on schedule, independent of reconnect.
     for (const sub of channel.subs.values()) {
-      sub.version = 0;
+      sub.version = -1;
       this.sendSub(channel, sub.key, sub.params);
     }
     this.emitDebug();

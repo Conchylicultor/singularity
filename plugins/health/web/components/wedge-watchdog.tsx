@@ -105,7 +105,9 @@ export function WedgeWatchdog() {
           // it live while hidden, which is the exact bug.
           const matches = snapshot.subs.filter((s) => s.key === prev.key);
           for (const s of matches) {
-            if (s.version > prev.prevVersion) {
+            // prevVersion < 0 means this sub had not applied its first frame
+            // before the resync — no baseline to have "missed" a push from.
+            if (prev.prevVersion >= 0 && s.version > prev.prevVersion) {
               wedge("missed-updates", `${prev.key} ${prev.prevVersion}->${s.version}`);
               return;
             }

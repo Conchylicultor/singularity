@@ -162,7 +162,14 @@ interface RegistryEntry {
    * the N→0 sub transition so memory is bounded to actively-observed pks.
    */
   snapshots?: Map<string, Map<string, string>>;
-  /** Monotonic version per params-tuple. */
+  /**
+   * Monotonic count of state changes (notifies) per params-tuple. Bumped ONLY
+   * in flushNotifies — a real state change. sub-acks and the HTTP fallback
+   * REPORT this value without bumping (a read is not a change), so a forced
+   * resync (which re-subscribes every sub) does not make the version appear to
+   * advance. The client compares it across a hidden→visible resync to detect
+   * frames it missed while hidden — that only works if subscribing is inert.
+   */
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
   pendingNotifies: Map<string, PendingNotify>;
@@ -819,8 +826,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       sendJson(state.ws, { kind: "sub-error", id, key, reason: "loader-failed" });
       return;
     }
-    const version = (entry.versions.get(pk) ?? 0) + 1;
-    entry.versions.set(pk, version);
+    // Report the CURRENT version without bumping: a sub-ack delivers existing
+    // state, it is not a state change. Bumping here made the version climb on
+    // every (re)subscribe, which broke the missed-update watchdog — `resync()`
+    // re-subscribes every sub, so the version always appeared to advance even
+    // when nothing was missed. Mirrors handleResourceHttp (also unbumped). The
+    // version advances only in flushNotifies. A never-notified pk reports 0; the
+    // client's -1 "nothing applied yet" baseline still accepts that sub-ack.
+    const version = entry.versions.get(pk) ?? 0;
     // Keyed entries: seed the per-pk snapshot from the full sub-ack value so the
     // next notify can diff against it. The sub-ack itself stays full-value.
     if (entry.mode === "keyed") {
