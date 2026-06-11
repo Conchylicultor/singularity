@@ -11,8 +11,8 @@
   - Uses: `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useScopeForked`, `fields/dynamic-enum/config.DynamicEnum`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ColorAdjustment`, `ColorMode`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `VariantGroupContribution`; Values: `ColorAdjustContext`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useColorMode`, `useResolvedColorMode`, `useThemeScopeId`, `useTokenGroupPresets`
 - Cross-plugin:
-  - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `typography`
-  - Imported by: `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/typography`, `ui/tokens/typography/google-fonts`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
+  - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `font-family`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `type-scale`
+  - Imported by: `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Core:

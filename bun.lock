@@ -2269,6 +2269,14 @@
       "name": "@singularity/plugin-ui-tokens-density",
       "version": "0.0.1",
     },
+    "plugins/ui/plugins/tokens/plugins/font-family": {
+      "name": "@singularity/plugin-ui-tokens-font-family",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts": {
+      "name": "@singularity/plugin-ui-tokens-font-family-google-fonts",
+      "version": "0.0.1",
+    },
     "plugins/ui/plugins/tokens/plugins/shadow": {
       "name": "@singularity/plugin-ui-tokens-shadow",
       "version": "0.0.1",
@@ -2281,12 +2289,8 @@
       "name": "@singularity/plugin-ui-tokens-sidebar-palette",
       "version": "0.0.1",
     },
-    "plugins/ui/plugins/tokens/plugins/typography": {
-      "name": "@singularity/plugin-ui-tokens-typography",
-      "version": "0.0.1",
-    },
-    "plugins/ui/plugins/tokens/plugins/typography/plugins/google-fonts": {
-      "name": "@singularity/plugin-ui-tokens-typography-google-fonts",
+    "plugins/ui/plugins/tokens/plugins/type-scale": {
+      "name": "@singularity/plugin-ui-tokens-type-scale",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tweakcn": {
@@ -3913,15 +3917,17 @@
 
     "@singularity/plugin-ui-tokens-density": ["@singularity/plugin-ui-tokens-density@workspace:plugins/ui/plugins/tokens/plugins/density"],
 
+    "@singularity/plugin-ui-tokens-font-family": ["@singularity/plugin-ui-tokens-font-family@workspace:plugins/ui/plugins/tokens/plugins/font-family"],
+
+    "@singularity/plugin-ui-tokens-font-family-google-fonts": ["@singularity/plugin-ui-tokens-font-family-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts"],
+
     "@singularity/plugin-ui-tokens-shadow": ["@singularity/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
 
     "@singularity/plugin-ui-tokens-shape": ["@singularity/plugin-ui-tokens-shape@workspace:plugins/ui/plugins/tokens/plugins/shape"],
 
     "@singularity/plugin-ui-tokens-sidebar-palette": ["@singularity/plugin-ui-tokens-sidebar-palette@workspace:plugins/ui/plugins/tokens/plugins/sidebar-palette"],
 
-    "@singularity/plugin-ui-tokens-typography": ["@singularity/plugin-ui-tokens-typography@workspace:plugins/ui/plugins/tokens/plugins/typography"],
-
-    "@singularity/plugin-ui-tokens-typography-google-fonts": ["@singularity/plugin-ui-tokens-typography-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/typography/plugins/google-fonts"],
+    "@singularity/plugin-ui-tokens-type-scale": ["@singularity/plugin-ui-tokens-type-scale@workspace:plugins/ui/plugins/tokens/plugins/type-scale"],
 
     "@singularity/plugin-ui-tweakcn": ["@singularity/plugin-ui-tweakcn@workspace:plugins/ui/plugins/tweakcn"],
 

@@ -1,0 +1,18 @@
+// @hash e43907a206da
+{
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "fontSans": "",
+      "fontSerif": "",
+      "fontMono": "",
+      "letterSpacing": ""
+    },
+    "dark": {
+      "fontSans": "",
+      "fontSerif": "",
+      "fontMono": "",
+      "letterSpacing": ""
+    }
+  }
+}

@@ -121,27 +121,30 @@ export function convertTweakcnTheme(
     dark: pick(cssVars.dark, chartIdentityMap),
   };
 
-  // typography: font-* from theme (mode-independent), tracking-normal from light only
-  const TYPOGRAPHY_MAP: Record<string, string> = {
+  // font-family: font-* from theme (mode-independent), tracking-normal from light
+  // only. tweakcn themes carry font identity but never a type scale, so they
+  // target the `font-family` group exclusively — the `type-scale` group is never
+  // named here and stays whatever the user selected.
+  const FONT_FAMILY_MAP: Record<string, string> = {
     "font-sans": "fontSans",
     "font-mono": "fontMono",
     "font-serif": "fontSerif",
   };
-  const typoLight: Record<string, string> = {};
-  const typoDark: Record<string, string> = {};
+  const fontLight: Record<string, string> = {};
+  const fontDark: Record<string, string> = {};
   // font-* from cssVars.theme
-  for (const [tweakcnKey, singularityKey] of Object.entries(TYPOGRAPHY_MAP)) {
+  for (const [tweakcnKey, singularityKey] of Object.entries(FONT_FAMILY_MAP)) {
     if (tweakcnKey in cssVars.theme) {
-      typoLight[singularityKey] = cssVars.theme[tweakcnKey]!;
-      typoDark[singularityKey] = cssVars.theme[tweakcnKey]!;
+      fontLight[singularityKey] = cssVars.theme[tweakcnKey]!;
+      fontDark[singularityKey] = cssVars.theme[tweakcnKey]!;
     }
   }
   // tracking-normal → letterSpacing, from light only (used for both modes)
   if ("tracking-normal" in cssVars.light) {
-    typoLight.letterSpacing = cssVars.light["tracking-normal"]!;
-    typoDark.letterSpacing = cssVars.light["tracking-normal"]!;
+    fontLight.letterSpacing = cssVars.light["tracking-normal"]!;
+    fontDark.letterSpacing = cssVars.light["tracking-normal"]!;
   }
-  result["typography"] = { light: typoLight, dark: typoDark };
+  result["font-family"] = { light: fontLight, dark: fontDark };
 
   return result;
 }
