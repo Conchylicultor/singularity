@@ -10,6 +10,7 @@
     { "path": "./plugins/framework/plugins/web-core" },
     { "path": "./plugins/framework/plugins/server-core" },
     { "path": "./plugins/framework/plugins/central-core" },
-    { "path": "./tsconfig.tools.json" }
+    { "path": "./tsconfig.tools.json" },
+    { "path": "./tsconfig.test.json" }
   ]
 }

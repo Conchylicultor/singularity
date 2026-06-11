@@ -8,7 +8,10 @@
   },
   "exclude": [
     "../../../framework/plugins/web-sdk/**",
-    "**/node_modules"
+    "**/node_modules",
+    "../../../../**/*.test.ts",
+    "../../../../**/*.test.tsx",
+    "../../../../**/__tests__/**"
   ],
   "include": [
     "bin",

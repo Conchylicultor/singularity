@@ -15,7 +15,10 @@
     "../../../plugin-meta/plugins/plugin-tree/**",
     "../../../plugin-meta/plugins/barrel-import/**",
     "../tooling/**",
-    "**/node_modules"
+    "**/node_modules",
+    "../../../../**/*.test.ts",
+    "../../../../**/*.test.tsx",
+    "../../../../**/__tests__/**"
   ],
   "include": [
     "web",

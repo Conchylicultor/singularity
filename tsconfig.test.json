@@ -1,0 +1,19 @@
+{
+  "extends": "./tsconfig.base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM", "DOM.Iterable"],
+    "types": ["node", "@types/bun"],
+    "allowImportingTsExtensions": true,
+    "moduleDetection": "force",
+    "paths": {
+      "@plugins/*": ["./plugins/*"],
+      "@/*": ["./plugins/framework/plugins/web-core/web/*"]
+    }
+  },
+  "exclude": ["**/node_modules"],
+  "include": [
+    "plugins/**/*.test.ts",
+    "plugins/**/*.test.tsx",
+    "plugins/**/__tests__/**/*"
+  ]
+}
