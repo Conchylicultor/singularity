@@ -1,9 +1,8 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableColumns } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 interface ColumnRow {
   column_name: string;
@@ -60,12 +59,7 @@ export function ColumnsSection({
   const { data, isPending, isError } = useEndpoint(getTableColumns, { tableName }, { staleTime: 60_000 });
 
   if (isPending) {
-    return (
-      <Text as="div" variant="body" className="flex items-center gap-2 px-3 py-2 text-muted-foreground">
-        <Spinner />
-        Loading columns…
-      </Text>
-    );
+    return <Loading variant="spinner" label="Loading columns…" />;
   }
 
   if (isError) {

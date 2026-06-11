@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback, useMemo } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@/lib/utils";
@@ -145,9 +146,7 @@ export function MemoryPanel() {
             Select a memory file
           </Text>
         ) : loadingContent ? (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-            Loading…
-          </Text>
+          <Loading className="flex h-full items-center justify-center" />
         ) : error ? (
           <Text as="div" variant="body" className="flex h-full items-center justify-center text-destructive">
             {error}

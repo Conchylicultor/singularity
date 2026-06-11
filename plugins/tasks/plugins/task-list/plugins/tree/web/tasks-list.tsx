@@ -2,7 +2,7 @@ import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   RenameInput,
   RowChrome,
@@ -177,7 +177,7 @@ export function TasksList({
 }) {
   const result = useResource(tasksResource);
   return (
-    <ResourceView resource={result} fallback={<Placeholder>Loading…</Placeholder>}>
+    <ResourceView resource={result} fallback={<Loading variant="rows" />}>
       {(rawRows) => (
         <TasksListInner
           rawRows={rawRows}

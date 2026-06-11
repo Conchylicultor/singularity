@@ -21,7 +21,7 @@ import {
   SelectionCheckbox,
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   createAgent,
@@ -163,7 +163,7 @@ export function AgentsList({
   const result = useResource(agentsResource);
   const openPane = useOpenPane();
 
-  if (result.pending) return <Placeholder>Loading…</Placeholder>;
+  if (result.pending) return <Loading variant="rows" />;
 
   const rows = result.data;
   const orderedIds = deriveVisibleOrder(rows);

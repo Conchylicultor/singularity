@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 type ImgStatus = "loading" | "ok" | "missing";
 
@@ -71,7 +72,7 @@ export function ImageDiffView({
 
   if (oldStatus === "loading" || newStatus === "loading") {
     return (
-      <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">Loading…</Text>
+      <Loading className="px-3 py-2" />
     );
   }
 

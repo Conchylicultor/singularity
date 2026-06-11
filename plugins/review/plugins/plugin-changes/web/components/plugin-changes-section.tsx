@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type { Source } from "@plugins/review/web";
 import { usePluginChanges } from "../use-plugin-changes";
 import { PluginChangeCard } from "./plugin-change-card";
@@ -22,9 +23,7 @@ export function PluginChangesSection({
   const { expanded: expandedSet, allExpanded, toggleAll, toggle } = useExpandAll(allPaths);
 
   if (isPending) {
-    return (
-      <Text as="p" variant="body" className="text-muted-foreground px-1">Loading plugins...</Text>
-    );
+    return <Loading label="Loading plugins…" className="px-1" />;
   }
   if (error) {
     return (

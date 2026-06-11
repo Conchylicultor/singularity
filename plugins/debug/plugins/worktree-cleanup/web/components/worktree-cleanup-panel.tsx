@@ -3,6 +3,7 @@ import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { interpolatePath } from "@plugins/infra/plugins/endpoints/core";
 import { Button } from "@/components/ui/button";
@@ -240,7 +241,7 @@ export function WorktreeCleanupPanel() {
         {listError ? (
           <Placeholder tone="error">{listError}</Placeholder>
         ) : loading && (!sortedEntries || sortedEntries.length === 0) ? (
-          <Placeholder>Loading…</Placeholder>
+          <Loading />
         ) : sortedEntries?.length === 0 ? (
           <Placeholder>No worktrees found.</Placeholder>
         ) : (

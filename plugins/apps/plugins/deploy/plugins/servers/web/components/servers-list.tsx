@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { serversResource, type Server } from "../../shared";
@@ -12,7 +12,7 @@ export function ServersList() {
   const openPane = useOpenPane();
   const selectedId = serverDetailPane.useRouteEntry()?.params.serverId;
 
-  if (serversResult.pending) return <Placeholder>Loading…</Placeholder>;
+  if (serversResult.pending) return <Loading />;
 
   const servers = serversResult.data;
 

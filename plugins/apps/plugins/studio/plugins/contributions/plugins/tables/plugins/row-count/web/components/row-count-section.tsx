@@ -1,8 +1,8 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableRowCount } from "../../shared/endpoints";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function RowCountSection({
   tableName,
@@ -13,12 +13,7 @@ export function RowCountSection({
   const { data, isPending, isError } = useEndpoint(getTableRowCount, { tableName }, { staleTime: 60_000 });
 
   if (isPending) {
-    return (
-      <Text as="div" variant="body" className="flex items-center gap-2 px-3 py-2 text-muted-foreground">
-        <Spinner />
-        Loading…
-      </Text>
-    );
+    return <Loading variant="spinner" label="Loading…" />;
   }
 
   if (isError) {

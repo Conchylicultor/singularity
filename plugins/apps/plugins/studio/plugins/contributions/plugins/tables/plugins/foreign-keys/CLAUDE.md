@@ -7,7 +7,7 @@
 - Description: FK relationships section (outgoing and incoming) in the table detail view.
 - Web:
   - Contributes: `TableDetail.Section` "foreign-keys" → `ForeignKeysSection`
-  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/section-label.SectionLabel`, `primitives/spinner.Spinner`, `primitives/text.Text`
+  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/section-label.SectionLabel`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/foreign-keys`

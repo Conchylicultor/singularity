@@ -1,5 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { MdClose, MdSearch } from "react-icons/md";
 import { cn } from "@/lib/utils";
@@ -86,9 +87,7 @@ export function IconPicker({ value, onSelect, className }: IconPickerProps) {
       {/* Icon grid */}
       <div className="max-h-64 overflow-y-auto px-1 pb-1 space-y-2">
         {!fullSet ? (
-          <Text as="p" variant="caption" className="py-8 text-center text-muted-foreground">
-            Loading icons…
-          </Text>
+          <Loading label="Loading icons…" className="py-8 text-center" />
         ) : isSearching ? (
           searchResults.length > 0 ? (
             <div className="grid grid-cols-9 gap-1">

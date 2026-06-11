@@ -1,5 +1,6 @@
 import type { ComponentType, ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
@@ -43,7 +44,7 @@ function ResolveGuardInner({
   if (pending) {
     return (
       <FallbackChrome pane={pane} title="Loading…">
-        <Placeholder>Loading…</Placeholder>
+        <Loading />
       </FallbackChrome>
     );
   }

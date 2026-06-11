@@ -11,6 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   buildTree,
@@ -127,9 +128,7 @@ function BlockEditorInner() {
 
   if (pending) {
     return (
-      <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
-        Loading...
-      </Text>
+      <Loading variant="rows" />
     );
   }
 

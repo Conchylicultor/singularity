@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   PluginDetail,
@@ -37,9 +38,7 @@ function PluginConvSideBody() {
   return (
     <PaneChrome pane={pluginConvSidePane} title={node?.name ?? pluginId}>
       {isLoading ? (
-        <Text as="div" variant="body" tone="muted" className="flex h-full items-center justify-center">
-          Loading…
-        </Text>
+        <Loading className="flex h-full items-center justify-center" />
       ) : error ? (
         <Text as="div" variant="body" tone="muted" className="flex h-full items-center justify-center p-8">
           {String(error)}

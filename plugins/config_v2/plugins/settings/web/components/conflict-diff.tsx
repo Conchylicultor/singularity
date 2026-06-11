@@ -1,5 +1,6 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { TextDiff } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { getConfigRawFile } from "../../core";
@@ -12,7 +13,7 @@ export function ConflictDiff({ storePath }: { storePath: string }) {
     query: { storePath },
   });
 
-  if (isPending) return <Placeholder>Loading diff…</Placeholder>;
+  if (isPending) return <Loading label="Loading diff…" />;
   if (!data) return <Placeholder>No data</Placeholder>;
 
   const override = data.override ?? "";

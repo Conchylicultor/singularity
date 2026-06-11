@@ -12,7 +12,7 @@ import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { cn } from "@/lib/utils";
 import { attemptPane } from "../panes";
@@ -123,7 +123,7 @@ export function AttemptPane() {
   const convEntries = conversationPane.useRouteEntries();
   const convInstanceId = convEntries[convEntries.length - 1]?.instanceId;
 
-  if (result.pending) return <Placeholder>Loading…</Placeholder>;
+  if (result.pending) return <Loading />;
 
   const attempt = result.data.find((a) => a.id === attemptId) ?? null;
 

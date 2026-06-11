@@ -7,6 +7,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import type {
   PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -52,11 +53,7 @@ export function ContributionsView() {
   }, [plugins, sortedTables]);
 
   if (isLoading) {
-    return (
-      <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-        Loading…
-      </Text>
-    );
+    return <Loading className="flex h-full items-center justify-center" />;
   }
   if (error) {
     return (

@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
@@ -46,7 +45,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
     <ResourceView resource={agentsResult} fallback={<Loading variant="text" />}>
       {(agents) => {
         const agent = agents.find((a) => a.id === agentId) ?? null;
-        if (!agent) return <Placeholder>Loading…</Placeholder>;
+        if (!agent) return <Loading />;
         return <AgentDetailInner agentId={agentId} agent={agent} />;
       }}
     </ResourceView>

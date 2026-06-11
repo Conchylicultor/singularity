@@ -3,8 +3,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableSampleRows } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function SampleRowsSection({
   tableName,
@@ -31,12 +30,7 @@ export function SampleRowsSection({
   );
 
   if (isLoading) {
-    return (
-      <Text as="div" variant="body" className="flex items-center gap-2 text-muted-foreground">
-        <Spinner />
-        Loading sample rows…
-      </Text>
-    );
+    return <Loading variant="spinner" label="Loading sample rows…" />;
   }
 
   if (isError) {

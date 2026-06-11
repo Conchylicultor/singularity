@@ -10,6 +10,7 @@ import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
@@ -269,7 +270,7 @@ export function JsonlPane({
           fallback={
             <div className="relative min-h-0 flex-1 isolate">
               <div data-pane-scroll className="h-full overflow-auto">
-                <Text as="div" variant="caption" className="px-3 py-2 text-muted-foreground">Loading…</Text>
+                <Loading className="px-3 py-2" />
               </div>
             </div>
           }

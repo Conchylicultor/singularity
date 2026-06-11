@@ -8,6 +8,7 @@ import {
   useDarkMode,
 } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 
 const LINE_NUMBERS_TRANSFORMER: ShikiTransformer = {
@@ -86,7 +87,7 @@ export function RawView({
   }, [line, html]);
 
   if (state.kind === "loading") {
-    return <Placeholder>Loading…</Placeholder>;
+    return <Loading />;
   }
   if (state.kind === "error") {
     const message =

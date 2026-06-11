@@ -14,6 +14,7 @@ import {
 } from "@/components/ui/sidebar";
 import { MdClose } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function HistoryView({
   activeId,
@@ -80,9 +81,7 @@ export function HistoryView({
         </SidebarMenu>
       )}
       {isFetchingNextPage && (
-        <Text as="div" variant="caption" className="px-4 py-2 text-muted-foreground">
-          Loading...
-        </Text>
+        <Loading variant="spinner" label="Loading…" />
       )}
       <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
     </div>

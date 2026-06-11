@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -22,7 +23,7 @@ export function CodeReviewSection({
   const conversation = useConversationById(conversationId);
 
   if (!conversation) {
-    return <Placeholder>Loading...</Placeholder>;
+    return <Loading />;
   }
 
   return (
@@ -52,7 +53,7 @@ function WorkingTreeBody({
 function PushBody({ pushId }: { pushId: string }) {
   const state = usePushFiles(pushId);
   if (state.kind === "loading") {
-    return <Body><Placeholder>Loading...</Placeholder></Body>;
+    return <Body><Loading /></Body>;
   }
   if (state.kind === "error") {
     return (
@@ -141,7 +142,7 @@ function FileList({
       />
       <Body>
         {sections == null ? (
-          <Placeholder>Loading...</Placeholder>
+          <Loading />
         ) : sorted!.length === 0 ? (
           <Placeholder>{emptyLabel}</Placeholder>
         ) : (

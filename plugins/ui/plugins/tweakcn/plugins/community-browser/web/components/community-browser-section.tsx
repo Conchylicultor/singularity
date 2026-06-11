@@ -9,6 +9,7 @@ import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/w
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import { getCatalog, applyCatalogTheme } from "../../core";
 import { CommunityThemeCard } from "./community-theme-card";
@@ -141,11 +142,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
         </div>
       )}
 
-      {isLoading && (
-        <Text as="p" variant="body" tone="muted">
-          Loading themes...
-        </Text>
-      )}
+      {isLoading && <Loading variant="cards" />}
 
       {!isLoading && themes && visible.length > 0 && (
         <>

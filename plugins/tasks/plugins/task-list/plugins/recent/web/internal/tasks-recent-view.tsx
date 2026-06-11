@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { tasksResource } from "@plugins/tasks/core";
@@ -29,7 +29,7 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
       .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
   }, [result, filterFn]);
 
-  if (result.pending) return <Placeholder>Loading...</Placeholder>;
+  if (result.pending) return <Loading variant="rows" />;
 
   return (
     <div className="flex flex-col">

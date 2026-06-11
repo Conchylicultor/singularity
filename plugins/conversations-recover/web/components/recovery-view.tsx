@@ -4,6 +4,7 @@ import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Button } from "@/components/ui/button";
 import { conversationsResource, listGoneConversations } from "@plugins/conversations/core";
@@ -136,7 +137,7 @@ export function RecoveryView() {
 
       <div className="flex-1 overflow-auto">
         {isLoading && items.length === 0 ? (
-          <Placeholder>Loading…</Placeholder>
+          <Loading />
         ) : items.length === 0 ? (
           <Placeholder>No recently closed conversations.</Placeholder>
         ) : (

@@ -7,7 +7,7 @@ import { conversationPane } from "../panes";
 import { PromptInsertProvider } from "../prompt-insert-context";
 import { ActiveRelateSync } from "./active-relate-sync";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
@@ -23,9 +23,7 @@ export function ConversationView() {
 
   if (!conversation) {
     return (
-      <Text as="div" variant="body" className="flex h-full items-center justify-center p-6 text-muted-foreground">
-        Loading…
-      </Text>
+      <Loading className="flex h-full items-center justify-center p-6" />
     );
   }
 

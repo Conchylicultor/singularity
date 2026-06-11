@@ -7,7 +7,7 @@
 - Description: Commits included since the previous build, shown in the build detail pane. Per-run commit list data endpoint.
 - Web:
   - Contributes: `BuildDetailSlots.Section` "commits" → `BuildCommitsSection`
-  - Uses: `build.BuildDetailSlots`, `infra/endpoints.useEndpoint`, `primitives/commit-list.CommitRowItem`, `primitives/placeholder.Placeholder`
+  - Uses: `build.BuildDetailSlots`, `infra/endpoints.useEndpoint`, `primitives/commit-list.CommitRowItem`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`
 - Server:
   - Uses: `build._buildRuns`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPO_ROOT`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`
   - Routes: `GET /api/build/runs/:id/commits`

@@ -11,6 +11,7 @@ import {
 import type { FileData, HunkData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
@@ -323,7 +324,7 @@ export function DiffView({
   );
 
   if (state.kind === "loading") {
-    return <Placeholder>Loading…</Placeholder>;
+    return <Loading />;
   }
   if (state.kind === "error") {
     const message =

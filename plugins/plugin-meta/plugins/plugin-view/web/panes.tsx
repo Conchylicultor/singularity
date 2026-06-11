@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "../core/endpoints";
 import type { PluginNode } from "../core/types";
@@ -34,13 +35,7 @@ function PluginViewBody() {
   if (isLoading) {
     return (
       <PaneChrome pane={pluginViewPane} title="Plugin">
-        <Text
-          as="div"
-          variant="body"
-          className="flex h-full items-center justify-center text-muted-foreground"
-        >
-          Loading…
-        </Text>
+        <Loading className="flex h-full items-center justify-center" />
       </PaneChrome>
     );
   }

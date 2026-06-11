@@ -3,6 +3,7 @@ import { MdFolder } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -38,7 +39,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
             onNavigate={(dir) => setBrowsePath(dir)}
           />
         ) : (
-          <Placeholder>Loading…</Placeholder>
+          <Loading />
         )}
       </div>
 

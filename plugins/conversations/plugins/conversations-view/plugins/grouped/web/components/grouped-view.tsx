@@ -6,6 +6,7 @@ import { cn } from "@/lib/utils";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { GroupedConversationList } from "./grouped-conversation-list";
 
 const SHOW_SYSTEM_KEY = "conversations-view:show-system";
@@ -87,7 +88,7 @@ export function GroupedView({
         onCloseConversation={onCloseConversation}
       />
       {isFetchingNextPage && (
-        <Text as="div" variant="caption" className="px-4 py-2 text-muted-foreground">Loading...</Text>
+        <Loading variant="spinner" label="Loading…" />
       )}
       <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
       {isEmpty && !conv.pending && (

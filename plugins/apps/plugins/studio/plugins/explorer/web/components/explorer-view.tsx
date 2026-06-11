@@ -3,6 +3,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { PluginTree } from "./plugin-tree";
 
 export function ExplorerView() {
@@ -14,9 +15,10 @@ export function ExplorerView() {
 
   if (isLoading) {
     return (
-      <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-        Loading plugin tree…
-      </Text>
+      <Loading
+        label="Loading plugin tree…"
+        className="flex h-full items-center justify-center"
+      />
     );
   }
   if (error) {

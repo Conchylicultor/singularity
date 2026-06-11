@@ -2,6 +2,7 @@ import { useMemo, useCallback, useState, useEffect } from "react";
 import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
@@ -301,7 +302,7 @@ function RawFileView({ storePath }: { storePath: string }) {
     query: { storePath },
   });
 
-  if (isPending) return <Placeholder>Loading…</Placeholder>;
+  if (isPending) return <Loading />;
   if (!data) return <Placeholder>No data</Placeholder>;
 
   // The running app resolves to the user-layer origin (the propagated git config).

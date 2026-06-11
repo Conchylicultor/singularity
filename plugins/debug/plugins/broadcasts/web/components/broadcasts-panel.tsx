@@ -2,6 +2,7 @@ import { useState, useCallback, useMemo } from "react";
 import { MdAdd, MdDelete, MdRefresh } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Button } from "@/components/ui/button";
 import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -237,9 +238,7 @@ export function BroadcastsPanel() {
       {/* Entry list */}
       <div className="flex-1 overflow-y-auto">
         {isLoading ? (
-          <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
-            Loading…
-          </Text>
+          <Loading className="flex h-full items-center justify-center" />
         ) : entries.length === 0 ? (
           <Text as="div" variant="body" className="flex h-full items-center justify-center text-muted-foreground">
             No active broadcasts

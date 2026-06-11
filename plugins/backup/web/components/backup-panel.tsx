@@ -11,6 +11,7 @@ import {
 } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { BackupTargetResult } from "@plugins/backup/core";
 import { listBackupRuns, runBackup, type BackupRun } from "../../shared/endpoints";
@@ -132,7 +133,7 @@ export function BackupPanel() {
             Backup History
           </Text>
           {isLoading ? (
-            <Text as="p" variant="body" className="text-muted-foreground">Loading…</Text>
+            <Loading variant="rows" />
           ) : !runs || runs.length === 0 ? (
             <Text as="p" variant="body" className="text-muted-foreground">
               No backups yet. Click above to create one.

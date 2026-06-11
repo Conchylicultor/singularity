@@ -7,7 +7,7 @@
 - Description: Table column definitions section in the table detail view.
 - Web:
   - Contributes: `TableDetail.Section` "columns" → `ColumnsSection`
-  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`
+  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/columns`

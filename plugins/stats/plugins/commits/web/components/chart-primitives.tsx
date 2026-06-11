@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 export function ChartState({
   error,
@@ -13,7 +14,7 @@ export function ChartState({
   children: ReactNode;
 }) {
   if (error) return <Text as="div" variant="body" className="text-destructive">Failed to load: {error}</Text>;
-  if (loading) return <Text as="div" variant="body" className="text-muted-foreground">Loading…</Text>;
+  if (loading) return <Loading />;
   if (empty) return <Text as="div" variant="body" className="text-muted-foreground">No commits yet.</Text>;
   return <>{children}</>;
 }

@@ -1,5 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { MergeBaseMarker, CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -29,7 +30,7 @@ export function CommitsGraphBody() {
       <Placeholder tone="error">Failed to load commits: {String(result.error)}</Placeholder>
     );
   }
-  if (result.pending) return <Placeholder>Loading…</Placeholder>;
+  if (result.pending) return <Loading />;
   if (result.data.mergeBase === null) {
     return (
       <Placeholder>

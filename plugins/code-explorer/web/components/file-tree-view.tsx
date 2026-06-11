@@ -7,6 +7,7 @@ import {
 } from "@/components/ui/resizable";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { FileTree } from "./file-tree";
 
@@ -32,9 +33,7 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
       <ResizablePanel id="tree" defaultSize={25} minSize={15}>
         <div className="h-full min-h-0 overflow-auto border-r">
           {isLoading ? (
-            <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
-              Loading…
-            </Text>
+            <Loading variant="rows" />
           ) : error ? (
             <Text as="div" variant="body" className="px-3 py-2 text-destructive">
               {String(error)}

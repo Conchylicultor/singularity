@@ -2,9 +2,8 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableForeignKeys } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 interface OutgoingFk {
   constraint_name: string;
@@ -92,12 +91,7 @@ export function ForeignKeysSection({
   const { data, isLoading, isError } = useEndpoint(getTableForeignKeys, { tableName }, { staleTime: 60_000 });
 
   if (isLoading) {
-    return (
-      <Text as="div" variant="caption" className="flex items-center gap-2 text-muted-foreground">
-        <Spinner />
-        Loading foreign keys…
-      </Text>
-    );
+    return <Loading variant="spinner" label="Loading foreign keys…" />;
   }
 
   if (isError || !data) {

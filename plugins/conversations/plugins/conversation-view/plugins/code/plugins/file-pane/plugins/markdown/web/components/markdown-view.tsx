@@ -1,4 +1,5 @@
 import { useFileContent } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -15,7 +16,7 @@ export function MarkdownView({
   const state = useFileContent(worktree, path);
 
   if (state.kind === "loading") {
-    return <Placeholder>Loading…</Placeholder>;
+    return <Loading />;
   }
   if (state.kind === "error") {
     const message =

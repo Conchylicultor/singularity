@@ -3,6 +3,7 @@ import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web"
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -89,7 +90,7 @@ export function FileChangesSection({ conversationId, plugin }: PluginReviewProps
   const conversation = useConversationById(conversationId);
 
   if (!conversation) {
-    return <Text as="p" variant="caption" className="text-muted-foreground px-1">Loading&hellip;</Text>;
+    return <Loading className="px-1" />;
   }
 
   if (plugin.files.length === 0) return null;

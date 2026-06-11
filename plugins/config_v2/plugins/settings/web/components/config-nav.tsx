@@ -2,7 +2,7 @@ import { useCallback, useState, useMemo } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -151,7 +151,7 @@ export function ConfigNav() {
             />
           ))
         ) : isPending ? (
-          <Placeholder>Loading…</Placeholder>
+          <Loading />
         ) : (
           (hasQuery ? filteredTree : tree).map((item) => (
             <ConfigTreeNode

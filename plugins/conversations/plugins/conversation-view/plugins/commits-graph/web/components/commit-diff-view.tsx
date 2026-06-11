@@ -2,6 +2,7 @@ import { useState } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useCommitFiles } from "../use-commit-files";
@@ -16,7 +17,7 @@ export function CommitDiffView({
   const state = useCommitFiles(worktree, sha);
 
   if (state.kind === "loading") {
-    return <Placeholder>Loading…</Placeholder>;
+    return <Loading />;
   }
   if (state.kind === "error") {
     return <Placeholder tone="error">{state.message}</Placeholder>;
