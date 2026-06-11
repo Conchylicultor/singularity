@@ -1,11 +1,27 @@
 import type { PointerEvent as ReactPointerEvent } from "react";
-import { useCallback } from "react";
+import { useCallback, useMemo } from "react";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { scoreEndBeat } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  scoreEndBeat,
+  buildTempoIndex,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { SonataProgress } from "../slots";
+
+/**
+ * Format elapsed seconds as `m:ss.s` (e.g. 95.4 → "1:35.4"). Rounds to tenths
+ * first so a value like 119.98s renders "2:00.0" rather than rolling over into
+ * an illegal "1:60.0".
+ */
+function formatTime(seconds: number): string {
+  const tenths = Math.max(0, Math.round(seconds * 10));
+  const totalSec = Math.floor(tenths / 10);
+  const minutes = Math.floor(totalSec / 60);
+  const secs = totalSec - minutes * 60;
+  return `${minutes}:${secs.toString().padStart(2, "0")}.${tenths % 10}`;
+}
 
 /**
  * The Sonata Transport progression bar: a full-width horizontal scrubber over
@@ -20,6 +36,11 @@ export function ProgressBar() {
 
   const endBeat = scoreEndBeat(score);
   const ready = endBeat > 0;
+
+  // beat → elapsed wall-clock seconds. The `score` from useSonata() already has
+  // the playback speed (tempoScale) folded into its tempo map, so this readout
+  // is a real stopwatch: at 50% speed the elapsed/total times stretch to match.
+  const tempo = useMemo(() => buildTempoIndex(score), [score]);
 
   // beat → [0,1] along the track; the single projector shared by the playhead,
   // the filled portion, and every contributed marker.
@@ -118,11 +139,12 @@ export function ProgressBar() {
         ) : null}
       </div>
 
-      {/* Minimal cursor / end readout. */}
+      {/* Minimal elapsed / total time readout (m:ss.s). */}
       <Text variant="caption" tone="muted" className="shrink-0 tabular-nums">
         {ready ? (
           <>
-            {cursorBeat.toFixed(1)} / {endBeat.toFixed(1)}
+            {formatTime(tempo.beatToSeconds(cursorBeat))} /{" "}
+            {formatTime(tempo.beatToSeconds(endBeat))}
           </>
         ) : (
           "—"
