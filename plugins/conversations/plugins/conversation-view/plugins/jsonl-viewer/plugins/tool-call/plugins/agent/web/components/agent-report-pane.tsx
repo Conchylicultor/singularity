@@ -2,6 +2,7 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { agentReportPane } from "../panes";
@@ -18,9 +19,16 @@ export function AgentReportPaneBody() {
   const eventsResult = useResource(jsonlEventsResource, {
     id: convId ?? "",
   });
-  const events = eventsResult.pending ? [] : eventsResult.data;
 
-  const event = events?.find(
+  if (eventsResult.pending) {
+    return (
+      <PaneChrome pane={agentReportPane} title="Agent Report">
+        <Loading />
+      </PaneChrome>
+    );
+  }
+
+  const event = eventsResult.data.find(
     (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
   );
 

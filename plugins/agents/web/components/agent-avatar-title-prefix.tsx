@@ -1,9 +1,14 @@
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Avatar, DEFAULT_AGENT_AVATAR } from "@plugins/primitives/plugins/avatar/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { agentLaunchesResource, agentsResource } from "../../shared/resources";
+import {
+  agentLaunchesResource,
+  agentsResource,
+  type Agent,
+  type AgentLaunchWithStatus,
+} from "../../shared/resources";
 import { agentSidePane } from "../panes";
 import { cn } from "@/lib/utils";
 
@@ -17,18 +22,51 @@ export function AgentAvatarTitlePrefix() {
   const conversation = useConversationById(convId);
   const launchesResult = useResource(agentLaunchesResource);
   const agentsResult = useResource(agentsResource);
-
-  const launches = launchesResult.pending ? [] : launchesResult.data;
-  const agentsList = agentsResult.pending ? [] : agentsResult.data;
-  const launch = launches.find((l) => l.taskId === conversation?.taskId);
-  const agent = launch ? agentsList.find((a) => a.id === launch.agentId) : null;
-  const agentId = launch?.agentId;
-
-  const { isOpen, toggle } = agentSidePane.useToggle({
-    agentId: agentId ?? "",
-  });
+  const combined = useCombinedResources({ launches: launchesResult, agents: agentsResult });
 
   if (!conversation || conversation.kind !== "agent") return null;
+  // Render disabled-neutral button while both resources load — never a wrong default.
+  if (combined.pending) {
+    return (
+      <button
+        type="button"
+        disabled
+        aria-pressed={false}
+        title="Agent"
+        className="pointer-events-none cursor-default rounded-full opacity-60 transition-opacity"
+      >
+        <Avatar
+          icon={DEFAULT_AGENT_AVATAR.icon}
+          color={DEFAULT_AGENT_AVATAR.color}
+          svgNodes={DEFAULT_AGENT_AVATAR.svgNodes}
+          size="sm"
+        />
+      </button>
+    );
+  }
+
+  return (
+    <AgentAvatarTitlePrefixInner
+      taskId={conversation.taskId}
+      launches={combined.data.launches}
+      agents={combined.data.agents}
+    />
+  );
+}
+
+function AgentAvatarTitlePrefixInner({
+  taskId,
+  launches,
+  agents,
+}: {
+  taskId: string | null;
+  launches: AgentLaunchWithStatus[];
+  agents: Agent[];
+}) {
+  const launch = launches.find((l) => l.taskId === taskId);
+  const agent = launch ? agents.find((a) => a.id === launch.agentId) : null;
+  const agentId = launch?.agentId;
+  const { isOpen, toggle } = agentSidePane.useToggle({ agentId: agentId ?? "" });
 
   return (
     <button

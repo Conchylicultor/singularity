@@ -1,6 +1,7 @@
 import { useCallback, useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
@@ -49,6 +50,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   }, [taskId, folderCandidate]);
 
   if (!task) return null;
+  if (tasksResult.pending) return <Loading variant="rows" />;
 
   const target = targetForSibling(task);
 
@@ -86,7 +88,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
         ) : (
           <ul className="flex flex-wrap gap-2">
             {deps.map((depId) => (
-              <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.pending ? [] : tasksResult.data} />
+              <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.data} />
             ))}
           </ul>
         )}

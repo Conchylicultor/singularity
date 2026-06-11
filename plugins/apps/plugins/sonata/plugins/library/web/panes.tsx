@@ -62,9 +62,6 @@ export const sonataPlayerPane = Pane.define({
  */
 function useSonataPlayerResolve({ songId }: { songId: string }) {
   const songsResult = useResource(songsResource);
-  const song = songsResult.pending
-    ? undefined
-    : songsResult.data.find((s) => s.id === songId);
   const sources = Library.Source.useContributions();
   const { setRawMap } = useSonata();
   const [hydratedFor, setHydratedFor] = useState<string | null>(null);
@@ -90,7 +87,11 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
   }, [songId, sources, setRawMap]);
 
   const hydrated = hydratedFor === songId;
-  return { pending: !hydrated, found: hydrated && song !== undefined };
+  // `found` is gated by `hydrated` (requires the effect above to complete), so
+  // the resource is guaranteed settled by the time `found` can be true. Reading
+  // `.data` only when not pending avoids the collapse.
+  const found = hydrated && !songsResult.pending && songsResult.data.some((s) => s.id === songId);
+  return { pending: !hydrated, found };
 }
 
 /**
@@ -116,22 +117,17 @@ function SonataPlayerSurface(): ReactElement {
     nudgeTempo,
   } = useSonata();
 
-  // Canonical title from the song resource — `resolve` already gated `found` on
-  // the song existing, so it is present here. Fall back to the optimistic input
-  // title (then "Untitled") for the brief gap before the resource confirms.
-  const songsResult = useResource(songsResource);
-  const song = songsResult.pending
-    ? undefined
-    : songsResult.data.find((s) => s.id === songId);
-
   // Mark this song open on mount (once per open — each open is a fresh
   // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).
   // Clear on unmount so library-state effects don't mis-attribute playback.
+  // Title comes from `input.title` (set by the library on open); `resolve` gated
+  // `found` on the song existing, so by mount the resource is settled but we
+  // avoid reading it here to keep the dependency footprint minimal.
   useEffect(() => {
-    setCurrentSong({ id: songId, title: input.title ?? song?.title ?? "Untitled" });
+    setCurrentSong({ id: songId, title: input.title ?? "Untitled" });
     return () => clearCurrentSong();
     // Re-run only when the song id changes; `setCurrentSong`/`clearCurrentSong`
-    // are stable. `input.title`/`song?.title` are intentionally read once at open.
+    // are stable. `input.title` is intentionally read once at open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songId]);
 

@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { blocksResource } from "@plugins/page/plugins/editor/core";
 import { buildStoryTree } from "@plugins/apps/plugins/story/plugins/story-core/core";
 import { Story } from "../slots";
@@ -11,9 +11,7 @@ import { Story } from "../slots";
  */
 export function StoryRender({ pageId, rendererId }: { pageId: string; rendererId: string }) {
   const result = useResource(blocksResource, { pageId });
-  const story = useMemo(
-    () => (result.pending ? [] : buildStoryTree(result.data, pageId)),
-    [result, pageId],
-  );
+  if (result.pending) return <Loading variant="rows" />;
+  const story = buildStoryTree(result.data, pageId);
   return <Story.Renderer.Dispatch story={story} activeRendererId={rendererId} />;
 }

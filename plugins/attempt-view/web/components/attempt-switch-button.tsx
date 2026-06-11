@@ -12,13 +12,30 @@ export function AttemptSwitchButton() {
   const conversation = useConversationById(convId);
   const result = useResource(attemptsResource);
 
-  const attempt = result.pending ? null : result.data.find((a) => a.id === conversation?.attemptId) ?? null;
-  const count = attempt?.conversations.length ?? 0;
-
   const { isOpen, toggle } = attemptPane.useToggle(
     { attemptId: conversation?.attemptId ?? "" },
     { action: "unwrap", side: "left", input: { convId } },
   );
+
+  // Render a neutral button (no count chip) while the resource is still loading —
+  // the variant and toggle are data-independent so the button is usable immediately.
+  if (result.pending) {
+    return (
+      <Button
+        variant={isOpen ? "secondary" : "ghost"}
+        size="sm"
+        title={isOpen ? "Close attempt view" : "Open attempt view"}
+        aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
+        aria-pressed={isOpen}
+        onClick={toggle}
+      >
+        <MdSplitscreen className="size-4" />
+      </Button>
+    );
+  }
+
+  const attempt = result.data.find((a) => a.id === conversation?.attemptId) ?? null;
+  const count = attempt?.conversations.length ?? 0;
 
   return (
     <Button

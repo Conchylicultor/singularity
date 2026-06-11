@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { MdWarning } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -27,13 +26,14 @@ export function CodeReviewSummary({
   const carefulPaths = config.carefulPaths.map((p) => p.path);
 
   const pushesQ = useResource(pushesResource);
-  const hasPastPushes = useMemo(
-    () => {
-      if (!conversation) return false;
-      return pushesQ.pending ? false : pushesQ.data.some((p) => p.attemptId === conversation.attemptId);
-    },
-    [pushesQ, conversation],
-  );
+
+  // Gate: render nothing while pushes are loading so hasPastPushes is never
+  // incorrectly false (which would hide the file-stats row on a past-push conversation).
+  if (pushesQ.pending) return null;
+
+  const hasPastPushes = conversation
+    ? pushesQ.data.some((p) => p.attemptId === conversation.attemptId)
+    : false;
 
   const count = files.length;
   const additions = files.reduce((sum, f) => sum + f.additions, 0);

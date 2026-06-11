@@ -11,6 +11,7 @@ import { useIsOpen, setIsOpen, toggleIsOpen } from "./notes-visibility-store";
 export interface ConversationNoteState extends EditableField<string> {
   isVisible: boolean;
   noteExists: boolean;
+  pending: boolean;
   toggleVisible: () => void;
 }
 
@@ -18,8 +19,14 @@ export function useConversationNote(
   conversationId: string,
 ): ConversationNoteState {
   const notesResult = useResource(conversationNotesResource);
-  const serverNote = notesResult.pending ? "" : (notesResult.data[conversationId]?.notes ?? "");
-  const noteExists = serverNote.trim().length > 0;
+  // While pending, serverNote stays "" so useEditableField (which must run
+  // unconditionally) has a valid initial value. Consumers gate on `pending`
+  // to avoid showing a blank note before the resource settles.
+  let serverNote = "";
+  if (!notesResult.pending) {
+    serverNote = notesResult.data[conversationId]?.notes ?? "";
+  }
+  const noteExists = !notesResult.pending && serverNote.trim().length > 0;
   const isManuallyOpen = useIsOpen(conversationId);
 
   const handleSave = useCallback(
@@ -54,6 +61,7 @@ export function useConversationNote(
     ...field,
     isVisible: noteExists || isManuallyOpen,
     noteExists,
+    pending: notesResult.pending,
     toggleVisible,
   };
 }

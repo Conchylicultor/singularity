@@ -1,9 +1,11 @@
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { workflowNodePane } from "../panes";
@@ -15,14 +17,27 @@ interface WorkflowInput {
 }
 
 export function WorkflowNodePaneBody() {
-  const { toolUseId, nodeId } = workflowNodePane.useParams();
   const { convId: inputConvId } = workflowNodePane.useInput();
   const routeEntry = conversationPane.useRouteEntry();
   const convId = inputConvId ?? routeEntry?.params.convId;
 
   const eventsResult = useResource(jsonlEventsResource, { id: convId ?? "" });
-  const events = eventsResult.pending ? [] : eventsResult.data;
-  const event = events?.find(
+
+  if (eventsResult.pending) {
+    return (
+      <PaneChrome pane={workflowNodePane} title="Workflow step">
+        <Loading />
+      </PaneChrome>
+    );
+  }
+
+  return <WorkflowNodePaneInner events={eventsResult.data} />;
+}
+
+function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
+  const { toolUseId, nodeId } = workflowNodePane.useParams();
+
+  const event = events.find(
     (e) => e.kind === "tool-call" && e.toolUseId === toolUseId,
   );
   const input =

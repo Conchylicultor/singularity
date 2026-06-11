@@ -1,5 +1,5 @@
-import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
@@ -25,12 +25,11 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
   const convEntry = conversationPane.useRouteEntry();
   const activeConvId = convEntry?.params.convId;
 
-  const launches = useMemo(() => {
-    const rows = launchesQ.pending ? [] : launchesQ.data;
-    return rows
-      .filter((l) => l.agentId === agentId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [launchesQ, agentId]);
+  if (launchesQ.pending) return <Loading variant="text" />;
+
+  const launches = launchesQ.data
+    .filter((l) => l.agentId === agentId)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
     <section className="flex flex-col gap-2">

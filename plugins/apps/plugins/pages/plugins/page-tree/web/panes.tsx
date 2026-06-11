@@ -1,6 +1,6 @@
-import { type ReactElement, useMemo } from "react";
+import { type ReactElement } from "react";
 import { MdDescription } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
@@ -62,14 +62,17 @@ function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
   const result = useResource(pagesResource);
-  const page = useMemo(
-    () =>
-      result.pending ? undefined : result.data.find((d) => d.id === pageId),
-    [result, pageId],
-  );
+
+  const title = matchResource(result, {
+    pending: () => undefined,
+    ready: (pages) => {
+      const page = pages.find((d) => d.id === pageId);
+      return page ? pageData(page).title : undefined;
+    },
+  });
 
   return (
-    <PaneChrome pane={pageDetailPane} title={page ? pageData(page).title : undefined}>
+    <PaneChrome pane={pageDetailPane} title={title}>
       <div className="flex flex-col gap-4 p-4">
         <PageHeader pageId={pageId} />
         <BlockEditor

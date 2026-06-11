@@ -9,7 +9,8 @@ import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 
 export function BuildFixSection({ runId }: { runId: string }) {
   const result = useResource(buildHistoryResource);
-  const run = result.pending ? undefined : result.data.find((r) => r.id === runId);
+  if (result.pending) return null;
+  const run = result.data.find((r) => r.id === runId);
 
   const isFailed = run && run.finishedAt !== null && run.exitCode !== 0;
   if (!isFailed) return null;

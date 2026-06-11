@@ -7,7 +7,11 @@ import { frontendHashResource } from "../../shared";
 // the dev server (where VITE_BUILD_ID is "dev").
 export function useStaleFrontend(): { stale: boolean; serverBuildId: string | null } {
   const res = useResource(frontendHashResource);
-  const serverBuildId = res.pending ? null : res.data.buildId || null;
+  // Not a collapse: staleness is unknowable mid-load, so stale=false while
+  // pending is genuinely correct — we cannot claim the tab is stale or fresh
+  // until the server build id has been received.
+  if (res.pending) return { stale: false, serverBuildId: null };
+  const serverBuildId = res.data.buildId || null;
   const baked = import.meta.env.VITE_BUILD_ID ?? "dev";
   const stale = !!serverBuildId && baked !== "dev" && serverBuildId !== baked;
   return { stale, serverBuildId };

@@ -70,10 +70,14 @@ export class PageLinkInlineNode extends DecoratorNode<ReactNode> {
 function PageLinkInlineView({ pageId }: { pageId: string }) {
   const { onOpenPage } = useBlockEditor();
   const result = useResource(pagesResource);
-  const target = result.pending ? undefined : result.data.find((d) => d.id === pageId);
+
+  // Gate: render nothing while the pages resource is loading.
+  if (result.pending) return null;
+
+  const target = result.data.find((d) => d.id === pageId);
   const data = target ? pageData(target) : undefined;
 
-  if (!result.pending && !target) {
+  if (!target) {
     return (
       <LinkChip onClick={(e) => e.stopPropagation()}>
         <Placeholder>(page not found)</Placeholder>

@@ -1,6 +1,6 @@
-import { useMemo } from "react";
 import { MdClose } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
@@ -14,12 +14,11 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {
   const tasksResult = useResource(tasksResource);
-  const tasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
 
-  const dependentIds = useMemo(
-    () => tasks.filter((t) => t.dependencies.includes(taskId)).map((t) => t.id),
-    [tasks, taskId],
-  );
+  if (tasksResult.pending) return <Loading variant="rows" />;
+
+  const tasks = tasksResult.data;
+  const dependentIds = tasks.filter((t) => t.dependencies.includes(taskId)).map((t) => t.id);
 
   return (
     <Collapsible defaultOpen className="flex flex-col gap-2">

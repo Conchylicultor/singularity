@@ -64,11 +64,11 @@ export function FloatingBar() {
       variant="ghost"
       panelClassName="items-center"
     >
-      <WithTooltip content={status.tooltip}>
+      <WithTooltip content={status.pending ? "Loading…" : status.tooltip}>
         <div className="pointer-events-auto relative flex size-8 shrink-0 items-center justify-center">
           <MdAutoAwesome className="size-4 text-muted-foreground" />
           <StatusDot
-            colorClass={`${TONE_CLASS[status.tone]}${status.pulse ? " animate-pulse" : ""}`}
+            colorClass={`${TONE_CLASS[status.pending ? "ok" : status.tone]}${!status.pending && status.pulse ? " animate-pulse" : ""}`}
             size="sm"
             className="absolute -top-0.5 -right-0.5 ring-2 ring-background"
           />

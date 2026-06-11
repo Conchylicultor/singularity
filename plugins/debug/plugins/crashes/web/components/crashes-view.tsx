@@ -1,4 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
@@ -16,7 +17,9 @@ function navigateTo(url: string) {
 export function CrashesView() {
   const result = useResource(crashesResource);
   const { serverBuildId } = useStaleFrontend();
-  const rows = result.pending ? [] : result.data;
+
+  if (result.pending) return <Loading />;
+  const rows = result.data;
 
   if (rows.length === 0) {
     return (

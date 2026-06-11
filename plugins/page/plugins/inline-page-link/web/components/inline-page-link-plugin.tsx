@@ -13,6 +13,7 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   usePageOptions,
   PageOptionsList,
@@ -46,7 +47,11 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   // Esc-dismissal latch: stays closed until the `[[` trigger is removed.
   const dismissedRef = useRef(false);
 
-  const options = usePageOptions(query, { allowCreate: true });
+  const pageOptionsResult = usePageOptions(query, { allowCreate: true });
+  // Use settled options for keyboard navigation; [] while pending is safe here
+  // because commands return false (no-op) when the list is empty, and the menu
+  // shows a loading spinner rather than "No pages found".
+  const options = pageOptionsResult.pending ? [] : pageOptionsResult.options;
 
   // Refs let the stable Lexical command callbacks read fresh state.
   const openRef = useRef(open);
@@ -217,13 +222,17 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
       style={{ left: caret.left, top: caret.top + 4 }}
     >
       <div className="max-h-64 overflow-y-auto">
-        <PageOptionsList
-          options={options}
-          activeIndex={activeIndex}
-          onSelect={(id) => insertLink(id)}
-          onCreate={(title) => void createLinkedPage(title).then((id) => insertLink(id))}
-          onHoverIndex={setActiveIndex}
-        />
+        {pageOptionsResult.pending ? (
+          <Loading variant="rows" />
+        ) : (
+          <PageOptionsList
+            options={pageOptionsResult.options}
+            activeIndex={activeIndex}
+            onSelect={(id) => insertLink(id)}
+            onCreate={(title) => void createLinkedPage(title).then((id) => insertLink(id))}
+            onHoverIndex={setActiveIndex}
+          />
+        )}
       </div>
     </div>,
     document.body,

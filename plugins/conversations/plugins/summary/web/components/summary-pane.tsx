@@ -2,11 +2,12 @@ import { useEffect, useRef, useState } from "react";
 import { MdAutoAwesome } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { toast } from "@plugins/notifications/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -25,10 +26,23 @@ export function SummaryPane() {
   const routeEntry = conversationPane.useRouteEntry();
   const convId = inputConvId ?? routeEntry?.params.convId;
   const summariesResult = useResource(conversationSummariesResource);
-  const summaries: ConversationSummary[] | undefined =
-    summariesResult.pending ? undefined : summariesResult.data[convId ?? ""];
-  const latest = summaries?.[0];
 
+  return (
+    <ResourceView resource={summariesResult} fallback={<Loading />}>
+      {(summariesData) => (
+        <SummaryPaneInner convId={convId} latest={summariesData[convId ?? ""]?.[0]} />
+      )}
+    </ResourceView>
+  );
+}
+
+function SummaryPaneInner({
+  convId,
+  latest,
+}: {
+  convId: string | undefined;
+  latest: ConversationSummary | undefined;
+}) {
   const generate = useEndpointMutation(generateConversationSummary, {
     onError: (err) =>
       toast({

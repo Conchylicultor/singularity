@@ -103,7 +103,48 @@ export function BellButton() {
   const [open, setOpen] = useState(false);
   const [typeFilter, setTypeFilter] = useState<string>("all");
   const notificationsResult = useResource(notificationsResource);
-  const list = notificationsResult.pending ? [] : notificationsResult.data;
+
+  // prevIdsRef must always run — it tracks new-notification arrivals for toasts.
+  const prevIdsRef = useRef<Set<string> | null>(null);
+
+  // Effect: fire toasts for newly arrived notifications. Reads notificationsResult
+  // directly and narrows inside so we never capture a stale pending snapshot.
+  useEffect(() => {
+    if (notificationsResult.pending) return;
+    const settled = notificationsResult.data;
+    const currentIds = new Set(settled.map((n) => n.id));
+    if (prevIdsRef.current !== null) {
+      for (const n of settled) {
+        if (!prevIdsRef.current.has(n.id) && !recentClientIds.has(n.id) && !n.muted) {
+          ShellCommands.Toast({
+            title: n.title,
+            description: n.description,
+            variant: n.variant,
+          });
+        }
+      }
+    }
+    prevIdsRef.current = currentIds;
+  // eslint-disable-next-line react-hooks/exhaustive-deps -- notificationsResult identity changes on every push; depend on the result object
+  }, [notificationsResult]);
+
+  const hadUnreadRef = useRef(false);
+
+  // Gate at the render boundary — prevents the badge from flashing 0→N while
+  // the resource loads. Render a neutral bell (no badge) during the load window.
+  if (notificationsResult.pending) {
+    return (
+      <span className="relative inline-flex">
+        <IconButton
+          icon={MdNotificationsNone}
+          label="Notifications"
+          className="text-muted-foreground"
+        />
+      </span>
+    );
+  }
+
+  const list = notificationsResult.data;
   const unreadCount = list.filter(
     (n) => !n.read && !n.muted && (n.variant === "error" || n.variant === "warning"),
   ).length;
@@ -124,27 +165,6 @@ export function BellButton() {
   const unreadFiltered = filtered.filter(isCountedUnread);
   const restFiltered = filtered.filter((n) => !isCountedUnread(n));
 
-  const prevIdsRef = useRef<Set<string> | null>(null);
-  const data = notificationsResult.pending ? null : notificationsResult.data;
-
-  useEffect(() => {
-    if (!data) return;
-
-    const currentIds = new Set(data.map((n) => n.id));
-    if (prevIdsRef.current !== null) {
-      for (const n of data) {
-        if (!prevIdsRef.current.has(n.id) && !recentClientIds.has(n.id) && !n.muted) {
-          ShellCommands.Toast({
-            title: n.title,
-            description: n.description,
-            variant: n.variant,
-          });
-        }
-      }
-    }
-    prevIdsRef.current = currentIds;
-  }, [data]);
-
   function dismiss(id: string) {
     void fetchEndpoint(dismissNotification, { id });
   }
@@ -152,8 +172,6 @@ export function BellButton() {
   function dismissAll() {
     void fetchEndpoint(dismissAllNotifications, {});
   }
-
-  const hadUnreadRef = useRef(false);
 
   function onOpenChange(next: boolean) {
     if (next) {

@@ -1,6 +1,6 @@
 import { useMemo, useState, useCallback } from "react";
 import { MdAdd } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import {
@@ -12,7 +12,7 @@ import {
 } from "@plugins/primitives/plugins/tree/web";
 import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { TaskStatus } from "@plugins/tasks-core/core";
-import { tasksResource, createTask } from "@plugins/tasks/core";
+import { tasksResource, createTask, type TaskListItem } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "@plugins/tasks/plugins/task-list/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
@@ -111,24 +111,22 @@ function isInSubtree(
   return false;
 }
 
-export function TasksList({
+function TasksListInner({
+  rawRows,
   selectedId,
   rootTaskId,
   onSelect,
 }: {
+  rawRows: readonly TaskListItem[];
   selectedId?: string;
   rootTaskId?: string;
   onSelect: (id: string) => void;
 }) {
-  const result = useResource(tasksResource);
   const [hideTerminal, setHideTerminal] = useState(true);
   // Project the tasks' folder hierarchy onto the tree primitive's parentId.
   const rows = useMemo<Task[]>(
-    () =>
-      result.pending
-        ? []
-        : result.data.map((t) => ({ ...t, parentId: t.folderId })),
-    [result],
+    () => rawRows.map((t) => ({ ...t, parentId: t.folderId })),
+    [rawRows],
   );
   const isTerminal = useCallback(
     (t: Task) => t.status === "done" || t.status === "dropped",
@@ -138,8 +136,6 @@ export function TasksList({
     () => deriveVisibleOrder(rows, rootTaskId, hideTerminal ? isTerminal : undefined),
     [rows, rootTaskId, hideTerminal, isTerminal],
   );
-
-  if (result.pending) return <Placeholder>Loading…</Placeholder>;
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>
@@ -167,5 +163,29 @@ export function TasksList({
         addLabel={rootTaskId ? null : "Add"}
       />
     </MultiSelectProvider>
+  );
+}
+
+export function TasksList({
+  selectedId,
+  rootTaskId,
+  onSelect,
+}: {
+  selectedId?: string;
+  rootTaskId?: string;
+  onSelect: (id: string) => void;
+}) {
+  const result = useResource(tasksResource);
+  return (
+    <ResourceView resource={result} fallback={<Placeholder>Loading…</Placeholder>}>
+      {(rawRows) => (
+        <TasksListInner
+          rawRows={rawRows}
+          selectedId={selectedId}
+          rootTaskId={rootTaskId}
+          onSelect={onSelect}
+        />
+      )}
+    </ResourceView>
   );
 }

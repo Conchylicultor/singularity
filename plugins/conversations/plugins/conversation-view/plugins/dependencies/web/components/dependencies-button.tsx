@@ -4,7 +4,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useActiveConversations } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource, addTaskDependency, removeTaskDependency } from "@plugins/tasks/core";
+import { tasksResource, addTaskDependency, removeTaskDependency, type TaskListItem } from "@plugins/tasks/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
 import { toast } from "@plugins/notifications/web";
 import { Button } from "@/components/ui/button";
@@ -20,14 +20,24 @@ export function DependenciesButton({
 }: {
   conversation: ConversationRecord;
 }) {
+  const tasksResult = useResource(tasksResource);
+  if (tasksResult.pending) return null;
+  return <DependenciesButtonInner conversation={conversation} allTasks={tasksResult.data} />;
+}
+
+function DependenciesButtonInner({
+  conversation,
+  allTasks,
+}: {
+  conversation: ConversationRecord;
+  allTasks: TaskListItem[];
+}) {
   const [blockedByOpen, setBlockedByOpen] = useState(false);
   const [blockingOpen, setBlockingOpen] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
 
   const task = useTask(conversation.taskId);
   const active = useActiveConversations();
-  const tasksResult = useResource(tasksResource);
-  const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
 
   const depTaskIds = useMemo(
     () => new Set(task?.dependencies ?? []),

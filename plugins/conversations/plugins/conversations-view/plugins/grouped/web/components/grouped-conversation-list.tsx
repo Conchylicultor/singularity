@@ -10,7 +10,8 @@ import {
   type DragEndEvent,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   createConversationGroup,
@@ -20,8 +21,9 @@ import {
   removeConversationGroupMember,
 } from "../../shared/endpoints";
 import { conversationGroupsResource } from "../../shared";
-import type { Conversation } from "@plugins/tasks-core/core";
+import type { Conversation, TaskListItem } from "@plugins/tasks-core/core";
 import { tasksResource } from "@plugins/tasks/core";
+import type { ConversationGroup, ConversationGroupMember } from "../../shared";
 import { useTaskAutoGroups } from "./use-task-auto-groups";
 import { AutoGroupBox } from "./auto-group-box";
 import {
@@ -78,6 +80,32 @@ function rowTint(conv: ConversationEntry) {
 }
 
 export function GroupedConversationList(props: GroupedConversationListProps) {
+  const groupsResult = useResource(conversationGroupsResource);
+  const tasksResult = useResource(tasksResource);
+  const all = useCombinedResources({ groups: groupsResult, tasks: tasksResult });
+
+  // Show rows-skeleton while either resource is still loading — prevents the
+  // DnD context from initialising from a half-loaded snapshot (groups or tasks
+  // settled while the other is still pending would mis-classify conversations).
+  if (all.pending) return <Loading variant="rows" />;
+
+  return (
+    <GroupedConversationListInner
+      {...props}
+      groups={all.data.groups.groups}
+      members={all.data.groups.members}
+      tasksData={all.data.tasks}
+    />
+  );
+}
+
+interface GroupedConversationListInnerProps extends GroupedConversationListProps {
+  groups: ConversationGroup[];
+  members: ConversationGroupMember[];
+  tasksData: TaskListItem[];
+}
+
+function GroupedConversationListInner(props: GroupedConversationListInnerProps) {
   const {
     active,
     system,
@@ -87,11 +115,12 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     activeId,
     onNavigate,
     onCloseConversation,
+    groups,
+    members,
+    tasksData,
   } = props;
 
   const { mutate: removeMemberMutation } = useEndpointMutation(removeConversationGroupMember);
-  const groupsResult = useResource(conversationGroupsResource);
-  const { groups, members } = groupsResult.pending ? { groups: [], members: [] } : groupsResult.data;
 
   const groupIdByConvId = useMemo(() => {
     const m = new Map<string, string>();
@@ -160,8 +189,6 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     [attemptGroupsInOrder, groupIdByConvId],
   );
 
-  const tasksResult = useResource(tasksResource);
-  const tasksData = tasksResult.pending ? [] : tasksResult.data;
   const { autoGroups, trulyUngrouped } = useTaskAutoGroups(
     ungroupedAttemptGroups,
     tasksData,

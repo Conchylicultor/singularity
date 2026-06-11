@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
   - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `tasks.patchTask`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `tasks.patchTask`
   - Exports: Types: `TaskViewProps`; Values: `Tasks`
 - Cross-plugin:
   - Slot contributors: `auto-start`, `recent`, `tree`

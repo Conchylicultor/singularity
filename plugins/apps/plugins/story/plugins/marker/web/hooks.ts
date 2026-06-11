@@ -7,7 +7,18 @@ export function useIsStory(pageId: string | null | undefined): boolean {
   return pageId in result.data;
 }
 
+/**
+ * All story marks as an array.
+ *
+ * NOTE: returns `[]` while the resource is pending. Consumers that render
+ * lists (e.g. story-gallery) must gate on the resource themselves via
+ * `useResource(storiesResource)` or `useCombinedResources` to distinguish
+ * "still loading" from "genuinely no stories". story-editor.tsx is a known
+ * out-of-list consumer that also uses this hook but tolerates the brief
+ * null-defaultRendererId flash on first load.
+ */
 export function useStories(): StoryMark[] {
   const result = useResource(storiesResource);
-  return result.pending ? [] : Object.values(result.data);
+  if (result.pending) return [];
+  return Object.values(result.data);
 }

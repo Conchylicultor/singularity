@@ -1,5 +1,6 @@
 import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FilterChip, FilterGroup, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
 import { claudeCliCallsResource } from "@plugins/infra/plugins/claude-cli/core";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
@@ -20,13 +21,16 @@ function callMatchesTier(call: ClaudeCliCall, tier: ModelTier): boolean {
 
 export function CallsView() {
   const result = useResource(claudeCliCallsResource);
+  return (
+    <ResourceView resource={result} fallback={<Loading />}>
+      {(calls) => <CallsViewInner calls={calls} />}
+    </ResourceView>
+  );
+}
+
+function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
   const modelChip = useChipFilter<ModelFilter>("all");
   const sourceChip = useChipFilter<string>("all");
-
-  const calls = useMemo(
-    () => result.pending ? [] : result.data,
-    [result],
-  );
 
   const sources = useMemo(() => {
     const set = new Set<string>();

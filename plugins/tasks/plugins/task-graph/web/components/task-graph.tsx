@@ -15,7 +15,7 @@ import {
   type NodeProps,
 } from "@xyflow/react";
 import "@xyflow/react/dist/style.css";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type TaskListItem, addTaskDependency } from "@plugins/tasks/core";
@@ -374,9 +374,13 @@ function TaskGraphInner({
   );
 }
 
-export function TaskGraph({ taskId }: { taskId: string }) {
-  const tasksResult = useResource(tasksResource);
-  const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
+function TaskGraphLoaded({
+  taskId,
+  allTasks,
+}: {
+  taskId: string;
+  allTasks: readonly TaskListItem[];
+}) {
   const closure = useMemo(() => computeDagClosure(taskId, allTasks), [taskId, allTasks]);
   const ctxNavigate = useTaskNavigate();
   const openPane = useOpenPane();
@@ -405,5 +409,14 @@ export function TaskGraph({ taskId }: { taskId: string }) {
     <ReactFlowProvider>
       <TaskGraphInner taskId={taskId} nodes={nodes} edges={edges} onNavigate={onNavigate} onConnect={onConnect} />
     </ReactFlowProvider>
+  );
+}
+
+export function TaskGraph({ taskId }: { taskId: string }) {
+  const tasksResult = useResource(tasksResource);
+  return (
+    <ResourceView resource={tasksResult}>
+      {(allTasks) => <TaskGraphLoaded taskId={taskId} allTasks={allTasks} />}
+    </ResourceView>
   );
 }

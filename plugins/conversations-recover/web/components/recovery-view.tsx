@@ -46,7 +46,6 @@ function formatTime(date: Date): string {
 export function RecoveryView() {
   const resource = useResource(conversationsResource);
   const queryClient = useQueryClient();
-  const readyData = resource.pending ? null : resource.data;
 
   const q = useQuery({
     queryKey: QUERY_KEY,
@@ -59,11 +58,11 @@ export function RecoveryView() {
   });
 
   useEffect(() => {
-    if (readyData) {
+    if (!resource.pending) {
       // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab maintains its own query cache, no cross-tab write to deduplicate
       void queryClient.invalidateQueries({ queryKey: QUERY_KEY });
     }
-  }, [readyData, queryClient]);
+  }, [resource.pending, queryClient]);
 
   const items = useMemo(() => q.data ?? [], [q.data]);
   const isLoading = q.isLoading;

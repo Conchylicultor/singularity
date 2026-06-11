@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { MdFormatListNumbered, MdKeyboardArrowDown } from "react-icons/md";
 import {
   FloatingAction,
@@ -58,8 +57,10 @@ function paneScrollFrom(from: Element): HTMLElement | null {
 export function MessageToc() {
   const { convId } = conversationPane.useParams();
   const result = useResource(jsonlEventsResource, { id: convId });
-  const entries = useMemo(() => result.pending ? [] : extractUserEntries(result.data), [result]);
 
+  if (result.pending) return null;
+
+  const entries = extractUserEntries(result.data);
   if (entries.length === 0) return null;
 
   const scrollTo = (eventIndex: number, from: Element) => {

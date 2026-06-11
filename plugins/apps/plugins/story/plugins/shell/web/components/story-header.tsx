@@ -1,8 +1,8 @@
-import { useMemo } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { pagesResource, updateBlock, pageData } from "@plugins/page/plugins/editor/core";
+import { pagesResource, updateBlock, pageData, type Block } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 
 /**
@@ -12,10 +12,17 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
  */
 export function StoryHeader({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);
-  const page = useMemo(
-    () => (result.pending ? undefined : result.data.find((d) => d.id === pageId)),
-    [result, pageId],
+  return (
+    <ResourceView resource={result} fallback={<Loading variant="rows" />}>
+      {(pages) => {
+        const page = pages.find((d) => d.id === pageId);
+        return <StoryHeaderInner pageId={pageId} page={page} />;
+      }}
+    </ResourceView>
   );
+}
+
+function StoryHeaderInner({ pageId, page }: { pageId: string; page: Block | undefined }) {
   const data = page ? pageData(page) : undefined;
 
   const { mutateAsync } = useEndpointMutation(updateBlock);

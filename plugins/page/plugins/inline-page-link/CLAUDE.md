@@ -6,7 +6,7 @@
 
 - Description: Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
 - Web:
-  - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageIcon`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`
+  - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageIcon`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`
 - Server:
   - Uses: `page/links.PageLinks`
 - Core:

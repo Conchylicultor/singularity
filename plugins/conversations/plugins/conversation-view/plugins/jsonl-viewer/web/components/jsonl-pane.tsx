@@ -1,5 +1,5 @@
 import { Fragment, useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import {
   JumpToBottomButton,
   useStickyScroll,
@@ -150,22 +150,16 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
   );
 }
 
-export function JsonlPane({
+function JsonlPaneInner({
   conversation,
-  children,
+  events,
 }: {
   conversation: Conversation;
-  children?: ReactNode;
+  events: JsonlEvent[];
 }) {
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone" || conversation.status === "done";
-  const eventsResult = useResource(jsonlEventsResource, {
-    id: conversation.id,
-  });
-  const events = useMemo(
-    () => eventsResult.pending ? [] : eventsResult.data,
-    [eventsResult],
-  );
+
   const totals = useMemo(() => aggregateUsage(events), [events]);
   // Plugin-contributed hide predicates. Computed over the full `events` so the
   // EventFilter slot can remove individual rows (e.g. a raw answer turn already
@@ -209,60 +203,95 @@ export function JsonlPane({
   }, [events.length, scrollIfPinned]);
 
   return (
-    <ConversationIdProvider id={conversation.id}>
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="relative min-h-0 flex-1 isolate">
-        <div
-          ref={sticky.scrollRef}
-          data-pane-scroll
-          className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
-        >
-          {eventsResult.pending ? (
-            <Text as="div" variant="caption" className="px-3 py-2 text-muted-foreground">Loading…</Text>
-          ) : eventsResult.error ? (
-            <Text as="div" variant="caption" className="px-3 py-2 text-destructive">
-              {eventsResult.error instanceof Error ? eventsResult.error.message : String(eventsResult.error)}
-            </Text>
-          ) : events.length === 0 ? (
-            <Text as="div" variant="caption" className="flex flex-col px-3 py-2 text-muted-foreground">
-              <span>No transcript yet. Claude may not have written its session log.</span>
+    <div className="relative min-h-0 flex-1 isolate">
+      <div
+        ref={sticky.scrollRef}
+        data-pane-scroll
+        className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
+      >
+        {events.length === 0 ? (
+          <Text as="div" variant="caption" className="flex flex-col px-3 py-2 text-muted-foreground">
+            <span>No transcript yet. Claude may not have written its session log.</span>
+            {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+          </Text>
+        ) : (
+          <LastAssistantProvider event={lastAssistantEvent}>
+            <EventSections events={visibleEvents}>
               {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-            </Text>
-          ) : (
-            <LastAssistantProvider event={lastAssistantEvent}>
-              <EventSections events={visibleEvents}>
-                {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-                {!isWorking && !!conversation.waitingFor && (
-                  <JsonlViewer.PendingPrompt.Dispatch
-                    conversationId={conversation.id}
-                    waitingFor={conversation.waitingFor}
-                  />
-                )}
-              </EventSections>
-            </LastAssistantProvider>
-          )}
-        </div>
-        {totals && (
-          <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-raised">
-            <div className="mx-auto flex max-w-reading justify-end px-3">
-              <Badge
-                colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
-                className="pointer-events-auto"
-                title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
-              >
-                {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
-              </Badge>
-            </div>
-          </div>
+              {!isWorking && !!conversation.waitingFor && (
+                <JsonlViewer.PendingPrompt.Dispatch
+                  conversationId={conversation.id}
+                  waitingFor={conversation.waitingFor}
+                />
+              )}
+            </EventSections>
+          </LastAssistantProvider>
         )}
-        <JsonlViewer.Overlay.Render />
-        <JumpToBottomButton
-          handle={sticky}
-          className="absolute bottom-12 right-4 z-nav"
-        />
       </div>
-      {children}
+      {totals && (
+        <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-raised">
+          <div className="mx-auto flex max-w-reading justify-end px-3">
+            <Badge
+              colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
+              className="pointer-events-auto"
+              title={`Latest context: ${totals.latestContext.toLocaleString()} tokens\nTotal output: ${totals.output.toLocaleString()} tokens`}
+            >
+              {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
+            </Badge>
+          </div>
+        </div>
+      )}
+      <JsonlViewer.Overlay.Render />
+      <JumpToBottomButton
+        handle={sticky}
+        className="absolute bottom-12 right-4 z-nav"
+      />
     </div>
+  );
+}
+
+export function JsonlPane({
+  conversation,
+  children,
+}: {
+  conversation: Conversation;
+  children?: ReactNode;
+}) {
+  const eventsResult = useResource(jsonlEventsResource, {
+    id: conversation.id,
+  });
+
+  return (
+    <ConversationIdProvider id={conversation.id}>
+      <div className="flex h-full min-h-0 flex-col">
+        <ResourceView
+          resource={eventsResult}
+          fallback={
+            <div className="relative min-h-0 flex-1 isolate">
+              <div data-pane-scroll className="h-full overflow-auto">
+                <Text as="div" variant="caption" className="px-3 py-2 text-muted-foreground">Loading…</Text>
+              </div>
+            </div>
+          }
+          errorFallback={(err) => (
+            <div className="relative min-h-0 flex-1 isolate">
+              <div data-pane-scroll className="h-full overflow-auto">
+                <Text as="div" variant="caption" className="px-3 py-2 text-destructive">
+                  {err.message}
+                </Text>
+              </div>
+            </div>
+          )}
+        >
+          {(events) => (
+            <JsonlPaneInner
+              conversation={conversation}
+              events={events}
+            />
+          )}
+        </ResourceView>
+        {children}
+      </div>
     </ConversationIdProvider>
   );
 }

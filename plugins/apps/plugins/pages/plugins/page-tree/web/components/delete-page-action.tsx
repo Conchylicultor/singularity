@@ -18,6 +18,10 @@ import { Button } from "@/components/ui/button";
  * Subtree delete is destructive: deleting a page FK-cascades its blocks AND
  * every descendant page. Gate it behind a confirm dialog that names the
  * descendant count.
+ *
+ * The Delete button and confirm dialog are disabled while pages data is still
+ * loading: showing "0 sub-pages" when the count is unknown would mislead the
+ * user into believing there are no children when there may be many.
  */
 export function DeletePageAction({
   pageId,
@@ -30,41 +34,45 @@ export function DeletePageAction({
   const result = useResource(pagesResource);
   const { mutateAsync } = useEndpointMutation(deleteBlock);
 
-  const descendantCount = result.pending
-    ? 0
-    : countDescendants(result.data, pageId);
-
   const onConfirm = async () => {
     await mutateAsync({ params: { id: pageId } });
     setOpen(false);
+  };
+
+  // Never open the dialog while the page tree is still loading — we cannot know
+  // the descendant count yet, and showing "0 sub-pages" would be dangerously wrong.
+  const handleOpen = (e: React.MouseEvent) => {
+    e.stopPropagation();
+    if (!result.pending) setOpen(true);
   };
 
   return (
     <>
       <button
         type="button"
-        onClick={(e) => {
-          e.stopPropagation();
-          setOpen(true);
-        }}
+        onClick={handleOpen}
+        disabled={result.pending}
         title="Delete page"
         aria-label="Delete page"
-        className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md"
+        className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md disabled:opacity-40 disabled:cursor-not-allowed"
       >
         <MdDelete className="size-4" />
       </button>
       <Dialog open={open} onOpenChange={setOpen}>
         <DialogContent>
           <DialogTitle>Delete page</DialogTitle>
-          <DialogDescription>
-            Delete <span className="font-medium">{title || "Untitled"}</span>
-            {descendantCount > 0
-              ? ` and ${descendantCount} sub-page${
-                  descendantCount === 1 ? "" : "s"
-                }`
-              : ""}
-            ? This also removes all of their content and cannot be undone.
-          </DialogDescription>
+          {!result.pending && (
+            <DialogDescription>
+              Delete <span className="font-medium">{title || "Untitled"}</span>
+              {(() => {
+                const count = countDescendants(result.data, pageId);
+                return count > 0
+                  ? ` and ${count} sub-page${count === 1 ? "" : "s"}`
+                  : "";
+              })()}
+              ? This also removes all of their content and cannot be undone.
+            </DialogDescription>
+          )}
           <div className="mt-4 flex justify-end gap-2">
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel

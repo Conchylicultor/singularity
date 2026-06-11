@@ -14,6 +14,7 @@ import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";
 
@@ -33,9 +34,10 @@ export function GoogleSetupPane() {
   const reg = registrations.find((r) => r.descriptor.name === "auth-google");
   const storePath = reg?.storePath ?? "";
   const metaResult = useResource(configV2SecretMetaResource, { path: storePath });
-  const secretMeta = metaResult.pending ? {} : metaResult.data;
-  const credentialsSaved = !!secretMeta.clientId?.set && !!secretMeta.clientSecret?.set;
   const status = useAccountStatus("google");
+  if (metaResult.pending) return <Loading />;
+  const secretMeta = metaResult.data;
+  const credentialsSaved = !!secretMeta.clientId?.set && !!secretMeta.clientSecret?.set;
   const connected = status?.connected;
 
   function handleProjectInput(raw: string) {

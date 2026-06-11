@@ -6,10 +6,10 @@ export function NotesArea({
 }: {
   conversation: ConversationRecord;
 }) {
-  const { value, onChange, onFocus, onBlur, isVisible, isSaving } =
+  const { value, onChange, onFocus, onBlur, isVisible, isSaving, pending } =
     useConversationNote(conversation.id);
 
-  if (!isVisible) return null;
+  if (pending || !isVisible) return null;
 
   return (
     <div className="relative">

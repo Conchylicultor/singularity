@@ -18,7 +18,6 @@ export function AnswerHereButton({
   // two surfaces never double up. We only show this generic indicator when the
   // tool_use has NOT yet hit the transcript (still blocked in the terminal).
   const eventsResult = useResource(jsonlEventsResource, { id: conversationId });
-  const events = eventsResult.pending ? undefined : eventsResult.data;
   const m = useEndpointMutation(flushQuestion, {
     onError: (err) =>
       toast({
@@ -29,7 +28,8 @@ export function AnswerHereButton({
       }),
   });
 
-  if (findAwaitingAuqEvent(events) != null) return null;
+  if (eventsResult.pending) return null;
+  if (findAwaitingAuqEvent(eventsResult.data) != null) return null;
 
   return (
     <Text

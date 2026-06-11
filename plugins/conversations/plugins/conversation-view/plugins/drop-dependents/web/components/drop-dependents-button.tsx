@@ -5,7 +5,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/notifications/web";
-import { tasksResource, countTransitiveDependents } from "@plugins/tasks/core";
+import { tasksResource, countTransitiveDependents, type TaskListItem } from "@plugins/tasks/core";
 import { DropdownMenuItem } from "@/components/ui/dropdown-menu";
 import { dropDependents } from "../../shared";
 
@@ -14,9 +14,19 @@ export function DropDependentsItem({
 }: {
   conversation: ConversationRecord;
 }) {
-  const live = useConversation(conversation.id) ?? conversation;
   const tasksResult = useResource(tasksResource);
-  const allTasks = useMemo(() => (tasksResult.pending ? [] : tasksResult.data), [tasksResult]);
+  if (tasksResult.pending) return null;
+  return <DropDependentsItemInner conversation={conversation} allTasks={tasksResult.data} />;
+}
+
+function DropDependentsItemInner({
+  conversation,
+  allTasks,
+}: {
+  conversation: ConversationRecord;
+  allTasks: TaskListItem[];
+}) {
+  const live = useConversation(conversation.id) ?? conversation;
   const dependentCount = useMemo(
     () => countTransitiveDependents(conversation.taskId, allTasks),
     [conversation.taskId, allTasks],

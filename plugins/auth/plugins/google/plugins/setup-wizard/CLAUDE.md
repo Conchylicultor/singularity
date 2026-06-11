@@ -7,7 +7,7 @@
 - Description: Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
 - Web:
   - Contributes: `Pane.Register` "google-setup"
-  - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/text.Text`
+  - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/text.Text`
   - Exports: Values: `googleSetupPane`
 - Cross-plugin:
   - Imported by: `auth/google`

@@ -33,19 +33,21 @@ export interface TrackMixerEntry {
   customized: boolean;
 }
 
-const EMPTY: TrackViewRow[] = [];
-
 /** Persisted overrides for the open song, keyed by trackId. */
 function useCurrentSongOverrides(): Map<string, TrackViewRow> {
   const { currentSongId } = useSonata();
   const result = useResource(trackViewResource);
-  const rows = result.pending ? EMPTY : result.data;
+  // Empty map while pending is genuinely correct: tracks fall back to palette-
+  // default color, muted=false, hidden=false — the same defaults an unoverridden
+  // track would have at any point. Piano-roll and audio engine work correctly
+  // with these defaults while overrides are still loading.
   return useMemo(() => {
     const m = new Map<string, TrackViewRow>();
     if (!currentSongId) return m;
-    for (const r of rows) if (r.songId === currentSongId) m.set(r.trackId, r);
+    if (result.pending) return m;
+    for (const r of result.data) if (r.songId === currentSongId) m.set(r.trackId, r);
     return m;
-  }, [rows, currentSongId]);
+  }, [result, currentSongId]);
 }
 
 /**

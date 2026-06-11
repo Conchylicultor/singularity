@@ -1,5 +1,5 @@
 import type { ReactElement } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Pane, PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -73,10 +73,13 @@ function AgentsRoot(): ReactElement {
 function AgentDetailBody(): ReactElement {
   const { id } = agentDetailPane.useParams();
   const agentsResult = useResource(agentsResource);
-  const agent = agentsResult.pending ? null : (agentsResult.data.find((a: Agent) => a.id === id) ?? null);
+  const title = matchResource(agentsResult, {
+    pending: () => undefined,
+    ready: (agents) => agents.find((a: Agent) => a.id === id)?.name,
+  });
 
   return (
-    <PaneChrome pane={agentDetailPane} title={agent?.name}>
+    <PaneChrome pane={agentDetailPane} title={title}>
       <AgentDetail key={id} agentId={id} />
       <div className="flex flex-col gap-4 px-6 pb-6">
         <AgentsSlots.View.Render>

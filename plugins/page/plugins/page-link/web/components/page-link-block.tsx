@@ -1,7 +1,8 @@
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -31,7 +32,7 @@ function PagePicker({
   const [open, setOpen] = useState(autoOpen ?? false);
   const [query, setQuery] = useState("");
   const [activeIndex, setActiveIndex] = useState(0);
-  const options = usePageOptions(query);
+  const pageOptionsResult = usePageOptions(query);
 
   return (
     <InlinePopover
@@ -48,16 +49,20 @@ function PagePicker({
           onChange={(e) => setQuery(e.target.value)}
         />
         <div className="max-h-64 overflow-y-auto">
-          <PageOptionsList
-            options={options}
-            activeIndex={activeIndex}
-            onHoverIndex={setActiveIndex}
-            onSelect={(id) => {
-              onSelect(id);
-              setOpen(false);
-              setQuery("");
-            }}
-          />
+          {pageOptionsResult.pending ? (
+            <Loading variant="rows" />
+          ) : (
+            <PageOptionsList
+              options={pageOptionsResult.options}
+              activeIndex={activeIndex}
+              onHoverIndex={setActiveIndex}
+              onSelect={(id) => {
+                onSelect(id);
+                setOpen(false);
+                setQuery("");
+              }}
+            />
+          )}
         </div>
       </div>
     </InlinePopover>
@@ -69,13 +74,8 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   const { onOpenPage } = useBlockEditor();
   const result = useResource(pagesResource);
 
-  const target = useMemo(
-    () => (result.pending ? undefined : result.data.find((d) => d.id === pageId)),
-    [result, pageId],
-  );
-  const targetData = target ? pageData(target) : undefined;
-
   // Freshly inserted (empty) block: render the picker affordance, opened.
+  // Show it even while pending — it has its own internal loading state.
   if (pageId === "") {
     return (
       <div className="px-3 py-1">
@@ -96,8 +96,14 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
     );
   }
 
+  // Gate: render nothing (inline block) while the pages resource is loading.
+  if (result.pending) return null;
+
+  const target = result.data.find((d) => d.id === pageId);
+  const targetData = target ? pageData(target) : undefined;
+
   // Target page was deleted: offer a muted not-found row that re-opens the picker.
-  if (!result.pending && !target) {
+  if (!target) {
     return (
       <div className="px-3 py-1">
         <PagePicker

@@ -8,11 +8,11 @@ export function NotesToggleButton({
 }: {
   conversation: ConversationRecord;
 }) {
-  const { isVisible, noteExists, toggleVisible } = useConversationNote(
+  const { isVisible, noteExists, pending, toggleVisible } = useConversationNote(
     conversation.id,
   );
 
-  if (noteExists) return null;
+  if (pending || noteExists) return null;
 
   return (
     <Button

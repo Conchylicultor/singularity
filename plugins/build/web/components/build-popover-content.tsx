@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { triggerBuildEndpoint } from "../../core/endpoints";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -40,7 +41,8 @@ const BRANCH_COLOR = "var(--warning)";
 
 function MainAheadSection() {
   const result = useResource(mainAheadCountResource);
-  const { count, commits } = result.pending ? { count: 0, commits: [] } : result.data;
+  if (result.pending) return null;
+  const { count, commits } = result.data;
   if (count === 0) return null;
 
   return (
@@ -213,7 +215,8 @@ function BuildHistoryList({
   onRunClick?: (runId: string) => void;
 }) {
   const result = useResource(buildHistoryResource);
-  const runs = result.pending ? [] : result.data;
+  if (result.pending) return <Loading variant="rows" count={3} />;
+  const runs = result.data;
   const limit = variant === "popover" ? 10 : 50;
   const visible = runs.slice(0, limit);
 
@@ -254,17 +257,18 @@ function BuildHistoryList({
   );
 }
 
-export function BuildPopoverContent({
+/** Inner: receives settled history so hooks always run with real data. */
+function BuildPopoverContentInner({
   variant,
   selectedRunId,
   onRunClick,
+  runs,
 }: {
   variant: "popover" | "pane";
   selectedRunId?: string;
   onRunClick?: (runId: string) => void;
+  runs: BuildRun[];
 }) {
-  const historyResult = useResource(buildHistoryResource);
-  const runs = historyResult.pending ? [] : historyResult.data;
   const latestRun = runs[0];
   const building = latestRun?.finishedAt === null;
 
@@ -288,5 +292,32 @@ export function BuildPopoverContent({
       {variant === "popover" && <BuildLogView variant={variant} />}
       <BuildHistoryList variant={variant} selectedRunId={selectedRunId} onRunClick={onRunClick} />
     </div>
+  );
+}
+
+export function BuildPopoverContent({
+  variant,
+  selectedRunId,
+  onRunClick,
+}: {
+  variant: "popover" | "pane";
+  selectedRunId?: string;
+  onRunClick?: (runId: string) => void;
+}) {
+  const historyResult = useResource(buildHistoryResource);
+  if (historyResult.pending) {
+    return (
+      <div className={cn("flex flex-col", variant === "pane" && "h-full")}>
+        <Loading variant="rows" count={3} />
+      </div>
+    );
+  }
+  return (
+    <BuildPopoverContentInner
+      variant={variant}
+      selectedRunId={selectedRunId}
+      onRunClick={onRunClick}
+      runs={historyResult.data}
+    />
   );
 }

@@ -11,31 +11,41 @@ export type PageOption =
   | { kind: "page"; page: Block }
   | { kind: "create"; title: string };
 
+export type PageOptionsResult =
+  | { pending: true; options?: undefined }
+  | { pending: false; options: PageOption[] };
+
 /**
  * Ordered picker options for a query: pages whose title matches, followed by an
  * optional "Create '<query>'" row when `allowCreate` and the query is non-empty.
  * Backed by the live `pagesResource`, so the full list is always in memory and
  * filtering is local. Shared by the page-link block picker and the inline `[[`
  * typeahead so both surfaces stay identical.
+ *
+ * Returns a discriminated union so consumers can render a distinct loading state
+ * instead of a premature "No pages found" while the resource is still pending.
  */
 export function usePageOptions(
   query: string,
   opts?: { allowCreate?: boolean },
-): PageOption[] {
-  const result = useResource(pagesResource);
+): PageOptionsResult {
+  const resourceResult = useResource(pagesResource);
   const allowCreate = opts?.allowCreate ?? false;
-  return useMemo(() => {
-    const pages = result.pending ? [] : result.data;
+  const options = useMemo(() => {
+    if (resourceResult.pending) return null;
+    const pages = resourceResult.data;
     const q = query.trim().toLowerCase();
     const matched = q
       ? pages.filter((d) => (pageData(d).title || "Untitled").toLowerCase().includes(q))
       : pages;
-    const options: PageOption[] = matched.map((page) => ({ kind: "page", page }));
+    const items: PageOption[] = matched.map((page) => ({ kind: "page", page }));
     if (allowCreate && query.trim()) {
-      options.push({ kind: "create", title: query.trim() });
+      items.push({ kind: "create", title: query.trim() });
     }
-    return options;
-  }, [result, query, allowCreate]);
+    return items;
+  }, [resourceResult, query, allowCreate]);
+  if (resourceResult.pending) return { pending: true };
+  return { pending: false, options: options! };
 }
 
 function PageOptionIcon({ page }: { page: Block }) {

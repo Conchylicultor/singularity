@@ -1,9 +1,34 @@
 import { useCallback } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
+
+function ExpandCollapseAllActionInner({
+  rows,
+  taskId,
+  hasChildren,
+}: {
+  rows: readonly TaskListItem[];
+  taskId: string;
+  hasChildren: boolean;
+}) {
+  // The tree primitive's ExpandableRow speaks `parentId`; project the tasks'
+  // folder hierarchy onto it at this boundary.
+  const mappedRows = rows.map((t) => ({ ...t, parentId: t.folderId }));
+  const patch = useCallback(
+    (id: string, expanded: boolean) => patchTask(id, { expanded }),
+    [],
+  );
+  const { willCollapse, toggle } = useSubtreeExpandAll(mappedRows, taskId, patch);
+
+  if (!hasChildren) return null;
+
+  return (
+    <ExpandAllButton allExpanded={!willCollapse} onToggle={toggle} />
+  );
+}
 
 export function ExpandCollapseAllAction({
   taskId,
@@ -13,20 +38,13 @@ export function ExpandCollapseAllAction({
   hasChildren: boolean;
 }) {
   const result = useResource(tasksResource);
-  // The tree primitive's ExpandableRow speaks `parentId`; project the tasks'
-  // folder hierarchy onto it at this boundary.
-  const rows = result.pending
-    ? []
-    : result.data.map((t) => ({ ...t, parentId: t.folderId }));
-  const patch = useCallback(
-    (id: string, expanded: boolean) => patchTask(id, { expanded }),
-    [],
-  );
-  const { willCollapse, toggle } = useSubtreeExpandAll(rows, taskId, patch);
-
-  if (!hasChildren || result.pending) return null;
-
+  // Return null while pending (no flicker of the button with empty rows).
+  if (!hasChildren) return null;
   return (
-    <ExpandAllButton allExpanded={!willCollapse} onToggle={toggle} />
+    <ResourceView resource={result}>
+      {(rows) => (
+        <ExpandCollapseAllActionInner rows={rows} taskId={taskId} hasChildren={hasChildren} />
+      )}
+    </ResourceView>
   );
 }

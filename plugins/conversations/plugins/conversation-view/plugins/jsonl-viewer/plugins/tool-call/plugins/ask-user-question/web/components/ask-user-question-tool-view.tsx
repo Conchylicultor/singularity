@@ -269,16 +269,17 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
 
   const { convId } = conversationPane.useParams();
   const eventsResult = useResource(jsonlEventsResource, { id: convId });
-  const events = eventsResult.pending ? undefined : eventsResult.data;
+
+  if (eventsResult.pending) return null;
+
+  const events = eventsResult.data;
   // Find the last tool-call event (backwards loop; the repo's tsconfig target
   // predates Array.prototype.findLast — mirror the jsonl-pane precedent).
-  let lastToolCall: NonNullable<typeof events>[number] | undefined;
-  if (events) {
-    for (let i = events.length - 1; i >= 0; i--) {
-      if (events[i]?.kind === "tool-call") {
-        lastToolCall = events[i];
-        break;
-      }
+  let lastToolCall: (typeof events)[number] | undefined;
+  for (let i = events.length - 1; i >= 0; i--) {
+    if (events[i]?.kind === "tool-call") {
+      lastToolCall = events[i];
+      break;
     }
   }
 

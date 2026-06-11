@@ -1,4 +1,4 @@
-import { useId, useMemo, useRef, useState } from "react";
+import { useId, useRef, useState } from "react";
 import { z } from "zod";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -9,6 +9,7 @@ import { useActiveDataBinding } from "@plugins/active-data/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import {
   attemptsResource,
@@ -151,12 +152,11 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
     : null;
   const activeConvId = activeConvEntry?.params.convId;
 
-  const attempts = useMemo(() => {
-    if (attemptsQ.pending) return [];
-    return attemptsQ.data
-      .filter((a) => a.taskId === taskId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [attemptsQ, taskId]);
+  if (attemptsQ.pending) return <Loading variant="text" />;
+
+  const attempts = attemptsQ.data
+    .filter((a) => a.taskId === taskId)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   if (attempts.length === 0) {
     return (
@@ -210,9 +210,10 @@ function TaskChip({ taskId }: { taskId: string }) {
   const conversation = useConversationById(convId);
   const tasksResult = useResource(tasksResource);
   const openPane = useOpenPane();
-  const task = tasksResult.pending ? undefined : tasksResult.data.find((t) => t.id === taskId);
-  const title = task?.title.trim() || "Untitled task";
   if (!conversation) return null;
+  if (tasksResult.pending) return null;
+  const task = tasksResult.data.find((t) => t.id === taskId);
+  const title = task?.title.trim() || "Untitled task";
   return (
     <LinkChip
       onClick={(e) => {

@@ -1,7 +1,8 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdPlayArrow } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
@@ -18,6 +19,7 @@ import { launchAgent, updateAgent } from "@plugins/agents/core";
 import { useVisibleModels } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";
 import { agentLaunchesResource, agentsResource } from "../../shared/resources";
+import type { Agent } from "../../shared/resources";
 import { AgentLaunches } from "./agent-launches";
 
 type Patch = Partial<{
@@ -40,15 +42,26 @@ function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
 
 export function AgentDetail({ agentId }: { agentId: string }) {
   const agentsResult = useResource(agentsResource);
-  const agent = agentsResult.pending ? null : (agentsResult.data.find((a) => a.id === agentId) ?? null);
+  return (
+    <ResourceView resource={agentsResult} fallback={<Loading variant="text" />}>
+      {(agents) => {
+        const agent = agents.find((a) => a.id === agentId) ?? null;
+        if (!agent) return <Placeholder>Loading…</Placeholder>;
+        return <AgentDetailInner agentId={agentId} agent={agent} />;
+      }}
+    </ResourceView>
+  );
+}
+
+function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent }) {
   const launchesQ = useResource(agentLaunchesResource);
   const visibleModels = useVisibleModels();
-  const [model, setModel] = useState<string | null>(agent?.model ?? null);
+  const [model, setModel] = useState<string | null>(agent.model ?? null);
   const [launching, setLaunching] = useState(false);
 
   useEffect(() => {
-    setModel(agent?.model ?? null);
-  }, [agent?.model]);
+    setModel(agent.model ?? null);
+  }, [agent.model]);
 
   const save = useCallback(
     async (patch: Patch) => {
@@ -58,19 +71,19 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   );
 
   const latestStatus = useMemo(() => {
-    const launches = launchesQ.pending ? [] : launchesQ.data;
-    const latest = launches
+    if (launchesQ.pending) return null;
+    const latest = launchesQ.data
       .filter((l) => l.agentId === agentId)
       .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt))[0];
     return latest?.latestConversationStatus ?? null;
   }, [launchesQ, agentId]);
 
   const nameField = useEditableField({
-    value: agent?.name ?? "",
+    value: agent.name ?? "",
     onSave: (v) => save({ name: v.trim() || "Untitled" }),
   });
   const promptField = useEditableField({
-    value: agent?.prompt ?? "",
+    value: agent.prompt ?? "",
     onSave: (v) => save({ prompt: v }),
   });
 
@@ -81,7 +94,7 @@ export function AgentDetail({ agentId }: { agentId: string }) {
   };
 
   const launch = async () => {
-    if (!agent || !agent.prompt) return;
+    if (!agent.prompt) return;
     if (launching) return;
     setLaunching(true);
     try {
@@ -91,10 +104,6 @@ export function AgentDetail({ agentId }: { agentId: string }) {
       setLaunching(false);
     }
   };
-
-  if (!agent) {
-    return <Placeholder>Loading…</Placeholder>;
-  }
 
   const agentSvgNodes = parseSvgNodes(agent.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes;
 

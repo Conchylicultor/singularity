@@ -1,8 +1,8 @@
-import { useCallback, useMemo } from "react";
+import { useCallback } from "react";
 import { MdAdd, MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
@@ -68,11 +68,6 @@ export function PagesSidebar() {
   const openPane = useOpenPane();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
 
-  const rows = useMemo<PageRowData[]>(
-    () => (result.pending ? [] : result.data),
-    [result],
-  );
-
   const onSelect = useCallback(
     (id: string) => openPane(pageDetailPane, { pageId: id }, { mode: "push" }),
     [openPane],
@@ -106,10 +101,10 @@ export function PagesSidebar() {
     <SidebarPaneSection title="Pages" icon={MdDescription}>
       <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
         {result.pending ? (
-          <Placeholder>Loading…</Placeholder>
+          <Loading variant="rows" />
         ) : (
           <TreeList<PageRowData>
-            rows={rows}
+            rows={result.data}
             selectedId={selectedId}
             onSelect={onSelect}
             onToggleExpanded={onToggleExpanded}

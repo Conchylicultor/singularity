@@ -4,6 +4,7 @@ import { buildHistoryResource } from "@plugins/build/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
@@ -53,7 +54,8 @@ function Row({ label, children }: { label: string; children: React.ReactNode }) 
 
 export function BuildInfo({ runId }: { runId: string }) {
   const result = useResource(buildHistoryResource);
-  const run = result.pending ? undefined : result.data.find((r) => r.id === runId);
+  if (result.pending) return <Loading />;
+  const run = result.data.find((r) => r.id === runId);
 
   if (!run) {
     return <Text as="p" variant="caption" className="text-muted-foreground">Run not found</Text>;

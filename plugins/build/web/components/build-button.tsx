@@ -7,29 +7,29 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
-import { buildHistoryResource } from "../../shared";
+import { buildHistoryResource, type BuildRun } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
-export function BuildButton() {
-  const [open, setOpen] = useState(false);
-  const openPane = useOpenPane();
-
-  // --- Stale-tab detection (baked build id vs server's current build id) ---
-  const { stale: staleTab } = useStaleFrontend();
-
-  // --- Worktree live-state channel status (backend liveness) ---
-  // During a build the `./singularity build` process restarts this very backend,
-  // so the worktree channel drops to reconnecting/closed. Guarded by `building`,
-  // that gap is what separates "Server restarting…" from "Building…".
-  const { worktree: wsStatus } = useNotificationsChannelStatuses();
-
-  // --- Build history ---
-  const historyResult = useResource(buildHistoryResource);
-  const historyData = historyResult.pending ? undefined : historyResult.data;
-  const latestRun = historyData?.[0];
+/** Inner component: receives settled history data so hooks run unconditionally with real values. */
+function BuildButtonInner({
+  open,
+  setOpen,
+  openPane,
+  staleTab,
+  wsStatus,
+  historyData,
+}: {
+  open: boolean;
+  setOpen: (v: boolean) => void;
+  openPane: ReturnType<typeof useOpenPane>;
+  staleTab: boolean;
+  wsStatus: string;
+  historyData: BuildRun[];
+}) {
+  const latestRun = historyData[0];
   const building = latestRun?.finishedAt === null;
   const failed =
     !building && latestRun != null && latestRun.exitCode !== null && latestRun.exitCode !== 0;
@@ -124,5 +124,44 @@ export function BuildButton() {
         }}
       />
     </InlinePopover>
+  );
+}
+
+export function BuildButton() {
+  const [open, setOpen] = useState(false);
+  const openPane = useOpenPane();
+
+  // --- Stale-tab detection (baked build id vs server's current build id) ---
+  const { stale: staleTab } = useStaleFrontend();
+
+  // --- Worktree live-state channel status (backend liveness) ---
+  // During a build the `./singularity build` process restarts this very backend,
+  // so the worktree channel drops to reconnecting/closed. Guarded by `building`,
+  // that gap is what separates "Server restarting…" from "Building…".
+  const { worktree: wsStatus } = useNotificationsChannelStatuses();
+
+  // --- Build history ---
+  const historyResult = useResource(buildHistoryResource);
+
+  // Render a neutral "Builds" button while the history resource is still loading —
+  // no fake "idle" status and no misleading useEffect trace before data arrives.
+  if (historyResult.pending) {
+    return (
+      <Button variant="outline" size="sm">
+        <MdBuild className="size-4" />
+        Builds
+      </Button>
+    );
+  }
+
+  return (
+    <BuildButtonInner
+      open={open}
+      setOpen={setOpen}
+      openPane={openPane}
+      staleTab={staleTab}
+      wsStatus={wsStatus}
+      historyData={historyResult.data}
+    />
   );
 }

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { useIsStory, useStories } from "./hooks";
 export { markStory, unmarkStory } from "./internal/api";
+export { storiesResource } from "../shared/schemas";
 export type { StoryMark } from "../shared/schemas";
 
 export default {

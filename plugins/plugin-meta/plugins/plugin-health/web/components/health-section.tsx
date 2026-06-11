@@ -1,14 +1,14 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Section,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginStaleness, getPluginHealthTasks } from "../../core/endpoints";
 import { pluginHealthReviewsDescriptor } from "../../shared/schemas";
-import type { PluginStaleness, ReviewTaskSummary } from "../../core";
+import type { PluginHealthReview, PluginStaleness, ReviewTaskSummary } from "../../core";
 
 interface ReviewWithMeta {
   id: string;
@@ -39,17 +39,19 @@ function healthColor(
   return "bg-success";
 }
 
-export function HealthSection({ node }: { node: PluginNode }) {
-  const reviewsResult = useResource(pluginHealthReviewsDescriptor);
-  const reviews = useMemo(
-    () => reviewsResult.pending ? [] : reviewsResult.data.filter((r) => r.pluginId === node.id),
-    [reviewsResult, node.id],
-  );
+function HealthSectionInner({
+  reviews,
+  node,
+}: {
+  reviews: PluginHealthReview[];
+  node: PluginNode;
+}) {
+  const pluginReviews = reviews.filter((r) => r.pluginId === node.id);
 
   const [enriched, setEnriched] = useState<ReviewWithMeta[]>([]);
 
   useEffect(() => {
-    if (reviews.length === 0) {
+    if (pluginReviews.length === 0) {
       setEnriched([]);
       return;
     }
@@ -60,7 +62,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
       const [stalenessRes, ...taskResults] = await Promise.all([
         // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
         fetchEndpoint(getPluginStaleness, { pluginId: node.id }),
-        ...reviews.map((r) =>
+        ...pluginReviews.map((r) =>
           // eslint-disable-next-line reactive-server-io/no-reactive-server-io -- read-only per-tab view refresh on live-state change; each tab renders its own enriched view, no cross-tab write to deduplicate
           fetchEndpoint(getPluginHealthTasks, { reviewId: r.id }),
         ),
@@ -74,7 +76,7 @@ export function HealthSection({ node }: { node: PluginNode }) {
       );
 
       setEnriched(
-        reviews.map((r, i) => ({
+        pluginReviews.map((r, i) => ({
           id: r.id,
           axis: r.axis,
           commitHash: r.commitHash,
@@ -88,12 +90,13 @@ export function HealthSection({ node }: { node: PluginNode }) {
     return () => {
       cancelled = true;
     };
-  }, [reviews, node.id]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- pluginReviews is derived inline; use stable node.id as the key
+  }, [node.id, reviews]);
 
-  if (reviews.length === 0) return null;
+  if (pluginReviews.length === 0) return null;
 
   return (
-    <Section title="Health" count={String(reviews.length)}>
+    <Section title="Health" count={String(pluginReviews.length)}>
       <div className="overflow-x-auto">
         <table className="w-full text-2xs">
           <thead>
@@ -149,5 +152,14 @@ export function HealthSection({ node }: { node: PluginNode }) {
         </table>
       </div>
     </Section>
+  );
+}
+
+export function HealthSection({ node }: { node: PluginNode }) {
+  const reviewsResult = useResource(pluginHealthReviewsDescriptor);
+  return (
+    <ResourceView resource={reviewsResult}>
+      {(reviews) => <HealthSectionInner reviews={reviews} node={node} />}
+    </ResourceView>
   );
 }

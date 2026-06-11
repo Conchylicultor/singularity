@@ -35,7 +35,11 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
     ctx ? { path: ctx.storePath } : { path: "" },
   );
   const fieldKey = ctx?.fieldKey ?? "";
-  const meta = metaResult.pending ? null : metaResult.data[fieldKey];
+
+  // Wait for meta before rendering — pending→isSet=false would wrongly show
+  // the password input even when the secret is already configured.
+  if (metaResult.pending) return null;
+  const meta = metaResult.data[fieldKey];
   const isSet = meta?.set ?? false;
 
   const handleBlur = () => {

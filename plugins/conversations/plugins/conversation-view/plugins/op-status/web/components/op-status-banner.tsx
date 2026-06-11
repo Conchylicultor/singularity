@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
@@ -179,13 +179,10 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
   const [expanded, setExpanded] = useState(false);
 
   const selfSlug = slugOf(conversation.worktreePath);
-  const ops = useMemo(
-    () => (result.pending ? [] : Object.values(result.data)),
-    [result],
-  );
-  const rows = useMemo(() => buildRows(ops, selfSlug), [ops, selfSlug]);
 
   if (result.pending) return null;
+  const ops = Object.values(result.data);
+  const rows = buildRows(ops, selfSlug);
   const op = result.data[selfSlug];
   if (!op) return null;
 

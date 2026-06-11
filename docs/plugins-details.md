@@ -25,7 +25,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
       - Web:
         - Contributes: `ActiveData.Tag` "(?<!\/)att-\d+-[a-z0-9]{4}(?![/.])\b" → `AttemptChip`
-        - Uses: `active-data.ActiveData`, `attempt-view.attemptPane`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`
+        - Uses: `active-data.ActiveData`, `attempt-view.attemptPane`, `primitives/link-chip.LinkChip`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`
         - Exports: Values: `AttemptChip`
     - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.
       - Web:
@@ -40,18 +40,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task`** — Renders <task>prompt</task> tags as editable cards with Create + Launch actions. Models suggest tasks inline; users tweak and act without leaving the transcript.
       - Web:
         - Contributes: `ActiveData.Tag` "task" → `TaskCard`
-        - Uses: `active-data.ActiveData`, `active-data.useActiveDataBinding`, `conversations.useConversationById`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/side-task.taskSidePane`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`, `primitives/launch.LaunchControl`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `tasks/attempt-status.AttemptStatusBadge`
+        - Uses: `active-data.ActiveData`, `active-data.useActiveDataBinding`, `conversations.useConversationById`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/side-task.taskSidePane`, `infra/endpoints.fetchEndpoint`, `primitives/card.Card`, `primitives/launch.LaunchControl`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `tasks/attempt-status.AttemptStatusBadge`
     - **`task-link`** — Renders raw `task-<id>` strings inline as clickable chips that open the task detail pane. Models emit the bare id, no tag wrapping needed.
       - Web:
         - Contributes: `ActiveData.Tag` "(?<!\/)task-\d+-[a-z0-9]{4,8}(?![/.])\b" → `TaskLinkChip`
-        - Uses: `active-data.ActiveData`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/side-task.taskSidePane`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `tasks/task-detail.taskDetailPane`
+        - Uses: `active-data.ActiveData`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/side-task.taskSidePane`, `primitives/link-chip.LinkChip`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `tasks/task-detail.taskDetailPane`
         - Exports: Values: `TaskLinkChip`
 
 - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
   - Web:
     - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
     - Contributes: `Pane.Register` "agents-root", `Pane.Register` "agent-detail", `Pane.Register` "agent-system-detail", `Pane.Register` "agent-side", `agentSidePane.Actions` → `ExpandAgentButton`, `Shell.Sidebar` "Agents" → `component`, `Item.Avatar` → `AgentAvatarRow`, `Conversation.Header` → `AgentAvatarTitlePrefix`, `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Agents.AgentActions` "delete" → `DeleteAgentAction`
-    - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `conversations/model-provider.useVisibleModels`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/avatar.Avatar`, `primitives/avatar.AVATAR_COLOR_KEYS`, `primitives/avatar.AvatarPicker`, `primitives/avatar.DEFAULT_AGENT_AVATAR`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/collapsible.ExpandAllButton`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/multi-select.useMultiSelect`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/row.Row`, `primitives/section-label.SectionLabel`, `primitives/slot-render.defineRenderSlot`, `primitives/status-dot.StatusDot`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `primitives/tree.useSubtreeExpandAll`, `shell.Shell`
+    - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `conversations/model-provider.useVisibleModels`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/avatar.Avatar`, `primitives/avatar.AVATAR_COLOR_KEYS`, `primitives/avatar.AvatarPicker`, `primitives/avatar.DEFAULT_AGENT_AVATAR`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/collapsible.ExpandAllButton`, `primitives/editable-field.useEditableField`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/multi-select.useMultiSelect`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/row.Row`, `primitives/section-label.SectionLabel`, `primitives/slot-render.defineRenderSlot`, `primitives/status-dot.StatusDot`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `primitives/tree.useSubtreeExpandAll`, `shell.Shell`
     - Exports: Types: `SystemAgentDescriptor`; Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
   - Server:
     - Uses: `conversations.createConversation`, `database.db`, `infra/attachments.Attachments`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/icon-picker.resolveIconSvgNodesJson`, `primitives/rank.nextRankUnder`, `tasks-core.conversationsLiveResource`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.listConversationsForDisplay`
@@ -118,7 +118,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
             - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-add-server", `Pane.Register` "deploy-server-detail"
-            - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
+            - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
             - Exports: Types: `Server`; Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
           - Server:
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/secrets.deleteSecret`, `infra/secrets.hasSecret`, `infra/secrets.setSecret`
@@ -164,7 +164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `PageDetail.Section`, `PageTree.RowActions`
             - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`, `PageTree.RowActions` → `DeletePageAction`
-            - Uses: `apps/pages/shell.Pages`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `page/links.Backlinks`, `primitives/app-shell.SidebarPaneSection`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.IconPicker`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/row.Row`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeList`
+            - Uses: `apps/pages/shell.Pages`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `page/links.Backlinks`, `primitives/app-shell.SidebarPaneSection`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.IconPicker`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeList`
             - Exports: Values: `PageDetail`, `PageTree`
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
           - Web:
@@ -358,7 +358,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`marker`** — Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.
           - Web:
             - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
-            - Exports: Types: `StoryMark`; Values: `markStory`, `unmarkStory`, `useIsStory`, `useStories`
+            - Exports: Types: `StoryMark`; Values: `markStory`, `storiesResource`, `unmarkStory`, `useIsStory`, `useStories`
           - Server:
             - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `page/editor._blocks`
             - DB schema: `plugins/apps/plugins/story/plugins/marker/server/internal/tables.ts`
@@ -372,14 +372,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`render`** — Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
           - Web:
             - Slots: `Story.Renderer`, `Story.Content`
-            - Uses: `primitives/live-state.useResource`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
+            - Uses: `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
             - Exports: Values: `RendererPicker`, `Story`, `StoryRender`
           - Cross-plugin:
             - Imported by: `apps/story/shell`
         - **`shell`** — App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).
           - Web:
             - Contributes: `Apps.App` "Story" → `StoryLayout`, `Pane.Register` "story-gallery", `Pane.Register` "story-detail"
-            - Uses: `apps.Apps`, `apps/story/marker.markStory`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/data-view.DataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/relative-time.formatRelativeTime`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
+            - Uses: `apps.Apps`, `apps/story/marker.markStory`, `apps/story/marker.storiesResource`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/data-view.DataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/relative-time.formatRelativeTime`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
         - **`story-core`** — Renderer-agnostic StoryNode IR plus buildStoryTree — the single place a block type maps to a structural role (divider → break, else content).
           - Core:
             - Uses: `page/divider.DIVIDER_TYPE`, `primitives/rank.Rank`, `primitives/tree.buildTree`, `primitives/tree.TreeNode`
@@ -560,7 +560,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
           - Web:
             - Contributes: `Pane.Register` "google-setup"
-            - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/text.Text`
+            - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/text.Text`
             - Exports: Values: `googleSetupPane`
           - Cross-plugin:
             - Imported by: `auth/google`
@@ -609,7 +609,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Web:
     - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
-    - Uses: `config_v2.ConfigV2`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/commit-list.CommitRowItem`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/log-channels.clientLog`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`
+    - Uses: `config_v2.ConfigV2`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/commit-list.CommitRowItem`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `shell/action-bar.ActionBar`
     - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`, `useStaleFrontend`
   - Server:
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.WEB_DIST_DIR`, `notifications.recordNotification`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`
@@ -645,7 +645,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`build-info`** — Status, trigger, commit hash, and timing section in the build detail pane.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "info" → `BuildInfo`
-        - Uses: `build.BuildDetailSlots`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
+        - Uses: `build.BuildDetailSlots`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/relative-time.RelativeTime`, `primitives/status-dot.StatusDot`, `primitives/text.Text`
     - **`build-logs`** — Live log stream section in the build detail pane. Per-run build log data endpoint.
       - Web:
         - Contributes: `BuildDetailSlots.Section` "logs" → `BuildLogSection`
@@ -966,7 +966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `JsonlViewer.RowAction`, `JsonlViewer.Overlay`, `JsonlViewer.EventFilter`, `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
-            - Uses: `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
+            - Uses: `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
             - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
           - Cross-plugin:
             - Slot contributors: `ask-user-question`, `assistant-text`, `assistant-thinking`, `attachment`, `fork-session`, `message-toc`, `meta-prompt`, `preprompt`, `queue-operation`, `summary`, `system`, `task-notification`, `task-tools`, `tool-call`, `unknown`, `user-image`, `user-text`
@@ -1097,7 +1097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`, `Pane.Register` "agent-report"
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/text.Text`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/text.Text`
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn", `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
@@ -1134,7 +1134,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`, `Pane.Register` "workflow-node"
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/card.Card`, `primitives/collapsible.useCollapsible`, `primitives/live-state.useResource`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/card.Card`, `primitives/collapsible.useCollapsible`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
@@ -1277,7 +1277,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
           - Web:
             - Contributes: `ConversationsView.View` "Grouped" → `GroupedView`
-            - Uses: `conversations.useConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversations-view.ConversationsView`, `conversations/conversations-view.useGoneConversationsPagination`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/collapsible.CollapsibleChevron`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/text.Text`
+            - Uses: `conversations.useConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversations-view.ConversationsView`, `conversations/conversations-view.useGoneConversationsPagination`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/collapsible.CollapsibleChevron`, `primitives/cursor-pagination.ScrollSentinel`, `primitives/editable-field.useEditableField`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/text.Text`
           - Server:
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `primitives/rank.nextRankIn`, `primitives/rank.nextRankUnder`, `tasks-core._conversations`
             - DB schema: `plugins/conversations/plugins/conversations-view/plugins/grouped/server/internal/tables.ts`
@@ -1345,7 +1345,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`summary`** — Toolbar button that opens a side pane with the Summarise action and the latest structured Sonnet summary (phase, flags, next action). On-demand structured summaries of conversations: phase, flags, next action. Curated by Sonnet via MCP. Append-only history.
       - Web:
         - Contributes: `Pane.Register` "conv-summary"
-        - Uses: `conversations/conversation-view.conversationPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/text.Text`
+        - Uses: `conversations/conversation-view.conversationPane`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/badge.Badge`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/text.Text`
       - Server:
         - Uses: `conversations.createConversation`, `conversations.deleteConversation`, `conversations.readConversationTurns`, `conversations.Turn`, `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks-core.getConversation`, `tasks-core.getTask`
         - DB schema: `plugins/conversations/plugins/summary/server/internal/tables.ts`
@@ -1479,12 +1479,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Web:
         - Contributes: `Pane.Register` "claude-cli-calls", `DebugApp.Sidebar` "Claude CLI Calls" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `conversations/model-provider.familyClass`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/collapsible.useCollapsible`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.FilterGroup`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/text.Text`
+        - Uses: `apps/debug/shell.DebugApp`, `conversations/model-provider.familyClass`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/collapsible.useCollapsible`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.FilterGroup`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/text.Text`
         - Exports: Values: `claudeCliCallsPane`
     - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
       - Web:
         - Contributes: `Pane.Register` "crashes", `DebugApp.Sidebar` "Crashes" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`
+        - Uses: `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`
         - Exports: Values: `crashesPane`
     - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
       - Web:
@@ -1576,7 +1576,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Web:
         - Contributes: `Pane.Register` "queue", `DebugApp.Sidebar` "Queue" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
+        - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `notifications.toast`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
         - Exports: Values: `queuePane`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Web:
@@ -2267,7 +2267,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Editor.Block`
         - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`, `primitives/text.Text`
-        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
+        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
       - Cross-plugin:
         - Slot contributors: `bulleted-list`, `code-block`, `divider`, `image`, `page-link`, `text`, `to-do`, `toggle`
         - Imported by: `apps/pages/page-tree`, `apps/story/marker`, `apps/story/shell`, `page/bulleted-list`, `page/code-block`, `page/divider`, `page/image`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/text`, `page/to-do`, `page/toggle`
@@ -2295,7 +2295,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `imageBlock`
     - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
       - Web:
-        - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageIcon`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`
+        - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.BlockTextPluginProps`, `page/editor.PageIcon`, `page/editor.PageOption`, `page/editor.PageOptionsList`, `page/editor.registerBlockTextExtension`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`
       - Server:
         - Uses: `page/links.PageLinks`
       - Core:
@@ -2317,7 +2317,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
       - Web:
         - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-        - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`
+        - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`
         - Exports: Values: `pageLinkBlock`
       - Server:
         - Uses: `page/links.PageLinks`
@@ -2545,7 +2545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
       - Web:
         - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
-        - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
+        - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
       - Server:
         - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core._tasks`, `tasks-core.createTask`, `tasks-core.getConversation`, `tasks/task-preprompt.inheritTaskPreprompt`
         - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
@@ -2809,7 +2809,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`
         - Exports: Types: `LoadingProps`, `LoadingVariant`; Values: `Loading`
       - Cross-plugin:
-        - Imported by: `conversations/conversations-view/queue`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/live-state`
+        - Imported by: `active-data/task`, `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/story/render`, `apps/story/shell`, `auth/google/setup-wizard`, `build`, `build/build-info`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversations-view/grouped`, `conversations/conversations-view/queue`, `conversations/summary`, `debug/claude-cli-calls`, `debug/crashes`, `debug/queue`, `page/inline-page-link`, `page/page-link`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/live-state`, `tasks/task-dependencies`, `tasks/task-draft-form`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
@@ -2861,7 +2861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `useDraft`
     - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
       - Cross-plugin:
-        - Imported by: `agents`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `attempt-view`, `build/build-commits`, `config_v2/fields`, `config_v2/settings`, `conversations-recover`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/worktree-cleanup`, `page/image`, `page/inline-page-link`, `page/page-link`, `primitives/folder-picker`, `primitives/live-state`, `primitives/loading`, `primitives/pane`, `review/code-review`, `tasks/task-list/recent`, `tasks/task-list/tree`
+        - Imported by: `agents`, `apps/deploy/servers`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `attempt-view`, `build/build-commits`, `config_v2/fields`, `config_v2/settings`, `conversations-recover`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/worktree-cleanup`, `page/image`, `page/inline-page-link`, `page/page-link`, `primitives/folder-picker`, `primitives/live-state`, `primitives/loading`, `primitives/pane`, `review/code-review`, `tasks/task-list/recent`, `tasks/task-list/tree`
       - Web:
         - Exports: Types: `PlaceholderProps`; Values: `Placeholder`
     - **`popover`** — Single-import wrapper for the Popover + Trigger + Content pattern with sensible defaults.
@@ -3238,11 +3238,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "dependencies" → `TaskDependencies`, `TaskDetailSlots.Section` "dependents" → `TaskDependents`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/row.SectionHeaderRow`, `primitives/text.Text`, `tasks.useTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-draft-form.TaskDraftPopover`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/row.SectionHeaderRow`, `primitives/text.Text`, `tasks.useTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-draft-form.TaskDraftPopover`
     - **`task-description`** — Description editor section in the task detail pane. Inline file-link parsing routes clicks to the active file-peek context.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "description" → `TaskDescription`
-        - Uses: `conversations/conversation-view/code/file-pane.filePeekPane`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/editable-field.useEditableField`, `primitives/file-links.FileLinkText`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/row.SectionHeaderRow`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`, `primitives/text-editor/paste-images.AttachmentThumbnail`, `primitives/text-editor/paste-images.isAttachmentUrl`, `primitives/text.Text`, `tasks.patchTask`, `tasks.useTask`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useFlushAll`, `tasks/task-detail.useRegisterFlush`
+        - Uses: `conversations/conversation-view/code/file-pane.filePeekPane`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/editable-field.useEditableField`, `primitives/file-links.FileLinkText`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/row.SectionHeaderRow`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`, `primitives/text-editor/paste-images.AttachmentThumbnail`, `primitives/text-editor/paste-images.isAttachmentUrl`, `primitives/text.Text`, `tasks.patchTask`, `tasks.useTask`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useFlushAll`, `tasks/task-detail.useRegisterFlush`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
       - Web:
         - Contributes: `Pane.Register` "tasks-root", `Pane.Register` "task-detail", `Shell.Sidebar` "Tasks" → `component`
@@ -3252,7 +3252,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `active-data/task-link`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-preprompt`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
-        - Uses: `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
+        - Uses: `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
         - Exports: Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskDraftPopoverProps`, `TaskDraftRelate`; Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view`, `conversations/conversation-view/new-child-task`, `improve`, `tasks/task-dependencies`
@@ -3263,7 +3263,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "graph" → `TaskGraph`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `tasks.patchTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useTaskNavigate`, `tasks/task-status.STATUS_META`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `tasks.patchTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useTaskNavigate`, `tasks/task-status.STATUS_META`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "header" → `TaskHeader`
@@ -3272,7 +3272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
         - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `tasks.patchTask`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `tasks.patchTask`
         - Exports: Types: `TaskViewProps`; Values: `Tasks`
       - Cross-plugin:
         - Slot contributors: `auto-start`, `recent`, `tree`
@@ -3285,7 +3285,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`tree`** — Tree-view tab for the task list.
           - Web:
             - Contributes: `Tasks.View` "Tree" → `TasksList`
-            - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/placeholder.Placeholder`, `primitives/tree.hideTerminalSubtrees`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
+            - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/placeholder.Placeholder`, `primitives/tree.hideTerminalSubtrees`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
             - Exports: Values: `TasksList`
           - Cross-plugin:
             - Imported by: `tasks/task-detail`

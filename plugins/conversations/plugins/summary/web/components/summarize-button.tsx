@@ -13,11 +13,29 @@ import { convSummaryPane } from "../panes";
 export function SummarizeButton() {
   const { convId } = conversationPane.useParams();
   const summariesResult = useResource(conversationSummariesResource);
-  const summaries: ConversationSummary[] | undefined =
-    summariesResult.pending ? undefined : summariesResult.data[convId];
-  const latest = summaries?.[0];
-
   const { isOpen, toggle } = convSummaryPane.useToggle({ convId }, { input: { convId } });
+
+  // Render disabled-neutral while pending — badge depends on data so we must
+  // not flash the wrong (no-badge) state during the load window.
+  if (summariesResult.pending) {
+    return (
+      <Button
+        variant={isOpen ? "secondary" : "ghost"}
+        size="sm"
+        disabled
+        className="gap-1.5 text-caption"
+        title="Summary"
+        aria-label="Summary"
+        aria-pressed={isOpen}
+      >
+        <MdAutoAwesome className="size-3.5" />
+        Summary
+      </Button>
+    );
+  }
+
+  const summaries: ConversationSummary[] | undefined = summariesResult.data[convId];
+  const latest = summaries?.[0];
 
   if (!latest) {
     return (

@@ -1,4 +1,3 @@
-import { useMemo } from "react";
 import { MdAltRoute, MdPublish } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -15,15 +14,13 @@ export function CommitsChip() {
     attemptId: conversation?.attemptId ?? "",
   });
   const pushesResult = useResource(pushesResource);
-  const pushCount = useMemo(
-    () => pushesResult.pending ? 0 : pushesResult.data.filter((p) => p.attemptId === conversation?.attemptId).length,
-    [pushesResult, conversation?.attemptId],
-  );
   const { isOpen, toggle } = convCommitsGraphPane.useToggle({ convId }, { input: { convId } });
 
   if (deltaResult.pending) return null;
+  if (pushesResult.pending) return null;
   if (deltaResult.data.mergeBase === null) return null;
 
+  const pushCount = pushesResult.data.filter((p) => p.attemptId === conversation?.attemptId).length;
   const ahead = deltaResult.data.ahead;
   const behind = deltaResult.data.behind;
   const branch = deltaResult.data.branch;

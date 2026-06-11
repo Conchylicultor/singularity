@@ -1,4 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Deploy } from "@plugins/apps/plugins/deploy/plugins/shell/web";
@@ -62,12 +63,21 @@ function AddServerBody() {
 function ServerDetailBody() {
   const { serverId } = serverDetailPane.useParams();
   const serversResult = useResource(serversResource);
-  const server = serversResult.pending ? null : (serversResult.data.find((s) => s.id === serverId) ?? null);
+
+  if (serversResult.pending) {
+    return (
+      <PaneChrome pane={serverDetailPane} title="Server">
+        <Loading variant="rows" />
+      </PaneChrome>
+    );
+  }
+
+  const server = serversResult.data.find((s) => s.id === serverId) ?? null;
 
   if (!server) {
     return (
       <PaneChrome pane={serverDetailPane} title="Server">
-        <Text as="div" variant="body" className="text-muted-foreground p-4">Loading…</Text>
+        <Text as="div" variant="body" className="text-muted-foreground p-4">Server not found.</Text>
       </PaneChrome>
     );
   }

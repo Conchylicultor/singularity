@@ -7,7 +7,7 @@
 - Description: Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
 - Web:
   - Contributes: `Editor.Block` "page-link" → `PageLinkBlock`
-  - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`
+  - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.PageIcon`, `page/editor.PageOptionsList`, `page/editor.useBlockEditor`, `page/editor.usePageOptions`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`
   - Exports: Values: `pageLinkBlock`
 - Server:
   - Uses: `page/links.PageLinks`

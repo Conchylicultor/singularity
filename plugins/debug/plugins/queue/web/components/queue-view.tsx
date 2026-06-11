@@ -1,10 +1,11 @@
 import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { toast } from "@plugins/notifications/web";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";
-import { jobsListResource, retryJob, cancelJob, type JobRow, type JobState } from "@plugins/infra/plugins/jobs/core";
-import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, deleteTriggerEndpoint, type EmissionRow, type TriggerRow } from "@plugins/infra/plugins/events/core";
+import { jobsListResource, retryJob, cancelJob, type JobRow, type JobState, type JobsPayload } from "@plugins/infra/plugins/jobs/core";
+import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, deleteTriggerEndpoint, type EmissionRow, type TriggerRow, type TriggersPayload } from "@plugins/infra/plugins/events/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -78,19 +79,24 @@ const STATE_STYLES: Record<JobState, string> = {
 };
 
 function JobsTab() {
-  const chipFilter = useChipFilter<JobState | "all">("all");
-  const [selected, setSelected] = useState<JobRow | null>(null);
   const jobsResult = useResource(jobsListResource);
   const { refetch } = jobsResult;
-
-  const counts = useMemo(
-    () => jobsResult.pending ? { pending: 0, running: 0, retrying: 0, dead: 0 } : jobsResult.data.counts,
-    [jobsResult],
+  return (
+    <ResourceView resource={jobsResult} fallback={<Loading />}>
+      {(data) => <JobsTabInner data={data} refetch={refetch} />}
+    </ResourceView>
   );
+}
+
+function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Promise<unknown> }) {
+  const chipFilter = useChipFilter<JobState | "all">("all");
+  const [selected, setSelected] = useState<JobRow | null>(null);
+
+  const counts = useMemo(() => data.counts, [data]);
   const total = counts.pending + counts.running + counts.retrying + counts.dead;
   const visible = useMemo(
-    () => jobsResult.pending ? [] : jobsResult.data.rows.filter((r) => chipFilter.matches(r.state)),
-    [jobsResult, chipFilter],
+    () => data.rows.filter((r) => chipFilter.matches(r.state)),
+    [data, chipFilter],
   );
 
   async function retry(id: string) {
@@ -248,7 +254,9 @@ function EventsTab() {
   const emissionsResult = useResource(eventEmissionsResource);
   const { refetch } = emissionsResult;
   const [selected, setSelected] = useState<EmissionRow | null>(null);
-  const rows = emissionsResult.pending ? [] : emissionsResult.data.rows;
+
+  if (emissionsResult.pending) return <Loading />;
+  const rows = emissionsResult.data.rows;
 
   return (
     <div className="flex h-full flex-col">
@@ -364,17 +372,23 @@ function EmissionDrawer({
 function TriggersTab() {
   const triggersResult = useResource(eventTriggersResource);
   const { refetch } = triggersResult;
+  return (
+    <ResourceView resource={triggersResult} fallback={<Loading />}>
+      {(data) => <TriggersTabInner data={data} refetch={refetch} />}
+    </ResourceView>
+  );
+}
 
+function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: () => Promise<unknown> }) {
   const grouped = useMemo(() => {
-    const rows = triggersResult.pending ? [] : triggersResult.data.rows;
     const map = new Map<string, TriggerRow[]>();
-    for (const r of rows) {
+    for (const r of data.rows) {
       const list = map.get(r.eventName) ?? [];
       list.push(r);
       map.set(r.eventName, list);
     }
     return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
-  }, [triggersResult]);
+  }, [data]);
 
   async function toggle(id: string, enabled: boolean) {
     try {
