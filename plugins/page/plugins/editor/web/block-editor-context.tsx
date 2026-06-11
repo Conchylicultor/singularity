@@ -137,6 +137,7 @@ export function BlockEditorProvider({
   const bulkDelete = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return;
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): user-triggered delete; migrate to useEndpointMutation so failure surfaces a toast.
       void fetchEndpoint(bulkDeleteBlocks, { pageId }, { body: { ids } });
     },
     [pageId],
@@ -145,6 +146,7 @@ export function BlockEditorProvider({
   const bulkMove = useCallback(
     (args: { ids: string[]; parentId: string | null; afterId: string | null }) => {
       if (args.ids.length === 0) return;
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD bulk-move rank write; blocksResource push re-renders, drag again to fix.
       void fetchEndpoint(bulkMoveBlocks, { pageId }, { body: args });
     },
     [pageId],
@@ -182,6 +184,7 @@ export function BlockEditorProvider({
 
   const move = useCallback(
     (id: string, dest: { parentId: string | null; rank: Rank }) => {
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD rank/parent write; blocksResource push re-renders, drag again to fix.
       void fetchEndpoint(
         moveBlock,
         { id },
@@ -197,6 +200,7 @@ export function BlockEditorProvider({
   // awaiting the response.
   const dispatchOp = useCallback(
     (op: BlockOp) => {
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: single tree op; reducer + blocksResource push re-renders (see comment above).
       void fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: op });
     },
     [pageId],
@@ -231,12 +235,15 @@ export function BlockEditorProvider({
   const makeBlockAPI = useCallback(
     (blockId: string): BlockEditorAPI => ({
       update(data: unknown) {
+        // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): saves user-typed content; migrate to useEndpointMutation so failure surfaces a toast.
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { data } });
       },
       setExpanded(expanded: boolean) {
+        // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: expand/collapse toggle; self-correcting on re-click via blocksResource push.
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { expanded } });
       },
       convertTo(type: string, data: unknown, opts?: { expanded?: boolean }) {
+        // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): user-triggered type conversion; migrate to useEndpointMutation so failure surfaces a toast.
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { type, data, ...(opts ?? {}) } });
       },
       insertAfter(type: string, data: unknown) {

@@ -1,9 +1,11 @@
 import noRawWebFetch from "./no-raw-web-fetch";
+import noVoidFetchEndpoint from "./no-void-fetch-endpoint";
 
 export default {
   name: "endpoints",
   rules: {
     "no-raw-web-fetch": noRawWebFetch,
+    "no-void-fetch-endpoint": noVoidFetchEndpoint,
   },
   ignores: {
     "no-raw-web-fetch": [
@@ -48,6 +50,40 @@ export default {
       "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/row-count/web/components/row-count-section.tsx",
       "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/sample-rows/web/components/sample-rows-section.tsx",
       "plugins/apps/plugins/studio/plugins/contributions/plugins/tables/plugins/foreign-keys/web/components/foreign-keys-section.tsx",
+    ],
+    "no-void-fetch-endpoint": [
+      // PERMANENT — whole-file genuine fire-and-forget: every fetchEndpoint here
+      // is a write whose failure is silent + self-correcting (drag/click again)
+      // AND whose state refreshes via a live-state push, not the response. This
+      // is the sanctioned `void fetchEndpoint()` use named in the endpoints
+      // CLAUDE.md. Files with a MIX of fire-and-forget and user-triggered calls
+      // are NOT listed here — they carry per-line inline disables instead.
+      //
+      // DnD edge connect; tasksResource push re-renders the graph.
+      "plugins/tasks/plugins/task-graph/web/components/task-graph.tsx",
+      // Notification dismiss / mark-read — the CLAUDE.md canonical example;
+      // reappears on next load if the write fails.
+      "plugins/notifications/web/components/bell-button.tsx",
+      // Secondary DB persistence of a toast already shown via Shell.Toast.
+      "plugins/notifications/web/internal/toast.ts",
+      // Page-tree expand toggle + DnD reorder; blocksLiveResource push refreshes.
+      "plugins/apps/plugins/pages/plugins/page-tree/web/components/pages-sidebar.tsx",
+      // Track color/instrument/mute/hide toggles + reset; live-state push refreshes.
+      "plugins/apps/plugins/sonata/plugins/track-mixer/web/actions.ts",
+      // Debounced chord-grid autosave; in-context state is source of truth, the
+      // next keystroke retries.
+      "plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/web/components/chord-grid-editor-section.tsx",
+      // Play-count telemetry; an off-by-one on failure has no UX consequence.
+      "plugins/apps/plugins/sonata/plugins/playback-history/web/components/record-play-observer.tsx",
+
+      // BURNDOWN — user-triggered mutations that should surface a toast; migrate
+      // to useEndpointMutation and remove from this list. Tracked by
+      // task-1781184772731-0e1w2e. Do NOT add new entries here; keep the rule
+      // green by migrating, not exempting. (Mixed files carry their BURNDOWN
+      // lines as inline disables tagged with the same task.)
+      "plugins/ui/plugins/tweakcn/plugins/community-browser/web/components/community-browser-section.tsx",
+      "plugins/conversations/plugins/conversations-view/plugins/queue/web/components/queue-view.tsx",
+      "plugins/apps/plugins/sonata/plugins/library/web/components/song-card.tsx",
     ],
   },
 };

@@ -315,6 +315,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
       for (const id of idsToMove) {
         if (!convIds.includes(id)) convIds.push(id);
       }
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD promote-to-group; conversationGroupsResource push reconciles, drag again to fix.
       void fetchEndpoint(createConversationGroup, {}, { body: { title: target.title, conversationIds: convIds } });
       return;
     }
@@ -322,6 +323,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     if (target.kind === "group") {
       // If all siblings are already in this group, nothing to do.
       if (idsToMove.every((id) => groupIdByConvId.get(id) === target.groupId)) return;
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD join-group; conversationGroupsResource push reconciles, drag again to fix.
       void fetchEndpoint(addConversationGroupMembers, { id: target.groupId }, { body: { conversationIds: idsToMove } });
       return;
     }
@@ -332,6 +334,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const targetGroupId = groupIdByConvId.get(target.convId);
     if (targetGroupId) {
       if (idsToMove.every((id) => groupIdByConvId.get(id) === targetGroupId)) return;
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD join-group; conversationGroupsResource push reconciles, drag again to fix.
       void fetchEndpoint(addConversationGroupMembers, { id: targetGroupId }, { body: { conversationIds: idsToMove } });
       return;
     }
@@ -341,6 +344,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
     const anchor = active.find((c) => c.id === target.convId);
     const title = anchor?.title?.trim() || "Group";
     const newGroupIds = [target.convId, ...idsToMove.filter((id) => id !== target.convId)];
+    // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD create-group; conversationGroupsResource push reconciles, drag again to fix.
     void fetchEndpoint(createConversationGroup, {}, { body: { title, conversationIds: newGroupIds } });
   };
 
@@ -366,6 +370,7 @@ export function GroupedConversationList(props: GroupedConversationListProps) {
             <SidebarMenuAction
               onClick={(e: React.MouseEvent) => {
                 e.stopPropagation();
+                // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): explicit remove-from-group button; migrate to useEndpointMutation so failure surfaces a toast.
                 void fetchEndpoint(removeConversationGroupMember, { conversationId: conv.id });
               }}
               className="right-7 opacity-0 group-hover/menu-item:opacity-100"

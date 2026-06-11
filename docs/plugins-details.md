@@ -669,7 +669,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
     - Contributes: `Core.Boot`
-    - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
+    - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
   - Server:
     - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`
@@ -695,7 +695,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail", `Shell.Sidebar` "Config" → `ConfigSidebarButton`
-        - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/tree.TreeRowChrome`, `shell.Shell`
+        - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/tree.TreeRowChrome`, `shell.Shell`
         - Exports: Values: `configDetailPane`, `configNavPane`
       - Server:
         - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`

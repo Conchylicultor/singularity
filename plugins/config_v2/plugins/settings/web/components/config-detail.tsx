@@ -2,7 +2,7 @@ import { useMemo, useCallback, useState, useEffect } from "react";
 import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { fetchEndpoint, useEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -99,18 +99,24 @@ function ConfigDetailInner({
     return false;
   }, [valueFor, defaults, registration.descriptor.fields]);
 
+  // useEndpointMutation (not void fetchEndpoint) so a failed reset/dismiss
+  // surfaces via the global error toast instead of escaping as an unhandled
+  // rejection. The config view refreshes via its live-state resource on success.
+  const { mutate: acknowledge } = useEndpointMutation(acknowledgeConflict);
+  const { mutate: resetOverride } = useEndpointMutation(deleteOverride);
+
   const handleDismiss = useCallback(() => {
-    void fetchEndpoint(acknowledgeConflict, {}, { body: { storePath: registration.storePath } });
-  }, [registration.storePath]);
+    acknowledge({ body: { storePath: registration.storePath } });
+  }, [acknowledge, registration.storePath]);
 
   const handleAcceptAll = useCallback(() => {
-    void fetchEndpoint(deleteOverride, {}, { body: { storePath: registration.storePath } });
-  }, [registration.storePath]);
+    resetOverride({ body: { storePath: registration.storePath } });
+  }, [resetOverride, registration.storePath]);
 
   const handleResetAll = useCallback(() => {
-    void fetchEndpoint(deleteOverride, {}, { body: { storePath: registration.storePath } });
+    resetOverride({ body: { storePath: registration.storePath } });
     setConfirmReset(false);
-  }, [registration.storePath]);
+  }, [resetOverride, registration.storePath]);
 
   const toggleIcon = showRaw
     ? <MdTune className="size-3.5" />

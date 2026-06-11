@@ -113,7 +113,7 @@ Adding a field to an existing config (including a `listField` item or `objectFie
 - Description: Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 - Web:
   - Contributes: `Core.Boot`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
+  - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
   - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
 - Server:
   - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`

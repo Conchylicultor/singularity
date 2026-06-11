@@ -3,7 +3,7 @@ import { MdUndo, MdWarning } from "react-icons/md";
 import { cn } from "@/lib/utils";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FieldDef } from "@plugins/config_v2/core";
 import { setConfigField } from "@plugins/config_v2/core";
@@ -57,20 +57,25 @@ export function ConfigFieldRow({
     originValue !== undefined &&
     JSON.stringify(value) !== JSON.stringify(originValue);
 
+  // useEndpointMutation (not void fetchEndpoint) so a failed save/reset surfaces
+  // via the global error toast instead of escaping as an unhandled rejection.
+  const { mutate: setField } = useEndpointMutation(setConfigField);
+  const { mutate: resetField } = useEndpointMutation(resetConfigField);
+
   const handleChange = useCallback(
     (newValue: unknown) => {
-      void fetchEndpoint(setConfigField, {}, { body: { storePath, key: fieldKey, value: newValue } });
+      setField({ body: { storePath, key: fieldKey, value: newValue } });
     },
-    [storePath, fieldKey],
+    [setField, storePath, fieldKey],
   );
 
   const handleReset = useCallback(() => {
-    void fetchEndpoint(resetConfigField, {}, { body: { storePath, key: fieldKey } });
-  }, [storePath, fieldKey]);
+    resetField({ body: { storePath, key: fieldKey } });
+  }, [resetField, storePath, fieldKey]);
 
   const handleAcceptOrigin = useCallback(() => {
-    void fetchEndpoint(setConfigField, {}, { body: { storePath, key: fieldKey, value: originValue } });
-  }, [storePath, fieldKey, originValue]);
+    setField({ body: { storePath, key: fieldKey, value: originValue } });
+  }, [setField, storePath, fieldKey, originValue]);
 
   return (
     <div>

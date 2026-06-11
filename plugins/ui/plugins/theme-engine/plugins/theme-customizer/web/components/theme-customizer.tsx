@@ -34,6 +34,7 @@ function GlobalPresetPicker() {
       if (group && groupPresetId) {
         const reg = registrations.find((r) => r.descriptor === group.configDescriptor);
         if (reg) {
+          // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: applies a preset per token group; config live resource refreshes, re-pick to retry.
           void fetchEndpoint(setConfigField, {}, {
             body: scopeId
               ? { storePath: reg.storePath, key: "preset", value: groupPresetId, scopeId }
@@ -140,8 +141,10 @@ function CustomizeForAppToggle({
   const appLabel = appId.charAt(0).toUpperCase() + appId.slice(1);
   const onToggle = () => {
     if (forked) {
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): "customize for app" toggle; migrate to useEndpointMutation so failure surfaces a toast.
       void fetchEndpoint(deleteScope, {}, { body: { scopeId } });
     } else {
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- TODO(task-1781184772731-0e1w2e): "customize for app" toggle; migrate to useEndpointMutation so failure surfaces a toast.
       void fetchEndpoint(forkScope, {}, { body: { scopeId } });
     }
   };

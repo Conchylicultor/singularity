@@ -148,6 +148,13 @@ const { mutateAsync } = useEndpointMutation(deleteTask, { meta: { suppressError:
 - **Web code must use `fetchEndpoint`/`useEndpoint`.** Raw `fetch(...)` /
   `fetchWithRetry(...)` to `/api/...` from web code is forbidden — enforced by
   the `no-raw-web-fetch` lint rule and the `endpoints:typed-web-fetches` check.
+- **No `void fetchEndpoint(...)` for user-triggered mutations.** A discarded
+  endpoint promise lets a non-2xx response escape to `window.onunhandledrejection`
+  (a contextless `browser-rejection` crash, never a toast) — enforced by the
+  `no-void-fetch-endpoint` lint rule. Use `useEndpointMutation`. Genuine
+  fire-and-forget (see below) opts out explicitly: a whole-file glob in
+  `lint/index.ts` or an inline
+  `// eslint-disable-next-line endpoints/no-void-fetch-endpoint -- <why>`.
 - **JSON server responses must go through `implement()`.** A raw
   `Response.json()` in a server/central handler is forbidden — enforced by
   `endpoints:no-raw-json-handlers`. Raw `new Response(...)` handlers remain

@@ -1,6 +1,6 @@
 import { useContext, useCallback } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
-import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField } from "../../core";
 import type { ConfigDescriptor, FieldsRecord } from "../../core";
 import { storePathOf } from "./store-path";
@@ -10,6 +10,10 @@ export function useSetConfig<F extends FieldsRecord>(
   opts?: { scopeId?: string },
 ): (key: keyof F & string, value: unknown) => void {
   const ctx = useContext(PluginRuntimeContext);
+  // useEndpointMutation (not void fetchEndpoint) so a failed save surfaces via
+  // the global error toast instead of escaping as an unhandled rejection.
+  // Called before the throws below to keep hook order unconditional.
+  const { mutate } = useEndpointMutation(setConfigField);
   if (!ctx) throw new Error("useSetConfig must be inside PluginProvider");
 
   const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
@@ -27,12 +31,10 @@ export function useSetConfig<F extends FieldsRecord>(
 
   return useCallback(
     (key: keyof F & string, value: unknown) => {
-      void fetchEndpoint(
-        setConfigField,
-        {},
-        { body: scopeId ? { storePath, key, value, scopeId } : { storePath, key, value } },
-      );
+      mutate({
+        body: scopeId ? { storePath, key, value, scopeId } : { storePath, key, value },
+      });
     },
-    [storePath, scopeId],
+    [mutate, storePath, scopeId],
   );
 }
