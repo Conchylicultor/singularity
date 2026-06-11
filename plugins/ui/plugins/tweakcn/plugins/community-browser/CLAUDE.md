@@ -7,7 +7,7 @@
 - Description: Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
 - Web:
   - Contributes: `ThemeCustomizer.Section` "community-browser" → `CommunityBrowserSection`
-  - Uses: `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/filter-chips.FilterChip`, `primitives/search.SearchInput`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
+  - Uses: `config_v2.useConfigRegistrations`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/filter-chips.FilterChip`, `primitives/search.SearchInput`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `ui/tweakcn._tweakcnThemes`
   - Routes: `GET /api/tweakcn/community/catalog`, `POST /api/tweakcn/community/apply`
