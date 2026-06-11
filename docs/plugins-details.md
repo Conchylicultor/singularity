@@ -1204,7 +1204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`terminal-pane`** — Toolbar button that opens a right pane attaching to the conversation's tmux session.
           - Web:
             - Contributes: `Pane.Register` "conv-terminal", `Conversation.ActionBar` → `TerminalButton`
-            - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `terminal.terminalPane`
+            - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/icon-button.IconButton`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `terminal.terminalPane`
         - **`turn-summary`** — Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
           - Web:
             - Contributes: `Conversation.AbovePromptInput` → `TurnSummaryCard`, `ConfigV2.WebRegister`
@@ -2711,7 +2711,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
+        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/section-label.SectionLabel`, `primitives/text.Text`
