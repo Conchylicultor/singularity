@@ -109,6 +109,7 @@ Because the origin default is the materialized catalog, adding/removing a contri
 ### Caveats
 
 - **subId collapses to slot scope.** The config layout is keyed by the base `slotId` only — subIds aren't known at build. Sub-instances of one render slot therefore **share a single layout**. Intended.
+- **Per-row reorderable slots need no wrapper.** A reorderable slot rendered once per row in a list (e.g. `JsonlViewer.RowAction` per message row) subscribes per render site, but the underlying config subscription is **shared and kept alive at the live-state layer** (one cache entry + one kept-alive WS sub across all rows). No manual hoisting provider is required — just render `<Slot.Render>` per row as usual.
 - **Node types are extensible (registry-driven).** Spacer and the `header` container are just the first built-ins; add a node type by dropping a sub-plugin under `plugins/reorder/plugins/node-types/plugins/` that contributes `ReorderNodes.NodeType(...)` — no edits to the core format, the editor, or the consumers. Agents hand-author nodes via the `{ "type": … }` shapes shown in each origin file's comment legend.
 - **Groups (containers) are config-only this pass.** In-app edit mode reorders loose items/spacers, hides/restores, adds spacers, and toggles a container's `collapsed` — but does **not** create/destroy containers or change their membership/order (author that in the JSONC). Containers are not top-level draggable yet (no drag handle/rank). The old DB-backed `groups` sub-plugin (Postgres tables + `Rank` + endpoints) was **deleted**.
 
@@ -136,11 +137,11 @@ Edit mode inflates every item with chrome (ring, ×-badge, empty-item placeholde
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/slot-render.registerSlotListMiddleware`, `primitives/sortable-list.rectSortingStrategy`, `reorder/editor.ReorderAreaContext`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/node-types.useReorderNodeTypes`
-  - Exports: Types: `ReorderLayout`; Values: `getEditMode`, `ReorderHoist`, `ReorderLayoutContext`, `setEditMode`, `useEditMode`
+  - Exports: Types: `ReorderLayout`; Values: `getEditMode`, `ReorderLayoutContext`, `setEditMode`, `useEditMode`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
-  - Imported by: `conversations/conversation-view/jsonl-viewer`, `primitives/collapsible-wrap`, `reorder/edit-mode`
+  - Imported by: `primitives/collapsible-wrap`, `reorder/edit-mode`
 - Shared:
   - Exports: Types: `ReorderableSlot`; Values: `reorderableSlots`, `reorderDirectiveDescriptor`
 - Sub-plugins:

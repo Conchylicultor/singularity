@@ -37,10 +37,6 @@ import {
   type TopLevelEntry,
 } from "./sorting";
 import { ReorderLayoutContext } from "./reorder-layout";
-import {
-  ReorderHoistContext,
-  type ReorderHoistedConfig,
-} from "./hoist-context";
 
 /**
  * Below this host width (px), a horizontal reorder area in edit mode is too
@@ -155,11 +151,6 @@ export function ReorderListMiddleware({
   renderItem: (contribution: Contribution) => ReactNode;
   children: ReactNode;
 }) {
-  // Always read the hoist context first (stable hook order). The branches below
-  // are stable for a given mount (slotId is a prop; provider presence doesn't
-  // toggle at a fixed position).
-  const hoisted = useContext(ReorderHoistContext)?.get(slotId);
-
   // The descriptor is looked up by the base `slotId` (sub-instances of a render
   // slot share one directive; subIds aren't known at build time).
   const descriptor = reorderDescriptors.get(slotId);
@@ -168,19 +159,6 @@ export function ReorderListMiddleware({
   // → render naturally with no reorder applied.
   if (!descriptor) {
     return <>{contributions.map((c) => renderItem(c))}</>;
-  }
-
-  // Inside a `<ReorderHoist>` for this slot → reuse the shared config (one
-  // subscription per viewer) and render from the host's own `contributions`.
-  if (hoisted) {
-    return (
-      <ReorderInner
-        items={hoisted.items}
-        setConfig={hoisted.setConfig}
-        contributions={contributions}
-        renderItem={renderItem}
-      />
-    );
   }
 
   return (
@@ -193,10 +171,18 @@ export function ReorderListMiddleware({
 }
 
 /**
+ * The row-invariant `{ items, setConfig }` a reorderable slot needs from its
+ * single config subscription: its `items` tree and the `setConfig` writer.
+ */
+interface ReorderHoistedConfig {
+  items: ReorderTree;
+  setConfig: (key: string, value: unknown) => void;
+}
+
+/**
  * Reads a reorderable slot's `items` tree + `setConfig` writer. This is the
  * ONLY live-state subscription the reorder middleware makes (`config-v2.values`
- * + `config-v2.scope-forked`). `<ReorderHoist>` calls it once per viewer; the
- * legacy path calls it once per render site.
+ * + `config-v2.scope-forked`), once per render site.
  */
 function useReorderConfig(descriptor: ConfigDescriptor): ReorderHoistedConfig {
   // `useConfig` on a generically-typed descriptor returns a loose record;
@@ -208,8 +194,9 @@ function useReorderConfig(descriptor: ConfigDescriptor): ReorderHoistedConfig {
 }
 
 /**
- * Legacy per-render-site path: subscribes for itself, then renders. Used when no
- * `<ReorderHoist>` ancestor has hoisted this slot's config subscription.
+ * Per-render-site path: subscribes for itself, then renders. The config
+ * subscription is shared + kept alive at the live-state layer, so one
+ * subscription per render site is cheap even for per-row reorderable slots.
  */
 function ReorderListMiddlewareInner({
   descriptor,
@@ -235,8 +222,8 @@ function ReorderListMiddlewareInner({
  * The reorder render surface: derives the live catalog (`applyTree`), the
  * drag/hide/insert/remove/patch handlers, and the presentational entries from
  * the host's own `contributions` + `renderItem`, and renders `<ReorderEditor>`.
- * Subscribes to NOTHING — it is fed `items`/`setConfig` either by the legacy
- * per-render-site path or, once per viewer, by `<ReorderHoist>`.
+ * Subscribes to NOTHING — it is fed `items`/`setConfig` by the per-render-site
+ * path.
  */
 function ReorderInner({
   items,
@@ -688,61 +675,4 @@ function ReorderInner({
  */
 function fallbackNodeId(data: ReorderNodeData): string {
   return `__node:${data.type}:${JSON.stringify(data.rawNode)}`;
-}
-
-/**
- * Hoists a reorderable slot's config subscription to a SINGLE provider so every
- * `<Slot.Render>` underneath shares one `useConfig` subscription instead of
- * subscribing per render site. Wrap a list (rows, cards, …) that renders the
- * same reorderable slot in each item:
- *
- * ```tsx
- * <ReorderHoist slot={JsonlViewer.RowAction}>
- *   {rows…}  // each row's <JsonlViewer.RowAction.Render> auto-detects this scope
- * </ReorderHoist>
- * ```
- *
- * Pen-drag still reorders the global order — only the subscription site moves up;
- * each row still derives the catalog + handlers from its own `contributions` and
- * renders the full interactive editor. A slot with no reorder descriptor passes
- * through untouched.
- */
-export function ReorderHoist({
-  slot,
-  children,
-}: {
-  slot: { id: string };
-  children: ReactNode;
-}) {
-  const descriptor = reorderDescriptors.get(slot.id);
-  // Stable branch (slot.id is a prop). No descriptor → nothing to hoist.
-  if (!descriptor) return <>{children}</>;
-  return (
-    <ReorderHoistInner slotId={slot.id} descriptor={descriptor}>
-      {children}
-    </ReorderHoistInner>
-  );
-}
-
-function ReorderHoistInner({
-  slotId,
-  descriptor,
-  children,
-}: {
-  slotId: string;
-  descriptor: ConfigDescriptor;
-  children: ReactNode;
-}) {
-  const config = useReorderConfig(descriptor);
-  const parent = useContext(ReorderHoistContext);
-  const map = useMemo(() => {
-    const next = new Map(parent ?? []);
-    next.set(slotId, config);
-    return next;
-  }, [parent, slotId, config]);
-  return (
-    <ReorderHoistContext.Provider value={map}>
-      {children}
-    </ReorderHoistContext.Provider>
-  );
 }

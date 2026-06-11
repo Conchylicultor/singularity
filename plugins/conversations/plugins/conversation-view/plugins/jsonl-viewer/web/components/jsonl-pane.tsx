@@ -10,7 +10,6 @@ import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { ReorderHoist } from "@plugins/reorder/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
@@ -231,22 +230,15 @@ export function JsonlPane({
             </Text>
           ) : (
             <LastAssistantProvider event={lastAssistantEvent}>
-              {/* Hoist the row-action slot's reorder/config subscriptions to a
-                  single provider: every EventRow's <RowAction.Render> shares one
-                  set of subscriptions instead of subscribing per row (the slot's
-                  config/groups are row-invariant). Pen-drag still reorders the
-                  global order. */}
-              <ReorderHoist slot={JsonlViewer.RowAction}>
-                <EventSections events={visibleEvents}>
-                  {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-                  {!isWorking && !!conversation.waitingFor && (
-                    <JsonlViewer.PendingPrompt.Dispatch
-                      conversationId={conversation.id}
-                      waitingFor={conversation.waitingFor}
-                    />
-                  )}
-                </EventSections>
-              </ReorderHoist>
+              <EventSections events={visibleEvents}>
+                {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+                {!isWorking && !!conversation.waitingFor && (
+                  <JsonlViewer.PendingPrompt.Dispatch
+                    conversationId={conversation.id}
+                    waitingFor={conversation.waitingFor}
+                  />
+                )}
+              </EventSections>
             </LastAssistantProvider>
           )}
         </div>

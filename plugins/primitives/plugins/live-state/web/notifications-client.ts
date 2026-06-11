@@ -53,6 +53,15 @@ const WS_URLS = {
   central: "/ws/central-notifications",
 } as const;
 
+// After the last observer of a (key,params) leaves, keep its WS subscription
+// alive briefly so a transient unmount→remount (list virtualization, streaming
+// rows that filter in/out) reuses the live sub instead of churning a
+// unsub→resub round-trip. Mirrors TanStack Query's gcTime, which keeps the
+// cache entry alive on the same principle (use-resource.ts relies on that for
+// the value; this aligns the WS sub lifetime with it). This is a one-shot
+// deferred-cleanup timer, NOT a polling loop — it checks nothing on a schedule.
+const SUB_KEEPALIVE_MS = 30_000;
+
 type SocketKind = keyof typeof WS_URLS;
 
 export type ChannelStatuses = { worktree: WsStatus; central: WsStatus };
@@ -133,6 +142,13 @@ interface SocketChannel {
   ws: SharedWebSocket;
   /** (key, paramsKey) -> subscription state for subs routed to this socket. */
   subs: Map<string, ActiveSub>;
+  /**
+   * (key, paramsKey) -> pending deferred-teardown timer. An entry lives here
+   * only while a refcount-0 sub is inside its SUB_KEEPALIVE_MS gc window: a
+   * resurrecting observe() cancels it, otherwise the timer fires and tears the
+   * sub down. Keyed by the same `${key}\0${paramsKey}` id as `subs`.
+   */
+  pendingTeardown: Map<string, ReturnType<typeof setTimeout>>;
 }
 
 export class NotificationsClient {
@@ -300,8 +316,16 @@ export class NotificationsClient {
     const id = `${key}\0${pk}`;
     const existing = channel.subs.get(id);
     if (existing) {
+      // Resurrection: a refcount-0 sub still inside its keep-alive window is
+      // alive again with zero WS traffic — cancel the pending teardown. This is
+      // a pure refcount bump, not a transition, so the always-on trace stays
+      // silent (only emitDebug fires, to keep the health inspector accurate).
+      const pending = channel.pendingTeardown.get(id);
+      if (pending !== undefined) {
+        clearTimeout(pending);
+        channel.pendingTeardown.delete(id);
+      }
       existing.refcount++;
-      trace(`observe key=${key} params=${pk} refcount=${existing.refcount}`);
       this.emitDebug();
       return;
     }
@@ -320,20 +344,40 @@ export class NotificationsClient {
     const existing = channel.subs.get(id);
     if (!existing) return;
     existing.refcount--;
-    trace(`unobserve key=${key} params=${pk} refcount=${existing.refcount}`);
     if (existing.refcount > 0) {
+      // Pure refcount decrement, not a transition: stay silent on the always-on
+      // trace (emitDebug keeps the health inspector accurate).
       this.emitDebug();
       return;
     }
-    channel.subs.delete(id);
-    channel.ws.send(JSON.stringify({ op: "unsub", key, params }));
+    // Last observer left: defer the WS unsub by one keep-alive window so a
+    // transient remount reuses the live sub. The sub stays in `channel.subs`
+    // with refcount 0 until the timer fires (or a resurrecting observe() cancels
+    // it). One-shot deferred cleanup — see SUB_KEEPALIVE_MS; not a poll.
+    trace(`unobserve key=${key} params=${pk} refcount=0 keepAliveMs=${SUB_KEEPALIVE_MS}`);
     this.emitDebug();
+    const timer = setTimeout(() => {
+      const sub = channel.subs.get(id);
+      // Resurrected (refcount back above 0) between scheduling and firing, or
+      // already torn down — just drop the stale timer entry and do nothing.
+      if (!sub || sub.refcount > 0) {
+        channel.pendingTeardown.delete(id);
+        return;
+      }
+      channel.subs.delete(id);
+      channel.pendingTeardown.delete(id);
+      channel.ws.send(JSON.stringify({ op: "unsub", key, params }));
+      trace(`teardown key=${key} params=${pk}`);
+      this.emitDebug();
+    }, SUB_KEEPALIVE_MS);
+    channel.pendingTeardown.set(id, timer);
   }
 
   private openChannel(kind: SocketKind): SocketChannel {
     const channel: SocketChannel = {
       ws: new SharedWebSocket(WS_URLS[kind]),
       subs: new Map(),
+      pendingTeardown: new Map(),
     };
     channel.ws.onopen = () => this.replaySubs(channel);
     channel.ws.onmessage = (ev) => {
@@ -367,6 +411,9 @@ export class NotificationsClient {
     // local versions so a new sub-ack (which will come with a possibly lower
     // version if the server process restarted) isn't dropped as stale.
     trace(`replaySubs socket=${channel === this.channels.central ? "central" : "worktree"} subCount=${channel.subs.size}`);
+    // Subs in their keep-alive window (refcount 0, still in `channel.subs`) are
+    // resent here too. That's intentional and harmless: their pendingTeardown
+    // timer still fires and tears them down on schedule, independent of reconnect.
     for (const sub of channel.subs.values()) {
       sub.version = 0;
       this.sendSub(channel, sub.key, sub.params);
