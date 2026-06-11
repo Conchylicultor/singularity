@@ -47,7 +47,7 @@ cd plugins/framework/plugins/web-core && bun run vitest run web/__tests__/plugin
 ## Plugin reference
 
 - Web:
-  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`, `primitives/ui-kit`, `primitives/ui-kit.SidebarProvider`, `primitives/ui-kit.TooltipProvider`
+  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`, `primitives/ui-kit`
 - Structure:
   - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
   - Composition root: yes

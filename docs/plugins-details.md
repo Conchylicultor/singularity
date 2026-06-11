@@ -2050,7 +2050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
     - **`web-core`**
       - Web:
-        - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`, `primitives/ui-kit`, `primitives/ui-kit.SidebarProvider`, `primitives/ui-kit.TooltipProvider`
+        - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`, `primitives/ui-kit`
       - Structure:
         - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
         - Composition root: yes
