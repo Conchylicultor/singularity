@@ -42,12 +42,42 @@ const MANIFEST_HEADER = [
   "// The `token-group-vars-in-sync` check fails on drift.",
 ].join("\n");
 
+// Memoize per root: the descriptors are immutable for a process's lifetime, so
+// the (barrel-importing) collection runs at most once even though the codegen
+// step plus three checks (`token-group-vars-in-sync`, `css-vars-supplied`,
+// `css-vars-single-owner`) all consume it. Promise-valued so concurrent callers
+// share one in-flight pass; evicted on rejection so a transient failure doesn't
+// poison later retries.
+const collectCache = new Map<string, Promise<Record<string, string[]>>>();
+
 /**
  * Walk the plugin tree, import each plugin's web barrel, and collect — per token
  * group id — the CSS vars its descriptor declares. Generic: keyed on the
  * TokenGroup slot id, never on a specific group's name.
+ *
+ * This is THE fresh source of truth for the token-group vars. Checks must call
+ * this at `run()` time rather than importing the committed
+ * `token-group-vars.generated.ts` manifest: that manifest is a statically
+ * imported module, frozen in the ESM cache when the check graph first loads —
+ * which, in a build, is BEFORE codegen rewrites the file. Reading it would make
+ * any token-var rename/addition need two builds (the first failing on stale
+ * data). The committed file remains only a reviewable, in-sync-guarded snapshot.
  */
-async function collectTokenGroupVars(
+export function collectTokenGroupVars(
+  root: string,
+): Promise<Record<string, string[]>> {
+  let cached = collectCache.get(root);
+  if (!cached) {
+    cached = collectTokenGroupVarsUncached(root).catch((err) => {
+      collectCache.delete(root);
+      throw err;
+    });
+    collectCache.set(root, cached);
+  }
+  return cached;
+}
+
+async function collectTokenGroupVarsUncached(
   root: string,
 ): Promise<Record<string, string[]>> {
   const pluginsRoot = join(root, "plugins");

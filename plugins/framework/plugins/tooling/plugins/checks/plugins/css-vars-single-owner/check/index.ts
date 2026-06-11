@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
 import { matchBracket } from "@plugins/plugin-meta/plugins/parse-utils/core";
-import { TOKEN_GROUP_VARS } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -75,9 +75,14 @@ const check: Check = {
   async run() {
     const root = await getRoot();
 
+    // Fresh from the real `defineTokenGroup` descriptors — NOT the committed
+    // manifest, whose static import is frozen in the ESM cache before codegen
+    // rewrites it within the same build (see collectTokenGroupVars).
+    const tokenGroupVarsByGroup = await collectTokenGroupVars(root);
+
     // (a) Cross-group collisions: var → the groups that claim it.
     const owners = new Map<string, string[]>();
-    for (const [groupId, vars] of Object.entries(TOKEN_GROUP_VARS)) {
+    for (const [groupId, vars] of Object.entries(tokenGroupVarsByGroup)) {
       for (const v of vars) {
         const list = owners.get(v);
         if (list) list.push(groupId);

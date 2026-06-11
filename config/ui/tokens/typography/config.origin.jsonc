@@ -1,4 +1,4 @@
-// @hash 1f1897539f1e
+// @hash ebb49f30caf3
 {
   "preset": "default",
   "overrides": {
@@ -7,10 +7,10 @@
       "fontSerif": "",
       "fontMono": "",
       "letterSpacing": "",
-      "fontSize2xs": "",
-      "fontSize3xs": "",
-      "lineHeight2xs": "",
-      "lineHeight3xs": "",
+      "font-size-2xs": "",
+      "font-size-3xs": "",
+      "line-height-2xs": "",
+      "line-height-3xs": "",
       "fontWeightNormal": "",
       "fontWeightMedium": "",
       "fontWeightSemibold": "",
@@ -33,10 +33,10 @@
       "fontSerif": "",
       "fontMono": "",
       "letterSpacing": "",
-      "fontSize2xs": "",
-      "fontSize3xs": "",
-      "lineHeight2xs": "",
-      "lineHeight3xs": "",
+      "font-size-2xs": "",
+      "font-size-3xs": "",
+      "line-height-2xs": "",
+      "line-height-3xs": "",
       "fontWeightNormal": "",
       "fontWeightMedium": "",
       "fontWeightSemibold": "",

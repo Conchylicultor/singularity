@@ -80,10 +80,10 @@
     --color-categorical-9: var(--categorical-9);
     --color-categorical-10: var(--categorical-10);
     --tracking-normal: var(--letter-spacing);
-    --text-2xs: var(--font-size2xs);
-    --text-2xs--line-height: var(--line-height2xs);
-    --text-3xs: var(--font-size3xs);
-    --text-3xs--line-height: var(--line-height3xs);
+    --text-2xs: var(--font-size-2xs);
+    --text-2xs--line-height: var(--line-height-2xs);
+    --text-3xs: var(--font-size-3xs);
+    --text-3xs--line-height: var(--line-height-3xs);
     --font-weight-normal: var(--font-weight-normal);
     --font-weight-medium: var(--font-weight-medium);
     --font-weight-semibold: var(--font-weight-semibold);

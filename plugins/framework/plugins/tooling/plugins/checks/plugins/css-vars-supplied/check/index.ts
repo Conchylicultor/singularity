@@ -1,6 +1,6 @@
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
-import { TOKEN_GROUP_VARS } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { collectTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -9,9 +9,9 @@ type Check = { id: string; description: string; run(): Promise<CheckResult> };
  * Checks the SOURCE-demand class of CSS custom-property gaps: a fallback-less
  * `var(--x)` reference in any repo CSS that points at a token nothing supplies
  * (no token-group var, no `--x:` CSS declaration). Catches typos, renames, and
- * orphaned runtime-only vars. Token-group vars come from the generated
- * `TOKEN_GROUP_VARS` manifest (the real `defineTokenGroup` descriptors), not a
- * text-parse of `group.ts`.
+ * orphaned runtime-only vars. Token-group vars are read FRESH from the real
+ * `defineTokenGroup` descriptors via `collectTokenGroupVars()` (codegen core),
+ * not a text-parse of `group.ts` nor the frozen committed manifest.
  *
  * It does NOT catch runtime-supply gaps — e.g. a sparse tweakcn preset failing
  * to emit a token-group var it is silent on. `--font-size-caption` IS a
@@ -59,10 +59,12 @@ const check: Check = {
     // SUPPLY: every token a group schema or a CSS declaration provides.
     const supply = new Set<string>();
 
-    // SUPPLY: token-group vars from the generated manifest (the real
-    // `defineTokenGroup` descriptors, read at build time via their web-slot
-    // contributions — no text-parsing of group.ts).
-    for (const vars of Object.values(TOKEN_GROUP_VARS)) {
+    // SUPPLY: token-group vars computed fresh from the real `defineTokenGroup`
+    // descriptors (via their web-slot contributions) — NOT the committed
+    // manifest, whose static import is frozen in the ESM cache before codegen
+    // rewrites it, which would make a rename pass only on the second build.
+    const tokenGroupVars = await collectTokenGroupVars(root);
+    for (const vars of Object.values(tokenGroupVars)) {
       for (const v of vars) supply.add(v);
     }
 

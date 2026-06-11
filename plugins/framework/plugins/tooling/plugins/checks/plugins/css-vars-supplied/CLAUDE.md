@@ -10,11 +10,15 @@ supplies** — neither a token-group var nor a `--x:` CSS declaration.
   `pr-floating-bar`'s `var(--floating-bar-safe-area, var(--chrome-pad-x))` needs
   no allowlist. `--tw-*` (Tailwind internals) are dropped.
 - **SUPPLY** — the union of:
-  - Every token-group var, read from the generated `TOKEN_GROUP_VARS` manifest
-    (`framework/tooling/checks/core/token-group-vars.generated.ts`) — the **real**
-    `defineTokenGroup` descriptors, collected at build time via their
-    `ui.theme-engine.token-group` web-slot contributions. This replaces the old
-    text-parse of `*/shared/group.ts`, fixing the abstraction it worked around.
+  - Every token-group var, computed **fresh** at `run()` time via
+    `collectTokenGroupVars(root)` (codegen core) — the **real** `defineTokenGroup`
+    descriptors, read via their `ui.theme-engine.token-group` web-slot
+    contributions. It deliberately does NOT import the committed
+    `token-group-vars.generated.ts` manifest: that static import is frozen in the
+    ESM cache the moment the check graph loads — before codegen rewrites the file
+    in the same build — so reading it would make any token-var rename pass only on
+    the *second* build. The committed manifest now survives only as a reviewable,
+    `token-group-vars-in-sync`-guarded snapshot.
   - Every `--x:` declaration across all repo CSS files (covers `@theme` bridges
     and derived `--radius-*`).
 

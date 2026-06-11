@@ -62,6 +62,7 @@ export {
 } from "./barrel-stubs-gen";
 
 export {
+  collectTokenGroupVars,
   generateTokenGroupVars,
   renderTokenGroupVarsManifest,
   tokenGroupVarsManifestPath,
