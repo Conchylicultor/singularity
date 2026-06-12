@@ -58,12 +58,14 @@ const SECTION_H = 28;
 function SectionHeader({
   title,
   count,
+  blockedCount = 0,
   expanded,
   onToggleExpanded,
   stickyTop,
 }: {
   title: string;
   count: number;
+  blockedCount?: number;
   expanded: boolean;
   onToggleExpanded: () => void;
   stickyTop: number;
@@ -85,6 +87,11 @@ function SectionHeader({
       <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
         {title}
       </Text>
+      {blockedCount > 0 && (
+        <Badge variant="muted" size="sm" className="shrink-0" title={`${blockedCount} blocked task${blockedCount === 1 ? "" : "s"}`}>
+          {blockedCount} blocked
+        </Badge>
+      )}
       {count > 0 && (
         <Badge size="sm" className="shrink-0 opacity-0 transition-opacity group-hover/header:opacity-100">
           {count}
@@ -345,6 +352,14 @@ export function QueueView({
     [waitingGroups, pinnedCluster],
   );
 
+  // Count blocked tasks among queued groups — each group is one task, and all
+  // of a group's members share its task status, so the selected member's
+  // blocked flag is representative.
+  const blockedTaskCount = useMemo(
+    () => waitingGroups.filter((g) => blockedIds.has(g.selected.id)).length,
+    [waitingGroups, blockedIds],
+  );
+
   // All three resources gate together; the delayed skeleton means a warm
   // (<100ms) load paints the real sections directly with no flash.
   if (all.pending) {
@@ -385,7 +400,7 @@ export function QueueView({
   return (
     <div className="flex flex-col isolate">
       {/* Queue */}
-      <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
+      <SectionHeader title="Queue" count={allWaitingCount} blockedCount={blockedTaskCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
       {queueExpanded && waitingGroups.length === 0 && (
         <div className="px-2 py-1 pl-2 text-2xs italic text-muted-foreground">
           No conversations waiting
