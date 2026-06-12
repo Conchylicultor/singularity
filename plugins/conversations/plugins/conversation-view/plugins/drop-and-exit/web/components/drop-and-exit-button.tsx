@@ -40,7 +40,7 @@ export function DropAndExitItem({
     },
     onError: (err) => toast({
       type: "conversation",
-      title: `${hasPush ? "Complete" : "Drop"} & Exit failed`,
+      title: `${hasPush ? "Complete" : "Drop"} & Close failed`,
       description: err.message,
       variant: "error",
     }),
@@ -50,12 +50,12 @@ export function DropAndExitItem({
 
   // Neutral while loading — never the destructive default.
   const { Icon, label, variant } = decision.pending
-    ? { Icon: MdExitToApp, label: "Exit", variant: "default" as const }
+    ? { Icon: MdExitToApp, label: "Close", variant: "default" as const }
     : hasPush
-      ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Exit", variant: "default" as const }
+      ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Close", variant: "default" as const }
       : decision.data.hasOtherActive
-        ? { Icon: MdExitToApp, label: isPending ? "Closing…" : "Exit", variant: "default" as const }
-        : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Exit", variant: "destructive" as const };
+        ? { Icon: MdExitToApp, label: isPending ? "Closing…" : "Close", variant: "default" as const }
+        : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Close", variant: "destructive" as const };
 
   return (
     <DropdownMenuItem

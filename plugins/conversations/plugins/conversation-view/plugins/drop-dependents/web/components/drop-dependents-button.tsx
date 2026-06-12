@@ -60,7 +60,7 @@ function DropDependentsItemInner({
       onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <MdDeleteSweep className="size-4" />
-      {isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Exit`}
+      {isPending ? "Dropping…" : `Drop task + ${dependentCount} dependent(s) & Close`}
     </DropdownMenuItem>
   );
 }

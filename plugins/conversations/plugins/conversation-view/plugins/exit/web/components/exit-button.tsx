@@ -14,7 +14,7 @@ export function ExitItem({
   const live = useConversation(conversation.id) ?? conversation;
   const { mutate, isPending } = useEndpointMutation(exitConversation, {
     onSuccess: () => toast({ type: "conversation", title: "Conversation closed", description: "Closed without changing task state", variant: "success" }),
-    onError: (err) => toast({ type: "conversation", title: "Exit failed", description: err.message, variant: "error" }),
+    onError: (err) => toast({ type: "conversation", title: "Close failed", description: err.message, variant: "error" }),
   });
 
   const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
@@ -25,7 +25,7 @@ export function ExitItem({
       onClick={() => mutate({ params: { id: conversation.id } })}
     >
       <MdLogout className="size-4" />
-      {isPending ? "Exiting…" : "Exit"}
+      {isPending ? "Closing…" : "Close"}
     </DropdownMenuItem>
   );
 }

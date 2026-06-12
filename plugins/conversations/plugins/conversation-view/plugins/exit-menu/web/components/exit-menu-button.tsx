@@ -23,7 +23,7 @@ export function ExitMenuButton(_: PromptEditorActionProps) {
     <DropdownMenu>
       <DropdownMenuTrigger
         render={
-          <Button variant="ghost" size="icon-sm" aria-label="Exit options" title="Exit options" />
+          <Button variant="ghost" size="icon-sm" aria-label="Close options" title="Close options" />
         }
       >
         <MdLogout className="size-3.5" />

@@ -69,9 +69,9 @@ const LABELS: Record<Mode, string> = {
   send: "Send",
   stop: "Stop",
   go: "Go",
-  "push-and-exit": "Push & Exit",
-  exit: "Exit",
-  "drop-and-exit": "Drop & Exit",
+  "push-and-exit": "Push & Close",
+  exit: "Close",
+  "drop-and-exit": "Drop & Close",
 };
 
 export function PushAndExitButton(_: PromptEditorActionProps) {
@@ -164,18 +164,18 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
         };
       case "push-and-exit":
         return {
-          verb: "Push & Exit",
+          verb: "Push & Close",
           run: () => fetchEndpoint(startPushAndExit, { id: convId }),
         };
       case "exit":
         return {
-          verb: "Exit",
+          verb: "Close",
           successToast: "Conversation closed",
           run: () => fetchEndpoint(exitConversation, { id: convId }),
         };
       case "drop-and-exit":
         return {
-          verb: "Drop & Exit",
+          verb: "Drop & Close",
           successToast: "Task dropped and conversation closed",
           run: async () => {
             await fetchEndpoint(dropAndExit, { id: convId });
