@@ -1,9 +1,10 @@
-// @hash c6db4b9fe7fd
+// @hash 21a1ede5952c
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.pages.page-tree:backlinks"
+    "apps.pages.page-tree:backlinks",
+    "apps.story.pages-integration:story"
   ]
 }

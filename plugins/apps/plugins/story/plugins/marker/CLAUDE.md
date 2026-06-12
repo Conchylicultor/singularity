@@ -15,7 +15,7 @@
   - Exports: Values: `getStoryMark`, `setStoryMark`, `storiesResource`, `storyMark`
   - Routes: `PUT /api/stories/:pageId`, `DELETE /api/stories/:pageId`
 - Cross-plugin:
-  - Imported by: `apps/story/shell`
+  - Imported by: `apps/story/pages-integration`, `apps/story/shell`
 - Shared:
   - Exports: Types: `StoryMark`, `StoryMarksPayload`; Values: `clearStoryMark`, `setStoryMark`, `storiesResource`, `StoryMarkSchema`, `StoryMarksPayloadSchema`
 

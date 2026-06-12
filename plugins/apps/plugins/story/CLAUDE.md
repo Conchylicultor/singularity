@@ -9,6 +9,7 @@
   - **`content`** [1 sub-plugin] — Story content widgets: per-block-type Story.Content renderers.
   - **`generation`** — Format-agnostic generated-content substrate: useGeneratedUnits() generates + persists per-unit text keyed by (pageId, kind, unitId) over live-state. No UI. Format-agnostic generated-content substrate: LLM-generate text and persist it keyed by (pageId, kind, unitId) with per-unit input-hash + status, pushed over live-state.
   - **`marker`** — Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.
+  - **`pages-integration`** — Pages integration for Story: 'Upgrade to story' / 'Remove story' row action plus an embedded story section (renderer picker, live preview, Open in Story Builder).
   - **`render`** — Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
   - **`renderers`** [2 sub-plugins] — Story renderer lenses: each contributes a Story.Renderer view over the StoryNode tree.
   - **`shell`** — App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).

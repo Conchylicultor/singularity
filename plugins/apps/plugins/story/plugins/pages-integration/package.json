@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-pages-integration",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Pages integration for Story: 'Upgrade to story' / 'Remove story' row action and an embedded story section (renderer picker, live preview, Open in Story Builder)."
+}
