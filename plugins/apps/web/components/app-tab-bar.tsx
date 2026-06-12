@@ -12,6 +12,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TruncatingText } from "@plugins/primitives/plugins/truncating-text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
+import {
+  SortableList,
+  SortableItem,
+} from "@plugins/primitives/plugins/sortable-list/web";
 import { Apps } from "../slots";
 import { useTabs } from "../internal/use-tabs";
 
@@ -32,7 +36,8 @@ const CHIP_GAP_PX = 2;
  * a non-scrolling sibling of the strip so it's always reachable.
  */
 export function AppTabBar() {
-  const { tabs, focusedTabId, focusTab, closeTab, openTab, titles } = useTabs();
+  const { tabs, focusedTabId, focusTab, closeTab, openTab, moveTab, titles } =
+    useTabs();
   const apps = Apps.App.useContributions();
 
   const { containerRef, measureRef, visibleCount } = useResponsiveOverflow({
@@ -56,23 +61,39 @@ export function AppTabBar() {
         ref={containerRef}
         className="flex min-w-0 flex-1 items-center gap-2xs overflow-x-auto [&::-webkit-scrollbar]:hidden"
       >
-        {resolved.map(({ tab, app, label }) => {
-          const active = tab.tabId === focusedTabId;
-          return (
-            <TabChip
-              key={tab.tabId}
-              appId={tab.appId}
-              icon={app.icon}
-              label={label}
-              active={active}
-              // Focused tab always keeps its label; inactive tabs go icon-only
-              // once the strip is crowded.
-              collapsed={collapsed && !active}
-              onActivate={() => focusTab(tab.tabId)}
-              onClose={() => closeTab(tab.tabId)}
-            />
-          );
-        })}
+        <SortableList
+          items={resolved.map(({ tab }) => tab.tabId)}
+          onMove={(activeId, overId) => moveTab(activeId, overId)}
+          orientation="horizontal"
+          disabled={tabs.length < 2}
+        >
+          {resolved.map(({ tab, app, label }) => {
+            const active = tab.tabId === focusedTabId;
+            return (
+              // Whole-chip drag: the sortable-list PointerSensor's 4px activation
+              // distance lets a click still activate / close the tab.
+              <SortableItem
+                key={tab.tabId}
+                id={tab.tabId}
+                className={(s) => cn("min-w-0", s.isDragging && "opacity-50")}
+              >
+                {() => (
+                  <TabChip
+                    appId={tab.appId}
+                    icon={app.icon}
+                    label={label}
+                    active={active}
+                    // Focused tab always keeps its label; inactive tabs go
+                    // icon-only once the strip is crowded.
+                    collapsed={collapsed && !active}
+                    onActivate={() => focusTab(tab.tabId)}
+                    onClose={() => closeTab(tab.tabId)}
+                  />
+                )}
+              </SortableItem>
+            );
+          })}
+        </SortableList>
       </div>
       <IconButton
         icon={MdAdd}

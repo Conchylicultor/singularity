@@ -52,6 +52,8 @@ export interface TabsApi {
   navigate(url: string): void;
   focusTab(tabId: string): void;
   closeTab(tabId: string): void;
+  /** Reorder: move the tab `activeId` to the position of `overId`. */
+  moveTab(activeId: string, overId: string): void;
 }
 
 const TabsContext = createContext<TabsApi | null>(null);
@@ -356,9 +358,29 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [activate, persist, setTabTitle],
   );
 
+  // Reorder the open-tab set: move `activeId` to `overId`'s position. Pure array
+  // reordering — focus and store liveness are untouched (the focused tabId keeps
+  // its identity, just changes index). Persists the new order via the unchanged
+  // sessionStorage serializer (array order is the source of truth).
+  const moveTab = useCallback(
+    (activeId: string, overId: string) => {
+      const prev = tabsRef.current;
+      const from = prev.findIndex((t) => t.tabId === activeId);
+      const to = prev.findIndex((t) => t.tabId === overId);
+      if (from < 0 || to < 0 || from === to) return;
+      const next = [...prev];
+      const [moved] = next.splice(from, 1);
+      next.splice(to, 0, moved!);
+      tabsRef.current = next;
+      setTabs(next);
+      persist();
+    },
+    [persist],
+  );
+
   const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab }),
-    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab],
+    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab }),
+    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab],
   );
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;
