@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import type { UiContextMeta } from "../../core";
+import { serializeUiContext, type UiContextMeta } from "../../core";
 import { UiContextChip } from "../components/ui-context-chip";
 
 type SerializedUiContextNode = {
@@ -54,6 +54,15 @@ export class UiContextNode extends DecoratorNode<ReactNode> {
 
   getMeta(): UiContextMeta {
     return this.__meta;
+  }
+
+  // Lexical's clipboard copy reads each node's text content for the
+  // `text/plain` MIME type. Without this, a DecoratorNode contributes the empty
+  // string, so copying a chip and pasting it elsewhere (e.g. the task-draft
+  // prompt) would drop it. Emitting the full `<ui-context…/>` tag lets any
+  // TextEditor reconstruct the chip via UI_CONTEXT_RE on paste.
+  getTextContent(): string {
+    return serializeUiContext(this.__meta);
   }
 
   decorate(): ReactNode {
