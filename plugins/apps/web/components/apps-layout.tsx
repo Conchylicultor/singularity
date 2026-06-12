@@ -1,12 +1,14 @@
-import { useEffect, useMemo } from "react";
+import { useContext, useEffect, useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { TooltipProvider } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   PaneSurfaceProvider,
+  PaneBasePathContext,
   setBasePath,
   useSyncPaneRegistry,
   useRoute,
+  useIndexMatch,
   usePaneTitle,
 } from "@plugins/primitives/plugins/pane/web";
 import type { RailFramingProps } from "../../core";
@@ -104,6 +106,31 @@ function TabTitleReporter({ tabId }: { tabId: string }) {
       pane={leaf.pane}
       params={leaf.fullParams}
       input={leaf.input}
+    />
+  ) : (
+    <IndexTitleReporter key="index" tabId={tabId} />
+  );
+}
+
+/**
+ * Empty-route fallback: resolves the tab app's index pane (the `appPath`-scoped
+ * pane with an empty segment) via {@link useIndexMatch} and publishes its title
+ * through the same {@link LeafTitleReporter}/`usePaneTitle` path. This is what
+ * lets two same-app index tabs show their index pane's title instead of the bare
+ * app name. The base path is read from `PaneBasePathContext`, which this tab's
+ * `PaneSurfaceProvider` already provides. Index panes without a title (e.g.
+ * `chrome: false`) clear it, so the tab bar still falls back to the app name.
+ */
+function IndexTitleReporter({ tabId }: { tabId: string }) {
+  const basePath = useContext(PaneBasePathContext);
+  const entry = useIndexMatch(basePath)?.panes[0] ?? null;
+  return entry ? (
+    <LeafTitleReporter
+      key={entry.pane.id}
+      tabId={tabId}
+      pane={entry.pane}
+      params={entry.fullParams}
+      input={entry.input}
     />
   ) : (
     <TitleClear tabId={tabId} />
