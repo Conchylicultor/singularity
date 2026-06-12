@@ -9,7 +9,7 @@
 - Web:
   - Slots: `Apps.App`, `Apps.RailFraming`
   - Contributes: `Core.Root` → `AppsLayout`
-  - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
+  - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
   - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`, `useTabs`
 - Cross-plugin:
   - Slot contributors: `app-rail-framing`, `shell`

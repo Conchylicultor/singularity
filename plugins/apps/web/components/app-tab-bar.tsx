@@ -1,7 +1,7 @@
 import { MdAdd } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { TruncatingText } from "@plugins/primitives/plugins/truncating-text/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Apps } from "../slots";
 import { useTabs } from "../internal/use-tabs";
@@ -42,11 +42,9 @@ export function AppTabBar() {
               active && "bg-sidebar-accent text-sidebar-accent-foreground",
             )}
           >
-            <Stack direction="row" align="center" gap="xs">
+            <Stack direction="row" align="center" gap="xs" className="min-w-0">
               <Icon className="size-4 shrink-0" />
-              <Text variant="label" className="truncate">
-                {label}
-              </Text>
+              <TruncatingText className="text-label">{label}</TruncatingText>
             </Stack>
           </button>
         );
