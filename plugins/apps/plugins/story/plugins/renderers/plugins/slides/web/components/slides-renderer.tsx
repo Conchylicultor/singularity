@@ -3,6 +3,8 @@ import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Card } from "@plugins/primitives/plugins/card/web";
 import { StoryContentTree } from "./story-content-tree";
 
 /**
@@ -56,11 +58,11 @@ export function SlidesRenderer({ story }: { story: StoryNode[]; activeRendererId
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="aspect-[16/9] overflow-auto rounded-lg border border-border bg-card p-8">
+    <Stack gap="sm">
+      <Card className="aspect-[16/9] overflow-auto rounded-lg p-xl">
         <StoryContentTree nodes={current} />
-      </div>
-      <div className="flex items-center justify-center gap-3">
+      </Card>
+      <Stack direction="row" gap="sm" align="center" justify="center">
         <IconButton
           icon={MdChevronLeft}
           label="Previous slide"
@@ -76,7 +78,7 @@ export function SlidesRenderer({ story }: { story: StoryNode[]; activeRendererId
           onClick={() => setIndex(safeIndex + 1)}
           disabled={safeIndex >= slides.length - 1}
         />
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }
