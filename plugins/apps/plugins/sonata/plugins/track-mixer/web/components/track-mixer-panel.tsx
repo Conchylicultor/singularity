@@ -58,7 +58,7 @@ function ColorSwatch({
   return (
     <InlinePopover
       tooltip="Track color"
-      contentClassName="w-auto p-2"
+      contentClassName="w-auto p-sm"
       trigger={
         <button
           type="button"
@@ -133,12 +133,12 @@ function InstrumentPicker({
       open={open}
       onOpenChange={setOpen}
       tooltip="Track instrument"
-      contentClassName="w-60 p-2"
+      contentClassName="w-60 p-sm"
       trigger={
         <button
           type="button"
           aria-label="Track instrument"
-          className="flex min-w-0 items-center gap-1 rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
+          className="flex min-w-0 items-center gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
         >
           {ResolvedIcon ? <ResolvedIcon className="size-3 shrink-0" /> : null}
           <span className="truncate">{resolvedLabel}</span>
@@ -153,6 +153,7 @@ function InstrumentPicker({
         onChange={(e) => setQuery(e.target.value)}
       />
 
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the scroll list below the search input (no named margin utility) */}
       <div className="mt-2 max-h-64 overflow-y-auto">
         {/* Reset-to-auto: clears the override so resolution falls back to the
             track's GM program / the default timbre. Active when no override. */}
@@ -171,8 +172,9 @@ function InstrumentPicker({
         </Row>
 
         {groups.map(({ group, options: groupOptions }) => (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt separates each instrument group header from the prior group (no named margin utility)
           <div key={group} className="mt-1">
-            <div className="px-2 py-1 text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
+            <div className="px-sm py-xs text-3xs font-semibold uppercase tracking-wide text-muted-foreground">
               {group}
             </div>
             {groupOptions.map((o) => {
@@ -231,14 +233,14 @@ function TrackRow({
     customized,
   } = entry;
   return (
-    <div className="flex items-center gap-2 py-1">
+    <div className="flex items-center gap-sm py-xs">
       <ColorSwatch songId={songId} trackId={trackId} color={color} />
 
       <div className={cn("min-w-0 flex-1", hidden && "opacity-50")}>
         <Text as="div" variant="caption" className="truncate font-medium text-foreground">
           {name}
         </Text>
-        <div className="flex items-center gap-1 text-3xs text-muted-foreground">
+        <div className="flex items-center gap-xs text-3xs text-muted-foreground">
           <InstrumentPicker
             songId={songId}
             trackId={trackId}
@@ -303,7 +305,7 @@ export function TrackMixerPanel() {
   const anyCustomized = entries.some((e) => e.customized);
 
   return (
-    <Card className="rounded-lg p-4">
+    <Card className="rounded-lg p-lg">
       <Collapsible defaultOpen>
         <SectionHeaderRow
           variant="eyebrow"
@@ -320,6 +322,7 @@ export function TrackMixerPanel() {
           Tracks
         </SectionHeaderRow>
 
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt separates the track list from the section header above (no named margin utility) */}
         <CollapsibleContent className="mt-2 divide-y divide-border/60">
           {entries.map((entry) => (
             <TrackRow

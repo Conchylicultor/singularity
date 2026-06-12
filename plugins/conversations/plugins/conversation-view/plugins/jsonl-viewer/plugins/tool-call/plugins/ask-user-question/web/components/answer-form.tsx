@@ -2,6 +2,7 @@ import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
 import { Indicator, type Question } from "./ask-user-question-tool-view";
@@ -164,21 +165,26 @@ export function AnswerForm({
   };
 
   return (
-    <div className="mt-2 space-y-3" onKeyDown={handleKeyDown}>
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the answer form from the question card above (no named margin utility)
+    <Stack gap="md" className="mt-2" onKeyDown={handleKeyDown}>
       {questions.map((q, qi) => {
         const answer = answers[qi]!;
         const otherActive = isOtherActive(answer, q);
         return (
           <div key={qi}>
             {questions.length > 1 && (
-              <p className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground">
+              <p
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the per-question header from its question text (no named margin utility)
+                className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground"
+              >
                 {q.header}
               </p>
             )}
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the question text from its option list (no named margin utility) */}
             <Text as="p" variant="caption" className="mb-1.5 text-foreground">
               {q.question}
             </Text>
-            <div className="space-y-1">
+            <Stack gap="xs">
               {q.options.map((opt, oi) => {
                 const isSelected = isOptionActive(answer, q, opt.label);
                 return (
@@ -188,10 +194,10 @@ export function AnswerForm({
                     onClick={() =>
                       toggleOption(qi, opt.label, q.multiSelect)
                     }
-                    className={`flex w-full gap-2 text-left transition-colors ${
+                    className={`flex w-full gap-sm text-left transition-colors ${
                       isSelected
-                        ? "rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2"
-                        : "rounded-md py-1 pl-0.5 hover:bg-muted/50"
+                        ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
+                        : "rounded-md py-xs pl-2xs hover:bg-muted/50"
                     }`}
                   >
                     <Indicator selected={isSelected} multi={q.multiSelect} />
@@ -203,7 +209,10 @@ export function AnswerForm({
                         {opt.description}
                       </Text>
                       {opt.preview && (
-                        <pre className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-1.5 font-mono text-3xs text-muted-foreground">
+                        <pre
+                          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
+                          className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
+                        >
                           {opt.preview}
                         </pre>
                       )}
@@ -212,10 +221,10 @@ export function AnswerForm({
                 );
               })}
               <div
-                className={`flex items-center gap-2 ${
+                className={`flex items-center gap-sm ${
                   otherActive
-                    ? "rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2"
-                    : "pl-0.5"
+                    ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
+                    : "pl-2xs"
                 }`}
               >
                 <Indicator selected={otherActive} multi={q.multiSelect} />
@@ -229,7 +238,7 @@ export function AnswerForm({
                   className="text-caption h-7 flex-1"
                 />
               </div>
-            </div>
+            </Stack>
           </div>
         );
       })}
@@ -242,6 +251,6 @@ export function AnswerForm({
           {m.isPending ? "Submitting…" : "Submit"}
         </Button>
       </div>
-    </div>
+    </Stack>
   );
 }

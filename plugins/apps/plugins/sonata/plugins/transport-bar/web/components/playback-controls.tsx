@@ -10,6 +10,7 @@ import {
 } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   useCursorSelector,
   useSonata,
@@ -187,7 +188,7 @@ export function PlaybackControls() {
   );
 
   return (
-    <div className="flex items-center gap-2">
+    <Stack direction="row" gap="sm" align="center">
       <SeekButton
         direction={-1}
         icon={MdFastRewind}
@@ -221,7 +222,7 @@ export function PlaybackControls() {
         <Text
           as="span"
           variant="caption"
-          className="min-w-[3rem] border-x border-border px-1 text-center font-medium tabular-nums"
+          className="min-w-[3rem] border-x border-border px-xs text-center font-medium tabular-nums"
         >
           {asPercent(tempoScale)}
         </Text>
@@ -244,6 +245,6 @@ export function PlaybackControls() {
       >
         {bpm == null ? "— bpm" : `${Math.round(bpm)} bpm`}
       </Text>
-    </div>
+    </Stack>
   );
 }

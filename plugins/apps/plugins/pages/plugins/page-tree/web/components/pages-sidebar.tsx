@@ -82,7 +82,7 @@ export function PagesSidebar() {
 
   return (
     <SidebarPaneSection title="Pages" icon={MdDescription}>
-      <div className="min-h-0 flex-1 overflow-y-auto py-1">
+      <div className="min-h-0 flex-1 overflow-y-auto py-xs">
         {result.pending ? (
           <Loading variant="rows" />
         ) : (

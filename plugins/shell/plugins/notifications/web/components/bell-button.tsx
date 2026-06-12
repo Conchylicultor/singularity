@@ -56,7 +56,7 @@ function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (i
       }
     >
       <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-1.5 min-w-0">
+        <div className="flex items-center gap-xs min-w-0">
           <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
             {n.title}
           </Text>

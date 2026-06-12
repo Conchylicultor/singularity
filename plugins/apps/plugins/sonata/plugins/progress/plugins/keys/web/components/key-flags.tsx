@@ -59,8 +59,8 @@ export function KeyFlags({
             <div className={`${railBandClass} left-0 w-0.5 bg-foreground/60`} />
             {/* Small neutral key chip — names the key without a colored band,
                 floating in the headroom just above the rail. */}
-            {/* eslint-disable-next-line text/no-adhoc-typography -- tight key chip: line-height must stay 1 so the marker stays slim, matching the bands below */}
-            <span className="absolute bottom-1/2 left-1 mb-2 whitespace-nowrap rounded-sm bg-muted px-1 text-3xs font-medium leading-none text-foreground/80">
+            {/* eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- tight key chip: line-height must stay 1 so the marker stays slim, matching the bands below; mb-2 lifts the chip into the headroom above the rail (no named margin utility) */}
+            <span className="absolute bottom-1/2 left-1 mb-2 whitespace-nowrap rounded-sm bg-muted px-xs text-3xs font-medium leading-none text-foreground/80">
               {keyLabel(e.key)}
             </span>
           </div>

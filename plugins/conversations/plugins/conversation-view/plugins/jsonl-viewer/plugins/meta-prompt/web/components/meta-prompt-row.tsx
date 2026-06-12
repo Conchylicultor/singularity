@@ -15,7 +15,7 @@ export function MetaPromptRow({ event }: { event: JsonlEvent }) {
     <CollapsibleCard
       className="border-dashed"
       label={
-        <span className="flex items-center gap-1.5">
+        <span className="flex items-center gap-xs">
           <MdReplay className="size-3.5" />
           Resumed by harness{e.source ? ` · ${e.source}` : ""}
         </span>

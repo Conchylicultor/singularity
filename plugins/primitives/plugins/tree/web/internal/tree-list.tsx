@@ -293,10 +293,13 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onDragCancel={() => setActiveId(null)}
     >
       <TreeListProvider value={ctxValue}>
-        <div className="flex flex-col gap-0.5">
+        <div className="flex flex-col gap-2xs">
           {hasToolbar && (
-            <div className="sticky top-0 z-raised bg-background mb-1 flex items-center gap-1">
-              <div className="flex items-center gap-1">
+            <div
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
+              className="sticky top-0 z-raised bg-background mb-1 flex items-center gap-xs"
+            >
+              <div className="flex items-center gap-xs">
                 {showSearchInput && (
                   <SearchInput
                     value={searchQuery}
@@ -313,7 +316,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
                 )}
                 {toolbar.start}
               </div>
-              <div className="ml-auto flex items-center gap-1">
+              <div className="ml-auto flex items-center gap-xs">
                 {showExpandAll && (
                   <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
                 )}
@@ -346,6 +349,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
               variant="ghost"
               size="xs"
               onClick={() => void createAtRoot(null)}
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
               className="text-muted-foreground mt-1 w-fit"
             >
               <MdAdd className="size-4" />
@@ -356,7 +360,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       </TreeListProvider>
       <DragOverlay dropAnimation={null}>
         {activeOverlay !== null ? (
-          <Text as="div" variant="body" className="bg-background/90 border-accent rounded-md border px-2 py-1 shadow">
+          <Text as="div" variant="body" className="bg-background/90 border-accent rounded-md border px-sm py-xs shadow">
             {activeOverlay}
           </Text>
         ) : null}

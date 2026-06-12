@@ -7,6 +7,7 @@ import {
   RadioIndicator,
 } from "@plugins/primitives/plugins/selection-indicator/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -218,15 +219,17 @@ export function Indicator({
   // stay a square / circle under every Shape preset. The selection-indicator
   // primitive owns those fixed shapes, so this just picks the right one.
   return multi ? (
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt nudges the indicator to align with the first line of multi-line label text (no named margin utility)
     <CheckboxIndicator checked={selected} className="mt-0.5" />
   ) : (
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt nudges the indicator to align with the first line of multi-line label text (no named margin utility)
     <RadioIndicator checked={selected} className="mt-0.5" />
   );
 }
 
 function summaryFor(questions: Question[], firstAnswerParts: string[]) {
   return (
-    <span className="flex min-w-0 items-center gap-1.5">
+    <span className="flex min-w-0 items-center gap-xs">
       {questions.length > 0 ? (
         questions.map((q, i) => (
           <Badge key={i} size="sm" colorClass="bg-info/15 text-info" className="shrink-0 font-mono">
@@ -352,7 +355,8 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
       defaultOpen
       isError={showAsError}
     >
-      <div className="mt-2 space-y-3">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the answered view from the question card above (no named margin utility) */}
+      <Stack gap="md" className="mt-2">
         {questions.map((q, qi) => {
           const { selected, otherText, notes } = questionSelections[qi] ?? {
             selected: new Set<string>(),
@@ -364,20 +368,24 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
           return (
             <div key={qi}>
               {questions.length > 1 && (
-                <p className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground">
+                <p
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the per-question header from its question text (no named margin utility)
+                  className="mb-1 text-3xs font-medium tracking-wider text-muted-foreground"
+                >
                   {q.header}
                 </p>
               )}
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the question text from its option list (no named margin utility) */}
               <Text as="p" variant="caption" className="mb-1.5 text-foreground">
                 {q.question}
               </Text>
-              <div className="space-y-1">
+              <Stack gap="xs">
                 {q.options.map((opt, oi) => {
                   const isSelected = selected.has(opt.label);
                   return (
                     <div
                       key={oi}
-                      className={`flex gap-2 ${isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2" : hasAnswer ? "pl-0.5 opacity-60" : "pl-0.5"}`}
+                      className={`flex gap-sm ${isSelected ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm" : hasAnswer ? "pl-2xs opacity-60" : "pl-2xs"}`}
                     >
                       <Indicator selected={isSelected} multi={q.multiSelect} />
                       <div className="min-w-0 flex-1">
@@ -388,7 +396,10 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                           {opt.description}
                         </Text>
                         {opt.preview && (
-                          <pre className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-1.5 font-mono text-3xs text-muted-foreground">
+                          <pre
+                            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
+                            className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
+                          >
                             {opt.preview}
                           </pre>
                         )}
@@ -397,7 +408,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                   );
                 })}
                 {otherText != null && (
-                  <div className="flex gap-2 rounded-md border-l-2 border-primary bg-primary/5 py-1 pl-2">
+                  <div className="flex gap-sm rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm">
                     <Indicator selected multi={q.multiSelect} />
                     <Text as="p" variant="caption" className="italic text-foreground">
                       {otherText}
@@ -405,7 +416,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                   </div>
                 )}
                 {notes != null && (
-                  <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-1 pl-2">
+                  <div className="rounded-md border-l-2 border-muted-foreground/30 bg-muted/40 py-xs pl-sm">
                     <p className="text-3xs font-medium tracking-wider text-muted-foreground">
                       Note
                     </p>
@@ -418,7 +429,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
                     </Text>
                   </div>
                 )}
-              </div>
+              </Stack>
             </div>
           );
         })}
@@ -427,7 +438,7 @@ export function AskUserQuestionToolView({ event }: ToolRendererProps) {
             {event.result.content}
           </Text>
         )}
-      </div>
+      </Stack>
     </ToolCallCard>
   );
 }

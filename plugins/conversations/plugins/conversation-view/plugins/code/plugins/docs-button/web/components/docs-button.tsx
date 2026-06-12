@@ -27,7 +27,7 @@ export function DocsButton() {
         title="Design docs"
         aria-label="Design docs"
         disabled
-        className="gap-1.5"
+        className="gap-xs"
       >
         <MdArticle className="size-4" />
       </Button>
@@ -74,7 +74,7 @@ function DocsButtonReady({
       aria-pressed={isOpen}
       disabled={disabled}
       onClick={onToggle}
-      className="gap-1.5"
+      className="gap-xs"
     >
       <MdArticle className="size-4" />
       {count !== null && (

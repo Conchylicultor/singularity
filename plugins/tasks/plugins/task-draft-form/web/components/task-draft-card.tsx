@@ -69,9 +69,9 @@ function ContextRow({
   const showScreenshot = !!onToggleScreenshot;
   if (!showUrl && !showScreenshot) return null;
   return (
-    <div className="flex flex-wrap items-center gap-x-3 gap-y-1 pt-1.5">
+    <div className="flex flex-wrap items-center gap-x-md gap-y-xs pt-xs">
       {showUrl && (
-        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-1.5">
+        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-xs">
           <input
             type="checkbox"
             className="h-3 w-3 cursor-pointer"
@@ -83,7 +83,7 @@ function ContextRow({
         </Text>
       )}
       {showScreenshot && (
-        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-1.5">
+        <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-xs">
           <input
             type="checkbox"
             className="h-3 w-3 cursor-pointer"
@@ -167,7 +167,7 @@ export function TaskDraftCard({
       {...attributes}
       {...listeners}
       className={cn(
-        "border-border bg-background group relative flex flex-col rounded-md border p-2 cursor-grab active:cursor-grabbing",
+        "border-border bg-background group relative flex flex-col rounded-md border p-sm cursor-grab active:cursor-grabbing",
         isDragging && "opacity-50 shadow-lg",
       )}
     >
@@ -187,10 +187,10 @@ export function TaskDraftCard({
         />
       </div>
       {isHead && <HeadToolbar insertText={insertText} />}
-      <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
-        <div className="flex flex-wrap items-center gap-3">
+      <div className="flex flex-wrap items-center justify-between gap-sm pt-xs">
+        <div className="flex flex-wrap items-center gap-md">
           <ModelChip value={model} onChange={onModelChange} disabled={disabled} />
-          <Text as="div" variant="caption" tone="muted" className="flex items-center gap-1.5">
+          <Text as="div" variant="caption" tone="muted" className="flex items-center gap-xs">
             <span>Preprompt</span>
             <PrepromptSelect
               value={prepromptId}
@@ -240,8 +240,8 @@ export function TaskDraftCard({
           />
         )}
       {showStandalone && onStandaloneChange && (
-        <div className="px-2 py-1.5">
-          <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-1.5">
+        <div className="px-sm py-xs">
+          <Text as="label" variant="caption" tone="muted" className="flex cursor-pointer items-center gap-xs">
             <input
               type="checkbox"
               className="h-3 w-3 cursor-pointer"

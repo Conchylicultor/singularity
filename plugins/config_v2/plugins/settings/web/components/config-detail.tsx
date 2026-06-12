@@ -82,7 +82,7 @@ function ConfigDetailInner({
   });
 
   return (
-    <div className="flex flex-col gap-1 p-3">
+    <div className="flex flex-col gap-xs p-md">
       <ScopeTabs storePath={registration.storePath} scopeId={scopeId} onSelect={setScopeId} />
       {gated.pending ? (
         <Loading />
@@ -213,7 +213,8 @@ function ConfigDetailBody({
 
   return (
     <>
-      <div className="mb-1 flex items-center justify-end gap-2">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the action toolbar from the fields below (no named margin utility) */}
+      <div className="mb-1 flex items-center justify-end gap-sm">
         {scopeId && !showRaw && (
           <Button
             variant="ghost"
@@ -226,7 +227,7 @@ function ConfigDetailBody({
         )}
         {hasAnyModified && !showRaw && (
           confirmReset ? (
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-xs">
               <Text variant="caption" tone="muted">Reset all fields?</Text>
               <Button
                 variant="ghost"
@@ -271,11 +272,12 @@ function ConfigDetailBody({
           {conflictEntry && (
             conflictEntry.kind === "invalid" ? (
               <>
-                <Text as="div" variant="body" className="mb-2 flex flex-col gap-1.5 rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-destructive">
-                  <div className="flex items-center gap-2">
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the invalid banner from the fields below (no named margin utility) */}
+                <Text as="div" variant="body" className="mb-2 flex flex-col gap-xs rounded-md border border-destructive/30 bg-destructive/10 px-md py-sm text-destructive">
+                  <div className="flex items-center gap-sm">
                     <MdWarning className="size-4 shrink-0" />
                     <span className="flex-1">Stored config is invalid for the current schema</span>
-                    <div className="flex shrink-0 gap-1.5">
+                    <div className="flex shrink-0 gap-xs">
                       <Button
                         variant="ghost"
                         size="xs"
@@ -304,14 +306,17 @@ function ConfigDetailBody({
                     </div>
                   </div>
                   {conflictEntry.issues && conflictEntry.issues.length > 0 && (
-                    <div className="ml-6 flex flex-col gap-2">
+                    <div
+                      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml indents the issue list under the banner heading (no named margin utility)
+                      className="ml-6 flex flex-col gap-sm"
+                    >
                       {conflictEntry.issues.map((issue, i) => {
                         const value = drillPath(conflictEntry.overrideValues, issue.path);
                         const label = issue.path.length > 0 ? issue.path.join(".") : "(root)";
                         return (
-                          <div key={i} className="flex flex-col gap-1">
+                          <div key={i} className="flex flex-col gap-xs">
                             <Text as="div" variant="caption" className="text-destructive/90">
-                              <code className="rounded-sm bg-destructive/15 px-1 font-medium">{label}</code>
+                              <code className="rounded-sm bg-destructive/15 px-xs font-medium">{label}</code>
                               {" — "}
                               {issue.message}
                             </Text>
@@ -329,7 +334,8 @@ function ConfigDetailBody({
                 {showDiff && <InvalidDiff storePath={registration.storePath} />}
               </>
             ) : isSoftConflict ? (
-              <Text as="div" variant="body" className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the soft-conflict banner from the fields below (no named margin utility)
+              <Text as="div" variant="body" className="mb-2 flex items-center justify-between rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
                 <span>Defaults updated — no conflicts</span>
                 <Button
                   variant="ghost"
@@ -342,7 +348,8 @@ function ConfigDetailBody({
               </Text>
             ) : (
               <>
-                <Text as="div" variant="body" className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the hash-conflict banner from the fields below (no named margin utility) */}
+                <Text as="div" variant="body" className="mb-2 flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-md py-sm text-warning">
                   <MdWarning className="size-4 shrink-0" />
                   <span className="flex-1">
                     {canMerge && trueConflictKeys!.length > 0
@@ -351,7 +358,7 @@ function ConfigDetailBody({
                         ? "Upstream defaults changed — ready to merge cleanly"
                         : "Upstream defaults changed"}
                   </span>
-                  <div className="flex shrink-0 gap-1.5">
+                  <div className="flex shrink-0 gap-xs">
                     <Button
                       variant="ghost"
                       size="xs"
@@ -428,7 +435,7 @@ function RawFileView({ storePath, scopeId }: { storePath: string; scopeId: strin
   const showResolved = data.origin !== null && data.origin !== data.gitOrigin;
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-md">
       <RawSection label="User override" path={data.overridePath} code={data.override} />
       <RawSection label="Git override" path={data.gitOverridePath} code={data.gitOverride} />
       <RawSection label="Origin (defaults)" path={data.gitOriginPath} code={data.gitOrigin} />
@@ -442,7 +449,8 @@ function RawFileView({ storePath, scopeId }: { storePath: string; scopeId: strin
 function RawSection({ label, path, code }: { label: string; path: string; code: string | null }) {
   return (
     <section>
-      <Text as="div" variant="caption" tone="muted" className="mb-1 flex items-baseline gap-2">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the section label from the code block below (no named margin utility) */}
+      <Text as="div" variant="caption" tone="muted" className="mb-1 flex items-baseline gap-sm">
         <span className="shrink-0 whitespace-nowrap font-medium">{label}</span>
         <span className="min-w-0 truncate font-mono opacity-70" title={path}>{path}</span>
       </Text>

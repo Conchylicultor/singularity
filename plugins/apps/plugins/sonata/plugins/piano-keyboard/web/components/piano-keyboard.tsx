@@ -136,7 +136,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
         if (!text) return null;
         return (
           <span
-            // eslint-disable-next-line text/no-adhoc-typography, type-scale-tokens/no-arbitrary-font-size -- 9px/7px labels tuned to fit a narrow key cap; below the 10px token floor, tight leading centers them on the key
+            // eslint-disable-next-line text/no-adhoc-typography, type-scale-tokens/no-arbitrary-font-size, spacing/no-adhoc-spacing -- 9px/7px labels tuned to fit a narrow key cap; below the 10px token floor, tight leading centers them on the key; mb tunes the label's vertical seat on the cap (no named margin utility)
             className={`select-none leading-none ${k.isBlack ? "mb-0.5 text-[7px]" : "mb-1 text-[9px]"} ${lit ? "text-primary-foreground" : ""}`}
             style={
               lit

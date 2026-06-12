@@ -69,13 +69,8 @@ zero consumer changes — exactly the segmented-progress-bar collection model.
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots: `DataViewSlots.View`
-<<<<<<< .merge_file_l4kEPf
-  - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
-  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
-=======
   - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
-  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
->>>>>>> .merge_file_1hBZjp
+  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
 - Cross-plugin:
   - Slot contributors: `filter`, `gallery`, `table`, `tree`
   - Imported by: `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/data-view/tree`
