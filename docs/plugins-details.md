@@ -2059,6 +2059,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
+            - **`class-token-walk-in-sync`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
             - **`css-vars-single-owner`**

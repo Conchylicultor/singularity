@@ -42,7 +42,14 @@ async function discoverFiles(root: string): Promise<string[]> {
   const stdout = (await new Response(proc.stdout).text()).trim();
   await proc.exited;
   if (stdout === "") return [];
-  return stdout.split("\n").filter((l) => l.length > 0).sort();
+  // The shared walk only ever lives in a lint RULE file (`<plugin>/lint/*.ts`).
+  // Restrict to those so this check's OWN file — which carries the sentinel text
+  // inside its `START`/`END` string constants, under `check/` — isn't discovered
+  // as a (spurious) participant.
+  return stdout
+    .split("\n")
+    .filter((l) => l.length > 0 && l.includes("/lint/"))
+    .sort();
 }
 
 /**
