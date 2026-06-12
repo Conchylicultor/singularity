@@ -52,7 +52,7 @@ function ResolveGuardInner({
   return (
     <FallbackChrome pane={pane} title="Not Found">
       <Placeholder tone="error">
-        This link refers to a resource that no longer exists.
+        This resource couldn't be found.
       </Placeholder>
     </FallbackChrome>
   );
