@@ -5,16 +5,56 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
+import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { convDocsPane, isDocFile } from "../panes";
 import { usePushedDocFiles } from "../use-pushed-doc-files";
 
 export function DocsButton() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
-  const { files } = useEditedFiles(convId);
+  const filesResult = useEditedFiles(convId);
   const pushedDocs = usePushedDocFiles(conversation?.attemptId ?? "");
   const { isOpen, toggle } = convDocsPane.useToggle({ convId }, { input: { convId } });
 
+  // While edited files are still loading, render a neutral disabled button (no
+  // count badge) rather than collapsing pending → an empty file list, which
+  // would flash a confidently-wrong count. The settled-data body — count math
+  // that uses hooks — lives in DocsButtonReady so all hooks here run first.
+  if (filesResult.pending) {
+    return (
+      <Button
+        variant="ghost"
+        title="Design docs"
+        aria-label="Design docs"
+        disabled
+        className="gap-1.5"
+      >
+        <MdArticle className="size-4" />
+      </Button>
+    );
+  }
+
+  return (
+    <DocsButtonReady
+      files={filesResult.data}
+      pushedDocs={pushedDocs}
+      isOpen={isOpen}
+      onToggle={toggle}
+    />
+  );
+}
+
+function DocsButtonReady({
+  files,
+  pushedDocs,
+  isOpen,
+  onToggle,
+}: {
+  files: EditedFile[];
+  pushedDocs: EditedFile[] | null;
+  isOpen: boolean;
+  onToggle: () => void;
+}) {
   const workingDocs = useMemo(() => files.filter((f) => isDocFile(f.path)), [files]);
 
   const count = useMemo(() => {
@@ -33,7 +73,7 @@ export function DocsButton() {
       aria-label="Design docs"
       aria-pressed={isOpen}
       disabled={disabled}
-      onClick={toggle}
+      onClick={onToggle}
       className="gap-1.5"
     >
       <MdArticle className="size-4" />

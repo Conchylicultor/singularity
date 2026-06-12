@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
@@ -28,9 +29,32 @@ function DocsPaneInner({
   convId: string;
   attemptId: string;
 }) {
-  const { files } = useEditedFiles(convId);
+  const filesResult = useEditedFiles(convId);
   const pushedDocs = usePushedDocFiles(attemptId);
 
+  // Gate edited files inside the pane chrome. The settled-data body owns the
+  // useMemo/useState/useEffect, so all hooks run unconditionally before this
+  // early return — and we never collapse pending into an empty file list.
+  if (filesResult.pending) {
+    return (
+      <PaneChrome pane={convDocsPane} title="Docs">
+        <Loading />
+      </PaneChrome>
+    );
+  }
+
+  return <DocsPaneBody files={filesResult.data} pushedDocs={pushedDocs} attemptId={attemptId} />;
+}
+
+function DocsPaneBody({
+  files,
+  pushedDocs,
+  attemptId,
+}: {
+  files: EditedFile[];
+  pushedDocs: EditedFile[] | null;
+  attemptId: string;
+}) {
   const docs = useMemo<DocFile[]>(() => {
     const byPath = new Map<string, DocFile>();
     // Pushed docs first (lower priority)

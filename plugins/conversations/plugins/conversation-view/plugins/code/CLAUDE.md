@@ -6,7 +6,7 @@
 
 - Description: Meta plugin hosting code-related contributions for a conversation (edited files, viewer, etc.). Tracks edited files in the conversation's worktree via the live-state primitive.
 - Web:
-  - Uses: `primitives/live-state.useResource`
+  - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
   - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Server:
   - Uses: `infra/paths.GIT`, `tasks-core.getConversation`

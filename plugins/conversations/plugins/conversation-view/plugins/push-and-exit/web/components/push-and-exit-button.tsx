@@ -84,7 +84,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const draftRef = useRef(draft);
   draftRef.current = draft;
 
-  const { files } = useEditedFiles(convId);
+  const filesResult = useEditedFiles(convId);
   const pushesResult = useResource(pushesResource);
   // Derived slice: only re-renders when this worktree's sibling-active answer
   // flips, not on every conversations push. `conversation` may be null on first
@@ -93,13 +93,15 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     conversation?.worktreePath ?? "",
     convId,
   );
-  // The exit-vs-drop decision reads TWO independently-arriving resources
-  // (pushes + the conversations slice). Gate on both together: while either is
-  // loading the button shows a neutral disabled "Exit" instead of falling
-  // through to the destructive "Drop & Exit" default.
+  // The exit-vs-drop decision reads THREE independently-arriving resources
+  // (pushes + the conversations sibling slice + edited-files). Gate on all
+  // together: while any is loading the button shows a neutral disabled "Exit"
+  // instead of falling through to the destructive "Drop & Exit" default — or
+  // flashing it before edited-files settle into "Push & Exit".
   const exitDecision = useCombinedResources({
     pushes: pushesResult,
     hasSibling: siblingResult,
+    files: filesResult,
   });
 
   const isNotRunning = live?.status === "gone" || live?.status === "done";
@@ -109,16 +111,16 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     if (isNotRunning) return { mode: "restore", provisional: false };
     if (!isDraftEmpty(draft)) return { mode: "send", provisional: false };
     if (live.status === "working") return { mode: "stop", provisional: false };
+    if (exitDecision.pending) return { mode: "exit", provisional: true };
+    const { pushes, hasSibling, files } = exitDecision.data;
     if (files.length > 0) {
       if (files.every((f) => f.path.startsWith("research/"))) return { mode: "go", provisional: false };
       return { mode: "push-and-exit", provisional: false };
     }
-    if (exitDecision.pending) return { mode: "exit", provisional: true };
-    const { pushes, hasSibling } = exitDecision.data;
     const hasPush = pushes.some((p) => p.attemptId === conversation.attemptId);
     if (hasPush) return { mode: "exit", provisional: false };
     return { mode: hasSibling ? "exit" : "drop-and-exit", provisional: false };
-  }, [isNotRunning, draft, files, exitDecision, conversation, live]);
+  }, [isNotRunning, draft, exitDecision, conversation, live]);
 
   if (!conversation || !live) return null;
 

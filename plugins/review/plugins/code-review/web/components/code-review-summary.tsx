@@ -20,7 +20,7 @@ export function CodeReviewSummary({
   source: unknown;
 }) {
   const conversation = useConversationById(conversationId);
-  const { files } = useEditedFiles(conversationId);
+  const filesResult = useEditedFiles(conversationId);
   const config = useConfig(reviewConfig);
   const safePaths = config.safePaths.map((p) => p.path);
   const carefulPaths = config.carefulPaths.map((p) => p.path);
@@ -30,6 +30,10 @@ export function CodeReviewSummary({
   // Gate: render nothing while pushes are loading so hasPastPushes is never
   // incorrectly false (which would hide the file-stats row on a past-push conversation).
   if (pushesQ.pending) return null;
+  // Same gate for edited-files: collapsing pending to an empty list would show a
+  // confidently-wrong "0 +0 −0" (and hide warnings) until the resource settles.
+  if (filesResult.pending) return null;
+  const files = filesResult.data;
 
   const hasPastPushes = conversation
     ? pushesQ.data.some((p) => p.attemptId === conversation.attemptId)

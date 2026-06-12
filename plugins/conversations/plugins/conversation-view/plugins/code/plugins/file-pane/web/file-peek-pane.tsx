@@ -40,8 +40,10 @@ function FilePeekPaneBody() {
       ? resolved.path
       : filePath;
 
-  const { files } = useEditedFiles(convId ?? "");
-  const status = files.find((f) => f.path === effectivePath)?.status ?? "clean";
+  const filesResult = useEditedFiles(convId ?? "");
+  const status = filesResult.pending
+    ? "clean"
+    : (filesResult.data.find((f) => f.path === effectivePath)?.status ?? "clean");
   const renderers = useFileRenderers({ path: effectivePath, status });
 
   if (resolved.status === "loading") {

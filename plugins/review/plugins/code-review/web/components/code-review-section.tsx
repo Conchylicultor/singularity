@@ -1,6 +1,7 @@
 import { useMemo } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Collapsible, CollapsibleTrigger, CollapsibleContent, CollapsibleChevron, useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { useConfig } from "@plugins/config_v2/web";
@@ -44,9 +45,14 @@ function WorkingTreeBody({
   conversationId: string;
   worktree: string;
 }) {
-  const { files } = useEditedFiles(conversationId);
+  const filesResult = useEditedFiles(conversationId);
   return (
-    <FileList files={files} worktree={worktree} base="main" emptyLabel="No edited files." />
+    <ResourceView
+      resource={filesResult}
+      fallback={<FileList files={null} worktree={worktree} base="main" emptyLabel="No edited files." />}
+    >
+      {(files) => <FileList files={files} worktree={worktree} base="main" emptyLabel="No edited files." />}
+    </ResourceView>
   );
 }
 
