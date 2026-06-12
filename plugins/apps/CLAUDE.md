@@ -9,8 +9,8 @@
 - Web:
   - Slots: `Apps.App`, `Apps.RailFraming`
   - Contributes: `Core.Root` → `AppsLayout`
-  - Uses: `primitives/pane.PaneBasePathContext`, `primitives/pane.setBasePath`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
-  - Exports: Types: `ActiveApp`, `RailFramingContribution`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`
+  - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
+  - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`, `useTabs`
 - Cross-plugin:
   - Slot contributors: `app-rail-framing`, `shell`
   - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `tasks/task-draft-form`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`

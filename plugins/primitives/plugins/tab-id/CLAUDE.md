@@ -11,7 +11,7 @@ and falls back to `"no-tab-id"` if storage is unavailable.
 
 - Description: Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
 - Cross-plugin:
-  - Imported by: `crashes`, `debug/crashes`, `notifications`, `primitives/live-state`
+  - Imported by: `apps`, `crashes`, `debug/crashes`, `notifications`, `primitives/live-state`
 - Web:
   - Exports: Values: `getTabId`
 

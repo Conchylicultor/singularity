@@ -1,11 +1,13 @@
 import {
   createContext,
+  createElement,
   useCallback,
   useContext,
   useMemo,
   useRef,
   useSyncExternalStore,
   type ComponentType,
+  type ReactNode,
 } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { Pane as PaneSlots } from "./slots";
@@ -337,43 +339,402 @@ export function buildRouteUrl(route: PaneSlot[]): string {
 
 // ---------------------------------------------------------------------------
 // Layout route store — the primary source of truth for what's on screen.
+//
+// All per-route mutable state (`currentRoute`, `routeListeners`,
+// `currentBasePath`, `prevResolvedByUuid`) plus the methods that read/write it
+// live inside a `PaneStore` instance built by `createPaneStore()`. The pane
+// *definitions* (`registry`, `paneObjectByInternal`, `indexInstanceIds`,
+// `nextInstanceId`) stay module-global — one shared set across all stores.
+//
+// A `live` flag gates the side-effects that mirror the route to the browser
+// (`window.history`, `popstate`/`shell:navigate` dispatch, `applyBasePath`).
+// A live store behaves exactly like the historical module globals; a
+// background store updates its in-memory route + notifies its own listeners
+// only. Phase 2 (per-tab tabs) creates one store per tab and flips `live` on
+// the focused one.
 // ---------------------------------------------------------------------------
 
-let currentRoute: PaneSlot[] = [];
-const routeListeners = new Set<() => void>();
+export interface PaneStore {
+  /** Current in-memory route (the authoritative source of truth). */
+  getRoute(): PaneSlot[];
+  /** Snapshot for `useSyncExternalStore` (identity-stable until mutation). */
+  getRouteSnapshot(): PaneSlot[];
+  /** Subscribe to route changes; returns an unsubscribe. */
+  subscribeRoute(cb: () => void): () => void;
+  /** Replace the route. Mirrors to the browser when `live`. */
+  setRoute(route: PaneSlot[], replace?: boolean): void;
+  /** Re-derive the route from a (base-path-stripped) URL pathname. */
+  syncRouteFromUrl(pathname: string): void;
+  /** popstate/shell:navigate handler — restore from history.state or URL. */
+  handleLocationChange(): void;
+  reorderRoute(fromIndex: number, toIndex: number): void;
+  restoreRoute(
+    slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
+  ): void;
+  clearRoute(): void;
+  /** Resolve the current route to a `PaneMatch` (memo-friendly, per-store). */
+  resolveRoute(route: PaneSlot[]): PaneMatch | null;
+  setBasePath(basePath: string): void;
+  getBasePath(): string;
+  /** Open a pane (non-positional). Used by `promote` and the open hooks. */
+  openPaneImpl(
+    internal: PaneInternal,
+    params: Record<string, string>,
+    opts?: { root?: boolean; input?: Record<string, string> },
+  ): void;
+  close(internal: PaneInternal, instanceId: number): void;
+  unwrap(instanceId: number): void;
+  promote(internal: PaneInternal, instanceId: number): void;
+  /** Whether route mutations mirror to the browser URL/history. */
+  live: boolean;
+}
+
+function createPaneStore(opts: { live: boolean } = { live: false }): PaneStore {
+  let currentRoute: PaneSlot[] = [];
+  const routeListeners = new Set<() => void>();
+  let currentBasePath = "";
+  let prevResolvedByUuid = new Map<string, MatchEntry>();
+
+  function notifyRouteListeners(): void {
+    for (const fn of routeListeners) fn();
+  }
+
+  function applyBasePath(rawUrl: string): string {
+    if (!currentBasePath) return rawUrl;
+    if (rawUrl === "/") return currentBasePath;
+    return currentBasePath + rawUrl;
+  }
+
+  function setRoute(route: PaneSlot[], replace = false): void {
+    currentRoute = route;
+    notifyRouteListeners();
+    // Background stores update in-memory route + notify their own listeners
+    // only; they never touch the browser URL/history.
+    if (!store.live) return;
+    const url = buildRouteUrl(route);
+    const serialized = route.map(s => ({ paneId: s.paneId, params: s.params, input: s.input, uuid: s.uuid }));
+    const fullUrl = applyBasePath(url);
+    if (fullUrl === window.location.pathname && replace) return;
+    const method = replace ? "replaceState" : "pushState";
+    window.history[method]({ route: serialized }, "", fullUrl);
+    window.dispatchEvent(new PopStateEvent("popstate"));
+    window.dispatchEvent(new CustomEvent("shell:navigate"));
+  }
+
+  function reorderRoute(fromIndex: number, toIndex: number): void {
+    if (typeof window === "undefined") return;
+    const route = [...currentRoute];
+    if (fromIndex < 0 || fromIndex >= route.length) return;
+    if (toIndex < 0 || toIndex >= route.length) return;
+    if (fromIndex === toIndex) return;
+    const [item] = route.splice(fromIndex, 1);
+    route.splice(toIndex, 0, item!);
+    setRoute(route);
+  }
+
+  function restoreRoute(
+    slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
+  ): void {
+    if (typeof window === "undefined") return;
+    const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
+    if (route.length === 0) return;
+    setRoute(route);
+  }
+
+  function clearRoute(): void {
+    if (typeof window === "undefined") return;
+    setRoute([]);
+  }
+
+  function syncRouteFromUrl(pathname: string): void {
+    const parsed = parseUrl(pathname);
+    const newRoute = parsed ?? [];
+    if (routesEqual(currentRoute, newRoute)) return;
+    currentRoute = newRoute;
+    notifyRouteListeners();
+  }
+
+  function resolveRoute(route: PaneSlot[]): PaneMatch | null {
+    if (route.length === 0) {
+      prevResolvedByUuid = new Map();
+      return null;
+    }
+    const entries: MatchEntry[] = [];
+    const accumulated: Record<string, string> = {};
+    let routeStable = true;
+    for (const slot of route) {
+      const pane = registry.get(slot.paneId);
+      if (!pane) {
+        prevResolvedByUuid = new Map();
+        return null;
+      }
+      Object.assign(accumulated, slot.params);
+      const prev = prevResolvedByUuid.get(slot.uuid);
+      if (routeStable && prev && prev.pane === pane) {
+        entries.push(prev);
+      } else {
+        routeStable = false;
+        entries.push({
+          instanceId: slot.instanceId,
+          uuid: slot.uuid,
+          pane,
+          params: { ...slot.params },
+          fullParams: { ...accumulated },
+          input: { ...slot.input },
+        });
+      }
+    }
+    prevResolvedByUuid = new Map(entries.map(e => [e.uuid, e]));
+    return { panes: entries };
+  }
+
+  function setBasePath(basePath: string): void {
+    currentBasePath = normalizeAppPath(basePath);
+  }
+
+  function getBasePath(): string {
+    return currentBasePath;
+  }
+
+  function handleLocationChange(): void {
+    if (typeof window === "undefined") return;
+    // Only the live (focused) store mirrors the browser URL/history. A
+    // background tab's store must NOT read window.location here: every mounted
+    // background surface re-runs this via `useSyncPaneRegistry`, and without
+    // this gate they would all overwrite their in-memory route with the
+    // *focused* tab's URL — destroying keep-alive. Background stores receive
+    // their route only from `restoreRoute` (persistence) or from being
+    // navigated while focused (held in memory).
+    if (!store.live) return;
+    const state = window.history.state as { route?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string>; uuid?: string }> } | null;
+    if (state?.route) {
+      const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
+      if (routesEqual(currentRoute, newRoute)) return;
+      currentRoute = newRoute;
+      notifyRouteListeners();
+    } else {
+      const pathname = stripBasePath(window.location.pathname, currentBasePath);
+      syncRouteFromUrl(pathname);
+    }
+  }
+
+  function openPaneImpl(
+    internal: PaneInternal,
+    params: Record<string, string>,
+    implOpts?: { root?: boolean; input?: Record<string, string> },
+  ): void {
+    const replace = internal.chrome.enabled && !internal.chrome.history;
+    const route = currentRoute;
+    const ownParams = extractOwnParams(internal, params);
+    const input = implOpts?.input ?? {};
+
+    if (!implOpts?.root) {
+      const existingIdx = route.findIndex((s) => s.paneId === internal.id);
+      if (existingIdx >= 0) {
+        const existing = route[existingIdx]!;
+        const sameParams =
+          Object.keys(ownParams).length === Object.keys(existing.params).length &&
+          Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
+        const sameInput =
+          Object.keys(input).length === Object.keys(existing.input).length &&
+          Object.keys(input).every((k) => input[k] === existing.input[k]);
+        if (sameParams && sameInput) return;
+        const newRoute = route.slice(0, existingIdx + 1);
+        newRoute[existingIdx] = createSlot(internal.id, ownParams, input);
+        setRoute(newRoute, replace);
+        return;
+      }
+    }
+
+    // Build fresh route from defaultAncestors
+    const ancestorSlots: PaneSlot[] = [];
+    for (const ancestor of internal.defaultAncestors) {
+      const ancestorInternal = registry.get(ancestor.id);
+      if (!ancestorInternal) continue;
+      // Inherit params from existing route if available
+      const existingSlot = route.find(s => s.paneId === ancestor.id);
+      const ancestorParams = existingSlot
+        ? existingSlot.params
+        : extractOwnParams(ancestorInternal, params);
+      ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
+    }
+    setRoute([...ancestorSlots, createSlot(internal.id, ownParams, input)], replace);
+  }
+
+  function close(internal: PaneInternal, instanceId: number): void {
+    if (typeof window === "undefined") return;
+    const route = currentRoute;
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
+    if (idx <= 0) return;
+    const newRoute = route.slice(0, idx);
+    const replace = internal.chrome.enabled && !internal.chrome.history;
+    setRoute(newRoute, replace);
+  }
+
+  function unwrap(instanceId: number): void {
+    if (typeof window === "undefined") return;
+    const route = currentRoute;
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
+    if (idx < 0) return;
+    const newRoute = [...route.slice(0, idx), ...route.slice(idx + 1)];
+    setRoute(newRoute);
+  }
+
+  function promote(internal: PaneInternal, instanceId: number): void {
+    if (typeof window === "undefined") return;
+    const route = currentRoute;
+    const idx = route.findIndex((s) => s.instanceId === instanceId);
+    if (idx < 0) return;
+    const fullParams: Record<string, string> = {};
+    for (let i = 0; i <= idx; i++) {
+      Object.assign(fullParams, route[i]!.params);
+    }
+    openPaneImpl(internal, fullParams, { root: true, input: route[idx]!.input });
+  }
+
+  const store: PaneStore = {
+    getRoute: () => currentRoute,
+    getRouteSnapshot: () => currentRoute,
+    subscribeRoute: (cb) => {
+      routeListeners.add(cb);
+      return () => routeListeners.delete(cb);
+    },
+    setRoute,
+    syncRouteFromUrl,
+    handleLocationChange,
+    reorderRoute,
+    restoreRoute,
+    clearRoute,
+    resolveRoute,
+    setBasePath,
+    getBasePath,
+    openPaneImpl,
+    close,
+    unwrap,
+    promote,
+    live: opts.live,
+  };
+
+  return store;
+}
+
+// The default store mirrors the historical module-global behavior exactly: it
+// is live and is the initial `liveStore` that the imperative free functions
+// and the (single) module-level window listener delegate to. With exactly one
+// store (Phase 1) everything behaves identically to before.
+const defaultStore = createPaneStore({ live: true });
+
+// The focused store the imperative (non-hook) navigation API targets, AND the
+// store the single module-level window listener forwards browser back/forward
+// to. Phase 2's tab manager re-points this on focus switch via `setLiveStore`.
+let liveStore: PaneStore = defaultStore;
+
+/**
+ * Re-point the live store — the target of every imperative (non-hook)
+ * navigation call (`openPane`, `getRoute`, `restoreRoute`, …) and of the
+ * module-level `popstate`/`shell:navigate` window listener. Phase 2's tab
+ * manager calls this when the focused tab changes, after flipping the old
+ * store's `live` off and the new store's `live` on; browser back/forward then
+ * drives the focused tab's store.
+ */
+export function setLiveStore(store: PaneStore): void {
+  liveStore = store;
+}
+
+// Exactly ONE module-level window listener for the whole app. It forwards to
+// whichever store is currently live (set via `setLiveStore`). Since
+// `liveStore === defaultStore` until the tab manager repoints it, Phase 1
+// behavior is unchanged; in tab mode browser back/forward drives the focused
+// tab's store. The tab provider must NOT add a second listener.
+if (typeof window !== "undefined") {
+  const forwardToLiveStore = () => {
+    liveStore.handleLocationChange();
+  };
+  window.addEventListener("popstate", forwardToLiveStore);
+  window.addEventListener("shell:navigate", forwardToLiveStore);
+}
+
+export { createPaneStore, defaultStore };
+
+// ---------------------------------------------------------------------------
+// PaneStore React context. `usePaneStore()` reads the context, falling back to
+// the module-level `defaultStore` when no provider is present — this preserves
+// today's behavior everywhere not yet wrapped in a `PaneSurfaceProvider`.
+// ---------------------------------------------------------------------------
+
+export const PaneStoreContext = createContext<PaneStore>(defaultStore);
+
+export function usePaneStore(): PaneStore {
+  return useContext(PaneStoreContext);
+}
+
+/**
+ * Single provider supplying BOTH the active {@link PaneStore} (via
+ * {@link PaneStoreContext}) and the app base path (via the existing
+ * {@link PaneBasePathContext}) to a pane surface. The layout renderers
+ * (miller / full-pane / host / overlay) read the store implicitly through the
+ * route hooks and the base path through `PaneBasePathContext`, so wrapping a
+ * subtree in this provider rebinds its entire route to `store` with no renderer
+ * changes. Phase 2 mounts one `PaneSurfaceProvider` per tab.
+ */
+export function PaneSurfaceProvider({
+  store,
+  basePath,
+  children,
+}: {
+  store: PaneStore;
+  basePath: string;
+  children: ReactNode;
+}): ReactNode {
+  return createElement(
+    PaneStoreContext.Provider,
+    { value: store },
+    createElement(PaneBasePathContext.Provider, { value: basePath }, children),
+  );
+}
+
+// ---------------------------------------------------------------------------
+// Imperative (non-hook) route API — delegates to the live store. Keeps the
+// ~40 imperative call sites and external consumers (pane-restore, miller drag,
+// library/story/conversation-list) untouched.
+// ---------------------------------------------------------------------------
 
 export function getRoute(): PaneSlot[] {
-  return currentRoute;
+  return liveStore.getRoute();
 }
 
-function notifyRouteListeners(): void {
-  for (const fn of routeListeners) fn();
+export function reorderRoute(fromIndex: number, toIndex: number): void {
+  liveStore.reorderRoute(fromIndex, toIndex);
 }
 
-function subscribeRoute(cb: () => void): () => void {
-  routeListeners.add(cb);
-  return () => routeListeners.delete(cb);
+export function restoreRoute(
+  slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
+): void {
+  liveStore.restoreRoute(slots);
 }
 
-function getRouteSnapshot(): PaneSlot[] {
-  return currentRoute;
+/**
+ * Navigate to the EMPTY route — the only public way to do so. `restoreRoute`
+ * refuses an empty array and `setRoute` is store-internal, so full-pane apps
+ * had no way to go "back to index" (e.g. ← Library). `setRoute([])` builds URL
+ * "/" (→ the app root via applyBasePath), pushes history, and notifies; the
+ * empty route then re-resolves to the index pane via `useIndexMatch`.
+ */
+export function clearRoute(): void {
+  liveStore.clearRoute();
+}
+
+export function setBasePath(basePath: string): void {
+  liveStore.setBasePath(basePath);
+}
+
+export function getBasePath(): string {
+  return liveStore.getBasePath();
 }
 
 function useRouteSlots(): PaneSlot[] {
-  return useSyncExternalStore(subscribeRoute, getRouteSnapshot, () => []);
-}
-
-function setRoute(route: PaneSlot[], replace = false): void {
-  currentRoute = route;
-  notifyRouteListeners();
-  const url = buildRouteUrl(route);
-  const serialized = route.map(s => ({ paneId: s.paneId, params: s.params, input: s.input, uuid: s.uuid }));
-  const fullUrl = applyBasePath(url);
-  if (fullUrl === window.location.pathname && replace) return;
-  const method = replace ? "replaceState" : "pushState";
-  window.history[method]({ route: serialized }, "", fullUrl);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-  window.dispatchEvent(new CustomEvent("shell:navigate"));
+  const store = usePaneStore();
+  return useSyncExternalStore(store.subscribeRoute, store.getRouteSnapshot, () => []);
 }
 
 function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
@@ -394,82 +755,6 @@ function routesEqual(a: PaneSlot[], b: PaneSlot[]): boolean {
     }
   }
   return true;
-}
-
-export function reorderRoute(fromIndex: number, toIndex: number): void {
-  if (typeof window === "undefined") return;
-  const route = [...currentRoute];
-  if (fromIndex < 0 || fromIndex >= route.length) return;
-  if (toIndex < 0 || toIndex >= route.length) return;
-  if (fromIndex === toIndex) return;
-  const [item] = route.splice(fromIndex, 1);
-  route.splice(toIndex, 0, item!);
-  setRoute(route);
-}
-
-export function restoreRoute(
-  slots: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string> }>,
-): void {
-  if (typeof window === "undefined") return;
-  const route: PaneSlot[] = slots.map((s) => createSlot(s.paneId, s.params, s.input ?? {}));
-  if (route.length === 0) return;
-  setRoute(route);
-}
-
-/**
- * Navigate to the EMPTY route — the only public way to do so. `restoreRoute`
- * refuses an empty array and `setRoute` is module-internal, so full-pane apps
- * had no way to go "back to index" (e.g. ← Library). `setRoute([])` builds URL
- * "/" (→ the app root via applyBasePath), pushes history, and notifies; the
- * empty route then re-resolves to the index pane via `useIndexMatch`.
- */
-export function clearRoute(): void {
-  if (typeof window === "undefined") return;
-  setRoute([]);
-}
-
-export function syncRouteFromUrl(pathname: string): void {
-  const parsed = parseUrl(pathname);
-  const newRoute = parsed ?? [];
-  if (routesEqual(currentRoute, newRoute)) return;
-  currentRoute = newRoute;
-  notifyRouteListeners();
-}
-
-let prevResolvedByUuid = new Map<string, MatchEntry>();
-
-function resolveRoute(route: PaneSlot[]): PaneMatch | null {
-  if (route.length === 0) {
-    prevResolvedByUuid = new Map();
-    return null;
-  }
-  const entries: MatchEntry[] = [];
-  const accumulated: Record<string, string> = {};
-  let routeStable = true;
-  for (const slot of route) {
-    const pane = registry.get(slot.paneId);
-    if (!pane) {
-      prevResolvedByUuid = new Map();
-      return null;
-    }
-    Object.assign(accumulated, slot.params);
-    const prev = prevResolvedByUuid.get(slot.uuid);
-    if (routeStable && prev && prev.pane === pane) {
-      entries.push(prev);
-    } else {
-      routeStable = false;
-      entries.push({
-        instanceId: slot.instanceId,
-        uuid: slot.uuid,
-        pane,
-        params: { ...slot.params },
-        fullParams: { ...accumulated },
-        input: { ...slot.input },
-      });
-    }
-  }
-  prevResolvedByUuid = new Map(entries.map(e => [e.uuid, e]));
-  return { panes: entries };
 }
 
 function extractOwnParams(
@@ -510,19 +795,14 @@ export function useCurrentPane(): PaneInternal | null {
 
 export const PaneBasePathContext = createContext<string>("");
 
-let currentBasePath = "";
+// `setBasePath` / `getBasePath` are the imperative delegations to the live
+// store (declared above near the other imperative free functions). The per-
+// store base path now lives inside each `PaneStore`; only these helpers stay
+// module-level because they are pure (no per-store state) and shared.
 
-export function setBasePath(basePath: string): void {
-  currentBasePath = normalizeAppPath(basePath);
-}
-
-/** Normalize an app path to the same shape as `currentBasePath` ("/" → ""). */
+/** Normalize an app path to the store's base-path shape ("/" → ""). */
 function normalizeAppPath(path: string): string {
   return path === "/" ? "" : path.replace(/\/+$/, "");
-}
-
-export function getBasePath(): string {
-  return currentBasePath;
 }
 
 export function stripBasePath(pathname: string, basePath: string): string {
@@ -533,34 +813,10 @@ export function stripBasePath(pathname: string, basePath: string): string {
   return pathname;
 }
 
-function applyBasePath(rawUrl: string): string {
-  if (!currentBasePath) return rawUrl;
-  if (rawUrl === "/") return currentBasePath;
-  return currentBasePath + rawUrl;
-}
-
-// ---------------------------------------------------------------------------
-// URL → route sync (module-level listener, outside React render).
-// ---------------------------------------------------------------------------
-
-function handleLocationChange(): void {
-  if (typeof window === "undefined") return;
-  const state = window.history.state as { route?: Array<{ paneId: string; params: Record<string, string>; input?: Record<string, string>; uuid?: string }> } | null;
-  if (state?.route) {
-    const newRoute = state.route.map(s => createSlot(s.paneId, s.params, s.input ?? {}, s.uuid));
-    if (routesEqual(currentRoute, newRoute)) return;
-    currentRoute = newRoute;
-    notifyRouteListeners();
-  } else {
-    const pathname = stripBasePath(window.location.pathname, currentBasePath);
-    syncRouteFromUrl(pathname);
-  }
-}
-
-if (typeof window !== "undefined") {
-  window.addEventListener("popstate", handleLocationChange);
-  window.addEventListener("shell:navigate", handleLocationChange);
-}
+// The `popstate` / `shell:navigate` window listeners are wired exactly once at
+// module load (near `setLiveStore` above) and forward to the current live
+// store. Phase 2's tab manager owns liveness (via `setLiveStore`); browser
+// events are routed to whichever store is focused.
 
 // ---------------------------------------------------------------------------
 // Navigation + location hook.
@@ -694,35 +950,19 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       .map((e) => ({ instanceId: e.instanceId, uuid: e.uuid, params: e.params, fullParams: e.fullParams, input: e.input }));
   }
 
+  // Imperative methods on the PaneObject target the live store (the focused
+  // tab's route), matching the historical module-global behavior for external
+  // imperative callers (e.g. `conversationPane.close(instanceId)`).
   function close(instanceId: number): void {
-    if (typeof window === "undefined") return;
-    const route = getRoute();
-    const idx = route.findIndex((s) => s.instanceId === instanceId);
-    if (idx <= 0) return;
-    const newRoute = route.slice(0, idx);
-    const replace = internal.chrome.enabled && !internal.chrome.history;
-    setRoute(newRoute, replace);
+    liveStore.close(internal, instanceId);
   }
 
   function unwrap(instanceId: number): void {
-    if (typeof window === "undefined") return;
-    const route = getRoute();
-    const idx = route.findIndex((s) => s.instanceId === instanceId);
-    if (idx < 0) return;
-    const newRoute = [...route.slice(0, idx), ...route.slice(idx + 1)];
-    setRoute(newRoute);
+    liveStore.unwrap(instanceId);
   }
 
   function promote(instanceId: number): void {
-    if (typeof window === "undefined") return;
-    const route = getRoute();
-    const idx = route.findIndex((s) => s.instanceId === instanceId);
-    if (idx < 0) return;
-    const fullParams: Record<string, string> = {};
-    for (let i = 0; i <= idx; i++) {
-      Object.assign(fullParams, route[i]!.params);
-    }
-    openPaneImpl(internal, fullParams, { root: true, input: route[idx]!.input });
+    liveStore.promote(internal, instanceId);
   }
 
   function back(): void {
@@ -733,18 +973,21 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     if (typeof window !== "undefined") window.history.forward();
   }
 
+  // Hooks read/write the *context* store — the surface they are rendered in.
   function useClose(): (() => void) | null {
+    const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
     return useMemo(() => {
       if (instanceId === undefined) return null;
       const idx = route.findIndex((s) => s.instanceId === instanceId);
       if (idx <= 0) return null;
-      return () => close(instanceId);
-    }, [instanceId, route]);
+      return () => store.close(internal, instanceId);
+    }, [store, instanceId, route]);
   }
 
   function usePromote(): (() => void) | null {
+    const store = usePaneStore();
     const instanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
     return useMemo(() => {
@@ -752,14 +995,15 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       const idx = route.findIndex((s) => s.instanceId === instanceId);
       if (idx < 0) return null;
       if (idx === 0) return null;
-      return () => promote(instanceId);
-    }, [instanceId, route]);
+      return () => store.promote(internal, instanceId);
+    }, [store, instanceId, route]);
   }
 
   function useToggle(
     params: Record<string, string>,
     opts?: PaneToggleOpts,
   ): { isOpen: boolean; toggle: () => void } {
+    const store = usePaneStore();
     const callerInstanceId = useContext(PaneInstanceContext);
     const route = useRouteSlots();
     const openPaneFn = useOpenPane();
@@ -795,14 +1039,14 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
     const toggle = useCallback(() => {
       if (targetSlot) {
         if (action === "unwrap") {
-          unwrap(targetSlot.instanceId);
+          store.unwrap(targetSlot.instanceId);
         } else {
-          close(targetSlot.instanceId);
+          store.close(internal, targetSlot.instanceId);
         }
       } else {
         openPaneFn(paneObject, paramsRef.current, { mode, side, input: inputRef.current });
       }
-    }, [targetSlot, action, openPaneFn, mode, side]);
+    }, [store, targetSlot, action, openPaneFn, mode, side]);
 
     return { isOpen, toggle };
   }
@@ -934,6 +1178,7 @@ export const Pane = { define, Register: PaneSlots.Register };
 // ---------------------------------------------------------------------------
 
 export function useSyncPaneRegistry(): void {
+  const store = usePaneStore();
   const contributions = PaneSlots.Register.useContributions();
   useMemo(() => {
     registry.clear();
@@ -948,10 +1193,11 @@ export function useSyncPaneRegistry(): void {
       registry.set(internal.id, internal);
     }
     // Re-sync the route from the current URL now that the registry is
-    // populated. On initial load the module-level handleLocationChange()
-    // runs before any panes are registered, so the route stays empty
-    // until this re-sync.
-    handleLocationChange();
+    // populated. On initial load the store's handleLocationChange() runs
+    // (via the window listener) before any panes are registered, so the
+    // route stays empty until this re-sync.
+    store.handleLocationChange();
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- `store` identity is stable per surface; re-running on registry contribution change is what matters
   }, [contributions]);
 }
 
@@ -960,8 +1206,9 @@ export function useSyncPaneRegistry(): void {
 // ---------------------------------------------------------------------------
 
 export function useRoute(): PaneMatch | null {
+  const store = usePaneStore();
   const route = useRouteSlots();
-  return useMemo(() => resolveRoute(route), [route]);
+  return useMemo(() => store.resolveRoute(route), [store, route]);
 }
 
 // ---------------------------------------------------------------------------
@@ -1021,10 +1268,10 @@ export function useIndexMatch(basePath: string): PaneMatch | null {
  * (which must stay stable). Mirrors MillerColumns exactly.
  */
 export function usePaneRoute(basePath: string): PaneMatch | null {
-  // eslint-disable-next-line react-hooks/exhaustive-deps -- synchronous write before useSyncPaneRegistry, mirrors MillerColumns/PaneOverlayHost
+  const store = usePaneStore();
   useMemo(() => {
-    setBasePath(basePath);
-  }, [basePath]);
+    store.setBasePath(basePath);
+  }, [store, basePath]);
   useSyncPaneRegistry();
   const route = useRoute();
   const index = useIndexMatch(basePath);
@@ -1032,51 +1279,10 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
 }
 
 // ---------------------------------------------------------------------------
-// openPaneImpl — non-positional open logic (shared by useOpenPane fallbacks).
+// openPane — imperative (non-hook) open. Targets the live store, matching the
+// historical module-global behavior for the ~40 imperative call sites.
+// The non-positional open logic itself lives on the store (`openPaneImpl`).
 // ---------------------------------------------------------------------------
-
-function openPaneImpl(
-  internal: PaneInternal,
-  params: Record<string, string>,
-  opts?: { root?: boolean; input?: Record<string, string> },
-): void {
-  const replace = internal.chrome.enabled && !internal.chrome.history;
-  const route = getRoute();
-  const ownParams = extractOwnParams(internal, params);
-  const input = opts?.input ?? {};
-
-  if (!opts?.root) {
-    const existingIdx = route.findIndex((s) => s.paneId === internal.id);
-    if (existingIdx >= 0) {
-      const existing = route[existingIdx]!;
-      const sameParams =
-        Object.keys(ownParams).length === Object.keys(existing.params).length &&
-        Object.keys(ownParams).every((k) => ownParams[k] === existing.params[k]);
-      const sameInput =
-        Object.keys(input).length === Object.keys(existing.input).length &&
-        Object.keys(input).every((k) => input[k] === existing.input[k]);
-      if (sameParams && sameInput) return;
-      const newRoute = route.slice(0, existingIdx + 1);
-      newRoute[existingIdx] = createSlot(internal.id, ownParams, input);
-      setRoute(newRoute, replace);
-      return;
-    }
-  }
-
-  // Build fresh route from defaultAncestors
-  const ancestorSlots: PaneSlot[] = [];
-  for (const ancestor of internal.defaultAncestors) {
-    const ancestorInternal = registry.get(ancestor.id);
-    if (!ancestorInternal) continue;
-    // Inherit params from existing route if available
-    const existingSlot = route.find(s => s.paneId === ancestor.id);
-    const ancestorParams = existingSlot
-      ? existingSlot.params
-      : extractOwnParams(ancestorInternal, params);
-    ancestorSlots.push(createSlot(ancestor.id, ancestorParams));
-  }
-  setRoute([...ancestorSlots, createSlot(internal.id, ownParams, input)], replace);
-}
 
 export type PaneOpenMode = "root" | "push" | "swap";
 
@@ -1086,11 +1292,12 @@ export function openPane(
   opts: { mode: "root"; input?: Record<string, string> },
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-  openPaneImpl(target._internal, params, { root: opts.mode === "root", input: opts.input });
+  liveStore.openPaneImpl(target._internal, params, { root: opts.mode === "root", input: opts.input });
 }
 
 // ---------------------------------------------------------------------------
-// useOpenPane — caller-aware pane navigation hook.
+// useOpenPane — caller-aware pane navigation hook. Operates on the *context*
+// store (the surface it is rendered in).
 // ---------------------------------------------------------------------------
 
 export function useOpenPane(): (
@@ -1098,6 +1305,7 @@ export function useOpenPane(): (
   params: Record<string, string>,
   opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Record<string, string> },
 ) => void {
+  const store = usePaneStore();
   const callerInstanceId = useContext(PaneInstanceContext);
 
   return useCallback(
@@ -1110,16 +1318,16 @@ export function useOpenPane(): (
       const input = opts.input ?? {};
 
       if (opts.mode === "root" || callerInstanceId === undefined) {
-        openPaneImpl(targetInternal, params, { root: opts.mode === "root", input });
+        store.openPaneImpl(targetInternal, params, { root: opts.mode === "root", input });
         return;
       }
 
-      const currentRoute = getRoute();
+      const currentRoute = store.getRoute();
       const callerIndex = currentRoute.findIndex(
         (s) => s.instanceId === callerInstanceId,
       );
       if (callerIndex < 0) {
-        openPaneImpl(targetInternal, params, { input });
+        store.openPaneImpl(targetInternal, params, { input });
         return;
       }
 
@@ -1143,7 +1351,7 @@ export function useOpenPane(): (
         if (sameParams && sameInput) return;
         const newRoute = currentRoute.slice(0, callerIndex + 1);
         newRoute[callerIndex] = createSlot(targetInternal.id, ownParams, input);
-        setRoute(newRoute, replace);
+        store.setRoute(newRoute, replace);
         return;
       }
 
@@ -1157,7 +1365,7 @@ export function useOpenPane(): (
             createSlot(targetInternal.id, ownParams, input),
             ...currentRoute.slice(callerIndex),
           ];
-          setRoute(newRoute, replace);
+          store.setRoute(newRoute, replace);
           return;
         }
       }
@@ -1167,8 +1375,8 @@ export function useOpenPane(): (
         ...currentRoute.slice(0, callerIndex + 1),
         createSlot(targetInternal.id, ownParams, input),
       ];
-      setRoute(newRoute, replace);
+      store.setRoute(newRoute, replace);
     },
-    [callerInstanceId],
+    [store, callerInstanceId],
   );
 }

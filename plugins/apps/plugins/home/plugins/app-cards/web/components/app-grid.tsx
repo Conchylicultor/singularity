@@ -1,17 +1,12 @@
-import { Apps, type ActiveApp, useCurrentAppId } from "@plugins/apps/web";
+import { Apps, type ActiveApp, useCurrentAppId, useTabs } from "@plugins/apps/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { MdAdd } from "react-icons/md";
 
-function navigateToPath(path: string) {
-  if (window.location.pathname === path) return;
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
-
 export function AppGrid() {
   const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
+  const { openOrFocus } = useTabs();
   const launchable = apps.filter((a) => a.id !== currentId);
 
   return (
@@ -24,9 +19,7 @@ export function AppGrid() {
       views={["gallery"]}
       defaultView="gallery"
       storageKey="home:apps"
-      onRowActivate={(a) =>
-        a.onClick ? a.onClick() : navigateToPath(a.path)
-      }
+      onRowActivate={(a) => (a.onClick ? a.onClick() : openOrFocus(a.id))}
       actions={
         <IconButton
           icon={MdAdd}

@@ -2,12 +2,7 @@ import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Apps } from "../slots";
 import { useActiveApp } from "../internal/use-active-app";
-
-function navigateToPath(path: string) {
-  if (window.location.pathname === path) return;
-  window.history.pushState({}, "", path);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-}
+import { useTabs } from "../internal/use-tabs";
 
 export function AppRail() {
   // Self-sufficient: the rail derives its own active-app highlight rather than
@@ -15,13 +10,14 @@ export function AppRail() {
   // wiring. Width reads the same `--app-rail-width` var its parent variant sets
   // (single source of truth — no `w-10`-vs-`2.5rem` drift).
   const activeAppId = useActiveApp()?.id;
+  const { openOrFocus } = useTabs();
   return (
     <div className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-1 border-r bg-background pt-3">
       <Apps.App.Render>
         {(app) => (
           <WithTooltip content={app.tooltip} side="right">
             <button
-              onClick={app.onClick ?? (() => navigateToPath(app.path))}
+              onClick={app.onClick ?? (() => openOrFocus(app.id))}
               className={cn(
                 "relative flex size-8 items-center justify-center rounded-md text-sidebar-foreground/60 transition-colors hover:bg-sidebar-accent hover:text-sidebar-accent-foreground",
                 app.id === activeAppId &&

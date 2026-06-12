@@ -24,6 +24,12 @@ export {
   clearRoute,
   openPane,
   useOpenPane,
+  createPaneStore,
+  defaultStore,
+  setLiveStore,
+  PaneStoreContext,
+  usePaneStore,
+  PaneSurfaceProvider,
 } from "./pane";
 export type {
   PaneObject,
@@ -38,6 +44,7 @@ export type {
   PaneSlot,
   PaneOpenMode,
   ResolveHook,
+  PaneStore,
 } from "./pane";
 export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
 export { PaneIconAction } from "./components/pane-icon-action";
