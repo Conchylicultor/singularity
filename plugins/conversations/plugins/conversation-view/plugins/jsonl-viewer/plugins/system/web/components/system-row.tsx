@@ -1,16 +1,23 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { MdInfoOutline } from "react-icons/md";
+import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 type SystemEvent = Extract<JsonlEvent, { kind: "system" }>;
 
 export function SystemRow({ event }: { event: JsonlEvent }) {
   const e = event as SystemEvent;
+  // Natural-case eyebrow consistent with the sibling lifecycle rows ("Queued",
+  // "Task completed", "Resumed by harness · <source>"): a capitalized label and
+  // the raw snake_case subtype de-coded behind a "·", never a `code:token`.
+  const subtype = e.subtype ? e.subtype.replace(/[_-]+/g, " ") : "";
+  // The full text stays available via the row's hover-only raw-JSON action, so
+  // truncating the inline preview keeps the timeline quiet without hiding it.
   return (
-    <Text as="div" variant="caption" className="px-1 italic text-muted-foreground">
-      <span className="mr-2 font-mono">
-        system{e.subtype ? `:${e.subtype}` : ""}
-      </span>
-      <span>{e.text}</span>
-    </Text>
+    <EventLine
+      icon={<MdInfoOutline className="size-3.5" />}
+      label={`System${subtype ? ` · ${subtype}` : ""}`}
+    >
+      <span className="truncate">{e.text}</span>
+    </EventLine>
   );
 }

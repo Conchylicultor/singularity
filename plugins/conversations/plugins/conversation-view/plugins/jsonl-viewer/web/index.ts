@@ -6,6 +6,7 @@ import { TimestampAction } from "./components/timestamp-action";
 export { JsonlViewer } from "./slots";
 export type { OverlayContribution, RowActionContribution, EventFilterContribution } from "./slots";
 export { JsonlPane } from "./components/jsonl-pane";
+export { EventLine } from "./components/event-line";
 export { useRowMarkdown } from "./components/row-markdown-context";
 export { useLastAssistantEvent } from "./components/last-assistant-context";
 export { useJsonlConversationId } from "./components/conversation-id-context";

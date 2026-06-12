@@ -449,9 +449,18 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
         typeof obj.operation === "string" ? (obj.operation as string) : "";
       const content =
         typeof obj.content === "string" ? (obj.content as string) : undefined;
-      if (operation) {
-        events.push({ kind: "queue-operation", at: ts, operation, content });
+      if (!operation) continue;
+      // A background-task completion is enqueued (and later dequeued) as a raw
+      // <task-notification> block, then delivered again in the agent's next
+      // user turn — three transcript lines for one event. Parse the block into
+      // a structured task-notification here; the dedup pass below collapses all
+      // copies into a single row. Plain queued prompts (no notification block)
+      // keep their lightweight queue-op line ("Queued" / "Sent to agent").
+      if (content && content.includes("<task-notification>")) {
+        extractTaskNotifications(content, ts, events);
+        continue;
       }
+      events.push({ kind: "queue-operation", at: ts, operation, content });
       continue;
     }
 
@@ -482,5 +491,23 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
     }
   }
 
-  return events;
+  // Background-task completions surface up to three times in the raw transcript
+  // (queue enqueue at completion, dequeue when sent, delivered copy in the next
+  // user turn) — all parse to the same task-notification. Collapse to one row,
+  // keeping the earliest (completion time). Keyed by tool-use id when present,
+  // else by the notification's identifying fields.
+  const seenNotifications = new Set<string>();
+  const deduped: JsonlEvent[] = [];
+  for (const ev of events) {
+    if (ev.kind === "task-notification") {
+      const key =
+        ev.toolUseId ??
+        `${ev.taskId}|${ev.status}|${ev.summary}|${ev.outputFile ?? ""}`;
+      if (seenNotifications.has(key)) continue;
+      seenNotifications.add(key);
+    }
+    deduped.push(ev);
+  }
+
+  return deduped;
 }
