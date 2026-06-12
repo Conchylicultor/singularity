@@ -136,6 +136,19 @@ export interface PaneInternal {
   width?: number;
   actionsSlot: Slot<{ component: ComponentType; position?: "left" | "right" }>;
   resolve?: ResolveHook<Record<string, string>> | false;
+  /**
+   * Self-contained title resolver for tab labels and the browser document
+   * title. A React hook that runs OUTSIDE the owning app's providers (at the
+   * tab-surface level), so it may read only params, the pane's `input`, and
+   * GLOBAL hooks (live-state resources) — never app-local context. Returns
+   * undefined to fall back to `chrome.title`. Normalized to always-present (a
+   * no-op default) so callers can invoke it unconditionally; see
+   * {@link usePaneTitle}.
+   */
+  useTitle: (
+    params: Record<string, string>,
+    input: Record<string, string>,
+  ) => string | undefined;
 }
 
 // Populated synchronously via useSyncPaneRegistry (called by MillerColumns).
@@ -1112,6 +1125,19 @@ type DefineArgs<Path extends string, ParentParams, Input> = {
   input?: TypeMarker<Input>;
   chrome?: PaneChromeConfig<ParentParams & InferParams<Path>> | false;
   /**
+   * Self-contained title resolver for tab labels and the browser document
+   * title (see {@link PaneInternal.useTitle}). A React hook: it may call global
+   * live-state hooks but must NOT depend on the owning app's context — it runs
+   * at the tab surface, above the app's component tree. Read data the pane
+   * already self-fetches (a global resource keyed by `params`) or the optimistic
+   * `input` passed at open time. Falls back to `chrome.title` when it returns
+   * undefined.
+   */
+  useTitle?: (
+    params: ParentParams & InferParams<Path>,
+    input: Input,
+  ) => string | undefined;
+  /**
    * Default column width in pixels. Read by layout renderers (e.g. Miller
    * columns). The leaf column ignores this and flex-grows. Defaults to 400.
    */
@@ -1159,6 +1185,9 @@ function define<
     width: args.width,
     actionsSlot,
     resolve,
+    useTitle:
+      (args.useTitle as PaneInternal["useTitle"] | undefined) ??
+      (() => undefined),
   };
 
   return makePaneObject(internal) as PaneObject<
@@ -1209,6 +1238,27 @@ export function useRoute(): PaneMatch | null {
   const store = usePaneStore();
   const route = useRouteSlots();
   return useMemo(() => store.resolveRoute(route), [store, route]);
+}
+
+/**
+ * Resolve a pane's human-readable title for tab labels and the browser document
+ * title. Calls the pane's self-contained {@link PaneInternal.useTitle} hook
+ * (data-backed: a conversation tab shows the conversation name, not its id);
+ * when that yields nothing, falls back to the static `chrome.title`.
+ *
+ * Because `useTitle` is a hook that varies per pane, callers MUST invoke this
+ * from a component keyed by the pane's id, so switching panes remounts and the
+ * hook order stays stable across the component's life.
+ */
+export function usePaneTitle(
+  pane: PaneInternal,
+  params: Record<string, string>,
+  input: Record<string, string>,
+): string | undefined {
+  const dynamic = pane.useTitle(params, input);
+  if (dynamic) return dynamic;
+  const fallback = pane.chrome.title;
+  return typeof fallback === "function" ? fallback(params) : fallback;
 }
 
 // ---------------------------------------------------------------------------

@@ -12,6 +12,7 @@ export {
   getBasePath,
   stripBasePath,
   useRoute,
+  usePaneTitle,
   useIndexMatch,
   usePathname,
   useSyncPaneRegistry,

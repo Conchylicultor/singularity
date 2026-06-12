@@ -6,6 +6,8 @@ import {
   PaneSurfaceProvider,
   setBasePath,
   useSyncPaneRegistry,
+  useRoute,
+  usePaneTitle,
 } from "@plugins/primitives/plugins/pane/web";
 import type { RailFramingProps } from "../../core";
 import { Apps } from "../slots";
@@ -73,6 +75,7 @@ function AppTabsBody() {
               store={tab.store}
               basePath={appPathFor(tab.appId, apps)}
             >
+              <TabTitleReporter tabId={tab.tabId} />
               {renderIsolated(Apps.App.id, app as unknown as Contribution)}
             </PaneSurfaceProvider>
           </div>
@@ -80,6 +83,85 @@ function AppTabsBody() {
       })}
     </div>
   );
+}
+
+/**
+ * Reads the tab's active leaf pane and publishes its resolved title up to the
+ * tabs store, so the tab bar and the browser title can show the selected
+ * page/conversation/song. Mounted inside each tab's `PaneSurfaceProvider`, so
+ * `useRoute()` reads THIS tab's store — including background (keep-alive) tabs,
+ * which keep their label fresh while unfocused. The actual `useTitle` hook runs
+ * one level down in {@link LeafTitleReporter}, keyed by pane id.
+ */
+function TabTitleReporter({ tabId }: { tabId: string }) {
+  const route = useRoute();
+  const panes = route?.panes ?? [];
+  const leaf = panes.length > 0 ? panes[panes.length - 1]! : null;
+  return leaf ? (
+    <LeafTitleReporter
+      key={leaf.pane.id}
+      tabId={tabId}
+      pane={leaf.pane}
+      params={leaf.fullParams}
+      input={leaf.input}
+    />
+  ) : (
+    <TitleClear tabId={tabId} />
+  );
+}
+
+/**
+ * Resolves and publishes one pane's title. Separate from {@link TabTitleReporter}
+ * and keyed by pane id there, so the pane-specific `useTitle` hook (via
+ * `usePaneTitle`) mounts/unmounts as a unit when the leaf pane changes — keeping
+ * hook order stable across pane switches.
+ */
+function LeafTitleReporter({
+  tabId,
+  pane,
+  params,
+  input,
+}: {
+  tabId: string;
+  pane: Parameters<typeof usePaneTitle>[0];
+  params: Record<string, string>;
+  input: Record<string, string>;
+}) {
+  const { setTabTitle } = useTabs();
+  const title = usePaneTitle(pane, params, input);
+  useEffect(() => {
+    setTabTitle(tabId, title);
+  }, [tabId, title, setTabTitle]);
+  return null;
+}
+
+/** Clears a tab's title when its route is empty (app index / no leaf pane). */
+function TitleClear({ tabId }: { tabId: string }) {
+  const { setTabTitle } = useTabs();
+  useEffect(() => {
+    setTabTitle(tabId, undefined);
+  }, [tabId, setTabTitle]);
+  return null;
+}
+
+/**
+ * Mirrors the focused tab's content title into the browser document title
+ * (`<Entity> — <App> — Singularity`), reusing the same per-tab titles the tab
+ * bar shows. One global sync, so the browser tab name is never the stale static
+ * "Singularity".
+ */
+function DocumentTitleSync() {
+  const { tabs, focusedTabId, titles } = useTabs();
+  const apps = Apps.App.useContributions();
+  const focused = tabs.find((t) => t.tabId === focusedTabId);
+  const appName = apps.find((a) => a.id === focused?.appId)?.tooltip;
+  const entity = focused ? titles[focused.tabId] : undefined;
+  useEffect(() => {
+    document.title = [entity, appName, "Singularity"]
+      .filter(Boolean)
+      .join(" — ");
+  }, [entity, appName]);
+  return null;
 }
 
 export function AppsLayout() {
@@ -130,6 +212,7 @@ export function AppsLayout() {
   return (
     <TooltipProvider delay={300}>
       <TabsProvider>
+        <DocumentTitleSync />
         <div className="flex h-full min-h-0 flex-col">
           <AppTabBar />
           <div className="min-h-0 min-w-0 flex-1">

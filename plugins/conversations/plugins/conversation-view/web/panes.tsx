@@ -3,6 +3,7 @@ import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/w
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { conversationsResource, getConversation } from "@plugins/conversations/core";
+import { useConversationById } from "@plugins/conversations/web";
 import { ConversationView } from "./components/conversation-view";
 
 function useResolveConversation({ convId }: { convId: string }) {
@@ -44,4 +45,12 @@ export const conversationPane = Pane.define({
   component: ConversationView,
   width: 600,
   resolve: useResolveConversation,
+  // Tab/document title: the conversation's name from the global live-state
+  // resource (same source as the header's ConversationTitle).
+  useTitle: useConversationTitle,
 });
+
+/** The conversation's title from the global live-state resource, or undefined. */
+function useConversationTitle({ convId }: { convId: string }): string | undefined {
+  return useConversationById(convId)?.title ?? undefined;
+}

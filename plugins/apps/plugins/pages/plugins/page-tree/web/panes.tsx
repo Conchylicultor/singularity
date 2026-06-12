@@ -1,6 +1,6 @@
 import { type ReactElement } from "react";
 import { MdDescription } from "react-icons/md";
-import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
@@ -43,7 +43,18 @@ export const pageDetailPane = Pane.define({
   width: 720,
   chrome: { title: (params) => params.pageId },
   resolve: useResolvePage,
+  // Tab/document title: the page's title from the global pages resource (same
+  // source PageDetailBody renders), falling back to the pageId via chrome.title.
+  useTitle: usePageTitle,
 });
+
+/** The page's title from the global pages resource, or undefined while loading. */
+function usePageTitle({ pageId }: { pageId: string }): string | undefined {
+  const result = useResource(pagesResource);
+  if (result.pending) return undefined;
+  const page = result.data.find((d) => d.id === pageId);
+  return page ? pageData(page).title : undefined;
+}
 
 function PagesRoot(): ReactElement {
   return (
@@ -61,15 +72,7 @@ function PagesRoot(): ReactElement {
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
-  const result = useResource(pagesResource);
-
-  const title = matchResource(result, {
-    pending: () => undefined,
-    ready: (pages) => {
-      const page = pages.find((d) => d.id === pageId);
-      return page ? pageData(page).title : undefined;
-    },
-  });
+  const title = usePageTitle({ pageId });
 
   return (
     <PaneChrome pane={pageDetailPane} title={title}>

@@ -51,7 +51,22 @@ export const sonataPlayerPane = Pane.define({
   input: type<{ title: string }>(),
   resolve: useSonataPlayerResolve,
   component: SonataPlayerSurface,
+  // Tab/document title: the canonical song name from the global songs resource
+  // (reflects renames), falling back to the optimistic `input.title` carried at
+  // open time while the resource loads. Self-contained — `useSonata()` context
+  // is unavailable at the tab-surface level where this runs.
+  useTitle: useSongTitle,
 });
+
+/** Canonical song title from the global resource, or the optimistic open title. */
+function useSongTitle(
+  { songId }: { songId: string },
+  input: { title?: string },
+): string | undefined {
+  const songs = useResource(songsResource);
+  if (songs.pending) return input.title;
+  return songs.data.find((s) => s.id === songId)?.title ?? input.title;
+}
 
 /**
  * Resolve hook: hydrate every registered source's raw for `songId` and gate the

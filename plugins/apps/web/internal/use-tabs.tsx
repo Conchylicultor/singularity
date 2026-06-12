@@ -26,6 +26,15 @@ import {
 export interface TabsApi {
   tabs: Tab[];
   focusedTabId: string;
+  /**
+   * Per-tab resolved content title (selected page / conversation / song …),
+   * keyed by tabId. Absent when the tab is at its app index or its pane has no
+   * title; the tab bar falls back to the app name. Published by the per-tab
+   * title reporter via {@link TabsApi.setTabTitle}.
+   */
+  titles: Record<string, string>;
+  /** Publish (or clear, with `undefined`) the resolved content title for a tab. */
+  setTabTitle(tabId: string, title: string | undefined): void;
   /** Always opens a NEW tab for `appId` (multi-instance). Returns its tabId. */
   openTab(appId: string): string;
   /** Focus the first existing tab for `appId`, else open a new one. */
@@ -118,6 +127,22 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
   const [tabs, setTabs] = useState<Tab[]>(initialTabs);
   const [focusedTabId, setFocusedTabId] = useState<string>(initialFocus);
+  // Per-tab content titles, published by the title reporter mounted inside each
+  // tab's pane surface. Derived (not persisted): each tab re-reports on mount.
+  const [titles, setTitles] = useState<Record<string, string>>({});
+
+  const setTabTitle = useCallback(
+    (tabId: string, title: string | undefined) => {
+      setTitles((prev) => {
+        if ((prev[tabId] ?? undefined) === title) return prev;
+        const next = { ...prev };
+        if (title === undefined) delete next[tabId];
+        else next[tabId] = title;
+        return next;
+      });
+    },
+    [],
+  );
 
   // Latest tabs/focus in refs for the persistence subscriptions + actions.
   const tabsRef = useRef(tabs);
@@ -209,6 +234,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       if (idx < 0) return;
       const remaining = prev.filter((t) => t.tabId !== tabId);
       const wasFocused = focusedRef.current === tabId;
+      setTabTitle(tabId, undefined);
 
       if (remaining.length === 0) {
         // Never allow zero tabs — seed a fresh Home tab and focus it.
@@ -237,12 +263,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       }
       persist();
     },
-    [activate, persist],
+    [activate, persist, setTabTitle],
   );
 
   const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, openTab, openOrFocus, focusTab, closeTab }),
-    [tabs, focusedTabId, openTab, openOrFocus, focusTab, closeTab],
+    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, openOrFocus, focusTab, closeTab }),
+    [tabs, focusedTabId, titles, setTabTitle, openTab, openOrFocus, focusTab, closeTab],
   );
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;

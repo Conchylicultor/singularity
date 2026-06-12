@@ -13,7 +13,7 @@ import { useTabs } from "../internal/use-tabs";
  * it. The trailing `+` opens a new Home tab. Close/reorder are follow-ups.
  */
 export function AppTabBar() {
-  const { tabs, focusedTabId, focusTab, openTab } = useTabs();
+  const { tabs, focusedTabId, focusTab, openTab, titles } = useTabs();
   const apps = Apps.App.useContributions();
 
   return (
@@ -28,6 +28,9 @@ export function AppTabBar() {
         if (!app) return null;
         const Icon = app.icon;
         const active = tab.tabId === focusedTabId;
+        // The tab's selected content (page / conversation / song …); the app
+        // name is the fallback when the tab is at its index or has no title.
+        const label = titles[tab.tabId] ?? app.tooltip;
         return (
           <button
             key={tab.tabId}
@@ -42,7 +45,7 @@ export function AppTabBar() {
             <Stack direction="row" align="center" gap="xs">
               <Icon className="size-4 shrink-0" />
               <Text variant="label" className="truncate">
-                {app.tooltip}
+                {label}
               </Text>
             </Stack>
           </button>
