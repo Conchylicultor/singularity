@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-renderers-blog",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Blog lens: AI-generated continuous article from the outline."
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-generation",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Format-agnostic generated-content substrate: LLM-generate text and persist it keyed by (pageId, kind, unitId) with per-unit input-hash + status, pushed over live-state."
+}

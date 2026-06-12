@@ -9,7 +9,7 @@ export const Story = {
   // renderer id, carried in the render props so the host owns `activeRendererId`.
   // `Extra` ({id,label,icon?}) is the metadata the RendererPicker enumerates.
   Renderer: defineDispatchSlot<
-    { story: StoryNode[]; activeRendererId: string },
+    { story: StoryNode[]; pageId: string; activeRendererId: string },
     string,
     { id: string; label: string; icon?: IconType }
   >("story.renderer", {

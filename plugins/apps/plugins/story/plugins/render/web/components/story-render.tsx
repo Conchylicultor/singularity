@@ -13,5 +13,5 @@ export function StoryRender({ pageId, rendererId }: { pageId: string; rendererId
   const result = useResource(blocksResource, { pageId });
   if (result.pending) return <Loading variant="rows" />;
   const story = buildStoryTree(result.data, pageId);
-  return <Story.Renderer.Dispatch story={story} activeRendererId={rendererId} />;
+  return <Story.Renderer.Dispatch story={story} pageId={pageId} activeRendererId={rendererId} />;
 }
