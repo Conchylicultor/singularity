@@ -11,14 +11,15 @@ import {
 import {
   buildTempoIndex,
   emptyScore,
-  currentBarLine,
+  currentLine,
   mergeAnnotations,
   mergeScores,
-  nextBarLine,
-  prevBarLine,
+  nextLine,
+  prevLine,
   scaleTempo,
   scoreEndBeat,
   spellScore,
+  subdivideBars,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
@@ -40,6 +41,21 @@ const MAX_TEMPO_SCALE = 4;
  * value doesn't affect layout.
  */
 export const TEMPO_MATH_FLOOR = 0.05;
+
+/**
+ * How finely the seek grid subdivides a bar at a given playback tempo: a whole
+ * bar at authored tempo or faster, then halving each time the tempo halves
+ * (half-bar at ≤50%, quarter-bar at ≤25%, eighth-bar at ≤12.5%, …). The
+ * invariant is that one tap rewinds a roughly *constant wall-clock duration* —
+ * about one bar at authored tempo — so slowing down to practice a dense passage
+ * automatically buys finer-grained seeking, with no tuned threshold. Floored at
+ * `TEMPO_MATH_FLOOR` so a frozen 0% can't diverge to an unbounded subdivision.
+ */
+function seekSubdivisions(tempoScale: number): number {
+  const scale = Math.max(tempoScale, TEMPO_MATH_FLOOR);
+  if (scale >= 1) return 1;
+  return 2 ** Math.floor(Math.log2(1 / scale));
+}
 
 /**
  * Shared Sonata state + transport.
@@ -165,17 +181,20 @@ export interface SonataContextValue {
   /** Seek the playhead to an absolute `beat`, clamped to [0, end]; re-anchors playback. */
   seekTo: (beat: number) => void;
   /**
-   * Snap the playhead to the previous (`-1`) / next (`+1`) bar line — a single
-   * press rewinds / advances by a whole measure (Synthesia-style), so one tap is
-   * an immediate, meaningful jump rather than a tiny step.
+   * Single-press jump along the tempo-adaptive seek grid (`-1` back / `+1`
+   * forward): a whole bar at authored tempo, finer the more the tempo is slowed
+   * for practice (half-bar, quarter-bar, …; see `seekSubdivisions`). Backward
+   * uses a half-unit pivot — past the middle of the current unit it snaps to that
+   * unit's start, otherwise to the previous unit — so a tap is always an
+   * immediate, meaningful jump and repeated taps walk strictly backward.
    */
   seekBar: (direction: -1 | 1) => void;
   /**
-   * Begin a held repeat in `direction` (press-and-hold): steps bar-by-bar at an
-   * accelerating cadence until `endScrub` — discrete jumps, not a smooth glide.
-   * Playback is suspended for the duration and restored on release (mirroring the
-   * piano-roll drag-scrub's pause-on-grab / resume-on-settle), so the rapid
-   * stepping never thrashes the audio scheduler.
+   * Begin a held repeat in `direction` (press-and-hold): steps along the same
+   * tempo-adaptive seek grid at an accelerating cadence until `endScrub` —
+   * discrete jumps, not a smooth glide. Playback is suspended for the duration
+   * and restored on release (mirroring the piano-roll drag-scrub's pause-on-grab
+   * / resume-on-settle), so the rapid stepping never thrashes the audio scheduler.
    */
   startScrub: (direction: -1 | 1) => void;
   /** End an in-progress {@link startScrub}: commit the landing beat and, if
@@ -421,28 +440,28 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [seekTo],
   );
 
-  // Single-press jump: snap to the previous / next bar line (a whole measure).
-  // Goes through `seekTo`, so a tap while playing jumps the audio and keeps
-  // going. Reads the live cursor + score from refs so it stays stable.
+  // Single-press jump along the tempo-adaptive seek grid (a whole bar at normal
+  // speed, finer as the tempo is slowed; see `seekSubdivisions`). Goes through
+  // `seekTo`, so a tap while playing jumps the audio and keeps going. Reads the
+  // live cursor + score + tempo from refs so it stays stable.
   const seekBar = useCallback(
     (direction: -1 | 1) => {
       const score = scoreRef.current;
       const here = cursorBeatRef.current;
+      const end = scoreEndBeat(score);
+      const grid = subdivideBars(score, seekSubdivisions(tempoScaleRef.current));
       if (direction > 0) {
-        seekTo(nextBarLine(score, here));
+        seekTo(nextLine(grid, here, end));
         return;
       }
-      // Backward. Paused, `prevBarLine` snaps to the current bar's start (or the
-      // previous bar when already on a line) — the natural "replay this measure".
-      // While playing, the cursor drifts forward between taps, so a naive
-      // `prevBarLine(here)` keeps landing on the bar the playhead just rolled off
-      // and repeated taps never get past it. Anchor to the *current* bar and step
-      // to the one before it, which walks strictly backward regardless of drift.
-      seekTo(
-        isPlayingRef.current
-          ? prevBarLine(score, currentBarLine(score, here))
-          : prevBarLine(score, here),
-      );
+      // Backward: half-unit pivot. Past the middle of the current unit → snap to
+      // its start (replay this unit); in the first half → step to the previous
+      // unit. The target is always ≤ the current line ≤ here, so repeated taps
+      // walk strictly backward — drift-proof while playing, with no play/pause
+      // special-case (this subsumes the old `currentBarLine` anchor).
+      const cur = currentLine(grid, here);
+      const next = nextLine(grid, here, end);
+      seekTo(here > (cur + next) / 2 ? cur : prevLine(grid, cur));
     },
     [seekTo],
   );
@@ -461,8 +480,13 @@ export function SonataProvider({ children }: { children: ReactNode }) {
 
   const startScrub = useCallback((direction: -1 | 1) => {
     if (scrubRafRef.current !== null) return; // already holding
-    const end = scoreEndBeat(scoreRef.current);
+    const score = scoreRef.current;
+    const end = scoreEndBeat(score);
     if (end <= 0) return;
+
+    // The seek grid for this hold — captured once: playback is suspended for the
+    // duration, so neither the score nor the tempo can shift the unit mid-hold.
+    const grid = subdivideBars(score, seekSubdivisions(tempoScaleRef.current));
 
     // Suspend playback while holding; remember whether to resume on release.
     scrubWasPlayingRef.current = isPlayingRef.current;
@@ -488,9 +512,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
         acc = 0;
         const here = cursorBeatRef.current;
         const next =
-          direction < 0
-            ? prevBarLine(scoreRef.current, here)
-            : nextBarLine(scoreRef.current, here);
+          direction < 0 ? prevLine(grid, here) : nextLine(grid, here, end);
         // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
         // bump) since playback is suspended. Keep the ref in sync for the next
         // step + the final `endScrub` commit.

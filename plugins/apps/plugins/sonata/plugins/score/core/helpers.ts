@@ -39,48 +39,89 @@ export function scoreEndBeat(score: Score): number {
 }
 
 /**
- * The previous bar line strictly before `beat` (or 0 when there is none) — so a
- * "seek back" tap rewinds by a whole measure, Synthesia-style: one press lands on
- * the start of the current bar (or the previous bar if already at a bar start),
- * the musically natural "replay this measure" unit. A small epsilon keeps a tap
- * from sticking on the bar line it just landed on. Pure; never mutates.
+ * The epsilon that keeps a "strict" line lookup from sticking on the line it
+ * just landed on (sub-millibeat — well below any musical grid spacing).
  */
-export function prevBarLine(score: Score, beat: number): number {
-  const EPS = 1e-3;
+const LINE_EPS = 1e-3;
+
+/**
+ * Generic grid-line lookups over a sorted-ascending list of lines (any
+ * `{ startBeat }[]` — `bars()`, `beatGrid()`, or a {@link subdivideBars} seek
+ * grid). The seek transport drives every motion — forward step, the half-unit
+ * backward pivot, and the hold-scrub — through these three, so the line math
+ * lives here once rather than being re-derived per grid. All pure; never mutate.
+ *
+ * `prevLine` — the line strictly before `beat` (or 0 when there is none).
+ */
+export function prevLine(lines: { startBeat: number }[], beat: number): number {
   let best = 0;
-  for (const b of bars(score)) {
-    if (b.startBeat < beat - EPS && b.startBeat > best) best = b.startBeat;
+  for (const l of lines) {
+    if (l.startBeat < beat - LINE_EPS && l.startBeat > best) best = l.startBeat;
   }
   return best;
 }
 
 /**
- * The next bar line strictly after `beat` (or `scoreEndBeat` when there is none)
- * — the forward counterpart of {@link prevBarLine}. `bars()` is sorted ascending,
- * so the first match is the nearest. Pure; never mutates.
+ * The line strictly after `beat`, or `end` when there is none (the caller's
+ * upper bound — `scoreEndBeat` for the seek transport, so a forward step lands
+ * on the song end). `lines` is ascending, so the first match is the nearest.
  */
-export function nextBarLine(score: Score, beat: number): number {
-  const EPS = 1e-3;
-  for (const b of bars(score)) {
-    if (b.startBeat > beat + EPS) return b.startBeat;
+export function nextLine(
+  lines: { startBeat: number }[],
+  beat: number,
+  end: number,
+): number {
+  for (const l of lines) {
+    if (l.startBeat > beat + LINE_EPS) return l.startBeat;
   }
-  return scoreEndBeat(score);
+  return end;
 }
 
 /**
- * The bar line at or before `beat` — i.e. the start of the bar `beat` falls in
- * (or 0 before the first). Unlike {@link prevBarLine} it is *inclusive*, so a
- * `beat` sitting exactly on a bar line returns that same line. Used to anchor a
- * backward seek to the current bar before stepping, so playback drift past a bar
- * line can't make repeated taps stick on it. Pure; never mutates.
+ * The line at or before `beat` (or 0 before the first). Unlike {@link prevLine}
+ * it is *inclusive*, so a `beat` sitting exactly on a line returns that same
+ * line — the start of the unit `beat` falls in.
  */
-export function currentBarLine(score: Score, beat: number): number {
-  const EPS = 1e-3;
+export function currentLine(
+  lines: { startBeat: number }[],
+  beat: number,
+): number {
   let best = 0;
-  for (const b of bars(score)) {
-    if (b.startBeat <= beat + EPS && b.startBeat > best) best = b.startBeat;
+  for (const l of lines) {
+    if (l.startBeat <= beat + LINE_EPS && l.startBeat > best) best = l.startBeat;
   }
   return best;
+}
+
+/**
+ * Subdivide every bar into `n` equal parts — the seek grid. `n = 1` returns the
+ * bar lines unchanged (today's whole-measure unit); `n = 2` adds a mid-bar line,
+ * `n = 4` quarter-bar lines, etc. Each bar's span is `[start, nextStart)` (the
+ * final bar runs to `scoreEndBeat`), so subdivisions stay even across
+ * time-signature changes and variable bar lengths. The seek transport picks `n`
+ * from the tempo (finer the slower you practice). Pure; never mutates.
+ */
+export function subdivideBars(
+  score: Score,
+  n: number,
+): { startBeat: number }[] {
+  const barList = bars(score);
+  if (n <= 1) return barList;
+  const end = scoreEndBeat(score);
+  const out: { startBeat: number }[] = [];
+  for (let i = 0; i < barList.length; i++) {
+    const start = barList[i]!.startBeat;
+    const next = i + 1 < barList.length ? barList[i + 1]!.startBeat : end;
+    const span = next - start;
+    if (span <= 0) {
+      out.push({ startBeat: start });
+      continue;
+    }
+    for (let k = 0; k < n; k++) {
+      out.push({ startBeat: start + (span * k) / n });
+    }
+  }
+  return out;
 }
 
 /** An empty Score — the shell's default before any source loads. */
