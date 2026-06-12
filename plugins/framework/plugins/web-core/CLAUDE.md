@@ -33,7 +33,7 @@ Always go through `./singularity build` from the repo root — it runs `bun run 
 
 ### Tests
 
-This plugin hosts the project's **only** vitest suite — `web/__tests__/plugin-render.test.tsx` — because it's the one test that needs the browser stack (jsdom + the `@` SPA alias + `.css` imports + the full web plugin graph). Everything else in the repo is a `bun:test` unit test (see the root `CLAUDE.md` Testing section). The vitest config (`vitest.config.ts`) merges `vite.config.ts` and adds jsdom + `web/__tests__/setup.ts` (stubs `matchMedia` / canvas).
+This plugin hosts the project's vitest suites (`web/__tests__/`) — the tests that need the browser stack (jsdom + the `@` SPA alias + `.css` imports + React rendering), which `bun:test` can't provide. Everything else in the repo is a `bun:test` unit test (see the root `CLAUDE.md` Testing section). The vitest config (`vitest.config.ts`) merges `vite.config.ts` and adds jsdom + `web/__tests__/setup.ts` (stubs `matchMedia` / canvas). Two suites live here today: `plugin-render.test.tsx` (full plugin-graph load smoke) and `commands.test.tsx` (`defineCommand` handler-stack ordering, which needs real React mount/unmount).
 
 `plugin-render.test.tsx` is a **load-only smoke**: it asserts `loadPlugins(webEntries)` returns zero errors and every contribution is structurally well-formed. It does not render contributions — a contribution needs its slot's props/context, so bare rendering is meaningless. Run it (optional):
 
