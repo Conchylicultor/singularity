@@ -51,11 +51,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Web:
     - Slots: `Apps.App`, `Apps.RailFraming`
     - Contributes: `Core.Root` → `AppsLayout`
-    - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
-    - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`, `useTabs`
+    - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneSlot`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.parseUrl`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.stripBasePath`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
+    - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `navigate`, `useActiveApp`, `useCurrentAppId`, `useTabs`
   - Cross-plugin:
     - Slot contributors: `app-rail-framing`, `shell`
-    - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`, `shell/floating-bar`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
+    - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`, `debug/crashes`, `shell/floating-bar`, `shell/notifications`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
   - Core:
     - Exports: Types: `RailFramingProps`
   - Plugins:
@@ -64,7 +64,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
           - Web:
             - Contributes: `Apps.App` "Agent Manager" → `AgentManagerLayout`
-            - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/text.Text`, `shell.Shell`
+            - Uses: `apps.Apps`, `apps.navigate`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/text.Text`, `shell.Shell`
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
           - Web:
             - Contributes: `Pane.Register` "welcome"
@@ -1555,7 +1555,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`crashes`** — Debug pane listing all recorded crashes (including low-signal/noise ones) with source, count, noise flag, and linked task.
       - Web:
         - Contributes: `Pane.Register` "crashes", `DebugApp.Sidebar` "Crashes" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`
+        - Uses: `apps.navigate`, `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`
         - Exports: Values: `crashesPane`
     - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
       - Web:
@@ -3262,7 +3262,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
       - Web:
         - Contributes: `ActionBar.Item` → `BellButton`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
+        - Uses: `apps.navigate`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.ShellCommands`, `shell/action-bar.ActionBar`
         - Exports: Types: `ToastArgs`; Values: `notificationsResource`, `toast`
       - Server:
         - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`
@@ -3544,7 +3544,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
           - Web:
             - Contributes: `Pane.Register` "theme-customizer", `ActionBar.Item` → `ThemeCustomizerButton`
-            - Uses: `apps.useActiveApp`, `apps.useCurrentAppId`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useScopeForked`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/color-picker.Color`, `primitives/color-picker.ColorPickerPopover`, `primitives/detail-sections.defineDetailSections`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.ThemeScopeProvider`, `ui/theme-engine.useThemeScopeId`
+            - Uses: `apps.navigate`, `apps.useActiveApp`, `apps.useCurrentAppId`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useScopeForked`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/color-picker.Color`, `primitives/color-picker.ColorPickerPopover`, `primitives/detail-sections.defineDetailSections`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.ThemeScopeProvider`, `ui/theme-engine.useThemeScopeId`
             - Exports: Types: `TokenMode`, `TokenRowProps`; Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenModeContext`, `TokenRow`
           - Cross-plugin:
             - Imported by: `apps/settings/appearance`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`
