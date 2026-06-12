@@ -20,6 +20,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
 - Sub-plugins:
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**
+  - **`class-token-walk-in-sync`**
   - **`config-origins-in-sync`**
   - **`conversation-trailer`**
   - **`css-vars-single-owner`**

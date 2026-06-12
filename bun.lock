@@ -1315,6 +1315,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-class-token-walk-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-config-origins-in-sync",
       "version": "0.0.1",
@@ -3618,6 +3622,8 @@
     "@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync": ["@singularity/plugin-framework-tooling-checks-app-css-utilities-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/app-css-utilities-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync": ["@singularity/plugin-framework-tooling-checks-barrel-stubs-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/barrel-stubs-in-sync"],
+
+    "@singularity/plugin-framework-tooling-checks-class-token-walk-in-sync": ["@singularity/plugin-framework-tooling-checks-class-token-walk-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
 

@@ -1,4 +1,4 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -25,8 +25,10 @@ const createRule = ESLintUtils.RuleCreator(
  *      its tag is either `svg` or a Capitalized component (`MdX`/`Icon`/…), never
  *      a lowercase intrinsic host (`span`/`div`/…). This rejects layout-box and
  *      spacer wrappers without needing a react-icons name list.
- *   5. Its `className` (a simple analyzable literal) carries a hardcoded size
- *      token (`size-\d`/`h-\d`/`w-\d` after variant-prefix strip).
+ *   5. Its `className` carries a hardcoded size token (`size-\d`/`h-\d`/`w-\d`
+ *      after variant-prefix strip), as harvested by the shared class-token walk
+ *      below — which also resolves a same-file object/array MAP alias indexed in
+ *      a class context (e.g. `cn(MAP[key])`), but NOT a bare string `const`.
  *
  * Report-only, no autofix. This is a convention aid, not a guarantee — see the
  * plugin CLAUDE.md.
@@ -55,13 +57,33 @@ function baseClass(token: string): string {
   return idx === -1 ? token : token.slice(idx + 1);
 }
 
+// >>> shared:class-token-walk — keep byte-identical across the no-adhoc-* class rules (enforced by the class-token-walk-in-sync check) >>>
 /**
- * Collect class tokens from a `className` attribute value subtree, harvesting
- * ONLY string `Literal` values and `TemplateElement` raws — never identifiers
- * from dynamic expressions. Handles the simple shapes (bare string, template,
- * `cn(...)`/`clsx(...)`); opaque member-access/identifier color maps are ignored.
+ * Recursively harvest class-name tokens from a class-value subtree into `out`.
+ *
+ * Directly contained strings are harvested wherever they sit: bare `Literal`
+ * `.value`s and `TemplateElement.value.raw`s (split on whitespace), inside
+ * `cn(...)`/`clsx(...)` calls, ternaries, `clsx({ "text-x": cond })` object
+ * keys, and arbitrary nesting — the walk is structural, not shape-specific.
+ *
+ * It ALSO follows same-file aliases, but ONLY when an `Identifier` reached from
+ * a class context resolves to an object/array-literal MAP indexed directly in
+ * that context (e.g. `cn(TONE[tone])`, `styles.title`). The map's initializer is
+ * then harvested too — this is what catches a banned class parked in a style/tone
+ * map. A standalone string/template `const` (shared mono/code metrics are out of
+ * scope) and a styling-function result (`cva(...)`) are deliberately NOT followed,
+ * and a map reached only through an intermediate local is out of range by design.
+ * Resolution is same-file only (an imported or parameter binding has no in-file
+ * initializer to read) and cycle-guarded via `seen`. Because the walk only ever
+ * starts from a real class-name context, an unrelated doc-string that merely
+ * mentions `text-sm` is never inspected.
  */
-function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>): void {
+function collectTokens(
+  sourceCode: TSESLint.SourceCode,
+  node: TSESTree.Node | null | undefined,
+  out: Set<string>,
+  seen: Set<unknown> = new Set(),
+): void {
   if (!node) return;
   if (node.type === "Literal") {
     if (typeof node.value === "string") {
@@ -73,20 +95,46 @@ function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>)
     for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
     return;
   }
+  if (node.type === "Identifier") {
+    let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
+    let variable: TSESLint.Scope.Variable | undefined;
+    while (scope && !variable) {
+      variable = scope.variables.find((v) => v.name === node.name);
+      scope = scope.upper;
+    }
+    if (variable && !seen.has(variable)) {
+      seen.add(variable);
+      for (const def of variable.defs) {
+        // Maps-only: follow a same-file alias ONLY into an object/array-literal
+        // map — the documented "style map drives classes" pattern, indexed
+        // directly in a class context (e.g. `cn(TONE[tone])`). A standalone
+        // string/template const (shared mono-code metrics — code/mono is out of
+        // scope) or a styling-function result (`cva(...)`) is deliberately NOT
+        // followed, and a map reached only through an intermediate local is out
+        // of range by design.
+        const init = def.type === "Variable" ? def.node.init : null;
+        if (init && (init.type === "ObjectExpression" || init.type === "ArrayExpression")) {
+          collectTokens(sourceCode, init, out, seen);
+        }
+      }
+    }
+    return;
+  }
   for (const key of Object.keys(node)) {
     if (key === "parent") continue;
     const value = (node as unknown as Record<string, unknown>)[key];
     if (Array.isArray(value)) {
       for (const child of value) {
         if (child && typeof child === "object" && "type" in child) {
-          collectTokens(child as TSESTree.Node, out);
+          collectTokens(sourceCode, child as TSESTree.Node, out, seen);
         }
       }
     } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(value as TSESTree.Node, out);
+      collectTokens(sourceCode, value as TSESTree.Node, out, seen);
     }
   }
 }
+// <<< shared:class-token-walk <<<
 
 export default createRule({
   name: "no-adhoc-slot-icon-size",
@@ -144,7 +192,7 @@ export default createRule({
         if (!classAttr) return;
 
         const tokens = new Set<string>();
-        collectTokens(classAttr.value, tokens);
+        collectTokens(context.sourceCode, classAttr.value, tokens);
         if (tokens.size === 0) return; // not a simple analyzable className — skip.
 
         const hasHardcodedSize = [...tokens].some((t) => {

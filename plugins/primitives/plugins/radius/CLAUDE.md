@@ -40,7 +40,9 @@ corner with an arbitrary `rounded-[…]` literal.
 
 `lint/no-adhoc-radius.ts` fails `./singularity check` on any `className` (or
 `cn`/`clsx` argument) carrying a bare `rounded` or an arbitrary `rounded-[…]`.
-Reach for a token-driven scale step instead so Shape presets keep working.
+Reach for a token-driven scale step instead so Shape presets keep working. The
+walk also catches a banned class in an **object/array map indexed directly in a
+class context** (e.g. `cn(MAP[key])`) — but not a bare string `const`.
 
 The rule enforces repo-wide with no `ignores` allowlist — every corner routes
 through the token scale. The legacy offenders were all migrated; a genuinely

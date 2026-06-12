@@ -1,4 +1,4 @@
-import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
+import { ESLintUtils, type TSESLint, type TSESTree } from "@typescript-eslint/utils";
 
 const createRule = ESLintUtils.RuleCreator(
   (name) => `https://github.com/anthropics/singularity/lint/${name}`,
@@ -34,7 +34,9 @@ const createRule = ESLintUtils.RuleCreator(
  * class-name context (a `className`/`class` attribute value, or a class-builder
  * argument), via the same `collectTokens` walk the sibling `no-adhoc-*` rules
  * use, so a doc-string or fixture that merely mentions `rounded` is never
- * flagged.
+ * flagged. The shared walk also resolves same-file object/array MAP aliases
+ * indexed in a class context (e.g. a bare `rounded` in a style map reached via
+ * `cn(MAP[key])`) — but NOT a bare string `const` (see the shared block below).
  */
 
 // Bare `rounded` only — the static 0.25rem that bypasses --radius. Anchored with
@@ -49,19 +51,33 @@ const CLASS_ATTRS = new Set(["className", "class"]);
 /** Class-builder calls whose string arguments are class-name strings. */
 const CLASS_BUILDERS = new Set(["cn", "clsx", "twMerge"]);
 
+// >>> shared:class-token-walk — keep byte-identical across the no-adhoc-* class rules (enforced by the class-token-walk-in-sync check) >>>
 /**
- * Recursively collect class tokens from a class-name value subtree into `out`.
- * We harvest only string `Literal` `.value`s and `TemplateElement.value.raw`s —
- * never identifiers from dynamic expressions — and split each on whitespace.
+ * Recursively harvest class-name tokens from a class-value subtree into `out`.
  *
- * Handles the shapes a class-name realistically takes: a bare string literal, a
- * `JSXExpressionContainer` wrapping a template literal, a `cn(...)`/`clsx(...)`
- * call, ternaries/logical expressions, and arbitrary nesting thereof. The walk
- * is structural (visit every child node) rather than shape-specific, so it is
- * robust to however the class string is assembled — and, because it starts only
- * from class-name contexts, it never inspects unrelated string literals.
+ * Directly contained strings are harvested wherever they sit: bare `Literal`
+ * `.value`s and `TemplateElement.value.raw`s (split on whitespace), inside
+ * `cn(...)`/`clsx(...)` calls, ternaries, `clsx({ "text-x": cond })` object
+ * keys, and arbitrary nesting — the walk is structural, not shape-specific.
+ *
+ * It ALSO follows same-file aliases, but ONLY when an `Identifier` reached from
+ * a class context resolves to an object/array-literal MAP indexed directly in
+ * that context (e.g. `cn(TONE[tone])`, `styles.title`). The map's initializer is
+ * then harvested too — this is what catches a banned class parked in a style/tone
+ * map. A standalone string/template `const` (shared mono/code metrics are out of
+ * scope) and a styling-function result (`cva(...)`) are deliberately NOT followed,
+ * and a map reached only through an intermediate local is out of range by design.
+ * Resolution is same-file only (an imported or parameter binding has no in-file
+ * initializer to read) and cycle-guarded via `seen`. Because the walk only ever
+ * starts from a real class-name context, an unrelated doc-string that merely
+ * mentions `text-sm` is never inspected.
  */
-function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>): void {
+function collectTokens(
+  sourceCode: TSESLint.SourceCode,
+  node: TSESTree.Node | null | undefined,
+  out: Set<string>,
+  seen: Set<unknown> = new Set(),
+): void {
   if (!node) return;
   if (node.type === "Literal") {
     if (typeof node.value === "string") {
@@ -73,20 +89,46 @@ function collectTokens(node: TSESTree.Node | null | undefined, out: Set<string>)
     for (const t of node.value.raw.split(/\s+/)) if (t) out.add(t);
     return;
   }
+  if (node.type === "Identifier") {
+    let scope: TSESLint.Scope.Scope | null = sourceCode.getScope(node);
+    let variable: TSESLint.Scope.Variable | undefined;
+    while (scope && !variable) {
+      variable = scope.variables.find((v) => v.name === node.name);
+      scope = scope.upper;
+    }
+    if (variable && !seen.has(variable)) {
+      seen.add(variable);
+      for (const def of variable.defs) {
+        // Maps-only: follow a same-file alias ONLY into an object/array-literal
+        // map — the documented "style map drives classes" pattern, indexed
+        // directly in a class context (e.g. `cn(TONE[tone])`). A standalone
+        // string/template const (shared mono-code metrics — code/mono is out of
+        // scope) or a styling-function result (`cva(...)`) is deliberately NOT
+        // followed, and a map reached only through an intermediate local is out
+        // of range by design.
+        const init = def.type === "Variable" ? def.node.init : null;
+        if (init && (init.type === "ObjectExpression" || init.type === "ArrayExpression")) {
+          collectTokens(sourceCode, init, out, seen);
+        }
+      }
+    }
+    return;
+  }
   for (const key of Object.keys(node)) {
     if (key === "parent") continue;
     const value = (node as unknown as Record<string, unknown>)[key];
     if (Array.isArray(value)) {
       for (const child of value) {
         if (child && typeof child === "object" && "type" in child) {
-          collectTokens(child as TSESTree.Node, out);
+          collectTokens(sourceCode, child as TSESTree.Node, out, seen);
         }
       }
     } else if (value && typeof value === "object" && "type" in value) {
-      collectTokens(value as TSESTree.Node, out);
+      collectTokens(sourceCode, value as TSESTree.Node, out, seen);
     }
   }
 }
+// <<< shared:class-token-walk <<<
 
 /**
  * Strip Tailwind variant prefixes (`hover:`, `focus:`, `md:`, `dark:`, …) so the
@@ -135,7 +177,7 @@ export default createRule({
       JSXAttribute(node) {
         if (node.name.type !== "JSXIdentifier" || !CLASS_ATTRS.has(node.name.name)) return;
         const tokens = new Set<string>();
-        collectTokens(node.value, tokens);
+        collectTokens(context.sourceCode, node.value, tokens);
         checkTokens(node, tokens);
       },
       // Class-builder calls — `cn(...)`, `clsx(...)`, … — wherever they appear
@@ -145,7 +187,7 @@ export default createRule({
           return;
         }
         const tokens = new Set<string>();
-        for (const arg of node.arguments) collectTokens(arg, tokens);
+        for (const arg of node.arguments) collectTokens(context.sourceCode, arg, tokens);
         checkTokens(node, tokens);
       },
     };
