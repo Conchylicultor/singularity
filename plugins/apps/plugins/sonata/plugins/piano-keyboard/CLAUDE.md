@@ -7,7 +7,7 @@
 - Description: Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
 - Web:
   - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`, `ConfigV2.WebRegister`
-  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`
+  - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`
 - Server:
   - Uses: `config_v2.ConfigV2`
 

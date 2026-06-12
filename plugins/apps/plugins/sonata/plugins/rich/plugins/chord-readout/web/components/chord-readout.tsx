@@ -9,7 +9,7 @@ import {
   invertVoicing,
   formatChordSymbol,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
-import { MiniKeyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/mini-keyboard/web";
+import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import type {
@@ -147,7 +147,7 @@ export function ChordReadout() {
                             </span>
                           </div>
                         )}
-                        <MiniKeyboard
+                        <Keyboard
                           low={KB_LOW}
                           high={KB_HIGH}
                           lit={voicing}

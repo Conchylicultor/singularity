@@ -5,6 +5,10 @@ import {
   type Projection,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import {
+  keyLayout as fractionalKeyLayout,
+  isBlackPitch,
+} from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 
 /**
  * The piano roll's coordinate model — pure, framework-free, so the renderer and
@@ -55,48 +59,23 @@ export const KEYBOARD_LOW = 21;
 export const KEYBOARD_HIGH = 108;
 /** Number of white keys in the full 88-key range. */
 const WHITE_KEY_COUNT = 52;
-/** Black keys are this fraction of a white key's width. */
-const BLACK_WIDTH_RATIO = 0.62;
-/** White pitch classes (C D E F G A B). */
-const WHITE_PCS = new Set([0, 2, 4, 5, 7, 9, 11]);
 
-/** True for the five accidental pitch classes (black keys). */
-export function isBlackPitch(pitch: number): boolean {
-  return !WHITE_PCS.has(((pitch % 12) + 12) % 12);
-}
+// The key formula lives once, in the keyboard primitive. Re-export `isBlackPitch`
+// so the roll's note builder keeps importing it from here.
+export { isBlackPitch };
 
 /**
- * Build the full 88-key layout for a given pixel width. White keys tile
- * edge-to-edge (`whiteW = width / 52`); each black key centers on the boundary
- * just above its lower white neighbour, drawn narrower. Pure.
+ * Build the full 88-key layout for a given pixel width. The keyboard primitive
+ * owns the fractional key geometry (white keys tile edge-to-edge; black keys
+ * ride the boundaries, narrower); here we scale those 0..1 fractions to pixels
+ * so the falling notes and the keyboard renderer share ONE layout. Pure.
  */
 export function keyLayout(width: number): KeyLane[] {
-  const whiteW = width / WHITE_KEY_COUNT;
-  const blackW = whiteW * BLACK_WIDTH_RATIO;
-
-  const lanes: KeyLane[] = [];
-  let whiteIndex = 0;
-  for (let pitch = KEYBOARD_LOW; pitch <= KEYBOARD_HIGH; pitch++) {
-    if (!isBlackPitch(pitch)) {
-      lanes.push({
-        pitch,
-        isBlack: false,
-        center: whiteIndex * whiteW + whiteW / 2,
-        width: whiteW,
-      });
-      whiteIndex++;
-    } else {
-      // The boundary between the white key just below and the next one — i.e.
-      // the right edge of the white key already counted (whiteIndex - 1).
-      lanes.push({
-        pitch,
-        isBlack: true,
-        center: whiteIndex * whiteW,
-        width: blackW,
-      });
-    }
-  }
-  return lanes;
+  return fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH).map((k) => ({
+    ...k,
+    center: k.center * width,
+    width: k.width * width,
+  }));
 }
 
 /**

@@ -7,6 +7,7 @@ import {
   type KeySpeller,
   type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   useHiddenTrackIds,
@@ -19,15 +20,12 @@ import { pianoKeyboardConfig } from "../../shared/config";
 type LabelScope = "diatonic" | "whites-plus-in-key" | "all";
 
 /**
- * Resting key colors. A piano is a physical object — white keys are always
- * ivory, black keys always near-black — so these stay fixed in both light and
- * dark themes rather than tracking the UI's foreground/background tokens (which
- * flip in dark mode and would invert the keys). The lit state still uses the
- * theme's accent / per-track color. Inline styles keep these out of the
- * className-only `no-hardcoded-colors` check.
+ * Resting label text colors. The key chrome (ivory / near-black caps) is owned
+ * by the shared keyboard primitive; only the per-key label color lives here. A
+ * piano is a physical object, so these stay fixed across light/dark themes;
+ * inline styles keep them out of the className-only `no-hardcoded-colors` check.
  */
-const WHITE_KEY = { bg: "#fafafa", border: "#d4d4d8", label: "#52525b" };
-const BLACK_KEY = { bg: "#1c1c1c", border: "#0a0a0a", label: "#d4d4d4" };
+const LABEL_COLOR = { white: "#52525b", black: "#d4d4d4" };
 
 /** White pitch-class → natural letter (for keys outside the key signature). */
 const NATURAL_LETTER: Record<number, string> = {
@@ -73,10 +71,11 @@ function keyLabel(
 /**
  * Full 88-key piano keyboard, rendered in the roll's pitch-axis gutter. Draws
  * every key from `projection.keys` (the single layout the falling notes also
- * use), so each note column lands exactly on its key. Key labels follow the
- * score's key signature (`score.meta.key`) — configurable via the plugin's
- * `labelScope` — and keys sounding at the playback cursor light up in the
- * accent color, connecting the falling notes to the keys they land on.
+ * use) through the shared keyboard primitive, so each note column lands exactly
+ * on its key. Key labels follow the score's key signature (`score.meta.key`) —
+ * configurable via the plugin's `labelScope` — and keys sounding at the playback
+ * cursor light up in their per-track color, connecting the falling notes to the
+ * keys they land on.
  */
 export function PianoKeyboard({ projection }: { projection: Projection }) {
   const keys = projection.keys;
@@ -95,9 +94,10 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
   // Pitches sounding at the cursor → the color to light each with. A key lights
   // only for notes on a track that is neither hidden (gone from the roll) nor
   // muted (silent), so the keyboard tracks the same view-state as the falling
-  // notes and the audio. The first eligible note per pitch picks the tint.
-  // Recomputed each frame while playing (cursorBeat advances); a linear scan
-  // over notes is trivial at keyboard scale.
+  // notes and the audio. The first eligible note per pitch picks the tint. This
+  // is exactly the keyboard primitive's map-form `lit`: pitch → CSS color ("" →
+  // theme accent). Recomputed each frame while playing (cursorBeat advances); a
+  // linear scan over notes is trivial at keyboard scale.
   const sounding = useMemo(() => {
     const m = new Map<number, string>();
     for (const n of score.notes) {
@@ -113,73 +113,35 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
     return m;
   }, [score.notes, cursorBeat, colorMap, hiddenIds, mutedIds]);
 
-  if (!keys) return null; // defensive: host only mounts us with pitch-plane.
+  if (!keys?.length) return null; // defensive: host only mounts us with pitch-plane.
 
   const scope = labelScope as LabelScope;
-  const whites = keys.filter((k) => !k.isBlack);
-  const blacks = keys.filter((k) => k.isBlack);
+  const low = keys[0]!.pitch;
+  const high = keys[keys.length - 1]!.pitch;
 
   return (
-    <div className="absolute inset-0 overflow-hidden bg-muted/30">
-      {/* White keys (back layer). */}
-      {whites.map((k) => {
-        const color = sounding.get(k.pitch); // undefined → not lit
-        const lit = color !== undefined;
+    <Keyboard
+      low={low}
+      high={high}
+      lit={sounding}
+      className="absolute inset-0 rounded-none bg-muted/30"
+      renderKey={(k, lit) => {
+        const text = keyLabel(k, speller, scope);
+        if (!text) return null;
         return (
-          <div
-            key={k.pitch}
-            className={`absolute bottom-0 top-0 flex items-end justify-center rounded-b-sm border pb-1 ${
-              lit ? "bg-primary" : ""
-            }`}
-            style={{
-              left: k.center - k.width / 2,
-              width: k.width,
-              borderColor: WHITE_KEY.border,
-              backgroundColor: color || (lit ? undefined : WHITE_KEY.bg),
-            }}
+          <span
+            // eslint-disable-next-line text/no-adhoc-typography, type-scale-tokens/no-arbitrary-font-size -- 9px/7px labels tuned to fit a narrow key cap; below the 10px token floor, tight leading centers them on the key
+            className={`select-none leading-none ${k.isBlack ? "mb-0.5 text-[7px]" : "mb-1 text-[9px]"} ${lit ? "text-primary-foreground" : ""}`}
+            style={
+              lit
+                ? undefined
+                : { color: k.isBlack ? LABEL_COLOR.black : LABEL_COLOR.white }
+            }
           >
-            <span
-              // eslint-disable-next-line text/no-adhoc-typography, type-scale-tokens/no-arbitrary-font-size -- 9px label tuned to fit a narrow white-key cap; below the 10px token floor, tight leading centers it on the key
-              className={`select-none text-[9px] leading-none ${
-                lit ? "text-primary-foreground" : ""
-              }`}
-              style={lit ? undefined : { color: WHITE_KEY.label }}
-            >
-              {keyLabel(k, speller, scope)}
-            </span>
-          </div>
+            {text}
+          </span>
         );
-      })}
-      {/* Black keys (front layer), ~62% height. */}
-      {blacks.map((k) => {
-        const color = sounding.get(k.pitch); // undefined → not lit
-        const lit = color !== undefined;
-        return (
-          <div
-            key={k.pitch}
-            className={`absolute top-0 z-raised flex items-end justify-center rounded-b-sm border pb-0.5 ${
-              lit ? "bg-primary" : ""
-            }`}
-            style={{
-              left: k.center - k.width / 2,
-              width: k.width,
-              height: "62%",
-              borderColor: BLACK_KEY.border,
-              backgroundColor: color || (lit ? undefined : BLACK_KEY.bg),
-            }}
-          >
-            <span
-              // eslint-disable-next-line text/no-adhoc-typography, type-scale-tokens/no-arbitrary-font-size -- 7px label tuned to fit a narrow black-key cap; below the 10px token floor, tight leading centers it on the key
-              className={`select-none text-[7px] leading-none ${
-                lit ? "text-primary-foreground" : ""
-              }`}
-              style={lit ? undefined : { color: BLACK_KEY.label }}
-            >
-              {keyLabel(k, speller, scope)}
-            </span>
-          </div>
-        );
-      })}
-    </div>
+      }}
+    />
   );
 }

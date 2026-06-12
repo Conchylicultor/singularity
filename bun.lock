@@ -226,8 +226,8 @@
       "name": "@singularity/plugin-apps-sonata-primitives-inertial-drag",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/sonata/plugins/primitives/plugins/mini-keyboard": {
-      "name": "@singularity/plugin-apps-sonata-primitives-mini-keyboard",
+    "plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard": {
+      "name": "@singularity/plugin-apps-sonata-primitives-keyboard",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/sonata/plugins/progress": {
@@ -3010,7 +3010,7 @@
 
     "@singularity/plugin-apps-sonata-primitives-inertial-drag": ["@singularity/plugin-apps-sonata-primitives-inertial-drag@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag"],
 
-    "@singularity/plugin-apps-sonata-primitives-mini-keyboard": ["@singularity/plugin-apps-sonata-primitives-mini-keyboard@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/mini-keyboard"],
+    "@singularity/plugin-apps-sonata-primitives-keyboard": ["@singularity/plugin-apps-sonata-primitives-keyboard@workspace:plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard"],
 
     "@singularity/plugin-apps-sonata-progress": ["@singularity/plugin-apps-sonata-progress@workspace:plugins/apps/plugins/sonata/plugins/progress"],
 

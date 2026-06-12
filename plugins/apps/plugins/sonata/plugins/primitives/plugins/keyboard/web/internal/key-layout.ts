@@ -6,8 +6,9 @@
  *
  * White keys tile edge-to-edge (`whiteW = 1 / whiteCount`); each black key
  * centers on the boundary just above its lower white neighbour, drawn narrower.
- * Pure — mirrors the piano-roll's pixel-based `keyLayout`, which the unification
- * follow-up (task-1781255972357-v21c5e) will point at this primitive.
+ * Pure — the single source of the key formula: the piano-roll's pixel `keyLayout`
+ * scales these fractions by its lane width, so the falling notes and every
+ * keyboard renderer share one geometry.
  */
 
 /** Black keys are this fraction of a white key's width. */
