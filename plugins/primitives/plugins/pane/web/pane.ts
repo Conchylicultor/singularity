@@ -777,9 +777,19 @@ function makePaneObject(internal: PaneInternal): PaneObject<any, any, any> {
       callerInstanceId !== undefined
         ? route.findIndex((s) => s.instanceId === callerInstanceId)
         : -1;
-    const searchFrom = callerIndex >= 0 ? callerIndex + 1 : 0;
+    // Search for the toggle's target on the same side it would be opened.
+    // `side: "left"` inserts the pane before the caller (as an ancestor), so
+    // look to the left; the default right-push appends after the caller, so
+    // look to the right. Mismatching the side makes the open-check miss the
+    // existing pane and stack a duplicate on every click.
+    const searchRegion =
+      side === "left"
+        ? callerIndex >= 0
+          ? route.slice(0, callerIndex)
+          : route
+        : route.slice(callerIndex >= 0 ? callerIndex + 1 : 0);
     const targetSlot =
-      route.slice(searchFrom).find((s) => s.paneId === internal.id) ?? null;
+      searchRegion.find((s) => s.paneId === internal.id) ?? null;
     const isOpen = targetSlot !== null;
 
     const toggle = useCallback(() => {
