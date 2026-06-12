@@ -237,11 +237,22 @@ function Sidebar({
             : "group-data-[collapsible=icon]:w-(--sidebar-width-icon)"
         )}
       />
+      {/*
+        Divergence from stock shadcn: the fixed container sizes to its containing
+        block (`h-full` + `inset-y-0`), NOT the viewport (`h-svh`). The app shell
+        nests the sidebar inside an offset, `transform`ed container (per-tab
+        keep-alive in apps-layout makes it the fixed-positioning context), so a
+        viewport-height sidebar overshoots the bottom by the height of any chrome
+        above it (e.g. the app tab bar) and silently clips its last item. Sizing
+        to the container respects whatever offset that chrome imposes. If a shadcn
+        regen reverts this, the bottom of the sidebar will clip again — keep
+        `h-full`, not `h-svh`.
+      */}
       <div
         data-slot="sidebar-container"
         data-side={side}
         className={cn(
-          "fixed inset-y-0 z-nav hidden h-svh w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
+          "fixed inset-y-0 z-nav hidden h-full w-(--sidebar-width) transition-[left,right,width] duration-200 ease-linear data-[side=left]:left-0 data-[side=left]:group-data-[collapsible=offcanvas]:left-[calc(var(--sidebar-width)*-1)] data-[side=right]:right-0 data-[side=right]:group-data-[collapsible=offcanvas]:right-[calc(var(--sidebar-width)*-1)] md:flex",
           // Adjust the padding for floating and inset variants.
           variant === "floating" || variant === "inset"
             ? "p-sm group-data-[collapsible=icon]:w-[calc(var(--sidebar-width-icon)+(--spacing(4))+2px)]"
