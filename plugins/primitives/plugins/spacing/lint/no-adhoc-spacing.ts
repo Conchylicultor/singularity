@@ -32,12 +32,16 @@ const createRule = ESLintUtils.RuleCreator(
  */
 
 // Raw spacing utilities: a numeric step (`-2`, `-0.5`) or an arbitrary value
-// (`-[7px]`). The named ramp steps (`gap-sm`, `p-md`, …) and `auto` start with a
-// letter, so they never match.
-const GAP = /^gap(?:-[xy])?-(?:\d|\[)/;
-const PAD = /^p[xytrbl]?-(?:\d|\[)/;
-const MARGIN = /^m[xytrbl]?-(?:\d|\[)/;
-const SPACE = /^space-[xy]-(?:\d|\[)/;
+// (`-[7px]`). A raw value is a pure number (optionally fractional); a NAMED ramp
+// step is a word — even the two that begin with a digit (`2xs`, `2xl`). So we
+// can't just test "starts with a digit": that misfires on `gap-2xs`/`p-2xl`.
+// Instead, match digits NOT immediately followed by a letter (the `(?![a-z])`
+// guard) — so `gap-2`/`p-0.5`/`gap-2!` match while `gap-2xs`/`p-2xl` don't — or
+// an arbitrary `[`. Letter-led steps (`gap-sm`, `p-md`, `mx-auto`) never match.
+const GAP = /^gap(?:-[xy])?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
+const PAD = /^p[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
+const MARGIN = /^m[xytrbl]?-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
+const SPACE = /^space-[xy]-(?:\d+(?:\.\d+)?(?![a-z])|\[)/;
 
 /** JSX attribute names whose value is a class-name string. */
 const CLASS_ATTRS = new Set(["className", "class"]);
