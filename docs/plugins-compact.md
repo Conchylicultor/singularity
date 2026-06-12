@@ -6,13 +6,13 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`active-data`** [5 sub-plugins] — Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 
-- **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
-
 - **`apps`** [load-bearing] — App switcher rail. Wraps per-app shells; plugins contribute via Apps.App.
   - Plugins:
     - **`agent-manager`** — Agent manager app shell and layout.
       - Plugins:
         - **`shell`** — App shell for the agent manager. Registers the /agents app entry and renders the main Shell layout.
+        - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
+        - **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
     - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
       - Plugins:
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
@@ -56,8 +56,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 
-- **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
-
 - **`auth`** [load-bearing] [3 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 
 - **`backup`** [2 sub-plugins] — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
@@ -69,13 +67,9 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`code-api`** — Typed contracts for the /api/code/* endpoints (tree, file, diff, image, push, commit). A leaf library so both code-explorer (routes, handlers, explorer UI) and the conversation file-pane/commits-graph/docs-button consumers import the contracts without forming a code-explorer ⇄ file-pane import cycle.
     - **`file-resolve`** — Fuzzy file path resolution via segment-subsequence matching against git ls-files. Fuzzy file path resolution via segment-subsequence matching against git ls-files.
 
-- **`collections`** — Typed collection primitive: defineCollection for managed user-editable lists.
-
 - **`config_v2`** [3 sub-plugins] — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
 
-- **`conversations`** [load-bearing] [96 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
-
-- **`conversations-recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
+- **`conversations`** [load-bearing] [98 sub-plugins] — Conversation domain: shared hooks and client-side API. Conversation domain: shared server code and types; view plugins live under `plugins/`.
 
 - **`crashes`** [4 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 
@@ -108,11 +102,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
 
-- **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
-
 - **`fields`** [43 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
-
-- **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -138,8 +128,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
 
-- **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
-
 - **`improve`**
   - Plugins:
     - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
@@ -152,8 +140,10 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`endpoints`** [load-bearing] — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
     - **`entity-extensions`** [load-bearing] — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
+    - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
     - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
+    - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
     - **`jobs`** [load-bearing] — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
     - **`paths`**
@@ -166,8 +156,6 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`full-pane`** — Full-pane layout renderer. Paints only the active pane (route.at(-1)) full-surface — the screen-stack navigation model, mounted by full-surface apps.
     - **`host`** — Mixing host that dispatches each active pane to Full-pane or Miller per the app's own full-surface pane list. Resolves the route once and provides the shared match context.
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
-
-- **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
@@ -194,6 +182,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
     - **`collapsible`** — Accessible collapsible primitive with controlled/uncontrolled support and a built-in chevron indicator. Compound components for standard layouts; useCollapsible hook for custom triggers.
     - **`collapsible-wrap`** — Wraps overflowing children to multiple lines, clamped to N rows by default with a chevron toggle to reveal the rest. Force-expands while reorder edit mode is active.
+    - **`collections`** — Typed collection primitive: defineCollection for managed user-editable lists.
     - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
     - **`command-palette`** — Cmd+K command palette primitive. Plugins contribute commands via CommandPalette.Item; the dialog renders them with fuzzy search and keyboard navigation.
     - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
@@ -250,6 +239,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
     - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
+    - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
     - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
     - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
       - Plugins:
@@ -283,6 +273,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
   - Plugins:
     - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.
+    - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
+    - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
 
 - **`stats`** [4 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
@@ -290,6 +282,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`tasks`** — Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
   - Plugins:
     - **`attempt-status`** — Single source of truth for Attempt status display metadata — badge color and sentence-case label.
+    - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
     - **`auto-start`** — Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
     - **`task-attachments`** — Renders the task's attachments (images, files) in the detail pane.
     - **`task-dependencies`** — Lists the task's dependencies as removable chips, with a quick-add button for the folder task when applicable.
@@ -306,12 +299,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`task-preprompt`** — Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
     - **`task-status`** — Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
     - **`task-title`** — Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
-
-- **`tasks-core`** [load-bearing] — Schema + repository layer for the tasks/attempts/conversations FK cluster.
-
-- **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
-
-- **`theme`** — Toolbar toggle for light/dark mode.
+    - **`tasks-core`** [load-bearing] — Schema + repository layer for the tasks/attempts/conversations FK cluster.
 
 - **`ui`** — Umbrella for pluggable UI components with switchable visual variants.
   - Plugins:
@@ -327,14 +315,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
+    - **`theme-toggle`** — Toolbar toggle for light/dark mode.
     - **`tokens`** [11 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
       - Plugins:
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
     - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).
-
-- **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
-
-- **`worktree-switcher`** — Toolbar dropdown to switch the active worktree namespace.
 
 <!-- AUTOGENERATED:END -->

@@ -1,19 +1,19 @@
-// @hash 9a8414362778
+// @hash caaf04201b40
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "ui.theme-engine.theme-customizer:theme-customizer",
+    "ui.theme-toggle:theme-light-dark",
     "reorder.edit-mode:reorder-pen",
+    "infra.health:health-dot",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
-    "health:health-dot",
-    "theme:theme-light-dark",
+    "shell.notifications:notifications",
     "improve:improve",
     "improve.element-picker:element-picker",
     "build:build",
-    "fullscreen:fullscreen-toggle",
-    "notifications:notifications"
+    "fullscreen:fullscreen-toggle"
   ]
 }

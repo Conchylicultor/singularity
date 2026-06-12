@@ -15,11 +15,11 @@ export interface ReorderableSlot {
 
 export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "action-bar.item", pluginId: "shell.action-bar" },
-  { slotId: "agents.agent-actions", pluginId: "agents" },
-  { slotId: "agents.list", pluginId: "agents" },
-  { slotId: "agents.list-actions", pluginId: "agents" },
-  { slotId: "agents.system-agent", pluginId: "agents" },
-  { slotId: "agents.view", pluginId: "agents" },
+  { slotId: "agents.agent-actions", pluginId: "conversations.agents" },
+  { slotId: "agents.list", pluginId: "conversations.agents" },
+  { slotId: "agents.list-actions", pluginId: "conversations.agents" },
+  { slotId: "agents.system-agent", pluginId: "conversations.agents" },
+  { slotId: "agents.view", pluginId: "conversations.agents" },
   { slotId: "apps.app", pluginId: "apps" },
   { slotId: "build-detail.section", pluginId: "build" },
   { slotId: "conversation-item.chips", pluginId: "conversations.conversation-ui.item" },

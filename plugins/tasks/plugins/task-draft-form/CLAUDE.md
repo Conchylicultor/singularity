@@ -23,14 +23,9 @@ Submits to `POST /api/tasks/chain` (handler in `plugins/tasks/server`).
 
 - Description: Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
 - Web:
-<<<<<<< .merge_file_gbOVyP
   - Slots: `TaskDraftFormSlots.Action`
-  - Uses: `apps.useActiveApp`, `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
+  - Uses: `apps.useActiveApp`, `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/notifications.toast`
   - Exports: Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskDraftActionProps`, `TaskDraftPopoverProps`, `TaskDraftRelate`; Values: `setActiveRelateContext`, `TaskDraftFormSlots`, `TaskDraftPopover`, `useActiveRelateContext`
-=======
-  - Uses: `apps.useActiveApp`, `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/notifications.toast`
-  - Exports: Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskDraftPopoverProps`, `TaskDraftRelate`; Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
->>>>>>> .merge_file_psA630
 - Cross-plugin:
   - Slot contributors: `element-picker`
   - Imported by: `conversations/conversation-view`, `conversations/conversation-view/new-child-task`, `improve`, `improve/element-picker`, `tasks/task-dependencies`
