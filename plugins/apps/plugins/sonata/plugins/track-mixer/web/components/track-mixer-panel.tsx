@@ -14,7 +14,11 @@ import {
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import {
+  Collapsible,
+  CollapsibleContent,
+} from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   SearchInput,
@@ -300,29 +304,33 @@ export function TrackMixerPanel() {
 
   return (
     <Card className="rounded-lg p-4">
-      <div className="flex items-center justify-between">
-        <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+      <Collapsible defaultOpen>
+        <SectionHeaderRow
+          variant="eyebrow"
+          actions={
+            <IconButton
+              icon={MdRestartAlt}
+              label="Reset tracks to defaults"
+              size="icon-sm"
+              disabled={!anyCustomized}
+              onClick={() => resetTrackViews(currentSongId)}
+            />
+          }
+        >
           Tracks
-        </div>
-        <IconButton
-          icon={MdRestartAlt}
-          label="Reset tracks to defaults"
-          size="icon-sm"
-          disabled={!anyCustomized}
-          onClick={() => resetTrackViews(currentSongId)}
-        />
-      </div>
+        </SectionHeaderRow>
 
-      <div className="mt-2 divide-y divide-border/60">
-        {entries.map((entry) => (
-          <TrackRow
-            key={entry.trackId}
-            songId={currentSongId}
-            options={options}
-            entry={entry}
-          />
-        ))}
-      </div>
+        <CollapsibleContent className="mt-2 divide-y divide-border/60">
+          {entries.map((entry) => (
+            <TrackRow
+              key={entry.trackId}
+              songId={currentSongId}
+              options={options}
+              entry={entry}
+            />
+          ))}
+        </CollapsibleContent>
+      </Collapsible>
     </Card>
   );
 }
