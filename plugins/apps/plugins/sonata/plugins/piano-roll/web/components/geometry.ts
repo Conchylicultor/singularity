@@ -1,9 +1,12 @@
 import {
+  accidentalGlyph,
   buildTempoIndex,
   type KeyLane,
+  type KeySpeller,
   type Note,
   type Projection,
   type Score,
+  type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import {
   keyLayout as fractionalKeyLayout,
@@ -76,6 +79,114 @@ export function keyLayout(width: number): KeyLane[] {
     center: k.center * width,
     width: k.width * width,
   }));
+}
+
+/**
+ * AUTHORED (base-tempo) seconds of a beat. The incoming score's tempo map has
+ * the playback `tempoScale` folded in (see the file header: its seconds are
+ * authoredSeconds / tempoScale), so multiplying `beatToSeconds` by `tempoScale`
+ * cancels the fold and recovers the tempo-INVARIANT authored timeline. This is
+ * the Y axis the note geometry is authored in: a note's authored span never
+ * changes when the user slows/speeds playback — only the scroll rate does
+ * (pxPerSecond = PX_PER_SECOND * tempoScale). Pure.
+ */
+export function authoredSecondsOf(
+  tempo: TempoIndex,
+  tempoScale: number,
+  beat: number,
+): number {
+  return tempo.beatToSeconds(beat) * tempoScale;
+}
+
+/**
+ * One note's render-ready visual, in resolution-independent AUTHORED space:
+ * X in key-fractions of the lane width (0..1, from the keyboard primitive's
+ * fractional `keyLayout`), Y in authored seconds (see `authoredSecondsOf`).
+ * This is the contract between the pure geometry and the canvas renderer —
+ * built ONCE per (score, hidden-set, colors, tempoScale); resize and scroll
+ * never touch it (the renderer maps it to pixels with a single transform).
+ */
+export interface NoteVisual {
+  noteId: string;
+  trackId: string;
+  /** Left edge as a fraction of the lane width (0..1). */
+  xFrac: number;
+  /** Width as a fraction of the lane width (0..1). */
+  wFrac: number;
+  /** Onset, in authored seconds (tempo-invariant). */
+  y0Sec: number;
+  /** End (onset + duration), in authored seconds. Always >= y0Sec. */
+  y1Sec: number;
+  /**
+   * The note's CSS color EXPRESSION, unresolved — track colors arrive as CSS
+   * strings (typically `var(--categorical-N)`), and notes without a resolved
+   * track color carry `var(--primary)`. Always a string (never null) so the
+   * downstream CSS→number resolution is one uniform path with no fallback
+   * branch at the consumer.
+   */
+  colorExpr: string;
+  /** Velocity-driven fill opacity: 0.4 + velocity/127 × 0.6 ∈ [0.4, 1]. */
+  alpha: number;
+  /** Notes on black keys render a shade darker (Synthesia convention). */
+  isBlack: boolean;
+  /**
+   * Note-name label parts, kept apart so the accidental glyph can be rendered
+   * compact + tucked against the letter. ALWAYS populated — whether labels are
+   * shown (the `showNoteNames` toggle, fit thresholds) is the renderer's
+   * concern, so toggling labels never rebuilds the visuals.
+   */
+  label: { step: string; accidental: string } | null;
+}
+
+/**
+ * Build every visible note's {@link NoteVisual} — the pure, framework-free
+ * replacement for the piano-roll's per-note rect memo. Hidden tracks are
+ * dropped entirely; spelling prefers the note's own populated `spelling` (from
+ * the key-context pass) and falls back to lazy key-aware spelling. Positions
+ * are authored-space (key-fraction × authored-seconds), so the result is
+ * invariant under lane resizes AND tempo changes — only score/track-view
+ * changes rebuild it.
+ */
+export function buildNoteVisuals(input: {
+  /** Score with `tempoScale` already folded into its tempo map (see header). */
+  score: Score;
+  /** Track ids dropped from the roll (track-mixer "hide"). */
+  hiddenIds: ReadonlySet<string>;
+  /** trackId → CSS color expression (track-mixer rollup). */
+  colorMap: ReadonlyMap<string, string>;
+  /** Key-signature-aware speller for notes left unspelled by the source. */
+  speller: KeySpeller;
+  /** Playback tempo multiplier (1 = authored) — cancels the score's fold. */
+  tempoScale: number;
+}): NoteVisual[] {
+  const { score, hiddenIds, colorMap, speller, tempoScale } = input;
+  const tempo = buildTempoIndex(score);
+  const keys = fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH);
+  const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
+  // Out-of-range pitches degrade like `buildProjection`'s noteToRect: a
+  // white-key-wide bar pinned to the left edge (center 0), never a crash.
+  const fallbackWidth = 1 / WHITE_KEY_COUNT;
+
+  return score.notes
+    .filter((n) => !hiddenIds.has(n.track))
+    .map((n) => {
+      const k = byPitch.get(n.pitch);
+      const w = k?.width ?? fallbackWidth;
+      const center = k?.center ?? 0;
+      const s = n.spelling ?? speller.spell(n.pitch);
+      return {
+        noteId: n.id,
+        trackId: n.track,
+        xFrac: center - w / 2,
+        wFrac: w,
+        y0Sec: authoredSecondsOf(tempo, tempoScale, n.start),
+        y1Sec: authoredSecondsOf(tempo, tempoScale, n.start + n.duration),
+        colorExpr: colorMap.get(n.track) ?? "var(--primary)",
+        alpha: 0.4 + (n.velocity / 127) * 0.6,
+        isBlack: isBlackPitch(n.pitch),
+        label: { step: s.step, accidental: accidentalGlyph(s.alter) },
+      };
+    });
 }
 
 /**

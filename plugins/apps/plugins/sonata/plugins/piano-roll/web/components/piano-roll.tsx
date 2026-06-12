@@ -1,27 +1,39 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useLayoutEffect, useMemo, useRef, useState } from "react";
 import {
-  accidentalGlyph,
   bars,
   buildTempoIndex,
   makeKeySpeller,
   scoreEndBeat,
-  type KeyLane,
   type Score,
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
+import { keyLayout as fractionalKeyLayout } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   useTrackColorMap,
   useHiddenTrackIds,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { pianoRollConfig } from "../../shared/config";
-import { buildProjection, isBlackPitch, PX_PER_SECOND } from "./geometry";
+import {
+  authoredSecondsOf,
+  buildNoteVisuals,
+  buildProjection,
+  KEYBOARD_HIGH,
+  KEYBOARD_LOW,
+  PX_PER_SECOND,
+} from "./geometry";
+import type { Application } from "pixi.js";
+import { PianoRollCanvas } from "../internal/pixi/app";
+import type { PianoRollScene } from "../internal/pixi/scene";
+import { createFxContext } from "../internal/fx/fx-context";
+import { FxHost } from "../internal/fx/fx-host";
 import { ProjectionProvider } from "./projection-context";
 import { OverlayHost } from "./overlay-host";
+import { FxToggle } from "./fx-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
 
 /** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. */
@@ -36,33 +48,6 @@ export interface PianoRollProps {
 
 /** Height of the pitch-axis gutter (the piano keyboard) at the bottom. */
 const KEYBOARD_HEIGHT = 112;
-
-/**
- * Font size (px) for a falling-bar note name, sized so the whole label fits
- * *inside* the bar — no overflow into neighbouring columns. The width budget is
- * the label's intrinsic advance in em: one cap letter (≈0.70em in Inter
- * semibold) plus, when present, the compact accidental rendered at 0.7em and
- * tucked in (net ≈0.34em). Dividing the bar width by that budget makes a bare
- * natural on a wide white key large, while a flat/sharp on the narrower black
- * key (blackW ≈ 0.62·whiteW) plus its extra glyph comes out smaller — exactly
- * the desired "black-key names are smaller" behaviour. Capped by the bar height
- * so short notes don't get oversized text, and by a tasteful ceiling. Returns
- * null when even the legible floor won't fit, so the caller skips the label.
- */
-function noteLabelFontPx(
-  keyWidth: number,
-  barHeight: number,
-  hasAccidental: boolean,
-): number | null {
-  const FLOOR = 7;
-  const LETTER_EM = 0.7;
-  const ACCIDENTAL_EM = 0.34;
-  const FILL = 0.94;
-  const emWidth = LETTER_EM + (hasAccidental ? ACCIDENTAL_EM : 0);
-  const widthFit = (keyWidth * FILL) / emWidth;
-  if (widthFit < FLOOR) return null;
-  return Math.max(FLOOR, Math.min(widthFit, barHeight * 0.85, 28));
-}
 
 /** Observe an element's pixel size via ResizeObserver (no polling). */
 function useElementSize(): [
@@ -93,80 +78,15 @@ function useElementSize(): [
 }
 
 /**
- * Bar lines, drawn as absolutely-positioned content-space elements. These live
- * INSIDE the scroll layer, so their `top` is the cursor-invariant content Y and
- * the layer's `translateY` scrolls them. All bars mount once — the lane's
- * `overflow-hidden` paint-culls whatever falls offscreen.
- */
-function GridLines({
-  score,
-  beatToY,
-  laneWidth,
-}: {
-  score: Score;
-  beatToY: (beat: number) => number;
-  laneWidth: number;
-}) {
-  const barList = useMemo(() => bars(score), [score]);
-
-  return (
-    <>
-      {barList.map((b) => (
-        <div
-          key={b.index}
-          className="absolute left-0 border-t border-border/60"
-          style={{ top: beatToY(b.startBeat), width: laneWidth }}
-        >
-          <span className="absolute left-1 top-0.5 select-none text-3xs tabular-nums text-muted-foreground/70">
-            {b.index + 1}
-          </span>
-        </div>
-      ))}
-    </>
-  );
-}
-
-/**
- * Octave separators: vertical lines at every C boundary (the left edge of each C
- * key), so the eye can register which octave a falling note belongs to. Pitch is
- * the FIXED horizontal axis, so these are screen-anchored — they never scroll,
- * unlike the time-axis bar lines. Drawn full lane height from the published key
- * layout, so each line sits exactly on its key's left edge.
- */
-function OctaveLines({
-  keys,
-  laneHeight,
-}: {
-  keys: readonly KeyLane[];
-  laneHeight: number;
-}) {
-  const cKeys = useMemo(
-    () => keys.filter((k) => ((k.pitch % 12) + 12) % 12 === 0),
-    [keys],
-  );
-
-  return (
-    <>
-      {cKeys.map((k) => (
-        <div
-          key={k.pitch}
-          className="pointer-events-none absolute top-0 border-l border-border/40"
-          style={{ left: k.center - k.width / 2, height: laneHeight }}
-        />
-      ))}
-    </>
-  );
-}
-
-/**
- * The ONLY component that reads `cursorBeat` each frame. It maps the cursor to a
- * single scroll `offset` and applies it as one `translateY` over its children.
+ * The ONLY DOM component that reads `cursorBeat` each frame. It maps the cursor
+ * to a single scroll `offset` and applies it as one `translateY` over its
+ * children — exactly the formula the canvas scene's `setScroll` applies to its
+ * scroll root, so DOM overlays and canvas notes stay glued per frame.
  *
- * Its `children` are the cursor-INVARIANT content (notes + bar lines + overlays),
- * created by the parent which does NOT depend on `cursorBeat`. Because those
- * element identities don't change between frames, React bails out re-rendering
- * them when only the cursor advances — so the whole notes/overlay subtree stops
- * reconciling and only this leaf's transform updates. Keeping the parent
+ * Its `children` are the cursor-INVARIANT content (the projection-anchored
+ * overlay host), created by the parent which does NOT depend on `cursorBeat`.
+ * Because those element identities don't change between frames, React bails
+ * out re-rendering them when only the cursor advances. Keeping the parent
  * cursor-free is load-bearing: if it read `cursorBeat`, the isolation breaks.
  *
  * `transform` opens a new stacking context here, so the now-line must remain a
@@ -214,7 +134,10 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   );
 
   // Cursor-invariant projection: depends only on lane size + score, so it (and
-  // every note rect) stays stable while playing — only the ScrollLayer moves.
+  // every overlay anchor) stays stable while playing — only the ScrollLayer
+  // moves. The canvas draws from the SAME geometry source (buildNoteVisuals
+  // shares the fractional key layout and authored-seconds axis), so canvas
+  // notes land pixel-exact with DOM overlays and the keyboard.
   const projection = useMemo(
     () =>
       buildProjection({
@@ -242,7 +165,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // `unitsPerPixel`. The physics (friction, momentum) lives in the reusable
   // inertial-drag primitive; this site only maps pixels↔seconds and bridges the
   // transport (pause on grab, restore the pre-drag play state once motion ends).
-  const { seekTo, isPlaying, play, stop } = useSonata();
+  const { seekTo, isPlaying, play, stop, seekEpoch } = useSonata();
   const hasNotes = score.notes.length > 0;
   const pxPerSecond = PX_PER_SECOND * tempoScale;
   const endSeconds = tempo.beatToSeconds(scoreEndBeat(score));
@@ -271,145 +194,94 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // Per-track view-state: hidden tracks are dropped from the roll entirely;
   // every drawn note is tinted by its track's effective color (palette default
   // or user override). Both come from the track-mixer's reactive rollup, so a
-  // toggle/recolor re-derives `noteRects` (and only then — not per frame).
+  // toggle/recolor re-derives the visuals (and only then — not per frame).
   const colorMap = useTrackColorMap();
   const hiddenIds = useHiddenTrackIds();
 
-  // Note rectangles, derived from the projection (single geometry source). The
-  // key-signature-aware name is computed here too so it stays stable across
-  // frames; the label only renders when `showNoteNames` is on.
-  const noteRects = useMemo(() => {
-    const toRect = projection.noteToRect!;
-    return score.notes
-      .filter((n) => !hiddenIds.has(n.track))
-      .map((n) => {
-        // Prefer the note's own populated spelling (from the key-context pass);
-        // fall back to lazy key-aware spelling for any note left unspelled.
-        const s = n.spelling ?? speller.spell(n.pitch);
-        return {
-          note: n,
-          rect: toRect(n),
-          // Step letter and accidental kept apart so the glyph can be rendered
-          // compact + tucked against the letter (the unicode ♭/♯ carry a wide
-          // left-bearing that otherwise wastes space and overflows the column).
-          step: s.step,
-          accidental: accidentalGlyph(s.alter),
-          color: colorMap.get(n.track) ?? null,
-          // Synthesia-style: notes landing on black keys (sharps/flats) read a
-          // shade darker than the white-key notes of the same track, so the
-          // accidental rows are visually distinct from the diatonic ones.
-          isBlack: isBlackPitch(n.pitch),
-        };
-      });
-  }, [projection, score.notes, speller, colorMap, hiddenIds]);
+  // Authored-space note visuals — the canvas renderer's entire input. Pure and
+  // CURSOR-INVARIANT: built once per (score, track view, tempoScale); resize
+  // and scroll never touch it (the scene maps it to pixels with one transform).
+  const visuals = useMemo(
+    () => buildNoteVisuals({ score, hiddenIds, colorMap, speller, tempoScale }),
+    [score, hiddenIds, colorMap, speller, tempoScale],
+  );
 
-  // The cursor-invariant content, MEMOIZED on its real inputs (notes, geometry,
-  // label toggle) — pointedly NOT on `cursorBeat`. The transport bumps the
-  // cursor every rAF frame, which re-renders this component (it reads the shared
-  // context via `useSonata`); without this memo the whole note subtree's JSX is
-  // recreated and React reconciles every one of the (potentially thousands of)
-  // note nodes on every frame, which is the scrub/playback jank. Memoizing makes
-  // the element identity genuinely stable between cursor frames, so React bails
-  // out of reconciling it and only `ScrollLayer`'s single `translateY` updates —
-  // exactly the isolation the comment below the `ScrollLayer` definition
-  // describes (and which previously never actually engaged). Recomputes only when
-  // notes, the projection, the lane width, or the label toggle truly change.
+  // Bar markers in authored seconds (the canvas grid + bar numbers' input).
+  const barMarkers = useMemo(
+    () =>
+      bars(score).map((b) => ({
+        index: b.index,
+        startSec: authoredSecondsOf(tempo, tempoScale, b.startBeat),
+      })),
+    [score, tempo, tempoScale],
+  );
+
+  // Octave separators: the left-edge fraction of every C key, from the SAME
+  // fractional layout the notes use, so each line sits exactly on its key edge.
+  const cBoundaryFracs = useMemo(
+    () =>
+      fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH)
+        .filter((k) => ((k.pitch % 12) + 12) % 12 === 0)
+        .map((k) => k.center - k.width / 2),
+    [],
+  );
+
+  // Live scene + app pair, published by the canvas once Pixi init settles.
+  // The FX context (and host) mount off it below.
+  const [pixi, setPixi] = useState<{
+    scene: PianoRollScene;
+    app: Application;
+  } | null>(null);
+
+  // Latest-geometry refs for the FX context. The context is identity-stable
+  // (memoized on the pixi pair only) so effects never remount on resize —
+  // instead its accessors read these refs, which mirror the freshest
+  // projection/lane values every render. Closing over `projection` directly
+  // would hand effects a stale snapshot after the first resize.
+  const projectionRef = useRef(projection);
+  projectionRef.current = projection;
+  const laneSizeRef = useRef(lane);
+  laneSizeRef.current = lane;
+
+  // FX bridge — one per scene. See fx-context.ts for the accessor/budget design.
+  const fx = useMemo(
+    () =>
+      pixi
+        ? createFxContext({
+            scene: pixi.scene,
+            app: pixi.app,
+            getProjection: () => projectionRef.current,
+            getLaneSize: () => laneSizeRef.current,
+          })
+        : null,
+    [pixi],
+  );
+
+  // Per-frame scroll position in AUTHORED seconds — the only cursor-derived
+  // value the canvas consumes (one O(1) container move per frame).
+  const scrollSec = authoredSecondsOf(tempo, tempoScale, cursorBeat);
+
+  // The cursor-invariant DOM content, MEMOIZED on its real inputs — pointedly
+  // NOT on `cursorBeat`. The transport bumps the cursor every rAF frame, which
+  // re-renders this component (it reads the shared context via `useSonata`);
+  // memoizing keeps the overlay subtree's element identity stable between
+  // cursor frames so React bails out of reconciling it and only `ScrollLayer`'s
+  // single `translateY` (and the canvas scene's O(1) setScroll) update.
   const content = useMemo(
     () => (
-      <>
-        <GridLines
-          score={score}
-          beatToY={projection.beatToY!}
-          laneWidth={lane.width}
-        />
-
-        {noteRects.map(({ note, rect, step, accidental, color, isBlack }) => {
-          // Note name sized to fit inside the bar; null when it can't fit legibly.
-          const fontPx = showNoteNames
-            ? noteLabelFontPx(rect.w, rect.h, accidental !== "")
-            : null;
-          return (
-            <div
-              key={note.id}
-              className="absolute z-raised"
-              style={{
-                left: rect.x,
-                top: rect.y,
-                width: Math.max(2, rect.w - 1),
-                height: Math.max(2, rect.h - 1),
-              }}
-              title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
-            >
-              {/* Color fill is its own layer so velocity-driven opacity (and the
-                  black-key brightness shade) dim the bar WITHOUT also fading the
-                  label sitting on top of it. */}
-              <div
-                className={cn(
-                  "absolute inset-0 rounded-sm border shadow-sm",
-                  // Fall back to the primary token only when no track color
-                  // resolved (e.g. before the rollup loads); otherwise tint.
-                  color ? null : "border-primary/40 bg-primary/70",
-                )}
-                style={{
-                  opacity: 0.4 + (note.velocity / 127) * 0.6,
-                  // Darken black-key notes one shade below their track color.
-                  // Applied as a luminance filter so it works for any color
-                  // format and the token fallback alike, without parsing it.
-                  filter: isBlack ? "brightness(0.72)" : undefined,
-                  ...(color
-                    ? { backgroundColor: color, borderColor: color }
-                    : null),
-                }}
-              />
-              {/* Synthesia-style name, anchored to the bar's leading (bottom)
-                  edge and centered. Sized by noteLabelFontPx to sit fully inside
-                  the bar (naturals large on wide white keys, accidentals smaller
-                  on narrow black keys). A dark halo (text-shadow) keeps the white
-                  glyph legible on every palette hue — including bright
-                  amber/lime/cyan and velocity-dimmed/black-key-darkened bars —
-                  without per-note luminance math, which the opacity blend toward
-                  the dark roll background would defeat anyway. */}
-              {fontPx !== null ? (
-                <span
-                  // eslint-disable-next-line text/no-adhoc-typography -- per-note glyph sized by inline fontSize (fontPx); tight leading is required to vertically center the note-name on the falling bar
-                  className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center font-semibold leading-none text-white"
-                  style={{
-                    fontSize: fontPx,
-                    textShadow:
-                      "0 1px 1.5px rgba(0,0,0,0.95), 0 0 1px rgba(0,0,0,0.9)",
-                  }}
-                >
-                  {step}
-                  {accidental ? (
-                    // Compact accidental tucked tight against the letter:
-                    // smaller and pulled in to cancel the glyph's wide
-                    // left-bearing, so the pair stays near one column wide
-                    // instead of overflowing.
-                    <span style={{ fontSize: "0.7em", marginLeft: "-0.12em" }}>
-                      {accidental}
-                    </span>
-                  ) : null}
-                </span>
-              ) : null}
-            </div>
-          );
-        })}
-
-        {/* Overlays anchor against the published projection. */}
-        <ProjectionProvider projection={projection}>
-          <OverlayHost score={score} />
-        </ProjectionProvider>
-      </>
+      <ProjectionProvider projection={projection}>
+        <OverlayHost score={score} />
+      </ProjectionProvider>
     ),
-    [noteRects, projection, score, lane.width, showNoteNames],
+    [projection, score],
   );
 
   return (
     <div className="flex h-full w-full flex-col bg-background">
-      {/* The note lane. Content lives in cursor-invariant content-space; the
-          ScrollLayer applies the per-frame scroll as one translateY. Pitch is
-          the fixed full keyboard across the width, so notes align
-          column-for-key with the keyboard below. */}
+      {/* The note lane. Notes, grid, and labels render on the Pixi canvas in
+          cursor-invariant authored space; DOM keeps the overlays, now-line,
+          HUD, and keyboard. Pitch is the fixed full keyboard across the width,
+          so canvas notes align column-for-key with the keyboard below. */}
       <div
         ref={laneRef}
         {...(hasNotes ? handlers : null)}
@@ -422,10 +294,27 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
             : null,
         )}
       >
-        {/* Octave separators: screen-anchored vertical lines at each C boundary.
-            Placed before the scroll layer in DOM so falling notes paint above
-            the grid; outside it because pitch is the fixed horizontal axis. */}
-        <OctaveLines keys={projection.keys ?? []} laneHeight={lane.height} />
+        {/* The GPU note lane: grid, falling notes, and labels — under every
+            DOM layer (transparent canvas; the lane bg shows through). */}
+        <PianoRollCanvas
+          width={lane.width}
+          height={lane.height}
+          visuals={visuals}
+          bars={barMarkers}
+          cBoundaryFracs={cBoundaryFracs}
+          scoreNotes={score.notes}
+          scrollSec={scrollSec}
+          cursorBeat={cursorBeat}
+          seekEpoch={seekEpoch}
+          showLabels={showNoteNames}
+          tempoScale={tempoScale}
+          onSceneReady={setPixi}
+        />
+
+        {/* Headless FX wiring — every PianoRollFx contribution, config-gated
+            and error-isolated. Renders no DOM; effects paint into the scene's
+            fx layers via the context. */}
+        {fx ? <FxHost fx={fx} /> : null}
 
         <ScrollLayer
           cursorBeat={cursorBeat}
@@ -452,6 +341,9 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
           <Sonata.Hud.Render>
             {(h) => <h.component key={h.id} />}
           </Sonata.Hud.Render>
+          {/* Host-owned FX popover — sits with the HUD chips; re-enables its
+              own pointer events (the cluster is pointer-events-none). */}
+          <FxToggle />
         </div>
 
         {/* Empty-score affordance. */}
@@ -479,8 +371,10 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
 /**
  * The piano-roll Display. Renders notes Synthesia-style on a time (vertical) ×
  * pitch (horizontal full-keyboard) grid that falls toward a piano keyboard at
- * the bottom. Publishes a `Projection` (both capabilities) and hosts capability-
- * compatible overlays (over the lane) and pitch-axis decorations (in the gutter).
+ * the bottom — notes/grid/labels on a PixiJS canvas (WebGPU-first, WebGL
+ * fallback), chrome and overlays in DOM. Publishes a `Projection` (both
+ * capabilities) and hosts capability-compatible overlays (over the lane) and
+ * pitch-axis decorations (in the gutter).
  */
 export function PianoRoll(props: PianoRollProps) {
   return <PianoRollInner {...props} />;

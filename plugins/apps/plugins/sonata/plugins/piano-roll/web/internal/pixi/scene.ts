@@ -1,0 +1,237 @@
+/**
+ * The piano-roll Pixi scene — the imperative handle the React layer drives.
+ * One instance per mounted canvas; everything visual hangs off `app.stage`:
+ *
+ *   stage
+ *   ├─ octaveLines      screen space — fixed pitch grid, redrawn on resize only
+ *   ├─ fxBelow          FX layer (Phase 3) painting UNDER the notes
+ *   ├─ scrollRoot       y = laneHeight + scrollSec × PX_PER_SECOND (per frame)
+ *   │   ├─ contentScaled  scale = (laneWidth, PX_PER_SECOND) — authored space
+ *   │   │   ├─ barLines     content space, built once per score
+ *   │   │   └─ noteMesh     content space, built once per score
+ *   │   └─ pixelScroll     no scale — text stays undistorted
+ *   │       ├─ barNumbers
+ *   │       └─ noteLabels
+ *   └─ fxAbove          FX layer (Phase 3) painting OVER the notes
+ *
+ * COORDINATE CONVENTIONS (the load-bearing part):
+ *  - Content is authored with y = -seconds (and x in 0..1 key-fractions),
+ *    matching `geometry.ts`'s content-space `beatToY` — so `contentScaled`
+ *    keeps a POSITIVE scale and the scroll formula is byte-identical to the
+ *    DOM `ScrollLayer`: offset = laneHeight + authoredSec × PX_PER_SECOND.
+ *    Resize touches one scale + two uniforms; scroll touches one container y.
+ *  - `pixelScroll` shares the same translateY but no scale; its children are
+ *    positioned at y = -seconds × PX_PER_SECOND pixels directly.
+ *
+ * ONSET-TRACKER BRIDGE (documented decision): the scene scrolls in AUTHORED
+ * SECONDS but onsets are naturally beat events, and the shared
+ * `createOnsetTracker` (with its seek-vs-frame heuristics) works in BEATS. The
+ * cleanest bridge is for `setScroll` to take BOTH values — the React layer
+ * already has them on the same frame — and for `setScore` to carry the
+ * beat-domain `scoreNotes` alongside the visuals. The scene owns the tracker
+ * and fans detected onsets out as fully-resolved {@link FxNoteEvent}s (screen
+ * px + resolved color), because only the scene knows the lane size and color
+ * cache. Notes on hidden tracks have no visual and are skipped — hidden tracks
+ * should not spark FX.
+ */
+import { Container, type Application } from "pixi.js";
+import type { Note } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import type { FxNoteEvent } from "../../slots";
+import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
+import {
+  createOnsetTracker,
+  type OnsetTracker,
+} from "../fx/onset-tracker";
+import { resolveCssColor } from "./css-color";
+import { createGrid, type BarMarker } from "./grid";
+import { createLabelLayer } from "./labels";
+import { createNoteMesh } from "./note-mesh";
+
+export interface PianoRollSceneInput {
+  notes: NoteVisual[];
+  bars: BarMarker[];
+  /** Left-edge fraction (0..1) of each C key — the octave line positions. */
+  cBoundaryFracs: number[];
+  /** Beat-domain notes feeding the onset tracker (see the bridge note above). */
+  scoreNotes: Note[];
+  /** Playback tempo multiplier — wall-clock duration = authored / tempoScale. */
+  tempoScale: number;
+}
+
+export interface PianoRollScene {
+  setScore(input: PianoRollSceneInput): void;
+  resize(width: number, height: number, dpr: number): void;
+  /** Per frame: scroll offset (authored sec) + cursor (beats) for onsets. */
+  setScroll(authoredSec: number, cursorBeat: number): void;
+  /** Seek/jump: re-anchor the onset tracker and tell FX to drop in-flight state. */
+  reset(): void;
+  setShowLabels(on: boolean): void;
+  /** Theme flip: re-resolve every CSS color expression and rewrite tints. */
+  refreshColors(): void;
+  /** Mount points for FX plugins (see slots.ts — FxContext.layers). */
+  fxLayers: { belowNotes: Container; aboveNotes: Container };
+  onNoteOn(cb: (e: FxNoteEvent) => void): () => void;
+  onReset(cb: () => void): () => void;
+  destroy(): void;
+}
+
+export function createPianoRollScene(app: Application): PianoRollScene {
+  // --- scene graph ---------------------------------------------------------
+  const fxBelow = new Container();
+  const fxAbove = new Container();
+  const scrollRoot = new Container();
+  const contentScaled = new Container();
+  const pixelScroll = new Container();
+
+  const mesh = createNoteMesh();
+  const grid = createGrid();
+  const labels = createLabelLayer();
+
+  contentScaled.addChild(grid.barLines, mesh.mesh);
+  pixelScroll.addChild(labels.barNumbers, labels.noteLabels);
+  scrollRoot.addChild(contentScaled, pixelScroll);
+  app.stage.addChild(grid.octaveLines, fxBelow, scrollRoot, fxAbove);
+
+  // --- state ---------------------------------------------------------------
+  let visuals: NoteVisual[] = [];
+  let visualById = new Map<string, NoteVisual>();
+  let tracker: OnsetTracker | null = null;
+  /** Defer the tracker re-anchor to the next setScroll, which carries the
+   *  post-seek cursor — `reset()` itself has no beat to anchor at. */
+  let pendingTrackerReset = true;
+  let tempoScale = 1;
+  let laneWidth = 0;
+  let laneHeight = 0;
+  let scrollSec = 0;
+
+  const noteOnSubs = new Set<(e: FxNoteEvent) => void>();
+  const resetSubs = new Set<() => void>();
+
+  // Memoized CSS→number resolution: scores reuse a handful of track colors, so
+  // the probe-element round-trip runs once per distinct expression per theme.
+  const colorCache = new Map<string, number>();
+  const resolveColor = (expr: string): number => {
+    let color = colorCache.get(expr);
+    if (color === undefined) {
+      color = resolveCssColor(expr);
+      colorCache.set(expr, color);
+    }
+    return color;
+  };
+
+  const applyScroll = (): void => {
+    // The DOM ScrollLayer formula, verbatim: the cursor maps to the lane
+    // bottom (the keyboard), content above it is the future.
+    scrollRoot.y = laneHeight + scrollSec * PX_PER_SECOND;
+  };
+
+  return {
+    fxLayers: { belowNotes: fxBelow, aboveNotes: fxAbove },
+
+    setScore(input) {
+      visuals = input.notes;
+      visualById = new Map(visuals.map((v) => [v.noteId, v]));
+      tempoScale = input.tempoScale;
+      tracker = createOnsetTracker(input.scoreNotes);
+      pendingTrackerReset = true;
+
+      mesh.setNotes(visuals, resolveColor);
+      grid.setBars(input.bars);
+      grid.setBoundaries(input.cBoundaryFracs);
+      grid.refreshColors(resolveColor);
+      labels.setNotes(visuals);
+      labels.setBars(input.bars);
+      labels.refreshColors(resolveColor);
+    },
+
+    resize(width, height, dpr) {
+      laneWidth = width;
+      laneHeight = height;
+      app.renderer.resize(width, height, dpr);
+      // THE payoff of authored-space geometry: a resize is one container
+      // scale + two uniforms + a couple of redrawn octave lines — O(1) in
+      // note count, vs. the DOM version's per-note style writes.
+      contentScaled.scale.set(width, PX_PER_SECOND);
+      mesh.setUniforms(width, dpr);
+      grid.resize(width, height);
+      labels.setLaneSize(width, height);
+      applyScroll();
+    },
+
+    setScroll(authoredSec, cursorBeat) {
+      scrollSec = authoredSec;
+      applyScroll();
+      labels.update(authoredSec);
+
+      if (!tracker) return;
+      if (pendingTrackerReset) {
+        // First frame after a score change / seek: re-anchor without firing
+        // the onsets the jump skipped over (navigation, not performance).
+        pendingTrackerReset = false;
+        tracker.reset(cursorBeat);
+        return;
+      }
+      const fired = tracker.advance(cursorBeat);
+      if (fired.length === 0 || noteOnSubs.size === 0) return;
+      for (const note of fired) {
+        const v = visualById.get(note.id);
+        if (!v) continue; // hidden track — no visual, no FX
+        const event: FxNoteEvent = {
+          note,
+          x: v.xFrac * laneWidth,
+          width: v.wFrac * laneWidth,
+          laneY: laneHeight,
+          color: resolveColor(v.colorExpr),
+          velocity: note.velocity / 127,
+          isBlack: v.isBlack,
+          durationSeconds: (v.y1Sec - v.y0Sec) / tempoScale,
+        };
+        for (const cb of noteOnSubs) cb(event);
+      }
+    },
+
+    reset() {
+      pendingTrackerReset = true;
+      for (const cb of resetSubs) cb();
+    },
+
+    setShowLabels(on) {
+      labels.setVisible(on);
+    },
+
+    refreshColors() {
+      // The token VALUES changed (theme flip) — every cached resolution is
+      // stale. Re-resolve and rewrite the color buffer + tints; geometry and
+      // label glyphs are untouched.
+      colorCache.clear();
+      mesh.recolor(visuals, resolveColor);
+      grid.refreshColors(resolveColor);
+      labels.refreshColors(resolveColor);
+    },
+
+    onNoteOn(cb) {
+      noteOnSubs.add(cb);
+      return () => noteOnSubs.delete(cb);
+    },
+
+    onReset(cb) {
+      resetSubs.add(cb);
+      return () => resetSubs.delete(cb);
+    },
+
+    destroy() {
+      noteOnSubs.clear();
+      resetSubs.clear();
+      mesh.destroy();
+      grid.destroy();
+      labels.destroy();
+      // FX containers and the scroll/content shells (their children are
+      // already destroyed above; FX children belong to FX plugins, which
+      // unmount before the scene dies).
+      app.stage.removeChildren();
+      fxBelow.destroy({ children: true });
+      fxAbove.destroy({ children: true });
+      scrollRoot.destroy({ children: true });
+    },
+  };
+}

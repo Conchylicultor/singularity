@@ -1,5 +1,8 @@
 {
   "name": "@singularity/plugin-apps-sonata-piano-roll",
   "private": true,
-  "version": "0.0.1"
+  "version": "0.0.1",
+  "dependencies": {
+    "pixi.js": "^8.19.0"
+  }
 }

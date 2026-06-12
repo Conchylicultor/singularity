@@ -1,0 +1,5 @@
+// @hash 6e322ece5c0c
+{
+  // A comet arcs along the keyboard line from each track's previous note to its next, tracing the melody's motion.
+  "enabled": false
+}

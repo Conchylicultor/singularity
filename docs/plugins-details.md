@@ -249,9 +249,37 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
           - Web:
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `ConfigV2.WebRegister`
-            - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/ui-kit.cn`
+            - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/section-label.SectionLabel`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.cn`
+            - Exports: Types: `EmitterOptions`, `FxContext`, `FxNoteEvent`, `FxToggleConfig`, `ParticleEmitter`, `SpawnSpec`; Values: `createEmitter`, `easeOutCubic`, `PianoRollFx`
           - Server:
             - Uses: `config_v2.ConfigV2`
+          - Cross-plugin:
+            - Imported by: `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`
+          - Plugins:
+            - **`fx-comets`** — Fancy piano-roll FX (opt-in): a comet arcs along the keyboard line between consecutive notes of the same track, with a fading particle trail. Server registration of the fx-comets enabled toggle.
+              - Web:
+                - Contributes: `PianoRollFx` "Pitch comets" → `PitchCometsFx`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+              - Server:
+                - Uses: `config_v2.ConfigV2`
+            - **`fx-core`** — Ambient piano-roll FX (on by default): key-strike glow, rising sparks, and an active-note brighten over the sounding bar. Server registration of the fx-core enabled toggle.
+              - Web:
+                - Contributes: `PianoRollFx` "Note glow & sparks" → `NoteGlowSparksFx`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.FxNoteEvent`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+              - Server:
+                - Uses: `config_v2.ConfigV2`
+            - **`fx-ripples`** — Fancy piano-roll FX (opt-in): expanding sound-wave ripple rings from each note strike, chords merging into one stronger ripple. Server registration of the fx-ripples enabled toggle.
+              - Web:
+                - Contributes: `PianoRollFx` "Sound-wave ripples" → `SoundWaveRipplesFx`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.easeOutCubic`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+              - Server:
+                - Uses: `config_v2.ConfigV2`
+            - **`fx-shatter`** — Fancy piano-roll FX (opt-in): notes shatter into tinted debris that arcs up and falls under gravity at the strike line. Server registration of the fx-shatter enabled toggle.
+              - Web:
+                - Contributes: `PianoRollFx` "Note shatter" → `NoteShatterFx`, `ConfigV2.WebRegister`
+                - Uses: `apps/sonata/piano-roll.createEmitter`, `apps/sonata/piano-roll.FxContext`, `apps/sonata/piano-roll.PianoRollFx`, `config_v2.ConfigV2`
+              - Server:
+                - Uses: `config_v2.ConfigV2`
         - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and adds Most/Recently played sort orderings (Library.Sort). Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
           - Web:
             - Contributes: `Sonata.Effect` "record-play" → `RecordPlayObserver`, `Library.CardMeta` "play-stats" → `PlayStats`, `Library.Sort` "Most played" → `MostPlayedOrder`, `Library.Sort` "Recently played" → `RecentlyPlayedOrder`
@@ -749,7 +777,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `stringifyConfigValue`, `validationIssues`
   - Cross-plugin:
-    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
+    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
       - Web:
@@ -2872,7 +2900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `build`, `conversations/transcript-retention`, `database/migrations`, `infra/attachments`, `primitives/live-state`
+        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/migrations`, `infra/attachments`, `primitives/live-state`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `Markdown.Extension`
@@ -2921,7 +2949,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
         - Exports: Types: `InlinePopoverProps`; Values: `InlinePopover`
       - Cross-plugin:
-        - Imported by: `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/folder-picker`, `primitives/launch`, `reorder`, `reorder/editor`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/piano-roll`, `apps/sonata/track-mixer`, `build`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `notifications`, `page/editor`, `page/page-link`, `primitives/folder-picker`, `primitives/launch`, `reorder`, `reorder/editor`, `tasks/task-draft-form`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction`
@@ -2974,7 +3002,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/ui-kit.cn`
         - Exports: Types: `SectionLabelProps`; Values: `SectionLabel`
       - Cross-plugin:
-        - Imported by: `agents`, `apps/studio/contributions/tables/foreign-keys`, `config_v2/config-link`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/user-image`, `debug/live-state-health`, `debug/memory`, `debug/profiling`, `page/links`, `plugin-meta/plugin-view`, `primitives/avatar`, `primitives/color-picker`, `primitives/icon-picker`, `tasks/task-header`
+        - Imported by: `agents`, `apps/sonata/piano-roll`, `apps/studio/contributions/tables/foreign-keys`, `config_v2/config-link`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer/user-image`, `debug/live-state-health`, `debug/memory`, `debug/profiling`, `page/links`, `plugin-meta/plugin-view`, `primitives/avatar`, `primitives/color-picker`, `primitives/icon-picker`, `tasks/task-header`
     - **`select-scope`** — Scoped Ctrl+A (Select All) for content containers. Wrap content in <ContentScope>, or spread selectScopeProps onto any focusable root to make it the scope, to prevent page-wide selection when focus is inside it.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/user-text`, `page/editor`, `primitives/card`, `primitives/pane`, `primitives/syntax-highlight`, `primitives/ui-kit`, `shell/toaster`
@@ -3003,7 +3031,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/ui-kit.cn`
         - Exports: Types: `InsetProps`, `SpaceStep`, `StackAlign`, `StackDirection`, `StackJustify`, `StackProps`; Values: `Inset`, `Stack`
       - Cross-plugin:
-        - Imported by: `apps/sonata/audio/engine`, `apps/sonata/rich/key-readout`, `improve/element-picker`
+        - Imported by: `apps/sonata/audio/engine`, `apps/sonata/piano-roll`, `apps/sonata/rich/key-readout`, `improve/element-picker`
     - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
       - Web:
         - Uses: `primitives/ui-kit.cn`
@@ -3062,7 +3090,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.ControlSize`, `primitives/ui-kit.useControlSize`
         - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipSize`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/story/render`, `apps/story/shell`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `notifications`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `review`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/rich/chord-readout`, `apps/story/render`, `apps/story/shell`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `notifications`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `review`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
     - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
       - Web:
         - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.Tooltip`, `primitives/ui-kit.TooltipContent`, `primitives/ui-kit.TooltipTrigger`
