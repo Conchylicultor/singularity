@@ -3,6 +3,10 @@ export interface UiContextMeta {
   pluginId?: string;
   slotId?: string;
   paneId?: string;
+  // Composition lineage outer→inner, e.g. "tasks/task-header@TaskDetail.Section >
+  // improve/element-picker@ActionBar.Item". Points at the contributing source far
+  // more precisely than pluginId alone; omitted when there's only one marker.
+  path?: string;
   element: string; // e.g. "button — Improve this app"
   selector?: string; // short CSS path for precision, e.g. "header>div>button"
 }
@@ -13,8 +17,8 @@ export function serializeUiContext(m: UiContextMeta): string {
   const attr = (k: string, v?: string) => (v ? ` ${k}="${sanitize(v)}"` : "");
   return (
     `<ui-context${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}` +
-    `${attr("pane", m.paneId)} url="${sanitize(m.url)}" element="${sanitize(m.element)}"` +
-    `${attr("selector", m.selector)} />`
+    `${attr("pane", m.paneId)}${attr("path", m.path)} url="${sanitize(m.url)}"` +
+    ` element="${sanitize(m.element)}"${attr("selector", m.selector)} />`
   );
 }
 
@@ -36,6 +40,7 @@ export function parseUiContext(match: RegExpExecArray): UiContextMeta | null {
     pluginId: get("plugin"),
     slotId: get("slot"),
     paneId: get("pane"),
+    path: get("path"),
     selector: get("selector"),
   };
 }

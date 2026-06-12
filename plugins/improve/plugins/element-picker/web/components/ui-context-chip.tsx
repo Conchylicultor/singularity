@@ -76,6 +76,7 @@ export function UiContextChip({
           <Stack gap="2xs">
             <DetailRow label="Plugin" value={meta.pluginId} />
             <DetailRow label="Slot" value={meta.slotId} />
+            <DetailRow label="Path" value={meta.path} />
             <DetailRow label="Pane" value={meta.paneId} />
             <DetailRow label="Selector" value={meta.selector} />
             <DetailRow label="URL" value={meta.url} />

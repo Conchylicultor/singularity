@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Inset } from "@plugins/primitives/plugins/spacing/web";
-import { findPluginContext } from "../internal/find-plugin-context";
+import { collectMarkerLineage } from "../internal/marker-lineage";
 
 interface Highlight {
   rect: DOMRect;
@@ -32,9 +32,10 @@ export function PickerOverlay({
         setHighlight(null);
         return;
       }
+      const markers = collectMarkerLineage(el).markers;
       setHighlight({
         rect: el.getBoundingClientRect(),
-        pluginId: findPluginContext(el).pluginId,
+        pluginId: markers[markers.length - 1]?.pluginId,
         tag: el.tagName.toLowerCase(),
       });
     };
