@@ -4,7 +4,7 @@ import { KeyFlags } from "./components/key-flags";
 
 export default {
   description:
-    "Sonata progress marker: key-signature flags along the progression bar (starting key + 'key' annotation changes).",
+    "Sonata progress marker: key-signature regions along the progression bar — each key span tinted by key identity with a highlighted vertical bar at the change (starting key + 'key' annotation changes).",
   contributions: [
     SonataProgress.Marker({ id: "keys", component: KeyFlags }),
   ],

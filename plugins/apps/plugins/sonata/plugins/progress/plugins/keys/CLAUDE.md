@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Sonata progress marker: key-signature flags along the progression bar (starting key + 'key' annotation changes).
+- Description: Sonata progress marker: key-signature regions along the progression bar — each key span tinted by key identity with a highlighted vertical bar at the change (starting key + 'key' annotation changes).
 - Web:
   - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
   - Uses: `apps/sonata/progress/scrubber.SonataProgress`

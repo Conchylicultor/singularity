@@ -278,7 +278,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `SonataProgress.Marker` "bars" → `BarTicks`
                 - Uses: `apps/sonata/progress/scrubber.SonataProgress`
-            - **`keys`** — Sonata progress marker: key-signature flags along the progression bar (starting key + 'key' annotation changes).
+            - **`keys`** — Sonata progress marker: key-signature regions along the progression bar — each key span tinted by key identity with a highlighted vertical bar at the change (starting key + 'key' annotation changes).
               - Web:
                 - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
                 - Uses: `apps/sonata/progress/scrubber.SonataProgress`
@@ -309,6 +309,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
                 - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/text.Text`
+            - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the shared Score + cursor via useSonata().
+              - Web:
+                - Contributes: `Sonata.Hud` "key-chip" → `KeyChip`
+                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`
         - **`score`**
           - Cross-plugin:
             - Imported by: `apps/sonata/theory`
@@ -316,13 +320,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyEntry`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `asKeySignature`, `bars`, `beatGrid`, `beatToSeconds`, `buildTempoIndex`, `collectKeyEntries`, `effectiveKeyAt`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`, `spellScore`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
-            - Slots: `Sonata.Home`, `Sonata.Toolbar`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Section`, `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
+            - Slots: `Sonata.Home`, `Sonata.Toolbar`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Hud`, `Sonata.Section`, `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `TEMPO_MATH_FLOOR`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`
-            - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
+            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `key-chip`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`
+            - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-chip`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
             - **`chord-grid`** — Chord-grid input source for Sonata. A small mini-language (e.g. `Amaj9 Am9 (E E6)`) authors chord annotations: each cell is a bar, a `( )` group shares a bar, and `.` holds the previous chord. compile() derives notes from them via the selected voicing strategy. Persists per-song grid text/voicing/octave and contributes the library 'New Chord Grid' affordance, hydration, and an in-player editor section. Owns the sonata_songs_ext_chord_grid side-table: per-song chord text, voicing, and octave. Creates chord-grid–backed songs and persists edits (syncing the parent song's title/duration).

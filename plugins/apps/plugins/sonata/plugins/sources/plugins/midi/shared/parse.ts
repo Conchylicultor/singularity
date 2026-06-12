@@ -16,6 +16,7 @@ import { Midi } from "@tonejs/midi";
 import {
   beatToSeconds,
   scoreEndBeat,
+  type Annotation,
   type KeySignature,
   type Note,
   type Score,
@@ -72,16 +73,6 @@ export function parseMidi(raw: unknown): Score {
     timeSigMap = [{ beat: 0, numerator: 4, denominator: 4 }];
   }
 
-  // --- Key signature ---------------------------------------------------
-  // @tonejs/midi exposes header.keySignatures as { ticks, key, scale }[] where
-  // `key` is a note name ("Eb", "F#") and `scale` is "major" | "minor". Take the
-  // first; many files declare none, in which case meta.key stays undefined and
-  // the keyboard falls back to natural spelling.
-  const ks = midi.header.keySignatures[0];
-  const key: KeySignature | undefined = ks?.key
-    ? { tonic: ks.key, mode: ks.scale === "minor" ? "minor" : "major" }
-    : undefined;
-
   // --- Tracks and notes ------------------------------------------------
   // Only include MIDI tracks that contain at least one note.
   const tracks: TrackMeta[] = [];
@@ -120,16 +111,56 @@ export function parseMidi(raw: unknown): Score {
     }
   }
 
+  // --- Key signature(s) ------------------------------------------------
+  // @tonejs/midi exposes header.keySignatures as { ticks, key, scale }[] where
+  // `key` is a note name ("Eb", "F#") and `scale` is "major" | "minor". A file
+  // may declare SEVERAL — a piece that modulates carries one event per change
+  // (e.g. Chopin's Op.48 No.1: Eb major → C major → Eb major). We surface all of
+  // them: the opening event as `meta.key` (the starting key every consumer reads,
+  // incl. the keyboard's note spelling), and every event as an authored `key`
+  // annotation so the progress-bar key regions and the current-key chip track the
+  // modulations exactly as the file authored them — instead of collapsing to the
+  // first key the way taking `keySignatures[0]` alone did. Files commonly repeat
+  // the same event across tracks, so we dedupe by (beat, tonic, mode). With keys
+  // authored here, `inferKeys` defers to them rather than guessing.
+  const keyEvents: { beat: number; key: KeySignature }[] = [];
+  const seenKey = new Set<string>();
+  for (const k of midi.header.keySignatures) {
+    if (!k.key) continue;
+    const beat = k.ticks / ppq;
+    const key: KeySignature = {
+      tonic: k.key,
+      mode: k.scale === "minor" ? "minor" : "major",
+    };
+    const id = `${beat}:${key.tonic}:${key.mode}`;
+    if (seenKey.has(id)) continue;
+    seenKey.add(id);
+    keyEvents.push({ beat, key });
+  }
+  keyEvents.sort((a, b) => a.beat - b.beat);
+
+  // Each authored key governs `[beat, nextBeat)`; the last runs to the score end.
+  // The span is presentational only (the `effectiveKeyAt` resolver keys off the
+  // start beat), but we set it meaningfully to match the derived-key convention.
+  const scoreEnd = notes.reduce((m, n) => Math.max(m, n.start + n.duration), 0);
+  const keyAnnotations: Annotation[] = keyEvents.map((e, i) => ({
+    type: "key",
+    start: e.beat,
+    end: i + 1 < keyEvents.length ? keyEvents[i + 1]!.beat : scoreEnd,
+    data: e.key,
+    source: "authored",
+  }));
+
   return {
     meta: {
       ...(midi.header.name ? { title: midi.header.name } : {}),
-      ...(key ? { key } : {}),
+      ...(keyEvents[0] ? { key: keyEvents[0].key } : {}),
     },
     tracks,
     tempoMap,
     timeSigMap,
     notes,
-    annotations: [],
+    annotations: keyAnnotations,
   };
 }
 

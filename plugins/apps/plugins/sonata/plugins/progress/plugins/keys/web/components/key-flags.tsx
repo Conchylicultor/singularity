@@ -1,5 +1,6 @@
 import {
   collectKeyEntries,
+  scoreEndBeat,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type {
   KeySignature,
@@ -7,20 +8,51 @@ import type {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /**
- * Key-signature flags along the progression bar.
+ * Key-signature regions along the progression bar.
  *
- * A song's tonal centre is meaning layered on top of the notes, so it lives in
- * exactly two places in the Score: the *starting* key (`score.meta.key`) and any
- * mid-song key changes, which the IR models as `type: "key"` annotations. This
- * marker reads both and plants a tiny flag at each beat where the key is
- * established.
+ * A song's tonal centre is meaning layered on top of the notes: the *starting*
+ * key (`score.meta.key`) plus any mid-song key changes, which the IR models as
+ * `type:"key"` annotations. `collectKeyEntries` reconciles both into a sorted
+ * list of "key established at beat X" entries; here we turn each entry into the
+ * span it governs — `[entry.beat, nextEntry.beat)`, the last running to the song
+ * end — and paint it as a tinted band with a highlighted vertical bar at the
+ * boundary where the key takes hold. A song that moves through three keys reads
+ * as three colored regions at a glance, each delimited by its change bar.
  *
- * NOTE: no input source emits `key` annotations today — the built-in annotation
- * union doesn't even declare a `KeyData` shape, so an annotation's `data` is
- * typed as `unknown` and must be narrowed defensively. The marker is wired up
- * and ready regardless: the moment a source or analyzer starts emitting key
- * changes, the flags appear with zero edits here.
+ * Colors key the *identity* of the key, not its position: the same key returning
+ * later (e.g. an A→C→A modulation) reuses its hue, so a return reads as a return.
+ *
+ * Lives in the marker layer's TOP half; the section bands own the bottom half,
+ * so the two structural strata stack without fighting for the same pixels.
  */
+
+// Themeable categorical palette (the same data-viz tokens the section bands and
+// Gantt phases use, so the tints re-skin with the active theme). Two strengths
+// per slot: a faint band tint for the region, and a solid bar for the change
+// boundary, so the boundary reads as a highlight standing over its own region.
+const BAND = [
+  "bg-categorical-1/15",
+  "bg-categorical-2/15",
+  "bg-categorical-3/15",
+  "bg-categorical-4/15",
+];
+const BAR = [
+  "bg-categorical-1",
+  "bg-categorical-2",
+  "bg-categorical-3",
+  "bg-categorical-4",
+];
+
+/** Compact label, e.g. `C maj` / `A min`. */
+function keyLabel(key: KeySignature): string {
+  return `${key.tonic} ${key.mode === "major" ? "maj" : "min"}`;
+}
+
+/** Stable identity for hue assignment — same key → same string. */
+function keyId(key: KeySignature): string {
+  return `${key.tonic}-${key.mode}`;
+}
+
 export function KeyFlags({
   score,
   beatToFraction,
@@ -35,27 +67,41 @@ export function KeyFlags({
   // rather than an empty overlay artifact.
   if (entries.length === 0) return null;
 
+  const endBeat = scoreEndBeat(score);
+
+  // Stable hue per distinct key — a returning key reuses its color slot.
+  const hueOf = new Map<string, number>();
+  for (const e of entries) {
+    const id = keyId(e.key);
+    if (!hueOf.has(id)) hueOf.set(id, hueOf.size);
+  }
+
   return (
-    <div className="pointer-events-none absolute inset-0">
-      {entries.map((e) => (
-        <div
-          key={`${e.beat}-${e.key.tonic}-${e.key.mode}`}
-          className="absolute top-0 flex -translate-x-1/2 flex-col items-center"
-          style={{ left: `${beatToFraction(e.beat) * 100}%` }}
-        >
-          {/* eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps the compact key flag aligned to its tick; text-3xs carries no line-height of its own */}
-          <span className="-mt-3 text-3xs leading-none text-muted-foreground">
-            {formatKey(e.key)}
-          </span>
-          {/* A short tick anchoring the label to the rail. */}
-          <span className="mt-px h-2 w-px bg-muted-foreground/60" />
-        </div>
-      ))}
+    <div className="pointer-events-none absolute inset-x-0 top-0 h-1/2">
+      {entries.map((e, idx) => {
+        const next = entries[idx + 1];
+        const startF = beatToFraction(e.beat);
+        const endF = beatToFraction(next ? next.beat : endBeat);
+        const hue = (hueOf.get(keyId(e.key)) ?? 0) % BAND.length;
+        return (
+          <div
+            key={`${e.beat}-${keyId(e.key)}`}
+            className={`absolute inset-y-0 flex items-center overflow-hidden rounded-sm ${BAND[hue]}`}
+            style={{
+              left: `${startF * 100}%`,
+              width: `${(endF - startF) * 100}%`,
+            }}
+            title={keyLabel(e.key)}
+          >
+            {/* Highlighted vertical bar marking where this key takes hold. */}
+            <div className={`absolute inset-y-0 left-0 w-0.5 ${BAR[hue]}`} />
+            {/* eslint-disable-next-line text/no-adhoc-typography -- tight key label: line-height must stay 1 so the band stays slim, matching the section bands below */}
+            <span className="overflow-hidden text-ellipsis whitespace-nowrap pl-1.5 text-3xs font-medium leading-none text-foreground/70">
+              {keyLabel(e.key)}
+            </span>
+          </div>
+        );
+      })}
     </div>
   );
-}
-
-/** Compact label, e.g. `C maj` / `A min`. */
-function formatKey(key: KeySignature): string {
-  return `${key.tonic} ${key.mode === "major" ? "maj" : "min"}`;
 }

@@ -11,7 +11,7 @@ import {
   type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
@@ -429,6 +429,17 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
           className="pointer-events-none absolute left-0 z-raised h-0.5 bg-primary"
           style={{ top: lane.height, width: lane.width }}
         />
+
+        {/* HUD: screen-anchored heads-up chips (current key, …) pinned to the
+            lane's top-right corner — above the scroll layer and now-line, clear
+            of the chord overlay that hugs the left edge. Contributors read the
+            shared cursor via useSonata(); collection-consumer clean (renders the
+            generic Sonata.Hud slot, never naming a contributor). */}
+        <div className="pointer-events-none absolute right-2 top-2 z-float flex flex-col items-end gap-xs">
+          <Sonata.Hud.Render>
+            {(h) => <h.component key={h.id} />}
+          </Sonata.Hud.Render>
+        </div>
 
         {/* Empty-score affordance. */}
         {score.notes.length === 0 ? (

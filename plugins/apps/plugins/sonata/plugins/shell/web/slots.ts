@@ -159,6 +159,16 @@ export const Sonata = {
     docLabel: (p) => p.id,
   }),
 
+  // HUD — screen-anchored heads-up overlays painted over a display, pinned to its
+  // viewport corner (current-key chip, …). Unlike `Overlay`, which anchors to the
+  // projection's geometry and scrolls with the content, a HUD stays fixed and
+  // reads shared cursor/Score context via `useSonata()`. Display-agnostic: any
+  // display hosts it with `.Render`; capability-free since it needs no projection.
+  Hud: defineRenderSlot<{ component: ComponentType }>("sonata.hud", {
+    reorder: false,
+    docLabel: (p) => p.id,
+  }),
+
   // EXISTING — free-floating panels (current-chord readout, controls) that read
   // shared Score + cursor context.
   Section: defineRenderSlot<{
