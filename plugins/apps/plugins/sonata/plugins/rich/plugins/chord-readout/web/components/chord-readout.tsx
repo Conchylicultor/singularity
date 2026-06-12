@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import {
+  useCursorSelector,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -55,7 +56,7 @@ function centerInWindow(voicings: number[][]): number[][] {
  * notes; an "Inversions" toggle stacks one mini keyboard per inversion.
  */
 export function ChordReadout() {
-  const { score, cursorBeat } = useSonata();
+  const { score } = useSonata();
   const [showInversions, setShowInversions] = useDraft<boolean>(
     "sonata:chord-readout:inversions",
     false,
@@ -69,13 +70,16 @@ export function ChordReadout() {
     [score.annotations],
   );
 
-  const current = useMemo(
-    () =>
+  // `useCursorSelector` returns the matched chord's STABLE reference (from the
+  // memoized `chords` array), so this panel re-renders only when the chord under
+  // the playhead changes — not on every cursor frame.
+  const current = useCursorSelector(
+    (cursorBeat) =>
       chords.find((c) => cursorBeat >= c.start && cursorBeat < c.end) ??
       // Before playback starts (cursor at 0) show the first chord so the panel
       // isn't blank on load.
       (cursorBeat <= 0 ? chords[0] : undefined),
-    [chords, cursorBeat],
+    [chords],
   );
 
   // Every inversion of the current chord (index 0 = root position), each an

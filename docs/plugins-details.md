@@ -205,7 +205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`engine`** — Sonata audio engine: schedules the Score's notes against the Web Audio clock on play, routing each note to its track's resolved instrument, with master volume in the top toolbar.
               - Web:
                 - Contributes: `Sonata.Effect` "audio-engine" → `AudioEngine`, `Sonata.Toolbar` "volume" → `VolumeControl`
-                - Uses: `apps/sonata/shell.InstrumentVoices`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackInstrumentMap`, `primitives/icon-button.IconButton`, `primitives/spacing.Stack`
+                - Uses: `apps/sonata/shell.getCursorBeat`, `apps/sonata/shell.InstrumentVoices`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackInstrumentMap`, `primitives/icon-button.IconButton`, `primitives/spacing.Stack`
             - **`piano`** — Sonata Instrument: a sampled acoustic grand piano (smplr SplendidGrandPiano) that sounds the Score during playback. Registers the splendid-grand-piano asset mirror so the acoustic piano's samples are served same-origin (offline-capable) rather than streamed from the remote CDN.
               - Web:
                 - Contributes: `Sonata.Instrument` "Acoustic Piano"
@@ -243,13 +243,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
           - Web:
             - Contributes: `Sonata.PitchAxis` "piano-keyboard" → `PianoKeyboard`, `ConfigV2.WebRegister`
-            - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`
+            - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorBeat`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useMutedTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`
           - Server:
             - Uses: `config_v2.ConfigV2`
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
           - Web:
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `ConfigV2.WebRegister`
-            - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/section-label.SectionLabel`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.cn`
+            - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.getCursorBeat`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.subscribeCursor`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/section-label.SectionLabel`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.cn`
             - Exports: Types: `EmitterOptions`, `FxContext`, `FxNoteEvent`, `FxToggleConfig`, `ParticleEmitter`, `SpawnSpec`; Values: `createEmitter`, `easeOutCubic`, `PianoRollFx`
           - Server:
             - Uses: `config_v2.ConfigV2`
@@ -320,7 +320,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots: `SonataProgress.Marker`
                 - Contributes: `Sonata.Transport` "progress-bar" → `ProgressBar`
-                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`
+                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorBeat`, `apps/sonata/shell.useSonata`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`
                 - Exports: Values: `RAIL_THICKNESS`, `railBandClass`, `SonataProgress`
               - Cross-plugin:
                 - Slot contributors: `bars`, `keys`, `sections`
@@ -342,15 +342,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
-                - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/persistent-draft.useDraft`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
+                - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/persistent-draft.useDraft`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
             - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the shared Score + cursor via useSonata().
               - Web:
                 - Contributes: `Sonata.Hud` "key-chip" → `KeyChip`
-                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`
+                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`
             - **`key-readout`** — Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Current key" → `KeyReadout`
-                - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/spacing.Stack`, `primitives/text.Text`
+                - Uses: `apps/sonata/primitives/keyboard.Keyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/spacing.Stack`, `primitives/text.Text`
         - **`score`**
           - Cross-plugin:
             - Imported by: `apps/sonata/theory`
@@ -361,7 +361,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Slots: `Sonata.Home`, `Sonata.Toolbar`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Hud`, `Sonata.Section`, `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
-            - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `TEMPO_MATH_FLOOR`, `useSonata`
+            - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getCursorBeat`, `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `subscribeCursor`, `TEMPO_MATH_FLOOR`, `useCursorBeat`, `useCursorSelector`, `useSonata`
           - Cross-plugin:
             - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `controls`, `engine`, `key-chip`, `key-readout`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`
             - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-chip`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
@@ -417,7 +417,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`transport-bar`** — Sonata toolbar transport: play/pause button and a Synthesia-style speed stepper ([− xx% +]) with live BPM. Contributes to Sonata.Toolbar.
           - Web:
             - Contributes: `Sonata.Toolbar` "playback" → `PlaybackControls`
-            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/icon-button.IconButton`, `primitives/text.Text`, `primitives/ui-kit.cn`
+            - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useCursorSelector`, `apps/sonata/shell.useSonata`, `primitives/icon-button.IconButton`, `primitives/text.Text`, `primitives/ui-kit.cn`
     - **`story`** — Story Builder — author a page as a block tree and render it through pluggable lenses.
       - Plugins:
         - **`marker`** — Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.

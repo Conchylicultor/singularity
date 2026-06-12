@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useCursorSelector,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
@@ -7,7 +10,6 @@ import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugin
 import {
   accidentalGlyph,
   collectKeyEntries,
-  effectiveKeyAt,
   makeKeySpeller,
   type KeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
@@ -53,14 +55,24 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
  * accent, the other six diatonic degrees in a softer tint.
  */
 export function KeyReadout() {
-  const { score, cursorBeat } = useSonata();
+  const { score } = useSonata();
+
+  // Beat-indexed key entries — recomputed only when the Score changes. Walking
+  // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)
+  // yields STABLE `key` references, so `useCursorSelector` re-renders this panel
+  // only when the key changes — not on every cursor frame.
+  const entries = useMemo(() => collectKeyEntries(score), [score]);
 
   // The key in force at the playhead, with the same cursor-at-0 fallback the
   // key chip uses so the panel is never blank on load when a key is known.
-  const current = useMemo<KeySignature | undefined>(
-    () => effectiveKeyAt(score, cursorBeat) ?? collectKeyEntries(score)[0]?.key,
-    [score, cursorBeat],
-  );
+  const current = useCursorSelector<KeySignature | undefined>((cursorBeat) => {
+    let active: KeySignature | undefined;
+    for (const e of entries) {
+      if (e.beat <= cursorBeat) active = e.key;
+      else break; // entries are ascending — no later one can apply.
+    }
+    return active ?? entries[0]?.key;
+  }, [entries]);
 
   const scale = useMemo(() => {
     if (!current) return null;

@@ -8,7 +8,10 @@ import {
   type Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useCursorBeat,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   useHiddenTrackIds,
   useMutedTrackIds,
@@ -79,7 +82,10 @@ function keyLabel(
  */
 export function PianoKeyboard({ projection }: { projection: Projection }) {
   const keys = projection.keys;
-  const { score, cursorBeat } = useSonata();
+  const { score } = useSonata();
+  // Which pitches are sounding changes every frame, so the keyboard re-renders
+  // per frame during playback (a linear scan over notes, trivial at this scale).
+  const cursorBeat = useCursorBeat();
   const { labelScope } = useConfig(pianoKeyboardConfig);
 
   const speller = useMemo(() => makeKeySpeller(effectiveKeyAt(score, 0)), [score]);

@@ -106,7 +106,6 @@ function SonataPlayerSurface(): ReactElement {
   const {
     score,
     currentSongTitle,
-    cursorBeat,
     tempoScale,
     activeDisplayId,
     setActiveDisplay,
@@ -204,7 +203,6 @@ function SonataPlayerSurface(): ReactElement {
           {effectiveDisplayId ? (
             <Sonata.Display.Dispatch
               score={score}
-              cursorBeat={cursorBeat}
               // Displays scale geometry by this to cancel the scale folded into
               // `score`; floor it so a frozen 0% (which scales `score` by the
               // same floor) cancels to a finite layout instead of NaN.

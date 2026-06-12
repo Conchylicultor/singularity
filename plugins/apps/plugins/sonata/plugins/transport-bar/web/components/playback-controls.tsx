@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { useMemo, useRef } from "react";
+import { useRef } from "react";
 import {
   MdAdd,
   MdFastForward,
@@ -10,7 +10,10 @@ import {
 } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useCursorSelector,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -163,7 +166,7 @@ function StepButton({
  * stay in lock-step with the keyboard controls (Space, ↑/↓).
  */
 export function PlaybackControls() {
-  const { isPlaying, play, stop, tempoScale, setTempoScale, score, cursorBeat } =
+  const { isPlaying, play, stop, tempoScale, setTempoScale, score } =
     useSonata();
 
   // Nothing to play until a source has loaded a Score with span; 0% is a frozen
@@ -172,11 +175,16 @@ export function PlaybackControls() {
   const canPlay = hasScore && tempoScale > 0;
   // `score` is scaled by the tempo-math floor, not a literal 0, so read the live
   // BPM from it — but at a frozen 0% the true tempo is 0, not the floor.
-  const bpm = useMemo(() => {
-    if (!hasScore) return null;
-    if (tempoScale === 0) return 0;
-    return bpmAtBeat(score, cursorBeat);
-  }, [hasScore, tempoScale, score, cursorBeat]);
+  // `useCursorSelector` re-renders only when the rounded BPM changes (constant
+  // for most songs), not on every cursor frame.
+  const bpm = useCursorSelector(
+    (cursorBeat) => {
+      if (!hasScore) return null;
+      if (tempoScale === 0) return 0;
+      return bpmAtBeat(score, cursorBeat);
+    },
+    [hasScore, tempoScale, score],
+  );
 
   return (
     <div className="flex items-center gap-2">

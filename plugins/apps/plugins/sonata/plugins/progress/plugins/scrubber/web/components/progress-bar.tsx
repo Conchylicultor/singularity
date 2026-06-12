@@ -2,7 +2,10 @@ import type { PointerEvent as ReactPointerEvent } from "react";
 import { useCallback, useMemo } from "react";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useCursorBeat,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   scoreEndBeat,
   buildTempoIndex,
@@ -32,7 +35,10 @@ function formatTime(seconds: number): string {
  * markers (bar ticks, section bands, …) layer on without intercepting seeks.
  */
 export function ProgressBar() {
-  const { score, cursorBeat, seekTo } = useSonata();
+  const { score, seekTo } = useSonata();
+  // The fill width, ARIA value, and elapsed-time readout all change every frame,
+  // so this bar genuinely re-renders per frame during playback.
+  const cursorBeat = useCursorBeat();
   const markers = SonataProgress.Marker.useContributions();
 
   const endBeat = scoreEndBeat(score);

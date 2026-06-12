@@ -1,9 +1,11 @@
 /**
  * PianoRollCanvas — the React ↔ Pixi bridge. Owns the `Application` lifecycle
  * and forwards every prop change to the imperative {@link PianoRollScene}
- * handle through narrow, separately-keyed layout effects, so a per-frame
- * cursor tick touches exactly one O(1) scene call (`setScroll`) and nothing
- * re-renders or re-uploads.
+ * handle through narrow, separately-keyed layout effects. The per-frame cursor
+ * is NOT a prop: the parent subscribes to the cursor store and calls
+ * `scene.setScroll` directly (see piano-roll.tsx `applyCursor`), so a frame
+ * never re-renders this component. These effects fire only on real input
+ * changes (resize, score, seek, labels, theme).
  *
  * LIFECYCLE (the #1 Pixi-v8-in-React footgun): `Application.init()` is async,
  * but StrictMode double-mounts effects synchronously — destroying the app
@@ -36,12 +38,6 @@ export interface PianoRollCanvasProps {
   cBoundaryFracs: number[];
   /** Beat-domain notes for the onset tracker (see scene.ts bridge note). */
   scoreNotes: Note[];
-  /** Per-frame scroll position in AUTHORED seconds. */
-  scrollSec: number;
-  /** Per-frame cursor in beats — the onset tracker's domain. */
-  cursorBeat: number;
-  /** Bumped on every seek; re-anchors the tracker without an onset burst. */
-  seekEpoch: number;
   showLabels: boolean;
   tempoScale: number;
   /**
@@ -60,9 +56,6 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     bars,
     cBoundaryFracs,
     scoreNotes,
-    scrollSec,
-    cursorBeat,
-    seekEpoch,
     showLabels,
     tempoScale,
   } = props;
@@ -127,9 +120,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   }, []);
 
   // Each concern is its own effect so a change touches exactly one scene call.
-  // Declaration order matters on the first scene-ready pass: size before
-  // score (label layout needs the lane size), reset before scroll (the
-  // re-anchor must precede the first advance).
+  // Declaration order matters on the first scene-ready pass: size before score
+  // (label layout needs the lane size) before the parent's scroll re-sync.
   useLayoutEffect(() => {
     if (!scene || width <= 0 || height <= 0) return;
     // Re-read DPR every resize: a window move across monitors changes it
@@ -142,15 +134,12 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     scene.setScore({ notes: visuals, bars, cBoundaryFracs, scoreNotes, tempoScale });
   }, [scene, visuals, bars, cBoundaryFracs, scoreNotes, tempoScale]);
 
-  useLayoutEffect(() => {
-    if (!scene) return;
-    scene.reset();
-  }, [scene, seekEpoch]);
-
-  useLayoutEffect(() => {
-    if (!scene) return;
-    scene.setScroll(scrollSec, cursorBeat);
-  }, [scene, scrollSec, cursorBeat]);
+  // No per-frame cursor effect and no seek-reset effect here: the parent
+  // subscribes to the cursor store and calls `scene.setScroll` imperatively
+  // (piano-roll.tsx `applyCursor`), re-anchoring the onset tracker via
+  // `scene.reset()` when the store flags the change a seek. So a playback frame
+  // never re-renders this component; on scene-ready the parent re-syncs once via
+  // its own layout effect.
 
   useLayoutEffect(() => {
     if (!scene) return;

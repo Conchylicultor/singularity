@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
+  getCursorBeat,
   Sonata,
   useSonata,
   type InstrumentVoices,
@@ -47,7 +48,7 @@ import {
  * scheduling effect re-runs to play it.
  */
 export function AudioEngine() {
-  const { score, isPlaying, cursorBeat, seekEpoch, registerClock } = useSonata();
+  const { score, isPlaying, seekEpoch, registerClock } = useSonata();
 
   // Muted tracks are dropped from the play-list before scheduling. Deriving a
   // filtered score (rather than passing the set down) keeps `startScheduling`
@@ -74,11 +75,6 @@ export function AudioEngine() {
     () => new Map(instruments.map((inst) => [inst.id, inst] as const)),
     [instruments],
   );
-
-  // Keep the latest cursor in a ref so the scheduling effect reads it WITHOUT
-  // depending on it (re-anchor only on play/stop, like the transport).
-  const cursorBeatRef = useRef(cursorBeat);
-  cursorBeatRef.current = cursorBeat;
 
   // The DISTINCT instrument ids actually in use: resolve every track that still
   // has audible notes. A track whose notes are all muted contributes nothing
@@ -228,9 +224,11 @@ export function AudioEngine() {
 
     void ctx.resume();
 
-    // Capture the shared anchor synchronously at the play instant.
+    // Capture the shared anchor synchronously at the play instant. The cursor is
+    // read straight from the store (it's not a render input here) — a seek bumps
+    // `seekEpoch`, re-running this effect so the read reflects the new position.
     const audioAnchor = ctx.currentTime;
-    const fromBeat = cursorBeatRef.current;
+    const fromBeat = getCursorBeat();
 
     // Route a track to its instrument's manager, reading the ref live so it
     // always reflects the latest reconcile.

@@ -1,15 +1,27 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { useLayoutEffect, useMemo, useRef, useState } from "react";
+import {
+  forwardRef,
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import {
   bars,
   buildTempoIndex,
   makeKeySpeller,
   scoreEndBeat,
   type Score,
-  type TempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
-import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  getCursorBeat,
+  Sonata,
+  subscribeCursor,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
 import { keyLayout as fractionalKeyLayout } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -36,10 +48,11 @@ import { OverlayHost } from "./overlay-host";
 import { FxToggle } from "./fx-toggle";
 import { PitchAxisHost } from "./pitch-axis-host";
 
-/** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. */
+/** Props the shell's `Sonata.Display.Dispatch` passes to the chosen display. The
+ *  playback cursor is NOT a prop — it's read from the cursor store imperatively
+ *  (see `applyCursor`) so a per-frame advance never re-renders this display. */
 export interface PianoRollProps {
   score: Score;
-  cursorBeat: number;
   /** Playback tempo multiplier (1 = authored). Scales the scroll rate so slowing
    *  the tempo slows the scroll instead of stretching note heights. */
   tempoScale: number;
@@ -78,50 +91,31 @@ function useElementSize(): [
 }
 
 /**
- * The ONLY DOM component that reads `cursorBeat` each frame. It maps the cursor
- * to a single scroll `offset` and applies it as one `translateY` over its
- * children — exactly the formula the canvas scene's `setScroll` applies to its
- * scroll root, so DOM overlays and canvas notes stay glued per frame.
+ * The cursor scroll layer: one `translateY` over the cursor-INVARIANT overlay
+ * content, mirroring the canvas scene's `setScroll` so DOM overlays and canvas
+ * notes stay glued per frame. The transform is written IMPERATIVELY by the
+ * parent's cursor subscription (see `applyCursor`) via this forwarded ref — the
+ * component never reads the cursor, so a per-frame advance touches one
+ * `style.transform` and triggers ZERO React renders.
  *
  * Its `children` are the cursor-INVARIANT content (the projection-anchored
- * overlay host), created by the parent which does NOT depend on `cursorBeat`.
- * Because those element identities don't change between frames, React bails
- * out re-rendering them when only the cursor advances. Keeping the parent
- * cursor-free is load-bearing: if it read `cursorBeat`, the isolation breaks.
+ * overlay host), memoized by the parent so their element identity is stable
+ * between frames.
  *
  * `transform` opens a new stacking context here, so the now-line must remain a
  * sibling OUTSIDE this layer to render above it.
  */
-function ScrollLayer({
-  cursorBeat,
-  laneHeight,
-  tempo,
-  tempoScale,
-  children,
-}: {
-  cursorBeat: number;
-  laneHeight: number;
-  tempo: TempoIndex;
-  tempoScale: number;
-  children: React.ReactNode;
-}) {
-  // Map the cursor to the lane bottom: offset = height + seconds(cursor)*pxPerSec.
-  // This is exactly the per-frame term factored out of the old screen-space
-  // beatToY, applied once to the whole content layer. `pxPerSecond` mirrors the
-  // geometry's `PX_PER_SECOND * tempoScale`, so a slower tempo scrolls slower.
-  const offset =
-    laneHeight + tempo.beatToSeconds(cursorBeat) * PX_PER_SECOND * tempoScale;
-  return (
-    <div
-      className="absolute inset-0"
-      style={{ transform: `translateY(${offset}px)` }}
-    >
-      {children}
-    </div>
-  );
-}
+const ScrollLayer = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
+  function ScrollLayer({ children }, ref) {
+    return (
+      <div ref={ref} className="absolute inset-0">
+        {children}
+      </div>
+    );
+  },
+);
 
-function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
+function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // We measure the LANE (above the keyboard); its height drives the time axis.
   const [laneRef, lane] = useElementSize();
 
@@ -165,7 +159,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
   // `unitsPerPixel`. The physics (friction, momentum) lives in the reusable
   // inertial-drag primitive; this site only maps pixels↔seconds and bridges the
   // transport (pause on grab, restore the pre-drag play state once motion ends).
-  const { seekTo, isPlaying, play, stop, seekEpoch } = useSonata();
+  const { seekTo, isPlaying, play, stop } = useSonata();
   const hasNotes = score.notes.length > 0;
   const pxPerSecond = PX_PER_SECOND * tempoScale;
   const endSeconds = tempo.beatToSeconds(scoreEndBeat(score));
@@ -175,7 +169,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
     axis: "y",
     unitsPerPixel: 1 / pxPerSecond,
     bounds: [0, endSeconds],
-    origin: () => tempo.beatToSeconds(cursorBeat),
+    origin: () => tempo.beatToSeconds(getCursorBeat()),
     onScrub: (sec) => seekTo(tempo.secondsToBeat(sec)),
     onGrab: () => {
       if (isPlaying) {
@@ -257,16 +251,62 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
     [pixi],
   );
 
-  // Per-frame scroll position in AUTHORED seconds — the only cursor-derived
-  // value the canvas consumes (one O(1) container move per frame).
-  const scrollSec = authoredSecondsOf(tempo, tempoScale, cursorBeat);
+  // --- Imperative cursor path. The playhead advances ~60fps via the cursor
+  // store; routing it through React would re-render this whole display every
+  // frame. Instead a single subscription pushes the cursor straight to the Pixi
+  // scene (`setScroll`) and the DOM scroll layer's `transform`, reading the
+  // latest geometry from refs — so a frame is two imperative writes and ZERO
+  // React renders. This component re-renders only on real input changes (score,
+  // lane size, tempo, track view).
+  const scrollLayerRef = useRef<HTMLDivElement | null>(null);
+  const sceneRef = useRef<PianoRollScene | null>(pixi?.scene ?? null);
+  sceneRef.current = pixi?.scene ?? null;
+  const tempoRef = useRef(tempo);
+  tempoRef.current = tempo;
+  const tempoScaleRef = useRef(tempoScale);
+  tempoScaleRef.current = tempoScale;
 
-  // The cursor-invariant DOM content, MEMOIZED on its real inputs — pointedly
-  // NOT on `cursorBeat`. The transport bumps the cursor every rAF frame, which
-  // re-renders this component (it reads the shared context via `useSonata`);
-  // memoizing keeps the overlay subtree's element identity stable between
-  // cursor frames so React bails out of reconciling it and only `ScrollLayer`'s
-  // single `translateY` (and the canvas scene's O(1) setScroll) update.
+  const applyCursor = useCallback((beat: number, seek = false) => {
+    const scene = sceneRef.current;
+    const tempo = tempoRef.current;
+    const ts = tempoScaleRef.current;
+    // A seek/jump (scrub, seek, score reset) must re-anchor the onset tracker
+    // instead of advancing through every note between the old and new position
+    // — navigation must not spray note-strike FX. `reset()` defers the re-anchor
+    // to the setScroll just below, which carries the post-seek cursor.
+    if (seek) scene?.reset();
+    // Canvas: one O(1) container move in authored seconds.
+    scene?.setScroll(authoredSecondsOf(tempo, ts, beat), beat);
+    // DOM overlays: the same lane-bottom offset the scene applies to its scroll
+    // root, so overlays and canvas notes stay glued. `PX_PER_SECOND * ts`
+    // mirrors the geometry's pixels-per-second, so a slower tempo scrolls slower.
+    const el = scrollLayerRef.current;
+    if (el) {
+      const offset =
+        laneSizeRef.current.height +
+        tempo.beatToSeconds(beat) * PX_PER_SECOND * ts;
+      el.style.transform = `translateY(${offset}px)`;
+    }
+  }, []);
+
+  // Drive the imperative path on every cursor change — no React render. The
+  // store tells us whether the change was a seek so we re-anchor onsets.
+  useEffect(
+    () => subscribeCursor((seek) => applyCursor(getCursorBeat(), seek)),
+    [applyCursor],
+  );
+
+  // Re-sync after any reactive change (scene ready, resize, tempo) and on mount,
+  // so the view lands correctly even while paused (no cursor tick fires then).
+  // Layout effect so the transform is applied before paint (no flash).
+  useLayoutEffect(() => {
+    applyCursor(getCursorBeat());
+  }, [applyCursor, pixi, lane.height, tempo, tempoScale]);
+
+  // The cursor-invariant DOM content, MEMOIZED on its real inputs. The overlay
+  // subtree's element identity stays stable between frames (this component no
+  // longer re-renders per frame at all — the cursor drives the imperative path
+  // above), so React never reconciles it during playback.
   const content = useMemo(
     () => (
       <ProjectionProvider projection={projection}>
@@ -303,9 +343,6 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
           bars={barMarkers}
           cBoundaryFracs={cBoundaryFracs}
           scoreNotes={score.notes}
-          scrollSec={scrollSec}
-          cursorBeat={cursorBeat}
-          seekEpoch={seekEpoch}
           showLabels={showNoteNames}
           tempoScale={tempoScale}
           onSceneReady={setPixi}
@@ -316,14 +353,7 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
             fx layers via the context. */}
         {fx ? <FxHost fx={fx} /> : null}
 
-        <ScrollLayer
-          cursorBeat={cursorBeat}
-          laneHeight={lane.height}
-          tempo={tempo}
-          tempoScale={tempoScale}
-        >
-          {content}
-        </ScrollLayer>
+        <ScrollLayer ref={scrollLayerRef}>{content}</ScrollLayer>
 
         {/* Playback now-line: where falling notes land on the keyboard. Screen-
             anchored, so it sits OUTSIDE the scroll layer (and above it). */}

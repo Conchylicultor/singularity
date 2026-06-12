@@ -1,5 +1,8 @@
 import { useMemo } from "react";
-import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import {
+  useCursorSelector,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
   collectKeyEntries,
   type KeySignature,
@@ -15,7 +18,7 @@ import {
  * just the tiny walk to the active entry below — not a re-scan of every frame.
  */
 export function KeyChip() {
-  const { score, cursorBeat } = useSonata();
+  const { score } = useSonata();
 
   // Beat-indexed key entries — recomputed only when the Score changes.
   const entries = useMemo(() => collectKeyEntries(score), [score]);
@@ -23,14 +26,16 @@ export function KeyChip() {
   // The key in force at the playhead: the latest entry at or before the cursor.
   // Before the first entry we fall back to the opening key, so the chip is never
   // blank when a key is known (e.g. cursor at 0 with a pickup-delayed first key).
-  const current = useMemo<KeySignature | undefined>(() => {
+  // `useCursorSelector` returns the entry's STABLE `key` reference, so this chip
+  // re-renders only when the key actually changes — not on every cursor frame.
+  const current = useCursorSelector<KeySignature | undefined>((cursorBeat) => {
     let active: KeySignature | undefined;
     for (const e of entries) {
       if (e.beat <= cursorBeat) active = e.key;
       else break; // entries are ascending — no later one can apply.
     }
     return active ?? entries[0]?.key;
-  }, [entries, cursorBeat]);
+  }, [entries]);
 
   if (!current) return null; // keyless score → no chip.
 

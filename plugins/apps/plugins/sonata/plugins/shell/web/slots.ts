@@ -64,11 +64,12 @@ export const Sonata = {
   // DISPLAY — single-active selector. `Extra` carries the metadata the picker
   // enumerates (collection-consumer clean — never names a contributor). The
   // dispatch key is the active display id, carried in the render props so the
-  // shell stays the single owner of `activeDisplayId`.
+  // shell stays the single owner of `activeDisplayId`. The playback cursor is
+  // NOT a prop — displays read it from the cursor store (`useCursorBeat` /
+  // `subscribeCursor`) so a per-frame advance never re-renders the dispatch site.
   Display: defineDispatchSlot<
     {
       score: Score;
-      cursorBeat: number;
       /** Playback tempo multiplier (1 = authored). Displays scale scroll speed by
        *  this so slowing down slows the scroll instead of stretching notes. */
       tempoScale: number;

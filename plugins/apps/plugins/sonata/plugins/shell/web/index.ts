@@ -17,6 +17,12 @@ export {
   publishSonataTransport,
   type SonataTransportActions,
 } from "./transport-store";
+export {
+  getCursorBeat,
+  subscribeCursor,
+  useCursorBeat,
+  useCursorSelector,
+} from "./cursor-store";
 
 export default {
   description:
