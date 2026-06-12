@@ -12,7 +12,7 @@ import {
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
 import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
-import type { TaskStatus } from "@plugins/tasks-core/core";
+import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { tasksResource, createTask, type TaskListItem } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
 import { Tasks as TasksSlots } from "@plugins/tasks/plugins/task-list/web";

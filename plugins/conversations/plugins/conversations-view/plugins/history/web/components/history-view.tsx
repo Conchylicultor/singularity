@@ -4,7 +4,7 @@ import { useConversations } from "@plugins/conversations/web";
 import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
-import type { Conversation } from "@plugins/tasks-core/core";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { MdClose } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";

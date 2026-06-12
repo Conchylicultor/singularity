@@ -1,7 +1,7 @@
-// @hash e8121d43887d
+// @hash ad3eee716748
 {
   "items": [
-    "attempt-view:attempt-switch",
+    "tasks.attempt-view:attempt-switch",
     "conversations.conversation-view.jsonl-viewer.event-counter:event-counter",
     "conversations.conversation-view.commits-graph:commits-graph",
     "conversations.conversation-view.dependent-count:dependent-count",

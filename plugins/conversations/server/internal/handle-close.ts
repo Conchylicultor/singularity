@@ -1,4 +1,4 @@
-import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
+import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { closeConversation } from "../../core/endpoints";
 import { deleteConversation } from "./lifecycle";

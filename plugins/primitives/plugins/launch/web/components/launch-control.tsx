@@ -3,7 +3,7 @@ import { useState } from "react";
 import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
 import { useOpenPane, type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { type Conversation } from "@plugins/tasks-core/core";
+import { type Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { createConversation } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {

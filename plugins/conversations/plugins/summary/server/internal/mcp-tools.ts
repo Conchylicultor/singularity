@@ -2,7 +2,7 @@ import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
 import { readConversationTurns } from "@plugins/conversations/server";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { cliFlagFor } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { _conversationSummaries } from "./tables";

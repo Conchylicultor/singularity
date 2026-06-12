@@ -1,8 +1,8 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getServerBuildId } from "@plugins/build/server";
-import { createTask, getTask } from "@plugins/tasks-core/server";
-import { recordNotification } from "@plugins/notifications/server";
+import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _crashes } from "./tables";
 import { crashesResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";

@@ -5,7 +5,7 @@ import {
   dropTaskTree,
   markConversationClosed,
   notifyConversationsChanged,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { dropDependents } from "../../shared/endpoints";
 
 export const handleDropDependents = implement(dropDependents, async ({ params }) => {

@@ -2,9 +2,9 @@ import { useResource, matchResource } from "@plugins/primitives/plugins/live-sta
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
-import { attemptPane } from "@plugins/attempt-view/web";
+import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { attemptsResource } from "@plugins/tasks/core";
-import type { AttemptStatus } from "@plugins/tasks-core/core";
+import type { AttemptStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 const ATTEMPT_STATUS_DOT: Record<AttemptStatus, string> = {
   pending: "bg-muted-foreground/60",

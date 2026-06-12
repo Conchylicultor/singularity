@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { getTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { resolvePrepromptItem } from "@plugins/conversations/plugins/preprompts/server";
 import { recordConversationPreprompt } from "./record";

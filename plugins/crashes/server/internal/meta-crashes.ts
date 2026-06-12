@@ -1,4 +1,4 @@
-import { ensureMetaTask } from "@plugins/tasks-core/server";
+import { ensureMetaTask } from "@plugins/tasks/plugins/tasks-core/server";
 
 export const CRASHES_META_TASK_ID = "task-meta-crashes";
 const TITLE = "Crashes";

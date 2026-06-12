@@ -1,10 +1,10 @@
-// @hash 2204cc5d5c9b
+// @hash 9c8e83fe1f70
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "agents:agent-avatar",
+    "conversations.agents:agent-avatar",
     "conversations.conversation-view:title",
     "conversations.conversation-view.status:status",
     "conversations.conversation-view.allow-monitor:allow-monitor",

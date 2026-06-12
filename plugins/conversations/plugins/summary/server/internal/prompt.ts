@@ -2,7 +2,7 @@ import {
   readConversationTurns,
   type Turn,
 } from "@plugins/conversations/server";
-import { getConversation, getTask } from "@plugins/tasks-core/server";
+import { getConversation, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 
 // Most transcripts fit comfortably in Sonnet's context. For very long ones
 // we keep a head + tail of each turn's text so the model still sees both

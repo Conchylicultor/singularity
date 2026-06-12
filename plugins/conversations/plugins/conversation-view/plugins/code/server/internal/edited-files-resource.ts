@@ -1,5 +1,5 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { EditedFilesPayloadSchema } from "../../core/protocol";
 import { getEditedFiles } from "./get-edited-files";
 import { watchEditedFiles } from "./watch-edited-files";

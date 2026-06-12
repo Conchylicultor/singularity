@@ -1,5 +1,5 @@
 import { join } from "path";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { getAllowFiles } from "../../shared/endpoints";
 

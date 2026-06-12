@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { terminalPane } from "@plugins/terminal/web";
+import { terminalPane } from "@plugins/primitives/plugins/terminal/web";
 import { convTerminalPane } from "../panes";
 
 const TMUX = "tmux";

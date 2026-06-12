@@ -1,5 +1,5 @@
 import { text, timestamp } from "drizzle-orm/pg-core";
-import { _conversations } from "@plugins/tasks-core/server";
+import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 
 export const turnSummaries = defineExtension(_conversations, "turn_summary", {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { attemptPane } from "@plugins/attempt-view/web";
+import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   PushGantt,

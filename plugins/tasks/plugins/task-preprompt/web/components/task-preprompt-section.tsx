@@ -1,5 +1,5 @@
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   Collapsible,
   CollapsibleContent,

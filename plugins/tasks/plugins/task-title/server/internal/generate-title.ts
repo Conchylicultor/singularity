@@ -1,5 +1,5 @@
 import { runClaudePrint } from "@plugins/infra/plugins/claude-cli/server";
-import { getTask, updateConversationsTitleForTask, updateTaskTitle } from "@plugins/tasks-core/server";
+import { getTask, updateConversationsTitleForTask, updateTaskTitle } from "@plugins/tasks/plugins/tasks-core/server";
 
 // Haiku ignores a system-only instruction when the user message looks like a
 // feature request — it answers conversationally instead. Restating the task in

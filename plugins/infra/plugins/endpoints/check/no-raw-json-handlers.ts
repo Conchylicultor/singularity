@@ -30,7 +30,7 @@ const ALLOWED: { prefix: string; reason: string }[] = [
   // 400/404 guards emitted before an NDJSON stream Response.
   { prefix: "plugins/debug/plugins/worktree-cleanup/server/internal/handle-delete.ts", reason: "400/404 guards before an NDJSON stream response" },
   // events-test long-poll / onDeadline test handlers (custom statuses + timeouts).
-  { prefix: "plugins/events-test/server/internal/", reason: "long-poll / onDeadline test handlers" },
+  { prefix: "plugins/infra/plugins/events-test/server/internal/", reason: "long-poll / onDeadline test handlers" },
 ];
 
 const check: Check = {

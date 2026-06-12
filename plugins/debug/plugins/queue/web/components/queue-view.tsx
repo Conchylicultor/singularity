@@ -1,7 +1,7 @@
 import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { FilterChip, useChipFilter } from "@plugins/primitives/plugins/filter-chips/web";

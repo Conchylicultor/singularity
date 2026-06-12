@@ -41,9 +41,9 @@ export default {
       "plugins/tasks/plugins/task-graph/web/components/task-graph.tsx",
       // Notification dismiss / mark-read — the CLAUDE.md canonical example;
       // reappears on next load if the write fails.
-      "plugins/notifications/web/components/bell-button.tsx",
+      "plugins/shell/plugins/notifications/web/components/bell-button.tsx",
       // Secondary DB persistence of a toast already shown via Shell.Toast.
-      "plugins/notifications/web/internal/toast.ts",
+      "plugins/shell/plugins/notifications/web/internal/toast.ts",
       // Page-tree expand toggle + DnD reorder; blocksLiveResource push refreshes.
       "plugins/apps/plugins/pages/plugins/page-tree/web/components/pages-sidebar.tsx",
       // Track color/instrument/mute/hide toggles + reset; live-state push refreshes.

@@ -1,4 +1,4 @@
-// @hash d7a998a294a5
+// @hash 3e15e7cea1e5
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -12,8 +12,8 @@
     "debug.memory:memory",
     "debug.worktree-cleanup:worktree-cleanup",
     { "type": "spacer", "id": "spacer-1" },
-    "conversations-recover:conversations-recover",
-    "events-test:events-test",
+    "conversations.recover:conversations-recover",
+    "infra.events-test:events-test",
     "backup:backup"
   ]
 }

@@ -1,4 +1,4 @@
-import { listGoneConversations as listGoneConversationsDb } from "@plugins/tasks-core/server";
+import { listGoneConversations as listGoneConversationsDb } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { listGoneConversations } from "../../core/endpoints";
 

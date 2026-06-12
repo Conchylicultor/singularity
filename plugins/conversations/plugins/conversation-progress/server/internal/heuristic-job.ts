@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { PHASE_ORDER, type ConversationPhase } from "../../shared/schemas";
 import { conversationProgress } from "./tables";
 import { conversationProgressResource } from "./resource";

@@ -6,7 +6,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { taskSidePane } from "@plugins/conversations/plugins/conversation-view/plugins/side-task/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/core";
-import type { TaskStatus } from "@plugins/tasks-core/core";
+import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 const TASK_STATUS_DOT: Record<TaskStatus, string> = {
   new: "bg-muted-foreground/60",

@@ -5,7 +5,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useHasActiveSiblings } from "@plugins/conversations/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { dropAndExit } from "../../core";
 

@@ -1,4 +1,4 @@
-import { notifyConversationsChanged } from "@plugins/tasks-core/server";
+import { notifyConversationsChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";

@@ -9,7 +9,7 @@
   - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
   - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
 - Server:
-  - Uses: `infra/paths.GIT`, `tasks-core.getConversation`
+  - Uses: `infra/paths.GIT`, `tasks/tasks-core.getConversation`
   - Exports: Values: `getEditedFiles`
   - Resources: `edited-files` (invalidate)
 - Core:

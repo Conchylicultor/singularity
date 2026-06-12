@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { getTask } from "@plugins/tasks-core/server";
-import { recordNotification } from "@plugins/notifications/server";
+import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import {
   MODEL_REGISTRY,
   normalizeModel,

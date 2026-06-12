@@ -12,7 +12,7 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint, taskDetailResource } from "@plugins/tasks/core";
 import type { Task } from "@plugins/tasks/core";
-import { buildTaskPrompt } from "@plugins/tasks-core/core";
+import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { DescriptionView } from "./description-view";

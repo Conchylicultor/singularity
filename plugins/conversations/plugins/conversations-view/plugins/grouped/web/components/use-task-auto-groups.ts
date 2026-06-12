@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import type { Conversation, TaskListItem } from "@plugins/tasks-core/core";
+import type { Conversation, TaskListItem } from "@plugins/tasks/plugins/tasks-core/core";
 
 export type AttemptGroup = Conversation[]; // [root, ...forks]
 

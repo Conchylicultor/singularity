@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState, type ReactElement } from "react";
 import { useProfilingContext } from "@plugins/debug/plugins/profiling/web";
-import { attemptPane } from "@plugins/attempt-view/web";
+import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { ShellCommands } from "@plugins/shell/web";

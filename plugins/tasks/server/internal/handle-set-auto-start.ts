@@ -1,4 +1,4 @@
-import { getTask } from "@plugins/tasks-core/server";
+import { getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { setTaskAutoStart } from "../../core/endpoints";
 import { armTaskAutoStart } from "./arm-auto-start";

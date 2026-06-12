@@ -9,9 +9,9 @@
   - Contributes: `PluginViewSlots.Section` "health" → `HealthSection`
   - Uses: `infra/endpoints.fetchEndpoint`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/relative-time.RelativeTime`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks-core._tasks`, `tasks-core.createTask`, `tasks-core.getConversation`, `tasks/task-preprompt.inheritTaskPreprompt`
+  - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/tasks-core._tasks`, `tasks/tasks-core.createTask`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/plugin-meta/plugins/plugin-health/server/internal/tables.ts`
-  - Entity extension of: `tasks-core` (table `tasks_ext_health_review`)
+  - Entity extension of: `tasks/tasks-core` (table `tasks_ext_health_review`)
   - Exports: Values: `healthReviewExt`, `pluginHealthReviewsResource`
   - Register: `mcpTool('propose_task')`
   - Resources: `plugin-health-reviews` (push)

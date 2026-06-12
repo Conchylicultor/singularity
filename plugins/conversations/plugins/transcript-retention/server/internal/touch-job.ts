@@ -2,7 +2,7 @@ import { utimes } from "node:fs/promises";
 import { z } from "zod";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { listActiveConversations } from "@plugins/tasks-core/server";
+import { listActiveConversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 
 const log = Log.channel("transcript-retention");

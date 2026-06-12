@@ -6,7 +6,7 @@
 
 - Description: Agent API: GET /api/conversations/:id/transcript returns the on-disk JSONL path for a conversation's full raw Claude session transcript.
 - Server:
-  - Uses: `conversations/transcript-watcher.findTranscriptPath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversationClaudeSessionId`
+  - Uses: `conversations/transcript-watcher.findTranscriptPath`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversationClaudeSessionId`
   - Routes: `GET /api/conversations/:id/transcript`
 - Shared:
   - Exports: Values: `getConversationTranscript`

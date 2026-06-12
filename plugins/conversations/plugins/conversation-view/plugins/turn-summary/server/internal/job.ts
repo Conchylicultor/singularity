@@ -2,7 +2,7 @@ import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { getConfig } from "@plugins/config_v2/server";
 import { readConversationTurns } from "@plugins/conversations/server";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   ClaudeCliError,
   runClaudePrint,

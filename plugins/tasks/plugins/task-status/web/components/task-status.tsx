@@ -9,7 +9,7 @@ import {
   MdTimelapse,
 } from "react-icons/md";
 import type { IconType } from "react-icons";
-import type { TaskStatus } from "@plugins/tasks-core/core";
+import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/text/web";

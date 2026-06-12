@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import { updateConversation } from "@plugins/tasks-core/server";
+import { updateConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { exitCleanFinalizeJob } from "./exit-clean-finalize-job";
 
 // `exit_clean` and `flag_raise` are the model-facing terminus of the

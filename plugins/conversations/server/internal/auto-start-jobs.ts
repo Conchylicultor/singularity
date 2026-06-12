@@ -6,8 +6,8 @@ import {
   hasBlockingDep,
   listArmedDependentsOf,
   listAttemptsForTask,
-} from "@plugins/tasks-core/server";
-import { buildTaskPrompt } from "@plugins/tasks-core/core";
+} from "@plugins/tasks/plugins/tasks-core/server";
+import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import {
   claimAutoStart,
   getTaskAutoStart,

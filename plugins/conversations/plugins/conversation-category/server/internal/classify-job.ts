@@ -5,7 +5,7 @@ import {
   readConversationTurns,
   type Turn,
 } from "@plugins/conversations/server";
-import { getConversation } from "@plugins/tasks-core/server";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   ClaudeCliError,
   runClaudePrint,

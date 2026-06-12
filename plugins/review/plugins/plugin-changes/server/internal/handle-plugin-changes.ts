@@ -1,7 +1,7 @@
 import { dirname, join, resolve } from "node:path";
 import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
-import { getConversation, listPushesByPushId } from "@plugins/tasks-core/server";
+import { getConversation, listPushesByPushId } from "@plugins/tasks/plugins/tasks-core/server";
 import { getEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/server";
 import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
 import { REPO_ROOT, GIT } from "@plugins/infra/plugins/paths/server";

@@ -6,7 +6,7 @@ import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   MODEL_REGISTRY,
   type ConversationModel,

@@ -9,7 +9,7 @@
   - Contributes: `Stats.Chart` "Tasks" → `TasksSection`
   - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/text.Text`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
 - Server:
-  - Uses: `infra/endpoints.implement`, `tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks-core.listTasks`
+  - Uses: `infra/endpoints.implement`, `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks/tasks-core.listTasks`
   - Routes: `GET /api/stats/tasks/cumulative`, `GET /api/stats/tasks/daily`
 - Shared:
   - Exports: Values: `getTasksCumulative`, `getTasksDaily`

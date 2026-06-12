@@ -10,7 +10,7 @@ A child plugin that wants per-entity state (toggles, settings, soft-delete flags
 
 ```ts
 import { boolean } from "drizzle-orm/pg-core";
-import { _agents } from "@plugins/agents/server";
+import { _agents } from "@plugins/conversations/plugins/agents/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 
 export const agentAutoLaunch = defineExtension(_agents, "auto_launch", {

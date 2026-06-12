@@ -6,7 +6,7 @@ import {
   text,
   timestamp,
 } from "drizzle-orm/pg-core";
-import { _conversations } from "@plugins/tasks-core/server";
+import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 
 // Per-widget persistent state for active-data block tags. The card itself
 // (e.g. <task>…</task>) is in immutable assistant text, so the model emits

@@ -7,7 +7,7 @@ import {
   markConversationClosed,
   notifyConversationsChanged,
   updateTask,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { dropAndExit } from "../../core/endpoints";
 
 export const handleDropAndExit = implement(dropAndExit, async ({ params }) => {

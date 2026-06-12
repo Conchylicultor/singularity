@@ -4,7 +4,7 @@ import {
   createTask,
   getTask,
   getTaskDependencyIds,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import {
   scheduleTaskTitleUpdate,
   synthesiseTitleFallback,

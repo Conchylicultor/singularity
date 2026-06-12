@@ -4,7 +4,7 @@ import {
   readJsonlEvents,
   watchTranscript,
 } from "@plugins/conversations/plugins/transcript-watcher/server";
-import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
+import { getConversationClaudeSessionId } from "@plugins/tasks/plugins/tasks-core/server";
 import { JsonlEventsPayloadSchema } from "../../core/protocol";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 

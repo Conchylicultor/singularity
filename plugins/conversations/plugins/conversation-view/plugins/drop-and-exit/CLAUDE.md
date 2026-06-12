@@ -7,9 +7,9 @@
 - Description: Exit-menu entry that marks the top task as dropped and closes the conversation.
 - Web:
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
-  - Uses: `conversations.useConversation`, `conversations.useHasActiveSiblings`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `notifications.toast`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/ui-kit.DropdownMenuItem`
+  - Uses: `conversations.useConversation`, `conversations.useHasActiveSiblings`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/ui-kit.DropdownMenuItem`, `shell/notifications.toast`
 - Server:
-  - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core.getConversation`, `tasks-core.listActiveConversations`, `tasks-core.listPushesForAttempt`, `tasks-core.markConversationClosed`, `tasks-core.notifyConversationsChanged`, `tasks-core.updateTask`
+  - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listActiveConversations`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.notifyConversationsChanged`, `tasks/tasks-core.updateTask`
   - Routes: `POST /api/conversations/:id/drop-and-exit`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

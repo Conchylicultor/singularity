@@ -3,7 +3,7 @@ import { join } from "node:path";
 import { and, eq, isNull } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { REPO_ROOT, SINGULARITY_DIR, currentWorktreeName } from "@plugins/infra/plugins/paths/server";
-import { recordNotification } from "@plugins/notifications/server";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _buildRuns } from "./tables";
 import { buildHistoryResource } from "./build-history-resource";
 import { frontendHashResource } from "./frontend-hash-resource";

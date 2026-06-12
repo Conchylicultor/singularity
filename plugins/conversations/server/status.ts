@@ -1,5 +1,5 @@
-import type { ConversationStatus } from "@plugins/tasks-core/core";
-export { ConversationStatusSchema, type ConversationStatus } from "@plugins/tasks-core/core";
+import type { ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
+export { ConversationStatusSchema, type ConversationStatus } from "@plugins/tasks/plugins/tasks-core/core";
 
 export function isActiveStatus(status: ConversationStatus): boolean {
   return status !== "done";

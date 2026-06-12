@@ -3,7 +3,7 @@ import type { ConversationModel } from "@plugins/conversations/plugins/model-pro
 import {
   getConversationRuntime,
   getConversationClaudeSessionId,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { findTranscriptPath } from "@plugins/conversations/plugins/transcript-watcher/server";
 import {
   readTurns,

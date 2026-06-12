@@ -1,7 +1,7 @@
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import { createTask, getConversation } from "@plugins/tasks-core/server";
+import { createTask, getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";
 import { _pluginHealthReviews, healthReviewExt } from "./tables";
 import { pluginHealthReviewsResource } from "./resource";

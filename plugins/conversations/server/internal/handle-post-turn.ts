@@ -1,4 +1,4 @@
-import { conversationAttachments, getConversation } from "@plugins/tasks-core/server";
+import { conversationAttachments, getConversation } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { postConversationTurn } from "../../core/endpoints";
 import { sendTurn } from "./runtime";

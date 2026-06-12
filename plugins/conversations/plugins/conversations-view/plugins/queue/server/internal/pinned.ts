@@ -1,6 +1,6 @@
 import { and, asc, eq, ne, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _conversations, _attempts } from "@plugins/tasks-core/server";
+import { _conversations, _attempts } from "@plugins/tasks/plugins/tasks-core/server";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import { conversationsQueue, _queueState } from "./tables";
 

@@ -4,7 +4,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";
 import type { LaunchRequest } from "./launch-control";
-import type { Conversation } from "@plugins/tasks-core/core";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 
 export type LaunchAgentPopoverProps = {
   trigger: React.ReactElement;

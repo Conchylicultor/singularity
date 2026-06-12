@@ -1,5 +1,5 @@
 import { stat } from "node:fs/promises";
-import { listAttempts, listTasks } from "@plugins/tasks-core/server";
+import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { ndjsonResponse } from "../../shared/ndjson";

@@ -7,7 +7,7 @@
 - Description: WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
 - Load-bearing: yes
 - Cross-plugin:
-  - Imported by: `build`, `build/build-logs`, `debug/logs`, `health`, `primitives/live-state`, `primitives/log-channels`, `terminal`
+  - Imported by: `build`, `build/build-logs`, `debug/logs`, `infra/health`, `primitives/live-state`, `primitives/log-channels`, `primitives/terminal`
 - Web:
   - Exports: Types: `CrossTabElectionCallbacks`, `FetchWithRetryOptions`, `NetDiagEvent`, `ReconnectingEventSourceOptions`, `ReconnectingWsHandle`, `ReconnectingWsOptions`, `WsStatus`, `WsStatusEvent`; Values: `CrossTabElection`, `fetchWithRetry`, `publishNetDiag`, `publishWsStatus`, `ReconnectingEventSource`, `SharedWebSocket`, `subscribeNetDiag`, `subscribeWsStatus`, `useReconnectingWebSocket`
 

@@ -31,9 +31,9 @@ never the reverse) and the feature fully opt-in and removable.
   - Uses: `config_v2/config-link.ConfigPopoverHeader`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `conversations/preprompts.PrepromptGlyph`, `conversations/preprompts.prepromptsConfig`, `conversations/preprompts.usePreprompt`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`
   - Exports: Values: `useConversationPreprompt`
 - Server:
-  - Uses: `conversations.conversationCreated`, `conversations/preprompts.resolvePrepromptItem`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks-core._conversations`, `tasks-core.getConversation`, `tasks/task-preprompt.getTaskPreprompt`
+  - Uses: `conversations.conversationCreated`, `conversations/preprompts.resolvePrepromptItem`, `database.db`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/task-preprompt.getTaskPreprompt`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-preprompt/server/internal/tables.ts`
-  - Entity extension of: `tasks-core` (table `conversations_ext_preprompt`)
+  - Entity extension of: `tasks/tasks-core` (table `conversations_ext_preprompt`)
   - Exports: Values: `conversationPreprompt`, `conversationPrepromptsResource`, `recordConversationPreprompt`, `recordPrepromptJob`
   - Register: `defineJob('conversation-preprompt.record')`
 - Shared:

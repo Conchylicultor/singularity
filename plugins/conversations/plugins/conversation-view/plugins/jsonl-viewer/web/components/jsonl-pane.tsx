@@ -5,7 +5,7 @@ import {
   useStickyScroll,
 } from "@plugins/primitives/plugins/auto-scroll/web";
 
-import type { Conversation } from "@plugins/tasks-core/core";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";

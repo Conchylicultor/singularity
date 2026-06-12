@@ -6,7 +6,7 @@ import {
   markConversationGone,
   markConversationClosed,
   notifyConversationsChanged,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { recordCrash } from "@plugins/crashes/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";

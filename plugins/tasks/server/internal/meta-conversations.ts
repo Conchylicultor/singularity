@@ -2,7 +2,7 @@ import {
   CONVERSATIONS_META_TASK_ID,
   ensureMetaTask,
   backfillMetaParent,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 
 const TITLE = "Conversations";
 

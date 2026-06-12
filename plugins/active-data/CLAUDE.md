@@ -75,7 +75,7 @@ Behavior:
   - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
   - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks-core._conversations`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
   - Exports: Values: `_activeDataBindings`, `activeDataBindingsResource`
   - Routes: `PUT /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`, `DELETE /api/active-data/bindings/:conversationId/:messageId/:tag/:occurrenceIndex`

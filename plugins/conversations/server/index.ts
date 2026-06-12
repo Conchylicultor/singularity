@@ -30,7 +30,7 @@ import { notifyConversationCreatedJob } from "./internal/notify-created-job";
 import { conversationCreated } from "./internal/tables-created-event";
 import { conversationTurnCompleted } from "./internal/tables-turn-completed-event";
 import { userTurnSent } from "./internal/tables-user-turn-sent-event";
-import { taskStatusChanged } from "@plugins/tasks-core/server";
+import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { autoAnswerConfig } from "../shared/config";

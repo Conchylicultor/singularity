@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { getServerBuildId } from "@plugins/build/server";
-import { setMutedByMetadata } from "@plugins/notifications/server";
+import { setMutedByMetadata } from "@plugins/shell/plugins/notifications/server";
 import { _crashes } from "./tables";
 import { crashesResource } from "./resources";
 import { isNoiseCrash } from "./noise-rules";

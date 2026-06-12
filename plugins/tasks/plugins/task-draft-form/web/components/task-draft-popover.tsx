@@ -1,6 +1,6 @@
 import { type ReactElement, type ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";

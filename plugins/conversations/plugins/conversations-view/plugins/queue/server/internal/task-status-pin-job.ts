@@ -2,7 +2,7 @@ import { z } from "zod";
 import { and, eq, inArray } from "drizzle-orm";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { db } from "@plugins/database/server";
-import { _conversations, _attempts, listBlockingDepIds } from "@plugins/tasks-core/server";
+import { _conversations, _attempts, listBlockingDepIds } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { validatePin } from "./pinned";
 import { queueRanksResource } from "./resource";

@@ -7,7 +7,7 @@ import { useTask } from "@plugins/tasks/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, addTaskDependency, removeTaskDependency, type TaskListItem } from "@plugins/tasks/core";
 import { fetchEndpoint, EndpointError } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";

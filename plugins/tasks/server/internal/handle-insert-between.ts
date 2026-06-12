@@ -3,7 +3,7 @@ import {
   getTask,
   removeTaskDependency,
   addTaskDependency,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { insertTaskBetween } from "../../core/endpoints";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";

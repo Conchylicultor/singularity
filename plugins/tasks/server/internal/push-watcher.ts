@@ -4,7 +4,7 @@ import {
   insertPush,
   getConversation,
   listPushShasIn,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { GIT } from "@plugins/infra/plugins/paths/server";

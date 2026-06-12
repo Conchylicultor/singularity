@@ -1,6 +1,6 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { _tasks } from "@plugins/tasks-core/server";
+import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { tasksAutoStartResource } from "./resource";
 import { tasksAutoStart, _tasksAutoStartExt } from "./tables";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";

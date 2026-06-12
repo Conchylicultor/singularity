@@ -5,7 +5,7 @@ import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { conversationCategoryConfig } from "../../shared";

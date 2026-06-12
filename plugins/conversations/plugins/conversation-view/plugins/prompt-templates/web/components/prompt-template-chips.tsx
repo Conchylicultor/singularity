@@ -12,7 +12,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversation, useConversationById } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { promptTemplatesConfig } from "../../shared/config";
 

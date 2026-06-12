@@ -4,8 +4,8 @@ import {
   afterTurn,
   deleteConversation,
 } from "@plugins/conversations/server";
-import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks-core/server";
-import { recordNotification } from "@plugins/notifications/server";
+import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks/plugins/tasks-core/server";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 
 const FINALIZE_TIMEOUT_MS = 60_000;
 

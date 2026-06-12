@@ -1,5 +1,5 @@
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks-core/server";
+import { listTasks, CONVERSATIONS_META_TASK_ID } from "@plugins/tasks/plugins/tasks-core/server";
 import { getTasksDaily } from "../../shared/endpoints";
 
 export const handleDaily = implement(getTasksDaily, async () => {

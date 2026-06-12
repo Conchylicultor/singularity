@@ -1,4 +1,4 @@
-import { getAttempt } from "@plugins/tasks-core/server";
+import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 

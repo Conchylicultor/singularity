@@ -1,7 +1,7 @@
 import {
   addTaskDependency as addTaskDependencyDb,
   removeTaskDependency,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { addTaskDependency, removeTaskDependency as removeTaskDependencyEndpoint } from "../../core/endpoints";
 

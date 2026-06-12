@@ -4,7 +4,7 @@ import { MdPlaylistPlay } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConfig } from "@plugins/config_v2/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { fetchEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { createConversation } from "@plugins/conversations/core";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";

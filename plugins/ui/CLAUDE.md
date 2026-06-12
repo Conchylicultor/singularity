@@ -9,6 +9,7 @@
   - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
   - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
   - **`theme-engine`** — Central settings pane for switching visual variants of pluggable UI components.
+  - **`theme-toggle`** — Toolbar toggle for light/dark mode.
   - **`tokens`** — Umbrella for CSS token group plugins. Contributes global theme presets.
   - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
   - **`variant-region`** — Factory for pluggable chrome regions with per-app switchable variants. Collapses the config + slot + host + picker + registrations boilerplate into defineVariantRegion (core) and defineVariantRegionWeb (web).

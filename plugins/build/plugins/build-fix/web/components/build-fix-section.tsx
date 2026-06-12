@@ -3,7 +3,7 @@ import { MdAutoFixHigh } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { type BuildRun, buildHistoryResource } from "@plugins/build/core";
 import { getBuildRunLogs } from "@plugins/build/plugins/build-logs/core";
 

@@ -1,4 +1,4 @@
-import { taskAttachments, updateTask } from "@plugins/tasks-core/server";
+import { taskAttachments, updateTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { extractAttachmentIds } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/core";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { updateTask as updateTaskEndpoint } from "../../core/endpoints";

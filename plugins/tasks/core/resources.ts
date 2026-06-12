@@ -1,18 +1,18 @@
 // In-plugin imports go straight to the leaf so the frontend bundle doesn't
 // pull `server/api`'s runtime surface. Cross-plugin consumers go through
-// `@plugins/tasks-core/server`.
+// `@plugins/tasks/plugins/tasks-core/server`.
 import type {
   AttemptWithConversations,
   Push,
   Task,
   TaskListItem,
-} from "@plugins/tasks-core/core";
+} from "@plugins/tasks/plugins/tasks-core/core";
 import {
   TaskSchema,
   TaskListItemSchema,
   AttemptWithConversationsSchema,
   PushSchema,
-} from "@plugins/tasks-core/core";
+} from "@plugins/tasks/plugins/tasks-core/core";
 import { resourceDescriptor, keyedResourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { z } from "zod";
 
@@ -23,7 +23,7 @@ export type {
   Push,
   Task,
   TaskListItem,
-} from "@plugins/tasks-core/core";
+} from "@plugins/tasks/plugins/tasks-core/core";
 
 // Bulk list: lean per-row projection (no `description`). The detail pane reads
 // the full task from `taskDetailResource`, keyed by id.

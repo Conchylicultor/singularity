@@ -1,9 +1,9 @@
-// @hash 345dbe4fc909
+// @hash aadee5363ce2
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "tasks.task-detail:tasks",
-    "agents:agents",
+    "conversations.agents:agents",
     "conversations.conversations-view:conversations",
     "code-explorer:code-explorer",
     "stats:stats"

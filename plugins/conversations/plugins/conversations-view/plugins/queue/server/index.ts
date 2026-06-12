@@ -6,7 +6,7 @@ import {
   conversationTurnCompleted,
   userTurnSent,
 } from "@plugins/conversations/server";
-import { taskStatusChanged } from "@plugins/tasks-core/server";
+import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";

@@ -1,7 +1,7 @@
 import {
   useCursorPagination,
 } from "@plugins/primitives/plugins/cursor-pagination/web";
-import type { Conversation } from "@plugins/tasks-core/core";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listGoneConversations } from "@plugins/conversations/core";
 

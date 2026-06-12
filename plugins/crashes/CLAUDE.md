@@ -10,7 +10,7 @@
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/error-boundary.registerBoundaryReporter`, `primitives/tab-id.getTabId`
   - Exports: Types: `CrashContext`; Values: `report`
 - Server:
-  - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `notifications.recordNotification`, `notifications.setMutedByMetadata`, `tasks-core.createTask`, `tasks-core.ensureMetaTask`, `tasks-core.getTask`
+  - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.CRASHES_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
   - DB schema: `plugins/crashes/server/internal/schema.ts`, `plugins/crashes/server/internal/tables.ts`
   - Exports: Types: `CrashNoiseInput`, `CrashNoiseRuleSpec`; Values: `_crashes`, `CRASHES_META_TASK_ID`, `crashesResource`, `CrashNoiseRule`, `recordCrash`
   - Resources: `crashes` (push)
@@ -19,7 +19,7 @@
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Crash`; Values: `crashesResource`, `CrashSchema`
 - Cross-plugin:
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `crashes/endpoint-errors`, `crashes/noise-rules`, `health`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `crashes/endpoint-errors`, `crashes/noise-rules`, `infra/health`
 - Sub-plugins:
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).
   - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.

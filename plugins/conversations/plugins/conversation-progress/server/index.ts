@@ -2,7 +2,7 @@ import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import { conversationTurnCompleted } from "@plugins/conversations/server";
-import { pushLanded } from "@plugins/tasks-core/server";
+import { pushLanded } from "@plugins/tasks/plugins/tasks-core/server";
 import { classifyProgressJob } from "./internal/heuristic-job";
 import { markProgressPushedJob } from "./internal/push-job";
 import { conversationProgressResource } from "./internal/resource";

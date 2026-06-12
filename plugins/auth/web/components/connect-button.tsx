@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { currentWorktreeName, startConnectFlow } from "../connect";
 
 export interface ConnectButtonProps {

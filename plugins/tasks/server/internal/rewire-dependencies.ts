@@ -3,7 +3,7 @@ import {
   removeTaskDependency,
   listDependentIds,
   getTaskDependencyIds,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 
 export async function rewireDependencies(opts: {
   newTaskId: string;

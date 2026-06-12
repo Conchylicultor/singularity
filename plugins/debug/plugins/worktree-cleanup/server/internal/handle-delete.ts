@@ -1,6 +1,6 @@
 import { rm, stat } from "node:fs/promises";
 import { join } from "node:path";
-import { getAttempt } from "@plugins/tasks-core/server";
+import { getAttempt } from "@plugins/tasks/plugins/tasks-core/server";
 import { dropDatabase } from "@plugins/database/plugins/admin/server";
 import { removeWorktree } from "@plugins/infra/plugins/worktree/server";
 import { SINGULARITY_DIR } from "@plugins/infra/plugins/paths/server";

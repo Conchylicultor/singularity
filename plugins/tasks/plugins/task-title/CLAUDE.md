@@ -6,7 +6,7 @@
 
 - Description: Haiku-backed task title generation. Upgrades uninformative titles asynchronously via event subscribers so task/conversation creation never blocks on the Claude CLI round-trip.
 - Server:
-  - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `infra/claude-cli.runClaudePrint`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks-core.getTask`, `tasks-core.updateConversationsTitleForTask`, `tasks-core.updateTaskTitle`
+  - Uses: `conversations.conversationCreated`, `conversations.userTurnSent`, `infra/claude-cli.runClaudePrint`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core.getTask`, `tasks/tasks-core.updateConversationsTitleForTask`, `tasks/tasks-core.updateTaskTitle`
   - Exports: Values: `generateTaskTitle`, `scheduleTaskTitleUpdate`, `scheduleTaskTitleUpgrade`, `synthesiseTitleFallback`
   - Register: `defineJob('task-title.on-conversation-created')`, `defineJob('task-title.on-user-turn-sent')`
 - Cross-plugin:

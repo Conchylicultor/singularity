@@ -5,7 +5,7 @@ import {
   getConversation,
   getTask,
   getTaskDependencyIds,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { withNotifyBatch } from "@plugins/framework/plugins/server-core/core";
 import { DEFAULT_MODEL, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { inheritTaskPreprompt } from "@plugins/tasks/plugins/task-preprompt/server";

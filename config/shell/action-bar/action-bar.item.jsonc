@@ -5,13 +5,13 @@
     "improve:improve",
     "build:build",
     { "type": "spacer", "id": "spacer-1" },
-    "notifications:notifications",
-    "health:health-dot",
+    "shell.notifications:notifications",
+    "infra.health:health-dot",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "improve.element-picker:element-picker",
     "fullscreen:fullscreen-toggle",
-    "theme:theme-light-dark",
+    "ui.theme-toggle:theme-light-dark",
     "ui.theme-engine.theme-customizer:theme-customizer",
     "reorder.edit-mode:reorder-pen"
   ]

@@ -1,6 +1,6 @@
 import { rankText } from "@plugins/primitives/plugins/rank/core";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
-import { _conversations } from "@plugins/tasks-core/server";
+import { _conversations } from "@plugins/tasks/plugins/tasks-core/server";
 import { pgTable, text, timestamp } from "drizzle-orm/pg-core";
 
 export const conversationsQueue = defineExtension(_conversations, "queue", {

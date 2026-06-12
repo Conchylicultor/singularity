@@ -2,7 +2,7 @@ import { useState } from "react";
 import { flushSync } from "react-dom";
 import { MdPhotoCamera } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createScreenshot } from "../../shared/endpoints";
 import { captureApp } from "../capture";

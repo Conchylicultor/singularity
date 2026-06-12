@@ -1,7 +1,7 @@
 import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { CLAUDE_PROJECTS_DIR } from "@plugins/infra/plugins/paths/server";
 import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
-import { getConversationClaudeSessionId } from "@plugins/tasks-core/server";
+import { getConversationClaudeSessionId } from "@plugins/tasks/plugins/tasks-core/server";
 import { findTranscriptPath } from "./find-transcript-path";
 import { readJsonlEvents } from "./parse-jsonl";
 import type { JsonlEvent } from "../../core";

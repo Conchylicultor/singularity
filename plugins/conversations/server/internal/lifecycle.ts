@@ -9,10 +9,10 @@ import {
   getConversationRuntime,
   updateConversation,
   updateTask,
-} from "@plugins/tasks-core/server";
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { Runtime } from "./runtime";
 import { DEFAULT_MODEL, normalizeModel, type ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
-import type { Conversation, ConversationKind } from "@plugins/tasks-core/core";
+import type { Conversation, ConversationKind } from "@plugins/tasks/plugins/tasks-core/core";
 import { databaseForkJob } from "@plugins/database/plugins/fork/server";
 import { forkConfig } from "@plugins/config_v2/server";
 import { setupWorktree, worktreePathFor } from "@plugins/infra/plugins/worktree/server";

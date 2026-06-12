@@ -1,4 +1,4 @@
-import { hasBlockingDep } from "@plugins/tasks-core/server";
+import { hasBlockingDep } from "@plugins/tasks/plugins/tasks-core/server";
 import { setTaskAutoStart } from "@plugins/tasks/plugins/auto-start/server";
 import { maybeLaunchTaskJob } from "@plugins/conversations/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";

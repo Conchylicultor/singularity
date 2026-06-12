@@ -1,7 +1,7 @@
 import { useEffect } from "react";
 import { useQueryClient } from "@tanstack/react-query";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 
 export function MutationErrorWatcher() {
   const queryClient = useQueryClient();

@@ -1,4 +1,4 @@
-import { ensureMetaTask } from "@plugins/tasks-core/server";
+import { ensureMetaTask } from "@plugins/tasks/plugins/tasks-core/server";
 
 // Parent task for system conversations (kind = "system"). Keeps their auto-created
 // task rows out of the user-facing task tree under CONVERSATIONS_META_TASK_ID.

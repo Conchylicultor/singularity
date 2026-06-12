@@ -1,5 +1,5 @@
 import { text } from "drizzle-orm/pg-core";
-import { _tasks } from "@plugins/tasks-core/server";
+import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { defineExtension } from "@plugins/infra/plugins/entity-extensions/server";
 
 // Per-task selected preprompt. Stores the config list-item id (not the text),

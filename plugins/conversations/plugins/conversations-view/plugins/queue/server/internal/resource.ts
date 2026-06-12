@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { conversationsLiveResource } from "@plugins/tasks-core/server";
+import { conversationsLiveResource } from "@plugins/tasks/plugins/tasks-core/server";
 import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";
 import { validatePin } from "./pinned";

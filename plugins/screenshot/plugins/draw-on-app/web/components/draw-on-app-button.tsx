@@ -4,7 +4,7 @@ import { flushSync } from "react-dom";
 import { MdGesture } from "react-icons/md";
 import { captureApp } from "@plugins/screenshot/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { uploadAttachment } from "@plugins/infra/plugins/attachments/web";
 import { attachmentMarkdown } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { ImproveCommands } from "@plugins/improve/web";

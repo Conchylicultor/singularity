@@ -1,7 +1,7 @@
 import { and, asc, desc, eq, gt, inArray, lt, ne } from "drizzle-orm";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
-import { _conversations, _attempts } from "@plugins/tasks-core/server";
+import { _conversations, _attempts } from "@plugins/tasks/plugins/tasks-core/server";
 import type { RankExecutor } from "@plugins/primitives/plugins/rank/server";
 import type { ConversationStatus } from "@plugins/conversations/core";
 import { conversationsQueue } from "./tables";

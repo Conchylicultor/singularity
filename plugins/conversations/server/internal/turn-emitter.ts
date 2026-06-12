@@ -1,6 +1,6 @@
 import { sql } from "drizzle-orm";
 import { isActiveStatus } from "../../core";
-import { listConversationsForInfra } from "@plugins/tasks-core/server";
+import { listConversationsForInfra } from "@plugins/tasks/plugins/tasks-core/server";
 import { db, isTransientDbError } from "@plugins/database/server";
 import { watchTranscript } from "@plugins/conversations/plugins/transcript-watcher/server";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";

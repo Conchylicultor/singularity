@@ -1,7 +1,7 @@
 import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useRef, useCallback, useEffect, type ReactElement } from "react";
 import { MdContentCopy, MdCheck, MdClose } from "react-icons/md";
-import { toast } from "@plugins/notifications/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
 import {

@@ -19,7 +19,7 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationsResource } from "@plugins/conversations/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import type { Conversation } from "@plugins/tasks-core/core";
+import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";

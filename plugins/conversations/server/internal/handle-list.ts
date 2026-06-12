@@ -1,4 +1,4 @@
-import { listConversationsForDisplay } from "@plugins/tasks-core/server";
+import { listConversationsForDisplay } from "@plugins/tasks/plugins/tasks-core/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { listConversations } from "../../core/endpoints";
 

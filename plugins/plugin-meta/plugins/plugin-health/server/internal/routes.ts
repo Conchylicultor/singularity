@@ -2,7 +2,7 @@ import { eq } from "drizzle-orm";
 import { asFsPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
-import { _tasks } from "@plugins/tasks-core/server";
+import { _tasks } from "@plugins/tasks/plugins/tasks-core/server";
 import {
   getPluginHealthReviews,
   getPluginStaleness,

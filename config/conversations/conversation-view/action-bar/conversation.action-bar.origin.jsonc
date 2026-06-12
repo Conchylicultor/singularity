@@ -1,10 +1,10 @@
-// @hash e8121d43887d
+// @hash ad3eee716748
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "attempt-view:attempt-switch",
+    "tasks.attempt-view:attempt-switch",
     "conversations.conversation-view.push-profiling:push-profiling",
     "conversations.conversation-view.terminal-pane:terminal",
     "conversations.conversation-view.code.docs-button:docs",

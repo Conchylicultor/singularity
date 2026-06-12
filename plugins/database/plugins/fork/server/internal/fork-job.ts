@@ -1,6 +1,6 @@
 import { z } from "zod";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
-import { recordNotification } from "@plugins/notifications/server";
+import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { forkDatabase } from "@plugins/database/plugins/admin/server";
 
 // Durable, self-healing worktree DB fork. The enqueue is a committed row in
