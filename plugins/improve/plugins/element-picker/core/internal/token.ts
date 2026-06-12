@@ -11,28 +11,51 @@ export interface UiContextMeta {
   selector?: string; // short CSS path for precision, e.g. "header>div>button"
 }
 
-const sanitize = (v: string) => v.replace(/"/g, "'").replace(/\s+/g, " ").trim();
+// Attribute values are quote-delimited, so only `"` would break them (a `>`
+// inside quotes — e.g. a CSS selector "div>div" — is fine). Collapse whitespace
+// so the tag stays single-line for the editor's line-based markdown sync.
+const sanitizeAttr = (v: string) =>
+  v.replace(/"/g, "'").replace(/\s+/g, " ").trim();
 
+// The body is angle-bracket-delimited and captured as `[^<]*`, so a stray `<`
+// would terminate it early; strip it (a `>` is harmless in the body).
+const sanitizeBody = (v: string) =>
+  v.replace(/</g, "'").replace(/\s+/g, " ").trim();
+
+// Fixed, model-facing preamble carried in the tag body. The tag flows verbatim
+// into the agent prompt, so an agent reading it cold needs to know what it is
+// and how the user produced it — not just a bag of attributes. Kept in one
+// place so serialize/parse never drift; the actual picked-element label follows.
+const BODY_PREAMBLE =
+  "The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to. Picked element: ";
+
+// Structured machine coordinates live in attributes; the human/model-readable
+// explanation + element label live in the body — the standard XML split, which
+// reads far more naturally to a model than cramming prose into an attribute.
 export function serializeUiContext(m: UiContextMeta): string {
-  const attr = (k: string, v?: string) => (v ? ` ${k}="${sanitize(v)}"` : "");
-  return (
-    `<ui-context${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}` +
-    `${attr("pane", m.paneId)}${attr("path", m.path)} url="${sanitize(m.url)}"` +
-    ` element="${sanitize(m.element)}"${attr("selector", m.selector)} />`
-  );
+  const attr = (k: string, v?: string) => (v ? ` ${k}="${sanitizeAttr(v)}"` : "");
+  const open =
+    `<ui-context url="${sanitizeAttr(m.url)}"` +
+    `${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}` +
+    `${attr("pane", m.paneId)}${attr("path", m.path)}${attr("selector", m.selector)}>`;
+  return `${open}${BODY_PREAMBLE}${sanitizeBody(m.element)}</ui-context>`;
 }
 
-// Match the self-closing tag by parsing each attribute as a quoted string, so
-// values may safely contain `>` (e.g. a CSS-path selector "div>div>div"). A
-// naive `[^>]*?` would stop at the first `>` inside such a value and fail to
-// match the whole tag. Values never contain `"` (sanitized at serialize time).
-export const UI_CONTEXT_RE = /<ui-context(?:\s+[\w-]+="[^"]*")+\s*\/>/g;
+// Match the paired tag. Attribute values are quoted so they may safely contain
+// `>` (e.g. a CSS-path selector "div>div>div"); the body is angle-bracket-free
+// (sanitized at serialize time) so `[^<]*` captures it unambiguously up to the
+// closing tag. Stays single-line so it survives the editor's line-based scan.
+export const UI_CONTEXT_RE =
+  /<ui-context(?:\s+[\w-]+="[^"]*")*\s*>([^<]*)<\/ui-context>/g;
 
 export function parseUiContext(match: RegExpExecArray): UiContextMeta | null {
-  const body = match[0];
-  const get = (k: string) => new RegExp(`${k}="([^"]*)"`).exec(body)?.[1];
+  const tag = match[0];
+  const body = (match[1] ?? "").trim();
+  const get = (k: string) => new RegExp(`${k}="([^"]*)"`).exec(tag)?.[1];
   const url = get("url");
-  const element = get("element");
+  const element = body.startsWith(BODY_PREAMBLE)
+    ? body.slice(BODY_PREAMBLE.length).trim()
+    : body;
   if (!url || !element) return null;
   return {
     url,
