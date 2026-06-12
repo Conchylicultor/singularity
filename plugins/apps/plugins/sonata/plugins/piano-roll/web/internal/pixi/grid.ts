@@ -1,6 +1,6 @@
 /**
  * Grid layers for the canvas piano roll: time-axis BAR LINES and pitch-axis
- * OCTAVE LINES — the canvas replacements for the DOM `GridLines`/`OctaveLines`
+ * PITCH LINES — the canvas replacements for the DOM `GridLines`/`OctaveLines`
  * components.
  *
  * Two different spaces, mirroring the DOM version's layering:
@@ -11,9 +11,11 @@
  *    scale.y is the constant PX_PER_SECOND, so it renders exactly 1px at any
  *    lane size. Built ONCE per score; resize never redraws it.
  *
- *  - Octave lines mark a fixed pitch axis, so they are SCREEN-space (a direct
- *    stage child): vertical 1px lines at each C key's left-edge fraction ×
- *    laneWidth, full lane height. Redrawn on resize only (a handful of rects).
+ *  - Pitch lines mark a fixed pitch axis, so they are SCREEN-space (a direct
+ *    stage child): vertical 1px lines at the natural white-key boundaries
+ *    (B–C octave splits, plus the E–F mid-octave split), at each boundary key's
+ *    left-edge fraction × laneWidth, full lane height. Octave (B–C) lines render
+ *    stronger than the mid-octave (E–F) lines. Redrawn on resize only.
  *
  * Color: both layers draw WHITE geometry and carry a FIXED faint-light tint —
  * the lane is a Synthesia-dark stage in every theme (see `ROLL_BG`), so the grid
@@ -30,21 +32,35 @@ export interface BarMarker {
   startSec: number;
 }
 
+/**
+ * A vertical pitch-axis grid line at a natural white-key boundary.
+ * `strong` marks the octave (B–C) splits, which render heavier than the
+ * mid-octave (E–F) splits.
+ */
+export interface PitchLine {
+  /** Left-edge fraction (0..1) of the boundary key. */
+  frac: number;
+  strong: boolean;
+}
+
 /** Fixed faint-white grid color on the Synthesia-dark lane (theme-independent). */
 const BORDER_COLOR_EXPR = "#ffffff";
 const BAR_LINE_ALPHA = 0.1;
-const OCTAVE_LINE_ALPHA = 0.14;
+/** Octave (B–C) pitch line alpha — the strong reference line. */
+const OCTAVE_LINE_ALPHA = 0.24;
+/** Mid-octave (E–F) pitch line alpha — a regular, lighter reference line. */
+const PITCH_LINE_ALPHA = 0.09;
 
 export interface GridHandle {
   /** Bar lines — mount under the CONTENT-SCALED container. */
   barLines: Graphics;
-  /** Octave lines — mount directly on the stage (screen space, below notes). */
-  octaveLines: Graphics;
+  /** Pitch lines — mount directly on the stage (screen space, below notes). */
+  pitchLines: Graphics;
   /** Rebuild the bar lines (once per score). */
   setBars(bars: readonly BarMarker[]): void;
-  /** Set the C-boundary fractions (once per score). */
-  setBoundaries(cBoundaryFracs: readonly number[]): void;
-  /** Redraw the screen-space octave lines for a new lane size. */
+  /** Set the pitch-axis boundary lines (once per score). */
+  setPitchLines(lines: readonly PitchLine[]): void;
+  /** Redraw the screen-space pitch lines for a new lane size. */
   resize(laneWidth: number, laneHeight: number): void;
   /** Re-tint both layers from the (re-resolved) border token. */
   refreshColors(resolveColor: (expr: string) => number): void;
@@ -54,26 +70,29 @@ export interface GridHandle {
 export function createGrid(): GridHandle {
   const barLines = new Graphics();
   barLines.alpha = BAR_LINE_ALPHA;
-  const octaveLines = new Graphics();
-  octaveLines.alpha = OCTAVE_LINE_ALPHA;
+  // Per-line alpha is baked into each fill (octave vs mid-octave), so the
+  // container stays at full opacity and only carries the shared tint.
+  const pitchLines = new Graphics();
 
-  let fracs: readonly number[] = [];
+  let lines: readonly PitchLine[] = [];
   let laneWidth = 0;
   let laneHeight = 0;
 
-  const redrawOctaves = (): void => {
-    octaveLines.clear();
+  const redrawPitchLines = (): void => {
+    pitchLines.clear();
     if (laneWidth <= 0 || laneHeight <= 0) return;
-    for (const frac of fracs) {
-      // 1px vertical line whose LEFT edge sits on the C key's left edge —
+    for (const { frac, strong } of lines) {
+      // 1px vertical line whose LEFT edge sits on the boundary key's left edge —
       // matching the DOM's `border-l` at `left: center - width/2`.
-      octaveLines.rect(frac * laneWidth, 0, 1, laneHeight).fill(0xffffff);
+      pitchLines
+        .rect(frac * laneWidth, 0, 1, laneHeight)
+        .fill({ color: 0xffffff, alpha: strong ? OCTAVE_LINE_ALPHA : PITCH_LINE_ALPHA });
     }
   };
 
   return {
     barLines,
-    octaveLines,
+    pitchLines,
 
     setBars(bars) {
       barLines.clear();
@@ -85,26 +104,26 @@ export function createGrid(): GridHandle {
       }
     },
 
-    setBoundaries(cBoundaryFracs) {
-      fracs = cBoundaryFracs;
-      redrawOctaves();
+    setPitchLines(pitchBoundaries) {
+      lines = pitchBoundaries;
+      redrawPitchLines();
     },
 
     resize(width, height) {
       laneWidth = width;
       laneHeight = height;
-      redrawOctaves();
+      redrawPitchLines();
     },
 
     refreshColors(resolveColor) {
       const border = resolveColor(BORDER_COLOR_EXPR);
       barLines.tint = border;
-      octaveLines.tint = border;
+      pitchLines.tint = border;
     },
 
     destroy() {
       barLines.destroy();
-      octaveLines.destroy();
+      pitchLines.destroy();
     },
   };
 }

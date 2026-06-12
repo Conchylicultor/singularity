@@ -3,7 +3,7 @@
  * One instance per mounted canvas; everything visual hangs off `app.stage`:
  *
  *   stage
- *   ├─ octaveLines      screen space — fixed pitch grid, redrawn on resize only
+ *   ├─ pitchLines       screen space — fixed pitch grid, redrawn on resize only
  *   ├─ fxBelow          FX layer (Phase 3) painting UNDER the notes
  *   ├─ scrollRoot       y = laneHeight + scrollSec × PX_PER_SECOND (per frame)
  *   │   ├─ contentScaled  scale = (laneWidth, PX_PER_SECOND) — authored space
@@ -43,15 +43,15 @@ import {
   type OnsetTracker,
 } from "../fx/onset-tracker";
 import { resolveCssColor } from "./css-color";
-import { createGrid, type BarMarker } from "./grid";
+import { createGrid, type BarMarker, type PitchLine } from "./grid";
 import { createLabelLayer } from "./labels";
 import { createNoteMesh } from "./note-mesh";
 
 export interface PianoRollSceneInput {
   notes: NoteVisual[];
   bars: BarMarker[];
-  /** Left-edge fraction (0..1) of each C key — the octave line positions. */
-  cBoundaryFracs: number[];
+  /** Pitch-axis boundary lines (B–C octave splits + E–F mid-octave splits). */
+  pitchLines: PitchLine[];
   /** Beat-domain notes feeding the onset tracker (see the bridge note above). */
   scoreNotes: Note[];
   /** Playback tempo multiplier — wall-clock duration = authored / tempoScale. */
@@ -90,7 +90,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
   contentScaled.addChild(grid.barLines, mesh.mesh);
   pixelScroll.addChild(labels.barNumbers, labels.noteLabels);
   scrollRoot.addChild(contentScaled, pixelScroll);
-  app.stage.addChild(grid.octaveLines, fxBelow, scrollRoot, fxAbove);
+  app.stage.addChild(grid.pitchLines, fxBelow, scrollRoot, fxAbove);
 
   // --- state ---------------------------------------------------------------
   let visuals: NoteVisual[] = [];
@@ -137,7 +137,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
 
       mesh.setNotes(visuals, resolveColor);
       grid.setBars(input.bars);
-      grid.setBoundaries(input.cBoundaryFracs);
+      grid.setPitchLines(input.pitchLines);
       grid.refreshColors(resolveColor);
       labels.setNotes(visuals);
       labels.setBars(input.bars);

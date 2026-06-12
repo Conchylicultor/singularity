@@ -226,13 +226,18 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     [score, tempo, tempoScale],
   );
 
-  // Octave separators: the left-edge fraction of every C key, from the SAME
-  // fractional layout the notes use, so each line sits exactly on its key edge.
-  const cBoundaryFracs = useMemo(
+  // Pitch-axis separators at the two natural white-key boundaries (where
+  // adjacent white keys have no black key between them): the B–C octave split
+  // (left edge of every C, pitch class 0) rendered STRONG, and the E–F
+  // mid-octave split (left edge of every F, pitch class 5) rendered regular.
+  // Taken from the SAME fractional layout the notes use, so each line sits
+  // exactly on its key edge.
+  const pitchLines = useMemo(
     () =>
       fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH)
-        .filter((k) => ((k.pitch % 12) + 12) % 12 === 0)
-        .map((k) => k.center - k.width / 2),
+        .map((k) => ({ pc: ((k.pitch % 12) + 12) % 12, k }))
+        .filter(({ pc }) => pc === 0 || pc === 5)
+        .map(({ pc, k }) => ({ frac: k.center - k.width / 2, strong: pc === 0 })),
     [],
   );
 
@@ -358,7 +363,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           height={lane.height}
           visuals={visuals}
           bars={barMarkers}
-          cBoundaryFracs={cBoundaryFracs}
+          pitchLines={pitchLines}
           scoreNotes={score.notes}
           showLabels={showNoteNames}
           tempoScale={tempoScale}

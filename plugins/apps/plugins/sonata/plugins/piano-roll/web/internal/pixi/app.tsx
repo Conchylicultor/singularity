@@ -24,7 +24,7 @@ import { Application } from "pixi.js";
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import type { Note } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { NoteVisual } from "../../components/geometry";
-import type { BarMarker } from "./grid";
+import type { BarMarker, PitchLine } from "./grid";
 import { createPianoRollScene, type PianoRollScene } from "./scene";
 import { watchThemeColors } from "./css-color";
 
@@ -35,7 +35,7 @@ export interface PianoRollCanvasProps {
   /** Cursor-invariant note geometry (authored space; see geometry.ts). */
   visuals: NoteVisual[];
   bars: BarMarker[];
-  cBoundaryFracs: number[];
+  pitchLines: PitchLine[];
   /** Beat-domain notes for the onset tracker (see scene.ts bridge note). */
   scoreNotes: Note[];
   showLabels: boolean;
@@ -54,7 +54,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     height,
     visuals,
     bars,
-    cBoundaryFracs,
+    pitchLines,
     scoreNotes,
     showLabels,
     tempoScale,
@@ -131,8 +131,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
 
   useLayoutEffect(() => {
     if (!scene) return;
-    scene.setScore({ notes: visuals, bars, cBoundaryFracs, scoreNotes, tempoScale });
-  }, [scene, visuals, bars, cBoundaryFracs, scoreNotes, tempoScale]);
+    scene.setScore({ notes: visuals, bars, pitchLines, scoreNotes, tempoScale });
+  }, [scene, visuals, bars, pitchLines, scoreNotes, tempoScale]);
 
   // No per-frame cursor effect and no seek-reset effect here: the parent
   // subscribes to the cursor store and calls `scene.setScroll` imperatively
