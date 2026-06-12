@@ -897,8 +897,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/avatar.Avatar`, `primitives/badge.Badge`, `primitives/relative-time.formatRelativeTime`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - Exports: Types: `ConversationItemConv`, `ConversationItemProps`; Values: `CONV_STATUS_DOT`, `ConversationItem`, `ConvRelativeTime`, `ConvStatusDot`, `ConvSysBadge`, `ConvTitle`, `formatRelativeTime`, `Item`
           - Cross-plugin:
-            - Slot contributors: `agents`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `op-status`
-            - Imported by: `active-data/conv`, `active-data/task`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/op-status`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `tasks/attempt-view`, `tasks/task-events`
+            - Slot contributors: `agents`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `dependent-count`, `op-status`
+            - Imported by: `active-data/conv`, `active-data/task`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/op-status`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `tasks/attempt-view`, `tasks/task-events`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Web:
         - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`
@@ -989,8 +989,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useActiveConversations`, `conversations/conversation-ui/item.ConversationItem`, `conversations/conversation-view.Conversation`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Button`, `primitives/ui-kit.ButtonGroup`, `primitives/ui-kit.cn`, `shell/notifications.toast`, `tasks.useTask`
         - **`dependent-count`** — Shows the count of tasks transitively blocked by the current conversation's task.
           - Web:
-            - Contributes: `Conversation.ActionBar` → `DependentCountChip`
-            - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/live-state.useResource`
+            - Contributes: `Conversation.ActionBar` → `DependentCountChip`, `Item.Chips` → `DependentCountItemChip`
+            - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/live-state.useResource`
         - **`drop-and-exit`** — Exit-menu entry that marks the top task as dropped and closes the conversation.
           - Web:
             - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
