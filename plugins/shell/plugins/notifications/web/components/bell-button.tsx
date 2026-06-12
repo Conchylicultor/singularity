@@ -7,6 +7,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import { navigate } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -43,20 +44,14 @@ const VARIANT_TEXT_MUTED: Record<Notification["variant"], string> = {
   success: "text-success/70",
 };
 
-function navigateTo(url: string) {
-  window.history.pushState({}, "", url);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-  window.dispatchEvent(new CustomEvent("shell:navigate"));
-}
-
-function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notification; dismiss: (id: string) => void; navigateTo: (url: string) => void; onClose: () => void }) {
+function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (id: string) => void; onClose: () => void }) {
   const clientId = typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
   return (
     <li
       className={`flex gap-2 px-3 py-2.5 border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
       onClick={
         n.linkTo?.startsWith("/")
-          ? () => { nav(n.linkTo!); onClose(); }
+          ? () => { navigate(n.linkTo!); onClose(); }
           : undefined
       }
     >
@@ -263,7 +258,7 @@ export function BellButton() {
                 </div>
                 <ul>
                   {unreadFiltered.map((n) => (
-                    <NotificationRow key={n.id} n={n} dismiss={dismiss} navigateTo={navigateTo} onClose={() => { setOpen(false); }} />
+                    <NotificationRow key={n.id} n={n} dismiss={dismiss} onClose={() => { setOpen(false); }} />
                   ))}
                 </ul>
               </>
@@ -277,7 +272,7 @@ export function BellButton() {
                 )}
                 <ul>
                   {restFiltered.map((n) => (
-                    <NotificationRow key={n.id} n={n} dismiss={dismiss} navigateTo={navigateTo} onClose={() => { setOpen(false); }} />
+                    <NotificationRow key={n.id} n={n} dismiss={dismiss} onClose={() => { setOpen(false); }} />
                   ))}
                 </ul>
               </>

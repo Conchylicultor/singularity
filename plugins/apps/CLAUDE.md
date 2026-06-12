@@ -9,11 +9,20 @@
 - Web:
   - Slots: `Apps.App`, `Apps.RailFraming`
   - Contributes: `Core.Root` → `AppsLayout`
+<<<<<<< .merge_file_y14V9D
   - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
   - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`, `useTabs`
+=======
+  - Uses: `primitives/icon-button.IconButton`, `primitives/pane.createPaneStore`, `primitives/pane.PaneSlot`, `primitives/pane.PaneStore`, `primitives/pane.PaneSurfaceProvider`, `primitives/pane.parseUrl`, `primitives/pane.setBasePath`, `primitives/pane.setLiveStore`, `primitives/pane.stripBasePath`, `primitives/pane.usePaneTitle`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/tab-id.getTabId`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.cn`, `primitives/ui-kit.TooltipProvider`
+  - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `navigate`, `useActiveApp`, `useCurrentAppId`, `useTabs`
+>>>>>>> .merge_file_Z1NevI
 - Cross-plugin:
   - Slot contributors: `app-rail-framing`, `shell`
+<<<<<<< .merge_file_fy3NPz
   - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`, `shell/floating-bar`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
+=======
+  - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `debug/crashes`, `shell/floating-bar`, `shell/notifications`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
+>>>>>>> .merge_file_vqlnn0
 - Core:
   - Exports: Types: `RailFramingProps`
 - Sub-plugins:

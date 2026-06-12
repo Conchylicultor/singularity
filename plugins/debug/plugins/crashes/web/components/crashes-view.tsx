@@ -7,12 +7,7 @@ import { useStaleFrontend } from "@plugins/build/web";
 import { crashesResource } from "@plugins/crashes/core";
 import type { Crash } from "@plugins/crashes/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
-
-function navigateTo(url: string) {
-  window.history.pushState({}, "", url);
-  window.dispatchEvent(new PopStateEvent("popstate"));
-  window.dispatchEvent(new CustomEvent("shell:navigate"));
-}
+import { navigate } from "@plugins/apps/web";
 
 export function CrashesView() {
   const result = useResource(crashesResource);
@@ -89,7 +84,7 @@ function CrashRow({ crash: c, serverBuildId }: { crash: Crash; serverBuildId: st
             <button
               type="button"
               className="text-primary hover:underline"
-              onClick={() => navigateTo(`/tasks/t/${c.taskId}`)}
+              onClick={() => navigate(`/tasks/t/${c.taskId}`)}
             >
               task →
             </button>

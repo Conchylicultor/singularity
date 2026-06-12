@@ -13,6 +13,7 @@ export interface CollectedEntry {
 }
 
 export const lintEntries: CollectedEntry[] = [
+  { pluginPath: "apps", id: "apps", loader: () => import("@plugins/apps/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/icon-safety", id: "framework.tooling.lint.icon-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", id: "framework.tooling.lint.promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/reactive-server-io", id: "framework.tooling.lint.reactive-server-io", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io/lint"), dependsOn: [] },

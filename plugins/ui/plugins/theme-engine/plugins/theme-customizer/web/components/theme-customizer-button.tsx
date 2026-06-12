@@ -1,7 +1,7 @@
 import { MdPalette } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
-import { useActiveApp } from "@plugins/apps/web";
+import { navigate, useActiveApp } from "@plugins/apps/web";
 import { themeCustomizerPane } from "../panes";
 
 /**
@@ -22,8 +22,7 @@ export function ThemeCustomizerButton() {
     if (isOpen) {
       const path = activeApp?.path ?? "/";
       if (window.location.pathname !== path) {
-        window.history.pushState({}, "", path);
-        window.dispatchEvent(new PopStateEvent("popstate"));
+        navigate(path);
       }
     } else {
       openPane(themeCustomizerPane, {}, { mode: "root" });

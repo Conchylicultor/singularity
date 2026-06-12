@@ -10,11 +10,14 @@ import {
 } from "react";
 import {
   createPaneStore,
+  parseUrl,
   setLiveStore,
+  type PaneSlot,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { Apps } from "../slots";
 import { useActiveApp } from "./use-active-app";
+import { resolveAppForPath } from "./resolve-app";
 import {
   appPathFor,
   loadPersistedTabs,
@@ -39,11 +42,42 @@ export interface TabsApi {
   openTab(appId: string): string;
   /** Swap `tabId`'s app in place (keeps the tabId) and focus it. */
   replaceTabApp(tabId: string, appId: string): void;
+  /**
+   * THE sanctioned cross-app navigation: resolve `url` to its owning app
+   * (matched app or the `fallback` app), swap the focused tab to that app in
+   * place, and set its route from the URL — all through the live pane store, so
+   * the focused tab's `appId` can never drift from the URL. Use this anywhere
+   * you'd reach for `window.history.pushState` (enforced by `no-raw-history-nav`).
+   */
+  navigate(url: string): void;
   focusTab(tabId: string): void;
   closeTab(tabId: string): void;
 }
 
 const TabsContext = createContext<TabsApi | null>(null);
+
+// Module-level handle to the mounted provider's `navigate`, mirroring the
+// `setLiveStore`/`liveStore` pointer in the pane primitive. Lets callers that
+// render OUTSIDE `<TabsProvider>` (e.g. the floating action bar, a sibling
+// `Core.Root`) reach the one sanctioned cross-app navigation without the hook.
+let tabsNavigator: ((url: string) => void) | null = null;
+
+function setTabsNavigator(fn: ((url: string) => void) | null): void {
+  tabsNavigator = fn;
+}
+
+/**
+ * Free-function form of {@link TabsApi.navigate} — the cross-app navigation
+ * primitive callable from anywhere, including outside `<TabsProvider>`. Throws
+ * if invoked before the provider has mounted (a real bug: there is nothing to
+ * navigate yet).
+ */
+export function navigate(url: string): void {
+  if (!tabsNavigator) {
+    throw new Error("navigate() called before <TabsProvider> mounted.");
+  }
+  tabsNavigator(url);
+}
 
 export function useTabs(): TabsApi {
   const ctx = useContext(TabsContext);
@@ -174,15 +208,24 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     };
   }, [tabs, persist]);
 
-  /** Flip liveness from the current focused store onto `next` and mirror URL. */
-  const activate = useCallback((next: Tab) => {
+  /**
+   * Flip liveness from the current focused store onto `next` and mirror its
+   * route into the URL. When `targetRoute` is given (cross-app navigation), it
+   * is seeded into the still-background store FIRST — a background `setRoute` is
+   * an in-memory-only update (no history op), so the single live mirror below
+   * lands directly on the target URL in one `replaceState`, with no stray
+   * intermediate entry at the bare app root and no double event dispatch.
+   */
+  const activate = useCallback((next: Tab, targetRoute?: PaneSlot[]) => {
     const current = tabsRef.current.find((t) => t.tabId === focusedRef.current);
     if (current && current.tabId !== next.tabId) current.store.live = false;
+    next.store.setBasePath(appPathFor(next.appId, appsRef.current));
+    // Seed the target route while still background (in-memory only).
+    if (targetRoute) next.store.setRoute(targetRoute);
     next.store.live = true;
     setLiveStore(next.store);
-    next.store.setBasePath(appPathFor(next.appId, appsRef.current));
-    // Assert the focused tab's in-memory route into the URL so it mirrors the
-    // focused tab and `useActiveApp` (URL-driven) resolves to it.
+    // Assert the (now possibly seeded) in-memory route into the URL so it
+    // mirrors the focused tab and `useActiveApp` (URL-driven) resolves to it.
     next.store.setRoute(next.store.getRoute(), /* replace */ true);
   }, []);
 
@@ -198,6 +241,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [activate, persist],
   );
 
+  /** Open a new tab for `appId` at its index. Used by the `+` new-tab button. */
   const openTab = useCallback(
     (appId: string): string => {
       const tabId = crypto.randomUUID();
@@ -215,11 +259,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [activate, persist],
   );
 
-  // Swap a tab's app without changing its tabId or position: the launcher
-  // (Home) tab navigates into the picked app in place instead of spawning a new
-  // tab beside itself. A fresh store is bound to the new app's base path.
-  const replaceTabApp = useCallback(
-    (tabId: string, appId: string) => {
+  // Swap a tab's app in place (keeps the tabId + position), seeding `route` into
+  // the fresh store before it goes live. The launcher (Home) tab and the rail
+  // navigate INTO the picked app instead of spawning a tab beside it; a
+  // cross-app deep-link lands the focused tab directly on its target route.
+  const replaceTabAppWithRoute = useCallback(
+    (tabId: string, appId: string, route: PaneSlot[]) => {
       const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
       if (idx < 0) return;
       tabsRef.current[idx]!.store.live = false;
@@ -229,13 +274,48 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
-      activate(tab);
+      activate(tab, route);
       focusedRef.current = tabId;
       setFocusedTabId(tabId);
       persist();
     },
     [activate, persist],
   );
+
+  const replaceTabApp = useCallback(
+    (tabId: string, appId: string) => replaceTabAppWithRoute(tabId, appId, []),
+    [replaceTabAppWithRoute],
+  );
+
+  const navigate = useCallback(
+    (url: string) => {
+      // Strip any query/hash — routing is path-based.
+      const pathname = url.split(/[?#]/)[0] ?? url;
+      const resolved = resolveAppForPath(pathname, appsRef.current);
+      if (!resolved) return; // No app owns this path and there is no fallback.
+      const route = parseUrl(resolved.routePath) ?? [];
+      const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
+      if (focused && focused.appId === resolved.app.id) {
+        // Already on this app — set the route on its live store (normal push,
+        // preserving a back target).
+        focused.store.setRoute(route);
+        return;
+      }
+      // Cross-app: swap the focused tab's app in place AND seed the target
+      // route, so the focused tab's appId always matches the URL (no desync) —
+      // consistent with the rail's in-place app switch.
+      replaceTabAppWithRoute(focusedRef.current, resolved.app.id, route);
+    },
+    [replaceTabAppWithRoute],
+  );
+
+  // Publish the cross-app navigator at module scope so out-of-provider callers
+  // (the floating bar, a sibling Core.Root) can reach it via the free
+  // `navigate()` export. Mirrors the pane primitive's `setLiveStore` handle.
+  useEffect(() => {
+    setTabsNavigator(navigate);
+    return () => setTabsNavigator(null);
+  }, [navigate]);
 
   const closeTab = useCallback(
     (tabId: string) => {
@@ -277,8 +357,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, focusTab, closeTab }),
-    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, focusTab, closeTab],
+    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab }),
+    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab],
   );
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;

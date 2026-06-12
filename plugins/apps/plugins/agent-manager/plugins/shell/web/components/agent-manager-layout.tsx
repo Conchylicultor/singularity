@@ -1,4 +1,5 @@
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
+import { navigate } from "@plugins/apps/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Shell } from "@plugins/shell/web";
@@ -14,8 +15,7 @@ export function AgentManagerLayout() {
           onClick={(e) => {
             e.preventDefault();
             if (window.location.pathname === "/agents") return;
-            history.pushState({}, "", "/agents");
-            window.dispatchEvent(new PopStateEvent("popstate"));
+            navigate("/agents");
           }}
           className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >

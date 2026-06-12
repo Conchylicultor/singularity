@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import { Apps } from "../slots";
+import { matchAppForPath } from "./resolve-app";
 
 export type ActiveApp = ReturnType<typeof Apps.App.useContributions>[number];
 
@@ -18,10 +19,6 @@ export function usePathname(): string {
   );
 }
 
-function appMatchesPath(appPath: string, pathname: string): boolean {
-  return pathname === appPath || pathname.startsWith(appPath + "/");
-}
-
 /**
  * The registered app whose `path` best matches the current pathname
  * (longest path wins, so `/studio` beats `/` for `/studio/foo`). Shared by the
@@ -31,6 +28,5 @@ function appMatchesPath(appPath: string, pathname: string): boolean {
 export function useActiveApp(): ActiveApp | undefined {
   const allApps = Apps.App.useContributions();
   const pathname = usePathname();
-  const sorted = [...allApps].sort((a, b) => b.path.length - a.path.length);
-  return sorted.find((a) => appMatchesPath(a.path, pathname));
+  return matchAppForPath(pathname, allApps);
 }
