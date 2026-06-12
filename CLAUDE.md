@@ -220,14 +220,20 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 
 Tests are **optional and manual** — nothing runs them automatically (no `./singularity check`, no CI, no `build`/`push` gate). When you do run tests, always pass an **explicit file or folder path** — there is no blanket "run everything" target.
 
-- **`bun:test` is the default runner.** Every `*.test.ts(x)` in the repo is a `bun:test` unit test (pure logic / lint / check / server / web-logic), except the vitest suites below. Run a specific file or folder:
+The runner is chosen by **where the file lives**, so the two never cross-load:
+
+- **`bun:test` — pure logic, co-located next to source as `*.test.ts(x)`** (lint / check / server / web-logic; anything not needing a DOM). Never put a bun:test file under a `__tests__/` folder. Run a specific file or folder:
   ```bash
   bun test plugins/page/plugins/editor/core/block-ops.test.ts
   bun test plugins/page/plugins/editor                 # a folder
   ```
-- **`vitest` is reserved for the browser/DOM suites** under `plugins/framework/plugins/web-core/web/__tests__/` (jsdom + React + the `@` SPA alias + the full plugin graph) — e.g. `plugin-render.test.tsx` and `commands.test.tsx`. Run them via web-core's `test` script — see [`plugins/framework/plugins/web-core/CLAUDE.md`](plugins/framework/plugins/web-core/CLAUDE.md).
+- **`vitest` — jsdom/React tests, co-located in the plugin's own `web/__tests__/` folder.** One repo-wide vitest project (root `vitest.config.ts`: jsdom + `@plugins` alias + shared `test/setup.ts`) auto-discovers every `plugins/**/web/__tests__/**/*.test.{ts,tsx}` — no per-plugin config. Add a jsdom test by dropping a `*.test.tsx` in your plugin's `web/__tests__/`. Run the whole DOM suite from the repo root:
+  ```bash
+  bun run test:dom
+  bun run test:dom plugins/primitives/plugins/pane   # scope to one plugin's tests
+  ```
 - **Prerequisite:** `node_modules` must be populated. Any `./singularity` invocation (and `build` as step 1) runs `bun install` — so run tests after a build, or `bun install` first.
-- Do **not** run a blanket `bun test` from the repo root: it would also try to load the vitest files and fail. If you ever need a broad sweep, scope it to a folder or pass `--path-ignore-patterns='**/web-core/web/__tests__/**'`.
+- Do **not** run a blanket `bun test` from the repo root: it would also try to load the vitest files under `__tests__/` and fail. Scope `bun test` to a folder of pure tests, or use `bun run test:dom` for the jsdom suites.
 
 ### Coding Style
 

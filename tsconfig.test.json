@@ -10,6 +10,7 @@
   "include": [
     "plugins/**/*.test.ts",
     "plugins/**/*.test.tsx",
-    "plugins/**/__tests__/**/*"
+    "plugins/**/__tests__/**/*",
+    "test/**/*"
   ]
 }

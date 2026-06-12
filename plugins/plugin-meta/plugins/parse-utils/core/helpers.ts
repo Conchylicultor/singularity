@@ -153,7 +153,10 @@ export function walkFiles(dir: string, out: string[]): void {
   for (const e of entries) {
     const p = join(dir, e.name);
     if (e.isDirectory()) {
-      if (e.name === "node_modules" || e.name === "plugins") continue;
+      // `plugins` = sub-plugin trees (scanned as their own plugins); `__tests__`
+      // = co-located test files, which are not part of a plugin's API/dep
+      // surface and must not pollute its facets (Uses, exports, routes, …).
+      if (e.name === "node_modules" || e.name === "plugins" || e.name === "__tests__") continue;
       walkFiles(p, out);
     } else if (e.isFile() && /\.(ts|tsx)$/.test(e.name)) {
       out.push(p);

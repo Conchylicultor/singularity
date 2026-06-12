@@ -5,14 +5,11 @@
   "version": "0.0.1",
   "type": "module",
   "scripts": {
-    "build": "tsc -b && vite build",
-    "test": "vitest run"
+    "build": "tsc -b && vite build"
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.1.4",
-    "@testing-library/react": "^16.3.2",
     "@vitejs/plugin-react": "^4.4.1",
-    "jsdom": "^29.0.2",
     "shadcn": "^4.2.0",
     "tailwindcss": "^4.1.4",
     "typescript": "~5.8.3",

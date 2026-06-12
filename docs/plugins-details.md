@@ -2102,7 +2102,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/text.Text`, `primitives/ui-kit`
       - Structure:
-        - Loose top-level files: `vite.config.ts`, `vitest.config.ts`
+        - Loose top-level files: `vite.config.ts`
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
       - Core:

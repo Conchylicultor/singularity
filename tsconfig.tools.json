@@ -7,7 +7,6 @@
   "exclude": [
     "**/node_modules",
     "plugins/framework/plugins/web-core/vite.config.ts",
-    "plugins/framework/plugins/web-core/vitest.config.ts",
     "plugins/framework/plugins/server-core/scripts",
     "plugins/framework/plugins/tooling/plugins/checks/core/scripts",
     "plugins/**/*.test.ts",
