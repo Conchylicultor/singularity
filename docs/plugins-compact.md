@@ -34,7 +34,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`appearance`** — Appearance settings surface: opens the theme customizer (presets, variants, tokens) as a Settings sidebar entry. The same customizer is also reachable from the floating action bar.
         - **`config`** — Config settings surface: the config nav as the Settings app's default pane, its sidebar entry, and the rail-icon conflict dot.
         - **`shell`** — App shell for Settings. Registers the /settings app entry, defines the Settings.Sidebar + Settings.RailBadge slots, and surfaces an attention dot on the rail icon.
-    - **`sonata`** [31 sub-plugins] — Sonata — extensible piano and music app.
+    - **`sonata`** [32 sub-plugins] — Sonata — extensible piano and music app.
     - **`story`** [4 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
