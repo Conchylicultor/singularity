@@ -44,10 +44,35 @@ export function propagate(
   upstream: ConfigProxy,
   downstreamOrigin: ConfigProxy,
   downstreamOverwrites: ConfigProxy,
+  ancestor?: ConfigProxy,
 ): { conflict: boolean } {
   const up = upstream.read();
   if (!up) return { conflict: false };
   const hash = computeHash(up.content);
+
+  // Snapshot the merge base BEFORE overwriting the origin. The override was
+  // written against the origin currently on disk; once we propagate the new
+  // upstream, that ancestor content is gone (only its hash survives in the
+  // override header). Capture it precisely at the transition moment — the
+  // override is still in sync with the origin (`oldOrigin.hash === ow.hash`)
+  // but the new upstream will make it stale (`ow.hash !== hash`) — so a later
+  // three-way merge has a real base. Naturally idempotent across repeated
+  // builds: once the override is stale, `oldOrigin.hash !== ow.hash`, so we
+  // never clobber the true base with an intermediate origin.
+  if (ancestor) {
+    const oldOrigin = downstreamOrigin.read();
+    const ow = downstreamOverwrites.exists() ? downstreamOverwrites.read() : null;
+    if (
+      ow &&
+      ow.hash !== null &&
+      oldOrigin &&
+      oldOrigin.hash === ow.hash &&
+      ow.hash !== hash
+    ) {
+      ancestor.write(oldOrigin.content, oldOrigin.hash);
+    }
+  }
+
   downstreamOrigin.write(up.content, hash);
   if (downstreamOverwrites.exists()) {
     const ow = downstreamOverwrites.read();
@@ -56,6 +81,46 @@ export function propagate(
     }
   }
   return { conflict: false };
+}
+
+// Per-field three-way merge of a config document. `base` is the origin the
+// override was written against (the ancestor snapshot); `ours` is the user
+// override; `theirs` is the new origin. A field only one side changed takes
+// that side; a field both sides changed identically agrees; a field both sides
+// changed differently is a true conflict — left as `ours` (a tentative pick)
+// and reported in `conflicts` for the user to resolve. Equality is structural
+// JSON equality, matching the rest of config_v2's change detection.
+export function threeWayMerge(
+  base: Record<string, JsonValue>,
+  ours: Record<string, JsonValue>,
+  theirs: Record<string, JsonValue>,
+): { merged: Record<string, JsonValue>; conflicts: string[] } {
+  const eq = (a: unknown, b: unknown) => JSON.stringify(a) === JSON.stringify(b);
+  const merged: Record<string, JsonValue> = {};
+  const conflicts: string[] = [];
+  const keys = new Set([
+    ...Object.keys(base),
+    ...Object.keys(ours),
+    ...Object.keys(theirs),
+  ]);
+  for (const key of keys) {
+    const b = base[key];
+    const o = ours[key];
+    const t = theirs[key];
+    const oursChanged = !eq(o, b);
+    const theirsChanged = !eq(t, b);
+    if (!oursChanged) {
+      merged[key] = t as JsonValue;
+    } else if (!theirsChanged) {
+      merged[key] = o as JsonValue;
+    } else if (eq(o, t)) {
+      merged[key] = o as JsonValue;
+    } else {
+      merged[key] = o as JsonValue;
+      conflicts.push(key);
+    }
+  }
+  return { merged, conflicts };
 }
 
 export function readTypedConfig<F extends FieldsRecord>(

@@ -9,7 +9,7 @@ import { handleConfigSnapshot } from "./internal/snapshot-handler";
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
-export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, getRawFileContent } from "./internal/registry";
+export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, mergeConflictByPath, getRawFileContent } from "./internal/registry";
 export { getAllDescriptors, getScopedDescriptors } from "./internal/resource";
 export { forkScope, deleteScope } from "./internal/scope-fork";
 export { registerFieldStorageProvider, getFieldStorageProvider, hasFieldStorageProvider } from "./internal/field-storage-providers";

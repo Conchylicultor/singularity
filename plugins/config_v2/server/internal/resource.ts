@@ -1,6 +1,6 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
 import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
@@ -141,7 +141,29 @@ function computeAllConflicts(): ConfigV2Conflicts {
       const overrideValues = overrideData
         ? (overrideData.content as Record<string, unknown>)
         : (descriptor.defaults as Record<string, unknown>);
-      conflicts[storePath] = { kind: "hash", originValues, overrideValues };
+
+      // When propagate captured a merge base (`<name>.ancestor.jsonc`), a
+      // three-way merge is available: compute which fields truly conflict (both
+      // sides changed differently) so the UI can offer Merge and flag only those
+      // fields. A corrupt ancestor fails loud here exactly like a corrupt
+      // origin/override above — consistent with how this loop treats its inputs.
+      let trueConflictKeys: string[] | undefined;
+      const ancestor = jsoncConfigProxy(join(CONFIG_DIR, dir, `${name}.ancestor.jsonc`));
+      if (ancestor.exists()) {
+        const base = ancestor.read()!.content as Record<string, JsonValue>;
+        trueConflictKeys = threeWayMerge(
+          base,
+          overrideValues as Record<string, JsonValue>,
+          originValues as Record<string, JsonValue>,
+        ).conflicts;
+      }
+
+      conflicts[storePath] = {
+        kind: "hash",
+        originValues,
+        overrideValues,
+        ...(trueConflictKeys !== undefined ? { trueConflictKeys } : {}),
+      };
       continue;
     }
 

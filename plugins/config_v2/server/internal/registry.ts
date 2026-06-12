@@ -9,6 +9,7 @@ import type {
 import {
   computeHash,
   readTypedConfig,
+  threeWayMerge,
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
@@ -28,6 +29,7 @@ interface CacheEntry {
   storePath: string;
   userOriginPath: string;
   userOverwritesPath: string;
+  userAncestorPath: string;
   disposables: Disposable[];
 }
 
@@ -88,6 +90,7 @@ async function buildEntry(
   const scopedDir = userScopedDir(hierarchyPath, scopeId || undefined);
   const userOriginPath = join(scopedDir, `${descriptor.name}.origin.jsonc`);
   const userOverwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
+  const userAncestorPath = join(scopedDir, `${descriptor.name}.ancestor.jsonc`);
 
   const reloadValues = (): ConfigValues<FieldsRecord> => {
     const freshUserOrigin = jsoncConfigProxy(userOriginPath);
@@ -144,6 +147,7 @@ async function buildEntry(
     storePath,
     userOriginPath,
     userOverwritesPath,
+    userAncestorPath,
     disposables,
   };
 
@@ -512,6 +516,57 @@ export function acknowledgeConflictByPath(storePath: string, scopeId?: string): 
 
   const newHash = computeHash(originData.content);
   userOverwrites.write(ow.content, newHash);
+  // Terminal resolution — the override now wins against the current origin, so
+  // the merge base is no longer needed. A stale ancestor would seed a wrong
+  // three-way merge on the next conflict.
+  if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
+}
+
+// Three-way merge resolution: reconcile a stale override against its origin
+// using the ancestor snapshot propagate() captured. Fields only one side changed
+// are auto-resolved; fields both sides changed differently are returned in
+// `conflictKeys` (left as the user's value, tentatively). When nothing truly
+// conflicts the override is rewritten against the current origin (resolved) and
+// the ancestor dropped; otherwise the stale hash is kept so the conflict stays
+// surfaced and re-running merge after the user resolves the remaining fields
+// finalizes it (idempotent — the same conflictKeys recur until resolved).
+export function mergeConflictByPath(
+  storePath: string,
+  scopeId?: string,
+): { resolved: boolean; conflictKeys: string[] } {
+  const descriptor = getDescriptorByStorePath(storePath);
+  if (!descriptor) throw new Error(`No descriptor for "${storePath}"`);
+
+  const entry = getEntry(descriptor, scopeId ?? BASE_SCOPE);
+  if (!entry) throw new Error(`No cache entry for "${storePath}"`);
+
+  const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
+  const userOrigin = jsoncConfigProxy(entry.userOriginPath);
+  const userAncestor = jsoncConfigProxy(entry.userAncestorPath);
+
+  if (!userAncestor.exists()) {
+    throw new Error(`No ancestor snapshot for "${storePath}" — three-way merge unavailable`);
+  }
+  const ow = userOverwrites.read();
+  if (!ow) throw new Error(`Cannot read override for "${storePath}"`);
+  const originData = userOrigin.read();
+  if (!originData) throw new Error(`Cannot read origin for "${storePath}"`);
+  const base = userAncestor.read();
+  if (!base) throw new Error(`Cannot read ancestor for "${storePath}"`);
+
+  const { merged, conflicts } = threeWayMerge(
+    base.content as Record<string, JsonValue>,
+    ow.content as Record<string, JsonValue>,
+    originData.content as Record<string, JsonValue>,
+  );
+  const injected = injectCollectionIds(merged, descriptor.fields);
+
+  const resolved = conflicts.length === 0;
+  const hash = resolved ? computeHash(originData.content) : ow.hash;
+  userOverwrites.write(injected as JsonValue, hash);
+  if (resolved && existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
+
+  return { resolved, conflictKeys: conflicts };
 }
 
 export function getRawFileContent(
@@ -580,4 +635,6 @@ export function deleteOverrideByPath(storePath: string, scopeId?: string): void 
   // (the origin itself fails the current schema). Deleting a non-existent
   // override is a no-op — defaults are already in effect.
   if (existsSync(entry.userOverwritesPath)) unlinkSync(entry.userOverwritesPath);
+  // The override is gone, so any captured merge base is moot — drop it.
+  if (existsSync(entry.userAncestorPath)) unlinkSync(entry.userAncestorPath);
 }

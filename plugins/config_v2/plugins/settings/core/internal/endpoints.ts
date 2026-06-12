@@ -16,6 +16,16 @@ export const deleteOverride = defineEndpoint({
   body: z.object({ storePath: z.string(), scopeId: z.string().optional() }),
 });
 
+// Three-way merge resolution for a hash conflict. Auto-merges fields only one
+// side changed; returns the fields both sides changed differently (true
+// conflicts) in `conflictKeys`. `resolved` is true when nothing truly conflicted
+// and the conflict is fully cleared.
+export const mergeConflict = defineEndpoint({
+  route: "POST /api/config-v2/merge-conflict",
+  body: z.object({ storePath: z.string(), scopeId: z.string().optional() }),
+  response: z.object({ resolved: z.boolean(), conflictKeys: z.array(z.string()) }),
+});
+
 export const getConfigRawFile = defineEndpoint({
   route: "GET /api/config-v2/raw-file",
   query: z.object({ storePath: z.string(), scopeId: z.string().optional() }),

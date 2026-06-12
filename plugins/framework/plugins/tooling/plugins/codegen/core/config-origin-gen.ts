@@ -408,13 +408,22 @@ export async function propagateConfigToUser(opts: {
     const userOverwrites = fileConfigProxy(
       join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`),
     );
+    // Sibling snapshot of the merge base, captured by propagate() when an
+    // in-sync override is about to go stale (see threeWayMerge / mergeConflict).
+    const ancestorPath = join(userConfigDir, hierarchyPath, `${descriptor.name}.ancestor.jsonc`);
+    const userAncestor = fileConfigProxy(ancestorPath);
 
-    const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites);
+    const { conflict } = propagate(gitEffProxy, userOrigin, userOverwrites, userAncestor);
     if (conflict) {
       console.warn(
         `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
         `were based on a different upstream. Review ${join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`)}`,
       );
+    } else if (existsSync(ancestorPath)) {
+      // No live conflict — any leftover ancestor snapshot is orphaned (override
+      // reconciled or deleted out-of-band). Self-correcting cleanup so the file
+      // never lingers and can't seed a stale merge base on a future conflict.
+      unlinkSync(ancestorPath);
     }
 
     // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.

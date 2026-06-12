@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md";
+import { MdWarning, MdCode, MdTune, MdUndo, MdDifference, MdMerge } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -9,7 +9,7 @@ import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigV2Conflicts, ConfigV2Tiers } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
+import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflicts } from "../internal/use-conflicts";
 import { useTiers } from "../internal/use-tiers";
@@ -132,6 +132,7 @@ function ConfigDetailBody({
   // rejection. The config view refreshes via its live-state resource on success.
   const { mutate: acknowledge } = useEndpointMutation(acknowledgeConflict);
   const { mutate: resetOverride } = useEndpointMutation(deleteOverride);
+  const { mutate: merge } = useEndpointMutation(mergeConflict);
 
   const handleDismiss = useCallback(() => {
     acknowledge({ body: { storePath: registration.storePath } });
@@ -140,6 +141,17 @@ function ConfigDetailBody({
   const handleAcceptAll = useCallback(() => {
     resetOverride({ body: { storePath: registration.storePath } });
   }, [resetOverride, registration.storePath]);
+
+  const handleMerge = useCallback(() => {
+    merge({ body: { storePath: registration.storePath } });
+  }, [merge, registration.storePath]);
+
+  // A three-way merge is offered only when propagate captured an ancestor
+  // snapshot (trueConflictKeys present). Its length is the count of fields the
+  // user and upstream both changed differently — the ones needing attention.
+  const trueConflictKeys =
+    conflictEntry?.kind === "hash" ? conflictEntry.trueConflictKeys : undefined;
+  const canMerge = trueConflictKeys !== undefined;
 
   const handleResetAll = useCallback(() => {
     resetOverride({ body: { storePath: registration.storePath } });
@@ -273,7 +285,13 @@ function ConfigDetailBody({
               <>
                 <Text as="div" variant="body" className="mb-2 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-3 py-2 text-warning">
                   <MdWarning className="size-4 shrink-0" />
-                  <span className="flex-1">Upstream defaults changed</span>
+                  <span className="flex-1">
+                    {canMerge && trueConflictKeys!.length > 0
+                      ? `Upstream defaults changed — ${trueConflictKeys!.length} field${trueConflictKeys!.length === 1 ? "" : "s"} need${trueConflictKeys!.length === 1 ? "s" : ""} your attention`
+                      : canMerge
+                        ? "Upstream defaults changed — ready to merge cleanly"
+                        : "Upstream defaults changed"}
+                  </span>
                   <div className="flex shrink-0 gap-1.5">
                     <Button
                       variant="ghost"
@@ -284,6 +302,17 @@ function ConfigDetailBody({
                       <MdDifference className="size-3.5" />
                       {showDiff ? "Hide diff" : "View diff"}
                     </Button>
+                    {canMerge && (
+                      <Button
+                        variant="ghost"
+                        size="xs"
+                        onClick={handleMerge}
+                        className="bg-warning/20 hover:bg-warning/30"
+                      >
+                        <MdMerge className="size-3.5" />
+                        Merge
+                      </Button>
+                    )}
                     <Button
                       variant="ghost"
                       size="xs"
@@ -315,6 +344,7 @@ function ConfigDetailBody({
               defaultValue={defaults[key]}
               storePath={registration.storePath}
               originValue={conflictEntry?.originValues[key]}
+              trueConflictKeys={trueConflictKeys}
               tier={tiers[key]}
             />
           ))}

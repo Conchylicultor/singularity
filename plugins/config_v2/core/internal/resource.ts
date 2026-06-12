@@ -37,6 +37,12 @@ export const configV2ConflictEntrySchema = z.object({
   // path (as an array) and message so the UI can pinpoint and render the offending
   // value drilled from `overrideValues`.
   issues: z.array(configV2ValidationIssueSchema).optional(),
+  // Present only for kind === "hash" when an ancestor snapshot exists (a
+  // three-way merge is possible). Lists the fields both the user and upstream
+  // changed differently — the true conflicts needing manual attention. An empty
+  // array means the merge is fully automatic; absent means no ancestor was
+  // captured (a pre-existing conflict) so only the binary Keep/Accept apply.
+  trueConflictKeys: z.array(z.string()).optional(),
 });
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;

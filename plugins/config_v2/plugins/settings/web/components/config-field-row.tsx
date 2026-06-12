@@ -42,6 +42,7 @@ export function ConfigFieldRow({
   defaultValue,
   storePath,
   originValue,
+  trueConflictKeys,
   tier,
 }: {
   fieldKey: string;
@@ -50,12 +51,19 @@ export function ConfigFieldRow({
   defaultValue: unknown;
   storePath: string;
   originValue?: unknown;
+  trueConflictKeys?: string[];
   tier?: "default" | "git" | "user";
 }) {
   const isModified = isFieldModified(field, value, defaultValue);
+  // When a three-way merge is available (trueConflictKeys present), only the
+  // fields both sides changed differently are flagged — a field the user changed
+  // but upstream didn't is a legitimate keep, not a conflict. Without an ancestor
+  // (legacy/binary path) fall back to the naive value-vs-origin comparison.
   const hasConflict =
-    originValue !== undefined &&
-    JSON.stringify(value) !== JSON.stringify(originValue);
+    trueConflictKeys !== undefined
+      ? trueConflictKeys.includes(fieldKey)
+      : originValue !== undefined &&
+        JSON.stringify(value) !== JSON.stringify(originValue);
 
   // useEndpointMutation (not void fetchEndpoint) so a failed save/reset surfaces
   // via the global error toast instead of escaping as an unhandled rejection.

@@ -40,6 +40,7 @@ export {
   effective,
   hasConflict,
   propagate,
+  threeWayMerge,
   readTypedConfig,
   validationIssues,
 } from "./internal/tier-logic";

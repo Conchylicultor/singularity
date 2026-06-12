@@ -10,11 +10,11 @@
   - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/tree.TreeRowChrome`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`
   - Exports: Values: `configDetailPane`, `ConfigNav`, `configNavPane`, `ConfigSidebarButton`
 - Server:
-  - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
-  - Routes: `POST /api/config-v2/reset-field`, `POST /api/config-v2/acknowledge-conflict`, `POST /api/config-v2/delete-override`, `GET /api/config-v2/raw-file`
+  - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.mergeConflictByPath`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
+  - Routes: `POST /api/config-v2/reset-field`, `POST /api/config-v2/acknowledge-conflict`, `POST /api/config-v2/delete-override`, `POST /api/config-v2/merge-conflict`, `GET /api/config-v2/raw-file`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `resetConfigField`
+  - Exports: Values: `acknowledgeConflict`, `deleteOverride`, `getConfigRawFile`, `mergeConflict`, `resetConfigField`
 - Cross-plugin:
   - Imported by: `apps/settings/config`, `auth`, `config_v2/config-link`
 
