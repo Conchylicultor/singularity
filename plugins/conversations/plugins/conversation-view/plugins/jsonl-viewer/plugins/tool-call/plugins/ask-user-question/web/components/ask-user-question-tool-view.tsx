@@ -2,6 +2,10 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import {
+  CheckboxIndicator,
+  RadioIndicator,
+} from "@plugins/primitives/plugins/selection-indicator/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -210,32 +214,13 @@ export function Indicator({
   selected: boolean;
   multi: boolean;
 }) {
-  // A checkbox (multi) and a radio (single) are semantic *fixed* shapes: they
-  // must stay a square / circle under every Shape preset. `rounded-full` already
-  // freezes the radio. The token-driven `rounded-sm` does NOT freeze the
-  // checkbox — it resolves to a `--radius`-derived value, so a generous Shape
-  // preset rounds this 12px (size-3) box into a near-circle, making multi-select
-  // look mutually-exclusive (like radios). Pin a small literal corner instead.
-  // The radius lint only scans className/cn contexts, so this const is clear of
-  // it; the fixed literal is the documented escape for a genuinely fixed shape.
-  const shape = multi ? "rounded-[3px]" : "rounded-full";
-  if (!selected) {
-    return (
-      <span
-        className={`mt-0.5 shrink-0 size-3 border border-muted-foreground/40 ${shape}`}
-      />
-    );
-  }
-  return (
-    <span
-      className={`mt-0.5 shrink-0 size-3 border border-primary bg-primary flex items-center justify-center ${shape}`}
-    >
-      {multi ? (
-        <span className="text-3xs text-white">✓</span>
-      ) : (
-        <span className="block size-1 rounded-full bg-white" />
-      )}
-    </span>
+  // A checkbox (multi) and a radio (single) are semantic fixed shapes that must
+  // stay a square / circle under every Shape preset. The selection-indicator
+  // primitive owns those fixed shapes, so this just picks the right one.
+  return multi ? (
+    <CheckboxIndicator checked={selected} className="mt-0.5" />
+  ) : (
+    <RadioIndicator checked={selected} className="mt-0.5" />
   );
 }
 

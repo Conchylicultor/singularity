@@ -19,8 +19,22 @@ Two shapes bypass the token and freeze a corner at a literal value:
   under every preset. Use `rounded-md` (or the step that fits).
 - **arbitrary `rounded-[…]`** (e.g. `rounded-[2px]`) — a hand-pinned literal.
 
-`rounded-none` and `rounded-full` are intentional, preset-independent shapes (a
-hard corner, a pill/circle) and are always allowed.
+`rounded-none`, `rounded-full`, and `rounded-checkbox` are intentional,
+shape-preserving corners (a hard corner, a pill/circle, a small square) and are
+always allowed.
+
+`rounded-checkbox` is the sanctioned square corner for checkbox-class indicators:
+`min(var(--radius), 3px)`. It **caps** the shape token at 3px rather than freezing
+a flat literal — so a sharp / 0-radius theme still yields a hard-cornered checkbox
+(it adapts downward), but a generous Shape preset can never round the box past 3px
+into a near-circle (which made multi-select look mutually-exclusive). This is
+actually *more* theme-aware than shadcn's own checkbox, which hardcodes a flat
+`rounded-[4px]`. It is owned as a custom `@utility` in ui-kit's `app.css`
+(registered in `custom-utilities.ts`).
+Prefer the `CheckboxIndicator` / `RadioIndicator` primitive
+(`@plugins/primitives/plugins/selection-indicator/web`), which bakes in the
+correct shape, over reaching for the class directly — and never re-derive a square
+corner with an arbitrary `rounded-[…]` literal.
 
 ## Enforcement
 

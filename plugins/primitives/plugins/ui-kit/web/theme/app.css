@@ -146,6 +146,14 @@
   }
 }
 
+/* Checkbox corner — a square-ish shape that stays square under every Shape
+ * preset, peer of rounded-none / rounded-full. Caps --radius at 3px rather than
+ * freezing a flat literal: it honors a sharp / 0-radius theme (→ hard corner) but
+ * never exceeds 3px, so a generous preset can't round the box into a near-circle
+ * and make multi-select look like radios. The sanctioned checkbox corner — reach
+ * for it instead of an arbitrary rounded-[…] literal. */
+@utility rounded-checkbox { border-radius: min(var(--radius), 3px); }
+
 /* Density padding utilities — the only bridge for runtime-themeable padding,
  * since padding utilities can't read theme vars. Values come from the density
  * token group (--pad-* runtime vars, overridden by ThemeInjector). */

@@ -2027,6 +2027,10 @@
       "name": "@singularity/plugin-primitives-select-scope",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/selection-indicator": {
+      "name": "@singularity/plugin-primitives-selection-indicator",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/shortcuts": {
       "name": "@singularity/plugin-primitives-shortcuts",
       "version": "0.0.1",
@@ -3910,6 +3914,8 @@
     "@singularity/plugin-primitives-section-label": ["@singularity/plugin-primitives-section-label@workspace:plugins/primitives/plugins/section-label"],
 
     "@singularity/plugin-primitives-select-scope": ["@singularity/plugin-primitives-select-scope@workspace:plugins/primitives/plugins/select-scope"],
+
+    "@singularity/plugin-primitives-selection-indicator": ["@singularity/plugin-primitives-selection-indicator@workspace:plugins/primitives/plugins/selection-indicator"],
 
     "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 

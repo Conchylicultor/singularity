@@ -40,6 +40,12 @@ export const CHROME_PADL_UTILITIES = ["pl-chrome"] as const;
 export const CHROME_PADR_UTILITIES = ["pr-floating-bar"] as const;
 export const ICON_AUTO_UTILITIES = ["icon-auto"] as const;
 export const FOCUS_RING_UTILITIES = ["focus-ring", "focus-ring-within"] as const;
+// Checkbox corner for checkbox-class indicators — caps --radius at 3px so it
+// stays square under every Shape preset (honors a sharp theme, never rounds into
+// a circle), a peer of rounded-none / rounded-full. Joins the built-in `rounded`
+// group so it mutually conflicts with any other rounded-* (no silent strip). See
+// radius/CLAUDE.md for the sanctioned shape.
+export const ROUNDED_FIXED_UTILITIES = ["rounded-checkbox"] as const;
 
 // — twMerge wiring ————————————————————————————————————————————————————————————
 // `extend`     append the literals into an existing built-in tailwind-merge group.
@@ -55,7 +61,7 @@ export const FOCUS_RING_UTILITIES = ["focus-ring", "focus-ring-within"] as const
 type BuiltinGroupId =
   | "font-size" | "z" | "h" | "w" | "size" | "min-h"
   | "p" | "px" | "py" | "pt" | "pr" | "pb" | "pl"
-  | "gap" | "gap-x" | "gap-y";
+  | "gap" | "gap-x" | "gap-y" | "rounded";
 
 type RegistryEntry =
   | { classes: readonly string[]; extend: BuiltinGroupId }
@@ -82,6 +88,10 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: SPACE_PR_UTILITIES, extend: "pr" },
   { classes: SPACE_PB_UTILITIES, extend: "pb" },
   { classes: SPACE_PL_UTILITIES, extend: "pl" },
+  // Fixed checkbox corner → join the built-in border-radius group (mutual
+  // conflict with rounded-md etc.; last-listed wins, so a lone rounded-checkbox
+  // is never stripped).
+  { classes: ROUNDED_FIXED_UTILITIES, extend: "rounded" },
   // Synthetic groups that the listed built-ins override (control set + icon-auto).
   { classes: CONTROL_HEIGHT_UTILITIES, group: "sg-control-height", conflictsWith: ["size", "h"] },
   { classes: CONTROL_ICON_UTILITIES, group: "sg-control-icon", conflictsWith: ["size", "h", "w"] },
