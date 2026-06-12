@@ -6,7 +6,9 @@ import {
 } from "@plugins/primitives/plugins/data-table/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  useFlatRows,
   useResolveCell,
+  useResolveFilter,
   type DataViewRenderProps,
   type FieldValue,
   type SortState,
@@ -29,6 +31,15 @@ function mapSort(sort: SortState | null): TableSortState | null {
 export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
   const resolveCell = useResolveCell();
+  // Rows arrive RAW; the table applies flat search/filter/sort itself.
+  const resolveFilter = useResolveFilter();
+  const rows = useFlatRows(
+    props.rows,
+    props.fields,
+    props.state,
+    resolveFilter,
+    props.searchAccessor,
+  );
 
   // Loading wins over empty: emptyState requires confirmed-empty.
   if (props.loading) {
@@ -37,7 +48,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
 
   // DataTable's `emptyLabel` is string-only; render a custom empty node here so
   // the host-provided `emptyState` (ReactNode) is honored.
-  if (props.rows.length === 0 && props.emptyState !== undefined) {
+  if (rows.length === 0 && props.emptyState !== undefined) {
     return <>{props.emptyState}</>;
   }
 
@@ -62,7 +73,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
 
   return (
     <DataTable
-      data={props.rows}
+      data={rows}
       columns={columns}
       rowKey={props.rowKey}
       sortState={mapSort(props.state.sort)}

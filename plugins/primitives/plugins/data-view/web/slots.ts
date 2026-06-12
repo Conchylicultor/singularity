@@ -9,6 +9,8 @@ export interface DataViewContribution {
   title: string;
   icon: ComponentType<{ className?: string }>;
   order?: number;
+  /** This view requires `DataViewProps.hierarchy`; the host drops it when absent. */
+  hierarchical?: boolean;
   component: ComponentType<DataViewRenderProps<unknown>>;
 }
 

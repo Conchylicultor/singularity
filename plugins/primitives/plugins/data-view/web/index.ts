@@ -5,9 +5,12 @@ export { DataViewSlots } from "./slots";
 export type { DataViewContribution } from "./slots";
 export { useResolveCell } from "./cell-slot";
 export { useResolveFilter } from "./filter-slot";
+export { useFlatRows } from "./internal/use-flat-rows";
+export { pickPrimaryField } from "./internal/pick-primary-field";
 export type {
   FieldValue,
   FieldDef,
+  HierarchyConfig,
   SortState,
   ViewState,
   DataViewRenderProps,

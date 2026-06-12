@@ -1,17 +1,15 @@
-import { useCallback } from "react";
+import { useMemo } from "react";
 import { MdAdd, MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { useEndpointMutation, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import {
-  RenameInput,
-  RowChrome,
-  TreeList,
+import { DataView } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  RowChromeMenuHelpers,
+  RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
-import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
-import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   pagesResource,
   updateBlock,
@@ -24,96 +22,103 @@ import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
 
-// A page is a `type="page"` block. It carries the tree-shaped fields (id,
-// parentId, rank, expanded) directly, so it satisfies TreeItem with no
-// projection; title + icon are read out of `data` via `pageData`.
-type PageRowData = Block;
-
-function PageRow({ node, depth }: { node: TreeNode<PageRowData>; depth: number }) {
-  const { mutateAsync: rename } = useEndpointMutation(updateBlock);
-  const { title, iconSvgNodes } = pageData(node);
-  return (
-    <RowChrome
-      node={node}
-      depth={depth}
-      menu={({ addBelow, addChild }) => [
-        { icon: MdAdd, label: "Add page below", onClick: () => void addBelow() },
-        { icon: MdAdd, label: "Add sub-page", onClick: () => void addChild() },
-      ]}
-      actions={
-        <PageTree.RowActions.Render>
-          {(a) => <a.component pageId={node.id} title={title} />}
-        </PageTree.RowActions.Render>
-      }
-    >
-      <span className="text-muted-foreground flex size-4 shrink-0 items-center justify-center">
-        <PageIcon nodes={iconSvgNodes} className="size-4" />
-      </span>
-      <RenameInput
-        nodeId={node.id}
-        value={title}
-        onCommit={async (next) => {
-          await rename({
-            params: { id: node.id },
-            body: { data: { ...pageData(node), title: next } },
-          });
-        }}
-      />
-    </RowChrome>
-  );
-}
-
 export function PagesSidebar() {
   const result = useResource(pagesResource);
   const openPane = useOpenPane();
   const selectedId = pageDetailPane.useRouteEntry()?.params.pageId;
 
-  const onSelect = useCallback(
-    (id: string) => openPane(pageDetailPane, { pageId: id }, { mode: "push" }),
-    [openPane],
-  );
+  // Build rows only under the not-pending guard (never the `pending ? [] : data`
+  // collapse that makes loading look like a confirmed-empty tree); the render
+  // below gates on `result.pending` and shows the skeleton instead.
+  let rows: Block[] = [];
+  if (!result.pending) {
+    rows = result.data;
+  }
 
-  const onToggleExpanded = useCallback(
-    (id: string, next: boolean) =>
-      void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
-    [],
-  );
+  // Plain function (not useCallback): the `hierarchy` object below is built
+  // inline every render anyway, so memoizing this buys nothing — and closing
+  // over the per-render `rows` is fine without a dependency array.
+  const onRename = async (id: string, next: string) => {
+    const block = rows.find((b) => b.id === id);
+    if (!block) return;
+    await fetchEndpoint(
+      updateBlock,
+      { id },
+      { body: { data: { ...pageData(block), title: next } } },
+    );
+  };
 
-  const onMove = useCallback(
-    (id: string, dest: { parentId: string | null; rank: Rank }) =>
-      void fetchEndpoint(
-        moveBlock,
-        { id },
-        { body: { parentId: dest.parentId, rank: dest.rank } },
-      ),
-    [],
-  );
-
-  // Every create path (root "New Page" and per-row "Add child") flows through
-  // TreeList's onCreate, so seeding the empty text block here covers both.
-  // Returns the new page id so TreeList opens it.
-  const onCreate = useCallback(
-    (args: { parentId: string | null; rank?: Rank }) => createPageWithSeed(args),
+  // Plain literal (not the tree child's options helper) to respect data-view's
+  // collection-consumer separation — consumers never import a view child. The
+  // row-menu callback is typed via the tree *primitive's* helper types.
+  const viewOptions = useMemo(
+    () => ({
+      tree: {
+        leadingIcon: (b: Block) => (
+          <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
+        ),
+        renderItemActions: (b: Block) => (
+          <PageTree.RowActions.Render>
+            {(a) => <a.component pageId={b.id} title={pageData(b).title} />}
+          </PageTree.RowActions.Render>
+        ),
+        rowMenu: ({
+          addBelow,
+          addChild,
+        }: RowChromeMenuHelpers): RowMenuItem[] => [
+          {
+            icon: MdAdd,
+            label: "Add page below",
+            onClick: () => void addBelow(),
+          },
+          { icon: MdAdd, label: "Add sub-page", onClick: () => void addChild() },
+        ],
+        addLabel: "New Page",
+        dragOverlay: (b: Block) => pageData(b).title || "Untitled",
+      },
+    }),
     [],
   );
 
   return (
     <SidebarPaneSection title="Pages" icon={MdDescription}>
-      <div className="min-h-0 flex-1 overflow-y-auto px-2 py-1">
+      <div className="min-h-0 flex-1 overflow-y-auto py-1">
         {result.pending ? (
           <Loading variant="rows" />
         ) : (
-          <TreeList<PageRowData>
-            rows={result.data}
-            selectedId={selectedId}
-            onSelect={onSelect}
-            onToggleExpanded={onToggleExpanded}
-            onMove={onMove}
-            onCreate={onCreate}
-            Row={PageRow}
-            dragOverlay={(p) => pageData(p).title || "Untitled"}
-            addLabel="New Page"
-            toolbar={{ search: { accessor: (p) => pageData(p).title } }}
+          <DataView<Block>
+            rows={rows}
+            fields={[
+              {
+                id: "title",
+                label: "Title",
+                primary: true,
+                value: (b) => pageData(b).title,
+              },
+            ]}
+            rowKey={(b) => b.id}
+            views={["tree"]}
+            storageKey="pages-sidebar"
+            selectedRowId={selectedId}
+            onRowActivate={(b) =>
+              openPane(pageDetailPane, { pageId: b.id }, { mode: "push" })
+            }
+            hierarchy={{
+              getParentId: (b) => b.parentId,
+              getRank: (b) => b.rank,
+              isExpanded: (b) => b.expanded,
+              onToggleExpanded: (id, next) =>
+                void fetchEndpoint(updateBlock, { id }, { body: { expanded: next } }),
+              onMove: (id, dest) =>
+                void fetchEndpoint(
+                  moveBlock,
+                  { id },
+                  { body: { parentId: dest.parentId, rank: dest.rank } },
+                ),
+              onRename,
+              onCreate: (args) => createPageWithSeed(args),
+            }}
+            viewOptions={viewOptions}
           />
         )}
       </div>

@@ -1,6 +1,33 @@
 import { type ComponentType, type ReactNode } from "react";
+import type { Rank } from "@plugins/primitives/plugins/rank/core";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
+
+/**
+ * Describes the data source as a hierarchy. Supplied on `DataViewProps` (not the
+ * per-view `options` channel) because it gates which views are available and
+ * carries write capabilities. Present → the hierarchical views (tree) become
+ * selectable; absent → the host drops them from the switcher.
+ */
+export interface HierarchyConfig<TRow> {
+  getParentId: (row: TRow) => string | null;
+  getRank: (row: TRow) => Rank;
+  /** Server-persisted expand state. Omit → tree manages expand locally. */
+  isExpanded?: (row: TRow) => boolean;
+  onToggleExpanded?: (id: string, next: boolean) => void | Promise<void>;
+  /** DnD reorder/reparent. Omit → read-only nav tree (no drag). */
+  onMove?: (
+    id: string,
+    dest: { parentId: string | null; rank: Rank },
+  ) => void | Promise<void>;
+  /** Inline rename of the primary field. Omit → read-only label. */
+  onRename?: (id: string, next: string) => void | Promise<void>;
+  /** Create child/sibling. Omit → no add buttons. */
+  onCreate?: (args: {
+    parentId: string | null;
+    rank?: Rank;
+  }) => Promise<string | null | undefined>;
+}
 
 export interface FieldDef<TRow> {
   id: string;
@@ -26,6 +53,8 @@ export interface FieldDef<TRow> {
   options?: { value: string; label: string }[];
   /** type:"media" — gallery cover source. */
   cover?: boolean;
+  /** The field rendered as the tree row label. Fallback heuristic: first text field, else fields[0]. */
+  primary?: boolean;
 }
 
 export interface SortState {
@@ -39,10 +68,13 @@ export interface ViewState {
   query: string;
   /** Phase 3: per-field filter values (keyed by field id). Carried now. */
   filters: Record<string, unknown>;
+  /** Local expand state for hierarchical views lacking server-persisted expansion. */
+  expanded?: Record<string, boolean>;
 }
 
 export interface DataViewRenderProps<TRow> {
-  /** AFTER this view's search + filter + sort. */
+  /** RAW rows. Each view applies the processing matching its own semantics
+   * (gallery/table call `useFlatRows`; the tree feeds them straight to `TreeList`). */
   rows: readonly TRow[];
   fields: FieldDef<TRow>[];
   rowKey: (row: TRow, index: number) => string;
@@ -54,8 +86,19 @@ export interface DataViewRenderProps<TRow> {
   setFilter: (fieldId: string, value: unknown) => void;
   /** Row/card click (default cards & table rows). */
   onRowActivate?: (row: TRow) => void;
+  /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
+  selectedRowId?: string;
   /** viewOptions[activeViewId] — opaque to the host, typed by each view. */
   options: unknown;
+  /** Custom search accessor; each view passes it into its own `useFlatRows`. */
+  searchAccessor?: (row: TRow) => string;
+  /** Present only when the data source is hierarchical (gates the tree view). */
+  hierarchy?: HierarchyConfig<TRow>;
+  /** This view's local expand map — for hierarchical views whose data source has
+   * no server-persisted expand state. Persisted in ViewState (localStorage). */
+  expanded?: Record<string, boolean>;
+  /** Persist local expand state for a row (writes THIS view's ViewState). */
+  setExpanded?: (id: string, next: boolean) => void;
   emptyState?: ReactNode;
   /**
    * True while the backing data is still loading. Views render `loadingState`
@@ -107,6 +150,8 @@ export interface DataViewProps<TRow> {
   actions?: ReactNode;
   searchAccessor?: (row: TRow) => string;
   onRowActivate?: (row: TRow) => void;
+  /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
+  selectedRowId?: string;
   emptyState?: ReactNode;
   /**
    * True while the backing data is still loading. The active view renders
@@ -118,4 +163,6 @@ export interface DataViewProps<TRow> {
   loadingState?: ReactNode;
   /** Opaque per-view options channel, keyed by view id. */
   viewOptions?: Record<string, unknown>;
+  /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
+  hierarchy?: HierarchyConfig<TRow>;
 }

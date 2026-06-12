@@ -1,6 +1,7 @@
 export type {
   FieldValue,
   FieldDef,
+  HierarchyConfig,
   SortState,
   ViewState,
   DataViewRenderProps,

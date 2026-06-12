@@ -57,7 +57,13 @@ export type TreeListProps<T extends TreeItem> = {
       value?: boolean;
       onValueChange?: (v: boolean) => void;
     };
-    search?: { accessor: (row: T) => string };
+    search?: {
+      accessor: (row: T) => string;
+      /** Controlled query value. When set, used instead of TreeList's own state. */
+      query?: string;
+      /** Hide TreeList's own SearchInput (a host toolbar renders one). */
+      hideInput?: boolean;
+    };
     /** Extra content rendered on the left side of the toolbar row. */
     start?: ReactNode;
   };
@@ -144,8 +150,12 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
 
   const [searchQuery, setSearchQuery] = useState("");
   const searchAccessor = toolbar?.search?.accessor;
+  // Controlled when `query` is supplied (host toolbar drives it); else internal.
+  const controlledQuery = toolbar?.search?.query;
+  const effectiveQuery = controlledQuery ?? searchQuery;
+  const hideSearchInput = toolbar?.search?.hideInput ?? false;
   const afterSearch = useMemo(() => {
-    const needle = searchQuery.trim().toLowerCase();
+    const needle = effectiveQuery.trim().toLowerCase();
     if (!needle || !searchAccessor) return tree;
     return filterTree<TreeNode<T>>(
       tree,
@@ -153,7 +163,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       (n) => n.children,
       (n, children) => ({ ...n, expanded: true, children }),
     );
-  }, [tree, searchQuery, searchAccessor]);
+  }, [tree, effectiveQuery, searchAccessor]);
 
   const isTerminal = toolbar?.hideTerminal?.isTerminal;
   const visibleTree = useMemo(
@@ -244,8 +254,9 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     }
   }, [selectedId, rows, wrappedOnToggleExpanded]);
 
+  const showSearchInput = !!toolbar?.search && !hideSearchInput;
   const hasToolbar =
-    showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start || !!toolbar?.search;
+    showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start || showSearchInput;
   const showRootAdd = !rootId && addLabel != null;
 
   const ctxValue = useMemo(
@@ -286,7 +297,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
           {hasToolbar && (
             <div className="sticky top-0 z-raised bg-background mb-1 flex items-center gap-1">
               <div className="flex items-center gap-1">
-                {toolbar.search && (
+                {showSearchInput && (
                   <SearchInput
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}

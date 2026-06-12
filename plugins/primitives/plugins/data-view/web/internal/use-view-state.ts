@@ -1,7 +1,12 @@
 import { useCallback, useMemo, useState } from "react";
 import type { ViewState } from "../../core";
 
-const DEFAULT_STATE: ViewState = { sort: null, query: "", filters: {} };
+const DEFAULT_STATE: ViewState = {
+  sort: null,
+  query: "",
+  filters: {},
+  expanded: {},
+};
 
 type StateMap = Record<string, ViewState>;
 
@@ -35,6 +40,7 @@ export interface ViewStateHandle {
   setSort: (viewId: string, fieldId: string) => void;
   setQuery: (viewId: string, query: string) => void;
   setFilter: (viewId: string, fieldId: string, value: unknown) => void;
+  setExpanded: (viewId: string, id: string, next: boolean) => void;
 }
 
 export function useViewState(
@@ -117,6 +123,16 @@ export function useViewState(
     [update],
   );
 
+  const setExpanded = useCallback(
+    (viewId: string, id: string, next: boolean) => {
+      update(viewId, (prev) => ({
+        ...prev,
+        expanded: { ...(prev.expanded ?? {}), [id]: next },
+      }));
+    },
+    [update],
+  );
+
   return useMemo(
     () => ({
       activeViewId,
@@ -125,7 +141,16 @@ export function useViewState(
       setSort,
       setQuery,
       setFilter,
+      setExpanded,
     }),
-    [activeViewId, setActiveView, stateFor, setSort, setQuery, setFilter],
+    [
+      activeViewId,
+      setActiveView,
+      stateFor,
+      setSort,
+      setQuery,
+      setFilter,
+      setExpanded,
+    ],
   );
 }

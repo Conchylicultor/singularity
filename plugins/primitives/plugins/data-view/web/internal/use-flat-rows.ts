@@ -21,7 +21,7 @@ function comparableSort(value: FieldValue): number | string {
   return String(value ?? "");
 }
 
-export function useDataViewRows<TRow>(
+export function useFlatRows<TRow>(
   rows: readonly TRow[],
   fields: FieldDef<TRow>[],
   state: ViewState,

@@ -1,9 +1,12 @@
 import { type ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import type {
-  DataViewRenderProps,
-  FieldDef,
+import {
+  pickPrimaryField,
+  useFlatRows,
+  useResolveFilter,
+  type DataViewRenderProps,
+  type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { CoverContent, GalleryViewOptions } from "../../core";
 import { DataCard } from "./data-card";
@@ -23,13 +26,6 @@ function pickCoverField<TRow>(
     fields.find((f) => f.cover === true) ??
     fields.find((f) => f.type === "media")
   );
-}
-
-/** The title field: first `text` field, else the first field. */
-function pickTitleField<TRow>(
-  fields: FieldDef<TRow>[],
-): FieldDef<TRow> | undefined {
-  return fields.find((f) => f.type === "text") ?? fields[0];
 }
 
 function renderFieldContent<TRow>(
@@ -91,11 +87,19 @@ function renderMedia<TRow>(
  * `options.renderCard` (the custom card owns its own click handling), or a
  * field-driven default `<DataCard>` wired to `onRowActivate`.
  *
- * `rows`/`fields` arrive type-erased as `unknown`; this is the documented
- * re-cast boundary for the view child.
+ * The host passes RAW rows; this view applies its own search/filter/sort via the
+ * shared `useFlatRows` hook. `rows`/`fields` arrive type-erased as `unknown`;
+ * this is the documented re-cast boundary for the view child.
  */
 export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
-  const rows = props.rows;
+  const resolveFilter = useResolveFilter();
+  const rows = useFlatRows(
+    props.rows,
+    props.fields,
+    props.state,
+    resolveFilter,
+    props.searchAccessor,
+  );
   const fields = props.fields;
   const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
 
@@ -117,7 +121,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   }
 
   const coverField = pickCoverField(fields, options.coverField);
-  const titleField = pickTitleField(fields);
+  const titleField = pickPrimaryField(fields);
 
   return (
     <div

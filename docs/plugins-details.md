@@ -157,7 +157,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `PageDetail.Section`, `PageTree.RowActions`
             - Contributes: `Pane.Register` "pages-root", `Pane.Register` "page-detail", `Pages.Sidebar` "Pages" → `PagesSidebar`, `PageDetail.Section` → `BacklinksSection`, `PageTree.RowActions` → `DeletePageAction`
-            - Uses: `apps/pages/shell.Pages`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `page/links.Backlinks`, `primitives/app-shell.SidebarPaneSection`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.IconPicker`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeList`, `primitives/ui-kit.Button`, `primitives/ui-kit.Dialog`, `primitives/ui-kit.DialogContent`, `primitives/ui-kit.DialogDescription`, `primitives/ui-kit.DialogTitle`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
+            - Uses: `apps/pages/shell.Pages`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `page/links.Backlinks`, `primitives/app-shell.SidebarPaneSection`, `primitives/data-view.DataView`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.IconPicker`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.Dialog`, `primitives/ui-kit.DialogContent`, `primitives/ui-kit.DialogDescription`, `primitives/ui-kit.DialogTitle`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
             - Exports: Values: `PageDetail`, `PageTree`
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
           - Web:
@@ -2759,27 +2759,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `DataViewSlots.View`
         - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
-        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `useResolveCell`, `useResolveFilter`
+        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
       - Cross-plugin:
-        - Slot contributors: `filter`, `gallery`, `table`
-        - Imported by: `apps/home/app-cards`, `apps/sonata/library`, `apps/story/shell`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`
+        - Slot contributors: `filter`, `gallery`, `table`, `tree`
+        - Imported by: `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/data-view/tree`
       - Core:
-        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `SortState`, `TableCellProps`, `ViewState`
+        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SortState`, `TableCellProps`, `ViewState`
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: `primitives/card.Card`, `primitives/data-view.DataViewSlots`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
+            - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`, `galleryOptions`
           - Core:
             - Exports: Types: `CoverContent`, `GalleryViewOptions`; Values: `galleryOptions`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldValue`, `primitives/data-view.SortState`, `primitives/data-view.useResolveCell`, `primitives/loading.Loading`
+            - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldValue`, `primitives/data-view.SortState`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`
             - Exports: Types: `TableViewOptions`
           - Core:
             - Exports: Types: `TableViewOptions`
+        - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
+          - Web:
+            - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
+            - Uses: `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useResolveCell`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.RowChromeMenuHelpers`, `primitives/tree.RowMenuItem`, `primitives/tree.TreeList`
+            - Exports: Types: `TreeRowNode`, `TreeViewOptions`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Web:
         - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/row.SectionHeaderRow`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.RenderSlot`
@@ -3110,7 +3115,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/rank.Rank`
         - Exports: Types: `DropZone`, `TreeNode`; Values: `buildTree`, `computeDrop`, `isDescendant`, `selectionRoots`, `subtreeIds`
       - Cross-plugin:
-        - Imported by: `apps/pages/page-tree`, `apps/story/story-core`, `config_v2/settings`, `conversations/agents`, `page/editor`, `tasks/task-list`, `tasks/task-list/tree`
+        - Imported by: `apps/story/story-core`, `config_v2/settings`, `conversations/agents`, `page/editor`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`
     - **`truncating-text`** — Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
       - Web:
         - Uses: `primitives/ui-kit.cn`

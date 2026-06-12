@@ -16,7 +16,6 @@ import type {
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import { useViewState } from "../internal/use-view-state";
-import { useDataViewRows } from "../internal/use-data-view-rows";
 import { useResolveFilter } from "../filter-slot";
 import { ViewSwitcher } from "./view-switcher";
 import { FilterBar } from "./filter-bar";
@@ -33,29 +32,36 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     actions,
     searchAccessor,
     onRowActivate,
+    selectedRowId,
     emptyState,
     loading,
     loadingState,
     viewOptions,
+    hierarchy,
   } = props;
 
   const contributions = DataViewSlots.View.useContributions();
 
   // Resolve available views: `views` prop is authoritative for inclusion+order
   // (resolve each id, drop misses); otherwise all contributions by order/title.
+  // Hierarchical views (the tree) require `hierarchy` — drop them when absent so
+  // a `views={["tree"]}` with no hierarchy can never render a broken view.
   const available = useMemo<SealContributions<DataViewContribution>[]>(() => {
+    const usable = hierarchy
+      ? contributions
+      : contributions.filter((c) => !c.hierarchical);
     if (views) {
       return views
-        .map((id) => contributions.find((c) => c.id === id))
+        .map((id) => usable.find((c) => c.id === id))
         .filter(
           (c): c is SealContributions<DataViewContribution> => c !== undefined,
         );
     }
-    return [...contributions].sort(
+    return [...usable].sort(
       (a, b) =>
         (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
     );
-  }, [views, contributions]);
+  }, [views, contributions, hierarchy]);
 
   const viewIds = useMemo(() => available.map((v) => v.id), [available]);
 
@@ -71,13 +77,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const activeState = viewState.stateFor(activeViewId);
 
   const resolveFilter = useResolveFilter();
-  const processedRows = useDataViewRows(
-    rows,
-    fields,
-    activeState,
-    resolveFilter,
-    searchAccessor,
-  );
 
   const hasFilters = useMemo(
     () => fields.some((f) => resolveFilter(f.type ?? "text") !== undefined),
@@ -100,8 +99,10 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     );
   }
 
+  // The host passes RAW rows; each view applies the processing matching its own
+  // semantics (gallery/table call `useFlatRows`, the tree feeds `TreeList`).
   const renderProps: DataViewRenderProps<unknown> = {
-    rows: processedRows as readonly unknown[],
+    rows: rows as readonly unknown[],
     fields: fields as DataViewRenderProps<unknown>["fields"],
     rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
     state: activeState,
@@ -109,7 +110,13 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     setFilter: (fieldId, value) =>
       viewState.setFilter(activeViewId, fieldId, value),
     onRowActivate: onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
+    selectedRowId,
     options: viewOptions?.[activeViewId],
+    searchAccessor:
+      searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
+    hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
+    expanded: activeState.expanded,
+    setExpanded: (id, next) => viewState.setExpanded(activeViewId, id, next),
     emptyState,
     loading,
     loadingState,
