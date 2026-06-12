@@ -142,7 +142,7 @@ function asObject(value: unknown): Record<string, unknown> {
 }
 
 /** The block's text payload, or "" when it has none. */
-export function textOf(node: BlockNode): string {
+export function textOf(node: { data?: unknown }): string {
   const obj = asObject(node.data);
   return typeof obj.text === "string" ? obj.text : "";
 }

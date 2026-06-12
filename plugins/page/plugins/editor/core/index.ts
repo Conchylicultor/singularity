@@ -33,7 +33,7 @@ export type {
   PasteBlocksBody,
 } from "./endpoints";
 
-export { BlockOpSchema, applyBlockOp, childrenOf } from "./block-ops";
+export { BlockOpSchema, applyBlockOp, childrenOf, textOf } from "./block-ops";
 export type { BlockOp, BlockNode } from "./block-ops";
 
 export { SerializedBlockSchema } from "./serialized-block";

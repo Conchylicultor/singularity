@@ -101,6 +101,7 @@ export function BlockRow({
       {/* Drag handle — drags to reorder (PointerSensor needs 4px movement),
           and a plain click opens the block-actions (turn into / delete) menu. */}
       <BlockActionsMenu
+        block={block}
         api={api}
         align="start"
         side="bottom"

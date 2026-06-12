@@ -1641,6 +1641,10 @@
       "name": "@singularity/plugin-page-toggle",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/turn-into-page": {
+      "name": "@singularity/plugin-page-turn-into-page",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta": {
       "name": "@singularity/plugin-plugin-meta",
       "version": "0.0.1",
@@ -3768,6 +3772,8 @@
     "@singularity/plugin-page-to-do": ["@singularity/plugin-page-to-do@workspace:plugins/page/plugins/to-do"],
 
     "@singularity/plugin-page-toggle": ["@singularity/plugin-page-toggle@workspace:plugins/page/plugins/toggle"],
+
+    "@singularity/plugin-page-turn-into-page": ["@singularity/plugin-page-turn-into-page@workspace:plugins/page/plugins/turn-into-page"],
 
     "@singularity/plugin-plugin-meta": ["@singularity/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 
