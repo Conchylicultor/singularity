@@ -10,6 +10,7 @@ import {
 import { clientLog } from "@plugins/primitives/plugins/log-channels/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { ResourceOrigin } from "../core/resource";
+import { mergeKeyedDelta } from "./keyed-delta-merge";
 
 // Per-hop persistent tracing for the live-state update pipeline (Layer 1). All
 // lines route to the `live-state` log channel over plain HTTP via clientLog —
@@ -650,45 +651,23 @@ export class NotificationsClient {
     const upsertMap = new Map<string, unknown>();
     for (const [rowId, row] of upserts) upsertMap.set(rowId, element.parse(row));
 
-    // Set when the membership-changed branch finds an `order` id resolving to
-    // neither an upsert nor a cached row — i.e. the client's base has drifted
-    // behind the server snapshot (a missed/stale-dropped intermediate frame).
-    // Writing the rebuilt array anyway would punch `undefined` holes into it
-    // and crash any downstream consumer that iterates the rows; instead we keep
-    // the prior array untouched and force a fresh full base below.
-    const driftedIds: string[] = [];
-    this.queryClient.setQueryData(queryKey, (prev: unknown) => {
-      const prevRows = Array.isArray(prev) ? (prev as unknown[]) : [];
-      if (order === undefined) {
-        // Membership/order unchanged (in-place upserts only): walk the prior
-        // array, swapping changed rows by id. No deletes, no new rows. Unchanged
-        // rows keep their identical reference — only upserted rows get a new
-        // object, preserving the no-re-render-churn property.
-        return prevRows.map((row) => upsertMap.get(keyOf(row)) ?? row);
-      }
-      // Membership/order changed: rebuild from the authoritative `order`,
-      // reusing prior row references for unchanged ids.
-      const existingById = new Map<string, unknown>();
-      for (const row of prevRows) existingById.set(keyOf(row), row);
-      const next: unknown[] = [];
-      for (const rowId of order) {
-        const row = upsertMap.get(rowId) ?? existingById.get(rowId);
-        if (row === undefined) {
-          driftedIds.push(rowId);
-          continue;
-        }
-        next.push(row);
-      }
-      // Any unresolved id ⇒ base drift: leave `prev` intact and resub below.
-      return driftedIds.length > 0 ? prev : next;
-    });
-    if (driftedIds.length > 0) {
+    // The base-presence guard above already ensured a non-undefined base.
+    const prevRows = (this.queryClient.getQueryData(queryKey) as unknown[]) ?? [];
+    const result = mergeKeyedDelta(prevRows, upsertMap, order, keyOf);
+    if (result.kind === "drift") {
+      // `order` named ids resolvable from neither the upserts nor the cached
+      // base — the client's base has drifted behind the server snapshot (a
+      // missed/stale-dropped intermediate frame). Writing the rebuild anyway
+      // would punch `undefined` holes into the array and crash the next
+      // consumer to iterate the rows; instead leave the cache untouched and
+      // force a fresh full base.
       trace(
-        `applyDelta key=${key} params=${paramsKey(params)} reason=delta-drift-resub ids=${driftedIds.join(",")}`,
+        `applyDelta key=${key} params=${paramsKey(params)} reason=delta-drift-resub ids=${result.missingIds.join(",")}`,
       );
       this.sendSub(channel, key, params);
       return;
     }
+    this.queryClient.setQueryData(queryKey, result.rows);
     this.markApplied(entry, key);
   }
 

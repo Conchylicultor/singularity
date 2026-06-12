@@ -1,5 +1,11 @@
 import type { ServerWebSocket } from "bun";
 import type { ZodType } from "zod";
+import {
+  buildSnapshot,
+  diffKeyedFull,
+  diffKeyedScoped as diffKeyedScopedPure,
+  type KeyedDiff,
+} from "./keyed-diff";
 
 // Shared live-state resource runtime. See
 // research/2026-04-15-global-sse-lifecycle-mental-model-v3.md and
@@ -182,22 +188,6 @@ interface RegistryEntry {
   downstream: DownstreamEdge[];
   onFirstSubscribe?: (params: ResourceParams) => void | Promise<void>;
   onLastUnsubscribe?: (params: ResourceParams) => void;
-}
-
-interface KeyedDiff {
-  upserts: [string, unknown][];
-  deletes: string[];
-  /**
-   * The full ordered id list, OR `undefined` when order/membership are
-   * unchanged (the common in-place-update case: a status/title flip on one
-   * row). The snapshot Map is built from `value` in order, so iterating the
-   * prior snapshot's keys yields the prior order; when it matches the new order
-   * element-for-element we omit it from the wire. An omitted `order` strictly
-   * means "in-place upserts, membership/order unchanged" — `deletes` is then
-   * necessarily empty and there are no brand-new ids.
-   */
-  order: string[] | undefined;
-  hadSnapshot: boolean;
 }
 
 interface SocketState {
@@ -489,9 +479,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
         `[resources] keyed resource "${entry.key}" loader must return an array`,
       );
     }
-    const map = new Map<string, string>();
-    for (const row of value) map.set(keyOf(row), JSON.stringify(row));
-    return map;
+    return buildSnapshot(value, keyOf);
   }
 
   // Diff the new array `value` against the stored snapshot for `pk`, then REPLACE
@@ -509,33 +497,9 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       );
     }
     const snapshots = (entry.snapshots ??= new Map());
-    const prev = snapshots.get(pk);
-    const hadSnapshot = prev !== undefined;
-    // Map preserves insertion order, and the snapshot was built from the prior
-    // `value` in order, so its key iteration order is the prior id order.
-    const prevOrder = prev ? [...prev.keys()] : undefined;
-    const next = new Map<string, string>();
-    const upserts: [string, unknown][] = [];
-    const order: string[] = [];
-    for (const row of value) {
-      const id = keyOf(row);
-      const hash = JSON.stringify(row);
-      next.set(id, hash);
-      order.push(id);
-      if (!prev || prev.get(id) !== hash) upserts.push([id, row]);
-    }
-    const deletes: string[] = [];
-    if (prev) {
-      for (const id of prev.keys()) if (!next.has(id)) deletes.push(id);
-    }
-    snapshots.set(pk, next);
-    // Omit `order` when the id sequence is identical to the prior one — a delete
-    // or insert changes membership ⇒ length/sequence differs ⇒ order is sent.
-    const orderUnchanged =
-      prevOrder !== undefined &&
-      prevOrder.length === order.length &&
-      prevOrder.every((id, i) => id === order[i]);
-    return { upserts, deletes, order: orderUnchanged ? undefined : order, hadSnapshot };
+    const { diff, nextSnapshot } = diffKeyedFull(snapshots.get(pk), value, keyOf);
+    snapshots.set(pk, nextSnapshot);
+    return diff;
   }
 
   // Scoped diff (Layer 2): `scopedRows` is a PARTIAL array — only the recomputed
@@ -555,21 +519,15 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     if (!keyOf) {
       throw new Error(`[resources] keyed resource "${entry.key}" missing keyOf`);
     }
-    const snap = entry.snapshots?.get(pk);
+    const snapshots = (entry.snapshots ??= new Map());
+    const snap = snapshots.get(pk);
     if (!snap) {
       throw new Error(
         `[resources] diffKeyedScoped called for "${entry.key}" pk "${pk}" with no snapshot`,
       );
     }
-    const upserts: [string, unknown][] = [];
-    for (const row of scopedRows) {
-      const id = keyOf(row);
-      const hash = JSON.stringify(row);
-      if (snap.get(id) !== hash) {
-        upserts.push([id, row]);
-        snap.set(id, hash);
-      }
-    }
+    const { upserts, nextSnapshot } = diffKeyedScopedPure(snap, scopedRows, keyOf);
+    snapshots.set(pk, nextSnapshot);
     return { upserts };
   }
 

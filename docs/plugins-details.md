@@ -1991,7 +1991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `framework/central-core`, `framework/server-core`
       - Core:
-        - Exports: Types: `DependsOnEntry`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `createResourceRuntime`
+        - Exports: Types: `DependsOnEntry`, `KeyedDiff`, `KeyedSnapshot`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
     - **`server-core`**
       - Core:
         - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.recordEntrySpan`
