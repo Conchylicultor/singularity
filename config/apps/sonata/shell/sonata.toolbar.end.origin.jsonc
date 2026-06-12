@@ -1,0 +1,10 @@
+// @hash d0d7b0517b70
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.sonata.audio.engine:volume",
+    "apps.sonata.transport-bar:playback"
+  ]
+}

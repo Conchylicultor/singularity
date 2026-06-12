@@ -2017,6 +2017,10 @@
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/pane-toolbar": {
+      "name": "@singularity/plugin-primitives-pane-toolbar",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/persistent-draft": {
       "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
@@ -3960,6 +3964,8 @@
     "@singularity/plugin-primitives-optimistic-mutation": ["@singularity/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
+
+    "@singularity/plugin-primitives-pane-toolbar": ["@singularity/plugin-primitives-pane-toolbar@workspace:plugins/primitives/plugins/pane-toolbar"],
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 

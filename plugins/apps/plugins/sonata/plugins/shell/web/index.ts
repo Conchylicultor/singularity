@@ -3,7 +3,7 @@ import { Apps } from "@plugins/apps/web";
 import { MdPiano } from "react-icons/md";
 import { SonataLayout } from "./components/sonata-layout";
 
-export { Sonata } from "./slots";
+export { Sonata, SonataToolbar } from "./slots";
 export type { InstrumentVoices, ScheduledNote } from "./slots";
 export {
   useSonata,

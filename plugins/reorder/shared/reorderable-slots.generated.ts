@@ -49,6 +49,8 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "shell.sidebar", pluginId: "shell" },
   { slotId: "shell.toolbar", pluginId: "shell" },
   { slotId: "sonata.section", pluginId: "apps.sonata.shell" },
+  { slotId: "sonata.toolbar.end", pluginId: "apps.sonata.shell" },
+  { slotId: "sonata.toolbar.start", pluginId: "apps.sonata.shell" },
   { slotId: "stats.chart", pluginId: "stats" },
   { slotId: "studio.explorer.tree-row-badge", pluginId: "apps.studio.explorer" },
   { slotId: "studio.sidebar", pluginId: "apps.studio.shell" },

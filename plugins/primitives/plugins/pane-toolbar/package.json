@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-pane-toolbar",
+  "description": "Factory for full-surface pane toolbars: a sanctioned render-slot header host with reorderable start/end zones.",
+  "private": true,
+  "version": "0.0.1"
+}

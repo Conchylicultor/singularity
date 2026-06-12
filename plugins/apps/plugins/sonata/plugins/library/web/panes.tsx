@@ -1,14 +1,10 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactElement, useEffect, useState } from "react";
-import {
-  Pane,
-  clearRoute,
-  type,
-} from "@plugins/primitives/plugins/pane/web";
+import { Pane, type } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Sonata,
+  SonataToolbar,
   TEMPO_MATH_FLOOR,
   publishSonataTransport,
   useSonata,
@@ -16,7 +12,6 @@ import {
 import { songsResource } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
-import { Picker } from "./components/display-picker";
 import { SectionPane } from "./components/section-pane";
 
 // Panes are declared first so their types are known before the component bodies
@@ -110,20 +105,18 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 }
 
 /**
- * The player surface — the `view==="player"` chrome of the old bespoke layout,
- * now a full-surface pane: ← Library + song title, the Display picker, the
- * `Sonata.Toolbar` widgets, the `Sonata.Transport` strip, the active display
- * (`Sonata.Display.Dispatch`), and the collapsible `SectionPane`.
+ * The player surface — a full-surface pane: the `Sonata.Toolbar` host (← Library
+ * + title + display picker on the left, transport/volume on the right), the
+ * `Sonata.Transport` strip, the active display (`Sonata.Display.Dispatch`), and
+ * the collapsible `SectionPane`.
  */
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
   const input = sonataPlayerPane.useInput();
   const {
     score,
-    currentSongTitle,
     tempoScale,
     activeDisplayId,
-    setActiveDisplay,
     setCurrentSong,
     clearCurrentSong,
     togglePlay,
@@ -170,41 +163,10 @@ function SonataPlayerSurface(): ReactElement {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      {/* Toolbar: back-to-library + title, display picker, transport. */}
-      <div className="flex flex-wrap items-center gap-x-xl gap-y-sm border-b border-border pl-xl pr-floating-bar py-md">
-        <div className="flex items-center gap-sm">
-          <Button variant="outline" size="xs" onClick={() => clearRoute()}>
-            ← Library
-          </Button>
-          <Text variant="body" className="font-semibold text-foreground">
-            {currentSongTitle ?? "Untitled"}
-          </Text>
-        </div>
-
-        <div className="flex items-center gap-sm">
-          <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-            Display
-          </span>
-          <Picker
-            items={displays.map((d) => ({
-              id: d.id,
-              label: d.label,
-              icon: d.icon,
-            }))}
-            activeId={effectiveDisplayId}
-            onSelect={setActiveDisplay}
-            empty="No displays"
-          />
-        </div>
-
-        {/* Toolbar action widgets (transport controls: play/pause, speed, …).
-            Open slot — renders nothing until a plugin contributes. */}
-        <div className="ml-auto flex items-center gap-sm">
-          <Sonata.Toolbar.Render>
-            {(t) => <t.component key={t.id} />}
-          </Sonata.Toolbar.Render>
-        </div>
-      </div>
+      {/* Toolbar: the PaneToolbar host renders both zones — Start (← Library,
+          title, display picker; contributed by this plugin) and End (transport,
+          volume; contributed by transport-bar / engine). Both reorderable. */}
+      <SonataToolbar.Host />
 
       {/* Transport strip: full-width progression bar (and future transport
           widgets). Renders nothing when no contributor is present. */}

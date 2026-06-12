@@ -4,6 +4,7 @@ import {
   defineDispatchSlot,
   defineRenderSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
+import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web";
 import type {
   Annotation,
   Capability,
@@ -138,13 +139,6 @@ export const Sonata = {
     docLabel: (p) => p.id,
   }),
 
-  // TOOLBAR — action widgets pinned to the right of the top toolbar (transport
-  // controls: play/pause, speed, …). Open slot so any plugin can add an action.
-  Toolbar: defineRenderSlot<{ component: ComponentType }>("sonata.toolbar", {
-    reorder: false,
-    docLabel: (p) => p.id,
-  }),
-
   // EFFECT — headless, always-mounted Sonata-scoped side effects. Components
   // contributed here render nothing; they observe shared context (current song,
   // playback state) and run effects (e.g. recording a play, scrobbling). Mounted
@@ -181,3 +175,14 @@ export const Sonata = {
     docLabel: (p) => p.label,
   }),
 };
+
+/**
+ * The player's top toolbar, hosted by the PaneToolbar primitive — the sanctioned
+ * render-slot header host for full-surface (`chrome: false`) panes. `.Start`
+ * (left: ← Library, title, display picker) and `.End` (right: transport, volume)
+ * are both **reorderable** render-slot zones; the player surface renders `.Host`.
+ * Hand-rolling a toolbar `<div>` is banned by the `no-adhoc-pane-toolbar` lint
+ * rule. Exported top-level (not nested in `Sonata`) so the build's slot facet
+ * discovers `.Start`/`.End` as reorderable — the same shape as `TaskDetail` etc.
+ */
+export const SonataToolbar = definePaneToolbar("sonata.toolbar");
