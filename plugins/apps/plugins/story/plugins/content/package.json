@@ -1,0 +1,7 @@
+{
+  "name": "@singularity/plugin-apps-story-content",
+  "description": "Story content widgets: per-block-type Story.Content renderers.",
+  "private": true,
+  "version": "0.0.1",
+  "singularity": { "collapsed": true }
+}

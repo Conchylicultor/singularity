@@ -348,12 +348,28 @@
       "name": "@singularity/plugin-apps-story",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/story/plugins/content": {
+      "name": "@singularity/plugin-apps-story-content",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/story/plugins/content/plugins/text": {
+      "name": "@singularity/plugin-apps-story-content-text",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/story/plugins/marker": {
       "name": "@singularity/plugin-apps-story-marker",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/story/plugins/render": {
       "name": "@singularity/plugin-apps-story-render",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/story/plugins/renderers": {
+      "name": "@singularity/plugin-apps-story-renderers",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/story/plugins/renderers/plugins/slides": {
+      "name": "@singularity/plugin-apps-story-renderers-slides",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/story/plugins/shell": {
@@ -3115,9 +3131,17 @@
 
     "@singularity/plugin-apps-story": ["@singularity/plugin-apps-story@workspace:plugins/apps/plugins/story"],
 
+    "@singularity/plugin-apps-story-content": ["@singularity/plugin-apps-story-content@workspace:plugins/apps/plugins/story/plugins/content"],
+
+    "@singularity/plugin-apps-story-content-text": ["@singularity/plugin-apps-story-content-text@workspace:plugins/apps/plugins/story/plugins/content/plugins/text"],
+
     "@singularity/plugin-apps-story-marker": ["@singularity/plugin-apps-story-marker@workspace:plugins/apps/plugins/story/plugins/marker"],
 
     "@singularity/plugin-apps-story-render": ["@singularity/plugin-apps-story-render@workspace:plugins/apps/plugins/story/plugins/render"],
+
+    "@singularity/plugin-apps-story-renderers": ["@singularity/plugin-apps-story-renderers@workspace:plugins/apps/plugins/story/plugins/renderers"],
+
+    "@singularity/plugin-apps-story-renderers-slides": ["@singularity/plugin-apps-story-renderers-slides@workspace:plugins/apps/plugins/story/plugins/renderers/plugins/slides"],
 
     "@singularity/plugin-apps-story-shell": ["@singularity/plugin-apps-story-shell@workspace:plugins/apps/plugins/story/plugins/shell"],
 

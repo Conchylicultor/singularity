@@ -1,0 +1,7 @@
+{
+  "name": "@singularity/plugin-apps-story-renderers",
+  "description": "Story renderer lenses: each contributes a Story.Renderer view over the StoryNode tree.",
+  "private": true,
+  "version": "0.0.1",
+  "singularity": { "collapsed": true }
+}

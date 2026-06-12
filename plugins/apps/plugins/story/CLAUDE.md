@@ -6,8 +6,10 @@
 
 - Description: Story Builder — author a page as a block tree and render it through pluggable lenses.
 - Sub-plugins:
+  - **`content`** [1 sub-plugin] — Story content widgets: per-block-type Story.Content renderers.
   - **`marker`** — Story capability marker (read hooks + set/clear mutations). No UI: useIsStory/useStories, markStory/unmarkStory. Story capability marker: page_blocks_ext_story side-table (entity-extensions), storiesResource, set/clear endpoints, useIsStory/useStories.
   - **`render`** — Owns the Story.Renderer + Story.Content dispatch slots, the <StoryRender pageId rendererId/> surface, RendererPicker, and visible unsupported-block / no-renderer fallbacks.
+  - **`renderers`** [1 sub-plugin] — Story renderer lenses: each contributes a Story.Renderer view over the StoryNode tree.
   - **`shell`** — App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).
   - **`story-core`** — Renderer-agnostic StoryNode IR plus buildStoryTree — the single place a block type maps to a structural role (divider → break, else content).
 

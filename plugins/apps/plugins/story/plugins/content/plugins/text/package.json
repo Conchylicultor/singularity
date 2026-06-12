@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-content-text",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Renders the text block payload as a Story.Content widget."
+}

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-story-renderers-slides",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Slides lens: each top-level block is a slide; top-level dividers split slides."
+}
