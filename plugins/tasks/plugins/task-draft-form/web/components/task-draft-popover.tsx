@@ -19,11 +19,12 @@ import type {
   TaskChainTarget,
 } from "@plugins/tasks/core";
 import { useActiveRelateContext } from "../active-relate-context";
+import { useCaptureUrlDefault } from "../use-capture-url-default";
 
 const HEAD_DEFAULT_MODEL: ChainModel = DEFAULT_MODEL;
 
-function freshCards(): CardDraft[] {
-  return [makeCard(HEAD_DEFAULT_MODEL)];
+function freshCards(includeUrl: boolean): CardDraft[] {
+  return [makeCard(HEAD_DEFAULT_MODEL, null, includeUrl)];
 }
 
 function draftScope(target: TaskChainTarget): string {
@@ -242,9 +243,11 @@ export function TaskDraftPopover({
   const isControlled = controlledOpen !== undefined;
   const open = isControlled ? controlledOpen : uncontrolledOpen;
 
+  const appCaptureUrlDefault = useCaptureUrlDefault();
+  const captureUrlDefault = captures.includes("url") && appCaptureUrlDefault;
   const [cards, setCards, clearCards] = useDraft<CardDraft[]>(
     "task-draft:cards",
-    freshCards,
+    () => freshCards(captureUrlDefault),
     { scope: draftScope(target) },
   );
   const [autoFocusId, setAutoFocusId] = useState<string | null>(null);

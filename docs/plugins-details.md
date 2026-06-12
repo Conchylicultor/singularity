@@ -71,7 +71,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Types: `ActiveApp`, `RailFramingContribution`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`
   - Cross-plugin:
     - Slot contributors: `app-rail-framing`, `shell`
-    - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
+    - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `floating-bar`, `tasks/task-draft-form`, `theme`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/variant-region`
   - Core:
     - Exports: Types: `RailFramingProps`
   - Plugins:
@@ -3319,7 +3319,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `active-data/task-link`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-preprompt`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
-        - Uses: `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
+        - Uses: `apps.useActiveApp`, `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `notifications.toast`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
         - Exports: Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskDraftPopoverProps`, `TaskDraftRelate`; Values: `setActiveRelateContext`, `TaskDraftPopover`, `useActiveRelateContext`
       - Cross-plugin:
         - Imported by: `conversations/conversation-view`, `conversations/conversation-view/new-child-task`, `improve`, `tasks/task-dependencies`

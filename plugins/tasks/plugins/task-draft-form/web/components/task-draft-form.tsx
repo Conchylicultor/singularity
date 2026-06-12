@@ -20,6 +20,7 @@ import { ChainConnector } from "./chain-connector";
 import type { ChildEntry } from "./insert-before-children";
 import type { ChainModel } from "./model-chip";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
+import { useCaptureUrlDefault } from "../use-capture-url-default";
 
 export interface CardDraft {
   localId: string;
@@ -72,13 +73,17 @@ function useIsAgentWorktree(): boolean {
   }, []);
 }
 
-export function makeCard(model: ChainModel, prepromptId: string | null = null): CardDraft {
+export function makeCard(
+  model: ChainModel,
+  prepromptId: string | null = null,
+  includeUrl = false,
+): CardDraft {
   return {
     localId: crypto.randomUUID(),
     text: "",
     model,
     prepromptId,
-    includeUrl: false,
+    includeUrl,
     includeScreenshot: false,
     linkedToPrev: true,
   };
@@ -121,8 +126,10 @@ export function TaskDraftForm({
   const isMulti = cards.length > 1;
   const hasEmpty = cards.some((c) => !c.text.trim());
   const disabled = hasEmpty || submitting;
+  const appCaptureUrlDefault = useCaptureUrlDefault();
   const supportsUrl = captures.includes("url");
   const supportsScreenshot = captures.includes("screenshot");
+  const captureUrlDefault = supportsUrl && appCaptureUrlDefault;
 
   const updateCard = (idx: number, patch: Partial<CardDraft>) => {
     const next = cards.slice();
@@ -134,7 +141,11 @@ export function TaskDraftForm({
     if (submitting) return;
     const inheritFrom = cards[idx] ?? cards[idx - 1];
     const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
-    const card = makeCard(model, inheritFrom?.prepromptId ?? null);
+    const card = makeCard(
+      model,
+      inheritFrom?.prepromptId ?? null,
+      inheritFrom?.includeUrl ?? captureUrlDefault,
+    );
     const next = [...cards.slice(0, idx), card, ...cards.slice(idx)];
     onCardsChange(next);
   };
@@ -143,7 +154,14 @@ export function TaskDraftForm({
     if (submitting) return;
     const inheritFrom = cards[cards.length - 1];
     const model = inheritFrom?.model ?? NEW_CARD_DEFAULT_MODEL;
-    onCardsChange([...cards, makeCard(model, inheritFrom?.prepromptId ?? null)]);
+    onCardsChange([
+      ...cards,
+      makeCard(
+        model,
+        inheritFrom?.prepromptId ?? null,
+        inheritFrom?.includeUrl ?? captureUrlDefault,
+      ),
+    ]);
   };
 
   const toggleLink = (idx: number) => {
