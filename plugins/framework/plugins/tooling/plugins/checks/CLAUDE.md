@@ -37,6 +37,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`no-relative-server-imports`**
   - **`no-use-resource-cast`**
   - **`plugin-boundaries`**
+  - **`plugin-refs-resolve`**
   - **`plugins-doc-in-sync`**
   - **`plugins-have-claudemd`**
   - **`plugins-registry-in-sync`**

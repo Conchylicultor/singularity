@@ -2069,6 +2069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`no-relative-server-imports`**
             - **`no-use-resource-cast`**
             - **`plugin-boundaries`**
+            - **`plugin-refs-resolve`**
             - **`plugins-doc-in-sync`**
             - **`plugins-have-claudemd`**
             - **`plugins-registry-in-sync`**
