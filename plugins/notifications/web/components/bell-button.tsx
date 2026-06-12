@@ -62,6 +62,9 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
     >
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5 min-w-0">
+          <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
+            {n.title}
+          </Text>
           {n.muted && (
             <Badge
               size="sm"
@@ -72,9 +75,6 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
               muted
             </Badge>
           )}
-          <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
-            {n.title}
-          </Text>
         </div>
         {n.description && n.description !== n.title && (
           <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
