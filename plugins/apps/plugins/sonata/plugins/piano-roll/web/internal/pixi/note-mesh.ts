@@ -16,11 +16,13 @@
  * convention as `geometry.ts`'s `beatToY` (y = -seconds × pxPerSec), so the
  * canvas and the DOM overlays share one formula and land pixel-exact.
  *
- * Rounded corners, the inter-note gap, and the darker rim are all computed in
- * SCREEN PIXELS inside the fragment shader (an SDF rounded-box) from the
- * `uScale`/`uDpr` uniforms — resolution- and DPR-independent with zero
- * per-note CPU work. This replaces the DOM version's `rounded-sm border
- * shadow-sm` + the `w-1/h-1` inset.
+ * Rounded corners and the inter-note gap are computed in SCREEN PIXELS inside
+ * the fragment shader (an SDF rounded-box) from the `uScale`/`uDpr` uniforms —
+ * resolution- and DPR-independent with zero per-note CPU work. The fill is FLAT
+ * (Synthesia-style): the white-key / black-key shade is baked into the vertex
+ * color upstream (`NoteVisual.fillExpr`), so the shader just fills it. This
+ * replaces the DOM version's `rounded-sm border shadow-sm` + the `w-1/h-1`
+ * inset.
  *
  * The shader is deliberately MINIMAL and authored twice (GLSL for WebGL,
  * WGSL for WebGPU — Pixi v8's dual-backend requirement); keeping it to one
@@ -36,10 +38,6 @@ import {
 } from "pixi.js";
 import { PX_PER_SECOND, type NoteVisual } from "../../components/geometry";
 
-/** Synthesia convention: notes on black keys render a shade darker. Matches
- *  the DOM version's `filter: brightness(0.72)`. */
-const BLACK_KEY_DARKEN = 0.72;
-
 // --- shaders -------------------------------------------------------------------
 //
 // Vertex: standard Pixi v8 mesh transform (projection × world × local) with the
@@ -51,8 +49,8 @@ const BLACK_KEY_DARKEN = 0.72;
 //
 // Fragment: maps the corner UV to a position in CSS pixels (sizePx = aSize ×
 // uScale), shrinks the box by 0.5px per side (the DOM drew notes at w-1/h-1 — a
-// 1px gap between adjacent notes), rounds corners at min(2px, half the min
-// dimension), darkens a ~1.2px rim (the DOM border + shadow edge), and
+// 1px gap between adjacent notes), rounds corners at min(4px, half the min
+// dimension), fills FLAT with the (already-shaded) vertex color, and
 // anti-aliases over one PHYSICAL pixel (CSS px × 1/uDpr). Output is
 // premultiplied alpha (Pixi's blend convention).
 
@@ -98,7 +96,8 @@ void main() {
   // 0.5px inset per side = 1px gap between adjacent notes (DOM's w-1/h-1).
   // Clamped so sub-pixel notes keep a visible ~1px core instead of vanishing.
   vec2 halfPx = max(0.5 * sizePx - 0.5, vec2(0.5));
-  float radius = min(2.0, min(halfPx.x, halfPx.y));
+  // Rounded pill corners (Synthesia-style).
+  float radius = min(4.0, min(halfPx.x, halfPx.y));
   vec2 p = (vLocal - 0.5) * sizePx;
   // SDF rounded box, in CSS px (negative inside).
   vec2 q = abs(p) - (halfPx - vec2(radius));
@@ -106,11 +105,10 @@ void main() {
   // One physical pixel of AA: adjacent fragments differ by 1/uDpr CSS px.
   float aa = 0.6 / uDpr;
   float coverage = 1.0 - smoothstep(-aa, aa, d);
-  // ~1.2px darker rim hugging the edge (replaces the DOM border/shadow edge).
-  float rim = smoothstep(-1.2 - aa, -1.2 + aa, d);
-  vec3 rgb = mix(vColor.rgb, vColor.rgb * 0.8, rim);
+  // Flat fill: solid Synthesia note color (the white-key / black-key shade is
+  // baked into vColor upstream) — no gradient, bevel, or rim.
   float alpha = vColor.a * coverage;
-  finalColor = vec4(rgb * alpha, alpha);
+  finalColor = vec4(vColor.rgb * alpha, alpha);
 }
 `;
 
@@ -168,7 +166,8 @@ fn fsMain(v: VsOut) -> @location(0) vec4<f32> {
   let sizePx = v.vSize * noteUniforms.uScale;
   // 0.5px inset per side = 1px gap between adjacent notes (DOM's w-1/h-1).
   let halfPx = max(0.5 * sizePx - vec2<f32>(0.5), vec2<f32>(0.5));
-  let radius = min(2.0, min(halfPx.x, halfPx.y));
+  // Rounded pill corners (Synthesia-style).
+  let radius = min(4.0, min(halfPx.x, halfPx.y));
   let p = (v.vLocal - vec2<f32>(0.5)) * sizePx;
   // SDF rounded box, in CSS px (negative inside).
   let q = abs(p) - (halfPx - vec2<f32>(radius));
@@ -176,11 +175,10 @@ fn fsMain(v: VsOut) -> @location(0) vec4<f32> {
   // One physical pixel of AA: adjacent fragments differ by 1/uDpr CSS px.
   let aa = 0.6 / noteUniforms.uDpr;
   let coverage = 1.0 - smoothstep(-aa, aa, d);
-  // ~1.2px darker rim hugging the edge (replaces the DOM border/shadow edge).
-  let rim = smoothstep(-1.2 - aa, -1.2 + aa, d);
-  let rgb = mix(v.vColor.rgb, v.vColor.rgb * 0.8, rim);
+  // Flat fill: solid Synthesia note color (the white-key / black-key shade is
+  // baked into vColor upstream) — no gradient, bevel, or rim.
   let alpha = v.vColor.a * coverage;
-  return vec4<f32>(rgb * alpha, alpha);
+  return vec4<f32>(v.vColor.rgb * alpha, alpha);
 }
 `;
 
@@ -202,20 +200,20 @@ export interface NoteMeshHandle {
   destroy(): void;
 }
 
-/** Pack one note's color bytes: resolved track color × optional black-key
- *  darken, alpha = velocity-driven visual alpha. Un-premultiplied in the
- *  buffer; the fragment shader premultiplies at output. */
+/** Pack one note's color bytes: the resolved fill color (`fillExpr` already
+ *  carries the Synthesia white-key / black-key shade), alpha = velocity-driven
+ *  visual alpha. Un-premultiplied in the buffer; the fragment shader
+ *  premultiplies at output. */
 function writeColor(
   out: Uint8Array,
   byteOffset: number,
   visual: NoteVisual,
   resolveColor: (expr: string) => number,
 ): void {
-  const rgb = resolveColor(visual.colorExpr);
-  const darken = visual.isBlack ? BLACK_KEY_DARKEN : 1.0;
-  const r = Math.round(((rgb >> 16) & 0xff) * darken);
-  const g = Math.round(((rgb >> 8) & 0xff) * darken);
-  const b = Math.round((rgb & 0xff) * darken);
+  const rgb = resolveColor(visual.fillExpr);
+  const r = (rgb >> 16) & 0xff;
+  const g = (rgb >> 8) & 0xff;
+  const b = rgb & 0xff;
   const a = Math.round(Math.max(0, Math.min(1, visual.alpha)) * 255);
   for (let corner = 0; corner < 4; corner++) {
     const o = byteOffset + corner * 4;

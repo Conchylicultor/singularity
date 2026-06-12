@@ -15,10 +15,11 @@
  *    stage child): vertical 1px lines at each C key's left-edge fraction ×
  *    laneWidth, full lane height. Redrawn on resize only (a handful of rects).
  *
- * Theme reactivity: both layers draw WHITE geometry and carry the resolved
- * `var(--border)` token as a TINT — `refreshColors` is then a tint write, no
- * retessellation. Alphas match the DOM classes: `border-border/60` for bars,
- * `border-border/40` for octaves.
+ * Color: both layers draw WHITE geometry and carry a FIXED faint-light tint —
+ * the lane is a Synthesia-dark stage in every theme (see `ROLL_BG`), so the grid
+ * is a theme-independent low-alpha white, not the `var(--border)` token (which
+ * would vanish on the dark lane under a dark theme). `refreshColors` is still a
+ * tint write (no retessellation).
  */
 import { Graphics } from "pixi.js";
 import { PX_PER_SECOND } from "../../components/geometry";
@@ -29,10 +30,10 @@ export interface BarMarker {
   startSec: number;
 }
 
-/** CSS expression for the grid line color — the DOM version's `border-border`. */
-const BORDER_COLOR_EXPR = "var(--border)";
-const BAR_LINE_ALPHA = 0.6;
-const OCTAVE_LINE_ALPHA = 0.4;
+/** Fixed faint-white grid color on the Synthesia-dark lane (theme-independent). */
+const BORDER_COLOR_EXPR = "#ffffff";
+const BAR_LINE_ALPHA = 0.1;
+const OCTAVE_LINE_ALPHA = 0.14;
 
 export interface GridHandle {
   /** Bar lines — mount under the CONTENT-SCALED container. */

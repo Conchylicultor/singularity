@@ -125,9 +125,16 @@ export interface NoteVisual {
    * branch at the consumer.
    */
   colorExpr: string;
-  /** Velocity-driven fill opacity: 0.4 + velocity/127 × 0.6 ∈ [0.4, 1]. */
+  /**
+   * The note BODY's CSS color expression — the Synthesia white-key shade for
+   * naturals, its darker black-key partner for accidentals. Kept apart from
+   * `colorExpr` (the undarkened base) so the renderer fills with the right
+   * shade while FX still read the base.
+   */
+  fillExpr: string;
+  /** Fill opacity. 1 = fully opaque (Synthesia draws solid notes). */
   alpha: number;
-  /** Notes on black keys render a shade darker (Synthesia convention). */
+  /** Notes on black keys (sharps/flats); drives the black-key shade + FX. */
   isBlack: boolean;
   /**
    * Note-name label parts, kept apart so the accidental glyph can be rendered
@@ -154,12 +161,19 @@ export function buildNoteVisuals(input: {
   hiddenIds: ReadonlySet<string>;
   /** trackId → CSS color expression (track-mixer rollup). */
   colorMap: ReadonlyMap<string, string>;
+  /**
+   * Base color → its Synthesia black-key (sharp/flat) shade. Injected (not
+   * imported) so this module stays free of the track-mixer barrel and its
+   * React graph — keeping `buildNoteVisuals` pure + unit-testable.
+   */
+  blackKeyColor: (base: string) => string;
   /** Key-signature-aware speller for notes left unspelled by the source. */
   speller: KeySpeller;
   /** Playback tempo multiplier (1 = authored) — cancels the score's fold. */
   tempoScale: number;
 }): NoteVisual[] {
-  const { score, hiddenIds, colorMap, speller, tempoScale } = input;
+  const { score, hiddenIds, colorMap, blackKeyColor, speller, tempoScale } =
+    input;
   const tempo = buildTempoIndex(score);
   const keys = fractionalKeyLayout(KEYBOARD_LOW, KEYBOARD_HIGH);
   const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
@@ -174,6 +188,8 @@ export function buildNoteVisuals(input: {
       const w = k?.width ?? fallbackWidth;
       const center = k?.center ?? 0;
       const s = n.spelling ?? speller.spell(n.pitch);
+      const base = colorMap.get(n.track) ?? "var(--primary)";
+      const black = isBlackPitch(n.pitch);
       return {
         noteId: n.id,
         trackId: n.track,
@@ -181,9 +197,10 @@ export function buildNoteVisuals(input: {
         wFrac: w,
         y0Sec: authoredSecondsOf(tempo, tempoScale, n.start),
         y1Sec: authoredSecondsOf(tempo, tempoScale, n.start + n.duration),
-        colorExpr: colorMap.get(n.track) ?? "var(--primary)",
-        alpha: 0.4 + (n.velocity / 127) * 0.6,
-        isBlack: isBlackPitch(n.pitch),
+        colorExpr: base,
+        fillExpr: black ? blackKeyColor(base) : base,
+        alpha: 1,
+        isBlack: black,
         label: { step: s.step, accidental: accidentalGlyph(s.alter) },
       };
     });

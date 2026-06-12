@@ -11,6 +11,7 @@ export {
   useMutedTrackIds,
   type TrackMixerEntry,
 } from "./hooks";
+export { blackKeyColor } from "./palette";
 
 export default {
   description:

@@ -59,6 +59,7 @@ const build = (score: Score, tempoScale = 1, over?: Partial<Parameters<typeof bu
     score,
     hiddenIds: new Set<string>(),
     colorMap: new Map<string, string>(),
+    blackKeyColor: (base) => base,
     speller,
     tempoScale,
     ...over,

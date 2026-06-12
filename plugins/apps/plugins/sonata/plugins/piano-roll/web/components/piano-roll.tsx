@@ -26,6 +26,7 @@ import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives
 import { keyLayout as fractionalKeyLayout } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
+  blackKeyColor,
   useTrackColorMap,
   useHiddenTrackIds,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
@@ -61,6 +62,13 @@ export interface PianoRollProps {
 
 /** Height of the pitch-axis gutter (the piano keyboard) at the bottom. */
 const KEYBOARD_HEIGHT = 112;
+
+/**
+ * Fixed Synthesia-dark lane background. Deliberately theme-independent (not a
+ * `bg-background` token): the falling-notes roll is a dark "stage" in every
+ * theme, so the opaque note colors read exactly as Synthesia's, light or dark.
+ */
+const ROLL_BG = "#262626";
 
 /** Observe an element's pixel size via ResizeObserver (no polling). */
 function useElementSize(): [
@@ -196,7 +204,15 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // CURSOR-INVARIANT: built once per (score, track view, tempoScale); resize
   // and scroll never touch it (the scene maps it to pixels with one transform).
   const visuals = useMemo(
-    () => buildNoteVisuals({ score, hiddenIds, colorMap, speller, tempoScale }),
+    () =>
+      buildNoteVisuals({
+        score,
+        hiddenIds,
+        colorMap,
+        blackKeyColor,
+        speller,
+        tempoScale,
+      }),
     [score, hiddenIds, colorMap, speller, tempoScale],
   );
 
@@ -325,6 +341,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
       <div
         ref={laneRef}
         {...(hasNotes ? handlers : null)}
+        style={{ backgroundColor: ROLL_BG }}
         className={cn(
           "relative min-h-0 flex-1 touch-none select-none overflow-hidden",
           hasNotes
