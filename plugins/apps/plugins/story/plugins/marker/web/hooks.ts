@@ -1,4 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import type { ResourceResult } from "@plugins/primitives/plugins/live-state/web";
 import { storiesResource, type StoryMark } from "../shared/schemas";
 
 export function useIsStory(pageId: string | null | undefined): boolean {
@@ -8,17 +9,13 @@ export function useIsStory(pageId: string | null | undefined): boolean {
 }
 
 /**
- * All story marks as an array.
- *
- * NOTE: returns `[]` while the resource is pending. Consumers that render
- * lists (e.g. story-gallery) must gate on the resource themselves via
- * `useResource(storiesResource)` or `useCombinedResources` to distinguish
- * "still loading" from "genuinely no stories". story-editor.tsx is a known
- * out-of-list consumer that also uses this hook but tolerates the brief
- * null-defaultRendererId flash on first load.
+ * All story marks as a gateable result. Returns the raw pending result while
+ * loading (never collapses to `[]`) so consumers can distinguish "still loading"
+ * from "genuinely no stories" — gate with matchResource/ResourceView, or
+ * combine with other resources via useCombinedResources.
  */
-export function useStories(): StoryMark[] {
+export function useStories(): ResourceResult<StoryMark[]> {
   const result = useResource(storiesResource);
-  if (result.pending) return [];
-  return Object.values(result.data);
+  if (result.pending) return result;
+  return { ...result, data: Object.values(result.data) };
 }

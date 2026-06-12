@@ -14,8 +14,9 @@ export function useConfigRowState(registration: ConfigRegistration): {
 } {
   const values = useConfig(registration.descriptor);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
-  const conflicts = useConflicts();
-  const hasConflict = registration.storePath in conflicts;
+  const conflictsRes = useConflicts();
+  const hasConflict =
+    !conflictsRes.pending && registration.storePath in conflictsRes.data;
 
   const modifiedCount = useMemo(() => {
     let count = 0;

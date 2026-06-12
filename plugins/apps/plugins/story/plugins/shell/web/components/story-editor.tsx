@@ -21,8 +21,12 @@ export function StoryEditor() {
 
   // The persisted default renderer for this story (null until the user picks
   // one). Read back from the marker so reopening the story restores the lens.
-  const defaultRendererId =
-    useStories().find((m) => m.pageId === pageId)?.defaultRendererId ?? null;
+  // Stays null while pending — story-editor tolerates the brief flash on first
+  // load (a renderer view never falls back to this; only the author preview does).
+  const storiesRes = useStories();
+  const defaultRendererId = storiesRes.pending
+    ? null
+    : (storiesRes.data.find((m) => m.pageId === pageId)?.defaultRendererId ?? null);
 
   const [view, setView] = useState<string>("author");
   const [split, setSplit] = useState(false);

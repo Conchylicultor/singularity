@@ -4,7 +4,9 @@ import { MdWarning, MdCode, MdTune, MdUndo, MdDifference } from "react-icons/md"
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
+import type { ConfigV2Conflicts, ConfigV2Tiers } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { acknowledgeConflict, deleteOverride, getConfigRawFile } from "../../core";
@@ -45,19 +47,44 @@ export function ConfigDetail() {
   return <ConfigDetailInner registration={registration} />;
 }
 
+// All-or-nothing gate over conflicts + tiers (neither is boot-hydrated, so both
+// render pending on first paint). Gating the whole body avoids a flash of wrong
+// tier badges or a transiently-absent conflict banner. The config values
+// themselves come from useConfig (hydrated at boot), but the body reads them
+// alongside settled conflicts/tiers so the snapshot is always consistent.
 function ConfigDetailInner({
   registration,
 }: {
   registration: ReturnType<typeof useConfigRegistrations>[number];
+}) {
+  const conflictsRes = useConflicts();
+  const tiersRes = useTiers(registration.storePath);
+  const gated = useCombinedResources({ conflicts: conflictsRes, tiers: tiersRes });
+  if (gated.pending) return <Loading />;
+  return (
+    <ConfigDetailBody
+      registration={registration}
+      conflicts={gated.data.conflicts}
+      tiers={gated.data.tiers}
+    />
+  );
+}
+
+function ConfigDetailBody({
+  registration,
+  conflicts,
+  tiers,
+}: {
+  registration: ReturnType<typeof useConfigRegistrations>[number];
+  conflicts: ConfigV2Conflicts;
+  tiers: ConfigV2Tiers;
 }) {
   const [showRaw, setShowRaw] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
   const values = useConfig(registration.descriptor);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
-  const conflicts = useConflicts();
   const conflictEntry = conflicts[registration.storePath];
-  const tiers = useTiers(registration.storePath);
 
   useEffect(() => {
     setConfirmReset(false);

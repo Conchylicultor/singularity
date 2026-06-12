@@ -1,6 +1,6 @@
-import { useMemo } from "react";
 import { MdOpenInNew } from "react-icons/md";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
+import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   Collapsible,
@@ -47,21 +47,18 @@ export function TaskEvents({ taskId }: { taskId: string }) {
     : null;
   const activeConvId = activeConvEntry?.params.convId;
 
-  const attempts = useMemo(() => {
-    if (attemptsQ.pending) return [];
-    return attemptsQ.data
-      .filter((a) => a.taskId === taskId)
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [attemptsQ, taskId]);
+  // Gate both resources together so the lists never paint from a half-loaded
+  // snapshot (e.g. a confident "No pushes yet." while pushes are in-flight).
+  const all = useCombinedResources({ attempts: attemptsQ, pushes: pushesQ });
+  if (all.pending) return <Loading variant="rows" />;
 
-  const attemptIds = useMemo(() => new Set(attempts.map((a) => a.id)), [attempts]);
-
-  const pushes = useMemo(() => {
-    if (pushesQ.pending) return [];
-    return pushesQ.data
-      .filter((p) => attemptIds.has(p.attemptId))
-      .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
-  }, [pushesQ, attemptIds]);
+  const attempts = all.data.attempts
+    .filter((a) => a.taskId === taskId)
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
+  const attemptIds = new Set(attempts.map((a) => a.id));
+  const pushes = all.data.pushes
+    .filter((p) => attemptIds.has(p.attemptId))
+    .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
     <div className="flex flex-col gap-6">

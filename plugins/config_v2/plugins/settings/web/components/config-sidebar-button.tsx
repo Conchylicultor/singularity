@@ -6,7 +6,7 @@ import { useConflicts } from "../internal/use-conflicts";
 
 export function ConfigSidebarButton() {
   const conflicts = useConflicts();
-  const hasConflicts = Object.keys(conflicts).length > 0;
+  const hasConflicts = !conflicts.pending && Object.keys(conflicts.data).length > 0;
 
   return (
     <SidebarMenu>

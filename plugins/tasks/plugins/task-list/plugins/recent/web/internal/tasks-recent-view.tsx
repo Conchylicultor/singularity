@@ -1,11 +1,11 @@
-import { useMemo, useState, useCallback } from "react";
+import { useState } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { tasksResource } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
-import type { TaskListItem, TaskStatus } from "@plugins/tasks-core/core";
+import type { TaskStatus } from "@plugins/tasks-core/core";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
@@ -17,19 +17,11 @@ export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
   const result = useResource(tasksResource);
   const [hideTerminal, setHideTerminal] = useState(true);
 
-  const filterFn = useCallback(
-    (t: TaskListItem) => !hideTerminal || !isTerminal(t.status),
-    [hideTerminal],
-  );
-
-  const sorted = useMemo(() => {
-    if (result.pending) return [];
-    return [...result.data]
-      .filter(filterFn)
-      .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-  }, [result, filterFn]);
-
   if (result.pending) return <Loading variant="rows" />;
+
+  const sorted = [...result.data]
+    .filter((t) => !hideTerminal || !isTerminal(t.status))
+    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
 
   return (
     <div className="flex flex-col">
