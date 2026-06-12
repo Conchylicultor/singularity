@@ -17,6 +17,11 @@ import noAdhocSpacing from "./no-adhoc-spacing";
  * escapes per-site, travelling with the code:
  *
  *   // eslint-disable-next-line spacing/no-adhoc-spacing -- <reason>
+ *
+ * The leading test-file glob is NOT part of the burndown: this rule governs
+ * rendered UI markup, but a raw `p-2`/`px-2` inside a test is literal data
+ * exercising cn()'s merge, not markup. It is a permanent exemption — keep it
+ * when the burndown finally drains to empty.
  */
 export default {
   name: "spacing",
@@ -25,6 +30,7 @@ export default {
   },
   ignores: {
     "no-adhoc-spacing": [
+      "**/*.test.{ts,tsx}",
       "plugins/active-data/plugins/plugin-link/web/components/plugin-link-chip.tsx",
       "plugins/active-data/plugins/plugin-link/web/panes.tsx",
       "plugins/active-data/plugins/task/web/components/task-card.tsx",
