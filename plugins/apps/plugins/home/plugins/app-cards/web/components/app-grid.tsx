@@ -6,7 +6,7 @@ import { MdAdd } from "react-icons/md";
 export function AppGrid() {
   const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
-  const { openOrFocus } = useTabs();
+  const { focusedTabId, replaceTabApp } = useTabs();
   const launchable = apps.filter((a) => a.id !== currentId);
 
   return (
@@ -19,7 +19,11 @@ export function AppGrid() {
       views={["gallery"]}
       defaultView="gallery"
       storageKey="home:apps"
-      onRowActivate={(a) => (a.onClick ? a.onClick() : openOrFocus(a.id))}
+      // The grid only renders inside the visible (focused) Home tab, so the
+      // launcher navigates that tab into the picked app in place.
+      onRowActivate={(a) =>
+        a.onClick ? a.onClick() : replaceTabApp(focusedTabId, a.id)
+      }
       actions={
         <IconButton
           icon={MdAdd}

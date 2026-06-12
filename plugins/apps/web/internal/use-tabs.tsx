@@ -37,8 +37,8 @@ export interface TabsApi {
   setTabTitle(tabId: string, title: string | undefined): void;
   /** Always opens a NEW tab for `appId` (multi-instance). Returns its tabId. */
   openTab(appId: string): string;
-  /** Focus the first existing tab for `appId`, else open a new one. */
-  openOrFocus(appId: string): void;
+  /** Swap `tabId`'s app in place (keeps the tabId) and focus it. */
+  replaceTabApp(tabId: string, appId: string): void;
   focusTab(tabId: string): void;
   closeTab(tabId: string): void;
 }
@@ -215,16 +215,26 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [activate, persist],
   );
 
-  const openOrFocus = useCallback(
-    (appId: string) => {
-      const existing = tabsRef.current.find((t) => t.appId === appId);
-      if (existing) {
-        focusTab(existing.tabId);
-        return;
-      }
-      openTab(appId);
+  // Swap a tab's app without changing its tabId or position: the launcher
+  // (Home) tab navigates into the picked app in place instead of spawning a new
+  // tab beside itself. A fresh store is bound to the new app's base path.
+  const replaceTabApp = useCallback(
+    (tabId: string, appId: string) => {
+      const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
+      if (idx < 0) return;
+      tabsRef.current[idx]!.store.live = false;
+      const store = makeBackgroundStore(appId, appsRef.current);
+      const tab: Tab = { tabId, appId, store };
+      const nextTabs = [...tabsRef.current];
+      nextTabs[idx] = tab;
+      tabsRef.current = nextTabs;
+      setTabs(nextTabs);
+      activate(tab);
+      focusedRef.current = tabId;
+      setFocusedTabId(tabId);
+      persist();
     },
-    [focusTab, openTab],
+    [activate, persist],
   );
 
   const closeTab = useCallback(
@@ -267,8 +277,8 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   );
 
   const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, openOrFocus, focusTab, closeTab }),
-    [tabs, focusedTabId, titles, setTabTitle, openTab, openOrFocus, focusTab, closeTab],
+    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, focusTab, closeTab }),
+    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, focusTab, closeTab],
   );
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;
