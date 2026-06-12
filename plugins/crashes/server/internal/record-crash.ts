@@ -144,6 +144,13 @@ export async function recordCrash(
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
     variant: "error",
     muted: row.noise,
+    // One bell row per crash fingerprint, mirroring the deduped crash row (and
+    // its single growing-count task). `row.id` is stable across occurrences —
+    // the upsert keyed on (fingerprint, worktree) returns the same row — so each
+    // recurrence refreshes this one notification in place, keeping its `muted`
+    // in sync with the row's latest last-writer-wins noise instead of inserting
+    // a fresh, frozen-classification row every time.
+    dedupeKey: row.id,
     linkTo: outcome.taskId ? `/tasks/t/${outcome.taskId}` : null,
     metadata: {
       crashId: row.id,

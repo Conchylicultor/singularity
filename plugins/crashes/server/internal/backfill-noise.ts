@@ -31,8 +31,9 @@ export async function backfillNoiseClassification(): Promise<void> {
     })
     .from(_crashes);
 
-  const flippedToNoise: string[] = [];
-  const flippedToSignal: string[] = [];
+  const noiseIds: string[] = [];
+  const signalIds: string[] = [];
+  let rowFlips = 0;
   for (const row of rows) {
     // Mirror record-crash's staleOrigin derivation so a row reclassifies
     // identically to how a fresh occurrence would be classified right now.
@@ -47,16 +48,23 @@ export async function backfillNoiseClassification(): Promise<void> {
       stack: row.stack,
       staleOrigin,
     });
-    if (noise === row.noise) continue;
-    await db.update(_crashes).set({ noise }).where(eq(_crashes.id, row.id));
-    (noise ? flippedToNoise : flippedToSignal).push(row.id);
+    if (noise !== row.noise) {
+      await db.update(_crashes).set({ noise }).where(eq(_crashes.id, row.id));
+      rowFlips++;
+    }
+    (noise ? noiseIds : signalIds).push(row.id);
   }
 
-  if (flippedToNoise.length === 0 && flippedToSignal.length === 0) return;
-
-  // Notifications link back to their crash via metadata.crashId (set in
-  // record-crash). At most two batched updates → at most two resource pushes.
-  await setMutedByMetadata("crashId", flippedToNoise, true);
-  await setMutedByMetadata("crashId", flippedToSignal, false);
-  crashesResource.notify();
+  // Reconcile EVERY linked notification's `muted` to its crash row's current
+  // noise — not just rows whose flag flipped this boot. A notification can
+  // diverge from an unchanged row: pre-dedup, `muted` was snapshotted per
+  // occurrence at record time, so a row that was already `noise: true` can still
+  // carry earlier occurrences' un-muted notifications (e.g. occurrences recorded
+  // while the firing tab's build matched the server's). Notifications link back
+  // via metadata.crashId; setMutedByMetadata writes only the rows that actually
+  // disagree and pushes only when something changed, so a converged steady state
+  // does two indexed scans and zero writes.
+  const muted = await setMutedByMetadata("crashId", noiseIds, true);
+  const unmuted = await setMutedByMetadata("crashId", signalIds, false);
+  if (rowFlips > 0 || muted > 0 || unmuted > 0) crashesResource.notify();
 }

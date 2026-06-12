@@ -1,4 +1,3 @@
-import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _notifications } from "./tables";
 import { notificationsResource } from "./resources";
@@ -18,8 +17,14 @@ export interface RecordNotificationInput {
   muted?: boolean;
   /**
    * Deterministic key that collapses duplicate writes to a single row via a
-   * UNIQUE index. Null/undefined means "no dedup" — Postgres treats NULLs as
-   * non-conflicting, so a normal insert always happens.
+   * UNIQUE index: a second write with the same key updates the existing row's
+   * display fields (title/description/variant/linkTo/metadata/muted) in place
+   * rather than inserting a new row — so a deduped notification always reflects
+   * its latest state (e.g. a crash whose noise classification flipped between
+   * occurrences). The row's identity, creation time, and read/dismissed state
+   * are preserved, so dedup collapses recurrences into one row without
+   * resurfacing or re-alerting. Null/undefined means "no dedup" — Postgres
+   * treats NULLs as non-conflicting, so a normal insert always happens.
    */
   dedupeKey?: string | null;
   /**
@@ -50,27 +55,30 @@ export async function recordNotification(
       muted: input.muted ?? false,
       dedupKey,
     })
-    // null never conflicts, so a normal insert happens when no dedupeKey is set.
-    .onConflictDoNothing({ target: _notifications.dedupKey })
+    // null never conflicts, so a plain insert happens when no dedupeKey is set;
+    // a colliding dedupeKey refreshes the existing row's display fields in place
+    // (notably re-syncing `muted` to the producer's current classification) so a
+    // deduped notification never drifts from its source. id/createdAt/read/
+    // dismissed are intentionally preserved — recurrences collapse into one row
+    // without resurfacing or re-alerting.
+    .onConflictDoUpdate({
+      target: _notifications.dedupKey,
+      set: {
+        title: input.title,
+        description: input.description,
+        variant: input.variant,
+        linkTo: input.linkTo ?? null,
+        metadata: input.metadata ?? null,
+        muted: input.muted ?? false,
+      },
+    })
     .returning({ id: _notifications.id });
-  // Cheap redundant nudge even on a pure conflict no-op.
   notificationsResource.notify();
+  // onConflictDoUpdate returns the row on both insert and update, so this is
+  // populated whether the write was a fresh insert or a dedup hit.
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (inserted[0]) {
     return inserted[0].id;
   }
-  // Conflict: the row already existed. Look it up by dedupKey and return its id.
-  if (dedupKey !== null) {
-    const [existing] = await db
-      .select({ id: _notifications.id })
-      .from(_notifications)
-      .where(eq(_notifications.dedupKey, dedupKey))
-      .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    if (existing) {
-      return existing.id;
-    }
-  }
-  // No insert and no existing row found — should be unreachable.
   return id;
 }
