@@ -34,12 +34,27 @@ test("path containing `>` does not break the tag regex", () => {
     element: "button",
     selector: "div>div>div",
   });
-  // A single self-closing tag is matched whole despite the inner `>` chars.
+  // A single tag is matched whole despite the inner `>` chars in attributes and
+  // the `<` chars from the nested <hint>/<picked-content> body tags.
   const matches = tag.match(UI_CONTEXT_RE);
   expect(matches).toHaveLength(1);
 });
 
-test("omits path/plugin/slot/selector when absent", () => {
-  const tag = serializeUiContext({ url: "u", element: "div" });
-  expect(tag).toBe(`<ui-context url="u" element="div" />`);
+test("splits the constant hint from the per-pick content in the body", () => {
+  const tag = serializeUiContext({ url: "u", element: "div — My label" });
+  expect(tag).toBe(
+    `<ui-context url="u">` +
+      `<hint>The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to.</hint>` +
+      `<picked-content>div — My label</picked-content>` +
+      `</ui-context>`,
+  );
+});
+
+test("parses legacy flat-body tags (pre <hint>/<picked-content> split)", () => {
+  const legacy =
+    `<ui-context url="u">The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to. Picked element: div — Old label</ui-context>`;
+  const re = new RegExp(UI_CONTEXT_RE.source, UI_CONTEXT_RE.flags);
+  const match = re.exec(legacy);
+  expect(match).not.toBeNull();
+  expect(parseUiContext(match!)).toEqual({ url: "u", element: "div — Old label" });
 });
