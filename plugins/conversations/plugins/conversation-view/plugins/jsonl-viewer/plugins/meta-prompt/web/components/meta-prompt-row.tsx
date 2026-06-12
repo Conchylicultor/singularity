@@ -1,20 +1,29 @@
-import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { MdReplay } from "react-icons/md";
+import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 type MetaPromptEvent = Extract<JsonlEvent, { kind: "meta-prompt" }>;
 
 export function MetaPromptRow({ event }: { event: JsonlEvent }) {
   const e = event as MetaPromptEvent;
+
+  // Sibling of the preprompt "Instructions" card on the canonical CollapsibleCard
+  // chrome. Neutral (no color accent) with only a dashed border, preserving the
+  // "harness, not human" cue while keeping primary as the single Instructions callout.
   return (
-    <div className="rounded-md border border-dashed border-border/70 bg-muted/30 px-3 py-2">
-      <div className="mb-1 flex items-center gap-1.5 text-2xs font-medium tracking-wide text-muted-foreground">
-        <MdReplay className="size-3.5" />
-        <span>Resumed by harness{e.source ? ` · ${e.source}` : ""}</span>
-      </div>
-      <Text as="div" variant="caption" className="whitespace-pre-wrap text-muted-foreground">
+    <CollapsibleCard
+      className="border-dashed"
+      label={
+        <span className="flex items-center gap-1.5">
+          <MdReplay className="size-3.5" />
+          Resumed by harness{e.source ? ` · ${e.source}` : ""}
+        </span>
+      }
+    >
+      <Text as="div" variant="caption" className="whitespace-pre-wrap break-words text-muted-foreground">
         {e.text}
       </Text>
-    </div>
+    </CollapsibleCard>
   );
 }

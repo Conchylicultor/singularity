@@ -1069,7 +1069,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `primitives/card.Card`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/ui-kit.cn`
                 - Exports: Types: `CollapsibleCardProps`; Values: `CardHeaderAction`, `CollapsibleCard`
               - Cross-plugin:
-                - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-thinking`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/preprompt`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/unknown`
+                - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-thinking`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/meta-prompt`, `conversations/conversation-view/jsonl-viewer/preprompt`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/unknown`
             - **`event-counter`** — Displays the total event count in the conversation toolbar.
               - Web:
                 - Contributes: `Conversation.ActionBar` → `EventCounter`
@@ -1093,7 +1093,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "meta-prompt" → `MetaPromptRow`
-                - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `primitives/text.Text`
+                - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/text.Text`
             - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "preprompt" → `PrepromptRow`
