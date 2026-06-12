@@ -8,7 +8,7 @@ import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/c
  */
 export function UnsupportedContent({ node }: { node: StoryNode }) {
   return (
-    <Text as="div" variant="body" tone="muted" className="px-3 py-2">
+    <Text as="div" variant="body" tone="muted" className="px-md py-sm">
       ⛔ {node.type} — not shown in this view
     </Text>
   );

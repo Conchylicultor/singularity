@@ -114,8 +114,8 @@ export function SortableReorderItem({
               className={cn(
                 "pointer-events-none select-none italic text-muted-foreground/50",
                 isHorizontal
-                  ? "px-2 py-0.5 text-3xs max-w-24 truncate"
-                  : "w-full px-3 py-1.5 text-center text-caption",
+                  ? "px-sm py-2xs text-3xs max-w-24 truncate"
+                  : "w-full px-md py-xs text-center text-caption",
               )}
             >
               {label}
@@ -155,7 +155,7 @@ export function SpacerReorderItem({
       {({ isDragging }) => (
         <div
           className={cn(
-            "group relative flex control-min-sm min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-2",
+            "group relative flex control-min-sm min-w-8 flex-1 cursor-grab items-center justify-center rounded-md border border-dashed border-muted-foreground/40 px-sm",
             isDragging && "opacity-40",
           )}
         >
@@ -214,10 +214,10 @@ export function RestoreButton({
             : "Add"}
         </Button>
       }
-      contentClassName="w-56 p-0"
+      contentClassName="w-56 p-none"
     >
       {hasHidden && (
-          <div className="p-1">
+          <div className="p-xs">
             {hiddenItems.map((item) => (
               <Row
                 key={item.key}
@@ -236,7 +236,7 @@ export function RestoreButton({
         )}
 
         {inserts.length > 0 && (
-          <div className="border-t border-border p-1">
+          <div className="border-t border-border p-xs">
             {inserts.map((insert) => (
               <Row
                 key={insert.label}
@@ -254,11 +254,12 @@ export function RestoreButton({
           </div>
         )}
 
-        <div className="border-t border-border px-2.5 py-2">
+        <div className="border-t border-border px-sm py-sm">
           <Text
             as="div"
             variant="label"
-            className="flex items-center gap-1.5 text-muted-foreground mb-1.5"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the Marketplace label from the search input
+            className="flex items-center gap-xs text-muted-foreground mb-1.5"
           >
             <MdStorefront className="size-3.5" />
             Marketplace
@@ -267,6 +268,7 @@ export function RestoreButton({
             <MdSearch className="absolute left-2 top-1/2 -translate-y-1/2 size-3.5 text-muted-foreground pointer-events-none" />
             <Input
               placeholder="Search..."
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- precise left padding clearing the absolutely-positioned search icon
               className="h-7 pl-7 text-caption"
               disabled
             />
@@ -274,13 +276,14 @@ export function RestoreButton({
           <Text
             as="p"
             variant="caption"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state text from the search input above
             className="mt-1.5 text-center text-muted-foreground/60"
           >
             No items
           </Text>
         </div>
 
-        <div className="border-t border-border p-1">
+        <div className="border-t border-border p-xs">
           <Row
             size="sm"
             hover="accent"

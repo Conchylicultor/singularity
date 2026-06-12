@@ -23,7 +23,7 @@ export function ExplorerView() {
   }
   if (error) {
     return (
-      <Text as="div" variant="body" className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+      <Text as="div" variant="body" className="flex h-full flex-col items-center justify-center gap-sm p-2xl text-center">
         <span className="font-medium text-foreground">
           Failed to load plugin tree
         </span>
@@ -36,8 +36,8 @@ export function ExplorerView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="border-b px-4 py-3">
-        <Text as="div" variant="caption" className="flex flex-col gap-1 text-muted-foreground">
+      <div className="border-b px-lg py-md">
+        <Text as="div" variant="caption" className="flex flex-col gap-xs text-muted-foreground">
           <Stat value={totals.plugins} label="plugins" />
           <Stat value={totals.loadBearing} label="load-bearing" />
           <Stat value={totals.umbrellas} label="umbrellas" />

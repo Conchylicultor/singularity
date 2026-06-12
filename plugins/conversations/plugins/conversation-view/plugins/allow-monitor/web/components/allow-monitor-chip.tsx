@@ -18,6 +18,7 @@ export function AllowMonitorChip() {
       side="bottom"
       content={
         <>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- heading offset inside a tooltip fragment with no flex parent to own the gap */}
           <p className="mb-1 font-semibold">Guard bypasses active:</p>
           {allowFiles.map((f) => (
             <Text as="p" variant="caption" key={f} className="font-mono">

@@ -77,7 +77,7 @@ function ServerDetailBody() {
   if (!server) {
     return (
       <PaneChrome pane={serverDetailPane} title="Server">
-        <Text as="div" variant="body" className="text-muted-foreground p-4">Server not found.</Text>
+        <Text as="div" variant="body" className="text-muted-foreground p-lg">Server not found.</Text>
       </PaneChrome>
     );
   }
@@ -93,10 +93,11 @@ function ServerDetailContent({ serverId, server }: { serverId: string; server: S
   return (
     <>
       <ServerDetail server={server} />
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-lg p-lg">
         <Deploy.Section.Render>
           {(s) => (
-            <section key={s.id} className="bg-card rounded-lg border p-4">
+            <section key={s.id} className="bg-card rounded-lg border p-lg">
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- section title offset inside a bg/border/padded card, not a flex-gap sibling */}
               <Text as="h2" variant="label" className="mb-3">{s.title}</Text>
               <s.component serverId={serverId} />
             </section>

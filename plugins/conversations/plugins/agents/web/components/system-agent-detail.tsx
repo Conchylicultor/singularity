@@ -7,7 +7,7 @@ export function SystemAgentDetail({
   descriptor: SystemAgentDescriptor;
 }) {
   return (
-    <div className="flex flex-col gap-3 p-6">
+    <div className="flex flex-col gap-md p-xl">
       <Text as="h1" variant="title">{descriptor.name}</Text>
       <Text as="p" variant="caption" className="text-muted-foreground italic">
         This system agent has no custom UI yet.

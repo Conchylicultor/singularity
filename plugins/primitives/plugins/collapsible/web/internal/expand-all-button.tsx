@@ -28,7 +28,7 @@ export function ExpandAllButton({
         "flex shrink-0 items-center justify-center rounded-md text-muted-foreground hover:text-foreground transition-colors disabled:opacity-50 disabled:cursor-not-allowed",
         variant === "compact"
           ? "size-7 hover:bg-accent"
-          : "gap-1 text-caption",
+          : "gap-xs text-caption",
       )}
     >
       <Icon className="size-4" />

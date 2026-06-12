@@ -88,7 +88,7 @@ export function ReorderEditor({
           // sortable cells, so a horizontal row wraps instead of overflowing.
           // `SortableContext` registers items by id regardless of DOM nesting,
           // so one extra div is invisible to dnd-kit.
-          <div className="flex flex-1 flex-wrap content-start items-start gap-1.5 min-w-0">
+          <div className="flex flex-1 flex-wrap content-start items-start gap-xs min-w-0">
             {itemNodes}
           </div>
         ) : (

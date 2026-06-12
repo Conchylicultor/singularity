@@ -101,11 +101,11 @@ function HealthSectionInner({
         <table className="w-full text-2xs">
           <thead>
             <tr className="text-left text-muted-foreground/60">
-              <th className="pb-1 pr-3 font-medium" />
-              <th className="pb-1 pr-3 font-medium">Axis</th>
-              <th className="pb-1 pr-3 font-medium">Reviewed</th>
-              <th className="pb-1 pr-3 font-medium">Commits</th>
-              <th className="pb-1 font-medium">Findings</th>
+              <th className="pb-xs pr-md font-medium" />
+              <th className="pb-xs pr-md font-medium">Axis</th>
+              <th className="pb-xs pr-md font-medium">Reviewed</th>
+              <th className="pb-xs pr-md font-medium">Commits</th>
+              <th className="pb-xs font-medium">Findings</th>
             </tr>
           </thead>
           <tbody>
@@ -117,24 +117,25 @@ function HealthSectionInner({
               const held = r.tasks.filter((t) => t.status === "held").length;
               return (
                 <tr key={r.id} className="border-t border-border/30">
-                  <td className="py-1.5 pr-2">
+                  <td className="py-xs pr-sm">
                     <StatusDot color={healthColor(r.staleness, r.tasks)} />
                   </td>
-                  <td className="py-1.5 pr-3 font-medium text-foreground">
+                  <td className="py-xs pr-md font-medium text-foreground">
                     {r.axis}
                   </td>
-                  <td className="py-1.5 pr-3 text-muted-foreground">
+                  <td className="py-xs pr-md text-muted-foreground">
                     <RelativeTime date={new Date(r.createdAt)} />
                   </td>
-                  <td className="py-1.5 pr-3 text-muted-foreground">
+                  <td className="py-xs pr-md text-muted-foreground">
                     {r.staleness?.commitsSince ?? "—"}
                     {r.staleness?.apiChanged && (
+                      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 is a tiny inline offset for the trailing "API changed" asterisk after the commit count, not container rhythm
                       <span className="ml-1 text-warning" title="API changed">
                         *
                       </span>
                     )}
                   </td>
-                  <td className="py-1.5 text-muted-foreground">
+                  <td className="py-xs text-muted-foreground">
                     {r.tasks.length === 0
                       ? "—"
                       : [

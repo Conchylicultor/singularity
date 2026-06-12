@@ -74,7 +74,7 @@ export function ToggleChip({
       disabled={isButton ? disabled : undefined}
       aria-pressed={ariaPressed}
       className={cn(
-        "inline-flex items-center gap-1.5 rounded-full font-medium transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+        "inline-flex items-center gap-xs rounded-full font-medium transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
         effectiveSize === "sm" && "control-xs p-chip text-2xs",
         effectiveSize === "md" && "control-sm p-control text-caption",
@@ -116,7 +116,7 @@ export function SegmentedControl<T extends string>({
   className,
 }: SegmentedControlProps<T>) {
   return (
-    <div role="radiogroup" className={cn("flex flex-wrap gap-1.5", className)}>
+    <div role="radiogroup" className={cn("flex flex-wrap gap-xs", className)}>
       {options.map((opt) => (
         <ToggleChip
           key={opt.id}

@@ -31,7 +31,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
 
   return (
     <div className="flex flex-col">
-      <div className="border-b p-2">
+      <div className="border-b p-sm">
         {data ? (
           <FilepathBreadcrumb
             path={data.path}
@@ -43,9 +43,9 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
         )}
       </div>
 
-      <div className="max-h-64 min-h-24 overflow-y-auto p-1">
+      <div className="max-h-64 min-h-24 overflow-y-auto p-xs">
         {isLoading ? (
-          <div className="flex justify-center p-3">
+          <div className="flex justify-center p-md">
             <Spinner className="size-4 text-muted-foreground" />
           </div>
         ) : isError ? (
@@ -68,7 +68,7 @@ export function FolderPicker({ value, onSelect }: FolderPickerProps) {
         )}
       </div>
 
-      <div className="flex justify-end border-t p-2">
+      <div className="flex justify-end border-t p-sm">
         <Button
           size="sm"
           disabled={!data || !data.isDirectory}

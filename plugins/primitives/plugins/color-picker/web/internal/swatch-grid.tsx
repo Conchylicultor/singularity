@@ -22,7 +22,7 @@ export function SwatchGrid({
   className,
 }: SwatchGridProps) {
   return (
-    <div className={cn("flex flex-wrap gap-1.5", className)}>
+    <div className={cn("flex flex-wrap gap-xs", className)}>
       {colors.map((c) => {
         const selected = value != null && colorsMatch(value, c);
         return (

@@ -1,4 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
 
 export interface ChildEntry {
   id: string;
@@ -41,8 +42,8 @@ export function InsertBeforeChildren({
   if (children.length === 1) {
     const child = children[0]!;
     return (
-      <div className="px-2 py-1.5">
-        <Text as="label" variant="caption" className="flex cursor-pointer items-center gap-1.5 text-muted-foreground">
+      <Inset x="sm" y="xs">
+        <Text as="label" variant="caption" className="flex cursor-pointer items-center gap-xs text-muted-foreground">
           <input
             type="checkbox"
             className="h-3 w-3 cursor-pointer"
@@ -57,12 +58,12 @@ export function InsertBeforeChildren({
             </span>
           </span>
         </Text>
-      </div>
+      </Inset>
     );
   }
 
   return (
-    <div className="flex flex-col gap-1 px-2 py-1.5">
+    <div className="flex flex-col gap-xs px-sm py-xs">
       <div className="flex items-center justify-between">
         <Text as="span" variant="caption" className="text-muted-foreground">
           Insert before {noneSelected ? "dependents" : `${selectedIds.size} dependent${selectedIds.size === 1 ? "" : "s"}`}
@@ -76,13 +77,13 @@ export function InsertBeforeChildren({
           {allSelected ? "None" : "Select all"}
         </button>
       </div>
-      <div className="flex flex-col gap-0.5">
+      <Stack gap="2xs">
         {children.map((child) => (
           <Text
             as="label"
             variant="caption"
             key={child.id}
-            className="flex cursor-pointer items-center gap-1.5 text-muted-foreground"
+            className="flex cursor-pointer items-center gap-xs text-muted-foreground"
           >
             <input
               type="checkbox"
@@ -94,7 +95,7 @@ export function InsertBeforeChildren({
             <span title={child.title}>{truncate(child.title, 50)}</span>
           </Text>
         ))}
-      </div>
+      </Stack>
     </div>
   );
 }

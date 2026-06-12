@@ -48,7 +48,7 @@ export function StoryEditor() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      <div className="flex items-center gap-3 border-b border-border py-3 pl-4 pr-floating-bar">
+      <div className="flex items-center gap-md border-b border-border py-md pl-lg pr-floating-bar">
         <Button variant="outline" size="xs" onClick={() => clearRoute()}>
           <MdChevronLeft className="size-4" />
           Stories

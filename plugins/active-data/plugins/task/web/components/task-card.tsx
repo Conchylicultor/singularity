@@ -61,7 +61,10 @@ export function TaskCard({
 
   if (value?.launchedConvId && value.taskId) {
     return (
-      <div className="my-2 flex flex-col gap-1.5">
+      <div
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
+        className="my-2 flex flex-col gap-xs"
+      >
         <Text as="p" variant="body" tone="muted">{initial}</Text>
         <LaunchedAttempts taskId={value.taskId} />
       </div>
@@ -94,7 +97,10 @@ export function TaskCard({
   };
 
   return (
-    <Card className="bg-background my-2 flex flex-col gap-2 p-2">
+    <Card
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- top-level widget vertical offset in markdown transcript flow
+      className="bg-background my-2 flex flex-col gap-sm p-sm"
+    >
       <TextEditor
         value={prompt}
         onChange={setPrompt}
@@ -104,7 +110,7 @@ export function TaskCard({
         maxHeight="20rem"
         namespace={`active-data-task-${editorNs}`}
       />
-      <div className="flex items-center justify-end gap-2">
+      <div className="flex items-center justify-end gap-sm">
         {error ? (
           <Text as="span" variant="caption" tone="destructive" className="mr-auto truncate" title={error}>
             {error}
@@ -167,17 +173,17 @@ function LaunchedAttempts({ taskId }: { taskId: string }) {
   }
 
   return (
-    <Card className="flex flex-col gap-2 px-3 py-2 bg-transparent">
+    <Card className="flex flex-col gap-sm px-md py-sm bg-transparent">
       {attempts.map((attempt) => (
-        <div key={attempt.id} className="flex flex-col gap-1">
-          <div className="flex items-center gap-2">
+        <div key={attempt.id} className="flex flex-col gap-xs">
+          <div className="flex items-center gap-sm">
             <AttemptStatusBadge status={attempt.status} />
             <Text as="span" variant="caption" tone="muted" className="truncate font-mono">
               {attempt.worktreePath.split("/").pop()}
             </Text>
           </div>
           {attempt.conversations.length > 0 && (
-            <ul className="flex flex-col gap-0.5">
+            <ul className="flex flex-col gap-2xs">
               {attempt.conversations.map((c) => {
                 const isActive = activeConvId === c.id;
                 return (

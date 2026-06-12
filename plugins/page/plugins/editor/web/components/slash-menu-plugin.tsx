@@ -161,7 +161,8 @@ export function SlashMenuPlugin({
   if (!open || filtered.length === 0) return null;
 
   return (
-    <div className="bg-popover absolute left-0 top-full z-popover mt-1 w-56 rounded-md border p-1 shadow-md">
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 is the popover's caret-gap offset below the block's bottom edge; a positioning nudge on an absolute element, not sibling rhythm
+    <div className="bg-popover absolute left-0 top-full z-popover mt-1 w-56 rounded-md border p-xs shadow-md">
       <BlockTypeList
         blocks={filtered}
         activeIndex={activeIndex}

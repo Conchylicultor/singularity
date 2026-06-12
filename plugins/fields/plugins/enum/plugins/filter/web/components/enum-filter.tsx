@@ -17,7 +17,7 @@ export function EnumFilter(props: FilterControlProps): ReactNode {
   }
 
   return (
-    <div className="flex flex-wrap gap-1">
+    <div className="flex flex-wrap gap-xs">
       {options.map((o) => (
         <ToggleChip
           key={o.value}

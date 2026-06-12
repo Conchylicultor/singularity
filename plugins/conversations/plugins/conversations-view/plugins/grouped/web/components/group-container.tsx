@@ -48,7 +48,7 @@ export function GroupContainer({
     >
       {/* eslint-disable-next-line badge/no-adhoc-chip -- group header row, awaiting Row primitive */}
       <div className={cn(
-          "group/header flex items-center gap-0.5 rounded-md px-1 py-1",
+          "group/header flex items-center gap-2xs rounded-md px-xs py-xs",
           !effectiveExpanded && hasActiveChild && "bg-sidebar-accent/50",
         )}
       >
@@ -69,7 +69,8 @@ export function GroupContainer({
         )}
         {trailingAction}
       </div>
-      {effectiveExpanded && <div className="mt-0.5 pl-1">{children}</div>}
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the expanded children list just below the header row (sibling under a non-flex container) */}
+      {effectiveExpanded && <div className="mt-0.5 pl-xs">{children}</div>}
     </div>
   );
 }

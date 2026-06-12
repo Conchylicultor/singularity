@@ -37,7 +37,7 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
           No changes.
         </Text>
       ) : (
-        <Text as="div" variant="caption" className="flex flex-col gap-0.5 font-mono">
+        <Text as="div" variant="caption" className="flex flex-col gap-2xs font-mono">
           {att.addedNames?.map((name) => (
             <p key={name} className="text-muted-foreground">
               <span className="text-success">+</span> {name}

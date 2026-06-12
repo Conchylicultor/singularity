@@ -40,7 +40,7 @@ export function ColorPaletteHeaderDots() {
   const schema = colorPaletteGroup.schema;
 
   return (
-    <span className="flex items-center gap-0.5">
+    <span className="flex items-center gap-2xs">
       {REPRESENTATIVE_KEYS.map((key) => (
         <span
           key={key as string}

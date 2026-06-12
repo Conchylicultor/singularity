@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";
@@ -49,21 +50,22 @@ export function LaunchAgentPopover({
       onOpenChange={setOpen}
       trigger={trigger}
       align={align}
-      contentClassName={`${width} max-w-[90vw] space-y-3 p-3`}
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- space-y between popover sections passed as a className string to InlinePopover (no flex container to host a Stack)
+      contentClassName={`${width} max-w-[90vw] space-y-3 p-md`}
     >
-      <div className="space-y-1">
+      <Stack gap="xs">
         <Text as="div" variant="label">
           {title}
         </Text>
         <Text as="div" variant="caption" tone="muted">
           {description}
         </Text>
-      </div>
+      </Stack>
       <textarea
         value={text}
         onChange={(e) => setText(e.target.value)}
         placeholder={placeholder}
-        className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-2.5 py-1.5 text-body"
+        className="focus-ring border-input placeholder:text-muted-foreground min-h-[80px] w-full resize-y rounded-md border bg-transparent px-sm py-xs text-body"
         rows={3}
       />
       {showPreprompt && (

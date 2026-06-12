@@ -70,7 +70,7 @@ function CommitFileList({
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
+      <div className="flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
         <Text as="span" variant="label" className="tabular-nums">
           {files.length} {files.length === 1 ? "file" : "files"}
         </Text>
@@ -123,7 +123,7 @@ function CommitFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className="text-body sticky top-0 z-raised flex w-full items-center gap-2 bg-muted px-3 py-1.5 text-left hover:bg-muted/80"
+        className="text-body sticky top-0 z-raised flex w-full items-center gap-sm bg-muted px-md py-xs text-left hover:bg-muted/80"
         aria-expanded={expanded}
       >
         <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
@@ -131,13 +131,14 @@ function CommitFileRow({
           {from && (
             <>
               <span className="text-muted-foreground line-through">{from}</span>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
               <span className="mx-1.5 text-muted-foreground">→</span>
             </>
           )}
           <span className="text-muted-foreground">{dir}</span>
           <span className="font-medium">{basename}</span>
         </span>
-        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-2 tabular-nums">
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
           <span className="text-success">
             +{file.additions}
           </span>

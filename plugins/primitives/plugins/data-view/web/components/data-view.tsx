@@ -87,7 +87,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   if (!activeView) {
     return (
       <div className="flex min-h-0 flex-1 flex-col">
-        <div className="flex items-center gap-2 px-2 pb-2">
+        <div className="flex items-center gap-sm px-sm pb-sm">
           {title ? (
             <Text as="div" variant="label">
               {title}
@@ -127,7 +127,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       {/* pr-14 reserves the top-right gutter for the global floating action bar
           (fixed top-2 right-3, ~44px footprint) so right-aligned controls stay
           visible and clickable rather than sitting under it. */}
-      <div className="flex shrink-0 items-center gap-2 pb-2 pl-2 pr-14">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- pr-14 reserves the fixed ~44px floating-action-bar gutter, a layout dimension the ramp can't express */}
+      <div className="flex shrink-0 items-center gap-sm pb-sm pl-sm pr-14">
         {title ? (
           <Text as="div" variant="label">
             {title}
@@ -156,7 +157,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
         />
       </div>
       {showFilters && hasFilters ? (
-        <div className="shrink-0 px-2 pb-2">
+        <div className="shrink-0 px-sm pb-sm">
           <FilterBar
             fields={fields as FieldDef<unknown>[]}
             filters={activeState.filters}

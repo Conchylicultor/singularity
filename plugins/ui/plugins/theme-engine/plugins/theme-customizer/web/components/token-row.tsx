@@ -67,7 +67,7 @@ export function TokenRow({
   }
 
   return (
-    <Row as="div" hover="muted" className="gap-2">
+    <Row as="div" hover="muted" className="gap-sm">
       {isColor ? (
         <ColorPickerPopover
           value={value}
@@ -94,7 +94,7 @@ export function TokenRow({
         <input
           ref={inputRef}
           type="text"
-          className="text-caption font-mono bg-transparent border border-transparent rounded-md px-1 py-0.5 text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"
+          className="text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs text-right max-w-[160px] focus:border-border focus:bg-background focus:outline-none"
           value={textValue}
           onChange={(e) => setTextValue(e.target.value)}
           onBlur={handleTextBlur}

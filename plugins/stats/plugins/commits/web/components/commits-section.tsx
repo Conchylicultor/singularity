@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { commitsConfig } from "../../shared/config";
 import { CumulativeCommitsChart } from "./cumulative-chart";
@@ -16,8 +17,8 @@ export function CommitsSection() {
     setConfig("filterRebases", !filterRebases);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex justify-end gap-2">
+    <Stack gap="xl">
+      <Stack direction="row" gap="sm" justify="end">
         <ToggleChip
           active={byCategory}
           onClick={() => setByCategory((v) => !v)}
@@ -36,19 +37,19 @@ export function CommitsSection() {
         >
           Filter rebases
         </ToggleChip>
-      </div>
-      <div>
-        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Over time</Text>
+      </Stack>
+      <Stack gap="md">
+        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Over time</Text>
         {byCategory
           ? <CumulativeCommitsCategoryChart dedup={filterRebases} />
           : <CumulativeCommitsChart dedup={filterRebases} />}
-      </div>
-      <div>
-        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Per period</Text>
+      </Stack>
+      <Stack gap="md">
+        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Per period</Text>
         {byCategory
           ? <CommitsRateCategoryChart dedup={filterRebases} />
           : <CommitsRateChart dedup={filterRebases} />}
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

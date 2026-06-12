@@ -76,7 +76,7 @@ export function PageOptionsList({
 }) {
   if (options.length === 0) {
     return (
-      <Text as="div" variant="body" className="text-muted-foreground px-2 py-1.5">
+      <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
         No pages found
       </Text>
     );

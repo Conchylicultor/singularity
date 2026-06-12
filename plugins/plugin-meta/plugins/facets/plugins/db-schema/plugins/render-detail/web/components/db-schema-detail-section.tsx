@@ -6,6 +6,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { DbSchemaFacetData } from "@plugins/plugin-meta/plugins/facets/plugins/db-schema/core";
 import { asPath } from "@plugins/framework/plugins/plugin-id/core";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the db-schema facet's own data. Read `node.facets[id]` directly (as
@@ -35,16 +36,16 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Database" count={parts.join(" · ")}>
-      <div className="flex flex-col gap-3">
+      <Stack gap="md">
         {tables.length > 0 && (
           <SubHeading label="Tables" count={tables.length}>
-            <div className="flex flex-col gap-0.5">
+            <Stack gap="2xs">
               {tables.map((t) => (
                 <Text
                   as="div"
                   variant="caption"
                   key={t.name}
-                  className="flex items-center gap-2 px-2 py-0.5"
+                  className="flex items-center gap-sm px-sm py-2xs"
                 >
                   <code className="min-w-0 truncate font-mono text-foreground">
                     {t.name}
@@ -54,19 +55,19 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   </span>
                 </Text>
               ))}
-            </div>
+            </Stack>
           </SubHeading>
         )}
 
         {entityExtensions.length > 0 && (
           <SubHeading label="Extends" count={entityExtensions.length}>
-            <div className="flex flex-col gap-0.5">
+            <Stack gap="2xs">
               {entityExtensions.map((e) => (
                 <Text
                   as="div"
                   variant="caption"
                   key={e.tableName}
-                  className="flex items-center gap-2 px-2 py-0.5"
+                  className="flex items-center gap-sm px-sm py-2xs"
                 >
                   <PluginLink name={e.parentPlugin} label={asPath(e.parentPlugin)} />
                   <code className="min-w-0 truncate font-mono text-muted-foreground">
@@ -74,19 +75,19 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   </code>
                 </Text>
               ))}
-            </div>
+            </Stack>
           </SubHeading>
         )}
 
         {extendedBy.length > 0 && (
           <SubHeading label="Extended by" count={extendedBy.length}>
-            <div className="flex flex-col gap-0.5">
+            <Stack gap="2xs">
               {extendedBy.map((e) => (
                 <Text
                   as="div"
                   variant="caption"
                   key={e.tableName}
-                  className="flex items-center gap-2 px-2 py-0.5"
+                  className="flex items-center gap-sm px-sm py-2xs"
                 >
                   <PluginLink name={e.childPlugin} label={asPath(e.childPlugin)} />
                   <code className="min-w-0 truncate font-mono text-muted-foreground">
@@ -94,10 +95,10 @@ export function DbSchemaDetailSection({ node }: { node: PluginNode }) {
                   </code>
                 </Text>
               ))}
-            </div>
+            </Stack>
           </SubHeading>
         )}
-      </div>
+      </Stack>
     </Section>
   );
 }

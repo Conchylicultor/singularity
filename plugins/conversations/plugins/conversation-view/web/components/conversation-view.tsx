@@ -8,6 +8,7 @@ import { PromptInsertProvider } from "../prompt-insert-context";
 import { ActiveRelateSync } from "./active-relate-sync";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
@@ -23,7 +24,7 @@ export function ConversationView() {
 
   if (!conversation) {
     return (
-      <Loading className="flex h-full items-center justify-center p-6" />
+      <Loading className="flex h-full items-center justify-center p-xl" />
     );
   }
 
@@ -37,7 +38,7 @@ export function ConversationView() {
       headerSpill
     >
       <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex items-center border-b px-2 py-1.5">
+        <div className="flex items-center border-b px-sm py-xs">
           <ActionBarView />
         </div>
         <div className="min-h-0 flex-1 overflow-hidden">
@@ -45,7 +46,7 @@ export function ConversationView() {
             {showBottomBar && (
               <PromptInsertProvider>
                 <div className="shrink-0">
-                <div className="mx-auto flex max-w-reading flex-col gap-2 px-3 pt-1.5 pb-2">
+                <Stack gap="sm" className="mx-auto max-w-reading px-md pt-xs pb-sm">
                   <Conversation.AbovePromptInput.Render>
                     {(item) => <item.component conversation={conversation} />}
                   </Conversation.AbovePromptInput.Render>
@@ -54,7 +55,7 @@ export function ConversationView() {
                   </Conversation.PromptInput.Render>
                   {promptBarItems.length > 0 && (
                     <div className="flex justify-end">
-                      <div className="flex items-center gap-1.5">
+                      <div className="flex items-center gap-xs">
                         <Conversation.PromptBar.Render>
                           {(item) => {
                             const Component = item.component;
@@ -64,7 +65,7 @@ export function ConversationView() {
                       </div>
                     </div>
                   )}
-                </div>
+                </Stack>
                 </div>
               </PromptInsertProvider>
             )}

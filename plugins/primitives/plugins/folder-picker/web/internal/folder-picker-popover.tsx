@@ -38,14 +38,14 @@ export function FolderPickerPopover({
   const valid = validity?.exists === true && validity.isDirectory;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <div className="flex items-center gap-xs">
       <div className="relative flex-1">
         <Input
           value={local}
           placeholder={placeholder ?? "Absolute folder path"}
           onChange={(e) => setLocal(e.target.value)}
           onBlur={() => commit(local)}
-          className="pr-8"
+          className="pr-2xl"
         />
         {hasValue && validity ? (
           <span className="pointer-events-none absolute inset-y-0 right-2 flex items-center">
@@ -69,7 +69,7 @@ export function FolderPickerPopover({
         onOpenChange={setOpen}
         align="end"
         tooltip="Browse folders"
-        contentClassName="w-80 p-0"
+        contentClassName="w-80 p-none"
         trigger={<IconButton icon={MdFolderOpen} label="Browse folders" />}
       >
         <FolderPicker

@@ -191,7 +191,7 @@ function FileSectionBlock({
 
   return (
     <Collapsible defaultOpen>
-      <CollapsibleTrigger className="sticky top-0 z-raised gap-2 border-b border-border bg-muted/60 px-3 py-2 text-caption font-medium text-muted-foreground backdrop-blur hover:bg-muted">
+      <CollapsibleTrigger className="sticky top-0 z-raised gap-sm border-b border-border bg-muted/60 px-md py-sm text-caption font-medium text-muted-foreground backdrop-blur hover:bg-muted">
         <CollapsibleChevron className="size-3.5" />
         <span>{label}</span>
         <span>·</span>
@@ -232,8 +232,8 @@ function ToolbarRow({
   onToggleAll: () => void;
 }) {
   return (
-    <div className="sticky top-0 z-raised flex items-center gap-3 border-b border-border bg-background/95 px-4 py-2 backdrop-blur">
-      <Text as="div" variant="label" className="flex items-center gap-2">
+    <div className="sticky top-0 z-raised flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
+      <Text as="div" variant="label" className="flex items-center gap-sm">
         <span className="tabular-nums">{count} files</span>
         <span className="text-success tabular-nums">
           +{additions}
@@ -242,7 +242,7 @@ function ToolbarRow({
           −{deletions}
         </span>
       </Text>
-      <div className="flex flex-1 items-center justify-end gap-1">
+      <div className="flex flex-1 items-center justify-end gap-xs">
         <ExpandAllButton
           variant="full"
           allExpanded={allExpanded}

@@ -20,7 +20,7 @@ export function NotesArea({
         onBlur={onBlur}
         placeholder="Notes…"
         rows={2}
-        className="w-full resize-y rounded-md border border-warning/60 bg-warning/10 px-3 py-2 text-caption placeholder:text-warning/70 focus:outline-none focus:ring-1 focus:ring-warning"
+        className="w-full resize-y rounded-md border border-warning/60 bg-warning/10 px-md py-sm text-caption placeholder:text-warning/70 focus:outline-none focus:ring-1 focus:ring-warning"
         aria-label="Conversation notes"
       />
       {isSaving && (

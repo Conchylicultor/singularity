@@ -61,7 +61,7 @@ export function DividerBlock({ block, isFocused, editor }: BlockRendererProps) {
       onFocus={() => editor.onFocus()}
       aria-label="Divider"
       className={cn(
-        "cursor-default px-3 py-2 outline-none",
+        "cursor-default px-md py-sm outline-none",
         isFocused && "ring-primary/30 rounded-md ring-1",
       )}
     >

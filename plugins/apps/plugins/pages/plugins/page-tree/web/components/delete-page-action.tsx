@@ -67,7 +67,8 @@ export function DeletePageAction({
               ? This also removes all of their content and cannot be undone.
             </DialogDescription>
           )}
-          <div className="mt-4 flex justify-end gap-2">
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- action row offset below the dialog description; one-off dialog footer spacing */}
+          <div className="mt-4 flex justify-end gap-sm">
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>

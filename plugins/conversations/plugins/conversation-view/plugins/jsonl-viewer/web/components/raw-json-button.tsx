@@ -18,9 +18,9 @@ export function RawJsonAction({ event }: { event: JsonlEvent }) {
         </button>
       }
       align="end"
-      contentClassName="w-[640px] max-w-[90vw] p-0"
+      contentClassName="w-[640px] max-w-[90vw] p-none"
     >
-      <Text as="pre" variant="caption" className="max-h-[60vh] overflow-auto rounded-md bg-muted/40 p-3">
+      <Text as="pre" variant="caption" className="max-h-[60vh] overflow-auto rounded-md bg-muted/40 p-md">
         {JSON.stringify(event, null, 2)}
       </Text>
     </InlinePopover>

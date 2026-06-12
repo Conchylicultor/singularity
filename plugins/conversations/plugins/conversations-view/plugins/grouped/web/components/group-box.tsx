@@ -54,7 +54,7 @@ export function GroupBox({
         />
       }
       trailingAction={
-        <div className="flex items-center gap-0.5">
+        <div className="flex items-center gap-2xs">
           <button
             ref={setHandleRef}
             {...attributes}
@@ -85,7 +85,7 @@ export function GroupBox({
       }
     >
       {isEmpty ? (
-        <div className="px-2 py-1 text-2xs text-muted-foreground italic">
+        <div className="px-sm py-xs text-2xs text-muted-foreground italic">
           Empty — drop a conversation here
         </div>
       ) : (

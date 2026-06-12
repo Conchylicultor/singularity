@@ -1,9 +1,10 @@
 import type { FieldDef } from "@plugins/config_v2/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 export function FieldHeader({ field }: { field: FieldDef }) {
   return (
-    <div className="flex flex-col gap-0.5">
+    <Stack gap="2xs">
       {field.meta.label ? (
         <Text as="label" variant="label">{field.meta.label}</Text>
       ) : null}
@@ -12,6 +13,6 @@ export function FieldHeader({ field }: { field: FieldDef }) {
           {field.meta.description}
         </Text>
       ) : null}
-    </div>
+    </Stack>
   );
 }

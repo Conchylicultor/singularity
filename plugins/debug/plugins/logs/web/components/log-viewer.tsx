@@ -180,8 +180,8 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
   }, [selectedKey, isGatewaySource, selected]);
 
   return (
-    <div className="flex h-full flex-col p-6 space-y-4">
-      <div role="tablist" className="flex items-center gap-1 border-b">
+    <div className="flex h-full flex-col gap-lg p-xl">
+      <div role="tablist" className="flex items-center gap-xs border-b">
         {channels.map((c) => {
           const key = channelKey(c);
           const active = key === selectedKey;
@@ -193,7 +193,7 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
               aria-selected={active}
               onClick={() => setSelectedKey(key)}
               className={cn(
-                "relative -mb-px px-3 py-1.5 text-body border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
+                "relative -mb-px px-md py-xs text-body border-b-2 transition-colors outline-none focus-visible:ring-2 focus-visible:ring-ring/50",
                 active
                   ? "border-foreground text-foreground"
                   : "border-transparent text-muted-foreground hover:text-foreground",
@@ -207,13 +207,13 @@ export function LogViewer({ initialChannel }: { initialChannel?: string }) {
 
       <div
         ref={viewportRef}
-        className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-4 font-mono text-caption"
+        className="flex-1 overflow-y-auto rounded-md border bg-muted/30 p-lg font-mono text-caption"
       >
         {entries.map((entry) => (
           <div
             key={entry.seq}
             className={cn(
-              "flex gap-2",
+              "flex gap-sm",
               entry.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
           >

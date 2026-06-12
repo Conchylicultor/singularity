@@ -4,6 +4,7 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the registrations facet's own data. Read `node.facets[id]` directly
@@ -25,13 +26,13 @@ export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Registrations" count={String(data.length)}>
-      <div className="flex flex-col gap-0.5">
+      <Stack gap="2xs">
         {data.map((r, i) => (
           <Text
             as="div"
             variant="caption"
             key={`${r.runtime}:${r.kind}:${i}`}
-            className="flex items-center gap-2 px-2 py-0.5"
+            className="flex items-center gap-sm px-sm py-2xs"
           >
             <code className="min-w-0 truncate font-mono text-foreground">
               {format(r)}
@@ -43,7 +44,7 @@ export function RegistrationsDetailSection({ node }: { node: PluginNode }) {
             </span>
           </Text>
         ))}
-      </div>
+      </Stack>
     </Section>
   );
 }

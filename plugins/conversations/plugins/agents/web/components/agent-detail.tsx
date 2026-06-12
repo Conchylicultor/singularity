@@ -107,8 +107,8 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
   const agentSvgNodes = parseSvgNodes(agent.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes;
 
   return (
-    <div className="flex flex-col gap-4 p-6">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-lg p-xl">
+      <div className="flex items-center gap-md">
         <AvatarPicker
           value={{
             icon: agent.icon ?? DEFAULT_AGENT_AVATAR.icon,
@@ -140,14 +140,14 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
           className="placeholder:text-muted-foreground flex-1 bg-transparent text-title outline-none focus:ring-0"
         />
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-xs">
         <SectionLabel as="label">
           Model
         </SectionLabel>
         <select
           value={model ?? ""}
           onChange={(e) => void onModelChange(e.target.value)}
-          className="focus:ring-ring w-fit rounded-md border bg-transparent px-2 py-1 text-body outline-none focus:ring-1"
+          className="focus:ring-ring w-fit rounded-md border bg-transparent px-sm py-xs text-body outline-none focus:ring-1"
         >
           <option key="" value="">Default</option>
           {visibleModels.map((m) => (
@@ -157,7 +157,7 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
           ))}
         </select>
       </div>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-xs">
         <SectionLabel as="label">
           Prompt
         </SectionLabel>
@@ -181,7 +181,7 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
         <Button
           onClick={launch}
           disabled={launching || !promptField.value.trim()}
-          className="gap-1"
+          className="gap-xs"
         >
           <MdPlayArrow className="size-4" />
           {launching ? "Launching…" : "Launch"}

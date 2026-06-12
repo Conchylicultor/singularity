@@ -139,7 +139,7 @@ export function SongLibrary() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       {songs.error ? (
-        <Text as="div" variant="body" tone="destructive" className="px-6 py-4">
+        <Text as="div" variant="body" tone="destructive" className="px-xl py-lg">
           Failed to load songs: {songs.error.message}
         </Text>
       ) : null}

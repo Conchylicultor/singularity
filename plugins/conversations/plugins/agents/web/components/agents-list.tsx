@@ -106,7 +106,7 @@ function DeleteSelectedAction() {
     <button
       type="button"
       onClick={() => void onClick()}
-      className="inline-flex items-center gap-1 text-destructive hover:text-destructive/80"
+      className="inline-flex items-center gap-xs text-destructive hover:text-destructive/80"
     >
       <MdDelete className="size-3.5" />
       Delete
@@ -170,7 +170,7 @@ export function AgentsList({
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>
-      <div className="flex flex-col gap-1">
+      <div className="flex flex-col gap-xs">
         <SelectionBar actions={<DeleteSelectedAction />} />
         <SystemFolder selectedSystemId={selectedSystemId} />
         <TreeList<Agent>

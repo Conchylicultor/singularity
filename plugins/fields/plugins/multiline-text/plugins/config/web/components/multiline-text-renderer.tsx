@@ -14,7 +14,7 @@ const MultilineTextRenderer: FieldRendererComponent<string> = ({
   const { local, setLocal, focus } = useLocalValue(value);
   const rows = (field as MultilineTextFieldDef).rows ?? 4;
   return (
-    <div className="flex flex-col gap-1.5 py-3">
+    <div className="flex flex-col gap-xs py-md">
       <FieldHeader field={field} />
       <textarea
         value={local}
@@ -26,7 +26,7 @@ const MultilineTextRenderer: FieldRendererComponent<string> = ({
           if (local !== value) onChange(local);
         }}
         onChange={(e) => setLocal(e.target.value)}
-        className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-2.5 py-1.5 text-body placeholder:text-muted-foreground dark:bg-input/30"
+        className="focus-ring w-full resize-y rounded-lg border border-input bg-transparent px-sm py-xs text-body placeholder:text-muted-foreground dark:bg-input/30"
       />
     </div>
   );

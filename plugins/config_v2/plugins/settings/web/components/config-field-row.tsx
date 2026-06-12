@@ -89,7 +89,7 @@ export function ConfigFieldRow({
 
   return (
     <div>
-      <div className="group flex items-center gap-2 rounded-md py-1.5 pl-0 pr-2">
+      <div className="group flex items-center gap-sm rounded-md py-xs pl-none pr-sm">
         <div
           className={cn(
             "h-8 w-0.5 shrink-0 rounded-full transition-colors",
@@ -110,7 +110,7 @@ export function ConfigFieldRow({
           type="button"
           onClick={handleReset}
           className={cn(
-            "shrink-0 rounded-sm p-1 text-muted-foreground hover:text-foreground",
+            "shrink-0 rounded-sm p-xs text-muted-foreground hover:text-foreground",
             "opacity-0 transition-opacity",
             isModified && "group-hover:opacity-100",
           )}
@@ -120,7 +120,8 @@ export function ConfigFieldRow({
         </button>
       </div>
       {hasConflict && (
-        <Text as="div" variant="caption" className="ml-3 flex items-center gap-2 rounded-md border border-warning/30 bg-warning/10 px-2 py-1 text-warning">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-3 indents the conflict note under the field's value column
+        <Text as="div" variant="caption" className="ml-3 flex items-center gap-sm rounded-md border border-warning/30 bg-warning/10 px-sm py-xs text-warning">
           <MdWarning className="size-3 shrink-0" />
           <span className="flex-1 truncate">
             Upstream: {formatOriginValue(originValue)}

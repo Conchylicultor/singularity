@@ -29,7 +29,7 @@ function StatusIcon({ status }: { status: string }) {
 
 function TaskRow({ task }: { task: TaskEntry }) {
   return (
-    <Text as="div" variant="caption" className="flex items-center gap-2 px-3 py-1">
+    <Text as="div" variant="caption" className="flex items-center gap-sm px-md py-xs">
       <StatusIcon status={task.status} />
       <span className="min-w-0 flex-1 truncate text-foreground/80">
         {task.description}
@@ -50,16 +50,17 @@ export function TaskProgressOverlay() {
 
   return (
     <div className="absolute inset-x-0 bottom-10 z-float flex justify-center pointer-events-none">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mx-4 gutters the centered card inside the pointer-events-none overlay; can't fold into the parent without breaking pointer-events scoping */}
       <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
-        <div className="flex items-center px-3 py-2">
+        <div className="flex items-center px-md py-sm">
           <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
             {completedCount}/{totalCount} complete
           </Text>
-          <div className="ml-auto flex items-center gap-1">
+          <div className="ml-auto flex items-center gap-xs">
             <button
               type="button"
               onClick={() => setExpanded((v) => !v)}
-              className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               {expanded ? (
                 <MdExpandMore className="size-4" />
@@ -70,14 +71,14 @@ export function TaskProgressOverlay() {
             <button
               type="button"
               onClick={() => setDismissed(true)}
-              className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+              className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
             >
               <MdClose className="size-4" />
             </button>
           </div>
         </div>
         {expanded && tasks.length > 0 && (
-          <div className="max-h-[180px] overflow-y-auto border-t border-border/40 py-1">
+          <div className="max-h-[180px] overflow-y-auto border-t border-border/40 py-xs">
             {tasks.map((task) => (
               <TaskRow key={task.taskId} task={task} />
             ))}

@@ -47,7 +47,7 @@ export function Loading({
         <div
           role="status"
           className={cn(
-            "loading-delayed flex items-center gap-2 px-3 py-2 text-body text-muted-foreground",
+            "loading-delayed flex items-center gap-sm px-md py-sm text-body text-muted-foreground",
             className,
           )}
         >
@@ -60,7 +60,7 @@ export function Loading({
         <div
           role="status"
           aria-label="Loading"
-          className={cn("loading-delayed flex flex-col gap-2 p-2", className)}
+          className={cn("loading-delayed flex flex-col gap-sm p-sm", className)}
         >
           {Array.from({ length: count ?? 6 }, (_, i) => (
             <Shimmer key={i} className="h-8 w-full" />
@@ -72,13 +72,13 @@ export function Loading({
         <div
           role="status"
           aria-label="Loading"
-          className={cn("loading-delayed grid gap-4 p-6", className)}
+          className={cn("loading-delayed grid gap-lg p-xl", className)}
           style={{
             gridTemplateColumns: "repeat(auto-fill, minmax(200px, 1fr))",
           }}
         >
           {Array.from({ length: count ?? 8 }, (_, i) => (
-            <div key={i} className="flex flex-col gap-2">
+            <div key={i} className="flex flex-col gap-sm">
               <Shimmer className="aspect-video w-full" />
               <Shimmer className="h-4 w-3/5" />
             </div>

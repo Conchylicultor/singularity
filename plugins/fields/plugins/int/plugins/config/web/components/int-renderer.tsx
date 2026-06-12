@@ -15,7 +15,7 @@ const IntRenderer: FieldRendererComponent<number> = ({
   const { min, max, step } = field as IntFieldDef;
   const { local, setLocal, focus } = useLocalValue(String(value));
   return (
-    <div className="flex flex-col gap-1.5 py-3">
+    <div className="flex flex-col gap-xs py-md">
       <FieldHeader field={field} />
       <Input
         type="number"

@@ -43,7 +43,7 @@ function FileRow({
       <button
         type="button"
         onClick={() => setExpanded(!expanded)}
-        className="text-body flex w-full items-center gap-2 px-2 py-1.5 text-left hover:bg-muted/50"
+        className="text-body flex w-full items-center gap-sm px-sm py-xs text-left hover:bg-muted/50"
         aria-expanded={expanded}
       >
         <CollapsibleChevron open={expanded} className="size-3.5 shrink-0 text-muted-foreground" />
@@ -54,6 +54,7 @@ function FileRow({
           {from && (
             <>
               <span className="text-muted-foreground line-through">{from}</span>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
               <span className="mx-1.5 text-muted-foreground">&rarr;</span>
             </>
           )}
@@ -63,11 +64,12 @@ function FileRow({
             text={file.path}
             title="Copy path"
             size="inline"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
             className="ml-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
             onClick={(e) => e.stopPropagation()}
           />
         </Text>
-        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-2 tabular-nums">
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
           <span className="text-success">+{file.additions}</span>
           <span className="text-destructive">&minus;{file.deletions}</span>
         </Text>
@@ -90,7 +92,7 @@ export function FileChangesSection({ conversationId, plugin }: PluginReviewProps
   const conversation = useConversationById(conversationId);
 
   if (!conversation) {
-    return <Loading className="px-1" />;
+    return <Loading className="px-xs" />;
   }
 
   if (plugin.files.length === 0) return null;

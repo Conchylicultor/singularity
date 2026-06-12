@@ -7,6 +7,7 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Color,
@@ -110,11 +111,11 @@ function ParamInput({
   };
 
   return (
-    <div className="flex items-center gap-2 group">
+    <div className="flex items-center gap-sm group">
       <input
         ref={inputRef}
         type="text"
-        className="flex-1 text-caption font-mono bg-transparent border border-transparent rounded-md px-1.5 py-0.5 focus:border-border focus:bg-background focus:outline-none"
+        className="flex-1 text-caption font-mono bg-transparent border border-transparent rounded-md px-xs py-2xs focus:border-border focus:bg-background focus:outline-none"
         value={localValue}
         onChange={(e) => setLocalValue(e.target.value)}
         onBlur={commit}
@@ -177,14 +178,15 @@ export function ShadowSection({ search }: { search: string }) {
   const colorIsOverridden = overrides.color !== "";
 
   return (
-    <div className="flex flex-col gap-1">
+    <Stack gap="xs">
       {/* Preset picker */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off offset separating preset picker from the parameter editor below */}
+      <Stack direction="row" gap="xs" wrap className="mb-3">
         {presets.map((p) => (
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-caption rounded-md border transition-colors ${
+            className={`flex items-center gap-xs px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
@@ -201,17 +203,18 @@ export function ShadowSection({ search }: { search: string }) {
             {p.label}
           </button>
         ))}
-      </div>
+      </Stack>
 
       {/* Parameters editor */}
       <Collapsible defaultOpen>
         <SectionHeaderRow variant="eyebrow">Parameters</SectionHeaderRow>
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent + top offset on third-party CollapsibleContent; no padding/gap equivalent */}
         <CollapsibleContent className="ml-2 mt-1">
-          <div className="flex flex-col gap-1.5">
+          <Stack gap="xs">
             {/* Color row */}
-            <Row as="div" hover="muted" className="gap-2">
+            <Row as="div" hover="muted" className="gap-sm">
               <Text as="span" variant="label" className="w-16 shrink-0">Color</Text>
-              <div className="flex items-center gap-2 flex-1">
+              <div className="flex items-center gap-sm flex-1">
                 <ColorPickerPopover
                   value={colorOklch}
                   onChange={(oklch) => {
@@ -249,7 +252,7 @@ export function ShadowSection({ search }: { search: string }) {
             {PARAM_FIELDS.map(({ key, label }) => {
               const isOverridden = overrides[key] !== "";
               return (
-                <Row key={key} as="div" hover="muted" className="gap-2">
+                <Row key={key} as="div" hover="muted" className="gap-sm">
                   <Text as="span" variant="label" className="w-16 shrink-0">
                     {label}
                   </Text>
@@ -269,28 +272,30 @@ export function ShadowSection({ search }: { search: string }) {
               <Button
                 variant="ghost"
                 size="xs"
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset separating the reset button from the param rows above
                 className="self-start mt-1 border border-border text-muted-foreground"
                 onClick={() => setConfig("overrides", EMPTY_OVERRIDES)}
               >
                 Reset all
               </Button>
             )}
-          </div>
+          </Stack>
         </CollapsibleContent>
       </Collapsible>
 
       {/* Token previews */}
       <Collapsible>
         <SectionHeaderRow variant="eyebrow">Preview</SectionHeaderRow>
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent + top offset on third-party CollapsibleContent; no padding/gap equivalent */}
         <CollapsibleContent className="ml-2 mt-1">
-          <div className="flex flex-wrap gap-3 p-2">
+          <div className="flex flex-wrap gap-md p-sm">
             {allKeys.map((key) => {
               const label = schema[key]?.label ?? (key as string);
               const value = tokens[key] ?? "";
               return (
                 <div
                   key={key as string}
-                  className="flex flex-col items-center gap-1"
+                  className="flex flex-col items-center gap-xs"
                 >
                   <span
                     className="size-8 rounded-md bg-background border border-border"
@@ -305,6 +310,6 @@ export function ShadowSection({ search }: { search: string }) {
           </div>
         </CollapsibleContent>
       </Collapsible>
-    </div>
+    </Stack>
   );
 }

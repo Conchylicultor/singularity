@@ -23,7 +23,7 @@ export interface FilterGroupProps {
 
 export function FilterGroup({ label, children }: FilterGroupProps) {
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-xs">
       <Text variant="caption" className="text-muted-foreground">
         {label}:
       </Text>

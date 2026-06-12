@@ -24,10 +24,10 @@ export function TaskPrepromptSection({ taskId }: { taskId: string }) {
   };
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-1.5">
+    <Collapsible defaultOpen className="flex flex-col gap-xs">
       <SectionHeaderRow variant="eyebrow">Preprompt</SectionHeaderRow>
       <CollapsibleContent>
-        <Text as="div" variant="caption" tone="muted" className="flex items-center gap-2">
+        <Text as="div" variant="caption" tone="muted" className="flex items-center gap-sm">
           <span>Append to the agent's system prompt on launch</span>
           <PrepromptSelect value={current} onChange={handleChange} ariaLabel="Task preprompt" />
         </Text>

@@ -57,7 +57,7 @@ export function ContributionsView() {
   }
   if (error) {
     return (
-      <Text as="div" variant="body" className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center">
+      <Text as="div" variant="body" className="flex h-full flex-col items-center justify-center gap-sm p-2xl text-center">
         <span className="font-medium text-foreground">Failed to load</span>
         <span className="text-muted-foreground">{String(error)}</span>
       </Text>
@@ -70,7 +70,7 @@ export function ContributionsView() {
 
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <div className="flex gap-1 overflow-x-auto border-b px-3 py-2">
+      <div className="flex gap-xs overflow-x-auto border-b px-md py-sm">
         {sortedTables.map((table) => {
           const count = rowsByFacet.get(table.facetId)?.length ?? 0;
           const active = table.facetId === activeId;
@@ -96,7 +96,7 @@ export function ContributionsView() {
         })}
       </div>
 
-      <div className="border-b px-3 py-2">
+      <div className="border-b px-md py-sm">
         <SearchInput
           value={filter}
           onChange={(e) => setFilter(e.target.value)}

@@ -59,7 +59,7 @@ export function SourceTabs({
   pushGroups: PushGroup[];
 }) {
   return (
-    <div className="flex items-center gap-1 overflow-x-auto border-b border-border bg-background/95 px-2 py-1.5 backdrop-blur">
+    <div className="flex items-center gap-xs overflow-x-auto border-b border-border bg-background/95 px-sm py-xs backdrop-blur">
       <ToggleChip
         active={source.kind === "working"}
         size="sm"
@@ -78,7 +78,10 @@ export function SourceTabs({
         >
           <span className="max-w-[24ch] truncate">{g.message}</span>
           {g.count > 1 && (
-            <span className="ml-1 text-muted-foreground tabular-nums">
+            <span
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap before count badge after truncated message
+              className="ml-1 text-muted-foreground tabular-nums"
+            >
               ×{g.count}
             </span>
           )}

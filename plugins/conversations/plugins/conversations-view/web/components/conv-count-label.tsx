@@ -8,6 +8,7 @@ export function ConvCountLabel() {
   const totalCount = activeCount + conv.totalGoneCount;
 
   return (
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating this count label from the preceding sidebar header text; no flex parent here to own a gap
     <Text variant="caption" className="ml-1 text-sidebar-foreground/50 opacity-0 transition-opacity group-hover/label:opacity-100">
       {activeCount}/{totalCount}
     </Text>

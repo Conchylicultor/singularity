@@ -5,6 +5,7 @@ import { formatRelativeTime, RelativeTime } from "@plugins/primitives/plugins/re
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Item } from "../slots";
 
 export { formatRelativeTime };
@@ -100,7 +101,7 @@ export function ConversationItem({
   const active = conv.status === "working";
   if (layout === "inline") {
     return (
-      <span className={cn("inline-flex max-w-full items-center gap-1.5", active && "opacity-60")}>
+      <span className={cn("inline-flex max-w-full items-center gap-xs", active && "opacity-60")}>
         <AvatarSlot conv={conv} size="xs" />
         <ConvTitle conv={conv} />
         <ConvSysBadge conv={conv} />
@@ -109,22 +110,23 @@ export function ConversationItem({
     );
   }
   return (
-    <div className={cn("flex w-full items-start gap-2 overflow-hidden", active && "opacity-60")}>
+    <div className={cn("flex w-full items-start gap-sm overflow-hidden", active && "opacity-60")}>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical nudge to baseline-align the avatar with the title row */}
       <span className="mt-0.5">
         <AvatarSlot conv={conv} size="sm" />
       </span>
-      <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-        <div className="flex items-center gap-1.5 overflow-hidden">
+      <Stack gap="2xs" className="min-w-0 flex-1">
+        <div className="flex items-center gap-xs overflow-hidden">
           <ConvTitle conv={conv} />
           <ConvSysBadge conv={conv} />
         </div>
-        <div className="flex items-center gap-1.5">
+        <div className="flex items-center gap-xs">
           <ChipsSlot conv={conv} />
           <span className="ml-auto">
             <ConvRelativeTime conv={conv} />
           </span>
         </div>
-      </div>
+      </Stack>
     </div>
   );
 }

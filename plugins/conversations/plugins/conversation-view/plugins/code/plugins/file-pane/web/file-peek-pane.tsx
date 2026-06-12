@@ -53,7 +53,7 @@ function FilePeekPaneBody() {
         title={<FilepathBreadcrumb path={filePath} />}
         hideRightActions
       >
-        <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
+        <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
           Resolving…
         </Text>
       </PaneChrome>
@@ -82,7 +82,7 @@ function FilePeekPaneBody() {
   }
 
   const title = (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-sm">
       <span className="min-w-0 overflow-hidden">
         <FilepathBreadcrumb path={effectivePath} />
       </span>

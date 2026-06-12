@@ -31,11 +31,11 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
           {isLoading ? (
             <Loading variant="rows" />
           ) : error ? (
-            <Text as="div" variant="body" className="px-3 py-2 text-destructive">
+            <Text as="div" variant="body" className="px-md py-sm text-destructive">
               {String(error)}
             </Text>
           ) : !treeData || treeData.files.length === 0 ? (
-            <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
+            <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
               No files.
             </Text>
           ) : (
@@ -57,7 +57,7 @@ export function FileTreeView({ worktree }: FileTreeViewProps) {
               status="clean"
             />
           ) : (
-            <Text as="div" variant="body" className="flex h-full items-center justify-center px-3 py-2 text-muted-foreground">
+            <Text as="div" variant="body" className="flex h-full items-center justify-center px-md py-sm text-muted-foreground">
               Select a file to preview.
             </Text>
           )}

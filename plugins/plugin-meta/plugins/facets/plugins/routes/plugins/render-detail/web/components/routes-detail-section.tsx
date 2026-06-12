@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Section,
@@ -56,10 +57,10 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Routes" count={parts.join(" · ")}>
-      <div className="flex flex-col gap-3">
+      <Stack gap="md">
         {endpointCallers.length > 0 && <CallersBanner names={endpointCallers} />}
         {routes.length > 0 && (
-          <div className="flex flex-col gap-0.5">
+          <Stack gap="2xs">
             {routes.map((r) => {
               const { method, path } = methodAndPath(r);
               return (
@@ -67,7 +68,7 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
                   as="div"
                   variant="caption"
                   key={`${r.runtime}:${r.type}:${r.route}`}
-                  className="flex items-center gap-2 px-2 py-0.5"
+                  className="flex items-center gap-sm px-sm py-2xs"
                 >
                   {method && (
                     <span
@@ -88,9 +89,9 @@ export function RoutesDetailSection({ node }: { node: PluginNode }) {
                 </Text>
               );
             })}
-          </div>
+          </Stack>
         )}
-      </div>
+      </Stack>
     </Section>
   );
 }
@@ -104,7 +105,8 @@ function CallersBanner({ names }: { names: string[] }) {
   const remaining = names.length - threshold;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-3xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-xs gap-y-2xs text-3xs text-muted-foreground">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mr-0.5 is a tiny inline trailing offset on the leading label before the wrapped chip flow, not container rhythm */}
       <span className="mr-0.5 font-medium">Endpoint callers</span>
       {visible.map((name, i) => (
         <span key={name} className="inline-flex items-center">

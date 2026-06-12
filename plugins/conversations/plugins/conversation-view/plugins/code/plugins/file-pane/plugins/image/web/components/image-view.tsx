@@ -7,7 +7,7 @@ export function ImageView({
 }) {
   const src = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(path)}`;
   return (
-    <div className="flex h-full items-center justify-center overflow-auto p-4">
+    <div className="flex h-full items-center justify-center overflow-auto p-lg">
       <img
         src={src}
         alt={path.slice(path.lastIndexOf("/") + 1)}

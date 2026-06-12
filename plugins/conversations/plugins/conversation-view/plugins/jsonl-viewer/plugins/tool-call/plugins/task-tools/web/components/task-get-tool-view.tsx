@@ -18,11 +18,13 @@ export function TaskGetToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {event.result && !event.result.isError && (
-        <pre className="mt-2 max-h-[200px] overflow-auto rounded-md bg-muted/50 p-2 text-2xs text-muted-foreground">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
+        <pre className="mt-2 max-h-[200px] overflow-auto rounded-md bg-muted/50 p-sm text-2xs text-muted-foreground">
           {event.result.content}
         </pre>
       )}
       {event.result?.isError && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header
         <Text as="p" variant="caption" tone="destructive" className="mt-2">
           {event.result.content}
         </Text>

@@ -8,6 +8,7 @@ import {
   contributionId,
   type ContributionsFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the contributions facet's own data. Read `node.facets[id]` directly
@@ -31,7 +32,7 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
       count={`${contribs.length} contribution${contribs.length !== 1 ? "s" : ""}`}
     >
       {contribs.length > 0 && (
-        <div className="flex flex-col gap-0.5">
+        <Stack gap="2xs">
           {contribs.map((c, i) => {
             const id = contributionId(c);
             return (
@@ -39,7 +40,7 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
                 as="div"
                 variant="caption"
                 key={`${c.slot}:${id ?? i}`}
-                className="flex items-center gap-2 px-2 py-0.5"
+                className="flex items-center gap-sm px-sm py-2xs"
               >
                 {c.definerPluginId ? (
                   <PluginLink
@@ -58,10 +59,11 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
               </Text>
             );
           })}
-        </div>
+        </Stack>
       )}
       {slotContributors.length > 0 && (
-        <Text as="div" variant="caption" className="mt-2 flex items-center gap-2 px-2 py-0.5">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets this conditional sibling from the contributions block above; both render directly inside Section with no shared flex parent to own the gap
+        <Text as="div" variant="caption" className="mt-2 flex items-center gap-sm px-sm py-2xs">
           <span className="shrink-0 text-muted-foreground/60">
             Slot contributors
           </span>

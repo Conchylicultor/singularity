@@ -1,5 +1,6 @@
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
 import { Stats } from "../slots";
 import { StatsProvider, useShowEmptyDays } from "./stats-context";
 
@@ -16,9 +17,9 @@ function StatsContent() {
   const { showEmptyDays, setShowEmptyDays } = useShowEmptyDays();
 
   return (
-    <div className="p-6">
-      <div className="mx-auto flex max-w-4xl flex-col gap-6">
-        <div className="flex justify-end gap-2">
+    <Inset pad="xl">
+      <Stack gap="xl" className="mx-auto max-w-4xl">
+        <Stack direction="row" gap="sm" justify="end">
           <ToggleChip as="a" href="/debug/profiling" active={false}>
             Profiling
           </ToggleChip>
@@ -33,20 +34,20 @@ function StatsContent() {
           >
             Show empty days
           </ToggleChip>
-        </div>
+        </Stack>
         {charts.length === 0 ? (
           <Text as="div" variant="body" className="text-muted-foreground">No stats available.</Text>
         ) : (
           <Stats.Chart.Render>
             {(item) => (
-              <section className="bg-card rounded-lg border p-4">
-                <Text as="h2" variant="label" className="mb-4">{item.title}</Text>
+              <Stack gap="lg" as="section" className="bg-card rounded-lg border p-lg">
+                <Text as="h2" variant="label">{item.title}</Text>
                 <item.component />
-              </section>
+              </Stack>
             )}
           </Stats.Chart.Render>
         )}
-      </div>
-    </div>
+      </Stack>
+    </Inset>
   );
 }

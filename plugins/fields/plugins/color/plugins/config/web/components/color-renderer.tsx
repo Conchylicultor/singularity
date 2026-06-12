@@ -13,7 +13,7 @@ const ColorRenderer: FieldRendererComponent<string> = ({
 }) => {
   const { swatches, showAlpha } = field as ColorFieldDef;
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="flex items-start justify-between gap-lg py-md">
       <FieldHeader field={field} />
       <ColorPickerPopover
         value={value}

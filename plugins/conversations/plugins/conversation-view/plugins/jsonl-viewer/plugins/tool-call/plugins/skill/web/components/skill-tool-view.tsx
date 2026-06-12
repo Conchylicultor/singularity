@@ -6,6 +6,7 @@ import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 type SkillInput = { skill: string; args?: string };
 
@@ -52,21 +53,22 @@ export function SkillToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} leading={skillChip}>
       {(args || injected.length > 0) && (
-        <div className="mt-2 space-y-2">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the content stack from the card header
+        <Stack gap="sm" className="mt-2">
           {args && (
-            <pre className="text-caption whitespace-pre-wrap break-words rounded-md bg-muted/60 p-2">
+            <pre className="text-caption whitespace-pre-wrap break-words rounded-md bg-muted/60 p-sm">
               {args}
             </pre>
           )}
           {injected.map((ctx, i) => (
             <pre
               key={i}
-              className="text-caption max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/40 px-2 py-2 text-muted-foreground"
+              className="text-caption max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/40 px-sm py-sm text-muted-foreground"
             >
               {ctx}
             </pre>
           ))}
-        </div>
+        </Stack>
       )}
     </ToolCallCard>
   );

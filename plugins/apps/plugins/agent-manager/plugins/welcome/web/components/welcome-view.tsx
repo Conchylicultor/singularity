@@ -8,6 +8,7 @@ import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 export function WelcomeView() {
   const conv = useConversations();
@@ -28,19 +29,19 @@ export function WelcomeView() {
   const recentConversations = conversations.slice(0, 5);
 
   return (
-    <div className="flex h-full items-center justify-center p-8">
-      <div className="flex w-full max-w-sm flex-col items-center gap-8">
+    <div className="flex h-full items-center justify-center p-2xl">
+      <Stack align="center" gap="2xl" className="w-full max-w-sm">
         {/* Branding */}
-        <div className="flex flex-col items-center gap-2">
+        <Stack align="center" gap="sm">
           <img src="/icon.svg" alt="Singularity" className="size-24" />
           <Text as="span" variant="heading" className="tracking-tight">
             Singularity
           </Text>
-        </div>
+        </Stack>
 
         {/* Stats */}
         {!conv.pending && totalCount > 0 && (
-          <div className="flex w-full gap-3">
+          <Stack direction="row" gap="md" className="w-full">
             {[
               { label: "Total", value: totalCount },
               { label: "Active", value: activeCount },
@@ -48,7 +49,7 @@ export function WelcomeView() {
             ].map((stat) => (
               <Card
                 key={stat.label}
-                className="flex-1 rounded-lg p-3 text-center"
+                className="flex-1 rounded-lg p-md text-center"
               >
                 <Text as="div" variant="title" className="text-foreground">
                   {stat.value}
@@ -58,7 +59,7 @@ export function WelcomeView() {
                 </div>
               </Card>
             ))}
-          </div>
+          </Stack>
         )}
 
         {/* New Conversation */}
@@ -67,22 +68,23 @@ export function WelcomeView() {
         {/* Recent Conversations */}
         {!conv.pending && recentConversations.length > 0 && (
           <div className="w-full">
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the section header above the recents card */}
             <div className="flex items-center justify-between mb-2">
               <Text as="span" variant="label" className="text-muted-foreground">
                 Recent conversations
               </Text>
             </div>
-            <Card className="flex flex-col rounded-lg overflow-hidden divide-y p-0">
+            <Card className="flex flex-col rounded-lg overflow-hidden divide-y p-none">
               {recentConversations.map((conversation) => (
                 <button
                   key={conversation.id}
-                  className="flex items-center gap-3 px-3 py-2.5 text-left hover:bg-accent transition-colors"
+                  className="flex items-center gap-md px-md py-sm text-left hover:bg-accent transition-colors"
                   onClick={() => openConversation(conversation.id)}
                 >
                   <StatusDot
                     colorClass={conversation.active ? "bg-info" : "bg-muted-foreground/40"}
                   />
-                  <div className="flex flex-col gap-0.5 overflow-hidden flex-1">
+                  <Stack gap="2xs" className="overflow-hidden flex-1">
                     <span
                       className={cn(
                         "truncate text-caption",
@@ -94,14 +96,14 @@ export function WelcomeView() {
                       {conversation.title ?? "Starting..."}
                     </span>
                     <RelativeTime date={conversation.createdAt} className="text-3xs text-muted-foreground" />
-                  </div>
+                  </Stack>
                   <MdArrowForward className="size-3.5 text-muted-foreground/50 shrink-0" />
                 </button>
               ))}
             </Card>
           </div>
         )}
-      </div>
+      </Stack>
     </div>
   );
 }

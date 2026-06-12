@@ -2,6 +2,7 @@ import { useMemo } from "react";
 import { useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import type { Source } from "@plugins/review/web";
 import { usePluginChanges } from "../use-plugin-changes";
 import { PluginChangeCard } from "./plugin-change-card";
@@ -23,23 +24,23 @@ export function PluginChangesSection({
   const { expanded: expandedSet, allExpanded, toggleAll, toggle } = useExpandAll(allPaths);
 
   if (isPending) {
-    return <Loading label="Loading plugins…" className="px-1" />;
+    return <Loading label="Loading plugins…" className="px-xs" />;
   }
   if (error) {
     return (
-      <Text as="p" variant="body" className="text-destructive px-1">Error: {String(error)}</Text>
+      <Text as="p" variant="body" className="text-destructive px-xs">Error: {String(error)}</Text>
     );
   }
   if (data.plugins.length === 0) {
     return (
-      <Text as="p" variant="body" className="text-muted-foreground px-1">
+      <Text as="p" variant="body" className="text-muted-foreground px-xs">
         No plugin API changes detected.
       </Text>
     );
   }
 
   return (
-    <div className="flex flex-col gap-2">
+    <Stack gap="sm">
       <div className="flex justify-end">
         <ExpandAllButton
           variant="full"
@@ -56,6 +57,6 @@ export function PluginChangesSection({
           onToggle={() => toggle(plugin.path)}
         />
       ))}
-    </div>
+    </Stack>
   );
 }

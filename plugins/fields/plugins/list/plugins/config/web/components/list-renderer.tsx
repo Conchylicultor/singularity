@@ -83,7 +83,7 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
   }, [sorted, value, onChange, itemFields]);
 
   return (
-    <div className="flex flex-col gap-2 py-3">
+    <div className="flex flex-col gap-sm py-md">
       {field.meta.label ? (
         <Text as="label" variant="label">
           {field.meta.label}
@@ -96,7 +96,7 @@ const ListRenderer: FieldRendererComponent<ListItem<FieldsRecord>[]> = ({
       ) : null}
 
       <SortableList items={ids} onMove={handleMove}>
-        <div className="flex flex-col gap-1.5">
+        <div className="flex flex-col gap-xs">
           {sorted.map((item) => (
             <ListItemRow
               key={item.id}

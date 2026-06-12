@@ -32,14 +32,14 @@ export function AgentLaunches({ agentId }: { agentId: string }) {
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-sm">
       <SectionLabel as="h3" className="font-medium">
         Attempts
       </SectionLabel>
       {launches.length === 0 ? (
         <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
       ) : (
-        <ul className="flex flex-col gap-1">
+        <ul className="flex flex-col gap-xs">
           {launches.map((launch) => {
             const primary = launch.latestConversation;
             const isActive = primary ? activeConvId === primary.id : false;

@@ -21,7 +21,7 @@ export function RowCountSection({
   }
 
   return (
-    <div className="flex items-baseline gap-2 px-3 py-2">
+    <div className="flex items-baseline gap-sm px-md py-sm">
       <Text variant="title" className="tabular-nums">
         {data.estimate != null ? data.estimate.toLocaleString() : "—"}
       </Text>

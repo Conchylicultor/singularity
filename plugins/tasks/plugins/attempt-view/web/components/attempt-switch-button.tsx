@@ -45,7 +45,7 @@ export function AttemptSwitchButton() {
       aria-label={isOpen ? "Close attempt view" : "Open attempt view"}
       aria-pressed={isOpen}
       onClick={toggle}
-      className="gap-1.5"
+      className="gap-xs"
     >
       <MdSplitscreen className="size-4" />
       <Text as="span" variant="caption" className="tabular-nums">

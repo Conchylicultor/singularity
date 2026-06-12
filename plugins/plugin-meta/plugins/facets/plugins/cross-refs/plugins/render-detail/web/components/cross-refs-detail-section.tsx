@@ -13,6 +13,7 @@ import {
   asPath,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   CrossRefsData,
@@ -44,20 +45,20 @@ export function CrossRefsDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Cross-refs" count={parts.join(" · ")}>
-      <div className="flex flex-col gap-3">
+      <Stack gap="md">
         {importedBy.length > 0 && <ImportedByBanner names={importedBy} />}
         {totalUses > 0 && (
           <SubHeading label="Uses" count={totalUses}>
-            <div className="flex flex-col gap-2">
+            <Stack gap="sm">
               {RUNTIMES.map((rt) =>
                 apiUses[rt].length > 0 ? (
                   <UsesGroup key={rt} runtime={rt} uses={apiUses[rt]} />
                 ) : null,
               )}
-            </div>
+            </Stack>
           </SubHeading>
         )}
-      </div>
+      </Stack>
     </Section>
   );
 }
@@ -72,27 +73,28 @@ function UsesGroup({
   uses: ApiUse[];
 }) {
   return (
-    <div className="flex flex-col gap-0.5">
-      <Text as="div" variant="caption" className="flex items-center gap-1.5 px-2">
+    <Stack gap="2xs">
+      <Text as="div" variant="caption" className="flex items-center gap-xs px-sm">
         <span className={cn("font-mono font-medium", RUNTIME_COLORS[runtime])}>
           {runtime}
         </span>
         <span className="text-muted-foreground/50">({uses.length})</span>
       </Text>
-      <div className="ml-1 flex flex-col gap-px border-l border-border/50 pl-3">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents this nested tree branch under its runtime header; one-off left offset paired with the left border, not sibling rhythm */}
+      <div className="ml-1 flex flex-col gap-px border-l border-border/50 pl-md">
         {uses.map((u) => (
           <Text
             as="code"
             variant="caption"
             key={`${u.plugin}:${u.symbol ?? ""}`}
-            className="truncate px-1.5 py-px font-mono text-foreground"
+            className="truncate px-xs py-px font-mono text-foreground"
           >
             {asPath(u.plugin)}
             {u.symbol ? "." + u.symbol : ""}
           </Text>
         ))}
       </div>
-    </div>
+    </Stack>
   );
 }
 
@@ -105,7 +107,8 @@ function ImportedByBanner({ names }: { names: PluginId[] }) {
   const remaining = names.length - threshold;
 
   return (
-    <div className="flex flex-wrap items-center gap-x-1 gap-y-0.5 text-3xs text-muted-foreground">
+    <div className="flex flex-wrap items-center gap-x-xs gap-y-2xs text-3xs text-muted-foreground">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mr-0.5 is a tiny inline trailing offset on the leading label before the wrapped chip flow, not container rhythm */}
       <span className="mr-0.5 font-medium">Imported by</span>
       {visible.map((name, i) => (
         <span key={name} className="inline-flex items-center">

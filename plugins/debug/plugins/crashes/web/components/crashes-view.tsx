@@ -41,9 +41,9 @@ function CrashRow({ crash: c, serverBuildId }: { crash: Crash; serverBuildId: st
   const line = c.errorType ? `${c.errorType}: ${c.message}` : c.message;
   const tabId = getTabId();
   return (
-    <li className="px-3 py-2">
-      <div className="flex min-w-0 flex-col gap-1">
-        <Text as="div" variant="caption" className="flex flex-wrap items-center gap-2">
+    <li className="px-md py-sm">
+      <div className="flex min-w-0 flex-col gap-xs">
+        <Text as="div" variant="caption" className="flex flex-wrap items-center gap-sm">
           <Badge variant="muted" size="md" className="font-mono">
             {c.source}
           </Badge>

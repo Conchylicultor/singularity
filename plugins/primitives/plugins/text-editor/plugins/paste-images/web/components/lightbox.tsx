@@ -23,7 +23,7 @@ export function Lightbox({
   return createPortal(
     <div
       onClick={onClose}
-      className="fixed inset-0 z-popover flex items-center justify-center bg-black/70 p-4 backdrop-blur-sm"
+      className="fixed inset-0 z-popover flex items-center justify-center bg-black/70 p-lg backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
     >

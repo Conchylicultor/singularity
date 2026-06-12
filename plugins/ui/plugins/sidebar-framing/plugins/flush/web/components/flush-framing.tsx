@@ -14,7 +14,7 @@ export function FlushFraming({
     <SidebarProvider className="h-full min-h-0">
       <Sidebar>
         {header && (
-          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-0">
+          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-none">
             {header}
           </SidebarHeader>
         )}

@@ -27,7 +27,7 @@ function SideBySideButton({ convId }: { convId: string }) {
         e.stopPropagation();
         openPane(conversationPane, { convId }, { mode: "push" });
       }}
-      className="rounded-md p-0.5 text-muted-foreground hover:bg-accent hover:text-foreground"
+      className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
     >
       <MdVerticalSplit size={14} />
     </button>
@@ -49,8 +49,8 @@ function AttemptSection({
 }) {
   const worktreeName = attempt.worktreePath.split("/").pop();
   return (
-    <div className="flex flex-col gap-0.5">
-      <div className="flex items-center gap-1.5 px-2 py-1">
+    <div className="flex flex-col gap-2xs">
+      <div className="flex items-center gap-xs px-sm py-xs">
         <span
           className={cn(
             "min-w-0 flex-1 truncate font-mono text-2xs",
@@ -67,12 +67,12 @@ function AttemptSection({
         <Text
           as="p"
           variant="caption"
-          className="text-muted-foreground px-2 py-0.5 italic"
+          className="text-muted-foreground px-sm py-2xs italic"
         >
           No conversations
         </Text>
       ) : (
-        <ul className="flex flex-col gap-0.5">
+        <ul className="flex flex-col gap-2xs">
           {attempt.conversations.map((c) => {
             const isActive = c.id === selectedConvId;
             return (
@@ -86,7 +86,7 @@ function AttemptSection({
                 <button
                   type="button"
                   onClick={() => onSelect(c.id)}
-                  className="flex min-w-0 flex-1 items-center gap-2 px-2 py-1.5 text-left text-body"
+                  className="flex min-w-0 flex-1 items-center gap-sm px-sm py-xs text-left text-body"
                 >
                   <StatusDot colorClass={CONV_STATUS_DOT[c.status]} />
                   <span className="min-w-0 flex-1 truncate">
@@ -94,7 +94,7 @@ function AttemptSection({
                   </span>
                 </button>
                 {convInstanceId !== undefined && !isActive && (
-                  <div className="flex shrink-0 items-center pr-1 opacity-0 group-hover:opacity-100">
+                  <div className="flex shrink-0 items-center pr-xs opacity-0 group-hover:opacity-100">
                     <PaneInstanceContext.Provider value={convInstanceId}>
                       <SideBySideButton convId={c.id} />
                     </PaneInstanceContext.Provider>
@@ -108,7 +108,7 @@ function AttemptSection({
       <LaunchControl
         size="sm"
         variant="outline"
-        className="px-2 pt-1"
+        className="px-sm pt-xs"
         getRequest={() => ({ attemptId: attempt.id })}
       />
     </div>
@@ -140,7 +140,7 @@ export function AttemptPane() {
   );
 
   const title = (
-    <span className="flex items-center gap-1.5">
+    <span className="flex items-center gap-xs">
       Attempts
       {totalConversations > 0 && (
         <Badge size="sm" className="shrink-0">
@@ -152,13 +152,13 @@ export function AttemptPane() {
 
   return (
     <PaneChrome pane={attemptPane} title={title}>
-      <div className="p-2">
+      <div className="p-sm">
         {taskAttempts.length === 0 ? (
-          <Text as="p" variant="body" className="text-muted-foreground px-2 py-1">
+          <Text as="p" variant="body" className="text-muted-foreground px-sm py-xs">
             No attempts.
           </Text>
         ) : (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-sm">
             {taskAttempts.map((a) => (
               <AttemptSection
                 key={a.id}

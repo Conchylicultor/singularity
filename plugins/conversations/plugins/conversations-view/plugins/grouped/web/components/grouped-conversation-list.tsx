@@ -29,6 +29,7 @@ import { useTaskAutoGroups } from "./use-task-auto-groups";
 import { AutoGroupBox } from "./auto-group-box";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { MdChevronRight, MdClose, MdFolder, MdRemoveCircleOutline } from "react-icons/md";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";
@@ -379,7 +380,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
       row={
         <>
           <SidebarMenuButton
-            className={cn("h-auto py-2", rowTint(conv))}
+            className={cn("h-auto py-sm", rowTint(conv))}
             isActive={conv.id === activeId}
             onClick={() => onNavigate(conv.id)}
           >
@@ -413,7 +414,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
             {forks.map((fork) => (
               <SidebarMenuSubItem key={fork.id} className="relative group/menu-item">
                 <SidebarMenuSubButton
-                  className={cn("h-auto py-1", rowTint(fork))}
+                  className={cn("h-auto py-xs", rowTint(fork))}
                   isActive={fork.id === activeId}
                   onClick={() => onNavigate(fork.id)}
                 >
@@ -442,7 +443,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
 
   return (
     <DndContext sensors={sensors} collisionDetection={pointerWithin} onDragStart={onDragStart} onDragEnd={onDragEnd} onDragCancel={() => { setActiveConvId(null); setActiveGroupId(null); setActiveSiblingConvIds([]); }}>
-      <div className="flex flex-col gap-1.5">
+      <Stack gap="xs">
         <NewGroupDropZone visible={dragInProgress} />
         {groups.map((g, i) => {
           const ags = groupedAttemptGroups.get(g.id) ?? [];
@@ -511,7 +512,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
           hasActiveChild={hasActiveInGroup(trulyUngrouped)}
           count={trulyUngrouped.length}
           title={
-            <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
+            <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-xs py-2xs font-semibold text-muted-foreground">
               Ungrouped
             </Text>
           }
@@ -521,7 +522,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
               {trulyUngrouped.map((ag) => renderAttemptGroup(ag))}
             </SidebarMenu>
           ) : (
-            <div className="px-2 py-1 text-2xs text-muted-foreground italic">
+            <div className="px-sm py-xs text-2xs text-muted-foreground italic">
               No ungrouped conversations
             </div>
           )}
@@ -529,7 +530,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
         {(recentGone.length > 0 || paginatedItems.length > 0) && (
           <div className="rounded-md transition-colors hover:bg-muted/30">
             {/* eslint-disable-next-line badge/no-adhoc-chip -- group header row, awaiting Row primitive */}
-            <div className="flex items-center gap-0.5 rounded-md px-1 py-1">
+            <div className="flex items-center gap-2xs rounded-md px-xs py-xs">
               <button
                 type="button"
                 onClick={toggleGoneExpanded}
@@ -543,17 +544,18 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
                   )}
                 />
               </button>
-              <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
+              <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-xs py-2xs font-semibold text-muted-foreground">
                 Closed
               </Text>
             </div>
             {!dragInProgress && goneExpanded && (
-              <div className="mt-0.5 pl-1">
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the expanded list just below the header row (sibling under a non-flex container)
+              <div className="mt-0.5 pl-xs">
                 <SidebarMenu>
                   {recentGone.map((conv) => (
                     <SidebarMenuItem key={conv.id}>
                       <SidebarMenuButton
-                        className={cn("h-auto py-2", rowTint(conv))}
+                        className={cn("h-auto py-sm", rowTint(conv))}
                         isActive={conv.id === activeId}
                         onClick={() => onNavigate(conv.id)}
                       >
@@ -570,7 +572,7 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
                   {paginatedItems.map((conv) => (
                     <SidebarMenuItem key={conv.id}>
                       <SidebarMenuButton
-                        className={cn("h-auto py-2", rowTint(conv))}
+                        className={cn("h-auto py-sm", rowTint(conv))}
                         isActive={conv.id === activeId}
                         onClick={() => onNavigate(conv.id)}
                       >
@@ -589,17 +591,17 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
             )}
           </div>
         )}
-      </div>
+      </Stack>
       <DragOverlay dropAnimation={null}>
         {activeGroupId ? (
-          <Text as="div" variant="label" className="bg-background/90 border-accent flex items-center gap-1.5 rounded-md border px-2 py-1.5 shadow-md">
+          <Text as="div" variant="label" className="bg-background/90 border-accent flex items-center gap-xs rounded-md border px-sm py-xs shadow-md">
             <MdFolder className="size-3.5 shrink-0 text-muted-foreground" />
             <span className="truncate">
               {groups.find((g) => g.id === activeGroupId)?.title || "Group"}
             </span>
           </Text>
         ) : activeConv ? (
-          <Text as="div" variant="body" className="bg-background/90 border-accent flex items-center rounded-md border px-2 py-1.5 shadow-md">
+          <Text as="div" variant="body" className="bg-background/90 border-accent flex items-center rounded-md border px-sm py-xs shadow-md">
             <ConversationItem conv={activeConv} />
           </Text>
         ) : null}

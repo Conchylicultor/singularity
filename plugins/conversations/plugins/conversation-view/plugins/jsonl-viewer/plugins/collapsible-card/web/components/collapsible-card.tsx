@@ -59,7 +59,7 @@ export interface CollapsibleCardProps {
 const CARD_CHROME = "border-border/50 bg-muted/20";
 const ERROR_CARD = "border-destructive/60 bg-destructive/5";
 const HEADER =
-  "relative flex w-full items-center gap-2 text-2xs text-muted-foreground hover:text-foreground";
+  "relative flex w-full items-center gap-sm text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
   label,
@@ -76,7 +76,7 @@ export function CollapsibleCard({
   return (
     <Card
       className={cn(
-        "group px-3 py-2",
+        "group px-md py-sm",
         error ? ERROR_CARD : CARD_CHROME,
         className,
       )}
@@ -95,14 +95,14 @@ export function CollapsibleCard({
         />
         {/* Non-interactive: pointer-events-none lets clicks fall through to the
             overlay button beneath, so the chevron+label area toggles too. */}
-        <span className="pointer-events-none relative flex min-w-0 items-center gap-2">
+        <span className="pointer-events-none relative flex min-w-0 items-center gap-sm">
           <CollapsibleChevron open={open} className="size-3" />
           {/* No `truncate` here: this row holds identity chips (e.g. the
               tool-name Badge, `shrink-0`) next to free text. `overflow:hidden`
               would clip the chips too once the row gets tight. Truncation is the
               job of the flexible leaf (a `flex-1 truncate` summary span), never
               the container — so chips stay whole and only the text ellipsizes. */}
-          <span className="flex min-w-0 items-center gap-2">{label}</span>
+          <span className="flex min-w-0 items-center gap-sm">{label}</span>
         </span>
         {/* Interactive siblings opt back in via CardHeaderAction. min-w-0 lets
             the aside (typically a FilePath with its own overflow ellipsis)
@@ -117,6 +117,7 @@ export function CollapsibleCard({
         )}
       </div>
       {open && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header
         <div id={contentId} className="mt-2">
           {children}
         </div>

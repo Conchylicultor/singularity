@@ -65,6 +65,7 @@ function SegmentedContent({
             <FileLinkText text={seg.value} onFileOpen={onFileOpen} />
           </Text>
         ) : (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
           <div key={i} className="mt-1.5">
             <InlineImage mime={seg.mime} data={seg.data} />
           </div>
@@ -95,7 +96,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <ContentScope>
-      <div className="rounded-md border border-border/60 bg-background px-3 py-2">
+      <div className="rounded-md border border-border/60 bg-background px-md py-sm">
         <div
           className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
           style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
@@ -112,7 +113,8 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
           <button
             type="button"
             onClick={() => setExpanded((v) => { const next = !v; reportSticky(next); return next; })}
-            className="text-caption mt-1 flex items-center gap-1 text-muted-foreground hover:text-foreground"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 spaces the show-more toggle from the content above it
+            className="text-caption mt-1 flex items-center gap-xs text-muted-foreground hover:text-foreground"
           >
             {expanded ? (
               <>

@@ -171,8 +171,8 @@ function SonataPlayerSurface(): ReactElement {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
       {/* Toolbar: back-to-library + title, display picker, transport. */}
-      <div className="flex flex-wrap items-center gap-x-6 gap-y-2 border-b border-border pl-6 pr-floating-bar py-3">
-        <div className="flex items-center gap-2">
+      <div className="flex flex-wrap items-center gap-x-xl gap-y-sm border-b border-border pl-xl pr-floating-bar py-md">
+        <div className="flex items-center gap-sm">
           <Button variant="outline" size="xs" onClick={() => clearRoute()}>
             ← Library
           </Button>
@@ -181,7 +181,7 @@ function SonataPlayerSurface(): ReactElement {
           </Text>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-sm">
           <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             Display
           </span>
@@ -199,7 +199,7 @@ function SonataPlayerSurface(): ReactElement {
 
         {/* Toolbar action widgets (transport controls: play/pause, speed, …).
             Open slot — renders nothing until a plugin contributes. */}
-        <div className="ml-auto flex items-center gap-2">
+        <div className="ml-auto flex items-center gap-sm">
           <Sonata.Toolbar.Render>
             {(t) => <t.component key={t.id} />}
           </Sonata.Toolbar.Render>
@@ -229,7 +229,7 @@ function SonataPlayerSurface(): ReactElement {
               as="div"
               variant="body"
               tone="muted"
-              className="flex h-full items-center justify-center p-8"
+              className="flex h-full items-center justify-center p-2xl"
             >
               No display selected.
             </Text>

@@ -1,6 +1,7 @@
 import { useMemo, useState, type ReactElement } from "react";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import type { BlockHandle } from "../../core";
 import { useInsertableBlocks, filterBlockTypes, BlockTypeList } from "./block-type-list";
 
@@ -15,7 +16,7 @@ export function BlockTypeMenu({
   onSelect,
   align = "start",
   side = "bottom",
-  contentClassName = "w-56 p-1",
+  contentClassName = "w-56 p-xs",
 }: {
   trigger: ReactElement;
   onSelect: (block: BlockHandle<unknown>) => void;
@@ -57,7 +58,7 @@ export function BlockTypeMenu({
       contentClassName={contentClassName}
       trigger={trigger}
     >
-      <div className="flex flex-col gap-1">
+      <Stack gap="xs">
         <SearchInput
           autoFocus
           placeholder="Filter blocks..."
@@ -91,7 +92,7 @@ export function BlockTypeMenu({
           onSelect={choose}
           onHoverIndex={setActiveIndex}
         />
-      </div>
+      </Stack>
     </InlinePopover>
   );
 }

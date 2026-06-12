@@ -32,22 +32,22 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
   }
 
   return (
-    <form onSubmit={handleSubmit} className="flex flex-col gap-4 p-4">
-      <label className="flex flex-col gap-1">
+    <form onSubmit={handleSubmit} className="flex flex-col gap-lg p-lg">
+      <label className="flex flex-col gap-xs">
         <Text as="span" variant="label">Name</Text>
         <input
-          className="bg-input rounded-md border px-2 py-1.5 text-body"
+          className="bg-input rounded-md border px-sm py-xs text-body"
           placeholder="e.g. equin-prod"
           value={name}
           onChange={(e) => setName(e.target.value)}
         />
       </label>
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-xs">
         <Text as="span" variant="label">
           Host <span className="text-destructive">*</span>
         </Text>
         <input
-          className="bg-input rounded-md border px-2 py-1.5 text-body"
+          className="bg-input rounded-md border px-sm py-xs text-body"
           placeholder="e.g. 49.13.197.105"
           value={host}
           onChange={(e) => setHost(e.target.value)}
@@ -55,29 +55,29 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
           autoFocus
         />
       </label>
-      <div className="flex gap-3">
-        <label className="flex flex-1 flex-col gap-1">
+      <div className="flex gap-md">
+        <label className="flex flex-1 flex-col gap-xs">
           <Text as="span" variant="label">SSH User</Text>
           <input
-            className="bg-input rounded-md border px-2 py-1.5 text-body"
+            className="bg-input rounded-md border px-sm py-xs text-body"
             value={sshUser}
             onChange={(e) => setSshUser(e.target.value)}
           />
         </label>
-        <label className="flex w-20 flex-col gap-1">
+        <label className="flex w-20 flex-col gap-xs">
           <Text as="span" variant="label">Port</Text>
           <input
-            className="bg-input rounded-md border px-2 py-1.5 text-body"
+            className="bg-input rounded-md border px-sm py-xs text-body"
             type="number"
             value={port}
             onChange={(e) => setPort(e.target.value)}
           />
         </label>
       </div>
-      <label className="flex flex-col gap-1">
+      <label className="flex flex-col gap-xs">
         <Text as="span" variant="label">SSH Private Key</Text>
         <textarea
-          className="bg-input rounded-md border px-2 py-1.5 font-mono text-caption"
+          className="bg-input rounded-md border px-sm py-xs font-mono text-caption"
           rows={5}
           placeholder="-----BEGIN OPENSSH PRIVATE KEY-----"
           value={sshPrivateKey}
@@ -87,11 +87,11 @@ export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }
           Stored encrypted. Can be added later.
         </Text>
       </label>
-      <div className="flex justify-end pt-1">
+      <div className="flex justify-end pt-xs">
         <button
           type="submit"
           disabled={!host || submitting}
-          className="bg-primary text-primary-foreground rounded-md px-3 py-1.5 text-label disabled:opacity-50"
+          className="bg-primary text-primary-foreground rounded-md px-md py-xs text-label disabled:opacity-50"
         >
           {submitting ? "Adding…" : "Add Server"}
         </button>

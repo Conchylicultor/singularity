@@ -17,7 +17,7 @@ All endpoints accept `?bucket=day|week|month` (default `day`).
 - Description: Push contention stats: wait time, throughput, and step breakdown charts. Push contention stats: wait time, throughput, and step breakdown.
 - Web:
   - Contributes: `Stats.Chart` "Pushes" → `PushesSection`
-  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
+  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
   - Routes: `GET /api/stats/pushes/wait-time`, `GET /api/stats/pushes/throughput`, `GET /api/stats/pushes/step-breakdown`

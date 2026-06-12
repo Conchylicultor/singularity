@@ -36,7 +36,7 @@ export function DataCard(props: DataCardProps) {
           onActivate?.();
         }
       }}
-      className={cn("group relative flex flex-col gap-3 rounded-lg p-4", className)}
+      className={cn("group relative flex flex-col gap-md rounded-lg p-lg", className)}
     >
       {media}
       <div className="min-w-0 flex-1">{children}</div>
@@ -44,7 +44,7 @@ export function DataCard(props: DataCardProps) {
       {actions ? (
         <div
           className={cn(
-            "absolute right-2 top-2 flex items-center gap-1",
+            "absolute right-2 top-2 flex items-center gap-xs",
             "opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
           )}
           // Action clicks must not bubble up to onActivate.

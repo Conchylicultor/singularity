@@ -75,7 +75,7 @@ export function FloatingBar() {
         </div>
       </WithTooltip>
 
-      <FloatingActionFadeIn className="flex max-w-0 items-center gap-2 overflow-hidden whitespace-nowrap pr-2 transition-[max-width] duration-200 group-data-hovered/fa:max-w-[40rem]">
+      <FloatingActionFadeIn className="flex max-w-0 items-center gap-sm overflow-hidden whitespace-nowrap pr-sm transition-[max-width] duration-200 group-data-hovered/fa:max-w-[40rem]">
         <ActionBar.Item.Render />
       </FloatingActionFadeIn>
     </FloatingAction>

@@ -19,6 +19,7 @@ import {
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCostAvgPerConversation } from "../../shared/endpoints";
 import { formatUsd, formatUsdCompact, formatTokensCompact } from "./format";
@@ -99,9 +100,9 @@ export function AvgCostPerConversationChart() {
   const tokenRows = flattenTokens(points, families);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div>
-        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">
+    <Stack gap="xl">
+      <Stack gap="md">
+        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">
           Avg cost / conversation by model
         </Text>
         <div className="h-56 w-full">
@@ -177,10 +178,10 @@ export function AvgCostPerConversationChart() {
             </ResponsiveContainer>
           </ChartState>
         </div>
-      </div>
+      </Stack>
 
-      <div>
-        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">
+      <Stack gap="md">
+        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">
           Avg tokens / conversation by model
         </Text>
         <div className="h-56 w-full">
@@ -254,7 +255,7 @@ export function AvgCostPerConversationChart() {
             </ResponsiveContainer>
           </ChartState>
         </div>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

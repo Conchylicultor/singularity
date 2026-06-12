@@ -39,7 +39,7 @@ function StoryHeaderInner({ pageId, page }: { pageId: string; page: Block | unde
   });
 
   return (
-    <div className="flex min-w-0 flex-1 items-center gap-2">
+    <div className="flex min-w-0 flex-1 items-center gap-sm">
       <PageIcon nodes={data?.iconSvgNodes} className="size-5 shrink-0 text-muted-foreground" />
       <input
         value={title.value}

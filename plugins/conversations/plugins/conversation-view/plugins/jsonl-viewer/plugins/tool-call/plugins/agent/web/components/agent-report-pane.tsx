@@ -4,6 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
+import { Inset } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { agentReportPane } from "../panes";
 
@@ -39,7 +40,7 @@ export function AgentReportPaneBody() {
 
   return (
     <PaneChrome pane={agentReportPane} title={title}>
-      <div className="p-4">
+      <Inset pad="lg">
         {!result ? (
           <Text as="div" variant="body" className="text-muted-foreground">
             {!event ? "Event not found." : "Agent is still running…"}
@@ -57,7 +58,7 @@ export function AgentReportPaneBody() {
             <Markdown>{result.content}</Markdown>
           </div>
         )}
-      </div>
+      </Inset>
     </PaneChrome>
   );
 }

@@ -1,5 +1,6 @@
 import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -23,9 +24,9 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
   if (rows.length === 0) return null;
 
   return (
-    <section className="flex flex-col gap-1.5">
+    <Stack as="section" gap="xs">
       <SectionLabel>Linked from</SectionLabel>
-      <ul className="flex flex-col gap-0.5">
+      <Stack as="ul" gap="2xs">
         {rows.map((row) => (
           <li key={row.id}>
             <Row
@@ -41,7 +42,7 @@ export function Backlinks({ documentId, onOpenPage }: BacklinksProps) {
             </Row>
           </li>
         ))}
-      </ul>
-    </section>
+      </Stack>
+    </Stack>
   );
 }

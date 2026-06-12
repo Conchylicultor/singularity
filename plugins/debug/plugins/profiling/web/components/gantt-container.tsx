@@ -51,8 +51,8 @@ export function TimeAxis({
   );
 
   return (
-    <div className="relative flex h-6 border-b px-4">
-      <div className="flex w-40 shrink-0 items-center gap-1.5">
+    <div className="relative flex h-6 border-b px-lg">
+      <div className="flex w-40 shrink-0 items-center gap-xs">
         <SectionLabel
           as="span"
           className="text-3xs font-medium tracking-wider"

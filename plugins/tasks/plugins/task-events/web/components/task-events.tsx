@@ -18,6 +18,7 @@ import {
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 function useGithubBase(): string | null {
   const { data } = useEndpoint(getRepoInfo, {});
@@ -61,14 +62,14 @@ export function TaskEvents({ taskId }: { taskId: string }) {
     .sort((a, b) => +new Date(b.createdAt) - +new Date(a.createdAt));
 
   return (
-    <div className="flex flex-col gap-6">
-      <Collapsible defaultOpen className="flex flex-col gap-2">
+    <Stack gap="xl">
+      <Collapsible defaultOpen className="flex flex-col gap-sm">
         <SectionHeaderRow variant="eyebrow">Pushes</SectionHeaderRow>
-        <CollapsibleContent className="flex flex-col gap-2">
+        <CollapsibleContent className="flex flex-col gap-sm">
         {pushes.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No pushes yet.</Text>
         ) : (
-          <ul className="flex flex-col gap-1">
+          <ul className="flex flex-col gap-xs">
             {pushes.map((push) => {
               const short = push.sha.slice(0, 7);
               const url = githubBase
@@ -96,7 +97,7 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                     target={url ? "_blank" : undefined}
                     rel={url ? "noreferrer" : undefined}
                     bordered
-                    className="gap-3"
+                    className="gap-md"
                   >
                     {content}
                   </Row>
@@ -108,21 +109,21 @@ export function TaskEvents({ taskId }: { taskId: string }) {
         </CollapsibleContent>
       </Collapsible>
 
-      <Collapsible defaultOpen className="flex flex-col gap-2">
+      <Collapsible defaultOpen className="flex flex-col gap-sm">
         <SectionHeaderRow variant="eyebrow">Attempts</SectionHeaderRow>
-        <CollapsibleContent className="flex flex-col gap-2">
+        <CollapsibleContent className="flex flex-col gap-sm">
         {attempts.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No attempts yet.</Text>
         ) : (
-          <ul className="flex flex-col gap-2">
+          <ul className="flex flex-col gap-sm">
             {attempts.map((attempt) => {
               const convs = attempt.conversations;
               return (
                 <li
                   key={attempt.id}
-                  className="flex flex-col gap-2 rounded-md border px-3 py-2"
+                  className="flex flex-col gap-sm rounded-md border px-md py-sm"
                 >
-                  <div className="flex items-center gap-3">
+                  <div className="flex items-center gap-md">
                     <AttemptStatusBadge status={attempt.status} />
                     <Text as="span" variant="caption" tone="muted" className="flex-1 truncate font-mono">
                       {attempt.worktreePath.split("/").pop()}
@@ -132,11 +133,11 @@ export function TaskEvents({ taskId }: { taskId: string }) {
                     </Text>
                   </div>
                   {convs.length === 0 ? (
-                    <Text as="p" variant="caption" tone="muted" className="pl-1">
+                    <Text as="p" variant="caption" tone="muted" className="pl-xs">
                       No conversations.
                     </Text>
                   ) : (
-                    <ul className="flex flex-col gap-1">
+                    <ul className="flex flex-col gap-xs">
                       {convs.map((c) => {
                         const isActive = activeConvId === c.id;
                         return (
@@ -167,6 +168,6 @@ export function TaskEvents({ taskId }: { taskId: string }) {
         )}
         </CollapsibleContent>
       </Collapsible>
-    </div>
+    </Stack>
   );
 }

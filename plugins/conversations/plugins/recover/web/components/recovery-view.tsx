@@ -124,8 +124,8 @@ export function RecoveryView() {
 
   return (
     <div className="flex flex-col h-full">
-      <div className="flex items-center justify-between px-4 py-3 border-b gap-3">
-        <div className="flex items-center gap-2 min-w-0">
+      <div className="flex items-center justify-between px-lg py-md border-b gap-md">
+        <div className="flex items-center gap-sm min-w-0">
           <Text as="h2" variant="label" className="font-semibold shrink-0">Recovery</Text>
           {items.length > 0 && (
             <Text as="span" variant="caption" tone="muted" className="truncate">
@@ -183,7 +183,7 @@ function ClusterGroup({
   return (
     <div className="border-b">
       {isCluster && endedAt && (
-        <div className="flex items-center justify-between px-4 py-2 bg-muted/30 border-b">
+        <div className="flex items-center justify-between px-lg py-sm bg-muted/30 border-b">
           <Text as="span" variant="caption" className="font-medium">
             {formatTime(endedAt)} — {group.length} conversations closed
           </Text>
@@ -196,11 +196,13 @@ function ClusterGroup({
           >
             {anyPending ? (
               <>
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
                 <Spinner className="size-3.5 mr-1" />
                 Restoring…
               </>
             ) : (
               <>
+                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
                 <MdRestore className="size-3.5 mr-1" />
                 Restore all ({group.length})
               </>
@@ -234,12 +236,12 @@ function ConversationRow({
 }) {
   return (
     <>
-      <div className="flex items-center gap-3 px-4 py-2 hover:bg-muted/30">
-        <div className="flex-1 min-w-0 flex flex-col gap-0.5">
+      <div className="flex items-center gap-md px-lg py-sm hover:bg-muted/30">
+        <div className="flex-1 min-w-0 flex flex-col gap-2xs">
           <Text as="span" variant="caption" className="truncate font-medium">
             {conversation.title ?? conversation.id}
           </Text>
-          <div className="flex items-center gap-2 text-3xs text-muted-foreground">
+          <div className="flex items-center gap-sm text-3xs text-muted-foreground">
             <span>{conversation.model}</span>
             {conversation.endedAt && <span>{formatTime(conversation.endedAt)}</span>}
           </div>
@@ -253,11 +255,13 @@ function ConversationRow({
         >
           {pending ? (
             <>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
               <Spinner className="size-3.5 mr-1" />
               Restoring…
             </>
           ) : (
             <>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
               <MdRestore className="size-3.5 mr-1" />
               Restore
             </>
@@ -265,7 +269,7 @@ function ConversationRow({
         </Button>
       </div>
       {error && (
-        <div className="px-4 py-1.5 bg-muted/10">
+        <div className="px-lg py-xs bg-muted/10">
           <Text as="span" variant="caption" tone="destructive">{error}</Text>
         </div>
       )}

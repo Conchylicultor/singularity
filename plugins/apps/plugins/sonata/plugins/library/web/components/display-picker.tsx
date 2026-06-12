@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentType } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 /**
  * A horizontal picker rendered from a list of `{ id, label, icon? }` items.
@@ -33,7 +34,7 @@ export function Picker({
     );
   }
   return (
-    <div className="flex flex-wrap items-center gap-1">
+    <Stack direction="row" wrap align="center" gap="xs">
       {items.map((item) => {
         const Icon = item.icon;
         const active = item.id === activeId;
@@ -46,7 +47,7 @@ export function Picker({
             aria-pressed={active}
             // eslint-disable-next-line row/no-adhoc-row -- bespoke picker: per-item "loaded" dot indicator that SegmentedControl can't express
             className={cn(
-              "flex items-center gap-1.5 rounded-md border px-2.5 py-1 text-label transition-colors",
+              "flex items-center gap-xs rounded-md border px-sm py-xs text-label transition-colors",
               active
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border bg-transparent text-muted-foreground hover:bg-muted/50",
@@ -63,6 +64,6 @@ export function Picker({
           </button>
         );
       })}
-    </div>
+    </Stack>
   );
 }

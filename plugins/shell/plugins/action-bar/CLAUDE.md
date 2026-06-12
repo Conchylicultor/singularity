@@ -8,7 +8,7 @@
 - Web:
   - Slots: `ActionBar.Item`
   - Contributes: `Shell.Toolbar` → `ActionBarStrip`
-  - Uses: `primitives/slot-render.defineRenderSlot`, `shell.Shell`
+  - Uses: `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `shell.Shell`
   - Exports: Values: `ActionBar`
 - Cross-plugin:
   - Slot contributors: `build`, `draw-on-app`, `edit-mode`, `element-picker`, `fullscreen`, `health`, `improve`, `notifications`, `screenshot`, `theme-customizer`, `theme-toggle`

@@ -6,11 +6,13 @@ import { Home } from "../slots";
 export function HomeLayout() {
   return (
     <div className="relative flex h-full flex-col bg-background">
-      <div className="mx-auto flex h-full w-full max-w-5xl flex-col px-8 py-10">
+      <div className="mx-auto flex h-full w-full max-w-5xl flex-col px-2xl py-2xl">
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- header offset from section area; sibling rhythm in a padded full-surface container, not a uniform gap */}
         <header className="mb-8 shrink-0">
           <Text as="h1" variant="title" className="tracking-tight">
             Apps
           </Text>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- subtitle offset under the title inside a non-flex header */}
           <Text as="p" variant="body" tone="muted" className="mt-1">
             Open an app to get started.
           </Text>

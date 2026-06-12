@@ -11,17 +11,17 @@ export function DateFilter(props: FilterControlProps): ReactNode {
   }
 
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-xs">
       <input
         type="date"
-        className="rounded-md border border-input bg-background px-1.5 py-0.5 text-body"
+        className="rounded-md border border-input bg-background px-xs py-2xs text-body"
         value={value.from ?? ""}
         onChange={(e) => update({ from: e.target.value || undefined })}
       />
       <span className="text-muted-foreground">–</span>
       <input
         type="date"
-        className="rounded-md border border-input bg-background px-1.5 py-0.5 text-body"
+        className="rounded-md border border-input bg-background px-xs py-2xs text-body"
         value={value.to ?? ""}
         onChange={(e) => update({ to: e.target.value || undefined })}
       />

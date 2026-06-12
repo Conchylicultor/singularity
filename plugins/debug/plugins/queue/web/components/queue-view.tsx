@@ -25,7 +25,7 @@ export function QueueView() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1 border-b px-3 py-2">
+      <div className="flex items-center gap-xs border-b px-md py-sm">
         <SegmentedControl
           options={TAB_OPTIONS}
           value={tab}
@@ -116,7 +116,7 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center gap-1 border-b px-3 py-2">
+      <div className="flex items-center gap-xs border-b px-md py-sm">
         <FilterChip active={chipFilter.value === "all"} onClick={() => chipFilter.setValue("all")}>
           All <span className="opacity-60">{total}</span>
         </FilterChip>
@@ -144,12 +144,12 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
           <table className="w-full text-body">
             <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
-                <th className="px-3 py-2">State</th>
-                <th className="px-3 py-2">Job</th>
-                <th className="px-3 py-2">Attempts</th>
-                <th className="px-3 py-2">Run at</th>
-                <th className="px-3 py-2">Last error</th>
-                <th className="px-3 py-2">Actions</th>
+                <th className="px-md py-sm">State</th>
+                <th className="px-md py-sm">Job</th>
+                <th className="px-md py-sm">Attempts</th>
+                <th className="px-md py-sm">Run at</th>
+                <th className="px-md py-sm">Last error</th>
+                <th className="px-md py-sm">Actions</th>
               </tr>
             </thead>
             <tbody>
@@ -159,20 +159,20 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
                   className="cursor-pointer border-b hover:bg-accent/30"
                   onClick={() => setSelected(r)}
                 >
-                  <td className="px-3 py-2">
+                  <td className="px-md py-sm">
                     <Badge size="sm" colorClass={STATE_STYLES[r.state]}>
                       {r.state}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 font-mono text-caption">{r.jobName}</td>
-                  <td className="px-3 py-2 tabular-nums">
+                  <td className="px-md py-sm font-mono text-caption">{r.jobName}</td>
+                  <td className="px-md py-sm tabular-nums">
                     {r.attempts}/{r.maxAttempts}
                   </td>
-                  <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.runAt)}</td>
-                  <td className="px-3 py-2 text-caption text-destructive">
+                  <td className="px-md py-sm text-muted-foreground">{relativeTime(r.runAt)}</td>
+                  <td className="px-md py-sm text-caption text-destructive">
                     {r.lastError ? truncate(r.lastError.split("\n")[0] ?? "", 60) : ""}
                   </td>
-                  <td className="px-3 py-2" onClick={(e) => e.stopPropagation()}>
+                  <td className="px-md py-sm" onClick={(e) => e.stopPropagation()}>
                     {(r.state === "retrying" || r.state === "dead") && (
                       <Button size="sm" variant="ghost" onClick={() => retry(r.id)}>
                         <MdReplay className="size-3.5" /> Retry
@@ -205,7 +205,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
         className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center justify-between border-b px-lg py-md">
           <div>
             <Text as="div" variant="caption" className="text-muted-foreground">Job</Text>
             <Text as="div" variant="body" className="font-mono">{job.jobName}</Text>
@@ -214,7 +214,8 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
             Close
           </Button>
         </div>
-        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-4">
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
+        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-lg">
           <Field label="ID">
             <code className="text-caption">{job.id}</code>
           </Field>
@@ -230,13 +231,13 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
           )}
           <Field label="Queue">{job.queueName ?? "(default)"}</Field>
           <Field label="Input">
-            <pre className="max-h-64 overflow-auto rounded-md bg-muted p-2 text-caption">
+            <pre className="max-h-64 overflow-auto rounded-md bg-muted p-sm text-caption">
               {JSON.stringify(job.input, null, 2)}
             </pre>
           </Field>
           {job.lastError && (
             <Field label="Last error">
-              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/5 p-2 text-caption text-destructive">
+              <pre className="max-h-64 overflow-auto rounded-md bg-destructive/5 p-sm text-caption text-destructive">
                 {job.lastError}
               </pre>
             </Field>
@@ -259,7 +260,7 @@ function EventsTab() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b px-3 py-2">
+      <div className="flex items-center border-b px-md py-sm">
         <Text as="div" variant="caption" className="text-muted-foreground">
           Capped ring-buffer of last ~1000 emit() calls.
         </Text>
@@ -275,10 +276,10 @@ function EventsTab() {
           <table className="w-full text-body">
             <thead className="sticky top-0 border-b bg-background text-left text-caption text-muted-foreground">
               <tr>
-                <th className="px-3 py-2">Time</th>
-                <th className="px-3 py-2">Event</th>
-                <th className="px-3 py-2">Matched</th>
-                <th className="px-3 py-2">Payload</th>
+                <th className="px-md py-sm">Time</th>
+                <th className="px-md py-sm">Event</th>
+                <th className="px-md py-sm">Matched</th>
+                <th className="px-md py-sm">Payload</th>
               </tr>
             </thead>
             <tbody>
@@ -288,9 +289,9 @@ function EventsTab() {
                   className="cursor-pointer border-b hover:bg-accent/30"
                   onClick={() => setSelected(r)}
                 >
-                  <td className="px-3 py-2 text-muted-foreground">{relativeTime(r.emittedAt)}</td>
-                  <td className="px-3 py-2 font-mono text-caption">{r.eventName}</td>
-                  <td className="px-3 py-2">
+                  <td className="px-md py-sm text-muted-foreground">{relativeTime(r.emittedAt)}</td>
+                  <td className="px-md py-sm font-mono text-caption">{r.eventName}</td>
+                  <td className="px-md py-sm">
                     <Badge
                       size="sm"
                       colorClass={
@@ -302,7 +303,7 @@ function EventsTab() {
                       {r.matchedCount}
                     </Badge>
                   </td>
-                  <td className="px-3 py-2 font-mono text-caption text-muted-foreground">
+                  <td className="px-md py-sm font-mono text-caption text-muted-foreground">
                     {truncate(JSON.stringify(r.payload), 80)}
                   </td>
                 </tr>
@@ -329,7 +330,7 @@ function EmissionDrawer({
         className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between border-b px-4 py-3">
+        <div className="flex items-center justify-between border-b px-lg py-md">
           <div>
             <Text as="div" variant="caption" className="text-muted-foreground">Emission</Text>
             <Text as="div" variant="body" className="font-mono">{emission.eventName}</Text>
@@ -338,7 +339,8 @@ function EmissionDrawer({
             Close
           </Button>
         </div>
-        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-4">
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between Field rows on a scrollable Text drawer body; not a plain flex container */}
+        <Text as="div" variant="body" className="flex-1 space-y-4 overflow-auto p-lg">
           <Field label="Emitted at">
             {new Date(emission.emittedAt).toLocaleString()} ({relativeTime(emission.emittedAt)})
           </Field>
@@ -348,6 +350,7 @@ function EmissionDrawer({
                 0 — no trigger matched this emission.
               </span>
             ) : (
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical rhythm between <li> rows on a semantic <ul>; converting to a flex Stack would change list semantics
               <ul className="space-y-1 font-mono text-caption">
                 {emission.matchedTriggerIds.map((id) => (
                   <li key={id}>{id}</li>
@@ -356,7 +359,7 @@ function EmissionDrawer({
             )}
           </Field>
           <Field label="Payload">
-            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-2 text-caption">
+            <pre className="max-h-96 overflow-auto rounded-md bg-muted p-sm text-caption">
               {JSON.stringify(emission.payload, null, 2)}
             </pre>
           </Field>
@@ -407,7 +410,7 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center border-b px-3 py-2">
+      <div className="flex items-center border-b px-md py-sm">
         <Text as="div" variant="caption" className="text-muted-foreground">
           Active subscriptions across all registered events.
         </Text>
@@ -423,17 +426,17 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
           <div className="divide-y">
             {grouped.map(([eventName, triggers]) => (
               <div key={eventName}>
-                <Text as="div" variant="caption" className="sticky top-0 border-b bg-muted/50 px-3 py-1.5 font-semibold">
+                <Text as="div" variant="caption" className="sticky top-0 border-b bg-muted/50 px-md py-xs font-semibold">
                   {eventName} <span className="text-muted-foreground">({triggers.length})</span>
                 </Text>
                 <table className="w-full text-body">
                   <tbody>
                     {triggers.map((t) => (
                       <tr key={t.id} className={cn("border-b", !t.enabled && "opacity-60")}>
-                        <td className="px-3 py-2 font-mono text-caption">{t.jobName}</td>
-                        <td className="px-3 py-2 text-caption">
+                        <td className="px-md py-sm font-mono text-caption">{t.jobName}</td>
+                        <td className="px-md py-sm text-caption">
                           {Object.keys(t.filters).length > 0 && (
-                            <div className="flex flex-wrap gap-1">
+                            <div className="flex flex-wrap gap-xs">
                               {Object.entries(t.filters).map(([k, v]) => (
                                 <Badge
                                   key={k}
@@ -447,18 +450,18 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
                             </div>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-caption text-muted-foreground">
+                        <td className="px-md py-sm text-caption text-muted-foreground">
                           {Object.keys(t.jobWith).length > 0 && (
                             <code>{truncate(JSON.stringify(t.jobWith), 40)}</code>
                           )}
                         </td>
-                        <td className="px-3 py-2 text-caption">
+                        <td className="px-md py-sm text-caption">
                           {t.oneShot && <span className="text-muted-foreground">oneShot</span>}
                         </td>
-                        <td className="px-3 py-2 text-caption text-muted-foreground">
+                        <td className="px-md py-sm text-caption text-muted-foreground">
                           {relativeTime(t.createdAt)}
                         </td>
-                        <td className="px-3 py-2 text-right">
+                        <td className="px-md py-sm text-right">
                           <Button
                             size="sm"
                             variant="ghost"
@@ -502,6 +505,7 @@ function Field({
 }) {
   return (
     <div>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label-to-content gap on a Text element inside a field row */}
       <Text as="div" variant="caption" className="mb-1 font-medium uppercase text-muted-foreground">{label}</Text>
       <div>{children}</div>
     </div>

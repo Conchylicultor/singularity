@@ -42,7 +42,7 @@ export function ColorInput({ color, onChange, className }: ColorInputProps) {
   }, [format, setFormat]);
 
   return (
-    <div className={cn("flex items-center gap-2", className)}>
+    <div className={cn("flex items-center gap-sm", className)}>
       <span
         className="size-5 shrink-0 rounded-md border border-border"
         style={{ background: color.toOklch() }}
@@ -55,7 +55,7 @@ export function ColorInput({ color, onChange, className }: ColorInputProps) {
         onKeyDown={(e) => {
           if (e.key === "Enter") commit();
         }}
-        className="w-full rounded-md border border-input bg-background px-2 py-1 font-mono text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
+        className="w-full rounded-md border border-input bg-background px-sm py-xs font-mono text-caption outline-none focus:ring-1 focus:ring-ring placeholder:text-muted-foreground"
         spellCheck={false}
       />
       <button

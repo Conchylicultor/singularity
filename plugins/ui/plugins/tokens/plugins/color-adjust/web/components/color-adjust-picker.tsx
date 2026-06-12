@@ -1,4 +1,5 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { colorAdjustConfig } from "../internal/config";
 import { ColorAdjust } from "../slots";
@@ -14,12 +15,12 @@ export function ColorAdjustPicker() {
   const lightnessScale = config.lightnessScale;
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex flex-wrap gap-1.5">
+    <Stack gap="md">
+      <Stack direction="row" gap="xs" wrap>
         {presets.map((p) => (
           <button
             key={p.id}
-            className={`px-2.5 py-1 text-caption rounded-md border transition-colors ${
+            className={`px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === activeId
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
@@ -34,9 +35,9 @@ export function ColorAdjustPicker() {
             {p.label}
           </button>
         ))}
-      </div>
-      <div className="flex flex-col gap-2 text-body">
-        <label className="flex items-center gap-2">
+      </Stack>
+      <Stack gap="sm" className="text-body">
+        <label className="flex items-center gap-sm">
           <span className="w-24 text-muted-foreground">Hue</span>
           <input
             type="range"
@@ -49,7 +50,7 @@ export function ColorAdjustPicker() {
           />
           <span className="w-10 text-right tabular-nums">{hueShift}</span>
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center gap-sm">
           <span className="w-24 text-muted-foreground">Saturation</span>
           <input
             type="range"
@@ -66,7 +67,7 @@ export function ColorAdjustPicker() {
             {saturationScale.toFixed(2)}
           </span>
         </label>
-        <label className="flex items-center gap-2">
+        <label className="flex items-center gap-sm">
           <span className="w-24 text-muted-foreground">Lightness</span>
           <input
             type="range"
@@ -83,7 +84,7 @@ export function ColorAdjustPicker() {
             {lightnessScale.toFixed(2)}
           </span>
         </label>
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

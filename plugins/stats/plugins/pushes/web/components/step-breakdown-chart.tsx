@@ -11,6 +11,7 @@ import {
 } from "recharts";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getPushesStepBreakdown } from "../../shared/endpoints";
 import {
@@ -53,8 +54,8 @@ export function StepBreakdownChart({ bucket }: { bucket: Bucket }) {
   }, [rawPoints, showEmptyDays, bucket]);
 
   return (
-    <div>
-      <Text as="p" variant="label" className="mb-2 text-muted-foreground">
+    <Stack gap="sm">
+      <Text as="p" variant="label" className="text-muted-foreground">
         Avg step duration (seconds)
       </Text>
       <div className="h-64 w-full">
@@ -105,6 +106,6 @@ export function StepBreakdownChart({ bucket }: { bucket: Bucket }) {
           </ResponsiveContainer>
         </ChartState>
       </div>
-    </div>
+    </Stack>
   );
 }

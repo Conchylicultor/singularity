@@ -35,7 +35,7 @@ const AGG_COLUMNS: ColumnDef<AggRow>[] = [
     header: "Label",
     width: "minmax(0,1fr)",
     cell: (row) => (
-      <div className="flex min-w-0 flex-col gap-0.5">
+      <div className="flex min-w-0 flex-col gap-2xs">
         <Text as="span" variant="caption" className="truncate font-mono" title={row.label}>
           {row.label}
         </Text>
@@ -80,7 +80,7 @@ function CallerBreakdown({ parents }: { parents: ParentRow[] }): ReactElement {
     .map((p) => `${p.kind}:${p.label} ×${p.count}`)
     .join("\n");
   return (
-    <div className="flex flex-col gap-0.5 pl-3">
+    <div className="flex flex-col gap-2xs pl-md">
       {shown.map((p) => (
         <span
           key={`${p.kind}:${p.label}`}
@@ -146,7 +146,7 @@ export function RuntimeSection(): ReactElement | null {
 
   if (!hasAny) {
     return (
-      <div className="flex flex-col gap-3 px-3 py-4">
+      <div className="flex flex-col gap-md px-md py-lg">
         <div className="flex items-center justify-between">
           <Text as="span" variant="label">Runtime</Text>
         </div>
@@ -156,8 +156,8 @@ export function RuntimeSection(): ReactElement | null {
   }
 
   return (
-    <div className="flex flex-col gap-6 py-4">
-      <div className="flex items-center justify-between px-3">
+    <div className="flex flex-col gap-xl py-lg">
+      <div className="flex items-center justify-between px-md">
         <Text as="span" variant="label">Runtime</Text>
         <Button
           variant="ghost"
@@ -186,8 +186,8 @@ function KindTable({
   emptyLabel: string;
 }): ReactElement {
   return (
-    <div className="flex flex-col gap-1">
-      <Text as="div" variant="caption" className="px-3 font-medium uppercase tracking-wider text-muted-foreground">
+    <div className="flex flex-col gap-xs">
+      <Text as="div" variant="caption" className="px-md font-medium uppercase tracking-wider text-muted-foreground">
         {title}
       </Text>
       <DataTable

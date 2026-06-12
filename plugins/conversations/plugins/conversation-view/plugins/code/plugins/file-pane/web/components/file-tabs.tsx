@@ -8,7 +8,7 @@ export function FileTabs({
 }: FileRenderersHandle) {
   if (resolved.length === 0) return null;
   return (
-    <div role="tablist" className="flex items-center gap-1">
+    <div role="tablist" className="flex items-center gap-xs">
       {resolved.map(({ contribution: c }) => {
         const isActive = active?.contribution.id === c.id;
         return (

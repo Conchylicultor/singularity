@@ -57,7 +57,7 @@ function DefaultFlushFraming({
     <SidebarProvider className="h-full min-h-0">
       <Sidebar>
         {header && (
-          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-0">
+          <SidebarHeader className="h-chrome-bar justify-center px-chrome py-none">
             {header}
           </SidebarHeader>
         )}
@@ -97,7 +97,7 @@ export function AppShellLayout({
   children: ReactNode;
 }) {
   const toolbar = toolbarSlot && (
-    <header className="flex items-center border-b pl-chrome pr-floating-bar h-chrome-bar gap-2 bg-background overflow-hidden">
+    <header className="flex items-center border-b pl-chrome pr-floating-bar h-chrome-bar gap-sm bg-background overflow-hidden">
       {sidebarSlot && <SidebarTrigger />}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}

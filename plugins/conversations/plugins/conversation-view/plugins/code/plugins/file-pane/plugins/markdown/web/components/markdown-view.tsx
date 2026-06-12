@@ -33,7 +33,7 @@ export function MarkdownView({
   const split = splitFrontmatter(state.content);
 
   return (
-    <Text as="div" variant="body" className="px-4 py-3">
+    <Text as="div" variant="body" className="px-lg py-md">
       {split && <FrontmatterCard fields={split.fields} />}
       {(split ? split.body : state.content).trim() && (
         <Markdown>{split ? split.body : state.content}</Markdown>

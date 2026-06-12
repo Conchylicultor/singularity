@@ -62,9 +62,9 @@ export function LiveDrawOverlay({
         <>
           <div
             data-draw-chrome="true"
-            className="absolute left-1/2 top-4 -translate-x-1/2 flex items-center gap-3 rounded-lg border bg-background/95 px-3 py-2 shadow-lg backdrop-blur"
+            className="absolute left-1/2 top-4 -translate-x-1/2 flex items-center gap-md rounded-lg border bg-background/95 px-md py-sm shadow-lg backdrop-blur"
           >
-            <div className="flex items-center gap-1.5">
+            <div className="flex items-center gap-xs">
               {COLORS.map((c) => (
                 <button
                   key={c}
@@ -79,7 +79,7 @@ export function LiveDrawOverlay({
                 />
               ))}
             </div>
-            <div className="flex items-center gap-2">
+            <div className="flex items-center gap-sm">
               <Text as="span" variant="label" tone="muted">
                 {width}px
               </Text>
@@ -93,7 +93,7 @@ export function LiveDrawOverlay({
                 className="w-24"
               />
             </div>
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-xs">
               <Button
                 size="sm"
                 variant="ghost"
@@ -119,7 +119,7 @@ export function LiveDrawOverlay({
 
           <div
             data-draw-chrome="true"
-            className="absolute bottom-4 right-4 flex items-center gap-2"
+            className="absolute bottom-4 right-4 flex items-center gap-sm"
           >
             <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
               Cancel

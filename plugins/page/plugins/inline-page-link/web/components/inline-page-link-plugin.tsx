@@ -218,7 +218,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
 
   return createPortal(
     <div
-      className="bg-popover z-popover fixed w-72 rounded-md border p-1 shadow-md"
+      className="bg-popover z-popover fixed w-72 rounded-md border p-xs shadow-md"
       style={{ left: caret.left, top: caret.top + 4 }}
     >
       <div className="max-h-64 overflow-y-auto">

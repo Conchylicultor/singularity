@@ -45,8 +45,8 @@ function PersistedLogs({ steps }: { steps: BuildStepLog[] }): ReactElement {
   }, [steps]);
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-between pb-1">
+    <div className="flex flex-col gap-xs">
+      <div className="flex items-center justify-between pb-xs">
         <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
         <Button
           variant="ghost"
@@ -71,7 +71,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
   return (
     <Collapsible defaultOpen={!step.success || step.lines.length <= 6}>
       <div className="rounded-md border bg-muted/30 overflow-hidden">
-        <CollapsibleTrigger className="flex items-center gap-2 px-3 py-1.5 text-caption hover:bg-muted/50 transition-colors">
+        <CollapsibleTrigger className="flex items-center gap-sm px-md py-xs text-caption hover:bg-muted/50 transition-colors">
           <CollapsibleChevron className="size-3 text-muted-foreground" />
           {step.success ? (
             <MdCheck className="size-3.5 text-success shrink-0" />
@@ -83,7 +83,7 @@ function StepSection({ step }: { step: BuildStepLog }): ReactElement {
         </CollapsibleTrigger>
         <CollapsibleContent>
           {step.lines.length > 0 && (
-            <div className={`border-t px-3 py-2 max-h-64 overflow-y-auto ${monoLogClass}`}>
+            <div className={`border-t px-md py-sm max-h-64 overflow-y-auto ${monoLogClass}`}>
               {step.lines.map((line, i) => (
                 <div
                   key={i}
@@ -158,8 +158,9 @@ function LiveLogs(): ReactElement {
 
   return (
     <div className="relative flex flex-col">
-      <div className="flex items-center justify-between pb-1">
+      <div className="flex items-center justify-between pb-xs">
         <Text as="span" variant="label" className="text-muted-foreground">
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline word spacing after "Logs" label text */}
           Logs <span className="text-muted-foreground/60 ml-1">Live</span>
         </Text>
         <Button
@@ -175,7 +176,7 @@ function LiveLogs(): ReactElement {
       </div>
       <div
         ref={stickyScroll.scrollRef}
-        className={`min-h-48 max-h-96 overflow-y-auto rounded-md border bg-muted/30 px-3 py-2 ${monoLogClass}`}
+        className={`min-h-48 max-h-96 overflow-y-auto rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
       >
         {entries.length === 0 && (
           <span className="text-muted-foreground">No build logs yet</span>
@@ -184,7 +185,7 @@ function LiveLogs(): ReactElement {
           <div
             key={entry.seq}
             className={cn(
-              "flex gap-2",
+              "flex gap-sm",
               entry.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
           >

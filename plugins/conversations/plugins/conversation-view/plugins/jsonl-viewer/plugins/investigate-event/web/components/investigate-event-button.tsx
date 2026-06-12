@@ -23,7 +23,7 @@ export function InvestigateEventButton({
           type="button"
           aria-label="Launch agent to investigate"
           title="Launch agent to investigate this event"
-          className={`flex items-center justify-center rounded-md p-1 text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${className ?? ""}`}
+          className={`flex items-center justify-center rounded-md p-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${className ?? ""}`}
         >
           <MdSmartToy className="size-3.5" />
         </button>

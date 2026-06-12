@@ -8,6 +8,7 @@ import { useEndpointMutation, getEndpointErrorMessage } from "@plugins/infra/plu
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   conversationSummariesResource,
   type ConversationSummary,
@@ -99,13 +100,13 @@ function SummaryPaneInner({
   const isPending = pendingSince !== null;
 
   return (
-    <Text as="div" variant="body" className="flex flex-col gap-3 p-3">
+    <Text as="div" variant="body" className="flex flex-col gap-md p-md">
       <Button
         size="sm"
         variant="outline"
         onClick={onSummarize}
         disabled={isPending}
-        className="gap-1.5 self-start text-caption"
+        className="gap-xs self-start text-caption"
         aria-label={isPending ? "Summarising" : latest ? "Re-summarise" : "Summarise"}
       >
         <MdAutoAwesome
@@ -128,8 +129,8 @@ function SummaryPaneInner({
 function SummaryCard({ summary }: { summary: ConversationSummary }) {
   const generated = new Date(summary.generatedAt);
   return (
-    <div className="space-y-3 rounded-md border p-3">
-      <div className="flex items-center justify-between gap-2">
+    <Stack gap="md" className="rounded-md border p-md">
+      <div className="flex items-center justify-between gap-sm">
         <Badge colorClass={PHASE_CLASSES[summary.phase]}>
           {PHASE_LABEL[summary.phase]}
         </Badge>
@@ -152,7 +153,7 @@ function SummaryCard({ summary }: { summary: ConversationSummary }) {
         </Section>
       )}
       {summary.notes && <Section label="Notes">{summary.notes}</Section>}
-    </div>
+    </Stack>
   );
 }
 

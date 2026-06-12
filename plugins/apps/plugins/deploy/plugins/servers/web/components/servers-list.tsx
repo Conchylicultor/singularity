@@ -18,7 +18,7 @@ export function ServersList() {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex items-center justify-between border-b px-4 py-3">
+      <div className="flex items-center justify-between border-b px-lg py-md">
         <Text as="h2" variant="label">Servers</Text>
         <Button
           variant="default"
@@ -30,7 +30,7 @@ export function ServersList() {
       </div>
       <div className="flex-1 overflow-auto">
         {servers.length === 0 ? (
-          <Text as="div" variant="body" className="text-muted-foreground p-4">
+          <Text as="div" variant="body" className="text-muted-foreground p-lg">
             No servers registered. Add one to get started.
           </Text>
         ) : (
@@ -54,7 +54,7 @@ function ServerRow({ server, selected }: { server: Server; selected: boolean }) 
   return (
     <button
       onClick={() => openPane(serverDetailPane, { serverId: server.id }, { mode: "push" })}
-      className={`flex items-center gap-3 px-4 py-2.5 text-left transition-colors ${
+      className={`flex items-center gap-md px-lg py-sm text-left transition-colors ${
         selected ? "bg-accent" : "hover:bg-accent/50"
       }`}
     >

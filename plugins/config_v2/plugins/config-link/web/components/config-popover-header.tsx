@@ -13,8 +13,8 @@ export interface ConfigPopoverHeaderProps {
 // any chip/popover whose contents are driven by config_v2.
 export function ConfigPopoverHeader({ label, descriptor }: ConfigPopoverHeaderProps) {
   return (
-    <div className="flex items-center justify-between gap-2 pl-1 pr-0.5">
-      <SectionLabel className="py-1 text-3xs">{label}</SectionLabel>
+    <div className="flex items-center justify-between gap-sm pl-xs pr-2xs">
+      <SectionLabel className="py-xs text-3xs">{label}</SectionLabel>
       <ConfigGearButton descriptor={descriptor} label={`Configure: ${label}`} />
     </div>
   );

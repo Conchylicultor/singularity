@@ -38,7 +38,7 @@ export function GroupRename({
     <input
       ref={inputRef}
       className={cn(
-        "min-w-0 flex-1 truncate rounded-md bg-transparent px-1 py-0.5 text-caption font-semibold",
+        "min-w-0 flex-1 truncate rounded-md bg-transparent px-xs py-2xs text-caption font-semibold",
         "outline-none focus:bg-background/60 focus:ring-1 focus:ring-border",
         className,
       )}

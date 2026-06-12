@@ -48,7 +48,7 @@ function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (i
   const clientId = typeof n.metadata?.clientId === "string" ? n.metadata.clientId : null;
   return (
     <li
-      className={`flex gap-2 px-3 py-2.5 border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
+      className={`flex gap-sm px-md py-sm border-l-2 ${n.muted ? VARIANT_BORDER_MUTED[n.variant] : VARIANT_BORDER[n.variant]} ${n.muted || n.read ? "opacity-60" : ""} hover:bg-muted/50 ${n.linkTo?.startsWith("/") ? "cursor-pointer" : ""}`}
       onClick={
         n.linkTo?.startsWith("/")
           ? () => { navigate(n.linkTo!); onClose(); }
@@ -76,7 +76,8 @@ function NotificationRow({ n, dismiss, onClose }: { n: Notification; dismiss: (i
             {n.description}
           </Text>
         )}
-        <div className="flex items-center gap-2 mt-0.5">
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the metadata row from the description above */}
+        <div className="flex items-center gap-sm mt-0.5">
           <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
           {n.type && (
             <span className="text-3xs text-muted-foreground">{n.type}</span>
@@ -210,9 +211,9 @@ export function BellButton() {
         </span>
       }
       align="end"
-      contentClassName="w-80 p-0"
+      contentClassName="w-80 p-none"
     >
-        <div className="flex items-center justify-between px-3 py-2 border-b">
+        <div className="flex items-center justify-between px-md py-sm border-b">
           <Text variant="body" className="font-semibold">Notifications</Text>
           {list.length > 0 && (
             <Text
@@ -226,7 +227,7 @@ export function BellButton() {
           )}
         </div>
         {list.length > 0 && (
-          <div className="flex gap-1 px-3 py-1.5 overflow-x-auto border-b">
+          <div className="flex gap-xs px-md py-xs overflow-x-auto border-b">
             {(["all", ...(hasErrors ? ["errors"] : []), ...uniqueTypes] as string[]).map((chip) => (
               <ToggleChip
                 key={chip}
@@ -242,18 +243,18 @@ export function BellButton() {
           </div>
         )}
         {list.length === 0 ? (
-          <Text as="p" variant="body" className="px-3 py-6 text-center text-muted-foreground">
+          <Text as="p" variant="body" className="px-md py-xl text-center text-muted-foreground">
             No notifications
           </Text>
         ) : filtered.length === 0 ? (
-          <Text as="p" variant="body" className="px-3 py-6 text-center text-muted-foreground">
+          <Text as="p" variant="body" className="px-md py-xl text-center text-muted-foreground">
             No notifications for this filter
           </Text>
         ) : (
           <div className="max-h-96 overflow-y-auto">
             {unreadFiltered.length > 0 && (
               <>
-                <div className="px-3 py-1.5 text-3xs font-semibold uppercase tracking-wider text-destructive bg-destructive/5 border-b">
+                <div className="px-md py-xs text-3xs font-semibold uppercase tracking-wider text-destructive bg-destructive/5 border-b">
                   Unread ({unreadFiltered.length})
                 </div>
                 <ul>
@@ -266,7 +267,7 @@ export function BellButton() {
             {restFiltered.length > 0 && (
               <>
                 {unreadFiltered.length > 0 && (
-                  <div className="px-3 py-1.5 text-3xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
+                  <div className="px-md py-xs text-3xs font-semibold uppercase tracking-wider text-muted-foreground border-b border-t">
                     Earlier
                   </div>
                 )}

@@ -10,6 +10,7 @@ import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {
@@ -39,8 +40,8 @@ export function TaskHeader({ taskId }: { taskId: string }) {
   if (!task) return null;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex items-start gap-3">
+    <Stack gap="lg">
+      <div className="flex items-start gap-md">
         <input
           value={titleField.value}
           onChange={(e) => titleField.onChange(e.target.value)}
@@ -49,16 +50,16 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           placeholder="Untitled"
           className="text-title flex-1 bg-transparent outline-none placeholder:text-muted-foreground focus:ring-0"
         />
-        <Text as="span" variant="caption" tone="muted" className="pt-1">
+        <Text as="span" variant="caption" tone="muted" className="pt-xs">
           {titleField.isSaving ? "Saving…" : "Saved"}
         </Text>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-md">
         <SectionLabel as="span">
           Status
         </SectionLabel>
         <StatusSignal status={task.status} />
-        <div className="ml-auto flex items-center gap-1">
+        <div className="ml-auto flex items-center gap-xs">
           <Button size="sm" variant="ghost" onClick={toggleHold}>
             {task.status === "held" ? "Resume" : "Hold"}
           </Button>
@@ -67,13 +68,13 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           </Button>
         </div>
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-md">
         <SectionLabel as="span">
           Author
         </SectionLabel>
         <AuthorDisplay author={task.author ?? "user"} />
       </div>
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-md">
         <SectionLabel as="span">
           Created
         </SectionLabel>
@@ -82,7 +83,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
         </Text>
       </div>
       {task.finishedAt != null && (
-        <div className="flex items-center gap-3">
+        <div className="flex items-center gap-md">
           <SectionLabel as="span">
             Closed
           </SectionLabel>
@@ -91,7 +92,7 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           </Text>
         </div>
       )}
-      <div className="flex items-center gap-3">
+      <div className="flex items-center gap-md">
         <SectionLabel as="span">
           Auto-start
         </SectionLabel>
@@ -101,6 +102,6 @@ export function TaskHeader({ taskId }: { taskId: string }) {
           ariaLabel="Auto-start model"
         />
       </div>
-    </div>
+    </Stack>
   );
 }

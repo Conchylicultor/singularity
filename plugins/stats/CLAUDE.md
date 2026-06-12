@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Stats.Chart`
   - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
-  - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.Shell`
+  - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.Shell`
   - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Cross-plugin:
   - Slot contributors: `commits`, `cost`, `pushes`, `tasks`

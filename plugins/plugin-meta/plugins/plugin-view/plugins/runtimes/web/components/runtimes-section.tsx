@@ -1,4 +1,5 @@
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   Section,
   RUNTIME_COLORS,
@@ -8,11 +9,11 @@ import {
 export function RuntimesSection({ node }: { node: PluginNode }) {
   return (
     <Section title="Runtimes">
-      <div className="flex flex-wrap gap-1.5">
+      <Stack direction="row" wrap gap="xs">
         {node.runtimes.web && <RuntimePill kind="web" />}
         {node.runtimes.server && <RuntimePill kind="server" />}
         {node.runtimes.central && <RuntimePill kind="central" />}
-      </div>
+      </Stack>
     </Section>
   );
 }

@@ -4,6 +4,7 @@ import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-tabl
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 interface OutgoingFk {
   constraint_name: string;
@@ -105,8 +106,8 @@ export function ForeignKeysSection({
   }
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex flex-col gap-2">
+    <Stack gap="lg">
+      <Stack gap="sm">
         <SectionLabel>References</SectionLabel>
         <DataTable
           data={data.outgoing}
@@ -114,8 +115,8 @@ export function ForeignKeysSection({
           rowKey={(row) => row.constraint_name + row.column_name}
           emptyLabel="No outgoing foreign keys"
         />
-      </div>
-      <div className="flex flex-col gap-2">
+      </Stack>
+      <Stack gap="sm">
         <SectionLabel>Referenced by</SectionLabel>
         <DataTable
           data={data.incoming}
@@ -123,7 +124,7 @@ export function ForeignKeysSection({
           rowKey={(row) => row.constraint_name + row.source_column}
           emptyLabel="No incoming foreign keys"
         />
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

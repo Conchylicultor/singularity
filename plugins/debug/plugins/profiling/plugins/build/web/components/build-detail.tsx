@@ -8,6 +8,7 @@ import {
 } from "@plugins/debug/plugins/profiling/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Inset } from "@plugins/primitives/plugins/spacing/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { BUILD_PHASE_ORDER, BUILD_PHASE_CONFIG } from "../phases";
 import { buildProfileDetailPane } from "../panes";
@@ -54,7 +55,7 @@ export function BuildProfileDetailBody(): ReactElement {
         <ProfilingContext.Provider
           value={{ hovered, setHovered, refreshKey: 0 }}
         >
-          <div className="p-2">
+          <Inset pad="sm">
             <div className="overflow-hidden rounded-md border">
               {(() => {
                 const grouped = groupByPhase(data.spans);
@@ -71,7 +72,7 @@ export function BuildProfileDetailBody(): ReactElement {
               })()}
               <SpanDetail span={hovered} />
             </div>
-          </div>
+          </Inset>
         </ProfilingContext.Provider>
       )}
     </PaneChrome>

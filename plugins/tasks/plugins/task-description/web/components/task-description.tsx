@@ -44,9 +44,9 @@ function TaskDescriptionInner({
   }, [taskId, detailTask, flushAll]);
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-3">
+    <Collapsible defaultOpen className="flex flex-col gap-md">
       <SectionHeaderRow variant="eyebrow">Description</SectionHeaderRow>
-      <CollapsibleContent className="flex flex-col gap-3">
+      <CollapsibleContent className="flex flex-col gap-md">
         <DescriptionView
           value={descField.value}
           onChange={descField.onChange}

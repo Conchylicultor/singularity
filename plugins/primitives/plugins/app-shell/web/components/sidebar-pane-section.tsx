@@ -27,6 +27,7 @@ export function SidebarPaneSection({
         aria-expanded={triggerProps["aria-expanded"]}
         aria-controls={triggerProps["aria-controls"]}
       >
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off icon offset inside shadcn SidebarGroupLabel label row */}
         <Icon className="mr-2 size-4" />
         {title}
         {LabelExtra && <LabelExtra />}

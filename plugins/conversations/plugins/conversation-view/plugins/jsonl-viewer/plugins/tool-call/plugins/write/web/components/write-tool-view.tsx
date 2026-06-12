@@ -14,6 +14,7 @@ export function WriteToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} aside={<FilePath filePath={file_path} />}>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the code block from the card header */}
       <div className="mt-2">
         <HighlightedCode
           code={content}
@@ -21,6 +22,7 @@ export function WriteToolView({ event }: ToolRendererProps) {
           className="max-h-[280px] overflow-auto"
         />
         {event.result?.isError && (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 separates the error text from the code block above
           <Text as="p" variant="caption" className="mt-1 text-destructive">
             {event.result.content}
           </Text>

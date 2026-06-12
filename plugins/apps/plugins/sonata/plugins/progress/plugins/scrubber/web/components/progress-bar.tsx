@@ -90,7 +90,7 @@ export function ProgressBar() {
   const filledPct = beatToFraction(cursorBeat) * 100;
 
   return (
-    <div className="flex items-center gap-3 border-b border-border px-6 py-3">
+    <div className="flex items-center gap-md border-b border-border px-xl py-md">
       {/* Interactive track. Extra vertical height (py) reserves headroom above
           and below for markers; the track itself is centered within it. */}
       <div
@@ -102,7 +102,7 @@ export function ProgressBar() {
         onPointerDown={ready ? onPointerDown : undefined}
         onPointerMove={ready ? onPointerMove : undefined}
         className={
-          "relative flex-1 py-3.5" + (ready ? " cursor-pointer" : "")
+          "relative flex-1 py-md" + (ready ? " cursor-pointer" : "")
         }
       >
         {/* Layering (bottom → top): the rail track + fill are the background

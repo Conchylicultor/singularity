@@ -40,9 +40,9 @@ export function SongCard({
           onOpen(song);
         }
       }}
-      className="group relative flex flex-col gap-3 rounded-lg p-4"
+      className="group relative flex flex-col gap-md rounded-lg p-lg"
     >
-      <div className="flex items-start gap-3">
+      <div className="flex items-start gap-md">
         <div className="flex size-10 shrink-0 items-center justify-center rounded-md bg-primary/10 text-primary">
           <MdMusicNote className="size-5" />
         </div>
@@ -61,7 +61,7 @@ export function SongCard({
       </div>
 
       <div className="flex items-center justify-between">
-        <Text variant="caption" tone="muted" className="flex items-center gap-2">
+        <Text variant="caption" tone="muted" className="flex items-center gap-sm">
           <span className="tabular-nums">{formatDuration(song.durationSec)}</span>
         </Text>
         <span

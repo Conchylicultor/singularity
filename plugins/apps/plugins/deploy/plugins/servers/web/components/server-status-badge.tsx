@@ -11,7 +11,7 @@ const styles: Record<ServerStatus, { bg: string; label: string }> = {
 export function ServerStatusBadge({ status }: { status: ServerStatus }) {
   const { bg, label } = styles[status];
   return (
-    <Text as="span" variant="caption" className="flex items-center gap-1.5">
+    <Text as="span" variant="caption" className="flex items-center gap-xs">
       <StatusDot colorClass={bg} size="md" className="inline-block" />
       {label}
     </Text>

@@ -83,8 +83,8 @@ function BuildButtonInner({
               <span
                 role="button"
                 tabIndex={0}
-                // eslint-disable-next-line row/no-adhoc-row -- nested interactive chip inside the build trigger button; a real button can't nest inside the Button trigger
-                className="ml-0.5 inline-flex items-center gap-0.5 rounded-md bg-info/15 px-1.5 py-0.5 text-label text-info hover:bg-info/25"
+                // eslint-disable-next-line row/no-adhoc-row, spacing/no-adhoc-spacing -- nested interactive chip inside the build trigger button (a real button can't nest inside the Button trigger); ml-0.5 inline offset from preceding button label, no flex parent to own a gap
+                className="ml-0.5 inline-flex items-center gap-2xs rounded-md bg-info/15 px-xs py-2xs text-label text-info hover:bg-info/25"
                 onClick={(e) => {
                   e.stopPropagation();
                   window.location.reload();
@@ -98,9 +98,9 @@ function BuildButtonInner({
         </Button>
       }
       align="end"
-      contentClassName="w-[480px] p-0"
+      contentClassName="w-[480px] p-none"
     >
-      <div className="flex items-center justify-between border-b px-3 py-2">
+      <div className="flex items-center justify-between border-b px-md py-sm">
         <Text as="span" variant="label">Builds</Text>
         <Button
           variant="ghost"

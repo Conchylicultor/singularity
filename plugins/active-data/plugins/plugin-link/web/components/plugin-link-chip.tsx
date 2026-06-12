@@ -61,7 +61,7 @@ export function PluginLinkChip({
     return (
       <code
         // eslint-disable-next-line text/no-adhoc-typography -- mono inline-code size matching markdown code base style
-        className="rounded-sm bg-muted px-1 py-0.5 font-mono text-xs"
+        className="rounded-sm bg-muted px-xs py-2xs font-mono text-xs"
       >
         {id}
       </code>

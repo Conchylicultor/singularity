@@ -127,8 +127,8 @@ export function ConfigNav() {
   const hasQuery = query.trim().length > 0;
 
   return (
-    <div className="flex h-full flex-col gap-2 p-2">
-      <div className="flex items-center gap-1">
+    <div className="flex h-full flex-col gap-sm p-sm">
+      <div className="flex items-center gap-xs">
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}

@@ -31,7 +31,7 @@ export function PrepromptChip() {
           <span className="max-w-32 truncate">{record.title}</span>
         </Badge>
       }
-      contentClassName="w-80 p-2"
+      contentClassName="w-80 p-sm"
     >
       <ConfigPopoverHeader
         label="Preprompt instructions"
@@ -40,7 +40,7 @@ export function PrepromptChip() {
       <Text
         as="div"
         variant="caption"
-        className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-1 text-muted-foreground"
+        className="max-h-80 overflow-auto whitespace-pre-wrap break-words px-xs text-muted-foreground"
         aria-label="Preprompt instructions"
       >
         {record.text}

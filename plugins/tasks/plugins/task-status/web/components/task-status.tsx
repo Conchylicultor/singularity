@@ -124,7 +124,7 @@ export function StatusSignal({ status }: { status: TaskStatus }) {
     return <StatusBadge status={status} />;
   }
   return (
-    <span className="inline-flex items-center gap-1.5">
+    <span className="inline-flex items-center gap-xs">
       <StatusDot colorClass={meta.dotClass} />
       <Text variant="caption" tone="muted">{meta.label}</Text>
     </span>

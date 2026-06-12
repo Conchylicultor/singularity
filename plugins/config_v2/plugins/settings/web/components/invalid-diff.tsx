@@ -22,8 +22,9 @@ export function InvalidDiff({ storePath }: { storePath: string }) {
   const defaults = data.gitOrigin ?? data.origin ?? "";
 
   return (
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-2 separates the diff block from the following content
     <div className="mb-2 overflow-hidden rounded-md border border-border">
-      <Text as="div" variant="caption" tone="muted" className="flex items-center justify-between border-b border-border bg-muted/40 px-3 py-1.5 font-medium">
+      <Text as="div" variant="caption" tone="muted" className="flex items-center justify-between border-b border-border bg-muted/40 px-md py-xs font-medium">
         <span>Stored (invalid)</span>
         <span>Defaults</span>
       </Text>

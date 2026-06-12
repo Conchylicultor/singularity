@@ -7,7 +7,7 @@ export function ColorCell(props: TableCellProps): ReactNode {
   const color = String(props.value ?? "");
   if (color === "") return null;
   return (
-    <span className="flex items-center gap-1.5">
+    <span className="flex items-center gap-xs">
       <span
         className="size-4 shrink-0 rounded-md border border-border"
         style={{ background: color }}

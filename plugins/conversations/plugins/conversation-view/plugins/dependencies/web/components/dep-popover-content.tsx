@@ -37,12 +37,14 @@ export function DepPopoverContent({
 
   return (
     <>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset on the section label; siblings sit in a fragment with no flex parent to own the gap */}
       <SectionLabel className="mb-1.5 text-3xs">{label}</SectionLabel>
 
       {(currentConvs.length > 0 || orphanIds.length > 0) && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the current-deps list from the search input; fragment parent can't own the gap
         <ul className="mb-2 space-y-px">
           {currentConvs.map((c) => (
-            <li key={c.taskId} className="flex items-center gap-1">
+            <li key={c.taskId} className="flex items-center gap-xs">
               <div className="flex-1 overflow-hidden">
                 <ConversationItem conv={c} layout="inline" />
               </div>
@@ -50,7 +52,7 @@ export function DepPopoverContent({
                 type="button"
                 onClick={() => onRemove(c.taskId!)}
                 disabled={busy === c.taskId}
-                className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-0.5"
+                className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-2xs"
                 aria-label="Remove"
               >
                 <MdClose className="size-3" />
@@ -62,7 +64,7 @@ export function DepPopoverContent({
             const isTerminal =
               depTask?.status === "done" || depTask?.status === "dropped";
             return (
-              <li key={id} className="flex items-center gap-1">
+              <li key={id} className="flex items-center gap-xs">
                 <Text
                   as="span"
                   variant="caption"
@@ -74,7 +76,8 @@ export function DepPopoverContent({
                   type="button"
                   onClick={() => onRemove(id)}
                   disabled={busy === id}
-                  className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-0.5"
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- p-2xs is the named 0.5-step density utility; the rule's regex erroneously matches the leading "2" of 2xs
+                  className="hover:bg-destructive/10 hover:text-destructive shrink-0 rounded-md p-2xs"
                   aria-label="Remove"
                 >
                   <MdClose className="size-3" />
@@ -95,7 +98,7 @@ export function DepPopoverContent({
         <Text
           as="div"
           variant="caption"
-          className="py-2 text-center text-muted-foreground"
+          className="py-sm text-center text-muted-foreground"
         >
           No conversations found
         </Text>

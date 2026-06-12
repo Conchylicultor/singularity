@@ -41,7 +41,7 @@ function TasksRoot(): ReactElement {
 
   return (
     <Tasks.Host
-      className="h-full p-4"
+      className="h-full p-lg"
       selectedId={selectedId}
       onSelect={(id) => openPane(taskDetailPane, { taskId: id }, { mode: "push" })}
     />

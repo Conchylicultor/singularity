@@ -36,7 +36,7 @@ export function FilePath({ filePath }: FilePathProps) {
   };
 
   return (
-    <span className="group/path inline-flex items-center gap-0.5 max-w-full min-w-0">
+    <span className="group/path inline-flex items-center gap-2xs max-w-full min-w-0">
       <button
         onClick={openFile}
         className="min-w-0 max-w-full overflow-hidden whitespace-nowrap font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"

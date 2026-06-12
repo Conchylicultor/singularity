@@ -138,7 +138,7 @@ export function CommandPaletteDialog({
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent>
         <div className="w-full max-w-lg overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl">
-          <div className="flex items-center gap-2 border-b px-3 py-2">
+          <div className="flex items-center gap-sm border-b px-md py-sm">
             <MdSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
               autoFocus
@@ -154,12 +154,12 @@ export function CommandPaletteDialog({
           </div>
 
           <ScrollArea className="max-h-80">
-            <div className="p-1">
+            <div className="p-xs">
               {flatList.length === 0 && (
                 <Text
                   as="p"
                   variant="body"
-                  className="px-3 py-6 text-center text-muted-foreground"
+                  className="px-md py-xl text-center text-muted-foreground"
                 >
                   No commands found.
                 </Text>
@@ -172,7 +172,7 @@ export function CommandPaletteDialog({
                         <Text
                           as="div"
                           variant="caption"
-                          className="px-2 py-1.5 font-medium text-muted-foreground"
+                          className="px-sm py-xs font-medium text-muted-foreground"
                         >
                           {group.label}
                         </Text>
@@ -211,7 +211,7 @@ export function CommandPaletteDialog({
           <Text
             as="div"
             variant="caption"
-            className="flex gap-3 border-t px-3 py-1.5 text-muted-foreground"
+            className="flex gap-md border-t px-md py-xs text-muted-foreground"
           >
             <span>
               <Kbd className="border-muted-foreground/30 bg-muted-foreground/10 text-muted-foreground">
@@ -254,7 +254,7 @@ const CommandRow = forwardRef<
       role="option"
       aria-selected={isActive}
       className={cn(
-        "flex cursor-pointer items-center gap-2 rounded-md px-2 py-1.5 text-body",
+        "flex cursor-pointer items-center gap-sm rounded-md px-sm py-xs text-body",
         isActive && "bg-accent text-accent-foreground",
       )}
       onMouseEnter={onMouseEnter}

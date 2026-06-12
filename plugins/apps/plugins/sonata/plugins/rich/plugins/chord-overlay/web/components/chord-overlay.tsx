@@ -34,8 +34,8 @@ export function ChordOverlay({
         return (
           <div
             key={`${a.start}-${data.symbol}-${i}`}
-            // eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps this compact chord chip a single line; size set via the text-2xs sub-scale
-            className="absolute left-0 -translate-y-1/2 rounded-r-md border border-border/60 bg-background/90 px-1.5 py-0.5 text-2xs font-semibold leading-none text-foreground shadow-sm backdrop-blur-sm"
+            // eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps this compact chord chip a single line (size via the text-2xs sub-scale)
+            className="absolute left-0 -translate-y-1/2 rounded-r-md border border-border/60 bg-background/90 px-xs py-2xs text-2xs font-semibold leading-none text-foreground shadow-sm backdrop-blur-sm"
             style={{ top: y }}
             title={(() => {
               const name = data.spelledSymbol

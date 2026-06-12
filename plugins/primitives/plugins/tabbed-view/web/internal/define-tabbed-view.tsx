@@ -59,10 +59,10 @@ export function defineTabbedView<ViewProps extends object>(
     return (
       <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
         {(header || ordered.length > 1) && (
-          <div className="flex shrink-0 flex-col gap-1 px-2 pb-1">
+          <div className="flex shrink-0 flex-col gap-xs px-sm pb-xs">
             {header}
             {ordered.length > 1 && (
-              <div className="flex items-center gap-0.5 rounded-md border bg-background p-0.5">
+              <div className="flex items-center gap-2xs rounded-md border bg-background p-2xs">
                 {ordered.map((v) => {
                   const Icon = v.icon;
                   const selected = activeView?.id === v.id;
@@ -75,7 +75,7 @@ export function defineTabbedView<ViewProps extends object>(
                       title={v.title}
                       // eslint-disable-next-line row/no-adhoc-row -- tabbed-view's own tab control (flex-1 justify-center layout differs from SegmentedControl)
                       className={cn(
-                        "flex flex-1 items-center justify-center gap-1 rounded-sm px-2 py-1 text-caption",
+                        "flex flex-1 items-center justify-center gap-xs rounded-sm px-sm py-xs text-caption",
                         selected
                           ? "bg-accent text-foreground"
                           : "text-muted-foreground hover:bg-accent/50",

@@ -71,7 +71,7 @@ export function ReviewFileRow({
       <button
         type="button"
         onClick={onToggle}
-        className={`text-body sticky top-0 flex w-full items-center gap-2 px-3 py-1.5 text-left hover:bg-muted/80 ${LEVEL_BG[level]}`}
+        className={`text-body sticky top-0 flex w-full items-center gap-sm px-md py-xs text-left hover:bg-muted/80 ${LEVEL_BG[level]}`}
         aria-expanded={expanded}
         title={level !== "safe" ? LEVEL_TOOLTIP[level] : undefined}
       >
@@ -83,6 +83,7 @@ export function ReviewFileRow({
           {from && (
             <>
               <span className="text-muted-foreground line-through">{from}</span>
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline arrow separator offset between from/to paths */}
               <span className="mx-1.5 text-muted-foreground">→</span>
             </>
           )}
@@ -92,11 +93,12 @@ export function ReviewFileRow({
             text={file.path}
             title="Copy path"
             size="inline"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- inline gap after path text before copy button
             className="ml-1 text-muted-foreground opacity-0 transition-opacity hover:text-foreground group-hover/path:opacity-100"
             onClick={(e) => e.stopPropagation()}
           />
         </span>
-        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-2 tabular-nums">
+        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
           <span className="text-success">+{file.additions}</span>
           <span className="text-destructive">−{file.deletions}</span>
           {level !== "safe" && (

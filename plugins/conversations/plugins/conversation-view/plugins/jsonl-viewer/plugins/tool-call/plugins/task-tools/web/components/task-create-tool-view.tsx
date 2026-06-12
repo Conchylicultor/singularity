@@ -21,12 +21,14 @@ export function TaskCreateToolView({ event }: ToolRendererProps) {
         <Text
           as="p"
           variant="caption"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the description from the card header
           className="mt-2 text-muted-foreground whitespace-pre-wrap"
         >
           {input.description}
         </Text>
       )}
       {event.result?.isError && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the error text from preceding content
         <Text as="p" variant="caption" className="mt-2 text-destructive">
           {event.result.content}
         </Text>

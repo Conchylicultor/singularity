@@ -12,7 +12,7 @@ export interface ModelChipProps {
 
 export function ModelChip({ value, onChange, disabled }: ModelChipProps) {
   return (
-    <Text as="div" variant="caption" className="flex items-center gap-1.5 text-muted-foreground">
+    <Text as="div" variant="caption" className="flex items-center gap-xs text-muted-foreground">
       <span>Auto-launch with</span>
       <ModelSelect
         value={value === "queue" ? null : value}

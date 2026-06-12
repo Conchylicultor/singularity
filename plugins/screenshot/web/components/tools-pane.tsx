@@ -36,12 +36,12 @@ interface Props {
 export function ToolsPane(props: Props) {
   return (
     <div className="flex h-full min-h-0 flex-col">
-      <Text as="div" variant="label" className="border-b px-3 py-2">
+      <Text as="div" variant="label" className="border-b px-md py-sm">
         Tools
       </Text>
 
-      <div className="border-b p-3">
-        <div className="grid grid-cols-3 gap-1">
+      <div className="border-b p-md">
+        <div className="grid grid-cols-3 gap-xs">
           <ToolButton
             active={props.tool === "none"}
             onClick={() => props.onToolChange("none")}
@@ -64,7 +64,7 @@ export function ToolsPane(props: Props) {
       </div>
 
       {props.tool === "crop" && (
-        <div className="border-b p-3">
+        <div className="border-b p-md">
           <Text as="div" variant="caption" tone="muted">
             Drag a rectangle on the image to crop.
           </Text>
@@ -72,12 +72,16 @@ export function ToolsPane(props: Props) {
       )}
 
       {props.tool === "draw" && (
-        <div className="space-y-3 border-b p-3">
+        <div
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- space-y on a bordered padded section; no named space-y utility, can't be a clean Stack
+          className="space-y-3 border-b p-md"
+        >
           <div>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the section label */}
             <Text as="div" variant="label" tone="muted" className="mb-1">
               Color
             </Text>
-            <div className="flex flex-wrap gap-1.5">
+            <div className="flex flex-wrap gap-xs">
               {COLORS.map((c) => (
                 <button
                   key={c}
@@ -100,6 +104,7 @@ export function ToolsPane(props: Props) {
               as="div"
               variant="label"
               tone="muted"
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset below the width label row
               className="mb-1 flex items-center justify-between"
             >
               <span>Width</span>
@@ -120,7 +125,7 @@ export function ToolsPane(props: Props) {
               className="w-full"
             />
           </div>
-          <div className="flex gap-2">
+          <div className="flex gap-sm">
             <Button size="sm" onClick={props.onApplyDraw} disabled={!props.hasStrokes}>
               Apply
             </Button>
@@ -145,7 +150,8 @@ export function ToolsPane(props: Props) {
         </div>
       )}
 
-      <div className="mt-auto space-y-2 border-t p-3">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- space-y on a bordered padded footer; no named space-y utility, can't be a clean Stack */}
+      <div className="mt-auto space-y-2 border-t p-md">
         <Button variant="outline" size="sm" className="w-full" onClick={props.onCopy}>
           <MdContentCopy className="size-4" />
           Copy to clipboard
@@ -179,7 +185,7 @@ function ToolButton({
       variant={active ? "secondary" : "ghost"}
       size="sm"
       onClick={onClick}
-      className="flex h-auto flex-col gap-0.5 py-2"
+      className="flex h-auto flex-col gap-2xs py-sm"
     >
       {icon}
       <span className="text-3xs">{label}</span>

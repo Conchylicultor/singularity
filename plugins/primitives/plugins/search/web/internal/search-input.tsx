@@ -23,14 +23,14 @@ export function SearchInput({
     <div className={cn("relative", wrapperClassName)}>
       <MdSearch className="pointer-events-none absolute left-2 top-1/2 size-3.5 -translate-y-1/2 text-muted-foreground" />
       <Input
-        className={cn("h-7 pl-7 text-caption", hasValue && "pr-6", className)}
+        className={cn("h-7 pl-xl text-caption", hasValue && "pr-xl", className)}
         {...props}
       />
       {hasValue && (
         <button
           type="button"
           onClick={handleClear}
-          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-0.5 text-muted-foreground hover:text-foreground focus:outline-none"
+          className="absolute right-1.5 top-1/2 -translate-y-1/2 rounded-sm p-2xs text-muted-foreground hover:text-foreground focus:outline-none"
           tabIndex={-1}
           aria-label="Clear filter"
         >

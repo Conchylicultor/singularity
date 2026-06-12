@@ -22,6 +22,7 @@ import {
   ToggleChip,
 } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCommitsLinesCumulative, getCommitsLinesRate } from "../../shared/endpoints";
 import {
@@ -473,8 +474,8 @@ export function LinesChartsSection() {
   }, [queryClient, filterKey]);
 
   return (
-    <div className="flex flex-col gap-6">
-      <div className="flex items-center justify-between gap-4">
+    <Stack gap="xl">
+      <Stack direction="row" gap="lg" align="center" justify="between">
         <ExcludedPathToggles dense />
         <ToggleChip
           active={byType}
@@ -483,21 +484,20 @@ export function LinesChartsSection() {
         >
           By type
         </ToggleChip>
-      </div>
-      <div>
-        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Over time</Text>
+      </Stack>
+      <Stack gap="md">
+        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Over time</Text>
         {byType ? <CumulativeLinesBreakdownChart dedup={filterRebases} /> : <CumulativeLinesChart dedup={filterRebases} />}
-      </div>
-      <div>
-        <Text as="h3" variant="caption" className="mb-3 font-medium text-muted-foreground">Per period</Text>
+      </Stack>
+      <Stack gap="md">
+        <Text as="h3" variant="caption" className="font-medium text-muted-foreground">Per period</Text>
         {byType ? <LinesRateBreakdownChart bucket={bucket} dedup={filterRebases} /> : <LinesRateChart bucket={bucket} dedup={filterRebases} />}
         <SegmentedControl
           options={BUCKETS}
           value={bucket}
           onChange={setBucket}
-          className="mt-3"
         />
-      </div>
-    </div>
+      </Stack>
+    </Stack>
   );
 }

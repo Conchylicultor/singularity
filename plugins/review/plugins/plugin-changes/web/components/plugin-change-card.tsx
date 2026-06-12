@@ -17,10 +17,10 @@ export function PluginChangeCard({
   );
 
   return (
-    <Card className="rounded-lg border-border/60 overflow-hidden p-0 bg-transparent">
+    <Card className="rounded-lg border-border/60 overflow-hidden p-none bg-transparent">
       <button
         onClick={onToggle}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-muted/30"
+        className="flex w-full items-center gap-sm px-md py-sm text-left hover:bg-muted/30"
       >
         {expanded ? (
           <MdExpandLess className="size-4 text-muted-foreground shrink-0" />
@@ -45,7 +45,7 @@ export function PluginChangeCard({
         })}
       </button>
       {expanded && hasExpandable && (
-        <div className="flex flex-col gap-3 px-3 pb-3 pt-1 border-t border-border/40">
+        <div className="flex flex-col gap-md px-md pb-md pt-xs border-t border-border/40">
           <PluginChanges.Section.Render>
             {(item) => {
               if (item.hasContent && !item.hasContent(plugin)) return null;

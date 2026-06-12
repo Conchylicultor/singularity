@@ -21,7 +21,7 @@ export function AddBlockMenu() {
           type="button"
           variant="ghost"
           size="sm"
-          className="text-muted-foreground hover:text-foreground h-7 gap-1.5 px-2 text-body"
+          className="text-muted-foreground hover:text-foreground h-7 gap-xs px-sm text-body"
         >
           <MdAdd className="size-4" />
           Add block

@@ -1,4 +1,5 @@
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 interface SectionProps {
   title: string;
@@ -8,7 +9,7 @@ interface SectionProps {
 
 export function Section({ title, count, children }: SectionProps) {
   return (
-    <section className="flex flex-col gap-2.5">
+    <Stack as="section" gap="sm">
       <div className="flex items-baseline justify-between">
         <SectionLabel as="h2" className="text-2xs font-semibold tracking-wider text-muted-foreground/70">
           {title}
@@ -18,6 +19,6 @@ export function Section({ title, count, children }: SectionProps) {
         )}
       </div>
       {children}
-    </section>
+    </Stack>
   );
 }

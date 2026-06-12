@@ -102,7 +102,7 @@ function EmptyImageBlock({
   }, [isFocused, ingest]);
 
   return (
-    <div className="px-3 py-1">
+    <div className="px-md py-xs">
       <input
         ref={inputRef}
         type="file"
@@ -142,7 +142,7 @@ function EmptyImageBlock({
           if (file) ingest(file);
         }}
         className={cn(
-          "flex cursor-pointer items-center gap-2 rounded-md border border-dashed border-border px-3 py-4 text-body text-muted-foreground transition-colors hover:bg-muted",
+          "flex cursor-pointer items-center gap-sm rounded-md border border-dashed border-border px-md py-lg text-body text-muted-foreground transition-colors hover:bg-muted",
           dragOver && "border-primary bg-muted",
         )}
       >
@@ -197,7 +197,7 @@ function FilledImageBlock({
   }
 
   return (
-    <div className="px-3 py-1">
+    <div className="px-md py-xs">
       <div
         ref={wrapperRef}
         className="group relative inline-block max-w-full"

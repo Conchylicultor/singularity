@@ -3,6 +3,7 @@ import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import type { PluginNode } from "../../core/types";
 import { PluginView } from "../slots";
 
@@ -13,7 +14,7 @@ interface PluginDetailProps {
 export function PluginDetail({ node }: PluginDetailProps) {
   if (!node) {
     return (
-      <div className="flex h-full items-center justify-center p-12 text-center">
+      <div className="flex h-full items-center justify-center p-2xl text-center">
         <Text as="div" variant="body" className="max-w-sm text-muted-foreground">
           Select a plugin to inspect what would be included in its release.
         </Text>
@@ -26,8 +27,8 @@ export function PluginDetail({ node }: PluginDetailProps) {
   return (
     <div className="h-full overflow-y-auto">
       <div className="mx-auto max-w-3xl">
-        <header className="flex flex-col gap-3 px-6 pt-6">
-          <Text as="div" variant="title" className="flex items-baseline gap-3 tracking-tight">
+        <Stack as="header" gap="md" className="px-xl pt-xl">
+          <Text as="div" variant="title" className="flex items-baseline gap-md tracking-tight">
             <Breadcrumb
               segments={trail.map((seg, i) => ({
                 key: String(i),
@@ -35,6 +36,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
               }))}
               actions={
                 node.loadBearing ? (
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 offsets this trailing load-bearing badge from the breadcrumb in the actions slot; one-off inline gap, no shared flex parent
                   <Badge variant="warning" size="sm" icon={<MdBolt />} className="ml-1">
                     Load-bearing
                   </Badge>
@@ -47,7 +49,7 @@ export function PluginDetail({ node }: PluginDetailProps) {
               {node.description}
             </Text>
           )}
-        </header>
+        </Stack>
 
         <PluginView.Host node={node} />
       </div>

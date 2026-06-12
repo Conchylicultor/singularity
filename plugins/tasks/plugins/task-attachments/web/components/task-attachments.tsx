@@ -21,9 +21,9 @@ export function TaskAttachments({ taskId }: { taskId: string }) {
   if (!attachments || attachments.length === 0) return null;
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-2">
+    <Collapsible defaultOpen className="flex flex-col gap-sm">
       <SectionHeaderRow variant="eyebrow">Attachments</SectionHeaderRow>
-      <CollapsibleContent className="flex flex-wrap gap-3">
+      <CollapsibleContent className="flex flex-wrap gap-md">
         {attachments.map((a) =>
           a.mime.startsWith("image/") ? (
             <a

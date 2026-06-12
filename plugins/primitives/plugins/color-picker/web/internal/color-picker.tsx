@@ -47,10 +47,10 @@ export function ColorPicker({
   );
 
   return (
-    <div className={cn("flex w-56 flex-col gap-2 p-2", className)}>
+    <div className={cn("flex w-56 flex-col gap-sm p-sm", className)}>
       {swatches && swatches.length > 0 && (
         <div>
-          <SectionLabel className="px-0.5 pb-1.5 text-3xs">Swatches</SectionLabel>
+          <SectionLabel className="px-2xs pb-xs text-3xs">Swatches</SectionLabel>
           <SwatchGrid
             colors={swatches}
             value={value}

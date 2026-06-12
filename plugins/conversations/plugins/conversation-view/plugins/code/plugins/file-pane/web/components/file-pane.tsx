@@ -22,7 +22,7 @@ export function FilePaneView({
       <Text
         as="div"
         variant="body"
-        className="flex items-center gap-2 border-b px-2 py-1.5"
+        className="flex items-center gap-sm border-b px-sm py-xs"
       >
         <div className="min-w-0 flex-1">
           <FilepathBreadcrumb path={path} />

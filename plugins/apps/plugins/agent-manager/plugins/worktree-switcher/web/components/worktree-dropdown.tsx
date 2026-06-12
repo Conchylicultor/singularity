@@ -32,7 +32,7 @@ export function WorktreeDropdown() {
       <Text
         as="span"
         variant="body"
-        className="flex min-w-0 items-center gap-1.5 px-2 py-1 text-muted-foreground cursor-default"
+        className="flex min-w-0 items-center gap-xs px-sm py-xs text-muted-foreground cursor-default"
       >
         <StatusDot size="sm" colorClass="bg-primary" />
         <TruncatingText>{taskTitle ?? currentWorktree}</TruncatingText>

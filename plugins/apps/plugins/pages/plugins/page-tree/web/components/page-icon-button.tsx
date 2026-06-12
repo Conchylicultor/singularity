@@ -34,7 +34,7 @@ export function PageIconButton({
       >
         <PageIcon nodes={value.iconSvgNodes} className="size-6" />
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-2" align="start">
+      <PopoverContent className="w-80 p-sm" align="start">
         <IconPicker
           value={value.icon}
           onSelect={({ key, svgNodes }) => {
@@ -44,6 +44,7 @@ export function PageIconButton({
         />
         {hasIcon && (
           <>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- vertical breathing room around a 1px divider rule in the popover */}
             <div className="my-1 h-px bg-border" />
             <Row
               size="sm"

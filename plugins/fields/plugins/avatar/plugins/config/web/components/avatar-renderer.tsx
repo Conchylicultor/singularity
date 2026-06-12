@@ -15,7 +15,7 @@ const AvatarRenderer: FieldRendererComponent<AvatarSpec> = ({
   onChange,
 }) => {
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="flex items-start justify-between gap-lg py-md">
       <FieldHeader field={field} />
       <AvatarPicker value={value} onChange={(next) => onChange({ icon: next.icon, color: next.color, svgNodes: null })}>
         <Avatar

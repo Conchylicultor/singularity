@@ -22,10 +22,10 @@ const ObjectRenderer: FieldRendererComponent<Record<string, unknown>> = ({
   const { subFields } = field as unknown as ObjectFieldDef;
 
   return (
-    <Collapsible defaultOpen className="py-1">
-      <CollapsibleTrigger className="gap-2 py-2">
+    <Collapsible defaultOpen className="py-xs">
+      <CollapsibleTrigger className="gap-sm py-sm">
         <CollapsibleChevron className="size-4 text-muted-foreground" />
-        <div className="flex flex-col gap-0.5 text-left">
+        <div className="flex flex-col gap-2xs text-left">
           {field.meta.label ? (
             <Text variant="label">{field.meta.label}</Text>
           ) : null}
@@ -36,7 +36,8 @@ const ObjectRenderer: FieldRendererComponent<Record<string, unknown>> = ({
           ) : null}
         </div>
       </CollapsibleTrigger>
-      <CollapsibleContent className="ml-2 mt-1 flex flex-col border-l border-border pl-4">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off margin offsets positioning the nested sub-field indent guide */}
+      <CollapsibleContent className="ml-2 mt-1 flex flex-col border-l border-border pl-lg">
         {Object.entries(subFields).map(([key, subField]) => (
           <SubFieldSlot
             key={key}

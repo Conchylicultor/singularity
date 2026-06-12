@@ -21,13 +21,13 @@ export function TaskDependents({ taskId }: { taskId: string }) {
   const dependentIds = tasks.filter((t) => t.dependencies.includes(taskId)).map((t) => t.id);
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-2">
+    <Collapsible defaultOpen className="flex flex-col gap-sm">
       <SectionHeaderRow variant="eyebrow">Dependents</SectionHeaderRow>
       <CollapsibleContent>
         {dependentIds.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No dependents.</Text>
         ) : (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-sm">
             {dependentIds.map((depId) => (
               <DependentChip key={depId} taskId={taskId} dependentId={depId} tasks={tasks} />
             ))}
@@ -73,7 +73,7 @@ function DependentChip({
           <button
             type="button"
             onClick={remove}
-            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-0.5"
+            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs"
             aria-label={`Remove dependent ${title}`}
           >
             <MdClose className="h-3 w-3" />

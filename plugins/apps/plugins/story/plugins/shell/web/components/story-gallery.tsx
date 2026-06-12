@@ -57,7 +57,7 @@ export function StoryGallery() {
 
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      <div className="flex items-center justify-between gap-4 py-4 pl-6 pr-floating-bar">
+      <div className="flex items-center justify-between gap-lg py-lg pl-xl pr-floating-bar">
         <Text variant="title">Stories</Text>
         <Button size="sm" onClick={() => void newStory()}>
           <MdAdd className="size-4" />

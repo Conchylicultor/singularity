@@ -10,10 +10,11 @@ const BoolRenderer: FieldRendererComponent<boolean> = ({
   onChange,
 }) => {
   return (
-    <div className="flex items-start justify-between gap-4 py-3">
+    <div className="flex items-start justify-between gap-lg py-md">
       <FieldHeader field={field} />
       <input
         type="checkbox"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off top offset to align the checkbox with the field header baseline
         className="mt-1 h-4 w-4 cursor-pointer"
         checked={value}
         onChange={(e) => onChange(e.target.checked)}

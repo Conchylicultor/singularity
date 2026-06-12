@@ -44,7 +44,7 @@ export function DataTable<TRow>({
   const template = columns.map((col) => col.width ?? "auto").join(" ");
 
   return (
-    <div className="grid gap-x-2" style={{ gridTemplateColumns: template }}>
+    <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
       <div className="sticky top-0 z-raised col-span-full grid grid-cols-subgrid border-b bg-background p-control text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {columns.map((col) => {
           const sortable = !!col.value;
@@ -123,6 +123,7 @@ function SortIcon({
   return (
     <Icon
       size={12}
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off inline sort-icon offset next to the column header text
       className={cn(
         "mb-px ml-0.5 inline-block align-middle",
         active ? "text-foreground" : "text-muted-foreground/40",

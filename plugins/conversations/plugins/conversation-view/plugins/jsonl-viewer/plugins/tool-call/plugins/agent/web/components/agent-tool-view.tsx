@@ -4,6 +4,7 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
@@ -57,7 +58,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-sm">
       <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" className="shrink-0 font-mono">
         {agentType}
       </Badge>
@@ -73,7 +74,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
         <span
           role="button"
           tabIndex={0}
-          className="shrink-0 cursor-pointer rounded-md p-0.5 text-muted-foreground hover:bg-muted hover:text-foreground"
+          className="shrink-0 cursor-pointer rounded-md p-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
           onClick={openReport}
           onKeyDown={(e) => {
             if (e.key === "Enter" || e.key === " ") {
@@ -90,9 +91,10 @@ export function AgentToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary={summary}>
-      <div className="mt-2 space-y-2">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
+      <Stack gap="sm" className="mt-2">
         {/* Prompt */}
-        <div className="prose-xs text-caption max-h-96 overflow-auto px-3 py-2">
+        <div className="prose-xs text-caption max-h-96 overflow-auto px-md py-sm">
           <Markdown>{prompt}</Markdown>
         </div>
 
@@ -111,7 +113,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
             </span>
           </Row>
         )}
-      </div>
+      </Stack>
     </ToolCallCard>
   );
 }

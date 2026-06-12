@@ -18,7 +18,7 @@ export function TaskTreeDetail({
   return (
     <TaskNavigateProvider value={onSelect}>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b p-2">
+        <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b p-sm">
           <TasksList
             rootTaskId={rootTaskId}
             selectedId={selectedId}

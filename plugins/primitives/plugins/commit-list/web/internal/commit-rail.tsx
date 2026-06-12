@@ -91,7 +91,9 @@ export function MergeBaseMarker({
           fill={mainColor}
         />
       </svg>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset from the rail svg; non-uniform with the svg sibling */}
       <span className="ml-2 font-mono">{shortSha ?? "main"}</span>
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- per-label offset between sha and merge-base text */}
       <span className="ml-2">merge-base</span>
     </Text>
   );

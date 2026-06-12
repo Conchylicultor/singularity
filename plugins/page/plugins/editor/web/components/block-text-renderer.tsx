@@ -39,6 +39,7 @@ export function BlockTextRenderer({ block, isFocused, editor }: BlockRendererPro
         // Don't blur the editor before the onChange registers; the editable
         // field flushes on blur anyway, but this keeps the caret put.
         onMouseDown={(e) => e.preventDefault()}
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mx-1/mt-2 are one-off offsets aligning the checkbox glyph optically with the first text line; not sibling rhythm a parent gap could own
         className="accent-primary mx-1 mt-2 size-3.5 flex-none cursor-pointer self-start"
       />
     );
@@ -48,7 +49,7 @@ export function BlockTextRenderer({ block, isFocused, editor }: BlockRendererPro
         as="span"
         variant="body"
         aria-hidden
-        className="text-muted-foreground flex-none select-none py-1 pl-3 pr-1"
+        className="text-muted-foreground flex-none select-none py-xs pl-md pr-xs"
       >
         {handle.marker}
       </Text>

@@ -140,7 +140,7 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
 
   return (
     <Text as="div" variant="body">
-      <div className="sticky top-0 z-raised border-b bg-background p-1.5">
+      <div className="sticky top-0 z-raised border-b bg-background p-xs">
         <SearchInput
           value={query}
           onChange={(e) => setQuery(e.target.value)}
@@ -148,9 +148,9 @@ export function FileTree({ files, selectedPath, onSelect }: FileTreeProps) {
           aria-label="Search files"
         />
       </div>
-      <div className="py-1">
+      <div className="py-xs">
         {q && filtered.length === 0 ? (
-          <div className="px-3 py-2 text-muted-foreground">No matches.</div>
+          <div className="px-md py-sm text-muted-foreground">No matches.</div>
         ) : (
           filtered.map((node) => (
             <FileTreeRow

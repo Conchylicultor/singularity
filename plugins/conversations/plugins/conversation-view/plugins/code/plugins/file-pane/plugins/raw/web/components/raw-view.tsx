@@ -105,7 +105,7 @@ export function RawView({
     return (
       <pre
         // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
-        className="whitespace-pre-wrap break-words p-3 font-mono text-caption leading-5"
+        className="whitespace-pre-wrap break-words p-md font-mono text-caption leading-5"
       >
         {content}
       </pre>
@@ -118,8 +118,8 @@ export function RawView({
   return (
     <div
       ref={containerRef}
-      // eslint-disable-next-line text/no-adhoc-typography -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment, distinct from caption's tighter line-height
-      className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:bg-transparent [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+      // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- [&>pre]:leading-5 fixes mono code line-height for line-number gutter alignment; [&_.ln]:mr-4 is the line-number gutter width (paired with [&_.ln]:w-7), a fixed code-gutter dimension the density ramp can't express
+      className="[&>pre]:m-0 [&>pre]:min-h-full [&>pre]:w-max [&>pre]:min-w-full [&>pre]:bg-transparent [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&>pre]:leading-5 [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
       dangerouslySetInnerHTML={{ __html: html }}
     />
   );

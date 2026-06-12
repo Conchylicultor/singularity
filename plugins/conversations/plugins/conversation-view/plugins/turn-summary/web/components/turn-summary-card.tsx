@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { turnSummariesResource } from "../../shared";
 
 function parseBullets(text: string): string[] {
@@ -53,18 +54,20 @@ export function TurnSummaryCard({
   const hasDetail = caveats.length > 0 || actions.length > 0;
 
   return (
-    <Text as="div" variant="caption" className="rounded-md border border-border bg-muted/30 px-3 py-2">
+    <Text as="div" variant="caption" className="rounded-md border border-border bg-muted/30 px-md py-sm">
       <button
         type="button"
         onClick={hasDetail ? toggle : undefined}
-        className={`flex w-full items-start gap-1.5 text-left ${
+        className={`flex w-full items-start gap-xs text-left ${
           hasDetail ? "cursor-pointer" : "cursor-default"
         }`}
         aria-expanded={hasDetail ? open : undefined}
       >
         {hasDetail ? (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the chevron with the first line of summary text
           <CollapsibleChevron open={open} className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" />
         ) : (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset matching the chevron's, keeps the spacer placeholder aligned
           <span className="mt-0.5 size-3.5 shrink-0" />
         )}
         <span className="flex-1">
@@ -72,10 +75,12 @@ export function TurnSummaryCard({
         </span>
       </button>
       {hasDetail && open && (
-        <div className="mt-2 ml-5 space-y-2">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates this detail block from the always-visible summary button (sibling under a non-flex Text); ml-5 indents it under the chevron column
+        <Stack gap="sm" className="mt-2 ml-5">
           {caveats.length > 0 && (
             <BulletList
               icon={
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
                 <MdWarning className="mt-0.5 size-3 shrink-0 text-warning" />
               }
               items={caveats}
@@ -84,12 +89,13 @@ export function TurnSummaryCard({
           {actions.length > 0 && (
             <BulletList
               icon={
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- tiny top offset to baseline-align the bullet icon with its first text line
                 <MdArrowForward className="mt-0.5 size-3 shrink-0 text-info" />
               }
               items={actions}
             />
           )}
-        </div>
+        </Stack>
       )}
     </Text>
   );
@@ -103,13 +109,13 @@ function BulletList({
   items: string[];
 }) {
   return (
-    <ul className="space-y-1">
+    <Stack as="ul" gap="xs">
       {items.map((item, i) => (
-        <li key={i} className="flex items-start gap-1.5">
+        <li key={i} className="flex items-start gap-xs">
           {icon}
           <span>{item}</span>
         </li>
       ))}
-    </ul>
+    </Stack>
   );
 }

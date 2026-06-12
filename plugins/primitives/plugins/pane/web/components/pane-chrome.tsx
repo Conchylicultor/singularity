@@ -63,7 +63,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
   return (
     <div className="flex h-full flex-col">
       <div
-        className={`flex h-chrome-pane min-w-0 items-center gap-2 ${headerSpill ? "overflow-visible" : "overflow-hidden"} border-b px-chrome${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
+        className={`flex h-chrome-pane min-w-0 items-center gap-sm ${headerSpill ? "overflow-visible" : "overflow-hidden"} border-b px-chrome${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >
@@ -139,7 +139,7 @@ export function PaneActionsSlot({
   );
   if (actions.length === 0) return null;
   return (
-    <div className="flex items-center gap-1">
+    <div className="flex items-center gap-xs">
       {actions.map((a, i) => (
         <Fragment key={i}>
           {renderIsolated(pane.Actions.id, a as unknown as Contribution)}
@@ -272,7 +272,7 @@ function OverflowActionsBar({
       {/* Container takes all remaining space; items are right-aligned. */}
       <div
         ref={containerRef}
-        className="flex min-w-0 flex-1 items-center justify-end gap-1 overflow-hidden"
+        className="flex min-w-0 flex-1 items-center justify-end gap-xs overflow-hidden"
       >
         {visibleSlot.map((a, i) => (
           <Fragment key={i}>
@@ -292,7 +292,7 @@ function OverflowActionsBar({
             <PopoverContent
               side="bottom"
               align="end"
-              className="w-auto min-w-0 p-1"
+              className="w-auto min-w-0 p-xs"
             >
               <div className="flex flex-col">
                 {overflowSlot.map((a, i) => (

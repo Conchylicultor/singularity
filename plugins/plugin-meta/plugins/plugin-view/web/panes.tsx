@@ -45,7 +45,7 @@ function PluginViewBody() {
         <Text
           as="div"
           variant="body"
-          className="flex h-full flex-col items-center justify-center gap-2 p-8 text-center"
+          className="flex h-full flex-col items-center justify-center gap-sm p-2xl text-center"
         >
           <span className="font-medium text-foreground">
             Failed to load plugin tree

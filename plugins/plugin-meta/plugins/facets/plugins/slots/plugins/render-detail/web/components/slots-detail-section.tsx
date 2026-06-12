@@ -1,3 +1,4 @@
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Section,
@@ -17,13 +18,13 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Slots" count={`${data.length} slot${data.length !== 1 ? "s" : ""}`}>
-      <div className="flex flex-col gap-0.5">
+      <Stack gap="2xs">
         {data.map((s) => (
           <Text
             as="div"
             variant="caption"
             key={s.slotId}
-            className="flex items-center gap-2 px-2 py-0.5"
+            className="flex items-center gap-sm px-sm py-2xs"
           >
             <code className="font-mono text-foreground">
               {s.groupName}.{s.memberName}
@@ -33,7 +34,7 @@ export function SlotsDetailSection({ node }: { node: PluginNode }) {
             </code>
           </Text>
         ))}
-      </div>
+      </Stack>
     </Section>
   );
 }

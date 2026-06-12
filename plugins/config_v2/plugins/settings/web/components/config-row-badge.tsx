@@ -12,10 +12,12 @@ export function ConfigRowBadge({
   hasConflict: boolean;
 }) {
   if (hasConflict) {
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label
     return <MdWarning className="ml-2 size-4 shrink-0 text-warning" />;
   }
   if (modifiedCount > 0) {
     return (
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- trailing row indicator offset from the row label
       <span className="ml-2 flex size-5 shrink-0 items-center justify-center rounded-full bg-primary text-3xs font-medium text-primary-foreground">
         {modifiedCount}
       </span>

@@ -35,7 +35,7 @@ export function CommitRowItem({
 }) {
   return (
     <li
-      className={`flex items-center gap-2 border-b border-border/50 pl-2 pr-3${onClick ? " cursor-pointer hover:bg-accent/50" : ""}`}
+      className={`flex items-center gap-sm border-b border-border/50 pl-sm pr-md${onClick ? " cursor-pointer hover:bg-accent/50" : ""}`}
       style={{ height: COMMIT_ROW_HEIGHT }}
       onClick={onClick ? () => onClick(commit) : undefined}
     >

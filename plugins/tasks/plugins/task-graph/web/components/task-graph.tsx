@@ -217,7 +217,7 @@ function TaskNode({ data }: NodeProps<TaskFlowNode>) {
     <div
       title={`${task.title} — ${meta.label}`}
       className={cn(
-        "bg-card text-foreground relative flex h-9 cursor-pointer items-center gap-2 rounded-md border px-2 text-caption shadow-sm transition-colors",
+        "bg-card text-foreground relative flex h-9 cursor-pointer items-center gap-sm rounded-md border px-sm text-caption shadow-sm transition-colors",
         "hover:border-foreground/40 focus:outline-none",
         selected
           ? "border-primary ring-primary/30 ring-2"

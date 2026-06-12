@@ -114,7 +114,7 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
   return (
     <PluginTreeProvider value={ctxValue}>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex items-center gap-2 px-3 py-2.5 border-b">
+        <div className="flex items-center gap-sm px-md py-sm border-b">
           <div className="flex-1">
             <SearchInput
               value={filter}
@@ -124,7 +124,7 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
           </div>
           <ExpandAllButton allExpanded={isAllExpanded} onToggle={toggleAll} />
         </div>
-        <div className="flex-1 min-h-0 overflow-y-auto py-1">
+        <div className="flex-1 min-h-0 overflow-y-auto py-xs">
           {filtered.map((p) => (
             <TreeRow
               key={p.id}
@@ -135,7 +135,7 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
             />
           ))}
           {filtered.length === 0 && (
-            <Text as="div" variant="caption" className="px-3 py-6 text-center text-muted-foreground">
+            <Text as="div" variant="caption" className="px-md py-xl text-center text-muted-foreground">
               No plugins match &quot;{filter}&quot;
             </Text>
           )}
@@ -171,7 +171,7 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
           }
         }}
         className={cn(
-          "group/row flex h-7 w-full cursor-pointer select-none items-center gap-1 pr-2 text-left transition-colors",
+          "group/row flex h-7 w-full cursor-pointer select-none items-center gap-xs pr-sm text-left transition-colors",
           isSelected
             ? "bg-accent"
             : "hover:bg-accent/40 focus-visible:bg-accent/40",

@@ -94,7 +94,7 @@ export function CodeWithLineNumbers({
 
   if (!code) {
     return (
-      <Text as="p" variant="caption" className="py-1 italic text-muted-foreground">
+      <Text as="p" variant="caption" className="py-xs italic text-muted-foreground">
         (empty result)
       </Text>
     );
@@ -103,7 +103,7 @@ export function CodeWithLineNumbers({
   if (html === null) {
     return (
       <ContentScope>
-        <pre className="max-h-[280px] overflow-auto rounded-md bg-muted p-3 font-mono text-caption">
+        <pre className="max-h-[280px] overflow-auto rounded-md bg-muted p-md font-mono text-caption">
           <code>{code}</code>
         </pre>
       </ContentScope>
@@ -113,7 +113,8 @@ export function CodeWithLineNumbers({
   return (
     <ContentScope>
       <div
-        className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- `[&_.ln]:mr-4` is a Shiki-injected line-number gutter margin targeted via arbitrary variant; not expressible through Stack/Inset
+        className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </ContentScope>

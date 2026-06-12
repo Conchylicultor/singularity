@@ -54,18 +54,18 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
 
   if (isSet && !editing) {
     return (
-      <div className="flex flex-col gap-1.5 py-3">
+      <div className="flex flex-col gap-xs py-md">
         {field.meta.label ? <Text as="label" variant="label">{field.meta.label}</Text> : null}
         {field.meta.description ? <Text as="p" variant="caption" className="text-muted-foreground">{field.meta.description}</Text> : null}
-        <div className="flex items-center gap-2">
-          <Text variant="caption" className="flex items-center gap-1 text-success">
+        <div className="flex items-center gap-sm">
+          <Text variant="caption" className="flex items-center gap-xs text-success">
             <MdCheck className="size-3.5" />
             Configured
           </Text>
           <Button
             variant="ghost"
             size="sm"
-            className="h-6 px-2 text-caption"
+            className="h-6 px-sm text-caption"
             onClick={() => setEditing(true)}
           >
             Replace
@@ -76,7 +76,7 @@ const SecretRenderer: FieldRendererComponent<string> = ({ field, value, onChange
   }
 
   return (
-    <div className="flex flex-col gap-1.5 py-3">
+    <div className="flex flex-col gap-xs py-md">
       {field.meta.label ? <Text as="label" variant="label">{field.meta.label}</Text> : null}
       {field.meta.description ? <Text as="p" variant="caption" className="text-muted-foreground">{field.meta.description}</Text> : null}
       <Input

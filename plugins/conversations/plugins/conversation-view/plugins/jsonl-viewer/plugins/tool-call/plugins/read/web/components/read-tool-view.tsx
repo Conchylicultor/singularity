@@ -54,7 +54,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
   if (!conversation) return null;
 
   const aside = (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-sm">
       <FilePath filePath={file_path} />
       <LineRangeBadge offset={offset} limit={limit} />
     </span>
@@ -65,6 +65,7 @@ export function ReadToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} aside={aside} defaultOpen={isImage}>
       {event.result && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
         <div className="mt-2">
           {event.result.isError ? (
             <Text as="p" variant="caption" className="text-destructive">{event.result.content}</Text>

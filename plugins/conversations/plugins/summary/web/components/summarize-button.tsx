@@ -23,7 +23,7 @@ export function SummarizeButton() {
         variant={isOpen ? "secondary" : "ghost"}
         size="sm"
         disabled
-        className="gap-1.5 text-caption"
+        className="gap-xs text-caption"
         title="Summary"
         aria-label="Summary"
         aria-pressed={isOpen}
@@ -43,7 +43,7 @@ export function SummarizeButton() {
         variant={isOpen ? "secondary" : "ghost"}
         size="sm"
         onClick={toggle}
-        className="gap-1.5 text-caption"
+        className="gap-xs text-caption"
         title="Summary"
         aria-label="Summary"
         aria-pressed={isOpen}
@@ -59,7 +59,7 @@ export function SummarizeButton() {
       variant={isOpen ? "secondary" : "ghost"}
       size="sm"
       onClick={toggle}
-      className="gap-1.5"
+      className="gap-xs"
       title={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-label={`Summary: ${PHASE_LABEL[latest.phase]}`}
       aria-pressed={isOpen}

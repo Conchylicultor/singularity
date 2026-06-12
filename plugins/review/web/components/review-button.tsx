@@ -17,7 +17,7 @@ export function ReviewButton() {
       aria-label="Review"
       aria-pressed={isOpen}
       onClick={toggle}
-      className="gap-1.5"
+      className="gap-xs"
     >
       <MdRateReview className="size-4" />
       {sections.map((s) => {

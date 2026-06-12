@@ -45,7 +45,7 @@ function StatusBadge({ exitCode, finished }: { exitCode: number | null; finished
 
 function Row({ label, children }: { label: string; children: React.ReactNode }) {
   return (
-    <div className="flex items-baseline justify-between gap-4">
+    <div className="flex items-baseline justify-between gap-lg">
       <Text as="span" variant="caption" className="shrink-0 text-muted-foreground">{label}</Text>
       <Text as="span" variant="body">{children}</Text>
     </div>
@@ -62,15 +62,15 @@ export function BuildInfo({ runId }: { runId: string }) {
   }
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-2">
+    <div className="flex flex-col gap-md">
+      <div className="flex items-center gap-sm">
         <StatusBadge exitCode={run.exitCode} finished={run.finishedAt !== null} />
         <Badge variant={run.trigger === "auto" ? "info" : "muted"}>
           {run.trigger}
         </Badge>
       </div>
 
-      <div className="flex flex-col gap-2">
+      <div className="flex flex-col gap-sm">
         {run.commitHash && (
           <Row label="Commit">
             {/* eslint-disable-next-line text/no-adhoc-typography -- mono commit-hash chip, intentional inline-code size */}

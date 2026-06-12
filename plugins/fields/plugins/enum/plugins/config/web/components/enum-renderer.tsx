@@ -14,8 +14,8 @@ const EnumRenderer: FieldRendererComponent<string> = ({
     display === "radio" || (display !== "dropdown" && options.length <= 3);
 
   return (
-    <div className="flex flex-col gap-1.5 py-3">
-      <div className="flex flex-col gap-0.5">
+    <div className="flex flex-col gap-xs py-md">
+      <div className="flex flex-col gap-2xs">
         {field.meta.label ? (
           <Text as="label" variant="label">
             {field.meta.label}
@@ -47,13 +47,13 @@ function RadioGroup({
   onChange: (value: string) => void;
 }) {
   return (
-    <div role="radiogroup" className="flex flex-col gap-1.5">
+    <div role="radiogroup" className="flex flex-col gap-xs">
       {options.map((opt) => (
         <Text
           as="label"
           variant="body"
           key={opt.value}
-          className="flex cursor-pointer items-center gap-2"
+          className="flex cursor-pointer items-center gap-sm"
         >
           <input
             type="radio"

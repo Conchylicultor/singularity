@@ -50,7 +50,7 @@ function CallsViewInner({ calls }: { calls: ClaudeCliCall[] }) {
 
   return (
     <div className="flex h-full flex-col">
-      <div className="flex flex-wrap items-center gap-2 border-b px-3 py-2">
+      <div className="flex flex-wrap items-center gap-sm border-b px-md py-sm">
         <FilterGroup label="Model">
           <FilterChip active={modelChip.value === "all"} onClick={() => modelChip.setValue("all")}>
             all

@@ -79,21 +79,22 @@ export function GoogleSetupPane() {
   const hasProject = projectId.length > 0;
 
   return (
-    <div className="flex flex-col gap-6 p-4 max-w-lg">
+    <div className="flex flex-col gap-xl p-lg max-w-lg">
       <div>
         <Text as="label" variant="label">GCP Project ID</Text>
-        <Input
-          className="mt-1"
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under label, no flex parent to own a gap */}
+        <Input className="mt-1"
           placeholder="my-project-123"
           value={projectId}
           onChange={(e) => handleProjectInput(e.target.value)}
         />
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- single-edge offset under input, no flex parent to own a gap */}
         <Text as="p" variant="caption" className="mt-1 text-muted-foreground">
           Paste any GCP console URL, or type your project ID
         </Text>
       </div>
 
-      <ol className="flex flex-col gap-4">
+      <ol className="flex flex-col gap-lg">
         <Step
           number={1}
           title="Select or create a GCP project"
@@ -136,7 +137,7 @@ export function GoogleSetupPane() {
           active={hasProject}
           done={false}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-sm">
             <StepLink
               href={`https://console.cloud.google.com/auth/clients/create?project=${projectId}`}
               disabled={!hasProject}
@@ -144,8 +145,8 @@ export function GoogleSetupPane() {
             <Text as="p" variant="caption" className="text-muted-foreground">
               Application type: <span className="font-medium">Desktop app</span>
             </Text>
-            <div className="flex items-center gap-2">
-              <Text as="code" variant="caption" className="flex-1 rounded-md bg-muted px-2 py-1 break-all">
+            <div className="flex items-center gap-sm">
+              <Text as="code" variant="caption" className="flex-1 rounded-md bg-muted px-sm py-xs break-all">
                 {REDIRECT_URI}
               </Text>
               <CopyButton
@@ -166,9 +167,9 @@ export function GoogleSetupPane() {
           active={true}
           done={credentialsSaved}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-sm">
             {credentialsSaved ? (
-              <Text as="div" variant="caption" className="flex items-center gap-1 text-success">
+              <Text as="div" variant="caption" className="flex items-center gap-xs text-success">
                 <MdCheck className="h-4 w-4" />
                 Credentials configured
               </Text>
@@ -205,9 +206,9 @@ export function GoogleSetupPane() {
           active={credentialsSaved}
           done={!!connected}
         >
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-sm">
             {connected ? (
-              <Text as="div" variant="caption" className="flex items-center gap-1 text-success">
+              <Text as="div" variant="caption" className="flex items-center gap-xs text-success">
                 <MdCheck className="h-4 w-4" />
                 Connected
                 {status.identity?.email ? ` (${status.identity.email})` : ""}
@@ -249,7 +250,7 @@ function Step({
 }) {
   return (
     <li
-      className={`flex gap-3 ${active ? "opacity-100" : "opacity-40 pointer-events-none"}`}
+      className={`flex gap-md ${active ? "opacity-100" : "opacity-40 pointer-events-none"}`}
     >
       <Text
         as="div"
@@ -262,7 +263,7 @@ function Step({
       >
         {done ? <MdCheck className="h-3.5 w-3.5" /> : number}
       </Text>
-      <div className="flex flex-col gap-1.5 min-w-0">
+      <div className="flex flex-col gap-xs min-w-0">
         <Text as="span" variant="label">{title}</Text>
         {children}
       </div>
@@ -286,6 +287,7 @@ function StepLink({
       className="w-fit"
     >
       Open
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline icon offset from button label */}
       <MdOpenInNew className="ml-1 h-3.5 w-3.5" />
     </Button>
   );

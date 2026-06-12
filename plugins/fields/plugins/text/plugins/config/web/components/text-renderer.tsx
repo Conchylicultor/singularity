@@ -13,7 +13,7 @@ const TextRenderer: FieldRendererComponent<string> = ({
 }) => {
   const { local, setLocal, focus } = useLocalValue(value);
   return (
-    <div className="flex flex-col gap-1.5 py-3">
+    <div className="flex flex-col gap-xs py-md">
       <FieldHeader field={field} />
       <Input
         value={local}

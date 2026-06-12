@@ -8,7 +8,7 @@
 - Web:
   - Slots: `SegmentedProgressBar.Variant`
   - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Progress bar variant", `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`
   - Exports: Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`; Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
 - Server:
   - Uses: `config_v2.ConfigV2`

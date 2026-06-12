@@ -40,10 +40,10 @@ function Panel({
       : "border-success/40 bg-success/5";
   return (
     <div className={`flex flex-1 flex-col overflow-hidden rounded-md border ${border}`}>
-      <Text as="div" variant="caption" className="border-b px-3 py-1 font-medium text-muted-foreground">
+      <Text as="div" variant="caption" className="border-b px-md py-xs font-medium text-muted-foreground">
         {label}
       </Text>
-      <div className="flex flex-1 items-center justify-center overflow-auto p-4">
+      <div className="flex flex-1 items-center justify-center overflow-auto p-lg">
         <img
           src={src}
           alt={label}
@@ -72,14 +72,14 @@ export function ImageDiffView({
 
   if (oldStatus === "loading" || newStatus === "loading") {
     return (
-      <Loading className="px-3 py-2" />
+      <Loading className="px-md py-sm" />
     );
   }
 
   // Added (no old version)
   if (oldStatus === "missing" && newStatus === "ok") {
     return (
-      <div className="flex h-full items-center justify-center overflow-auto p-4">
+      <div className="flex h-full items-center justify-center overflow-auto p-lg">
         <img
           src={newSrc}
           alt={path.slice(path.lastIndexOf("/") + 1)}
@@ -92,7 +92,7 @@ export function ImageDiffView({
   // Deleted (no new version)
   if (oldStatus === "ok" && newStatus === "missing") {
     return (
-      <div className="flex h-full items-center justify-center overflow-auto p-4 opacity-50">
+      <div className="flex h-full items-center justify-center overflow-auto p-lg opacity-50">
         <img
           src={oldSrc}
           alt={path.slice(path.lastIndexOf("/") + 1)}
@@ -104,13 +104,13 @@ export function ImageDiffView({
 
   if (oldStatus === "missing" && newStatus === "missing") {
     return (
-      <Text as="div" variant="body" className="px-3 py-2 text-destructive">Image not found.</Text>
+      <Text as="div" variant="body" className="px-md py-sm text-destructive">Image not found.</Text>
     );
   }
 
   // Modified: side-by-side
   return (
-    <div className="flex h-full gap-2 p-4">
+    <div className="flex h-full gap-sm p-lg">
       <Panel label={ref} src={oldSrc} side="old" />
       <Panel label="Working tree" src={newSrc} side="new" />
     </div>

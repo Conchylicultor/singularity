@@ -9,6 +9,7 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import { MdClose } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 export function HistoryView({
   activeId,
@@ -44,7 +45,7 @@ export function HistoryView({
     <SidebarMenuItem key={conv.id}>
       <SidebarMenuButton
         className={cn(
-          "h-auto py-2",
+          "h-auto py-sm",
           conv.kind === "system" && "bg-muted/30",
         )}
         isActive={conv.id === activeId}
@@ -63,9 +64,9 @@ export function HistoryView({
   );
 
   return (
-    <div className="flex flex-col gap-1">
+    <Stack gap="xs">
       {isEmpty && !conv.pending ? (
-        <Text as="div" variant="caption" className="px-4 py-2 text-muted-foreground">
+        <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground">
           No conversations
         </Text>
       ) : (
@@ -78,6 +79,6 @@ export function HistoryView({
         <Loading variant="spinner" label="Loading…" />
       )}
       <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
-    </div>
+    </Stack>
   );
 }

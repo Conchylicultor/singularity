@@ -89,11 +89,11 @@ function CrashFallback({
     <Text
       as="div"
       variant="caption"
-      className="flex items-center gap-2 rounded-md border border-destructive/20 bg-destructive/10 px-3 py-2 text-destructive"
+      className="flex items-center gap-sm rounded-md border border-destructive/20 bg-destructive/10 px-md py-sm text-destructive"
     >
       <span className="font-medium">{tag || "Plugin"} crashed</span>
       <span className="truncate text-destructive/70">{report.error.message}</span>
-      <div className="ml-auto flex shrink-0 items-center gap-2">
+      <div className="ml-auto flex shrink-0 items-center gap-sm">
         {actions.map((action, i) => {
           // UNSAFE: rendered inside the boundary's own fallback — wrapping again is circular.
           const Component = UNSAFE_unsealSlotComponent(action.component);

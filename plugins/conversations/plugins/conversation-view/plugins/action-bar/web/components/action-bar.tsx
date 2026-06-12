@@ -1,11 +1,12 @@
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Conversation } from "../slots";
 
 export function ActionBarView() {
   return (
-    <div className="flex w-full items-center gap-1">
+    <Stack direction="row" gap="xs" align="center" className="w-full">
       <Conversation.ActionBar.Render>
         {(item) => <item.component />}
       </Conversation.ActionBar.Render>
-    </div>
+    </Stack>
   );
 }

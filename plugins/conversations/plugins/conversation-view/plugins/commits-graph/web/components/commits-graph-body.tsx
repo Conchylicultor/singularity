@@ -55,8 +55,8 @@ export function CommitsGraphBody() {
 
   return (
     <Text as="div" variant="body" className="flex h-full flex-col">
-      <Text as="header" variant="caption" className="border-b border-border px-4 py-2 text-muted-foreground">
-        <div className="flex items-baseline gap-2">
+      <Text as="header" variant="caption" className="border-b border-border px-lg py-sm text-muted-foreground">
+        <div className="flex items-baseline gap-sm">
           <span className="font-mono text-foreground">{branchLabel}</span>
           <span>↑{ahead}</span>
           {behind > 0 ? (
@@ -123,7 +123,7 @@ function BehindSeparator({
   hasAgentWork: boolean;
 }) {
   return (
-    <li className="flex items-center gap-2 border-b border-border/50 px-3 py-1.5">
+    <li className="flex items-center gap-sm border-b border-border/50 px-md py-xs">
       <div className="h-px flex-1 bg-border/60" />
       <Text as="span" variant="caption" className="shrink-0 text-muted-foreground/60">
         {hasAgentWork

@@ -41,13 +41,15 @@ export function HighlightedCode({
   }, [code, resolved, dark]);
 
   const wrapper =
-    "[&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5";
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- [&>pre]:m-0 resets shiki's injected <pre> default margin; no named margin utility
+    "[&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5";
 
   if (!resolved || html === null) {
     return (
       <ContentScope>
         <pre
-          className={`my-2 overflow-auto rounded-md bg-muted p-3 font-mono text-caption ${className ?? ""}`}
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding content; one-off, no parent flex to own it
+          className={`my-2 overflow-auto rounded-md bg-muted p-md font-mono text-caption ${className ?? ""}`}
         >
           <code>{code}</code>
         </pre>
@@ -58,6 +60,7 @@ export function HighlightedCode({
   return (
     <ContentScope>
       <div
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- my-2 sets code-block vertical rhythm against surrounding content; one-off, no parent flex to own it
         className={`my-2 ${wrapper} ${className ?? ""}`}
         dangerouslySetInnerHTML={{ __html: html }}
       />

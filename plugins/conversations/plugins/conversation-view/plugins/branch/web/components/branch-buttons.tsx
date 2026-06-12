@@ -63,7 +63,7 @@ export function BranchButtons({
       tooltip="Fork this session into a background conversation"
       contentClassName="w-[480px]"
     >
-      <div className="flex flex-col gap-3 p-3">
+      <div className="flex flex-col gap-md p-md">
         <Text as="div" variant="label">Branch from this conversation</Text>
         <TextEditor
           value={prompt}
@@ -78,13 +78,13 @@ export function BranchButtons({
           maxHeight="12rem"
           namespace="branch-prompt"
         />
-        <div className="flex justify-end gap-2">
+        <div className="flex justify-end gap-sm">
           {visibleModels.map((model: ConversationModel) => (
             <Button
               key={model}
               variant="outline"
               size="sm"
-              className="gap-1"
+              className="gap-xs"
               disabled={!canSubmit}
               onClick={(e) => void launch(model, e)}
             >

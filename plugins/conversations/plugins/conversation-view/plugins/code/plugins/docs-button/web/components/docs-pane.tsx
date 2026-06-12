@@ -82,7 +82,7 @@ function DocsPaneBody({
   const selected = docs.find((f) => f.path === selectedPath) ?? null;
 
   const title = (
-    <span className="flex items-center gap-2">
+    <span className="flex items-center gap-sm">
       <span>Docs</span>
       <Text variant="caption" className="tabular-nums text-muted-foreground">
         {docs.length}
@@ -94,12 +94,12 @@ function DocsPaneBody({
     <PaneChrome pane={convDocsPane} title={title}>
       <div className="flex h-full min-h-0 flex-col">
         {docs.length !== 1 && (
-          <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-1">
+          <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-xs">
             {docs.length === 0 ? (
               <Text
                 as="div"
                 variant="caption"
-                className="px-2 py-1 text-muted-foreground"
+                className="px-sm py-xs text-muted-foreground"
               >
                 No design docs in the diff.
               </Text>
@@ -127,7 +127,7 @@ function DocsPaneBody({
             <Text
               as="div"
               variant="body"
-              className="px-3 py-2 text-muted-foreground"
+              className="px-md py-sm text-muted-foreground"
             >
               Select a document above.
             </Text>

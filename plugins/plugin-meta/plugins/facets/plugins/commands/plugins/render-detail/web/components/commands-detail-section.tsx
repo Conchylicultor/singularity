@@ -2,6 +2,7 @@ import {
   Section,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
 
@@ -17,13 +18,13 @@ export function CommandsDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Commands" count={String(data.length)}>
-      <div className="flex flex-col gap-0.5">
+      <Stack gap="2xs">
         {data.map((c) => (
           <Text
             as="div"
             variant="caption"
             key={c.commandId}
-            className="flex items-center gap-2 px-2 py-0.5"
+            className="flex items-center gap-sm px-sm py-2xs"
           >
             <code className="min-w-0 truncate font-mono text-foreground">
               {c.groupName}.{c.memberName}
@@ -33,7 +34,7 @@ export function CommandsDetailSection({ node }: { node: PluginNode }) {
             </span>
           </Text>
         ))}
-      </div>
+      </Stack>
     </Section>
   );
 }

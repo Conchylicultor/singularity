@@ -22,8 +22,12 @@ export function SystemFolder({
   if (descriptors.length === 0) return null;
 
   return (
-    <Collapsible defaultOpen className="mb-2">
-      <CollapsibleTrigger className="hover:bg-accent gap-1 rounded-md px-1 py-1 text-body">
+    <Collapsible
+      defaultOpen
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- extra bottom offset separating the System folder from the agent tree below
+      className="mb-2"
+    >
+      <CollapsibleTrigger className="hover:bg-accent gap-xs rounded-md px-xs py-xs text-body">
         <span className="flex size-5 shrink-0 items-center justify-center">
           <CollapsibleChevron className="size-4" />
         </span>

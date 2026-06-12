@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import type { FieldDef, FilterContribution } from "../../core";
 
 export interface FilterBarProps {
@@ -34,11 +35,11 @@ export function FilterBar({
   if (groups.length === 0) return null;
 
   return (
-    <div className="flex flex-wrap items-end gap-3">
+    <Stack direction="row" wrap align="end" gap="md">
       {groups.map(({ field, contribution }) => {
         const Control = contribution.Control;
         return (
-          <div key={field.id} className="flex flex-col gap-1">
+          <Stack key={field.id} gap="xs">
             <Text variant="caption" className="text-muted-foreground">
               {field.label}
             </Text>
@@ -47,9 +48,9 @@ export function FilterBar({
               onChange={(v) => setFilter(field.id, v)}
               field={field}
             />
-          </div>
+          </Stack>
         );
       })}
-    </div>
+    </Stack>
   );
 }

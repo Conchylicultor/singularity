@@ -25,7 +25,7 @@ export function CommandPermissionsView({ event }: AttachmentRendererProps) {
           No permissions granted.
         </Text>
       ) : (
-        <Text as="div" variant="caption" className="flex flex-col gap-0.5 font-mono">
+        <Text as="div" variant="caption" className="flex flex-col gap-2xs font-mono">
           {tools.map((tool) => (
             <p key={tool} className="text-muted-foreground">
               {tool}

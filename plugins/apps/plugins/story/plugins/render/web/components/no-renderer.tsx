@@ -12,7 +12,7 @@ export function NoRenderer(_props: { story: StoryNode[]; activeRendererId: strin
       as="div"
       variant="body"
       tone="muted"
-      className="flex h-full items-center justify-center p-8"
+      className="flex h-full items-center justify-center p-2xl"
     >
       No renderer available
     </Text>

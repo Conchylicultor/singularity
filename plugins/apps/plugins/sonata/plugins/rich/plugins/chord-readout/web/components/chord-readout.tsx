@@ -91,16 +91,17 @@ export function ChordReadout() {
   }, [current]);
 
   return (
-    <Card className="rounded-lg p-4">
+    <Card className="rounded-lg p-lg">
       <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Current chord
       </div>
       {current ? (
         <>
-          {/* eslint-disable-next-line text/no-adhoc-typography -- large display readout (36px); exceeds the title token (20px), no equivalent variant */}
+          {/* eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- large display readout (36px) exceeds the title token (20px), no equivalent variant; top offset separates it from the section label inside the Card chrome */}
           <div className="mt-2 text-4xl font-bold tracking-tight text-foreground">
             {current.data.symbol}
           </div>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the spelled-symbol caption from the large readout above */}
           <Text as="div" variant="caption" className="mt-1 text-muted-foreground">
             {current.data.spelledSymbol ? `${current.data.spelledSymbol} · ` : ""}
             {current.data.quality}
@@ -108,6 +109,7 @@ export function ChordReadout() {
               ? ` · ${(current.confidence * 100).toFixed(0)}% confidence`
               : ""}
           </Text>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the beat-range line from the caption above */}
           <div className="mt-1 text-2xs tabular-nums text-muted-foreground/70">
             beats {current.start.toFixed(2)}–{current.end.toFixed(2)}
           </div>
@@ -166,11 +168,16 @@ export function ChordReadout() {
           )}
         </>
       ) : chords.length === 0 ? (
-        <Text as="div" variant="body" className="mt-2 text-muted-foreground">
+        <Text
+          as="div"
+          variant="body"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state line from the section label inside the Card chrome
+          className="mt-2 text-muted-foreground"
+        >
           No chords detected.
         </Text>
       ) : (
-        // eslint-disable-next-line text/no-adhoc-typography -- large placeholder dash matching the 24px display readout; no equivalent variant above the title token (20px)
+        // eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- large placeholder dash matching the 24px display readout (no equivalent variant above the title token, 20px); top offset separates it from the section label inside the Card chrome
         <div className="mt-2 text-2xl font-semibold text-muted-foreground/60">
           —
         </div>

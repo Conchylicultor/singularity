@@ -85,7 +85,7 @@ function ToolbarRow() {
   if (items.length === 0) return null;
   if (!editable && !hasAlwaysActive) return null;
   return (
-    <div className="flex items-center gap-1.5 px-2 pb-1.5" onMouseDown={focusEditor}>
+    <div className="flex items-center gap-xs px-sm pb-xs" onMouseDown={focusEditor}>
       <PromptEditorSlots.FloatingAction.Render>
         {(item) => (
           <div className={cn("min-w-0", !editable && !item.alwaysActive && disabledPartCls)}>

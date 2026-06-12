@@ -24,7 +24,7 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
   return (
     <div
       className={cn(
-        "flex flex-wrap gap-1.5",
+        "flex flex-wrap gap-xs",
         dense ? "justify-end" : "justify-start",
       )}
     >

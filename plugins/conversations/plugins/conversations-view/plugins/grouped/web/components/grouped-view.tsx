@@ -7,6 +7,7 @@ import type { ViewProps } from "@plugins/conversations/plugins/conversations-vie
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { GroupedConversationList } from "./grouped-conversation-list";
 
 const SHOW_SYSTEM_KEY = "conversations-view:show-system";
@@ -56,8 +57,8 @@ export function GroupedView({
   const isEmpty = active.length === 0 && recentGone.length === 0;
 
   return (
-    <div className="flex flex-col gap-1">
-      <div className="flex items-center justify-end px-2 pb-1">
+    <Stack gap="xs">
+      <div className="flex items-center justify-end px-sm pb-xs">
         <button
           type="button"
           onClick={toggleShowSystem}
@@ -92,10 +93,10 @@ export function GroupedView({
       )}
       <ScrollSentinel sentinelRef={sentinelRef} show={hasNextPage} />
       {isEmpty && !conv.pending && (
-        <Text as="div" variant="caption" className="px-4 py-2 text-muted-foreground">
+        <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground">
           No conversations
         </Text>
       )}
-    </div>
+    </Stack>
   );
 }

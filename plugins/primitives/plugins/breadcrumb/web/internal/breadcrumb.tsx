@@ -25,7 +25,7 @@ export function Breadcrumb({
   const active = segments[lastIndex]!;
 
   return (
-    <span className="flex min-w-0 items-baseline gap-0.5 [&_svg:not([class*='size-'])]:icon-auto">
+    <span className="flex min-w-0 items-baseline gap-2xs [&_svg:not([class*='size-'])]:icon-auto">
       {prefix.length > 0 && (
         <span className="flex min-w-0 shrink items-baseline truncate">
           {prefix.map((seg, i) => (

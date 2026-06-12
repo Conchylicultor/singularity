@@ -1,5 +1,6 @@
 import { MdWarningAmber } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   Section,
   type PluginNode,
@@ -27,7 +28,7 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Structure">
-      <div className="flex flex-wrap gap-1.5">
+      <Stack direction="row" wrap gap="xs">
         {data.compositionRoot && (
           <Badge size="sm" variant="info">
             composition root
@@ -53,7 +54,7 @@ export function StructureDetailSection({ node }: { node: PluginNode }) {
             {name}
           </Badge>
         ))}
-      </div>
+      </Stack>
     </Section>
   );
 }

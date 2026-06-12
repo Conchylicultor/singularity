@@ -209,14 +209,14 @@ function PushAttemptRow({
   return (
     <div
       className={cn(
-        "flex items-center gap-2 px-4 py-1 hover:bg-muted/50",
+        "flex items-center gap-sm px-lg py-xs hover:bg-muted/50",
         handleClick && "cursor-pointer",
         highlighted && "ring-1 ring-inset ring-primary/40 bg-primary/5",
       )}
       onClick={handleClick}
     >
       <div
-        className="flex w-40 shrink-0 items-center gap-1.5 truncate"
+        className="flex w-40 shrink-0 items-center gap-xs truncate"
         // Bare worktree id stays discoverable on hover even when a title shows.
         title={group.worktree.replace(/^claude-web\//, "")}
       >

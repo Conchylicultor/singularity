@@ -113,7 +113,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
   };
 
   return (
-    <div className="flex flex-col gap-3">
+    <div className="flex flex-col gap-md">
       {themes && themes.length > 0 && (
         <SearchInput
           placeholder="Search themes..."
@@ -123,7 +123,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
       )}
 
       {sortedTags.length > 0 && (
-        <div className="flex gap-1 overflow-x-auto pb-1 [&::-webkit-scrollbar]:hidden">
+        <div className="flex gap-xs overflow-x-auto pb-xs [&::-webkit-scrollbar]:hidden">
           <FilterChip
             active={activeTag === "all"}
             onClick={() => setActiveTag("all")}
@@ -149,7 +149,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
           <Text as="span" variant="caption" tone="muted">
             {visible.length} themes
           </Text>
-          <div className="grid grid-cols-2 gap-2">
+          <div className="grid grid-cols-2 gap-sm">
             {visible.map((theme) => (
               <CommunityThemeCard
                 key={theme.id}

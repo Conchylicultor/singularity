@@ -13,7 +13,7 @@ export function PlayStats({ song }: { song: Song }) {
   }
 
   return (
-    <div className="flex items-center gap-1.5 text-2xs text-muted-foreground">
+    <div className="flex items-center gap-xs text-2xs text-muted-foreground">
       <MdPlayArrow className="size-3 shrink-0" />
       <span className="tabular-nums">
         {playCount} {playCount === 1 ? "play" : "plays"}

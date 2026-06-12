@@ -134,7 +134,7 @@ export function TerminalView({ command }: { command?: string[] }) {
   }, [wsHandle]);
 
   return (
-    <div className="h-full w-full p-2" style={{ background: THEME.background }}>
+    <div className="h-full w-full p-sm" style={{ background: THEME.background }}>
       <div ref={containerRef} className="h-full w-full" />
     </div>
   );

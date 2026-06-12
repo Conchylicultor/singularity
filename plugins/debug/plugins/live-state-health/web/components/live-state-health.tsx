@@ -38,7 +38,7 @@ export function LiveStateHealth(): ReactElement {
   );
 
   return (
-    <div className="flex h-full flex-col gap-6 overflow-auto p-4">
+    <div className="flex h-full flex-col gap-xl overflow-auto p-lg">
       <SocketsSection sockets={snapshot.sockets} />
       <LeaderSection leader={snapshot.leader} />
       <ResourcesSection subs={subs} />
@@ -48,9 +48,9 @@ export function LiveStateHealth(): ReactElement {
 
 function SocketsSection({ sockets }: { sockets: ChannelStatuses }): ReactElement {
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-sm">
       <SectionLabel>Sockets</SectionLabel>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-xs">
         <SocketRow label="Worktree" status={sockets.worktree} />
         <SocketRow label="Central" status={sockets.central} />
       </div>
@@ -60,7 +60,7 @@ function SocketsSection({ sockets }: { sockets: ChannelStatuses }): ReactElement
 
 function SocketRow({ label, status }: { label: string; status: WsStatus }): ReactElement {
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-sm">
       <StatusDot colorClass={SOCKET_DOT[status]} size="md" />
       <Text variant="body" className="w-24 shrink-0">{label}</Text>
       <Text
@@ -79,9 +79,9 @@ function LeaderSection({
   leader: { worktree: LeaderInfo; central: LeaderInfo };
 }): ReactElement {
   return (
-    <section className="flex flex-col gap-2">
+    <section className="flex flex-col gap-sm">
       <SectionLabel>Leader</SectionLabel>
-      <div className="flex flex-col gap-1.5">
+      <div className="flex flex-col gap-xs">
         <LeaderRow label="Worktree" info={leader.worktree} />
         <LeaderRow label="Central" info={leader.central} />
       </div>
@@ -97,7 +97,7 @@ function LeaderRow({ label, info }: { label: string; info: LeaderInfo }): ReactE
       ? { text: "follower (leader elsewhere)", tone: "muted" as const, dot: "bg-success" }
       : { text: "NO LEADER", tone: "destructive" as const, dot: "bg-destructive" };
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-sm">
       <StatusDot colorClass={state.dot} size="md" />
       <Text variant="body" className="w-24 shrink-0">{label}</Text>
       <Text variant="caption" tone={state.tone}>{state.text}</Text>
@@ -107,7 +107,7 @@ function LeaderRow({ label, info }: { label: string; info: LeaderInfo }): ReactE
 
 function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
   return (
-    <section className="flex min-h-0 flex-col gap-2">
+    <section className="flex min-h-0 flex-col gap-sm">
       <SectionLabel>
         Resources <span className="opacity-60">{subs.length}</span>
       </SectionLabel>
@@ -115,7 +115,7 @@ function ResourcesSection({ subs }: { subs: DebugSub[] }): ReactElement {
         <Text variant="caption" tone="muted">No active subscriptions.</Text>
       ) : (
         <div className="flex flex-col">
-          <div className="flex items-center gap-3 border-b py-1.5">
+          <div className="flex items-center gap-md border-b py-xs">
             <HeadCell className="flex-[2]">Key</HeadCell>
             <HeadCell className="flex-[2]">Params</HeadCell>
             <HeadCell className="w-16 text-right">Version</HeadCell>
@@ -140,7 +140,7 @@ function HeadCell({ children, className }: { children: React.ReactNode; classNam
 
 function ResourceRow({ sub }: { sub: DebugSub }): ReactElement {
   return (
-    <div className="flex items-center gap-3 border-b border-border/40 py-1.5">
+    <div className="flex items-center gap-md border-b border-border/40 py-xs">
       <TruncatingText className="flex-[2]">
         <Text variant="caption">{sub.key}</Text>
       </TruncatingText>

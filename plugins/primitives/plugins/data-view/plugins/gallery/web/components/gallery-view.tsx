@@ -113,7 +113,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       <Text
         as="div"
         variant="body"
-        className="flex h-full items-center justify-center p-6 text-muted-foreground"
+        className="flex h-full items-center justify-center p-xl text-muted-foreground"
       >
         {props.emptyState}
       </Text>
@@ -125,7 +125,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
   return (
     <div
-      className="grid gap-4 p-6"
+      className="grid gap-lg p-xl"
       style={{
         gridTemplateColumns: `repeat(auto-fill, minmax(${options.minCardWidth ?? 200}px, 1fr))`,
       }}
@@ -159,7 +159,8 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
               </Text>
             ) : null}
             {bodyFields.length > 0 ? (
-              <div className="mt-1 flex flex-col gap-0.5">
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the body block from the card title
+              <div className="mt-1 flex flex-col gap-2xs">
                 {bodyFields.map((field) => (
                   <Text
                     as="div"

@@ -3,6 +3,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -28,9 +29,10 @@ function PhaseList({
   phases: { title?: string; detail?: string }[];
 }) {
   return (
-    <ol className="space-y-1.5">
+    <Stack as="ol" gap="xs">
       {phases.map((phase, i) => (
-        <Text as="li" variant="caption" key={i} className="flex gap-2">
+        <Text as="li" variant="caption" key={i} className="flex gap-sm">
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line */}
           <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
             {i + 1}
           </span>
@@ -39,6 +41,7 @@ function PhaseList({
               {phase.title ?? "(untitled phase)"}
             </span>
             {phase.detail && (
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
               <span className="ml-1.5 text-muted-foreground">
                 {phase.detail}
               </span>
@@ -46,7 +49,7 @@ function PhaseList({
           </div>
         </Text>
       ))}
-    </ol>
+    </Stack>
   );
 }
 
@@ -58,7 +61,7 @@ function ScriptSection({ script }: { script: string }) {
     <div className="rounded-md border border-border/40">
       <button
         {...triggerProps}
-        className="flex w-full items-center gap-1.5 px-3 py-1.5 text-left text-caption text-muted-foreground hover:text-foreground"
+        className="flex w-full items-center gap-xs px-md py-xs text-left text-caption text-muted-foreground hover:text-foreground"
       >
         <MdCode className="size-3.5 shrink-0" />
         <span className="font-medium">{open ? "Hide" : "View"} script</span>
@@ -67,7 +70,7 @@ function ScriptSection({ script }: { script: string }) {
         </span>
       </button>
       {open && (
-        <div id={contentId} className="max-h-96 overflow-auto px-3 pb-2">
+        <div id={contentId} className="max-h-96 overflow-auto px-md pb-sm">
           <HighlightedCode code={script} lang="ts" />
         </div>
       )}
@@ -101,7 +104,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-sm">
       <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="shrink-0 font-mono">
         {name ?? "workflow"}
       </Badge>
@@ -125,50 +128,54 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary={summary}>
-      <Text as="div" variant="caption" className="mt-2 space-y-3">
-        {description && (
-          <p className="text-muted-foreground">{description}</p>
-        )}
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the card header */}
+      <Text as="div" variant="caption" className="mt-2">
+        <Stack gap="md">
+          {description && (
+            <p className="text-muted-foreground">{description}</p>
+          )}
 
-        {status === "ready" && graph ? (
-          <WorkflowGraph graph={graph} onOpenNode={openNode} />
-        ) : (
-          phases.length > 0 && <PhaseList phases={phases} />
-        )}
+          {status === "ready" && graph ? (
+            <WorkflowGraph graph={graph} onOpenNode={openNode} />
+          ) : (
+            phases.length > 0 && <PhaseList phases={phases} />
+          )}
 
-        {script ? (
-          <ScriptSection script={script} />
-        ) : input.scriptPath ? (
-          <div className="rounded-md border border-border/40 px-3 py-1.5 font-mono text-2xs text-muted-foreground">
-            {input.scriptPath}
-          </div>
-        ) : null}
-
-        {parsedResult && (
-          <div className="space-y-1 rounded-md border border-border/40 bg-muted/30 px-3 py-2">
-            {parsedResult.summary && (
-              <div className="text-foreground">{parsedResult.summary}</div>
-            )}
-            <div className="flex flex-wrap gap-x-4 gap-y-0.5 text-2xs text-muted-foreground">
-              {parsedResult.runId && (
-                <span>
-                  Run <span className="font-mono">{parsedResult.runId}</span>
-                </span>
-              )}
-              {parsedResult.taskId && (
-                <span>
-                  Task <span className="font-mono">{parsedResult.taskId}</span>
-                </span>
-              )}
+          {script ? (
+            <ScriptSection script={script} />
+          ) : input.scriptPath ? (
+            <div className="rounded-md border border-border/40 px-md py-xs font-mono text-2xs text-muted-foreground">
+              {input.scriptPath}
             </div>
-          </div>
-        )}
+          ) : null}
 
-        {result?.isError && (
-          <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-2 text-destructive">
-            {result.content || "(empty)"}
-          </pre>
-        )}
+          {parsedResult && (
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- space-y-1 spaces the summary line from the id row inside this bordered result box
+            <div className="space-y-1 rounded-md border border-border/40 bg-muted/30 px-md py-sm">
+              {parsedResult.summary && (
+                <div className="text-foreground">{parsedResult.summary}</div>
+              )}
+              <div className="flex flex-wrap gap-x-lg gap-y-2xs text-2xs text-muted-foreground">
+                {parsedResult.runId && (
+                  <span>
+                    Run <span className="font-mono">{parsedResult.runId}</span>
+                  </span>
+                )}
+                {parsedResult.taskId && (
+                  <span>
+                    Task <span className="font-mono">{parsedResult.taskId}</span>
+                  </span>
+                )}
+              </div>
+            </div>
+          )}
+
+          {result?.isError && (
+            <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-sm text-destructive">
+              {result.content || "(empty)"}
+            </pre>
+          )}
+        </Stack>
       </Text>
     </ToolCallCard>
   );

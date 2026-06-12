@@ -39,13 +39,13 @@ export function AvatarPicker({
       >
         {children}
       </PopoverTrigger>
-      <PopoverContent className="w-80 p-2" align="start">
+      <PopoverContent className="w-80 p-sm" align="start">
 
         {/* Color row */}
-        <SectionLabel className="px-1 pt-1 pb-1.5 text-3xs">
+        <SectionLabel className="px-xs pt-xs pb-xs text-3xs">
           Color
         </SectionLabel>
-        <div className="flex flex-wrap gap-1.5 px-1 pb-2">
+        <div className="flex flex-wrap gap-xs px-xs pb-sm">
           {AVATAR_COLOR_KEYS.map((key) => (
             <button
               key={key}
@@ -71,6 +71,7 @@ export function AvatarPicker({
         {/* Clear */}
         {(value.icon || value.color) && (
           <>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical offset on a hairline divider */}
             <div className="my-1 h-px bg-border" />
             <Row
               size="sm"

@@ -10,6 +10,7 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 type AddTaskInput = {
@@ -58,7 +59,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-sm">
       <span className="min-w-0 truncate">{input.title}</span>
       {autostart ? (
         <Badge variant="success" size="sm" className="shrink-0">
@@ -74,7 +75,8 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
 
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen>
-      <div className="mt-2 space-y-2">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
+      <Stack gap="sm" className="mt-2">
         {input.description && (
           <Text as="p" variant="caption" className="text-muted-foreground whitespace-pre-wrap">
             {input.description}
@@ -92,7 +94,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
         {event.result?.isError && (
           <Text as="p" variant="caption" className="text-destructive">{event.result.content}</Text>
         )}
-      </div>
+      </Stack>
     </ToolCallCard>
   );
 }

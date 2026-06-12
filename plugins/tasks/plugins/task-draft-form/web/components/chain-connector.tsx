@@ -31,11 +31,11 @@ export function ChainConnector({ linked, onToggle, disabled, onInsert }: ChainCo
 
   return (
     <div className="group/connector relative flex h-3 items-center justify-center">
-      <div className="text-muted-foreground/60 flex items-center gap-0.5 text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
+      <div className="text-muted-foreground/60 flex items-center gap-2xs text-3xs uppercase tracking-wider transition-opacity group-hover/connector:opacity-0">
         <MdArrowDownward className="size-3" />
         <span>blocks</span>
       </div>
-      <div className="absolute inset-0 flex items-center justify-center gap-4 opacity-0 transition-opacity group-hover/connector:opacity-100">
+      <div className="absolute inset-0 flex items-center justify-center gap-lg opacity-0 transition-opacity group-hover/connector:opacity-100">
         <button
           type="button"
           onClick={onToggle}

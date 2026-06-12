@@ -66,7 +66,7 @@ export function MidiLoader({ onRaw }: Props) {
   );
 
   return (
-    <div className="flex flex-col items-center gap-3 p-4">
+    <div className="flex flex-col items-center gap-md p-lg">
       <div
         role="button"
         tabIndex={0}
@@ -82,7 +82,7 @@ export function MidiLoader({ onRaw }: Props) {
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
         className={cn(
-          "flex w-full max-w-sm cursor-pointer flex-col items-center gap-3 rounded-xl border-2 border-dashed px-6 py-10 transition-colors",
+          "flex w-full max-w-sm cursor-pointer flex-col items-center gap-md rounded-xl border-2 border-dashed px-xl py-2xl transition-colors",
           dragging
             ? "border-primary bg-primary/5"
             : "border-border hover:border-muted-foreground/50 hover:bg-muted/30",
@@ -93,6 +93,7 @@ export function MidiLoader({ onRaw }: Props) {
           <Text as="p" variant="label">
             {fileName ?? "Drop a MIDI file here"}
           </Text>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- small top offset separating the hint line from the filename above inside the centered dropzone caption */}
           <Text as="p" variant="caption" className="mt-0.5 text-muted-foreground">
             .mid / .midi — or click to browse
           </Text>
@@ -101,7 +102,7 @@ export function MidiLoader({ onRaw }: Props) {
           <Text
             as="div"
             variant="caption"
-            className="flex items-center gap-1.5 rounded-md bg-muted px-2.5 py-1 text-muted-foreground"
+            className="flex items-center gap-xs rounded-md bg-muted px-sm py-xs text-muted-foreground"
           >
             <MdMusicNote className="size-3.5 shrink-0" />
             <span className="truncate max-w-[16rem]">{fileName}</span>

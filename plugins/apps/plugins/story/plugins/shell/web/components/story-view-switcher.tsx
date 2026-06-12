@@ -36,7 +36,7 @@ export function StoryViewSwitcher({
   ];
 
   return (
-    <div className="flex items-center gap-2">
+    <div className="flex items-center gap-sm">
       <SegmentedControl options={options} value={view} onChange={onView} />
       <IconButton
         icon={MdVerticalSplit}

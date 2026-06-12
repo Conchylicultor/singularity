@@ -23,7 +23,7 @@ export function JumpToBottomButton({
       size="sm"
       onClick={handle.jumpToBottom}
       aria-label="Jump to bottom"
-      className={cn("gap-1.5 rounded-full shadow-md", className)}
+      className={cn("gap-xs rounded-full shadow-md", className)}
     >
       <MdExpandMore className="size-4" />
       {label}

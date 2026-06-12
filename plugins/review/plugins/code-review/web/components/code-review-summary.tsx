@@ -53,7 +53,7 @@ export function CodeReviewSummary({
   if (count === 0 && !hasPastPushes) return null;
 
   return (
-    <Text as="span" variant="caption" className="flex items-center gap-1.5 tabular-nums">
+    <Text as="span" variant="caption" className="flex items-center gap-xs tabular-nums">
       <span>{count}</span>
       <span className="text-success">+{additions}</span>
       <span className="text-destructive">−{deletions}</span>

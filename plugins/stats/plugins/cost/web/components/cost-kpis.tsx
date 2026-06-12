@@ -2,6 +2,7 @@ import { ChartState } from "@plugins/stats/plugins/commits/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCostTotals } from "../../shared/endpoints";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
 import { formatTokensCompact, formatUsd } from "./format";
@@ -25,7 +26,7 @@ export function CostKpis() {
   const { scope } = useScope();
   const { data: resp, error } = useEndpoint(getCostTotals, {}, { query: { scope } });
   return (
-    <div className="flex flex-col gap-4">
+    <Stack gap="lg">
       <div className="flex items-center justify-between">
         <Text as="p" variant="caption" className="text-muted-foreground">
           Sourced from <code>ccusage</code>: parses{" "}
@@ -40,13 +41,13 @@ export function CostKpis() {
       >
         {resp && <KpiGrid totals={resp} />}
       </ChartState>
-    </div>
+    </Stack>
   );
 }
 
 function KpiGrid({ totals }: { totals: Totals }) {
   return (
-    <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+    <div className="grid grid-cols-2 gap-md sm:grid-cols-4">
       <Kpi label="Total spent" value={formatUsd(totals.totalCost)} />
       <Kpi
         label="Total tokens"
@@ -99,11 +100,12 @@ function Kpi({
   muted?: boolean;
 }) {
   return (
-    <div className="rounded-md border bg-background p-3">
+    <div className="rounded-md border bg-background p-md">
       <Text as="div" variant="caption" className="text-muted-foreground">{label}</Text>
       <Text
         as="div"
         variant={muted ? "subheading" : "title"}
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label→value offset inside the KPI card; restructuring into a Stack would also add spacing before the optional sub-label
         className={muted ? "mt-1 font-medium text-foreground" : "mt-1 text-foreground"}
       >
         {value}

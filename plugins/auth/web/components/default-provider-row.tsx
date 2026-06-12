@@ -86,10 +86,11 @@ export function DefaultProviderRow({ providerId }: Props) {
   const connected = status?.connected;
 
   return (
-    <div className="flex items-start gap-4 p-4">
+    <div className="flex items-start gap-lg p-lg">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset to baseline-align icon with adjacent text */}
       <Icon className="mt-1 h-6 w-6 shrink-0" />
       <div className="min-w-0 flex-1">
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-sm">
           <span className="font-medium">{provider.name}</span>
           <StatusPill
             connected={connected}
@@ -103,10 +104,12 @@ export function DefaultProviderRow({ providerId }: Props) {
           </Text>
         ) : null}
         {status?.scopes && status.scopes.length > 0 ? (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
           <details className="mt-1 text-caption text-muted-foreground">
             <summary className="cursor-pointer">
               {status.scopes.length} scope{status.scopes.length === 1 ? "" : "s"}
             </summary>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below summary + indent for nested list */}
             <ul className="mt-1 list-disc pl-4">
               {status.scopes.map((s) => (
                 <li key={s} className="break-all">{s}</li>
@@ -115,13 +118,14 @@ export function DefaultProviderRow({ providerId }: Props) {
           </details>
         ) : null}
         {status?.lastRefreshError ? (
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset from preceding sibling block
           <Text as="div" variant="caption" className="mt-1 text-warning">
             Last refresh failed:{" "}
             <span className="font-mono">{status.lastRefreshError.message}</span>
           </Text>
         ) : null}
       </div>
-      <div className="flex items-center gap-2 shrink-0">
+      <div className="flex items-center gap-sm shrink-0">
         {credentialsMissing ? (
           <Button
             variant="outline"

@@ -3,6 +3,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 
 type TaskListResult = Array<{ id?: string; description?: string; status?: string }>;
 
@@ -28,11 +29,12 @@ export function TaskListToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {tasks && tasks.length > 0 && (
-        <div className="mt-2 max-h-[200px] space-y-1 overflow-auto">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the task list from the card header
+        <Stack gap="xs" className="mt-2 max-h-[200px] overflow-auto">
           {tasks.map((t, i) => (
             <div
               key={t.id ?? i}
-              className="flex items-center gap-2 text-2xs text-muted-foreground"
+              className="flex items-center gap-sm text-2xs text-muted-foreground"
             >
               {t.id && <span className="shrink-0 font-mono">{t.id}</span>}
               {t.status && (
@@ -45,9 +47,10 @@ export function TaskListToolView({ event }: ToolRendererProps) {
               )}
             </div>
           ))}
-        </div>
+        </Stack>
       )}
       {event.result?.isError && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header
         <Text as="p" variant="caption" className="mt-2 text-destructive">
           {event.result.content}
         </Text>

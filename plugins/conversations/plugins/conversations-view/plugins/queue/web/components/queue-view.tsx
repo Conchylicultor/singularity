@@ -70,7 +70,7 @@ function SectionHeader({
 }) {
   return (
     <div
-      className="group/header sticky z-nav flex items-center gap-0.5 rounded-md bg-sidebar px-1 py-1"
+      className="group/header sticky z-nav flex items-center gap-2xs rounded-md bg-sidebar px-xs py-xs"
       style={{ top: stickyTop }}
     >
       <button
@@ -82,7 +82,7 @@ function SectionHeader({
       >
         <CollapsibleChevron open={expanded} className="size-4" />
       </button>
-      <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-1 py-0.5 font-semibold text-muted-foreground">
+      <Text as="div" variant="caption" className="min-w-0 flex-1 truncate px-xs py-2xs font-semibold text-muted-foreground">
         {title}
       </Text>
       {count > 0 && (
@@ -348,12 +348,12 @@ export function QueueView({
   // All three resources gate together; the delayed skeleton means a warm
   // (<100ms) load paints the real sections directly with no flash.
   if (all.pending) {
-    return <Loading variant="rows" count={5} className="px-1" />;
+    return <Loading variant="rows" count={5} className="px-xs" />;
   }
 
   if (waitingGroups.length === 0 && workingGroups.length === 0 && unranked.length === 0 && disconnected.length === 0 && recentGone.length === 0) {
     return (
-      <Text as="div" variant="caption" className="px-4 py-8 text-center text-muted-foreground">
+      <Text as="div" variant="caption" className="px-lg py-2xl text-center text-muted-foreground">
         All clear — no conversations are waiting on you.
       </Text>
     );
@@ -387,7 +387,7 @@ export function QueueView({
       {/* Queue */}
       <SectionHeader title="Queue" count={allWaitingCount} expanded={queueExpanded} onToggleExpanded={toggleQueueExpanded} stickyTop={queueTop} />
       {queueExpanded && waitingGroups.length === 0 && (
-        <div className="px-2 py-1 pl-2 text-2xs italic text-muted-foreground">
+        <div className="px-sm py-xs pl-sm text-2xs italic text-muted-foreground">
           No conversations waiting
         </div>
       )}
@@ -401,7 +401,7 @@ export function QueueView({
         >
           {/* Pinned top item */}
           {pinnedCluster && (
-            <div className="sticky z-raised bg-sidebar pt-px pb-1 pl-1" style={{ top: topItemTop }}>
+            <div className="sticky z-raised bg-sidebar pt-px pb-xs pl-xs" style={{ top: topItemTop }}>
               <SidebarMenu>
                 <QueueRow
                   conv={pinnedCluster.selected}
@@ -422,7 +422,7 @@ export function QueueView({
             </div>
           )}
           {restClusters.length > 0 && (
-            <div className="pl-1">
+            <div className="pl-xs">
               <SidebarMenu>
                 {restClusters.map((group, idx) => (
                   <QueueRow
@@ -447,7 +447,7 @@ export function QueueView({
           )}
           <DragOverlay dropAnimation={null}>
             {draggingConv ? (
-              <Text as="div" variant="body" className="flex items-center rounded-md border border-accent bg-background/90 px-2 py-1.5 shadow-md">
+              <Text as="div" variant="body" className="flex items-center rounded-md border border-accent bg-background/90 px-sm py-xs shadow-md">
                 <ConversationItem conv={draggingConv} />
               </Text>
             ) : null}
@@ -458,9 +458,10 @@ export function QueueView({
       {/* Working */}
       <SectionHeader title="Working" count={workingGroups.length} expanded={workingExpanded} onToggleExpanded={toggleWorkingExpanded} stickyTop={workingTop} />
       {workingExpanded && (
-        <div className="mt-0.5 pl-1">
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the section body just below its sticky header (sibling under a non-flex column)
+        <div className="mt-0.5 pl-xs">
           {workingGroups.length === 0 ? (
-            <div className="px-2 py-1 text-2xs italic text-muted-foreground">
+            <div className="px-sm py-xs text-2xs italic text-muted-foreground">
               No agents working
             </div>
           ) : (
@@ -468,7 +469,7 @@ export function QueueView({
               {workingGroups.map((group) => (
                 <li key={group.selected.id} className="group/menu-item relative list-none">
                   <SidebarMenuButton
-                    className="h-auto py-2"
+                    className="h-auto py-sm"
                     isActive={group.selected.id === activeId}
                     onClick={() => onNavigate(group.selected.id)}
                   >
@@ -500,12 +501,13 @@ export function QueueView({
         <>
           <SectionHeader title="Unranked" count={unranked.length} expanded={unrankedExpanded} onToggleExpanded={toggleUnrankedExpanded} stickyTop={unrankedTop} />
           {unrankedExpanded && (
-            <div className="mt-0.5 pl-1">
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the section body just below its sticky header (sibling under a non-flex column)
+        <div className="mt-0.5 pl-xs">
               <SidebarMenu>
                 {unranked.map((conv) => (
                   <li key={conv.id} className="group/menu-item relative list-none">
                     <SidebarMenuButton
-                      className="h-auto py-2"
+                      className="h-auto py-sm"
                       isActive={conv.id === activeId}
                       onClick={() => onNavigate(conv.id)}
                     >
@@ -540,12 +542,13 @@ export function QueueView({
         <>
           <SectionHeader title="Disconnected" count={disconnected.length} expanded={disconnectedExpanded} onToggleExpanded={toggleDisconnectedExpanded} stickyTop={disconnectedTop} />
           {disconnectedExpanded && (
-            <div className="mt-0.5 pl-1">
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the section body just below its sticky header (sibling under a non-flex column)
+        <div className="mt-0.5 pl-xs">
               <SidebarMenu>
                 {disconnected.map((conv) => (
                   <li key={conv.id} className="group/menu-item relative list-none">
                     <SidebarMenuButton
-                      className="h-auto py-2 opacity-60"
+                      className="h-auto py-sm opacity-60"
                       isActive={conv.id === activeId}
                       onClick={() => onNavigate(conv.id)}
                     >
@@ -573,12 +576,13 @@ export function QueueView({
         <>
           <SectionHeader title="Done" count={recentGone.length} expanded={goneExpanded} onToggleExpanded={toggleGoneExpanded} stickyTop={goneTop} />
           {goneExpanded && (
-            <div className="mt-0.5 pl-1">
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 nudges the section body just below its sticky header (sibling under a non-flex column)
+        <div className="mt-0.5 pl-xs">
               <SidebarMenu>
                 {recentGone.map((conv) => (
                   <li key={conv.id} className="group/menu-item relative list-none">
                     <SidebarMenuButton
-                      className="h-auto py-2 opacity-60"
+                      className="h-auto py-sm opacity-60"
                       isActive={conv.id === activeId}
                       onClick={() => onNavigate(conv.id)}
                     >
@@ -658,7 +662,7 @@ function QueueRow({
       >
         <SidebarMenuButton
           className={cn(
-            "h-auto py-2",
+            "h-auto py-sm",
             isBlocked && "opacity-50",
           )}
           isActive={isActive}

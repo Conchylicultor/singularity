@@ -58,12 +58,13 @@ function AgentsRoot(): ReactElement {
   const selectedSystemId = systemAgentDetailPane.useRouteEntry()?.params.systemId;
 
   return (
-    <div className="h-full overflow-auto p-4">
+    <div className="h-full overflow-auto p-lg">
       <AgentsList
         selectedId={selectedUserId}
         selectedSystemId={selectedSystemId}
       />
-      <div className="mt-6 flex flex-col gap-4">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the slot section from the agents list above */}
+      <div className="mt-6 flex flex-col gap-lg">
         <AgentsSlots.List.Render />
       </div>
     </div>
@@ -81,11 +82,12 @@ function AgentDetailBody(): ReactElement {
   return (
     <PaneChrome pane={agentDetailPane} title={title}>
       <AgentDetail key={id} agentId={id} />
-      <div className="flex flex-col gap-4 px-6 pb-6">
+      <div className="flex flex-col gap-lg px-xl pb-xl">
         <AgentsSlots.View.Render>
           {(v) => (
-            <section className="bg-card rounded-lg border p-4">
+            <section className="bg-card rounded-lg border p-lg">
               {v.title ? (
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the section title from its body
                 <Text as="h2" variant="label" className="mb-4">{v.title}</Text>
               ) : null}
               <v.component agentId={id} />

@@ -6,7 +6,7 @@ export function NoDisplay() {
     <Text
       as="div"
       variant="body"
-      className="flex h-full items-center justify-center p-8 text-muted-foreground"
+      className="flex h-full items-center justify-center p-2xl text-muted-foreground"
     >
       No display selected.
     </Text>

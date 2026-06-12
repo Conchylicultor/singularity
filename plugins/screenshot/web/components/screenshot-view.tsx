@@ -218,7 +218,7 @@ function ImageStage({
   }, [url, naturalSize]);
 
   return (
-    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center p-4">
+    <div ref={containerRef} className="relative flex h-full w-full items-center justify-center p-lg">
       {url && (
         <img
           ref={imgRef}

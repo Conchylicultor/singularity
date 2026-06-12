@@ -8,12 +8,13 @@ export function AccountsPane() {
   const providers = Auth.Provider.useContributions();
 
   return (
-    <div className="flex flex-col gap-4 p-6">
+    <div className="flex flex-col gap-lg p-xl">
       <div className="flex items-center justify-between">
         <div>
           <Text as="h1" variant="heading">Accounts</Text>
           <Text as="p" variant="body" className="text-muted-foreground">
             Connect third-party services. Tokens are stored encrypted in
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline-code chip needs horizontal breathing room in flowing prose */}
             <code className="mx-1">~/.singularity/auth/</code>
             on the main app and shared with all worktrees.
           </Text>
@@ -21,7 +22,7 @@ export function AccountsPane() {
       </div>
 
       {!authState.pending && authState.data.mainOffline ? (
-        <Text as="div" variant="body" className="rounded-md border border-warning/50 bg-warning/10 p-3 text-warning">
+        <Text as="div" variant="body" className="rounded-md border border-warning/50 bg-warning/10 p-md text-warning">
           The main app is offline. Worktrees can't read tokens until it comes
           back. Visit{" "}
           <a
@@ -37,15 +38,16 @@ export function AccountsPane() {
       ) : null}
 
       {authState.error ? (
-        <Text as="div" variant="body" className="rounded-md border border-destructive/50 bg-destructive/10 p-3 text-destructive">
+        <Text as="div" variant="body" className="rounded-md border border-destructive/50 bg-destructive/10 p-md text-destructive">
           Failed to load auth state: {String(authState.error)}
         </Text>
       ) : null}
 
       <div className="flex flex-col divide-y rounded-md border">
         {providers.length === 0 ? (
-          <Text as="div" variant="body" className="p-4 text-muted-foreground">
+          <Text as="div" variant="body" className="p-lg text-muted-foreground">
             No providers registered. Install an auth provider plugin (e.g.
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline-code chip needs horizontal breathing room in flowing prose */}
             <code className="mx-1">auth-google</code>).
           </Text>
         ) : (

@@ -46,11 +46,12 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
           No skills listed.
         </Text>
       ) : (
-        <Text as="ul" variant="caption" className="flex flex-col gap-0.5">
+        <Text as="ul" variant="caption" className="flex flex-col gap-2xs">
           {skills.map((skill) => (
             <li key={skill.name} className="text-muted-foreground">
               <span className="font-semibold text-foreground">{skill.name}</span>
               {skill.description && (
+                /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from skill name within a text line; not a flex-sibling gap */
                 <span className="ml-1.5 text-muted-foreground/60">
                   — {skill.description}
                 </span>

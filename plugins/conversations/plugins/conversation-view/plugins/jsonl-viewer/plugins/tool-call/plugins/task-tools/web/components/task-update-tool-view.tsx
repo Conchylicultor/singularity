@@ -25,7 +25,7 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
   const input = event.input as TaskUpdateInput;
 
   const summary = (
-    <span className="flex min-w-0 items-center gap-2">
+    <span className="flex min-w-0 items-center gap-sm">
       {(input.taskId ?? input.id) && (
         <span className="shrink-0 font-mono text-2xs">{input.taskId ?? input.id}</span>
       )}
@@ -40,11 +40,13 @@ export function TaskUpdateToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {input.description && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the description from the card header
         <Text as="p" variant="caption" className="mt-2 text-muted-foreground whitespace-pre-wrap">
           {input.description}
         </Text>
       )}
       {event.result?.isError && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the error text from preceding content
         <Text as="p" variant="caption" className="mt-2 text-destructive">
           {event.result.content}
         </Text>

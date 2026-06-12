@@ -55,7 +55,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
   const target = targetForSibling(task);
 
   return (
-    <Collapsible defaultOpen className="flex flex-col gap-2">
+    <Collapsible defaultOpen className="flex flex-col gap-sm">
       <SectionHeaderRow
         variant="eyebrow"
         actions={
@@ -86,7 +86,7 @@ export function TaskDependencies({ taskId }: { taskId: string }) {
         {deps.length === 0 ? (
           <Text as="p" variant="body" tone="muted">No dependencies.</Text>
         ) : (
-          <ul className="flex flex-wrap gap-2">
+          <ul className="flex flex-wrap gap-sm">
             {deps.map((depId) => (
               <DepChip key={depId} taskId={taskId} depId={depId} tasks={tasksResult.data} />
             ))}
@@ -130,7 +130,7 @@ function DepChip({
           <button
             type="button"
             onClick={remove}
-            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-0.5"
+            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs"
             aria-label={`Remove dependency ${title}`}
           >
             <MdClose className="h-3 w-3" />

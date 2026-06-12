@@ -11,6 +11,7 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { DepPopoverContent } from "./dep-popover-content";
 
 export function DependenciesButton({
@@ -161,7 +162,7 @@ function DependenciesButtonInner({
   const hasAny = hasBlockedBy || hasBlocking;
 
   const peekContent = (
-    <div className="space-y-1.5">
+    <Stack gap="xs">
       {hasBlockedBy && (
         <div>
           <div className="text-3xs tracking-wider text-muted-foreground">
@@ -205,7 +206,7 @@ function DependenciesButtonInner({
       {!hasAny && (
         <Text as="div" variant="caption" className="text-muted-foreground">Click to add dependencies</Text>
       )}
-    </div>
+    </Stack>
   );
 
   return (
@@ -215,7 +216,7 @@ function DependenciesButtonInner({
           open={blockedByOpen}
           onOpenChange={setBlockedByOpen}
           align="end"
-          contentClassName="w-96 p-2"
+          contentClassName="w-96 p-sm"
           trigger={
             <Button variant="ghost" size="xs" aria-label="Blocked by">
               {hasBlockedBy && (
@@ -241,7 +242,7 @@ function DependenciesButtonInner({
           />
         </InlinePopover>
 
-        <div className="flex shrink-0 items-center px-1">
+        <div className="flex shrink-0 items-center px-xs">
           <MdLink className="size-3 text-muted-foreground" />
         </div>
 
@@ -249,7 +250,7 @@ function DependenciesButtonInner({
           open={blockingOpen}
           onOpenChange={setBlockingOpen}
           align="end"
-          contentClassName="w-96 p-2"
+          contentClassName="w-96 p-sm"
           trigger={
             <Button variant="ghost" size="xs" aria-label="Blocking">
               <span className={cn("text-3xs", hasBlocking ? "text-muted-foreground" : "text-muted-foreground/40")}>

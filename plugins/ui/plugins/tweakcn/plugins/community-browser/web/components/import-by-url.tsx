@@ -85,13 +85,13 @@ export function ImportByUrl({
       onOpenChange={setUserOpen}
       className="rounded-lg border border-border/60"
     >
-      <CollapsibleTrigger className="gap-1.5 px-3 py-2 text-body text-muted-foreground hover:text-foreground">
+      <CollapsibleTrigger className="gap-xs px-md py-sm text-body text-muted-foreground hover:text-foreground">
         <CollapsibleChevron />
         <span className="font-medium">Import by URL</span>
       </CollapsibleTrigger>
 
-      <CollapsibleContent className="flex flex-col gap-3 border-t border-border/60 px-3 py-3">
-        <div className="flex gap-2">
+      <CollapsibleContent className="flex flex-col gap-md border-t border-border/60 px-md py-md">
+        <div className="flex gap-sm">
           <input
             type="text"
             value={input}
@@ -100,7 +100,7 @@ export function ImportByUrl({
               if (e.key === "Enter") handleImport();
             }}
             placeholder="Theme ID or tweakcn URL..."
-            className="flex-1 rounded-md border border-border bg-muted/20 px-3 py-1.5 text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
+            className="flex-1 rounded-md border border-border bg-muted/20 px-md py-xs text-body text-foreground placeholder:text-muted-foreground focus:border-primary focus:outline-none"
           />
           <Button
             variant="ghost"
@@ -120,16 +120,16 @@ export function ImportByUrl({
         )}
 
         {visible.length > 0 ? (
-          <div className="flex flex-col gap-2">
+          <div className="flex flex-col gap-sm">
             {visible.map((theme) => (
               <div
                 key={theme.id}
-                className="flex items-center justify-between rounded-lg border border-border/60 px-3 py-2"
+                className="flex items-center justify-between rounded-lg border border-border/60 px-md py-sm"
               >
                 <Text as="span" variant="label">
                   {theme.label}
                 </Text>
-                <div className="flex gap-1.5">
+                <div className="flex gap-xs">
                   <Button
                     variant="ghost"
                     size="xs"

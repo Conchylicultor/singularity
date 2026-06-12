@@ -10,7 +10,7 @@ const DirPathRenderer: FieldRendererComponent<string> = ({
   value,
   onChange,
 }) => (
-  <div className="flex flex-col gap-1.5 py-3">
+  <div className="flex flex-col gap-xs py-md">
     <FieldHeader field={field} />
     <FolderPickerPopover
       value={value}

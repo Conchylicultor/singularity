@@ -26,7 +26,7 @@ export function DocRow({
       onClick={onSelect}
       aria-pressed={selected}
       className={cn(
-        "flex w-full items-center gap-1.5 px-2 py-0.5 text-left text-caption hover:bg-muted/60 disabled:cursor-not-allowed",
+        "flex w-full items-center gap-xs px-sm py-2xs text-left text-caption hover:bg-muted/60 disabled:cursor-not-allowed",
         muted && "opacity-60",
         selected && "bg-muted",
       )}

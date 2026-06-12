@@ -230,20 +230,20 @@ export function EventsTestView() {
   // ── Render ──────────────────────────────────────────────────────────────
 
   return (
-    <div className="flex h-full flex-col overflow-auto p-6">
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-6">
-        <header className="flex items-start justify-between gap-4">
+    <div className="flex h-full flex-col overflow-auto p-xl">
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-xl">
+        <header className="flex items-start justify-between gap-lg">
           <div>
             <Text as="h1" variant="title" className="tracking-tight">
               Events Test
             </Text>
             <Text as="p" variant="body" tone="muted">
-              Exercises the <code className="rounded-md bg-muted px-1">events</code>{" "}
-              and <code className="rounded-md bg-muted px-1">jobs</code> plugins:
+              Exercises the <code className="rounded-md bg-muted px-xs">events</code>{" "}
+              and <code className="rounded-md bg-muted px-xs">jobs</code> plugins:
               subscribe a trigger, emit a payload, watch the job fire. Backed
-              by <code className="rounded-md bg-muted px-1">events_test.pinged</code>{" "}
+              by <code className="rounded-md bg-muted px-xs">events_test.pinged</code>{" "}
               event and{" "}
-              <code className="rounded-md bg-muted px-1">events_test.log</code>{" "}
+              <code className="rounded-md bg-muted px-xs">events_test.log</code>{" "}
               job.
             </Text>
           </div>
@@ -254,7 +254,7 @@ export function EventsTestView() {
         </header>
 
         {/* Subscribe + Emit forms */}
-        <div className="grid gap-4 md:grid-cols-2">
+        <div className="grid gap-lg md:grid-cols-2">
           <Section title="Subscribe">
             <FieldRow label="userId (filter)">
               <Input
@@ -270,7 +270,7 @@ export function EventsTestView() {
                 onChange={(e) => setSubLabel(e.target.value)}
               />
             </FieldRow>
-            <Text as="label" variant="body" tone="muted" className="flex items-center gap-2">
+            <Text as="label" variant="body" tone="muted" className="flex items-center gap-sm">
               <input
                 type="checkbox"
                 checked={subOneShot}
@@ -321,7 +321,7 @@ export function EventsTestView() {
             </Text>
           }
         >
-          <div className="grid gap-3 md:grid-cols-3">
+          <div className="grid gap-md md:grid-cols-3">
             <FieldRow label="label">
               <Input
                 placeholder="required"
@@ -372,12 +372,12 @@ export function EventsTestView() {
                 <div
                   key={t.id}
                   className={cn(
-                    "flex items-center gap-3 px-3 py-2 text-body transition-colors",
+                    "flex items-center gap-md px-md py-sm text-body transition-colors",
                     flashedIds.has(t.id) && "bg-success/10",
                   )}
                 >
-                  <div className="flex min-w-0 flex-1 flex-col gap-0.5">
-                    <div className="flex items-center gap-2">
+                  <div className="flex min-w-0 flex-1 flex-col gap-2xs">
+                    <div className="flex items-center gap-sm">
                       <Badge variant="muted" size="md" className="font-mono">
                         {t.userId ?? "(any)"}
                       </Badge>
@@ -387,7 +387,7 @@ export function EventsTestView() {
                         {JSON.stringify(t.jobWith)}
                       </Text>
                     </div>
-                    <Text as="div" variant="caption" tone="muted" className="flex items-center gap-2">
+                    <Text as="div" variant="caption" tone="muted" className="flex items-center gap-sm">
                       <span>{t.oneShot ? "one-shot" : "recurring"}</span>
                       <span>·</span>
                       <span className="truncate font-mono">{t.id}</span>
@@ -409,7 +409,7 @@ export function EventsTestView() {
 
         {/* Cleanup by config */}
         <Section title="Delete triggers by job config">
-          <div className="flex items-end gap-2">
+          <div className="flex items-end gap-sm">
             <div className="flex-1">
               <FieldRow label="label match">
                 <Input
@@ -449,9 +449,9 @@ export function EventsTestView() {
                   as="div"
                   variant="body"
                   key={`${e.jobId}-${e.firedAt}-${i}`}
-                  className="flex flex-col gap-0.5 px-3 py-2"
+                  className="flex flex-col gap-2xs px-md py-sm"
                 >
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-sm">
                     <Badge size="md" colorClass="bg-info/10 text-info-foreground" className="font-mono">
                       {e.label}
                     </Badge>
@@ -489,12 +489,12 @@ function Section({
   children: React.ReactNode;
 }) {
   return (
-    <section className="flex flex-col gap-3 rounded-lg border border-border bg-card p-4">
-      <div className="flex items-center justify-between gap-2">
+    <section className="flex flex-col gap-md rounded-lg border border-border bg-card p-lg">
+      <div className="flex items-center justify-between gap-sm">
         <Text as="h2" variant="label">{title}</Text>
         {action}
       </div>
-      <div className="flex flex-col gap-3">{children}</div>
+      <div className="flex flex-col gap-md">{children}</div>
     </section>
   );
 }
@@ -507,7 +507,7 @@ function FieldRow({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex flex-col gap-1">
+    <div className="flex flex-col gap-xs">
       <Text as="label" variant="caption" tone="muted">{label}</Text>
       {children}
     </div>
@@ -516,7 +516,7 @@ function FieldRow({
 
 function Empty({ children }: { children: React.ReactNode }) {
   return (
-    <Text as="div" variant="body" tone="muted" className="rounded-md border border-dashed border-border px-3 py-6 text-center">
+    <Text as="div" variant="body" tone="muted" className="rounded-md border border-dashed border-border px-md py-xl text-center">
       {children}
     </Text>
   );

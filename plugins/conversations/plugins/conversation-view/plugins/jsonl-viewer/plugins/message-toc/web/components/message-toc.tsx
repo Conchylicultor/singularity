@@ -75,7 +75,7 @@ export function MessageToc() {
       anchor="top-right"
       panelClassName="flex-col w-[3.25rem] group-data-hovered/fa:w-56 max-h-[1.625rem] group-data-hovered/fa:max-h-80"
     >
-      <div className="flex shrink-0 items-center gap-1.5 px-2 py-1 group-data-hovered/fa:border-b group-data-hovered/fa:border-border/40">
+      <div className="flex shrink-0 items-center gap-xs px-sm py-xs group-data-hovered/fa:border-b group-data-hovered/fa:border-border/40">
         <MdFormatListNumbered className="size-3.5 shrink-0 text-muted-foreground" />
         <Text as="span" variant="caption" className="shrink-0 tabular-nums text-muted-foreground">
           {entries.length}
@@ -91,7 +91,7 @@ export function MessageToc() {
             key={entry.eventIndex}
             type="button"
             onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
-            className="flex w-full items-start gap-2 px-2 py-1.5 text-left text-caption hover:bg-accent"
+            className="flex w-full items-start gap-sm px-sm py-xs text-left text-caption hover:bg-accent"
           >
             <span className="shrink-0 tabular-nums text-muted-foreground">
               #{entry.userIndex}
@@ -110,7 +110,7 @@ export function MessageToc() {
             const container = paneScrollFrom(e.currentTarget);
             container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
           }}
-          className="flex w-full items-center justify-center border-t border-border/40 py-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="flex w-full items-center justify-center border-t border-border/40 py-xs text-muted-foreground hover:bg-accent hover:text-foreground"
         >
           <MdKeyboardArrowDown className="size-4" />
         </button>

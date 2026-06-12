@@ -61,7 +61,7 @@ function PagesRoot(): ReactElement {
     <Text
       as="div"
       variant="body"
-      className="text-muted-foreground flex h-full flex-col items-center justify-center gap-2 p-8 text-center"
+      className="text-muted-foreground flex h-full flex-col items-center justify-center gap-sm p-2xl text-center"
     >
       <MdDescription className="size-8 opacity-50" />
       <p>Select a page from the sidebar, or create a new one.</p>
@@ -76,7 +76,7 @@ function PageDetailBody(): ReactElement {
 
   return (
     <PaneChrome pane={pageDetailPane} title={title}>
-      <div className="flex flex-col gap-4 p-4">
+      <div className="flex flex-col gap-lg p-lg">
         <PageHeader pageId={pageId} />
         <BlockEditor
           pageId={pageId}

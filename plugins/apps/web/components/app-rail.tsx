@@ -12,7 +12,7 @@ export function AppRail() {
   const activeAppId = useActiveApp()?.id;
   const { focusedTabId, replaceTabApp } = useTabs();
   return (
-    <div className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-1 border-r bg-background pt-3">
+    <div className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-xs border-r bg-background pt-md">
       <Apps.App.Render>
         {(app) => (
           <WithTooltip content={app.tooltip} side="right">

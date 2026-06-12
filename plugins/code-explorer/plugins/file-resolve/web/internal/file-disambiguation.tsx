@@ -11,7 +11,8 @@ export function FileDisambiguation({
   onSelect: (path: string) => void;
 }) {
   return (
-    <div className="flex h-full flex-col gap-1 p-3">
+    <div className="flex h-full flex-col gap-xs p-md">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset on heading above the scroll region, larger than the flex gap */}
       <Text as="div" variant="caption" className="mb-1 text-muted-foreground">
         Multiple files match{" "}
         <span className="font-mono font-medium text-foreground">{query}</span>

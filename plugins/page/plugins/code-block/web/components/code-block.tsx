@@ -22,11 +22,11 @@ const PLAIN = "__plain__";
 // + `break-words` make long lines wrap identically in both layers, so the block
 // grows vertically and we never need to sync horizontal scroll.
 const METRICS =
-  "p-3 font-mono text-xs leading-5 whitespace-pre-wrap break-words [tab-size:2]";
+  "p-md font-mono text-xs leading-5 whitespace-pre-wrap break-words [tab-size:2]";
 // Same contract, projected onto the <pre> shiki injects.
-// eslint-disable-next-line text/no-adhoc-typography -- pinned mono code-editor metric: the shiki <pre> must match METRICS size/line-height exactly so the transparent textarea overlays the highlighted glyphs
+// eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- pinned mono code-editor metric: the shiki <pre> must match METRICS size/line-height exactly so the transparent textarea overlays the highlighted glyphs; [&>pre]:m-0 resets the shiki <pre> UA margin (layout reset, not rhythm)
 const SHIKI_PRE = cn(
-  "[&>pre]:m-0 [&>pre]:p-3 [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5",
+  "[&>pre]:m-0 [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-xs [&>pre]:leading-5",
   "[&>pre]:whitespace-pre-wrap [&>pre]:break-words [&>pre]:[tab-size:2]",
 );
 
@@ -137,10 +137,10 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   );
 
   return (
-    <div className="px-3 py-1">
+    <div className="px-md py-xs">
       <div className="group relative overflow-hidden rounded-md bg-muted">
         {/* Hover/focus toolbar: language picker + copy. */}
-        <div className="absolute top-1 right-1 z-raised flex items-center gap-1 opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
+        <div className="absolute top-1 right-1 z-raised flex items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
           <Select items={langItems} value={language ?? PLAIN} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"
@@ -174,7 +174,11 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
             dangerouslySetInnerHTML={{ __html: html }}
           />
         ) : (
-          <pre aria-hidden className={cn("m-0", METRICS)}>
+          <pre
+            aria-hidden
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- m-0 resets the UA <pre> default margin to zero; there is no margin ramp and "none" is a layout reset, not rhythm
+            className={cn("m-0", METRICS)}
+          >
             {code || " "}
           </pre>
         )}

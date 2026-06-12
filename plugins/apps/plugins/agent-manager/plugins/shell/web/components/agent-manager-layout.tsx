@@ -17,7 +17,7 @@ export function AgentManagerLayout() {
             if (window.location.pathname === "/agents") return;
             navigate("/agents");
           }}
-          className="flex min-w-0 items-center gap-2 rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
+          className="flex min-w-0 items-center gap-sm rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
         >
           <img src="/icon.svg" alt="Singularity" className="size-6 shrink-0" />
           <Text as="span" variant="subheading" className="truncate tracking-tight">

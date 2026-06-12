@@ -32,7 +32,7 @@ export function PromptForm({ id, getBlob }: { id: string; getBlob: () => Blob | 
   };
 
   return (
-    <div className="bg-background flex shrink-0 flex-col gap-2 border-t p-3">
+    <div className="bg-background flex shrink-0 flex-col gap-sm border-t p-md">
       <TextEditor
         value={text}
         onChange={setText}

@@ -138,7 +138,7 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
     <Text
       as="div"
       variant="caption"
-      className={`flex items-center gap-2 px-3 py-1.5 ${
+      className={`flex items-center gap-sm px-md py-xs ${
         isSelf ? "bg-primary/5" : ""
       }`}
     >
@@ -156,6 +156,7 @@ function OpRowView({ row, title, now }: { row: OpRow; title?: string; now: numbe
       )}
       <span className="min-w-0 flex-1 truncate">
         {title ? <span className="truncate">{title}</span> : <span className="font-mono">{op.slug}</span>}
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset on a trailing label inside a truncating flex cell; not a sibling gap the parent can own */}
         {isSelf && <span className="ml-1.5 text-muted-foreground">(this conversation)</span>}
       </span>
       <span className="shrink-0 text-muted-foreground">{phaseText}</span>
@@ -204,7 +205,7 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
       <button
         type="button"
         onClick={() => setExpanded((v) => !v)}
-        className="flex w-full items-center gap-2 px-3 py-2 text-left hover:bg-foreground/[0.03]"
+        className="flex w-full items-center gap-sm px-md py-sm text-left hover:bg-foreground/[0.03]"
       >
         {queued ? (
           <MdHourglassEmpty className="size-3.5 shrink-0" />
@@ -233,7 +234,7 @@ export function OpStatusBanner({ conversation }: { conversation: ConversationRec
         )}
       </button>
       {expanded && (
-        <div className="border-t border-border/60 bg-background/40 py-1 text-foreground">
+        <div className="border-t border-border/60 bg-background/40 py-xs text-foreground">
           {rows.map((row) => (
             <OpRowView
               key={`${row.op.op}:${row.op.slug}`}

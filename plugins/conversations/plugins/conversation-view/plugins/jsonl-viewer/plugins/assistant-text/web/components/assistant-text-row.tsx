@@ -19,7 +19,7 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <ContentScope>
-      <div className="px-3 py-2">
+      <div className="px-md py-sm">
         {markdownMode ? (
           <Text as="div" variant="body">
             {(() => {

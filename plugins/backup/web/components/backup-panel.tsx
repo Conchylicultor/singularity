@@ -11,6 +11,7 @@ import {
   MdFolder,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { BackupTargetResult } from "@plugins/backup/core";
@@ -42,7 +43,7 @@ function StatusIcon({ status }: { status: string }) {
 function TargetResultRow({ result }: { result: BackupTargetResult }) {
   const Icon = result.targetId === "google-drive" ? MdCloudUpload : MdFolder;
   return (
-    <Text as="div" variant="body" className="flex items-center gap-2">
+    <Text as="div" variant="body" className="flex items-center gap-sm">
       <Icon className="size-4 shrink-0 text-muted-foreground" />
       <span className="font-medium capitalize">{result.targetId}</span>
       {result.ok ? (
@@ -66,9 +67,9 @@ function BackupRunRow({ run }: { run: BackupRun }) {
     <div className="rounded-md border overflow-hidden">
       <button
         onClick={() => setExpanded((v) => !v)}
-        className="w-full flex items-center justify-between px-4 py-3 hover:bg-muted/50 transition-colors text-left"
+        className="w-full flex items-center justify-between px-lg py-md hover:bg-muted/50 transition-colors text-left"
       >
-        <div className="flex items-center gap-3 min-w-0">
+        <div className="flex items-center gap-md min-w-0">
           <StatusIcon status={run.status} />
           <div className="min-w-0">
             <Text as="p" variant="label" className="truncate">
@@ -93,11 +94,11 @@ function BackupRunRow({ run }: { run: BackupRun }) {
       </button>
 
       {expanded && run.targetResults && (
-        <div className="border-t px-4 py-3 space-y-2">
+        <Stack gap="sm" className="border-t px-lg py-md">
           {run.targetResults.map((r) => (
             <TargetResultRow key={r.targetId} result={r} />
           ))}
-        </div>
+        </Stack>
       )}
     </div>
   );
@@ -110,21 +111,22 @@ export function BackupPanel() {
   });
 
   return (
-    <div className="p-6 max-w-2xl space-y-6">
-        <div>
+    <Stack gap="xl" className="p-xl max-w-2xl">
+        <Stack gap="xs">
           <Text as="h2" variant="heading">Backup</Text>
-          <Text as="p" variant="body" className="text-muted-foreground mt-1">
+          <Text as="p" variant="body" className="text-muted-foreground">
             Archives the database, secrets, and attachments. Dispatches to
             all enabled storage targets (local, Google Drive).
           </Text>
-        </div>
+        </Stack>
 
         <Button onClick={() => triggerBackup({})} disabled={isPending}>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
           <MdBackup className="size-4 mr-2" />
           {isPending ? "Starting backup…" : "Run Backup Now"}
         </Button>
 
-        <div className="space-y-3">
+        <Stack gap="md">
           <Text
             as="h3"
             variant="label"
@@ -139,13 +141,13 @@ export function BackupPanel() {
               No backups yet. Click above to create one.
             </Text>
           ) : (
-            <div className="space-y-2">
+            <Stack gap="sm">
               {runs.map((run) => (
                 <BackupRunRow key={run.id} run={run} />
               ))}
-            </div>
+            </Stack>
           )}
-        </div>
-    </div>
+        </Stack>
+    </Stack>
   );
 }

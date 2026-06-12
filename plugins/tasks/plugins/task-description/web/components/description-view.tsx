@@ -58,7 +58,7 @@ export function DescriptionView({
     <Text
       as="div"
       variant="body"
-      className="group relative min-h-48 w-full cursor-text rounded-md border p-3"
+      className="group relative min-h-48 w-full cursor-text rounded-md border p-md"
       onClick={() => setEditing(true)}
       role="button"
       tabIndex={0}

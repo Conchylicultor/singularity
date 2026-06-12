@@ -1,3 +1,4 @@
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { ActionBar } from "../slots";
 
 /**
@@ -8,8 +9,8 @@ import { ActionBar } from "../slots";
  */
 export function ActionBarStrip() {
   return (
-    <div className="flex items-center gap-2">
+    <Stack direction="row" align="center" gap="sm">
       <ActionBar.Item.Render />
-    </div>
+    </Stack>
   );
 }

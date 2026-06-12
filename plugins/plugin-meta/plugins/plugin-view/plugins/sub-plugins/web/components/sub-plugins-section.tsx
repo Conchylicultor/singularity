@@ -26,6 +26,7 @@ export function SubPluginsSection({ node }: { node: PluginNode }) {
           : `${directChildren.length}`
       }
     >
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- -mx-2 negative-bleeds the tree rows out to cancel the Section's horizontal padding so row hover backgrounds span full width */}
       <div className="-mx-2 flex flex-col">
         {directChildren.map((c) => (
           <PluginTreeNode key={c.id} node={c} depth={0} />

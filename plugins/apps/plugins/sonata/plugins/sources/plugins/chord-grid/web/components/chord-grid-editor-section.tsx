@@ -1,6 +1,7 @@
 import { useEffect, useRef } from "react";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Card } from "@plugins/primitives/plugins/card/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   beatToSeconds,
   scoreEndBeat,
@@ -72,23 +73,25 @@ export function ChordGridEditorSection() {
   if (rawValue === undefined) return null;
 
   return (
-    <Card className="space-y-3 rounded-lg p-4">
-      <label className="flex flex-col gap-1">
-        <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Title
-        </span>
-        <input
-          type="text"
-          value={currentSongTitle ?? ""}
-          onChange={(e) => renameCurrentSong(e.target.value)}
-          placeholder="Untitled"
-          className="w-full rounded-md border border-border bg-background px-3 py-1.5 text-body outline-none focus:border-primary"
+    <Card className="rounded-lg p-lg">
+      <Stack gap="md">
+        <label className="flex flex-col gap-xs">
+          <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Title
+          </span>
+          <input
+            type="text"
+            value={currentSongTitle ?? ""}
+            onChange={(e) => renameCurrentSong(e.target.value)}
+            placeholder="Untitled"
+            className="w-full rounded-md border border-border bg-background px-md py-xs text-body outline-none focus:border-primary"
+          />
+        </label>
+        <ChordGridLoader
+          raw={rawValue}
+          onRaw={(r) => setSourceRaw(CHORD_GRID_SOURCE_ID, r)}
         />
-      </label>
-      <ChordGridLoader
-        raw={rawValue}
-        onRaw={(r) => setSourceRaw(CHORD_GRID_SOURCE_ID, r)}
-      />
+      </Stack>
     </Card>
   );
 }

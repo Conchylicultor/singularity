@@ -36,7 +36,7 @@ export function TasksButton() {
         if (taskId) toggle();
       }}
       disabled={!taskId}
-      className="gap-1.5"
+      className="gap-xs"
     >
       <MdChecklist className="size-4" />
       {dotClass && <StatusDot colorClass={dotClass} />}

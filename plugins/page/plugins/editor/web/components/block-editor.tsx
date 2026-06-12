@@ -609,7 +609,8 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
               // selection. Focusing the container itself (selection mode) doesn't.
               if (e.target !== containerRef.current && isActive) clearSelection();
             }}
-            className="relative min-h-40 py-2 pl-16 pr-2 outline-none"
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- pl-16 (4rem) is a fixed gutter dimension reserving room for the three-button cluster at -20/-40/-60; beyond the ramp's 2xl (2rem) max, so it can't be a named step
+            className="relative min-h-40 py-sm pl-16 pr-sm outline-none"
           >
             {flat.map((f) => (
               <BlockRow
@@ -624,6 +625,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
                 dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
               />
             ))}
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the Add-block affordance below the block list; the container isn't a flex Stack (it holds keyed rows + an absolute marquee), so the margin can't lift into a parent gap */}
             <div className="mt-1">
               <AddBlockMenu />
             </div>
@@ -640,7 +642,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
             <Text
               as="div"
               variant="body"
-              className="bg-background/90 border-accent text-muted-foreground flex items-center gap-1 rounded-md border px-2 py-1 shadow"
+              className="bg-background/90 border-accent text-muted-foreground flex items-center gap-xs rounded-md border px-sm py-xs shadow"
             >
               <MdDragIndicator className="size-4" />
               {bulkDragRef.current && selectedCount > 1

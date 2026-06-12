@@ -35,7 +35,7 @@ export function AnswerHereButton({
     <Text
       as="div"
       variant="caption"
-      className="flex items-center gap-2 text-warning/70"
+      className="flex items-center gap-sm text-warning/70"
     >
       <span>Content pending in terminal — waiting for your input</span>
       <Button

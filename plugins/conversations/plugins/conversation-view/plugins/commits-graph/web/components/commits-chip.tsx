@@ -39,7 +39,7 @@ export function CommitsChip() {
       aria-label={title}
       aria-pressed={isOpen}
       onClick={toggle}
-      className="gap-1 px-2 text-caption tabular-nums"
+      className="gap-xs px-sm text-caption tabular-nums"
     >
       <MdAltRoute className="size-4" />
       <span className="text-muted-foreground">↑</span>

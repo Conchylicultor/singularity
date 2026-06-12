@@ -35,7 +35,7 @@ import {
 function ItemChip({ id }: { id: string }) {
   return (
     <SortableReorderItem itemKey={id} editMode label={id}>
-      <Text variant="body" className="px-2 py-1 font-mono">
+      <Text variant="body" className="px-sm py-xs font-mono">
         {id}
       </Text>
     </SortableReorderItem>
@@ -125,7 +125,7 @@ const ReorderTreeRenderer: FieldRendererComponent<ReorderTree> = ({
   );
 
   return (
-    <div className="flex flex-col gap-1.5 py-3">
+    <div className="flex flex-col gap-xs py-md">
       <FieldHeader field={field} />
       <ReorderEditor
         entries={entries}

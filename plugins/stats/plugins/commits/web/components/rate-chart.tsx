@@ -9,6 +9,7 @@ import {
   YAxis,
 } from "recharts";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCommitsRate } from "../../shared/endpoints";
@@ -50,7 +51,7 @@ export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
   }, [rawPoints, showEmptyDays, bucket]);
 
   return (
-    <div className="flex flex-col gap-3">
+    <Stack gap="md">
       <div className="h-64 w-full">
         <ChartState
           error={error ? getEndpointErrorMessage(error) : null}
@@ -91,6 +92,6 @@ export function CommitsRateChart({ dedup }: { dedup?: boolean }) {
         </ChartState>
       </div>
       <SegmentedControl options={BUCKETS} value={bucket} onChange={setBucket} />
-    </div>
+    </Stack>
   );
 }

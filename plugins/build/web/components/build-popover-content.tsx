@@ -26,7 +26,7 @@ import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primit
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 
 // Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
-const logViewerClass = "overflow-y-auto bg-muted/30 px-3 py-2 font-mono text-xs leading-5";
+const logViewerClass = "overflow-y-auto bg-muted/30 px-md py-sm font-mono text-xs leading-5";
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
@@ -46,7 +46,7 @@ function MainAheadSection() {
 
   return (
     <Collapsible className="border-b">
-      <CollapsibleTrigger className="gap-2 px-3 py-2 hover:bg-accent/50">
+      <CollapsibleTrigger className="gap-sm px-md py-sm hover:bg-accent/50">
         <CollapsibleChevron className="size-4 text-muted-foreground" />
         <Text as="span" variant="label">
           main is {count} commit{count !== 1 ? "s" : ""} ahead
@@ -71,7 +71,7 @@ function MainAheadSection() {
 
 function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void }) {
   return (
-    <div className="flex items-center gap-2 border-b px-3 py-2">
+    <div className="flex items-center gap-sm border-b px-md py-sm">
       <Button variant="default" size="sm" disabled={building} onClick={onBuild}>
         <MdPlayArrow className="size-4" />
         {building ? "Building…" : "Build"}
@@ -144,7 +144,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
 
   return (
     <div className="relative flex flex-col border-b">
-      <div className="flex items-center justify-between border-b px-3 py-1">
+      <div className="flex items-center justify-between border-b px-md py-xs">
         <Text as="span" variant="label" className="text-muted-foreground">Logs</Text>
         <Button
           variant="ghost"
@@ -168,7 +168,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           <div
             key={entry.seq}
             className={cn(
-              "flex gap-2",
+              "flex gap-sm",
               entry.stream === "stderr" ? "text-destructive" : "text-foreground",
             )}
           >
@@ -220,12 +220,14 @@ function BuildHistoryList({
   const visible = runs.slice(0, limit);
 
   return (
-    <div className="px-3 py-2">
+    <div className="px-md py-sm">
       <Text as="span" variant="label" className="text-muted-foreground">History</Text>
       {visible.length === 0 && (
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset below the History label, non-flex parent
         <Text as="p" variant="caption" className="mt-1 text-muted-foreground">No builds yet</Text>
       )}
-      <div className="mt-1 flex flex-col gap-0.5">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- list offset below the History label, sibling of label not in a shared flex parent */}
+      <div className="mt-1 flex flex-col gap-2xs">
         {visible.map((run) => (
           <Row
             key={run.id}

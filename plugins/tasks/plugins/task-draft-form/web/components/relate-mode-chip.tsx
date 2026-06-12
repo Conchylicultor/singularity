@@ -41,12 +41,12 @@ export function RelateModeChip({
     : RELATE_MODES.filter((m) => m.value !== "independent");
 
   return (
-    <Text as="div" variant="caption" className="flex items-center gap-1.5 text-muted-foreground">
+    <Text as="div" variant="caption" className="flex items-center gap-xs text-muted-foreground">
       <span>Mode</span>
       <div
         role="radiogroup"
         aria-label="Relation to current task"
-        className="border-border bg-muted/40 inline-flex items-center rounded-md border p-0.5"
+        className="border-border bg-muted/40 inline-flex items-center rounded-md border p-2xs"
       >
         {modes.map((m) => {
           const effective = m.value === "independent" ? undefined : m.value;

@@ -41,7 +41,7 @@ export function WorkflowNodeCard({
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
       className={cn(
-        "flex w-full min-w-0 flex-col gap-1 px-2.5 py-2 text-left transition-all",
+        "flex w-full min-w-0 flex-col gap-xs px-sm py-sm text-left transition-all",
         "hover:border-foreground/40",
         emphasis === "dim" && "opacity-40",
         emphasis === "active" && "border-primary ring-2 ring-primary/30",
@@ -49,7 +49,7 @@ export function WorkflowNodeCard({
         emphasis === "dependent" && "border-categorical-1/60",
       )}
     >
-      <span className="flex min-w-0 items-center gap-1.5">
+      <span className="flex min-w-0 items-center gap-xs">
         {node.kind === "workflow" && (
           <MdAccountTree className="size-3 shrink-0 text-muted-foreground" />
         )}
@@ -63,7 +63,7 @@ export function WorkflowNodeCard({
         )}
       </span>
       {(node.agentType || node.isolation || node.hasSchema) && (
-        <span className="flex flex-wrap gap-1">
+        <span className="flex flex-wrap gap-xs">
           {node.agentType && <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>}
           {node.isolation && <MetaChip>{formatStatusLabel(node.isolation)}</MetaChip>}
           {node.hasSchema && <MetaChip>Schema</MetaChip>}

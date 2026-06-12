@@ -46,6 +46,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
               <img
                 src={src}
                 alt={alt ?? ""}
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- block margin separating an inline-rendered markdown image from surrounding flow content; no flex parent to own a gap
                 className="my-2 max-w-full rounded-sm border border-border"
               />
             );
@@ -56,6 +57,7 @@ export function ImgEnhancer({ children }: { children: ReactNode }) {
               <img
                 src={apiSrc}
                 alt={alt ?? ""}
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- block margin separating an inline-rendered markdown image from surrounding flow content; no flex parent to own a gap
                 className="my-2 max-w-full rounded-sm border border-border"
               />
             );

@@ -120,13 +120,13 @@ export function LaunchControl({
         <DropdownMenuItem
           key={id}
           onClick={() => setDefaultModel(id)}
-          className="justify-between gap-4"
+          className="justify-between gap-lg"
         >
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-xs">
             {MODEL_REGISTRY[id].label}
             {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
           </span>
-          <span className="flex items-center gap-1.5">
+          <span className="flex items-center gap-xs">
             <button
               type="button"
               aria-label={`Launch ${MODEL_REGISTRY[id].label}`}
@@ -139,6 +139,7 @@ export function LaunchControl({
             >
               <MdPlayArrow className="size-3.5" />
             </button>
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-0 resets the Kbd primitive's default left margin in this inline row */}
             <Kbd className="ml-0 text-muted-foreground border-border bg-muted">
               {formatShortcutLabel(`mod+${i + 1}`)}
             </Kbd>
@@ -170,7 +171,7 @@ export function LaunchControl({
                 size="icon-xs"
                 disabled={disabled}
                 aria-label="Choose model"
-                className="px-0"
+                className="px-none"
               />
             }
           >
@@ -193,7 +194,7 @@ export function LaunchControl({
               variant={btnVariant}
               size={btnSize}
               disabled={disabled}
-              className={cn("gap-1", blue)}
+              className={cn("gap-xs", blue)}
             />
           }
         >
@@ -210,7 +211,7 @@ export function LaunchControl({
         title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
         onClick={() => void launch(defaultModel)}
         className={cn(
-          "px-2.5",
+          "px-sm",
           blue,
           variant === "default" && "border-l border-white/20",
         )}

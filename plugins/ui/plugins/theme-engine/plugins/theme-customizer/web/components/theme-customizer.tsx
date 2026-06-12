@@ -46,19 +46,19 @@ function GlobalPresetPicker() {
   };
 
   return (
-    <div className="flex flex-col gap-3">
-      <div className="flex items-center gap-3">
+    <div className="flex flex-col gap-md">
+      <div className="flex items-center gap-md">
         <div className="h-px flex-1 bg-border" />
         <span className="text-3xs font-semibold uppercase tracking-widest text-muted-foreground">
           Theme
         </span>
         <div className="h-px flex-1 bg-border" />
       </div>
-      <div className="flex flex-wrap gap-2">
+      <div className="flex flex-wrap gap-sm">
         {globalPresets.map((p) => (
           <button
             key={p.id}
-            className={`px-4 py-2 text-label rounded-lg transition-colors ${
+            className={`px-lg py-sm text-label rounded-lg transition-colors ${
               p.id === activeId
                 ? "border-2 border-primary bg-primary/10 text-primary"
                 : "border border-border text-muted-foreground hover:border-primary/50 bg-muted/20"
@@ -80,10 +80,10 @@ function VariantGroupSection() {
   const groups = ThemeEngine.VariantGroup.useContributions();
   if (groups.length === 0) return null;
   return (
-    <div className="flex flex-col gap-4">
+    <div className="flex flex-col gap-lg">
       <ThemeEngine.VariantGroup.Render>
         {(g) => (
-          <div className="flex flex-col gap-1.5">
+          <div className="flex flex-col gap-xs">
             <Text variant="label">{g.componentLabel}</Text>
             <g.component />
           </div>
@@ -107,13 +107,13 @@ function TokenModeSelector({
   onChange: (m: TokenMode) => void;
 }) {
   return (
-    <div className="flex gap-1">
+    <div className="flex gap-xs">
       {TOKEN_MODES.map(({ id, label }) => (
         <button
           key={id}
           type="button"
           onClick={() => onChange(id)}
-          className={`flex-1 py-1 text-caption font-medium rounded-md border transition-colors ${
+          className={`flex-1 py-xs text-caption font-medium rounded-md border transition-colors ${
             mode === id
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
@@ -152,7 +152,7 @@ function CustomizeForAppToggle({
     <button
       type="button"
       onClick={onToggle}
-      className={`flex items-center justify-between gap-3 px-3 py-2 text-body rounded-md border transition-colors ${
+      className={`flex items-center justify-between gap-md px-md py-sm text-body rounded-md border transition-colors ${
         forked
           ? "border-primary bg-primary/10 text-primary"
           : "border-border text-muted-foreground hover:border-primary/50 hover:text-foreground"
@@ -205,8 +205,8 @@ export function ThemeCustomizerBody() {
   return (
     <PaneChrome pane={themeCustomizerPane} title="Theme Customizer">
       <ThemeScopeProvider scopeId={effectiveScopeId}>
-        <div className="flex flex-col gap-4">
-          <div className="px-6 pt-4 flex flex-col gap-4">
+        <div className="flex flex-col gap-lg">
+          <div className="px-xl pt-lg flex flex-col gap-lg">
             {appId && scopeId && (
               <CustomizeForAppToggle
                 appId={appId}

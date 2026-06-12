@@ -13,7 +13,7 @@ export function CollapsedBar({ entry, onExpand }: CollapsedBarProps) {
       type="button"
       onClick={onExpand}
       aria-label={`Expand ${title ?? entry.pane.id}`}
-      className="flex h-full w-8 shrink-0 flex-col items-center gap-2 border-r bg-muted/40 py-2 text-muted-foreground hover:bg-muted hover:text-foreground"
+      className="flex h-full w-8 shrink-0 flex-col items-center gap-sm border-r bg-muted/40 py-sm text-muted-foreground hover:bg-muted hover:text-foreground"
     >
       <MdChevronRight className="size-4" />
       {title && (

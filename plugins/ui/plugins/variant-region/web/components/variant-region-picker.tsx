@@ -2,6 +2,7 @@ import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentType } from "react";
 import type { Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import type { VariantRegionCore } from "../../core";
@@ -38,12 +39,12 @@ export function createPicker<Props>(
     }
 
     return (
-      <div className="flex gap-2">
+      <Stack direction="row" gap="sm">
         {variants.map((v) => (
           <button
             key={v.id}
             className={cn(
-              "px-3 py-1 rounded-md border transition-colors",
+              "px-md py-xs rounded-md border transition-colors",
               v.id === activeId
                 ? "border-primary bg-primary/10"
                 : "border-border hover:border-primary/50",
@@ -55,7 +56,7 @@ export function createPicker<Props>(
             </Text>
           </button>
         ))}
-      </div>
+      </Stack>
     );
   }
   return Picker;

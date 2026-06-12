@@ -51,7 +51,7 @@ export function SectionBands({
         return (
           <div
             key={`${a.start}-${a.end}-${a.data.name}-${idx}`}
-            className={`absolute inset-y-0 flex items-center overflow-hidden rounded-sm px-1 ${PALETTE[idx % PALETTE.length]}`}
+            className={`absolute inset-y-0 flex items-center overflow-hidden rounded-sm px-xs ${PALETTE[idx % PALETTE.length]}`}
             style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
             title={a.data.name}
           >

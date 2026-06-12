@@ -81,7 +81,7 @@ export function MemoryPanel() {
     <div className="flex h-full">
       {/* File list */}
       <div className="flex w-56 shrink-0 flex-col border-r">
-        <div className="flex items-center justify-between border-b px-3 py-2">
+        <div className="flex items-center justify-between border-b px-md py-sm">
           <SectionLabel as="span" className="font-medium">
             Memory files
           </SectionLabel>
@@ -95,11 +95,11 @@ export function MemoryPanel() {
             <MdRefresh className="size-4" />
           </Button>
         </div>
-        <div className="flex-1 overflow-y-auto py-1">
+        <div className="flex-1 overflow-y-auto py-xs">
           {grouped.map(({ type, items }) => (
             <div key={type}>
               {type !== "index" && (
-                <div className="px-3 py-1 text-3xs font-semibold uppercase tracking-widest text-muted-foreground/60">
+                <div className="px-md py-xs text-3xs font-semibold uppercase tracking-widest text-muted-foreground/60">
                   {type}
                 </div>
               )}
@@ -109,7 +109,7 @@ export function MemoryPanel() {
                   type="button"
                   onClick={() => setSelected(f.name)}
                   className={cn(
-                    "w-full px-3 py-1.5 text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-1.5 min-w-0",
+                    "w-full px-md py-xs text-left text-caption transition-colors hover:bg-muted/50 flex items-center gap-xs min-w-0",
                     selected === f.name && "bg-muted font-medium",
                   )}
                 >
@@ -128,11 +128,11 @@ export function MemoryPanel() {
             </div>
           ))}
           {files.length === 0 && (
-            <Text as="p" variant="caption" className="px-3 py-4 text-muted-foreground">No memory files found.</Text>
+            <Text as="p" variant="caption" className="px-md py-lg text-muted-foreground">No memory files found.</Text>
           )}
         </div>
         {dir && (
-          <div className="border-t px-3 py-2">
+          <div className="border-t px-md py-sm">
             <p className="truncate font-mono text-3xs text-muted-foreground/50" title={dir}>{dir}</p>
           </div>
         )}
@@ -151,7 +151,7 @@ export function MemoryPanel() {
             {error}
           </Text>
         ) : content !== null ? (
-          <Text as="div" variant="body" className="px-6 py-4">
+          <Text as="div" variant="body" className="px-xl py-lg">
             <Markdown>{content}</Markdown>
           </Text>
         ) : null}

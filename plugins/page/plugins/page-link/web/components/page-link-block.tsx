@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { MdLink } from "react-icons/md";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
@@ -39,9 +40,9 @@ function PagePicker({
       trigger={trigger}
       open={open}
       onOpenChange={setOpen}
-      contentClassName="w-72 p-2"
+      contentClassName="w-72 p-sm"
     >
-      <div className="flex flex-col gap-2">
+      <Stack gap="sm">
         <SearchInput
           autoFocus
           placeholder="Search pages…"
@@ -64,7 +65,7 @@ function PagePicker({
             />
           )}
         </div>
-      </div>
+      </Stack>
     </InlinePopover>
   );
 }
@@ -78,7 +79,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // Show it even while pending — it has its own internal loading state.
   if (pageId === "") {
     return (
-      <div className="px-3 py-1">
+      <div className="px-md py-xs">
         <PagePicker
           autoOpen
           onSelect={(id) => editor.update({ pageId: id })}
@@ -105,7 +106,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
   // Target page was deleted: offer a muted not-found row that re-opens the picker.
   if (!target) {
     return (
-      <div className="px-3 py-1">
+      <div className="px-md py-xs">
         <PagePicker
           onSelect={(id) => editor.update({ pageId: id })}
           trigger={
@@ -123,7 +124,7 @@ export function PageLinkBlock({ block, editor }: BlockRendererProps) {
 
   // Resolved link: a clickable chip/row that navigates via the host callback.
   return (
-    <div className="px-3 py-1">
+    <div className="px-md py-xs">
       <Row
         hover="muted"
         onClick={() => onOpenPage?.(pageId)}

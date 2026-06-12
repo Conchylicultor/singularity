@@ -17,7 +17,7 @@ export function FileContent({
 }) {
   if (!active) {
     return (
-      <Text as="div" variant="body" className="px-3 py-2 text-muted-foreground">
+      <Text as="div" variant="body" className="px-md py-sm text-muted-foreground">
         No renderer available for this file.
       </Text>
     );

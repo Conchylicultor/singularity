@@ -12,6 +12,7 @@ import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web"
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type {
   PushDetail,
@@ -31,7 +32,7 @@ function outcomeVariant(
 
 function Stat({ label, value }: { label: string; value: number }): ReactElement {
   return (
-    <div className="flex flex-col gap-0.5 bg-card px-3 py-2">
+    <div className="flex flex-col gap-2xs bg-card px-md py-sm">
       <span className="text-3xs font-medium uppercase tracking-wider text-muted-foreground">
         {label}
       </span>
@@ -66,11 +67,11 @@ function PushStepsGantt({
     <ProfilingContext.Provider value={{ hovered, setHovered, refreshKey: 0 }}>
       <div className="overflow-hidden rounded-md border">
         <GanttContainer title="Steps" totalMs={totalMs}>
-          <div className="space-y-0.5 px-4 py-2">
+          <Stack gap="2xs" className="px-lg py-sm">
             {spans.map((s) => (
               <SpanRow key={s.id} span={s} color="bg-success" />
             ))}
-          </div>
+          </Stack>
         </GanttContainer>
         <SpanDetail span={hovered} />
       </div>
@@ -107,8 +108,8 @@ export function PushDetailBody(): ReactElement {
           {error ? "Push not found." : "Loading…"}
         </Placeholder>
       ) : (
-        <div className="flex flex-col gap-4 p-4">
-          <div className="flex flex-wrap items-center gap-2">
+        <div className="flex flex-col gap-lg p-lg">
+          <div className="flex flex-wrap items-center gap-sm">
             <Text as="span" variant="body" className="truncate font-mono">{branchShort}</Text>
             <Badge variant={outcomeVariant(data.outcome)}>
               {formatStatusLabel(data.outcome)}

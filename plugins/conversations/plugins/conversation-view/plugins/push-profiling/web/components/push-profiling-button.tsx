@@ -17,7 +17,7 @@ export function PushProfilingButton() {
       aria-label="Push profiling"
       aria-pressed={isOpen}
       onClick={toggle}
-      className="gap-1.5"
+      className="gap-xs"
     >
       <MdTimeline className="size-4" />
     </Button>

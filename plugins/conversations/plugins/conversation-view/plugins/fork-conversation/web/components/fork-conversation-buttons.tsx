@@ -10,7 +10,7 @@ export function ForkConversationButtons({
 }) {
   return (
     <WithTooltip content="New conversation in this worktree">
-      <div className="flex items-center gap-1">
+      <div className="flex items-center gap-xs">
         <MdForkRight className="size-3.5 text-muted-foreground" />
         <LaunchControl
           size="sm"

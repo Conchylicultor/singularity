@@ -1,4 +1,5 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { categoricalConfig } from "../internal/config";
 import { Categorical } from "../slots";
@@ -30,18 +31,18 @@ export function CategoricalPicker() {
   }
 
   return (
-    <div className="flex gap-2">
+    <Stack direction="row" gap="sm">
       {presets.map((p) => (
         <button
           key={p.id}
-          className={`flex items-center gap-2 px-3 py-1.5 text-body rounded-md border transition-colors ${
+          className={`flex items-center gap-sm px-md py-xs text-body rounded-md border transition-colors ${
             p.id === activeId
               ? "border-primary bg-primary/10 text-primary"
               : "border-border text-muted-foreground hover:border-primary/50"
           }`}
           onClick={() => setConfig("preset", p.id)}
         >
-          <span className="flex gap-0.5">
+          <span className="flex gap-2xs">
             {KEYS.map((k) => (
               <span
                 key={k}
@@ -53,6 +54,6 @@ export function CategoricalPicker() {
           {p.label}
         </button>
       ))}
-    </div>
+    </Stack>
   );
 }

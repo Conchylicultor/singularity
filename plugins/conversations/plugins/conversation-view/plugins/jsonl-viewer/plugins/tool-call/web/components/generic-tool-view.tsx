@@ -25,7 +25,8 @@ export function GenericToolView({ event }: ToolRendererProps) {
         <Text
           as="pre"
           variant="caption"
-          className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/60 p-2"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the input block from the card header
+          className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/60 p-sm"
         >
           {formatJson(event.input)}
         </Text>
@@ -34,7 +35,8 @@ export function GenericToolView({ event }: ToolRendererProps) {
         <Text
           as="pre"
           variant="caption"
-          className={`mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md p-2 ${
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the result block from the input block above
+          className={`mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md p-sm ${
             event.result.isError
               ? "bg-destructive/10 text-destructive"
               : "bg-muted/60"

@@ -27,7 +27,7 @@ export function HeaderBox({
 
   return (
     <div className="rounded-md border border-border/50">
-      <div className="flex items-center gap-0.5 px-1.5 py-1">
+      <div className="flex items-center gap-2xs px-xs py-xs">
         <button
           type="button"
           onClick={() => onPatch({ collapsed: !collapsed })}
@@ -44,7 +44,7 @@ export function HeaderBox({
           {payload.label || "Group"}
         </Text>
       </div>
-      {!collapsed && <div className="px-1.5 pb-1.5">{children}</div>}
+      {!collapsed && <div className="px-xs pb-xs">{children}</div>}
     </div>
   );
 }

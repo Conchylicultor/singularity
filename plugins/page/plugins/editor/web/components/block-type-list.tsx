@@ -67,7 +67,7 @@ export function BlockTypeList({
 }) {
   if (blocks.length === 0) {
     return (
-      <Text as="div" variant="body" className="text-muted-foreground px-2 py-1.5">
+      <Text as="div" variant="body" className="text-muted-foreground px-sm py-xs">
         No block types
       </Text>
     );

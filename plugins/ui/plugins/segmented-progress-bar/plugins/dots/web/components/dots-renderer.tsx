@@ -23,7 +23,7 @@ export function DotsRenderer({
 
   if (compact) {
     return (
-      <span className="inline-flex items-center gap-0.5">
+      <span className="inline-flex items-center gap-2xs">
         {dots.map(({ step, dotClass }) => (
           <WithTooltip key={step.id} content={step.label}>
             <span className={dotClass} />
@@ -36,9 +36,9 @@ export function DotsRenderer({
   const activeLabel = steps[currentIndex]?.label ?? activeStep;
 
   return (
-    <span className="inline-flex items-center gap-1">
+    <span className="inline-flex items-center gap-xs">
       {dots.map(({ step, i, dotClass }) => (
-        <span key={step.id} className="inline-flex items-center gap-1">
+        <span key={step.id} className="inline-flex items-center gap-xs">
           <WithTooltip content={step.label}>
             <span className={dotClass} />
           </WithTooltip>
@@ -47,6 +47,7 @@ export function DotsRenderer({
           )}
         </span>
       ))}
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off label offset after the dot row; inline sibling, no flex parent to own it */}
       <Text as="span" variant="caption" className="ml-0.5 text-muted-foreground">
         {activeLabel}
       </Text>

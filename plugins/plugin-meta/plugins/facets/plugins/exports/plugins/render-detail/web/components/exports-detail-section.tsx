@@ -8,6 +8,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   Section,
   ConsumerList,
@@ -60,7 +61,7 @@ export function ExportsDetailSection({ node }: { node: PluginNode }) {
 
   return (
     <Section title="Exports" count={`${total} export${total !== 1 ? "s" : ""}`}>
-      <div className="flex flex-col gap-3">
+      <Stack gap="md">
         {RUNTIMES.map((rt) =>
           data[rt].length > 0 ? (
             <RuntimeGroup
@@ -71,7 +72,7 @@ export function ExportsDetailSection({ node }: { node: PluginNode }) {
             />
           ) : null,
         )}
-      </div>
+      </Stack>
     </Section>
   );
 }
@@ -105,14 +106,15 @@ function RuntimeGroup({
 
   return (
     <Collapsible defaultOpen={defaultOpen}>
-      <CollapsibleTrigger className="gap-1 py-0.5 text-caption">
+      <CollapsibleTrigger className="gap-xs py-2xs text-caption">
         <CollapsibleChevron className="size-3.5 text-muted-foreground" />
         <span className={cn("font-mono font-medium", RUNTIME_COLORS[runtime])}>
           {runtime}
         </span>
         <span className="text-muted-foreground/50">({symbols.length})</span>
       </CollapsibleTrigger>
-      <CollapsibleContent className="ml-1 flex flex-col gap-px border-l border-border/50 pl-3 pt-0.5">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 indents the collapsed symbol list under its runtime trigger; one-off left offset paired with the left border, not sibling rhythm */}
+      <CollapsibleContent className="ml-1 flex flex-col gap-px border-l border-border/50 pl-md pt-2xs">
         {sorted.map((row) => (
           <SymbolRow key={row.name} row={row} />
         ))}

@@ -8,6 +8,7 @@ import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { workflowNodePane } from "../panes";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
 
@@ -50,14 +51,14 @@ function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
 
   return (
     <PaneChrome pane={workflowNodePane} title={title}>
-      <div className="space-y-3 p-4">
+      <Stack gap="md" className="p-lg">
         {!node ? (
           <Text as="div" variant="body" className="text-muted-foreground">
             {status === "tracing" ? "Parsing workflow…" : "Step not found."}
           </Text>
         ) : (
           <>
-            <div className="flex flex-wrap items-center gap-1.5 text-2xs">
+            <div className="flex flex-wrap items-center gap-xs text-2xs">
               {node.phase && (
                 <Badge variant="muted" size="sm">
                   {node.phase}
@@ -92,7 +93,7 @@ function WorkflowNodePaneInner({ events }: { events: JsonlEvent[] }) {
             </div>
           </>
         )}
-      </div>
+      </Stack>
     </PaneChrome>
   );
 }

@@ -59,7 +59,7 @@ export function TreeRowChrome({
       onClick={onSelect}
       // eslint-disable-next-line row/no-adhoc-row -- bespoke named-group (group/tree-row) hover scoping; Row's bare-group slots leak the reveal under ancestor groups
       className={cn(
-        "group/tree-row flex min-h-7 items-center gap-1 rounded-md px-1 py-1 text-body",
+        "group/tree-row flex min-h-7 items-center gap-xs rounded-md px-xs py-xs text-body",
         "hover:bg-accent",
         selected && "bg-accent",
         className,
@@ -93,7 +93,7 @@ export function TreeRowChrome({
       {actions && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="flex shrink-0 items-center gap-0.5 opacity-0 group-hover/tree-row:opacity-100"
+          className="flex shrink-0 items-center gap-2xs opacity-0 group-hover/tree-row:opacity-100"
         >
           {actions}
         </div>

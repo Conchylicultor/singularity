@@ -45,7 +45,7 @@ export function CommunityThemeCard({
       )}
     >
       <div
-        className="flex items-end justify-center gap-1 px-3 py-3 h-16"
+        className="flex items-end justify-center gap-xs px-md py-md h-16"
         style={{ backgroundColor: bg }}
       >
         {COLOR_BARS.map((key) => (
@@ -57,7 +57,7 @@ export function CommunityThemeCard({
         ))}
       </div>
 
-      <div className="flex items-center gap-1.5 border-t border-border px-2 py-1.5">
+      <div className="flex items-center gap-xs border-t border-border px-sm py-xs">
         <Text
           as="span"
           variant="label"
@@ -67,7 +67,7 @@ export function CommunityThemeCard({
           {theme.name}
         </Text>
         {theme.source === "registry" && (
-          <span className="shrink-0 rounded-full bg-primary/10 px-1.5 text-3xs uppercase tracking-wide text-primary">
+          <span className="shrink-0 rounded-full bg-primary/10 px-xs text-3xs uppercase tracking-wide text-primary">
             curated
           </span>
         )}

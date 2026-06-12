@@ -15,6 +15,7 @@ export function QueuedChipAction({ taskId }: { taskId: string; hasChildren: bool
       as="button"
       variant="warning"
       size="sm"
+      // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1 one-off inline offset of the chip from its preceding label; no parent gap to lift into
       className="ml-1 shrink-0 hover:bg-warning/20"
       title="Auto-start when parent is done — click to cancel"
       aria-label={`Cancel auto-start (${label})`}

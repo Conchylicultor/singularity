@@ -2,6 +2,7 @@ import { useState, type ReactElement } from "react";
 import { MdDelete } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import type { BlockEditorAPI } from "../types";
 import { useInsertableBlocks, BlockTypeList } from "./block-type-list";
@@ -35,14 +36,14 @@ export function BlockActionsMenu({
       }}
       align={align}
       side={side}
-      contentClassName="w-56 p-1"
+      contentClassName="w-56 p-xs"
       trigger={trigger}
     >
-      <div className="flex flex-col gap-1">
+      <Stack gap="xs">
         <Text
           as="div"
           variant="caption"
-          className="text-muted-foreground px-2 pt-1 font-medium uppercase tracking-wide"
+          className="text-muted-foreground px-sm pt-xs font-medium uppercase tracking-wide"
         >
           Turn into
         </Text>
@@ -55,6 +56,7 @@ export function BlockActionsMenu({
             setOpen(false);
           }}
         />
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- my-0.5 is a hairline separator's own inset between the menu's two zones; not a Stack-gap rhythm (the surrounding gap-xs is intentionally tighter) */}
         <div className="bg-border my-0.5 h-px" />
         <Row
           className="text-destructive"
@@ -67,7 +69,7 @@ export function BlockActionsMenu({
         >
           Delete
         </Row>
-      </div>
+      </Stack>
     </InlinePopover>
   );
 }

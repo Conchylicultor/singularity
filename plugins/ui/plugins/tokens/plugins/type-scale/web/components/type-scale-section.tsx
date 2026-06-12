@@ -5,6 +5,7 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   TokenRow,
   TokenModeContext,
@@ -64,14 +65,15 @@ export function TypeScaleSection({ search }: { search: string }) {
   if (visibleKeys.length === 0) return null;
 
   return (
-    <div className="flex flex-col gap-1">
+    <Stack gap="xs">
       {/* Preset picker */}
-      <div className="flex flex-wrap gap-1.5 mb-3">
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off offset separating preset picker from the token rows below */}
+      <Stack direction="row" gap="xs" wrap className="mb-3">
         {presets.map((p) => (
           <button
             key={p.id}
             type="button"
-            className={`flex items-center gap-1.5 px-2.5 py-1 text-caption rounded-md border transition-colors ${
+            className={`flex items-center gap-xs px-sm py-xs text-caption rounded-md border transition-colors ${
               p.id === config.preset
                 ? "border-primary bg-primary/10 text-primary"
                 : "border-border text-muted-foreground hover:border-primary/50"
@@ -87,11 +89,12 @@ export function TypeScaleSection({ search }: { search: string }) {
             {p.label}
           </button>
         ))}
-      </div>
+      </Stack>
 
       {/* Token rows */}
       <Collapsible defaultOpen>
         <SectionHeaderRow variant="eyebrow">Tokens</SectionHeaderRow>
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- indent offset on third-party CollapsibleContent; no padding/gap equivalent */}
         <CollapsibleContent className="ml-2">
           {visibleKeys.map((key) => {
             const label = schema[key]?.label ?? (key as string);
@@ -132,6 +135,6 @@ export function TypeScaleSection({ search }: { search: string }) {
           })}
         </CollapsibleContent>
       </Collapsible>
-    </div>
+    </Stack>
   );
 }

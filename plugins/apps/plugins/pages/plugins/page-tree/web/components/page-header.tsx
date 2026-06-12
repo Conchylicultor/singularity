@@ -44,7 +44,7 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
   };
 
   return (
-    <div className="flex items-center gap-2 px-1 pb-2">
+    <div className="flex items-center gap-sm px-xs pb-sm">
       <PageIconButton
         value={{ icon: data?.icon ?? null, iconSvgNodes: data?.iconSvgNodes ?? null }}
         onChange={saveIcon}

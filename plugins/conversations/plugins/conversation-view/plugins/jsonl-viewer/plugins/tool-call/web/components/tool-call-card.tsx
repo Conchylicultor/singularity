@@ -29,7 +29,7 @@ interface ToolCallCardProps {
 
 function RunningDots() {
   return (
-    <span className="flex shrink-0 items-center gap-1">
+    <span className="flex shrink-0 items-center gap-xs">
       {[0, 150, 300].map((delay) => (
         <span
           key={delay}

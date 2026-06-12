@@ -82,7 +82,7 @@ export function CategoryChipToolbar() {
           {label}
         </Badge>
       }
-      contentClassName="w-56 p-1"
+      contentClassName="w-56 p-xs"
     >
         <ConfigPopoverHeader
           label="Set category"
@@ -114,6 +114,7 @@ export function CategoryChipToolbar() {
             );
           })}
         </ul>
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- one-off vertical offset on a 1px divider between list and re-classify row */}
         <div className="my-1 h-px bg-border" />
         <Row
           size="sm"

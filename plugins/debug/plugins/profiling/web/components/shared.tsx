@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { createContext, useContext, type ReactElement } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   formatDuration,
   GanttContainer,
@@ -108,7 +109,7 @@ export function PhaseGroup({
 
   return (
     <div className={cn("border-b", config.bg)}>
-      <div className="flex items-center gap-2 px-4 py-1.5">
+      <div className="flex items-center gap-sm px-lg py-xs">
         <div className={cn("size-2.5 rounded-full", config.color)} />
         <Text as="div" variant="caption" className="font-semibold">{config.label}</Text>
         <Text as="div" variant="caption" className="font-mono tabular-nums text-muted-foreground">
@@ -125,11 +126,11 @@ export function PhaseGroup({
       </div>
 
       {spans.length > 0 && (
-        <div className="space-y-0.5 px-4 pb-2">
+        <Stack gap="2xs" className="px-lg pb-sm">
           {spans.map((span) => (
             <SpanRow key={span.id} span={span} color={config.color} />
           ))}
-        </div>
+        </Stack>
       )}
     </div>
   );
@@ -147,7 +148,7 @@ export function SpanRow({
   const isHovered = hovered?.id === span.id;
   return (
     <div
-      className="flex items-center gap-2 py-0.5"
+      className="flex items-center gap-sm py-2xs"
       onMouseEnter={() => setHovered(span)}
       onMouseLeave={() => setHovered(null)}
     >
@@ -185,19 +186,22 @@ export function SpanDetail({
     <Text
       as="div"
       variant="caption"
-      className={cn("border-t bg-muted/50 px-4 py-2", className)}
+      className={cn("border-t bg-muted/50 px-lg py-sm", className)}
     >
       {span ? (
         <>
           <span className="font-mono font-medium">{span.id}</span>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal padding around a middot separator between inline detail spans */}
           <span className="mx-2 text-muted-foreground">&middot;</span>
           <span>
             Phase: <strong>{span.phase}</strong>
           </span>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal padding around a middot separator between inline detail spans */}
           <span className="mx-2 text-muted-foreground">&middot;</span>
           <span>
             Start: <strong>+{formatDuration(span.startMs)}</strong>
           </span>
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal padding around a middot separator between inline detail spans */}
           <span className="mx-2 text-muted-foreground">&middot;</span>
           <span>
             Duration: <strong>{formatDuration(span.durationMs)}</strong>

@@ -40,7 +40,7 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
   function Host(entityProps: EntityProps): ReactNode {
     if (options?.collapsible) {
       return (
-        <div className="flex flex-col gap-2 px-4 pb-4">
+        <div className="flex flex-col gap-sm px-lg pb-lg">
           <Section.Render>
             {(item) => {
               const C = item.component;
@@ -52,14 +52,14 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
                       return (
                         <SectionHeaderRow
                           variant="title"
-                          className="rounded-lg px-4 py-3"
+                          className="rounded-lg px-lg py-md"
                           actions={Extra ? <Extra /> : undefined}
                         >
                           {item.label}
                         </SectionHeaderRow>
                       );
                     })()}
-                    <CollapsibleContent className="px-4 pb-4">
+                    <CollapsibleContent className="px-lg pb-lg">
                       <C {...entityProps} />
                     </CollapsibleContent>
                   </div>
@@ -71,7 +71,7 @@ export function defineDetailSections<EntityProps extends Record<string, unknown>
       );
     }
     return (
-      <div className="flex flex-col gap-6 p-6">
+      <div className="flex flex-col gap-xl p-xl">
         <Section.Render>
           {(item) => {
             const C = item.component;

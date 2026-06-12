@@ -40,7 +40,7 @@ function PluginConvSideBody() {
       {isLoading ? (
         <Loading className="flex h-full items-center justify-center" />
       ) : error ? (
-        <Text as="div" variant="body" tone="muted" className="flex h-full items-center justify-center p-8">
+        <Text as="div" variant="body" tone="muted" className="flex h-full items-center justify-center p-2xl">
           {String(error)}
         </Text>
       ) : (

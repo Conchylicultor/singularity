@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { Server } from "../../shared";
 import { deleteServer } from "../../shared/endpoints";
@@ -16,17 +17,17 @@ export function ServerDetail({ server }: { server: Server }) {
   }
 
   return (
-    <div className="flex flex-col gap-4 p-4">
+    <div className="flex flex-col gap-lg p-lg">
       <div className="flex items-start justify-between">
-        <div>
-          <div className="flex items-center gap-2">
+        <Stack gap="xs">
+          <div className="flex items-center gap-sm">
             <Text as="h3" variant="subheading">{server.name}</Text>
             <ServerStatusBadge status={server.status} />
           </div>
-          <Text as="div" variant="body" className="text-muted-foreground mt-1">
+          <Text as="div" variant="body" className="text-muted-foreground">
             {server.sshUser}@{server.host}:{server.port}
           </Text>
-        </div>
+        </Stack>
         <button
           onClick={handleDelete}
           disabled={deleting}
@@ -35,7 +36,7 @@ export function ServerDetail({ server }: { server: Server }) {
           Delete
         </button>
       </div>
-      <Text as="div" variant="caption" className="flex gap-4">
+      <Text as="div" variant="caption" className="flex gap-lg">
         <div>
           <span className="text-muted-foreground">SSH Key: </span>
           <span className={server.sshKeyConfigured ? "text-success" : "text-warning"}>

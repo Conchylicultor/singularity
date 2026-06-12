@@ -34,11 +34,11 @@ export function TopConversationsTable() {
         <table className="w-full text-body">
           <thead>
             <tr className="border-b text-left text-caption text-muted-foreground">
-              <th className="px-2 py-1.5 font-medium">Conversation</th>
-              <th className="px-2 py-1.5 font-medium">Model(s)</th>
-              <th className="px-2 py-1.5 text-right font-medium">Cost</th>
-              <th className="px-2 py-1.5 text-right font-medium">Tokens</th>
-              <th className="px-2 py-1.5 font-medium">Last activity</th>
+              <th className="px-sm py-xs font-medium">Conversation</th>
+              <th className="px-sm py-xs font-medium">Model(s)</th>
+              <th className="px-sm py-xs text-right font-medium">Cost</th>
+              <th className="px-sm py-xs text-right font-medium">Tokens</th>
+              <th className="px-sm py-xs font-medium">Last activity</th>
             </tr>
           </thead>
           <tbody>
@@ -71,8 +71,8 @@ function TopRow({ row }: { row: Row }) {
         isClickable && "cursor-pointer hover:bg-muted/50",
       )}
     >
-      <td className="px-2 py-1.5">
-        <div className="flex items-baseline gap-2">
+      <td className="px-sm py-xs">
+        <div className="flex items-baseline gap-sm">
           <span className="truncate font-medium text-foreground">
             {row.title ?? <UntitledLabel sessionId={row.sessionId} />}
           </span>
@@ -81,16 +81,16 @@ function TopRow({ row }: { row: Row }) {
           )}
         </div>
       </td>
-      <td className="px-2 py-1.5 text-caption text-muted-foreground">
+      <td className="px-sm py-xs text-caption text-muted-foreground">
         {row.modelsUsed.join(", ")}
       </td>
-      <td className="px-2 py-1.5 text-right font-mono tabular-nums">
+      <td className="px-sm py-xs text-right font-mono tabular-nums">
         {formatUsd(row.totalCost)}
       </td>
-      <td className="px-2 py-1.5 text-right font-mono tabular-nums text-muted-foreground">
+      <td className="px-sm py-xs text-right font-mono tabular-nums text-muted-foreground">
         {formatTokensCompact(totalTokens)}
       </td>
-      <td className="px-2 py-1.5 text-caption text-muted-foreground">
+      <td className="px-sm py-xs text-caption text-muted-foreground">
         {row.lastActivity}
       </td>
     </tr>

@@ -6,6 +6,7 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -110,7 +111,7 @@ export function FloatingTemplateChips({
   if (templates.length === 0) return null;
 
   return (
-    <div className="flex items-center gap-1.5">
+    <Stack direction="row" gap="xs" align="center">
       {pinnedTemplates.length > 0 && (
         <ResponsiveOverflow gap={4} className="items-center">
           {pinnedTemplates.map((t) => (
@@ -129,17 +130,17 @@ export function FloatingTemplateChips({
       <FloatingAction
         className="relative size-7 z-popover"
         variant="ghost"
-        panelClassName="flex-col-reverse items-end gap-1 p-1 group-data-hovered/fa:px-1.5 max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-56"
+        panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-hovered/fa:px-xs max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-56"
       >
         <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
-        <FloatingActionFadeIn className="flex flex-col items-start gap-1">
+        <FloatingActionFadeIn className="flex flex-col items-start gap-xs">
           <div className="self-end">
             <ConfigGearButton
               descriptor={promptTemplatesConfig}
               label="Configure: Prompt templates"
             />
           </div>
-          <div className="flex max-h-40 flex-wrap items-center gap-1 overflow-y-auto">
+          <div className="flex max-h-40 flex-wrap items-center gap-xs overflow-y-auto">
             {templates.map((t) => (
               <TemplateChip
                 key={t.id}
@@ -153,6 +154,6 @@ export function FloatingTemplateChips({
           </div>
         </FloatingActionFadeIn>
       </FloatingAction>
-    </div>
+    </Stack>
   );
 }

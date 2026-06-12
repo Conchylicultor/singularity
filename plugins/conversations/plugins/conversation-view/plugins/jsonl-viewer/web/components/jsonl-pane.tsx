@@ -60,8 +60,8 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
   }, [startAt]);
 
   return (
-    <div className="flex items-center gap-2 px-1 py-1">
-      <div className="flex items-center gap-1">
+    <div className="flex items-center gap-sm px-xs py-xs">
+      <div className="flex items-center gap-xs">
         {[0, 150, 300].map((delay) => (
           <span
             key={delay}
@@ -85,8 +85,8 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
       <div
         className={
           expanded
-            ? "z-raised bg-background pb-0.5"
-            : "sticky top-0 z-nav bg-background pb-0.5 shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
+            ? "z-raised bg-background pb-2xs"
+            : "sticky top-0 z-nav bg-background pb-2xs shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
         }
       >
         {children}
@@ -123,7 +123,7 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
   };
 
   return (
-    <div className="mx-auto flex max-w-reading flex-col gap-2 p-2 pb-10">
+    <div className="mx-auto flex max-w-reading flex-col gap-sm p-sm pb-2xl">
       {sections.map((section) => {
         const firstEvent = events[section.start]!;
         if (firstEvent.kind !== "user-text") {
@@ -136,7 +136,7 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
           );
         }
         return (
-          <div key={section.start} className="flex flex-col gap-2">
+          <div key={section.start} className="flex flex-col gap-sm">
             <StickyUserHeader>
               {renderEvent(section.start)}
             </StickyUserHeader>
@@ -211,7 +211,7 @@ function JsonlPaneInner({
         className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
       >
         {events.length === 0 ? (
-          <Text as="div" variant="caption" className="flex flex-col px-3 py-2 text-muted-foreground">
+          <Text as="div" variant="caption" className="flex flex-col px-md py-sm text-muted-foreground">
             <span>No transcript yet. Claude may not have written its session log.</span>
             {isWorking && <WorkingIndicator startAt={workingStartAt} />}
           </Text>
@@ -231,7 +231,7 @@ function JsonlPaneInner({
       </div>
       {totals && (
         <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-raised">
-          <div className="mx-auto flex max-w-reading justify-end px-3">
+          <div className="mx-auto flex max-w-reading justify-end px-md">
             <Badge
               colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
               className="pointer-events-auto"
@@ -270,14 +270,14 @@ export function JsonlPane({
           fallback={
             <div className="relative min-h-0 flex-1 isolate">
               <div data-pane-scroll className="h-full overflow-auto">
-                <Loading className="px-3 py-2" />
+                <Loading className="px-md py-sm" />
               </div>
             </div>
           }
           errorFallback={(err) => (
             <div className="relative min-h-0 flex-1 isolate">
               <div data-pane-scroll className="h-full overflow-auto">
-                <Text as="div" variant="caption" className="px-3 py-2 text-destructive">
+                <Text as="div" variant="caption" className="px-md py-sm text-destructive">
                   {err.message}
                 </Text>
               </div>

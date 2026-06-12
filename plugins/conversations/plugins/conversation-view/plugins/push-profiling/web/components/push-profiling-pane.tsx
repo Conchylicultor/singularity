@@ -43,7 +43,7 @@ export function PushProfilingPaneBody() {
 
   if (!data || data.groups.length === 0) {
     return (
-      <Text as="div" variant="body" className="p-4 text-muted-foreground">
+      <Text as="div" variant="body" className="p-lg text-muted-foreground">
         No push or build activity for this conversation.
       </Text>
     );

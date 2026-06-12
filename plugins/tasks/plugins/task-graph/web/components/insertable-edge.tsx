@@ -88,7 +88,7 @@ export function InsertableEdge({
       <BaseEdge path={edgePath} style={style} markerEnd={markerEnd} />
       <EdgeLabelRenderer>
         <div
-          className="nodrag nopan pointer-events-auto absolute flex items-center gap-1"
+          className="nodrag nopan pointer-events-auto absolute flex items-center gap-xs"
           style={{
             transform: `translate(-50%, -50%)`,
             left: labelX,
