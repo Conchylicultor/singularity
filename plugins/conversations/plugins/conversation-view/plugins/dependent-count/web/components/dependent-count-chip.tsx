@@ -8,5 +8,5 @@ export function DependentCountChip() {
 
   if (!conversation) return null;
 
-  return <DependentCountBadge taskId={conversation.taskId} />;
+  return <DependentCountBadge taskId={conversation.taskId} expanded />;
 }
