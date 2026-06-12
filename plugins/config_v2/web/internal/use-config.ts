@@ -6,6 +6,7 @@ import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/conf
 import { useScopeForked } from "./use-scope-forked";
 import { storePathOf } from "./store-path";
 import { useKnownServerPaths } from "./server-paths";
+import { useHasCommittedScope } from "./committed-scopes";
 
 export function useConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -44,22 +45,26 @@ export function useConfig<F extends FieldsRecord>(
   // config boot task), so it is never `pending` on first paint — that replaces
   // what Suspense was doing (no flash of default values).
   //
-  // A scope only DIFFERS from global when it is forked; an unforked scope
-  // resolves server-side to exactly the global value. So we subscribe to the
-  // scoped key only when forked, and otherwise reuse the global key. While a
-  // forked scope's value is still loading, we fall back to the GLOBAL value
-  // (the correct, currently-displayed value) — never `descriptor.defaults`,
-  // which was the original flash. All hooks are called unconditionally; only
-  // the returned value branches.
-  const forked = useScopeForked(opts?.scopeId);
-  const scoped = opts?.scopeId && forked;
+  // A scope DIFFERS from global only when it has its own config: a committed git
+  // scope (known from the boot snapshot) or a runtime user fork (useScopeForked).
+  // Both are boot-hydrated and live-tracked server-side, so we subscribe to the
+  // scoped key for them. An untracked scope resolves server-side to exactly the
+  // global value — and the server never pushes base changes to an untracked
+  // scoped key — so for it we reuse the live global key. While a scoped value is
+  // still loading, we fall back to the GLOBAL value (the correct currently-shown
+  // value), never `descriptor.defaults` (the original flash). All hooks run
+  // unconditionally; only the returned value branches.
+  const scopeId = opts?.scopeId;
+  const forked = useScopeForked(scopeId);
+  const hasCommittedScope = useHasCommittedScope(path, scopeId);
+  const useScoped = !!scopeId && (forked || hasCommittedScope);
   const globalRes = useResource(configV2Resource, { path });
   const scopedRes = useResource(
     configV2Resource,
-    scoped ? { path, scopeId: opts.scopeId } : { path },
+    useScoped ? { path, scopeId } : { path },
   );
 
-  if (scoped && !scopedRes.pending) return scopedRes.data as ConfigValues<F>;
+  if (useScoped && !scopedRes.pending) return scopedRes.data as ConfigValues<F>;
   if (!globalRes.pending) return globalRes.data as ConfigValues<F>;
   // Unreachable once boot hydration has run; safe fallback if a read races boot.
   return descriptor.defaults as ConfigValues<F>;

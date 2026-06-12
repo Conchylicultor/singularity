@@ -64,6 +64,26 @@ Code (defineConfig)  →  git config/  →  ~/.singularity/config/
 
 **Conflict detection:** When git config changes, the propagated origin hash updates. A stale user override hash triggers `console.warn` on server start. (UI notification not yet wired.)
 
+### App scopes: per-app config in git
+
+A descriptor's config can be customized **per app** straight from version control — no code declares scopes; you commit a JSONC file at an `@app/<id>` path and `./singularity build` does the rest. An app at `http://<wt>.localhost:9000` whose id is `<id>` then resolves the scoped values; every other app keeps the base value.
+
+**To customize app `<id>` for the descriptor at `<plugin-tree>` (config name `<name>`, usually `config`):**
+
+1. Create `config/<plugin-tree>/@app/<id>/<name>.jsonc`.
+2. Put **only the fields that differ** for that app, e.g. `{ "captureUrlByDefault": false }` (a partial delta — schema default-backfill fills the rest).
+3. Line 1: `// @hash <hash>` copied from the **base** origin `config/<plugin-tree>/<name>.origin.jsonc`. A scoped override anchors to the base origin — **no scoped origin is ever committed**.
+4. `./singularity build`. Propagation resolves the scope as `baseEffective ⊕ scopedDelta` and writes it to `~/.singularity/config/<wt>/<plugin-tree>/@app/<id>/<name>.origin.jsonc`.
+5. `./singularity check config-origins-in-sync` validates the `@hash` against the base origin and the document against the schema.
+
+This is the base-override workflow (Layer 1) one path segment deeper. Any registered descriptor can be git-scoped — it does **not** need `scope: "app"` (that marker only governs the theme "Customize for app" fork-all-descriptors UX).
+
+**Reading a scoped value (consumer):** thread the app scope yourself — `config_v2` is app-agnostic. `useConfig(cfg, { scopeId: appId ? \`app:${appId}\` : undefined })` with `appId = useCurrentAppId()`. Committed scopes are pre-hydrated in the boot snapshot, so the scoped value paints on the first frame (no flash). On the server, `getConfig(cfg, "app:<id>")`.
+
+**Semantics:** a committed scope is a frozen snapshot of `baseEffective ⊕ delta` (recomputed each build), so its non-overridden fields track the git base as of the last build — not a runtime base edit — consistent with every `forkScope` snapshot. A runtime user fork (theme "Customize for app") layers on top; un-customizing drops the runtime override and falls back to the committed scope, not to global.
+
+> **Not yet wired:** the settings detail pane is base-scoped — it shows and reconciles base config only. A stale *scoped* override (a committed delta changed after a runtime scoped edit) is honored on disk but is not yet surfaced in a conflict banner, because there is no per-scope settings surface. Follow-up.
+
 ### Hash chain
 
 Each layer's override records the hash of its origin (`// @hash` on line 1). Two independent hashes at the user layer:
@@ -120,7 +140,7 @@ Adding a field to an existing config (including a `listField` item or `objectFie
   - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `registerFieldStorageProvider`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `setConfigField`, `stringifyConfigValue`, `validationIssues`
+  - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `validationIssues`
 - Cross-plugin:
   - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `floating-bar`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `stats/commits`, `stats/cost`, `theme`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Sub-plugins:

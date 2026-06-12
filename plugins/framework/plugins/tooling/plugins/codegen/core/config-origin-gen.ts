@@ -1,9 +1,9 @@
-import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync } from "fs";
+import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, readdirSync, rmdirSync } from "fs";
 import { randomUUID } from "crypto";
 import { dirname, join } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
-import { computeHash, effective, propagate, readonlyProxy, stringifyConfigValue } from "@plugins/config_v2/core";
+import { computeHash, effective, propagate, readonlyProxy, stringifyConfigValue, APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigProxy, FieldDef, JsonValue } from "@plugins/config_v2/core";
 import {
   registerBarrelStubs,
@@ -415,6 +415,75 @@ export async function propagateConfigToUser(opts: {
         `[config-v2] conflict: user overwrites for "${descriptor.name}" at ${hierarchyPath} ` +
         `were based on a different upstream. Review ${join(userConfigDir, hierarchyPath, `${descriptor.name}.jsonc`)}`,
       );
+    }
+
+    // Per-app scoped overrides expressed in git: config/<hier>/@app/<id>/<name>.jsonc.
+    // Each is a base-anchored DELTA (only the fields that differ for that app). Resolve
+    // it over the base-effective config and propagate the merged document as the user
+    // scoped origin, mirroring the base layer above — so a committed scope reaches a
+    // fresh install. No scoped origin is ever committed (codegen has no scoped defaults;
+    // the base origin is the hash anchor for the scoped override).
+    const baseEff =
+      gitEff && typeof gitEff === "object" && !Array.isArray(gitEff)
+        ? (gitEff as Record<string, JsonValue>)
+        : {};
+    const gitAppDir = join(opts.root, "config", hierarchyPath, APP_SCOPE_DIR);
+    const gitScopedAppIds = new Set<string>();
+    if (existsSync(gitAppDir)) {
+      for (const appEntry of readdirSync(gitAppDir, { withFileTypes: true })) {
+        if (!appEntry.isDirectory()) continue;
+        const appId = appEntry.name;
+        const gitScopedDelta = fileConfigProxy(
+          join(gitAppDir, appId, `${descriptor.name}.jsonc`),
+        );
+        const delta = gitScopedDelta.read();
+        if (!delta) continue;
+        gitScopedAppIds.add(appId);
+        const scopedDelta =
+          delta.content && typeof delta.content === "object" && !Array.isArray(delta.content)
+            ? (delta.content as Record<string, JsonValue>)
+            : {};
+        const mergedProxy = readonlyProxy({ ...baseEff, ...scopedDelta });
+
+        const userScopedOrigin = fileConfigProxy(
+          join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.origin.jsonc`),
+        );
+        const userScopedOverwrites = fileConfigProxy(
+          join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`),
+        );
+
+        const { conflict: scopedConflict } = propagate(mergedProxy, userScopedOrigin, userScopedOverwrites);
+        if (scopedConflict) {
+          console.warn(
+            `[config-v2] conflict: user scoped override for "${descriptor.name}" @app/${appId} at ${hierarchyPath} ` +
+            `was based on a different upstream. Review ${join(userConfigDir, hierarchyPath, APP_SCOPE_DIR, appId, `${descriptor.name}.jsonc`)}`,
+          );
+        }
+      }
+    }
+
+    // Reconcile: a user scoped origin with NO git backing is a scope that was
+    // removed from version control — revert it to base so git stays the source of
+    // truth (the base layer self-heals the same way via propagate). A runtime user
+    // fork (a scoped override with no git backing) is per-user state, not stale
+    // propagation, so it is preserved.
+    const userAppDir = join(userConfigDir, hierarchyPath, APP_SCOPE_DIR);
+    if (!existsSync(userAppDir)) continue;
+    for (const appEntry of readdirSync(userAppDir, { withFileTypes: true })) {
+      if (!appEntry.isDirectory()) continue;
+      const appId = appEntry.name;
+      if (gitScopedAppIds.has(appId)) continue;
+      const appDir = join(userAppDir, appId);
+      if (existsSync(join(appDir, `${descriptor.name}.jsonc`))) continue; // runtime fork — keep
+      const stalePropagatedOrigin = join(appDir, `${descriptor.name}.origin.jsonc`);
+      if (!existsSync(stalePropagatedOrigin)) continue;
+      unlinkSync(stalePropagatedOrigin);
+      try {
+        rmdirSync(appDir);
+      } catch (err) {
+        // Another descriptor still has files here, or concurrent cleanup — leave it.
+        if ((err as NodeJS.ErrnoException).code !== "ENOTEMPTY") throw err;
+      }
     }
   }
 }

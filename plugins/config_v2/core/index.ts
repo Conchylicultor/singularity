@@ -44,3 +44,4 @@ export {
   validationIssues,
 } from "./internal/tier-logic";
 export { setConfigField, forkScope, deleteScope, configSnapshot } from "./internal/endpoints";
+export { APP_SCOPE_DIR, scopeAppId, appScopeId } from "./internal/scope-format";

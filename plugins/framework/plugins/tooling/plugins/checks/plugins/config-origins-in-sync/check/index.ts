@@ -4,9 +4,19 @@ import {
   renderConfigOriginContent,
   loadConfigDescriptorsByOriginPath,
 } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
-import { computeHash } from "@plugins/config_v2/core";
+import { computeHash, APP_SCOPE_DIR } from "@plugins/config_v2/core";
 import { parse as parseJsonc } from "jsonc-parser";
 import type { ConfigDescriptor, JsonValue } from "@plugins/config_v2/core";
+
+// A scoped override (config/<hier>/@app/<id>/<name>.jsonc) is a base-anchored
+// delta: its // @hash and schema anchor to the BASE origin
+// (config/<hier>/<name>.origin.jsonc). No scoped origin is ever committed. Strip a
+// trailing "@app/<id>/" segment to recover that base anchor; a non-scoped path is
+// returned unchanged.
+const SCOPE_SEG_RE = new RegExp(`/${APP_SCOPE_DIR}/[^/]+/([^/]+)$`);
+function stripScopeSegment(p: string): string {
+  return p.replace(SCOPE_SEG_RE, "/$1");
+}
 
 type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
 type Check = { id: string; description: string; run(): Promise<CheckResult> };
@@ -134,7 +144,7 @@ const check: Check = {
       }
       const hash = match[1]!;
 
-      const originPath = filePath.replace(/\.jsonc$/, ".origin.jsonc");
+      const originPath = stripScopeSegment(filePath).replace(/\.jsonc$/, ".origin.jsonc");
       const originRel = relative(root, originPath);
       if (!existsSync(originPath)) {
         return {
@@ -163,7 +173,7 @@ const check: Check = {
       // not that its values still satisfy the current *schema*. This is the gap
       // that let a legacy spacer node sit in a committed override until it blew
       // up at runtime.
-      const overrideOriginRel = relFromRoot
+      const overrideOriginRel = stripScopeSegment(relFromRoot)
         .replace(/^config\//, "")
         .replace(/\.jsonc$/, ".origin.jsonc");
       const descriptor = descriptorsByOriginRel.get(overrideOriginRel);

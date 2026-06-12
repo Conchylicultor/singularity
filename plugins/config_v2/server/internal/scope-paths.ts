@@ -1,5 +1,6 @@
 import { existsSync, readdirSync } from "node:fs";
 import { join } from "node:path";
+import { APP_SCOPE_DIR } from "../../core";
 import { CONFIG_DIR } from "./config-dir";
 
 // Canonical base-scope key. "" means "no scope" — base/global config that lives
@@ -13,7 +14,7 @@ export function scopeSegment(scopeId?: string): string {
   if (!scopeId) return "";
   const [kind, ...rest] = scopeId.split(":");
   if (kind !== "app") throw new Error(`Unknown scope kind: ${kind}`);
-  return `@app/${rest.join(":")}`;
+  return `${APP_SCOPE_DIR}/${rest.join(":")}`;
 }
 
 // Absolute user-config directory for a descriptor at `hierarchyPath`, under the
@@ -24,13 +25,18 @@ export function userScopedDir(hierarchyPath: string, scopeId?: string): string {
 }
 
 // Reverse of scopeSegment, for boot-time discovery: every scopeId that already
-// has a config directory on disk under `hierarchyPath`. Keeps the "@app/<id>" →
-// "app:<id>" encoding next to the forward mapping so the registry never hard-codes
-// the path convention. A missing "@app" dir is the normal un-forked case → [].
-export function discoverScopeIds(hierarchyPath: string): string[] {
-  const appDir = join(CONFIG_DIR, hierarchyPath, "@app");
+// has a config directory on disk under `hierarchyPath` within `baseDir`. Keeps
+// the "@app/<id>" → "app:<id>" encoding next to the forward mapping so callers
+// never hard-code the path convention. A missing "@app" dir → [].
+export function discoverScopeIdsIn(baseDir: string, hierarchyPath: string): string[] {
+  const appDir = join(baseDir, hierarchyPath, APP_SCOPE_DIR);
   if (!existsSync(appDir)) return [];
   return readdirSync(appDir, { withFileTypes: true })
     .filter((e) => e.isDirectory())
     .map((e) => `app:${e.name}`);
+}
+
+// User-layer scopes (propagated git scopes + runtime forks) for a descriptor.
+export function discoverScopeIds(hierarchyPath: string): string[] {
+  return discoverScopeIdsIn(CONFIG_DIR, hierarchyPath);
 }

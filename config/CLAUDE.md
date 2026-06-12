@@ -6,8 +6,9 @@ Git-committed config defaults and overrides. Structure mirrors `~/.singularity/c
 
 ```
 config/<plugin-tree>/
-  <name>.origin.jsonc   # Auto-generated from defineConfig defaults — DO NOT edit
-  <name>.jsonc          # Agent overrides (optional, hand-edited, committed)
+  <name>.origin.jsonc          # Auto-generated from defineConfig defaults — DO NOT edit
+  <name>.jsonc                 # Agent overrides (optional, hand-edited, committed)
+  @app/<id>/<name>.jsonc       # Per-app override (optional) — applies only to app <id>
 ```
 
 Every file starts with `// @hash <12-hex>` on line 1.
@@ -18,6 +19,17 @@ Every file starts with `// @hash <12-hex>` on line 1.
 2. Copy `<name>.origin.jsonc` → `<name>.jsonc`
 3. Edit values in the copy. Keep the `// @hash` line — it must match the origin's hash.
 4. Commit both files.
+
+## How to override defaults for a specific app
+
+Customize app `<id>` (e.g. `agent-manager`) for a descriptor:
+
+1. Create `config/<plugin-tree>/@app/<id>/<name>.jsonc`.
+2. Put **only the fields that differ** for that app (a partial delta — the rest inherit the base value).
+3. Line 1: `// @hash <hash>` copied from the **base** origin `config/<plugin-tree>/<name>.origin.jsonc`. A scoped override anchors to the base origin; **never** add a scoped `.origin.jsonc`.
+4. `./singularity build` propagates it (resolved as `base ⊕ delta`). Commit the `@app/<id>/<name>.jsonc`.
+
+See `plugins/config_v2/CLAUDE.md` → "App scopes" for resolution semantics and how consumers read scoped values.
 
 ## When origin changes
 

@@ -6,7 +6,12 @@ import { configV2ValuesSchema } from "./resource";
 // paint, so config reads never flash defaults and never suspend.
 //
 // - Without `scopeId`: every descriptor's resolved GLOBAL (no-scope) config,
-//   keyed by storePath (`global`). The config_v2 boot task seeds this.
+//   keyed by storePath (`global`), PLUS every COMMITTED git scope's resolved
+//   values (`scopes`) — version-controlled per-app config is part of the app
+//   definition, so it is pre-hydrated like global for flash-free first paint.
+//   Bounded to committed scopes (config/<hier>/@app/<id>/); runtime user forks
+//   are seeded on demand by the theme-engine boot task instead. The config_v2
+//   boot task seeds both.
 // - With `scopeId`: just that scope's forked-state and — when forked — its
 //   resolved scoped values for the `scope: "app"` descriptors (`scope`). The
 //   theme-engine boot task seeds this so a hard reload of a forked app paints
@@ -18,6 +23,15 @@ export const configSnapshot = defineEndpoint({
   query: z.object({ scopeId: z.string().optional() }),
   response: z.object({
     global: z.record(configV2ValuesSchema).optional(),
+    scopes: z
+      .array(
+        z.object({
+          scopeId: z.string(),
+          path: z.string(),
+          values: configV2ValuesSchema,
+        }),
+      )
+      .optional(),
     scope: z
       .object({
         scopeId: z.string(),

@@ -12,7 +12,7 @@ import {
 } from "../../core";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import type { Disposable, JsonValue } from "../../core";
-import { userScopedDir, discoverScopeIds, BASE_SCOPE } from "./scope-paths";
+import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./scope-paths";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
@@ -171,7 +171,7 @@ function notifyValues(storePath: string, scopeId: string): void {
   configV2ServerResource.notify({ path: storePath });
   const descriptor = getDescriptorByStorePath(storePath);
   for (const sid of knownScopeIds) {
-    if (descriptor && isForked(descriptor, sid)) continue;
+    if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
     configV2ServerResource.notify({ path: storePath, scopeId: sid });
   }
 }
@@ -184,7 +184,7 @@ function notifyTiers(storePath: string, scopeId: string): void {
   configV2TiersServerResource.notify({ path: storePath });
   const descriptor = getDescriptorByStorePath(storePath);
   for (const sid of knownScopeIds) {
-    if (descriptor && isForked(descriptor, sid)) continue;
+    if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
     configV2TiersServerResource.notify({ path: storePath, scopeId: sid });
   }
 }
@@ -193,7 +193,8 @@ function getEntry(descriptor: ConfigDescriptor, scopeId: string = BASE_SCOPE): C
   return cacheByDescriptor.get(descriptor)?.get(scopeId);
 }
 
-// A scope is "forked" when its scoped override file exists on disk. An un-forked
+// A scope is "forked" when its scoped override file exists on disk — a USER fork.
+// Drives only the theme "Customize for app" toggle (isScopeForked). An un-forked
 // scope tracks base live.
 function isForked(descriptor: ConfigDescriptor, scopeId: string): boolean {
   if (!scopeId) return false;
@@ -202,6 +203,23 @@ function isForked(descriptor: ConfigDescriptor, scopeId: string): boolean {
   const scopedDir = userScopedDir(hierarchyPath, scopeId);
   const overwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
   return jsoncConfigProxy(overwritesPath).exists();
+}
+
+// A scope "has its own config" when EITHER its scoped origin (a propagated git
+// scope — committed config/<hier>/@app/<id>/) OR its scoped override (a runtime
+// fork) exists. Such a scope resolves to its own values and is decoupled from
+// base; an untracked scope resolves base live. Broader than isForked, which is
+// override-only: a committed git scope has an origin but no user override, yet
+// must still resolve to its scoped values.
+function scopeHasOwnConfig(descriptor: ConfigDescriptor, scopeId: string): boolean {
+  if (!scopeId) return false;
+  const hierarchyPath = getHierarchyPath(descriptor);
+  if (!hierarchyPath) return false;
+  const scopedDir = userScopedDir(hierarchyPath, scopeId);
+  return (
+    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.jsonc`)).exists() ||
+    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.origin.jsonc`)).exists()
+  );
 }
 
 // Scope-level forked check: a scope is forked iff ANY of its `scope: "app"`
@@ -240,6 +258,7 @@ export async function initRegistry(): Promise<void> {
     setConfigGetter(getConfig);
     setScopeForkedChecker(isScopeForked);
     const contributions = ConfigV2.Register.getContributions();
+    const registered: { descriptor: ConfigDescriptor; hierarchyPath: string }[] = [];
 
     for (const contribution of contributions) {
       const { descriptor } = contribution;
@@ -264,19 +283,21 @@ export async function initRegistry(): Promise<void> {
       // Register only the BASE entry per descriptor (as today). Scoped entries are
       // created on demand by ensureScopeEntry once a fork writes their files.
       await buildEntry(descriptor, hierarchyPath, storePath, BASE_SCOPE);
+      registered.push({ descriptor, hierarchyPath });
     }
 
-    // Rehydrate forked scoped entries from disk. Scoped (per-app) entries are
-    // otherwise only ever created lazily on fork/setConfig, so after a server
-    // restart none exist — yet their override files persist on disk. Without this
-    // the in-memory cache silently disagrees with durable state: getConfig (which
-    // needs a live entry AND the on-disk fork) falls back to base/global values
-    // for an app with a saved per-app override, and knownScopeIds stays empty so
-    // base-config changes stop notifying forked scopes. Rebuild every scoped entry
-    // whose override file is already on disk so the cache matches what was forked.
-    for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
+    // Rehydrate scoped entries from disk. Scoped (per-app) entries are otherwise
+    // only ever created lazily on fork/setConfig, so after a server restart none
+    // exist — yet their files persist on disk (a propagated git scope's origin, or
+    // a runtime fork's override). Without this the in-memory cache silently
+    // disagrees with durable state: getConfig (which needs a live entry AND the
+    // on-disk scope) falls back to base/global for an app with its own config, and
+    // knownScopeIds stays empty so base-config changes stop notifying scoped apps.
+    // Any registered descriptor can be git-scoped (a committed config/<hier>/@app/
+    // file), not just `scope: "app"` ones — so iterate the full registered set.
+    for (const { descriptor, hierarchyPath } of registered) {
       for (const scopeId of discoverScopeIds(hierarchyPath)) {
-        if (isForked(descriptor, scopeId)) {
+        if (scopeHasOwnConfig(descriptor, scopeId)) {
           await ensureScopeEntry(descriptor, scopeId);
         }
       }
@@ -334,10 +355,10 @@ export function getConfig<F extends FieldsRecord>(
   }
   if (!scopeId) return base.values as ConfigValues<F>;
 
-  // Scoped read: a forked scope (its @app/<id> override file exists on disk)
-  // returns its own values; an un-forked scope tracks base LIVE.
+  // Scoped read: a scope with its own config (a propagated git scope OR a runtime
+  // fork) returns its own values; an untracked scope tracks base LIVE.
   const scoped = getEntry(descriptor, scopeId);
-  if (scoped && isForked(descriptor, scopeId)) {
+  if (scoped && scopeHasOwnConfig(descriptor, scopeId)) {
     return scoped.values as ConfigValues<F>;
   }
   return base.values as ConfigValues<F>;
@@ -521,12 +542,16 @@ export function getRawFileContent(
     }
   };
 
-  // Git-layer files live in the repo, not the per-worktree user dir. They are
-  // repo-wide (never scope-forked), so scopeId only affects the user-layer paths.
+  // Git-layer files live in the repo, not the per-worktree user dir. A scoped
+  // override is expressed in git at config/<dir>/@app/<id>/<name>.jsonc, but its
+  // origin anchor is always the BASE origin (config/<dir>/<name>.origin.jsonc) —
+  // no scoped origin is ever committed. So the override path takes the scope
+  // segment while the origin path stays base.
   const parts = storePath.replace(/\.jsonc$/, "").split("/");
   const dir = parts.slice(0, -1).join("/");
   const name = parts[parts.length - 1]!;
-  const gitOverridePath = join(REPO_ROOT, "config", dir, `${name}.jsonc`);
+  const gitScopeSeg = scopeSegment(scopeId);
+  const gitOverridePath = join(REPO_ROOT, "config", dir, gitScopeSeg, `${name}.jsonc`);
   const gitOriginPath = join(REPO_ROOT, "config", dir, `${name}.origin.jsonc`);
 
   // Paths are returned relative to their layer root (user config dir / repo root)

@@ -12,7 +12,7 @@ export const handleForkScope = implement(forkScopeEndpoint, async ({ body }) => 
 
 export const handleDeleteScope = implement(deleteScopeEndpoint, async ({ body }) => {
   try {
-    deleteScope(body.scopeId);
+    await deleteScope(body.scopeId);
   } catch (err) {
     throw new HttpError(400, err instanceof Error ? err.message : String(err));
   }

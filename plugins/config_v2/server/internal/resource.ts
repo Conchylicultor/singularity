@@ -3,8 +3,9 @@ import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective } from "../../core";
 import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
+import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { CONFIG_DIR } from "./config-dir";
-import { userScopedDir } from "./scope-paths";
+import { userScopedDir, discoverScopeIdsIn } from "./scope-paths";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 
@@ -77,6 +78,7 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
 
 export interface ConfigSnapshotResult {
   global?: Record<string, ConfigV2Values>;
+  scopes?: { scopeId: string; path: string; values: ConfigV2Values }[];
   scope?: { scopeId: string; forked: boolean; values: Record<string, ConfigV2Values> };
 }
 
@@ -101,10 +103,20 @@ export async function getConfigSnapshot(scopeId?: string): Promise<ConfigSnapsho
     return { scope: { scopeId, forked, values } };
   }
   const global: Record<string, ConfigV2Values> = {};
+  // Committed git scopes (config/<hier>/@app/<id>/) resolved for flash-free first
+  // paint. Discovered from the REPO config dir so the payload is bounded to
+  // version-controlled scopes — runtime user forks are seeded by the theme task.
+  const scopes: { scopeId: string; path: string; values: ConfigV2Values }[] = [];
+  const repoConfigDir = join(REPO_ROOT, "config");
   for (const [path, descriptor] of descriptorByPath) {
     global[path] = resolveRedactedConfig(descriptor);
+    const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+    if (!hierarchyPath) continue;
+    for (const scopeId of discoverScopeIdsIn(repoConfigDir, hierarchyPath)) {
+      scopes.push({ scopeId, path, values: resolveRedactedConfig(descriptor, scopeId) });
+    }
   }
-  return { global };
+  return { global, scopes };
 }
 
 function computeAllConflicts(): ConfigV2Conflicts {
