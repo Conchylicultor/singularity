@@ -4,6 +4,7 @@ import { handleReport } from "./internal/handle-report";
 import { crashesResource } from "./internal/resources";
 import { recordCrash } from "./internal/record-crash";
 import { ensureCrashesMetaTask } from "./internal/meta-crashes";
+import { backfillNoiseClassification } from "./internal/backfill-noise";
 import { flushBufferedCrashes, installProcessHooks } from "./internal/process-hooks";
 import { reportCrash } from "../shared/endpoints";
 
@@ -32,5 +33,8 @@ export default {
     });
     await ensureCrashesMetaTask();
     await flushBufferedCrashes();
+    // Self-heal classifications snapshotted before the current noise rules
+    // existed (e.g. pre-2026-06-07 ResizeObserver crashes left un-muted).
+    await backfillNoiseClassification();
   },
 } satisfies ServerPluginDefinition;

@@ -8,6 +8,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
@@ -69,6 +70,15 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
           </Text>
         )}
         <div className="flex items-center gap-2 mt-0.5">
+          {n.muted && (
+            <Badge
+              size="sm"
+              variant="muted"
+              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
+            >
+              muted
+            </Badge>
+          )}
           <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
           {n.type && (
             <span className="text-3xs text-muted-foreground">{n.type}</span>

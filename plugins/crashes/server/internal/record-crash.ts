@@ -183,7 +183,7 @@ async function ensureTaskForCrash(
 
     const task = await createTask({
       folderId: CRASHES_META_TASK_ID,
-      title: taskTitle(latest, origin.staleOrigin),
+      title: taskTitle(latest, origin.staleOrigin, latest.noise),
       description: taskDescription(
         latest,
         recurrence,
@@ -206,10 +206,14 @@ async function ensureTaskForCrash(
 function taskTitle(
   row: { errorType: string | null; message: string },
   staleOrigin: boolean,
+  noise: boolean,
 ): string {
   const prefix = row.errorType ? `${row.errorType}: ` : "";
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
-  const raw = `${stalePrefix}[crash] ${prefix}${row.message}`;
+  // Tag known-benign noise so the title itself reads as "expected", matching
+  // the muted notification — not just a dimmed row with no explanation.
+  const noisePrefix = noise ? "[noise] " : "";
+  const raw = `${stalePrefix}${noisePrefix}[crash] ${prefix}${row.message}`;
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
 

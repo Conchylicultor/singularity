@@ -17,6 +17,7 @@ export { _notifications } from "./internal/tables";
 export { notificationsResource } from "./internal/resources";
 export { recordNotification } from "./internal/record-notification";
 export type { RecordNotificationInput } from "./internal/record-notification";
+export { setMutedByMetadata } from "./internal/reclassify-muted";
 
 export default {
   description: "Persistent bell-button notifications backed by the DB.",
