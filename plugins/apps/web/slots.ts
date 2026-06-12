@@ -27,12 +27,6 @@ export const Apps = {
      * dot). Painted at the icon's top-right corner; render `null` when there's
      * nothing to surface so the corner stays empty. */
     badge?: ComponentType<{ className?: string }>;
-    /** Whether the task-draft form should pre-check the "URL" capture toggle
-     * when drafting from inside this app. The current page URL is useful task
-     * context for most apps, so consumers treat `undefined` as `true`; the
-     * agent manager — where you author tasks rather than look at subject
-     * matter — opts out with `false`. */
-    captureUrlByDefault?: boolean;
   }>("apps.app", {
     docLabel: (p) => p.tooltip,
   }),

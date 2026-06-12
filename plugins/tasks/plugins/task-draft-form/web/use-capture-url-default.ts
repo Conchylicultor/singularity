@@ -1,13 +1,17 @@
-import { useActiveApp } from "@plugins/apps/web";
+import { useCurrentAppId } from "@plugins/apps/web";
+import { useConfig } from "@plugins/config_v2/web";
+import { taskDraftConfig } from "../shared/config";
 
 /**
- * Whether new draft cards should pre-check the "URL" capture toggle, read from
- * the app the form is currently rendered in. The page URL is useful task
- * context for most apps, so an app that declares nothing defaults to `true`;
- * an app opts out by setting `captureUrlByDefault: false` on its `Apps.App`
- * contribution (e.g. the agent manager). The form stays contributor-agnostic —
- * it never names a specific app.
+ * Whether new draft cards should pre-check the "URL" capture toggle. Read from
+ * the task-draft config, scoped to the app the form is rendered in: most apps
+ * keep the `true` default; an app opts out via a committed per-app config
+ * override (`config/<…>/@app/<id>/config.jsonc`), e.g. the agent manager →
+ * `false`. The form stays contributor-agnostic — config_v2 is app-agnostic and
+ * the scope is threaded by app id, never by naming a specific app.
  */
 export function useCaptureUrlDefault(): boolean {
-  return useActiveApp()?.captureUrlByDefault ?? true;
+  const appId = useCurrentAppId();
+  const scopeId = appId ? `app:${appId}` : undefined;
+  return useConfig(taskDraftConfig, { scopeId }).captureUrlByDefault;
 }

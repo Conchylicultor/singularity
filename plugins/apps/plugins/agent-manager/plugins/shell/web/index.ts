@@ -15,9 +15,6 @@ export default {
       path: "/agents",
       hostsToolbar: true,
       fallback: true,
-      // The agent manager is where tasks are authored, not subject matter —
-      // its own URL isn't useful task context, so don't pre-check "URL".
-      captureUrlByDefault: false,
     }),
   ],
 } satisfies PluginDefinition;

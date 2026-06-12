@@ -1,0 +1,5 @@
+// @hash ff4403e504ad
+{
+  // When drafting a task from inside an app, pre-check the “URL” capture toggle so the current page URL is attached as task context. Apps where you author tasks rather than inspect subject matter (e.g. the Agent Manager) override this to false per-app.
+  "captureUrlByDefault": true
+}
