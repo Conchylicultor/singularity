@@ -58,7 +58,9 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
         : live.status === "gone"
           ? "Conversation is disconnected"
           : "Starting…"
-    : "Send a message — Enter to send, Shift+Enter for newline";
+    : live.status === "working"
+      ? "Queue a message — Enter to queue, Shift+Enter for newline"
+      : "Send a message — Enter to send, Shift+Enter for newline";
 
   return (
     <PromptEditor

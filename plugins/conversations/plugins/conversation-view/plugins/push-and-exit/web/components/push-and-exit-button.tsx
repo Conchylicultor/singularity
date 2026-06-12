@@ -1,7 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
-import { MdDeleteForever, MdLogout, MdPlayArrow, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
+import { MdDeleteForever, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";
 import { isDraftEmpty, conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useHasActiveSiblingInWorktree, useConversation, useConversationById } from "@plugins/conversations/web";
 import { postConversationTurn, stopConversation } from "@plugins/conversations/core";
@@ -17,7 +17,7 @@ import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 
-type Mode = "send" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
+type Mode = "send" | "queue" | "push-and-exit" | "exit" | "drop-and-exit" | "go" | "restore" | "stop";
 
 // One action per mode: a `run` thunk owning its typed fetchEndpoint call (so
 // each mode's differing param/body/response types stay encapsulated in its own
@@ -47,6 +47,7 @@ const PRIMARY = "gap-1.5 bg-primary hover:bg-primary/90 text-primary-foreground"
 const ICONS: Record<Mode, IconType> = {
   restore: MdReplay,
   send: MdSend,
+  queue: MdPlaylistAdd,
   stop: MdStop,
   go: MdPlayArrow,
   "push-and-exit": MdRocketLaunch,
@@ -57,6 +58,7 @@ const ICONS: Record<Mode, IconType> = {
 const BUTTON_CLASS: Record<Mode, string> = {
   restore: PRIMARY,
   send: PRIMARY,
+  queue: PRIMARY,
   go: "gap-1.5 bg-success hover:bg-success/90 text-success-foreground",
   stop: "gap-1.5 bg-destructive text-destructive-foreground hover:bg-destructive/90",
   "push-and-exit": PRIMARY,
@@ -67,6 +69,7 @@ const BUTTON_CLASS: Record<Mode, string> = {
 const LABELS: Record<Mode, string> = {
   restore: "Restore",
   send: "Send",
+  queue: "Queue",
   stop: "Stop",
   go: "Go",
   "push-and-exit": "Push & Close",
@@ -109,7 +112,10 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const { mode, provisional } = useMemo((): { mode: Mode; provisional: boolean } => {
     if (!conversation || !live) return { mode: "exit", provisional: false };
     if (isNotRunning) return { mode: "restore", provisional: false };
-    if (!isDraftEmpty(draft)) return { mode: "send", provisional: false };
+    // A draft while the agent is working is queued (pasted without a C-c
+    // interrupt) rather than sent immediately — surface that as "Queue".
+    if (!isDraftEmpty(draft))
+      return { mode: live.status === "working" ? "queue" : "send", provisional: false };
     if (live.status === "working") return { mode: "stop", provisional: false };
     if (exitDecision.pending) return { mode: "exit", provisional: true };
     const { pushes, hasSibling, files } = exitDecision.data;
@@ -140,11 +146,14 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
           successToast: "Resuming conversation…",
           run: () => fetchEndpoint(resumeConversationEndpoint, { id: convId }),
         };
-      case "send": {
+      case "send":
+      case "queue": {
         const current = draftRef.current;
         if (isDraftEmpty(current)) return null;
         return {
-          verb: "Send",
+          // Same turn POST for both; the server skips the C-c interrupt when the
+          // agent is working so the turn is queued rather than sent immediately.
+          verb: m === "queue" ? "Queue" : "Send",
           run: async () => {
             await fetchEndpoint(postConversationTurn, { id: convId }, { body: { text: current } });
             clearDraft();
@@ -211,9 +220,11 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   const label =
     busy && mode === "send"
       ? "Sending…"
-      : busy && mode === "stop"
-        ? "Stopping…"
-        : LABELS[mode];
+      : busy && mode === "queue"
+        ? "Queuing…"
+        : busy && mode === "stop"
+          ? "Stopping…"
+          : LABELS[mode];
   const Icon = ICONS[mode];
 
   return (

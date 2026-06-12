@@ -523,6 +523,37 @@ async function listPanes(): Promise<
   return map;
 }
 
+/**
+ * Live working verdict for a single pane, used by send() to decide whether a
+ * C-c is safe. Mirrors list()'s core resolution (title + session file + the
+ * build/push-in-flight override) for one conversation. On any uncertainty
+ * (pane missing its session file, session read fails, status null) it returns
+ * true: skipping the C-c only forgoes clearing a partial draft, whereas a wrong
+ * C-c interrupts a streaming agent — so we bias toward "working" and let Claude
+ * Code queue the turn.
+ */
+async function paneIsWorking(conversationId: string): Promise<boolean> {
+  const pane = (await listPanes()).get(conversationId);
+  if (!pane || pane.dead) return false;
+  let state: SessionState;
+  try {
+    state = await resolveSessionState(pane.panePid);
+  } catch (err) {
+    void recordCrash({
+      source: "server-caught",
+      errorType: "SessionStateError",
+      message: `paneIsWorking: resolveSessionState failed for "${conversationId}": ${err instanceof Error ? err.message : String(err)}`,
+      label: "tmux-runtime.paneIsWorking",
+    });
+    return true; // unknown → treat as working; never C-c into a possibly-streaming agent
+  }
+  const opActive =
+    state.status === "shell" && pane.worktreePath
+      ? isWorktreeOpActive(basename(pane.worktreePath))
+      : false;
+  return resolvePaneStatus(pane.rawTitle, state, opActive).working;
+}
+
 export const tmuxRuntime: ConversationRuntime = {
   id: "tmux",
 
@@ -700,16 +731,20 @@ export const tmuxRuntime: ConversationRuntime = {
       stdout: "pipe",
       stderr: "pipe",
     }).exited;
-    // Clear any partial input the user may have typed before we paste.
-    // C-c is the standard "abort current line" signal; at the Claude CLI's
-    // input prompt it discards the entire multi-line draft without affecting
-    // the running session. send() is only called when the conversation is
-    // not working (caller guards on !working), so C-c reaches the idle input
-    // handler rather than interrupting a streaming response.
-    await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
-      stdout: "pipe",
-      stderr: "pipe",
-    }).exited;
+    // When the agent is idle, clear any partial input first. C-c is the
+    // standard "abort current line" signal; at the Claude CLI's idle input
+    // prompt it discards the entire multi-line draft without affecting the
+    // session. But when the agent is WORKING, that same C-c interrupts the
+    // streaming response — so we skip it and let Claude Code queue the pasted
+    // turn (its input box accepts and queues input while busy). Deciding here
+    // from the live pane state keeps "never interrupt a working agent" a server
+    // invariant rather than trusting the caller to guard on !working.
+    if (!(await paneIsWorking(conversationId))) {
+      await Bun.spawn([TMUX, "send-keys", "-t", conversationId, "C-c"], {
+        stdout: "pipe",
+        stderr: "pipe",
+      }).exited;
+    }
     // Bracketed paste + Enter in one atomic tmux invocation (see pasteTurn).
     await pasteTurn(conversationId, text);
   },
