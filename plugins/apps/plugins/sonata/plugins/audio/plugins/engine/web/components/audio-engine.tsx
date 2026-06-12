@@ -261,8 +261,8 @@ export function AudioEngine() {
   // Aggregate status: "Loading…" until every in-use manager is loaded, the
   // error if any failed, "Ready" otherwise. Keyed on `inUseKey` so it
   // re-evaluates whenever the in-use set changes (the reconcile effect, declared
-  // earlier, has already updated the ref by then). Published to the store for
-  // the panel to render.
+  // earlier, has already updated the ref by then). Published to the store as the
+  // engine's health slice (no UI surface reads it yet).
   useEffect(() => {
     const managers = [...managersRef.current.values()];
     if (managers.length === 0) {

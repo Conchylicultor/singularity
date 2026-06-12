@@ -2,19 +2,18 @@ import { useSyncExternalStore } from "react";
 
 /**
  * A module-level reactive store sharing the small slice of audio state that
- * crosses the engine ↔ panel boundary.
+ * crosses the engine ↔ control boundary.
  *
- * The Web Audio graph now lives in the headless, always-mounted `AudioEngine`
- * (a `Sonata.Effect`) so collapsing the player's section column never tears the
- * `AudioContext` down. The visible `AudioPanel` (a collapsible `Sonata.Section`)
- * is therefore decoupled from the graph: the slider *writes* `volume` here and
- * the engine reads it to drive master gain; the engine *writes* `status` /
- * `loadError` here and the panel reads them to render. Either component can
- * mount, unmount, or remount independently.
+ * The Web Audio graph lives in the headless, always-mounted `AudioEngine`
+ * (a `Sonata.Effect`) so no piece of mountable UI can tear the `AudioContext`
+ * down. The `VolumeControl` (a `Sonata.Toolbar` widget) is therefore decoupled
+ * from the graph: the slider *writes* `volume` here and the engine reads it to
+ * drive master gain; the engine *writes* `status` / `loadError` here. Either
+ * component can mount, unmount, or remount independently.
  *
  * Mirrors the `transport-store` module-bus pattern, with a `useSyncExternalStore`
  * subscription so React consumers re-render on change (no Context that both the
- * Effect host and the Section host would have to share).
+ * Effect host and the Toolbar host would have to share).
  */
 
 export type AudioStatus = "empty" | "loading" | "ready";
@@ -67,9 +66,21 @@ export function useAudioState(): AudioState {
   return useSyncExternalStore(subscribe, () => state);
 }
 
-/** Panel → engine: set the master volume. */
+// The level to restore on un-mute: the most recent non-zero volume. Module-level
+// (not in `state`) so a click-to-mute survives the control unmounting/remounting
+// — no UI reads it, only `toggleAudioMute` does.
+let lastNonZeroVolume = DEFAULT_VOLUME;
+
+/** Control → engine: set the master volume. */
 export function setAudioVolume(volume: number): void {
+  if (volume > 0) lastNonZeroVolume = volume;
   patch({ volume });
+}
+
+/** Mute (volume → 0) or restore the pre-mute level. Dragging to 0 then toggling
+ *  restores the last audible level; toggling an already-0 level un-mutes. */
+export function toggleAudioMute(): void {
+  setAudioVolume(state.volume > 0 ? 0 : lastNonZeroVolume);
 }
 
 /** Engine → panel: publish the aggregate load status. */

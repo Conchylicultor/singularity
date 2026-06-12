@@ -1,8 +1,7 @@
-// @hash dfe15328ec08
+// @hash 35cb68fd780f
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
-    "apps.sonata.audio.engine:audio",
     "apps.sonata.track-mixer:track-mixer",
     "apps.sonata.rich.chord-readout:chord-readout",
     "apps.sonata.sources.chord-grid:chord-grid-editor"
