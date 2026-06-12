@@ -61,24 +61,27 @@ function NotificationRow({ n, dismiss, navigateTo: nav, onClose }: { n: Notifica
       }
     >
       <div className="flex-1 min-w-0">
-        <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
-          {n.title}
-        </Text>
+        <div className="flex items-center gap-1.5 min-w-0">
+          {n.muted && (
+            <Badge
+              size="sm"
+              variant="muted"
+              className="shrink-0"
+              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
+            >
+              muted
+            </Badge>
+          )}
+          <Text as="p" variant="label" className={`truncate ${n.muted ? VARIANT_TEXT_MUTED[n.variant] : VARIANT_TEXT[n.variant]}`}>
+            {n.title}
+          </Text>
+        </div>
         {n.description && n.description !== n.title && (
           <Text as="p" variant="caption" className="text-muted-foreground line-clamp-2">
             {n.description}
           </Text>
         )}
         <div className="flex items-center gap-2 mt-0.5">
-          {n.muted && (
-            <Badge
-              size="sm"
-              variant="muted"
-              title="Low-signal / expected — dimmed, kept out of the unread badge, and never toasted."
-            >
-              muted
-            </Badge>
-          )}
           <RelativeTime date={n.createdAt} className="text-3xs text-muted-foreground" />
           {n.type && (
             <span className="text-3xs text-muted-foreground">{n.type}</span>
