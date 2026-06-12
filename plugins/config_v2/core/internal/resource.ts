@@ -77,6 +77,20 @@ export const configV2ScopesResource = resourceDescriptor<ConfigV2Scopes, { path:
   [],
 );
 
+// storePaths with a conflict in the base scope OR any app scope. Keyed by `{}`
+// (the whole list). Powers the nav-row warning badge and the rail/sidebar
+// attention dots so a scoped-only conflict is discoverable without opening each
+// descriptor — distinct from configV2ConflictsResource, which carries the full
+// per-scope entry map for a single scope (base by default).
+export const configV2ConflictPathsSchema = z.array(z.string());
+export type ConfigV2ConflictPaths = z.infer<typeof configV2ConflictPathsSchema>;
+
+export const configV2ConflictPathsResource = resourceDescriptor<ConfigV2ConflictPaths, {}>(
+  "config-v2.conflict-paths",
+  configV2ConflictPathsSchema,
+  [],
+);
+
 export const configV2ScopeForkedSchema = z.object({ forked: z.boolean() });
 export type ConfigV2ScopeForked = z.infer<typeof configV2ScopeForkedSchema>;
 

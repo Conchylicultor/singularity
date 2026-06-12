@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
-import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ScopeForked } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ConflictPathsSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
+import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { userScopedDir, discoverScopeIdsIn, discoverScopeIds } from "./scope-paths";
@@ -217,6 +217,32 @@ export const configV2ScopesServerResource = defineResource<ConfigV2Scopes, { pat
   mode: "push",
   schema: configV2ScopesSchema,
   loader: whenRegistryReady(({ path }) => computeDescriptorScopes(path)),
+});
+
+// Union of conflicting storePaths across the base scope + every app scope.
+// Reuses computeAllConflicts per scope (which only flags descriptors actually
+// customized for that scope, since an un-customized scope has no @app/<id>
+// files on disk). Backs the nav-row warning badge and rail/sidebar dots.
+function computeConflictPaths(): ConfigV2ConflictPaths {
+  const paths = new Set<string>(Object.keys(computeAllConflicts()));
+  const scopeIds = new Set<string>();
+  for (const [, descriptor] of descriptorByPath) {
+    const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+    if (hierarchyPath) {
+      for (const sid of discoverScopeIds(hierarchyPath)) scopeIds.add(sid);
+    }
+  }
+  for (const sid of scopeIds) {
+    for (const storePath of Object.keys(computeAllConflicts(sid))) paths.add(storePath);
+  }
+  return [...paths];
+}
+
+export const configV2ConflictPathsServerResource = defineResource<ConfigV2ConflictPaths, {}>({
+  key: "config-v2.conflict-paths",
+  mode: "push",
+  schema: configV2ConflictPathsSchema,
+  loader: whenRegistryReady(() => computeConflictPaths()),
 });
 
 export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {

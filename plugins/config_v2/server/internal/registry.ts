@@ -17,7 +17,7 @@ import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./sco
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
@@ -205,6 +205,9 @@ function notifyTiers(storePath: string, scopeId: string): void {
 // change re-notifies only that scope; a BASE change also re-notifies every known
 // un-forked scope, which resolves base live (mirrors notifyValues/notifyTiers).
 function notifyConflicts(storePath: string, scopeId: string): void {
+  // The aggregate conflict-paths list spans base + every scope, so any conflict
+  // change (base or scoped) can change it. Notify it once regardless of scope.
+  configV2ConflictPathsServerResource.notify({});
   if (scopeId) {
     configV2ConflictsServerResource.notify({ scopeId });
     return;
