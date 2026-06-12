@@ -10,8 +10,8 @@ export type SectionHeaderVariant = "eyebrow" | "title";
 
 const VARIANT_CLASS: Record<SectionHeaderVariant, string> = {
   eyebrow:
-    "text-xs font-medium uppercase tracking-wider text-muted-foreground",
-  title: "text-sm font-semibold",
+    "text-caption font-medium uppercase tracking-wider text-muted-foreground",
+  title: "text-body font-semibold",
 };
 
 export interface SectionHeaderRowProps {
