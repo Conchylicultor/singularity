@@ -2102,6 +2102,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
         - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
 
+- **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
+  - Web:
+    - Contributes: `ActionBar.Item` → `FullscreenToggle`
+    - Uses: `primitives/icon-button.IconButton`, `shell/action-bar.ActionBar`
+
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
   - Web:
     - Contributes: `Core.Root` → `ReconnectWatcher`, `Core.Root` → `WedgeWatchdog`, `ActionBar.Item` → `HealthDot`
@@ -2851,7 +2856,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Button`, `primitives/ui-kit.iconSizeFor`, `primitives/ui-kit.useControlSize`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps/home/app-cards`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `improve/element-picker`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
+        - Imported by: `apps/home/app-cards`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/shell`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `notifications`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/loading.Loading`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/ui-kit.cn`
@@ -3247,8 +3252,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/slot-render.defineRenderSlot`, `shell.Shell`
         - Exports: Values: `ActionBar`
       - Cross-plugin:
-        - Slot contributors: `build`, `draw-on-app`, `edit-mode`, `element-picker`, `health`, `improve`, `notifications`, `screenshot`, `theme`, `theme-customizer`
-        - Imported by: `build`, `floating-bar`, `health`, `improve`, `improve/element-picker`, `notifications`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
+        - Slot contributors: `build`, `draw-on-app`, `edit-mode`, `element-picker`, `fullscreen`, `health`, `improve`, `notifications`, `screenshot`, `theme`, `theme-customizer`
+        - Imported by: `build`, `floating-bar`, `fullscreen`, `health`, `improve`, `improve/element-picker`, `notifications`, `reorder/edit-mode`, `screenshot`, `screenshot/draw-on-app`, `theme`, `ui/theme-engine/theme-customizer`
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
       - Web:
         - Contributes: `Core.Root` → `ToasterRoot`

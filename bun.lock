@@ -1440,6 +1440,10 @@
         "react": "^19.1.0",
       },
     },
+    "plugins/fullscreen": {
+      "name": "@singularity/plugin-fullscreen",
+      "version": "0.0.1",
+    },
     "plugins/health": {
       "name": "@singularity/plugin-health",
       "version": "0.0.1",
@@ -3632,6 +3636,8 @@
     "@singularity/plugin-framework-tooling-lint-reactive-server-io": ["@singularity/plugin-framework-tooling-lint-reactive-server-io@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/reactive-server-io"],
 
     "@singularity/plugin-framework-web-sdk": ["@singularity/plugin-framework-web-sdk@workspace:plugins/framework/plugins/web-sdk"],
+
+    "@singularity/plugin-fullscreen": ["@singularity/plugin-fullscreen@workspace:plugins/fullscreen"],
 
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
 

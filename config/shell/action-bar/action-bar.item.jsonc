@@ -1,4 +1,4 @@
-// @hash b51cb97e91c7
+// @hash 9a8414362778
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -10,6 +10,7 @@
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
     "improve.element-picker:element-picker",
+    "fullscreen:fullscreen-toggle",
     "theme:theme-light-dark",
     "ui.theme-engine.theme-customizer:theme-customizer",
     "reorder.edit-mode:reorder-pen"

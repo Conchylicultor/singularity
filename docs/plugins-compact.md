@@ -136,6 +136,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`web-core`**
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
 
+- **`fullscreen`** — Toolbar toggle to enter / exit browser fullscreen.
+
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
 
 - **`improve`**
