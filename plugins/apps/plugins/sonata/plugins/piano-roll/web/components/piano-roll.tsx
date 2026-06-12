@@ -303,92 +303,105 @@ function PianoRollInner({ score, cursorBeat, tempoScale }: PianoRollProps) {
       });
   }, [projection, score.notes, speller, colorMap, hiddenIds]);
 
-  // The cursor-invariant content. Built here (cursor-free) so its element
-  // identity is stable across frames; passed as `children` to ScrollLayer.
-  const content = (
-    <>
-      <GridLines
-        score={score}
-        beatToY={projection.beatToY!}
-        laneWidth={lane.width}
-      />
+  // The cursor-invariant content, MEMOIZED on its real inputs (notes, geometry,
+  // label toggle) — pointedly NOT on `cursorBeat`. The transport bumps the
+  // cursor every rAF frame, which re-renders this component (it reads the shared
+  // context via `useSonata`); without this memo the whole note subtree's JSX is
+  // recreated and React reconciles every one of the (potentially thousands of)
+  // note nodes on every frame, which is the scrub/playback jank. Memoizing makes
+  // the element identity genuinely stable between cursor frames, so React bails
+  // out of reconciling it and only `ScrollLayer`'s single `translateY` updates —
+  // exactly the isolation the comment below the `ScrollLayer` definition
+  // describes (and which previously never actually engaged). Recomputes only when
+  // notes, the projection, the lane width, or the label toggle truly change.
+  const content = useMemo(
+    () => (
+      <>
+        <GridLines
+          score={score}
+          beatToY={projection.beatToY!}
+          laneWidth={lane.width}
+        />
 
-      {noteRects.map(({ note, rect, step, accidental, color, isBlack }) => {
-        // Note name sized to fit inside the bar; null when it can't fit legibly.
-        const fontPx = showNoteNames
-          ? noteLabelFontPx(rect.w, rect.h, accidental !== "")
-          : null;
-        return (
-        <div
-          key={note.id}
-          className="absolute z-raised"
-          style={{
-            left: rect.x,
-            top: rect.y,
-            width: Math.max(2, rect.w - 1),
-            height: Math.max(2, rect.h - 1),
-          }}
-          title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
-        >
-          {/* Color fill is its own layer so velocity-driven opacity (and the
-              black-key brightness shade) dim the bar WITHOUT also fading the
-              label sitting on top of it. */}
-          <div
-            className={cn(
-              "absolute inset-0 rounded-sm border shadow-sm",
-              // Fall back to the primary token only when no track color resolved
-              // (e.g. before the rollup loads); otherwise tint per track.
-              color ? null : "border-primary/40 bg-primary/70",
-            )}
-            style={{
-              opacity: 0.4 + (note.velocity / 127) * 0.6,
-              // Darken black-key notes one shade below their track color. Applied
-              // as a luminance filter so it works for any color format and for
-              // the token fallback alike, without parsing the color string.
-              filter: isBlack ? "brightness(0.72)" : undefined,
-              ...(color
-                ? { backgroundColor: color, borderColor: color }
-                : null),
-            }}
-          />
-          {/* Synthesia-style name, anchored to the bar's leading (bottom) edge
-              and centered. Sized by noteLabelFontPx to sit fully inside the bar
-              (naturals large on wide white keys, accidentals smaller on narrow
-              black keys). A dark halo (text-shadow) keeps the white glyph legible
-              on every palette hue — including bright amber/lime/cyan and
-              velocity-dimmed/black-key-darkened bars — without per-note luminance
-              math, which the opacity blend toward the dark roll background would
-              defeat anyway. */}
-          {fontPx !== null ? (
-            <span
-              // eslint-disable-next-line text/no-adhoc-typography -- per-note glyph sized by inline fontSize (fontPx); tight leading is required to vertically center the note-name on the falling bar
-              className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center font-semibold leading-none text-white"
+        {noteRects.map(({ note, rect, step, accidental, color, isBlack }) => {
+          // Note name sized to fit inside the bar; null when it can't fit legibly.
+          const fontPx = showNoteNames
+            ? noteLabelFontPx(rect.w, rect.h, accidental !== "")
+            : null;
+          return (
+            <div
+              key={note.id}
+              className="absolute z-raised"
               style={{
-                fontSize: fontPx,
-                textShadow:
-                  "0 1px 1.5px rgba(0,0,0,0.95), 0 0 1px rgba(0,0,0,0.9)",
+                left: rect.x,
+                top: rect.y,
+                width: Math.max(2, rect.w - 1),
+                height: Math.max(2, rect.h - 1),
               }}
+              title={`pitch ${note.pitch} · beat ${note.start.toFixed(2)}`}
             >
-              {step}
-              {accidental ? (
-                // Compact accidental tucked tight against the letter: smaller
-                // and pulled in to cancel the glyph's wide left-bearing, so the
-                // pair stays near one column wide instead of overflowing.
-                <span style={{ fontSize: "0.7em", marginLeft: "-0.12em" }}>
-                  {accidental}
+              {/* Color fill is its own layer so velocity-driven opacity (and the
+                  black-key brightness shade) dim the bar WITHOUT also fading the
+                  label sitting on top of it. */}
+              <div
+                className={cn(
+                  "absolute inset-0 rounded-sm border shadow-sm",
+                  // Fall back to the primary token only when no track color
+                  // resolved (e.g. before the rollup loads); otherwise tint.
+                  color ? null : "border-primary/40 bg-primary/70",
+                )}
+                style={{
+                  opacity: 0.4 + (note.velocity / 127) * 0.6,
+                  // Darken black-key notes one shade below their track color.
+                  // Applied as a luminance filter so it works for any color
+                  // format and the token fallback alike, without parsing it.
+                  filter: isBlack ? "brightness(0.72)" : undefined,
+                  ...(color
+                    ? { backgroundColor: color, borderColor: color }
+                    : null),
+                }}
+              />
+              {/* Synthesia-style name, anchored to the bar's leading (bottom)
+                  edge and centered. Sized by noteLabelFontPx to sit fully inside
+                  the bar (naturals large on wide white keys, accidentals smaller
+                  on narrow black keys). A dark halo (text-shadow) keeps the white
+                  glyph legible on every palette hue — including bright
+                  amber/lime/cyan and velocity-dimmed/black-key-darkened bars —
+                  without per-note luminance math, which the opacity blend toward
+                  the dark roll background would defeat anyway. */}
+              {fontPx !== null ? (
+                <span
+                  // eslint-disable-next-line text/no-adhoc-typography -- per-note glyph sized by inline fontSize (fontPx); tight leading is required to vertically center the note-name on the falling bar
+                  className="pointer-events-none absolute inset-x-0 bottom-0.5 select-none whitespace-nowrap text-center font-semibold leading-none text-white"
+                  style={{
+                    fontSize: fontPx,
+                    textShadow:
+                      "0 1px 1.5px rgba(0,0,0,0.95), 0 0 1px rgba(0,0,0,0.9)",
+                  }}
+                >
+                  {step}
+                  {accidental ? (
+                    // Compact accidental tucked tight against the letter:
+                    // smaller and pulled in to cancel the glyph's wide
+                    // left-bearing, so the pair stays near one column wide
+                    // instead of overflowing.
+                    <span style={{ fontSize: "0.7em", marginLeft: "-0.12em" }}>
+                      {accidental}
+                    </span>
+                  ) : null}
                 </span>
               ) : null}
-            </span>
-          ) : null}
-        </div>
-        );
-      })}
+            </div>
+          );
+        })}
 
-      {/* Overlays anchor against the published projection. */}
-      <ProjectionProvider projection={projection}>
-        <OverlayHost score={score} />
-      </ProjectionProvider>
-    </>
+        {/* Overlays anchor against the published projection. */}
+        <ProjectionProvider projection={projection}>
+          <OverlayHost score={score} />
+        </ProjectionProvider>
+      </>
+    ),
+    [noteRects, projection, score, lane.width, showNoteNames],
   );
 
   return (
