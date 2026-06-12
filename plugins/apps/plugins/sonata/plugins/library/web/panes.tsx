@@ -113,7 +113,9 @@ function SonataPlayerSurface(): ReactElement {
     setCurrentSong,
     clearCurrentSong,
     togglePlay,
-    seekBy,
+    seekBar,
+    startScrub,
+    endScrub,
     nudgeTempo,
   } = useSonata();
 
@@ -136,9 +138,15 @@ function SonataPlayerSurface(): ReactElement {
   // surface. The "player on screen" gate is implicit: the bus is empty on the
   // library, so no `view` check is needed.
   useEffect(() => {
-    publishSonataTransport({ togglePlay, seekBy, nudgeTempo });
+    publishSonataTransport({
+      togglePlay,
+      seekBar,
+      startScrub,
+      endScrub,
+      nudgeTempo,
+    });
     return () => publishSonataTransport(null);
-  }, [togglePlay, seekBy, nudgeTempo]);
+  }, [togglePlay, seekBar, startScrub, endScrub, nudgeTempo]);
 
   // Enumerate displays via the dispatch slot's contributions — the `Extra`
   // metadata (id/label/icon/capabilities) is fully readable; only `component`

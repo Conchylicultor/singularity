@@ -9,7 +9,7 @@
 - Web:
   - Slots: `Shortcuts.Shortcut`
   - Contributes: `Core.Root` → `ShortcutManager`
-  - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `Shortcuts`
+  - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `isEditableTarget`, `Shortcuts`
 - Cross-plugin:
   - Imported by: `apps/sonata/controls`, `primitives/icon-button`, `primitives/launch`, `reorder/edit-mode`
 

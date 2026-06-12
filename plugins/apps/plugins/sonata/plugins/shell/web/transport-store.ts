@@ -13,8 +13,13 @@
 export interface SonataTransportActions {
   /** Toggle play/pause from the current cursor. */
   togglePlay: () => void;
-  /** Move the playhead by `deltaBeat` quarter-note beats (clamped to the score). */
-  seekBy: (deltaBeat: number) => void;
+  /** Jump the playhead to the previous (`-1`) / next (`+1`) bar line — one
+   *  measure per press (tap). */
+  seekBar: (direction: -1 | 1) => void;
+  /** Begin an accelerating bar-by-bar press-and-hold repeat (-1 back / +1 fwd). */
+  startScrub: (direction: -1 | 1) => void;
+  /** End an in-progress hold, committing the landing beat. */
+  endScrub: () => void;
   /** Adjust the playback tempo scale by `delta` (e.g. +0.1 = 10% faster). */
   nudgeTempo: (delta: number) => void;
 }

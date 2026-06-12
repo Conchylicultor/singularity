@@ -218,10 +218,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `apps/sonata/shell.Sonata`
               - Server:
                 - Uses: `infra/asset-mirror.defineAssetMirror`
-        - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ←/→ seek the playhead, ↑/↓ speed up / slow down tempo.
+        - **`controls`** — Keyboard transport for Sonata: Space toggles play/pause, ↑/↓ speed up / slow down tempo, and ←/→ seek the playhead — tap to snap to the previous/next note, hold to scrub.
           - Web:
-            - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.seek-back (arrowleft)", `Shortcuts.Shortcut` "sonata.seek-forward (arrowright)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)"
-            - Uses: `apps/sonata/shell.getSonataTransport`, `primitives/shortcuts.defineShortcut`
+            - Contributes: `Shortcuts.Shortcut` "sonata.play-pause (space)", `Shortcuts.Shortcut` "sonata.tempo-up (arrowup)", `Shortcuts.Shortcut` "sonata.tempo-down (arrowdown)", `Sonata.Effect` "seek-hold" → `SeekHoldController`
+            - Uses: `apps/sonata/shell.getSonataTransport`, `apps/sonata/shell.Sonata`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.isEditableTarget`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
             - Slots: `Library.CardMeta`, `Library.Source`, `Library.Sort`
@@ -323,7 +323,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Cross-plugin:
             - Imported by: `apps/sonata/theory`
           - Core:
-            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyEntry`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `asKeySignature`, `bars`, `beatGrid`, `beatToSeconds`, `buildTempoIndex`, `collectKeyEntries`, `effectiveKeyAt`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `scaleTempo`, `scoreEndBeat`, `spellScore`
+            - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyEntry`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `asKeySignature`, `bars`, `beatGrid`, `beatToSeconds`, `buildTempoIndex`, `collectKeyEntries`, `currentBarLine`, `effectiveKeyAt`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `nextBarLine`, `prevBarLine`, `scaleTempo`, `scoreEndBeat`, `spellScore`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
             - Slots: `Sonata.Home`, `Sonata.Toolbar`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Hud`, `Sonata.Section`, `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
@@ -331,7 +331,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `TEMPO_MATH_FLOOR`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `engine`, `key-chip`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`
+            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `controls`, `engine`, `key-chip`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`
             - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-chip`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
@@ -2973,7 +2973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Shortcuts.Shortcut`
         - Contributes: `Core.Root` → `ShortcutManager`
-        - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `Shortcuts`
+        - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `isEditableTarget`, `Shortcuts`
       - Cross-plugin:
         - Imported by: `apps/sonata/controls`, `primitives/icon-button`, `primitives/launch`, `reorder/edit-mode`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).

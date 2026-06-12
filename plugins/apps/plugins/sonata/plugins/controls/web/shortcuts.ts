@@ -1,8 +1,9 @@
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { getSonataTransport } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
-/** One quarter-note beat per arrow press; one tempo step per up/down press. */
-const SEEK_BEATS = 1;
+/** One tempo step per up/down press. (←/→ seek is owned by `SeekHoldController`,
+ *  which needs keyup + auto-repeat to distinguish a tap from a press-and-hold —
+ *  something the keydown-only shortcut registry can't express.) */
 const TEMPO_STEP = 0.1;
 
 /**
@@ -23,22 +24,6 @@ export const transportShortcuts = [
     group: "Sonata",
     when: whenSonataActive,
     handler: () => getSonataTransport()?.togglePlay(),
-  }),
-  defineShortcut({
-    id: "sonata.seek-back",
-    keys: "arrowleft",
-    label: "Seek back",
-    group: "Sonata",
-    when: whenSonataActive,
-    handler: () => getSonataTransport()?.seekBy(-SEEK_BEATS),
-  }),
-  defineShortcut({
-    id: "sonata.seek-forward",
-    keys: "arrowright",
-    label: "Seek forward",
-    group: "Sonata",
-    when: whenSonataActive,
-    handler: () => getSonataTransport()?.seekBy(SEEK_BEATS),
   }),
   defineShortcut({
     id: "sonata.tempo-up",

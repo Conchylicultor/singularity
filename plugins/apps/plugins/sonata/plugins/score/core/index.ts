@@ -34,6 +34,9 @@ export {
   scaleTempo,
   bars,
   beatGrid,
+  prevBarLine,
+  nextBarLine,
+  currentBarLine,
   mergeScores,
   mergeAnnotations,
 } from "./helpers";

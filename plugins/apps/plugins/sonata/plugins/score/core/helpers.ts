@@ -38,6 +38,51 @@ export function scoreEndBeat(score: Score): number {
   return end;
 }
 
+/**
+ * The previous bar line strictly before `beat` (or 0 when there is none) — so a
+ * "seek back" tap rewinds by a whole measure, Synthesia-style: one press lands on
+ * the start of the current bar (or the previous bar if already at a bar start),
+ * the musically natural "replay this measure" unit. A small epsilon keeps a tap
+ * from sticking on the bar line it just landed on. Pure; never mutates.
+ */
+export function prevBarLine(score: Score, beat: number): number {
+  const EPS = 1e-3;
+  let best = 0;
+  for (const b of bars(score)) {
+    if (b.startBeat < beat - EPS && b.startBeat > best) best = b.startBeat;
+  }
+  return best;
+}
+
+/**
+ * The next bar line strictly after `beat` (or `scoreEndBeat` when there is none)
+ * — the forward counterpart of {@link prevBarLine}. `bars()` is sorted ascending,
+ * so the first match is the nearest. Pure; never mutates.
+ */
+export function nextBarLine(score: Score, beat: number): number {
+  const EPS = 1e-3;
+  for (const b of bars(score)) {
+    if (b.startBeat > beat + EPS) return b.startBeat;
+  }
+  return scoreEndBeat(score);
+}
+
+/**
+ * The bar line at or before `beat` — i.e. the start of the bar `beat` falls in
+ * (or 0 before the first). Unlike {@link prevBarLine} it is *inclusive*, so a
+ * `beat` sitting exactly on a bar line returns that same line. Used to anchor a
+ * backward seek to the current bar before stepping, so playback drift past a bar
+ * line can't make repeated taps stick on it. Pure; never mutates.
+ */
+export function currentBarLine(score: Score, beat: number): number {
+  const EPS = 1e-3;
+  let best = 0;
+  for (const b of bars(score)) {
+    if (b.startBeat <= beat + EPS && b.startBeat > best) best = b.startBeat;
+  }
+  return best;
+}
+
 /** An empty Score — the shell's default before any source loads. */
 export function emptyScore(): Score {
   return {

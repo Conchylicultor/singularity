@@ -11,8 +11,11 @@ import {
 import {
   buildTempoIndex,
   emptyScore,
+  currentBarLine,
   mergeAnnotations,
   mergeScores,
+  nextBarLine,
+  prevBarLine,
   scaleTempo,
   scoreEndBeat,
   spellScore,
@@ -161,6 +164,23 @@ export interface SonataContextValue {
   seekBy: (deltaBeat: number) => void;
   /** Seek the playhead to an absolute `beat`, clamped to [0, end]; re-anchors playback. */
   seekTo: (beat: number) => void;
+  /**
+   * Snap the playhead to the previous (`-1`) / next (`+1`) bar line — a single
+   * press rewinds / advances by a whole measure (Synthesia-style), so one tap is
+   * an immediate, meaningful jump rather than a tiny step.
+   */
+  seekBar: (direction: -1 | 1) => void;
+  /**
+   * Begin a held repeat in `direction` (press-and-hold): steps bar-by-bar at an
+   * accelerating cadence until `endScrub` — discrete jumps, not a smooth glide.
+   * Playback is suspended for the duration and restored on release (mirroring the
+   * piano-roll drag-scrub's pause-on-grab / resume-on-settle), so the rapid
+   * stepping never thrashes the audio scheduler.
+   */
+  startScrub: (direction: -1 | 1) => void;
+  /** End an in-progress {@link startScrub}: commit the landing beat and, if
+   *  playback was running when the hold began, resume it from there. */
+  endScrub: () => void;
   /** Set the playback tempo multiplier (clamped to [0.25, 4]). */
   setTempoScale: (scale: number) => void;
 
@@ -401,6 +421,111 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     [seekTo],
   );
 
+  // Single-press jump: snap to the previous / next bar line (a whole measure).
+  // Goes through `seekTo`, so a tap while playing jumps the audio and keeps
+  // going. Reads the live cursor + score from refs so it stays stable.
+  const seekBar = useCallback(
+    (direction: -1 | 1) => {
+      const score = scoreRef.current;
+      const here = cursorBeatRef.current;
+      if (direction > 0) {
+        seekTo(nextBarLine(score, here));
+        return;
+      }
+      // Backward. Paused, `prevBarLine` snaps to the current bar's start (or the
+      // previous bar when already on a line) — the natural "replay this measure".
+      // While playing, the cursor drifts forward between taps, so a naive
+      // `prevBarLine(here)` keeps landing on the bar the playhead just rolled off
+      // and repeated taps never get past it. Anchor to the *current* bar and step
+      // to the one before it, which walks strictly backward regardless of drift.
+      seekTo(
+        isPlayingRef.current
+          ? prevBarLine(score, currentBarLine(score, here))
+          : prevBarLine(score, here),
+      );
+    },
+    [seekTo],
+  );
+
+  // --- Press-and-hold repeat. ----------------------------------------------
+  // A self-driven rAF loop that steps the cursor bar-by-bar at an accelerating
+  // cadence while a control is held — discrete jumps (NOT a smooth glide), like
+  // holding the rewind key in a media player. Playback is suspended for the
+  // duration so the rapid stepping never re-anchors / restarts the audio
+  // scheduler per step (the old flicker); a single clean re-anchor happens in
+  // `endScrub`. Cadence timing reads the wall clock directly (`performance.now`),
+  // NOT the transport clock: while paused the audio clock (`ctx.currentTime`) is
+  // frozen, so it would report `dt = 0` and the hold would never advance.
+  const scrubRafRef = useRef<number | null>(null);
+  const scrubWasPlayingRef = useRef(false);
+
+  const startScrub = useCallback((direction: -1 | 1) => {
+    if (scrubRafRef.current !== null) return; // already holding
+    const end = scoreEndBeat(scoreRef.current);
+    if (end <= 0) return;
+
+    // Suspend playback while holding; remember whether to resume on release.
+    scrubWasPlayingRef.current = isPlayingRef.current;
+    if (isPlayingRef.current) setIsPlaying(false);
+
+    // Seconds between bar steps: starts spaced out so a brief hold steps a few
+    // bars, then tightens the longer it's held so a far rewind doesn't crawl.
+    const START_INTERVAL = 0.16;
+    const MIN_INTERVAL = 0.05;
+    const ACCEL = 0.06; // interval shaved per second held
+
+    let last = performance.now() / 1000;
+    let held = 0;
+    let acc = 0;
+    const step = () => {
+      const now = performance.now() / 1000;
+      const dt = now - last;
+      last = now;
+      held += dt;
+      acc += dt;
+      const interval = Math.max(MIN_INTERVAL, START_INTERVAL - held * ACCEL);
+      if (acc >= interval) {
+        acc = 0;
+        const here = cursorBeatRef.current;
+        const next =
+          direction < 0
+            ? prevBarLine(scoreRef.current, here)
+            : nextBarLine(scoreRef.current, here);
+        // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
+        // bump) since playback is suspended. Keep the ref in sync for the next
+        // step + the final `endScrub` commit.
+        if (next !== here) {
+          cursorBeatRef.current = next;
+          setCursorBeat(next);
+        }
+      }
+      scrubRafRef.current = requestAnimationFrame(step);
+    };
+    scrubRafRef.current = requestAnimationFrame(step);
+  }, []);
+
+  const endScrub = useCallback(() => {
+    if (scrubRafRef.current === null) return;
+    cancelAnimationFrame(scrubRafRef.current);
+    scrubRafRef.current = null;
+    if (scrubWasPlayingRef.current) {
+      // Resuming re-anchors at the landing beat and reschedules audio once.
+      scrubWasPlayingRef.current = false;
+      play();
+    } else {
+      // Paused: commit the landing beat (re-anchor + signal once) so a later
+      // play starts from exactly where the scrub stopped.
+      seekTo(cursorBeatRef.current);
+    }
+  }, [play, seekTo]);
+
+  // Cancel any in-flight scrub loop on unmount so the rAF doesn't outlive us.
+  useEffect(() => {
+    return () => {
+      if (scrubRafRef.current !== null) cancelAnimationFrame(scrubRafRef.current);
+    };
+  }, []);
+
   const setTempoScale = useCallback((scale: number) => {
     const clamped = Math.max(
       MIN_TEMPO_SCALE,
@@ -533,6 +658,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       setCursorBeat,
       seekBy,
       seekTo,
+      seekBar,
+      startScrub,
+      endScrub,
       setTempoScale,
       play,
       stop,
@@ -562,6 +690,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       nudgeTempo,
       seekBy,
       seekTo,
+      seekBar,
+      startScrub,
+      endScrub,
       setTempoScale,
       play,
       stop,

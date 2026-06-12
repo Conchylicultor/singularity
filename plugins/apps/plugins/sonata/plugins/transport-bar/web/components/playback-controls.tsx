@@ -1,6 +1,13 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { useMemo } from "react";
-import { MdAdd, MdPause, MdPlayArrow, MdRemove } from "react-icons/md";
+import { useMemo, useRef } from "react";
+import {
+  MdAdd,
+  MdFastForward,
+  MdFastRewind,
+  MdPause,
+  MdPlayArrow,
+  MdRemove,
+} from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -34,6 +41,93 @@ function bpmAtBeat(score: Score, beat: number): number {
   const secondsPerBeat =
     (beatToSeconds(score, beat + EPS) - beatToSeconds(score, beat)) / EPS;
   return 60 / secondsPerBeat;
+}
+
+/**
+ * Held longer than this, a press escalates from a single bar jump into the
+ * bar-by-bar repeat. Short enough that a deliberate hold catches quickly; long
+ * enough that an ordinary click stays a single one-measure jump.
+ */
+const HOLD_TO_REPEAT_MS = 220;
+
+/**
+ * A rewind / forward button: **press** jumps one measure (the previous/next bar
+ * line), **press-and-hold** then repeats bar-by-bar at an accelerating cadence
+ * until release. Both drive the shared transport, so the button and the ←/→ keys
+ * behave identically. Pointer-driven (acts on press, not click) so the jump is
+ * immediate and the hold gesture is first-class.
+ */
+function SeekButton({
+  direction,
+  icon: Icon,
+  label,
+  shortcut,
+  disabled,
+}: {
+  direction: -1 | 1;
+  icon: typeof MdFastRewind;
+  label: string;
+  shortcut: string;
+  disabled: boolean;
+}) {
+  const { seekBar, startScrub, endScrub } = useSonata();
+  // Pending hold timer + whether this press has escalated to the held repeat.
+  const holdTimer = useRef<number | null>(null);
+  const scrubbing = useRef(false);
+
+  const clearHoldTimer = () => {
+    if (holdTimer.current !== null) {
+      window.clearTimeout(holdTimer.current);
+      holdTimer.current = null;
+    }
+  };
+
+  const onPointerDown = (e: React.PointerEvent<HTMLButtonElement>) => {
+    if (e.button !== 0) return; // primary button / touch only
+    e.preventDefault();
+    // Capture so the release (and any drift outside the button) still lands here.
+    e.currentTarget.setPointerCapture(e.pointerId);
+    // Jump one measure right away; if the press is held, escalate to the repeat.
+    seekBar(direction);
+    holdTimer.current = window.setTimeout(() => {
+      holdTimer.current = null;
+      scrubbing.current = true;
+      startScrub(direction);
+    }, HOLD_TO_REPEAT_MS);
+  };
+
+  const onPointerUp = () => {
+    clearHoldTimer();
+    if (scrubbing.current) {
+      scrubbing.current = false;
+      endScrub();
+    }
+  };
+
+  // Capture lost (e.g. the press is interrupted): cancel a pending repeat and end
+  // one already running.
+  const onLostCapture = () => {
+    clearHoldTimer();
+    if (scrubbing.current) {
+      scrubbing.current = false;
+      endScrub();
+    }
+  };
+
+  return (
+    <button
+      type="button"
+      aria-label={label}
+      title={`${label} (${shortcut === "ArrowLeft" ? "←" : "→"})`}
+      disabled={disabled}
+      onPointerDown={onPointerDown}
+      onPointerUp={onPointerUp}
+      onLostPointerCapture={onLostCapture}
+      className="flex size-7 touch-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+    >
+      <Icon className="size-4" />
+    </button>
+  );
 }
 
 /** A square ghost stepper button (− / +) for the speed control. */
@@ -86,12 +180,26 @@ export function PlaybackControls() {
 
   return (
     <div className="flex items-center gap-2">
+      <SeekButton
+        direction={-1}
+        icon={MdFastRewind}
+        label="Seek back"
+        shortcut="ArrowLeft"
+        disabled={!hasScore}
+      />
       <IconButton
         icon={isPlaying ? MdPause : MdPlayArrow}
         label={isPlaying ? "Pause" : "Play"}
         shortcut="space"
         disabled={!isPlaying && !canPlay}
         onClick={isPlaying ? stop : play}
+      />
+      <SeekButton
+        direction={1}
+        icon={MdFastForward}
+        label="Seek forward"
+        shortcut="ArrowRight"
+        disabled={!hasScore}
       />
 
       {/* Speed stepper: [− xx% +]. ↑/↓ keyboard shortcuts nudge the same value. */}
