@@ -59,7 +59,7 @@ export function AppTabBar() {
     <div className="flex shrink-0 items-center border-b bg-background px-xs py-2xs">
       <div
         ref={containerRef}
-        className="flex min-w-0 flex-1 items-center gap-2xs overflow-x-auto [&::-webkit-scrollbar]:hidden"
+        className="flex min-w-0 items-center gap-2xs overflow-x-auto [&::-webkit-scrollbar]:hidden"
       >
         <SortableList
           items={resolved.map(({ tab }) => tab.tabId)}
