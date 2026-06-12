@@ -7,7 +7,7 @@
 - Description: Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
 - Sub-plugins:
   - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
-  - **`keys`** — Sonata progress marker: key-signature regions along the progression bar — each key span tinted by key identity with a highlighted vertical bar at the change (starting key + 'key' annotation changes).
+  - **`keys`** — Sonata progress marker: key-signature change markers along the progression bar — a strong vertical bar at each key change captioned by a small neutral key chip (starting key + 'key' annotation changes).
   - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
   - **`sections`** — Sonata progress marker: labeled section-region bands along the progression bar, drawn from 'section' annotations.
 

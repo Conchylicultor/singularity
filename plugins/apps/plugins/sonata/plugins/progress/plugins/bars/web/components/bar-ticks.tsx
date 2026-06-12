@@ -1,5 +1,6 @@
 import { bars } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { railBandClass } from "@plugins/apps/plugins/sonata/plugins/progress/plugins/scrubber/web";
 
 /**
  * Bar/measure ticks marker. The progression bar is just a beat→fraction axis;
@@ -9,11 +10,11 @@ import type { Score } from "@plugins/apps/plugins/sonata/plugins/score/core";
  *
  * Each boundary becomes a thin muted tick drawn *inside* the rail (its height
  * matches the centered `h-2.5` track, so ticks read as notches in the bar rather
- * than fence posts poking out above and below it); bar numbers are labelled only
- * every Nth bar, floating in the headroom above so a long song reads as a clean
- * ruler instead of a wall of digits. The whole layer is `pointer-events-none` —
- * the scrubber owns the seek track underneath, and ticks are pure decoration
- * that clicks fall straight through.
+ * than fence posts poking out above and below it), so a long song reads as a
+ * clean ruler rather than a wall of digits — the ticks carry the cadence without
+ * any numbering. The whole layer is `pointer-events-none` — the scrubber owns the
+ * seek track underneath, and ticks are pure decoration that clicks fall straight
+ * through.
  */
 export function BarTicks({
   score,
@@ -33,30 +34,20 @@ export function BarTicks({
     return null;
   }
 
-  // Adaptive label cadence: dense ruler → sparse labels, so they never collide.
-  const labelEvery =
-    boundaries.length > 64 ? 8 : boundaries.length > 32 ? 4 : 1;
-
   return (
     <div className="pointer-events-none absolute inset-0">
       {boundaries.map(({ index, startBeat }) => {
         const left = `${beatToFraction(startBeat) * 100}%`;
-        const showLabel = index % labelEvery === 0;
         return (
           <div
             key={index}
             className="absolute inset-y-0 -translate-x-1/2"
             style={{ left }}
           >
-            {/* Tick confined to the centered rail (h-2.5), so it sits inside the
-                bar instead of overhanging it. */}
-            <div className="absolute left-0 top-1/2 h-2.5 w-px -translate-y-1/2 bg-muted-foreground/40" />
-            {showLabel && (
-              // eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps the compact tick number aligned to the rail tick; text-3xs carries no line-height of its own
-              <span className="absolute left-1 top-0 text-3xs leading-none text-muted-foreground tabular-nums">
-                {index + 1}
-              </span>
-            )}
+            {/* Tick confined to the shared rail band, so it sits inside the bar
+                instead of overhanging it — and stays aligned with the key bars,
+                which compose the same band. */}
+            <div className={`${railBandClass} left-0 w-px bg-muted-foreground/40`} />
           </div>
         );
       })}

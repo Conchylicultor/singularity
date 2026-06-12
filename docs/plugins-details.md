@@ -311,17 +311,17 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
               - Web:
                 - Contributes: `SonataProgress.Marker` "bars" → `BarTicks`
-                - Uses: `apps/sonata/progress/scrubber.SonataProgress`
-            - **`keys`** — Sonata progress marker: key-signature regions along the progression bar — each key span tinted by key identity with a highlighted vertical bar at the change (starting key + 'key' annotation changes).
+                - Uses: `apps/sonata/progress/scrubber.railBandClass`, `apps/sonata/progress/scrubber.SonataProgress`
+            - **`keys`** — Sonata progress marker: key-signature change markers along the progression bar — a strong vertical bar at each key change captioned by a small neutral key chip (starting key + 'key' annotation changes).
               - Web:
                 - Contributes: `SonataProgress.Marker` "keys" → `KeyFlags`
-                - Uses: `apps/sonata/progress/scrubber.SonataProgress`
+                - Uses: `apps/sonata/progress/scrubber.railBandClass`, `apps/sonata/progress/scrubber.SonataProgress`
             - **`scrubber`** — Sonata Transport: a draggable progression bar for song navigation. Click/drag to seek; hosts the open SonataProgress.Marker slot for timeline markers (bars, sections, keys, …).
               - Web:
                 - Slots: `SonataProgress.Marker`
                 - Contributes: `Sonata.Transport` "progress-bar" → `ProgressBar`
                 - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`
-                - Exports: Values: `SonataProgress`
+                - Exports: Values: `RAIL_THICKNESS`, `railBandClass`, `SonataProgress`
               - Cross-plugin:
                 - Slot contributors: `bars`, `keys`, `sections`
                 - Imported by: `apps/sonata/progress/bars`, `apps/sonata/progress/keys`, `apps/sonata/progress/sections`

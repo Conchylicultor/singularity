@@ -3,6 +3,7 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { ProgressBar } from "./components/progress-bar";
 
 export { SonataProgress } from "./slots";
+export { RAIL_THICKNESS, railBandClass } from "./rail-geometry";
 
 export default {
   description:

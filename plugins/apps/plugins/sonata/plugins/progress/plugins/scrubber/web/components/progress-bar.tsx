@@ -9,6 +9,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { SonataProgress } from "../slots";
+import { RAIL_THICKNESS } from "../rail-geometry";
 
 /**
  * Format elapsed seconds as `m:ss.s` (e.g. 95.4 → "1:35.4"). Rounds to tenths
@@ -105,8 +106,9 @@ export function ProgressBar() {
             layer rather than overhang the rail: they read as notches on the
             bar's surface, with the handle still sitting readably on top. */}
 
-        {/* The track rail, centered within the region. */}
-        <div className="relative h-2.5 rounded-full bg-muted">
+        {/* The track rail, centered within the region. Its thickness is the
+            single source the on-rail markers (ticks, key bars) align to. */}
+        <div className={`relative ${RAIL_THICKNESS} rounded-full bg-muted`}>
           {/* Filled portion up to the playhead. */}
           <div
             className="absolute inset-y-0 left-0 rounded-full bg-primary"
