@@ -139,6 +139,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
 
 - **`improve`**
+  - Plugins:
+    - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:

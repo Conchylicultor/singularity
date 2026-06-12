@@ -1,4 +1,4 @@
-// @hash ae3f7f411da1
+// @hash b51cb97e91c7
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -11,6 +11,7 @@
     "health:health-dot",
     "theme:theme-light-dark",
     "improve:improve",
+    "improve.element-picker:element-picker",
     "build:build",
     "notifications:notifications"
   ]

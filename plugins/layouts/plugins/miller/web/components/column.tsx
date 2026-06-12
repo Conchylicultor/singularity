@@ -73,6 +73,7 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
     <>
       <div
         ref={divRef}
+        data-pane-id={paneId}
         style={isCollapsed ? { display: "none" } : (expandFull ? undefined : { width })}
         className={
           isCollapsed

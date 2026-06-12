@@ -36,7 +36,7 @@ export function FullPane({ match: provided }: { match?: PaneMatch }) {
       {/* No maximize/drag in full-pane — the layout context stays empty. */}
       <PaneLayoutContext.Provider value={null}>
         <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
-          <div className="h-full min-h-0">
+          <div className="h-full min-h-0" data-pane-id={active.pane.id}>
             <PaneResolveGuard pane={active.pane} params={active.params} />
           </div>
         </PluginErrorBoundary>

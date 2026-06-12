@@ -1,4 +1,4 @@
-// @hash ae3f7f411da1
+// @hash b51cb97e91c7
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
@@ -9,6 +9,7 @@
     "health:health-dot",
     "screenshot:screenshot",
     "screenshot.draw-on-app:draw-on-app",
+    "improve.element-picker:element-picker",
     "theme:theme-light-dark",
     "ui.theme-engine.theme-customizer:theme-customizer",
     "reorder.edit-mode:reorder-pen"

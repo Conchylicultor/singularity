@@ -1417,6 +1417,14 @@
       "name": "@singularity/plugin-improve",
       "version": "0.0.1",
     },
+    "plugins/improve/plugins/element-picker": {
+      "name": "@singularity/plugin-improve-element-picker",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
     "plugins/infra": {
       "name": "@singularity/plugin-infra",
       "version": "0.0.1",
@@ -3583,6 +3591,8 @@
     "@singularity/plugin-health": ["@singularity/plugin-health@workspace:plugins/health"],
 
     "@singularity/plugin-improve": ["@singularity/plugin-improve@workspace:plugins/improve"],
+
+    "@singularity/plugin-improve-element-picker": ["@singularity/plugin-improve-element-picker@workspace:plugins/improve/plugins/element-picker"],
 
     "@singularity/plugin-infra": ["@singularity/plugin-infra@workspace:plugins/infra"],
 
