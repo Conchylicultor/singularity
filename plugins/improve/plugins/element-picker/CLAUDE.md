@@ -60,8 +60,8 @@ and round-trippable through the editor's line-based markdown sync.
 
 - Description: Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 - Web:
-  - Contributes: `ActionBar.Item` → `ElementPickerButton`
-  - Uses: `improve.ImproveCommands`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor.registerNodeExtension`, `primitives/text.Text`, `shell/action-bar.ActionBar`
+  - Contributes: `ActionBar.Item` → `ElementPickerButton`, `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
+  - Uses: `improve.ImproveCommands`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor.registerNodeExtension`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
 - Core:
   - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`
 

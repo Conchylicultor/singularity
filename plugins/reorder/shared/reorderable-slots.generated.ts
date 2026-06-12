@@ -55,6 +55,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "studio.toolbar", pluginId: "apps.studio.shell" },
   { slotId: "table-detail.section", pluginId: "apps.studio.contributions.tables" },
   { slotId: "task-detail.section", pluginId: "tasks.task-detail" },
+  { slotId: "task-draft-form.action", pluginId: "tasks.task-draft-form" },
   { slotId: "tasks.list-actions", pluginId: "tasks.task-list" },
   { slotId: "tasks.task-actions", pluginId: "tasks.task-list" },
   { slotId: "text-editor.plugin", pluginId: "primitives.text-editor" },

@@ -1,9 +1,10 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { type CSSProperties } from "react";
+import { type CSSProperties, useCallback, useRef } from "react";
 import { MdClose, MdDragIndicator } from "react-icons/md";
 import { useSortable } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
+import { HeadToolbar } from "./head-toolbar";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { ModelChip, type ChainModel } from "./model-chip";
@@ -140,6 +141,22 @@ export function TaskDraftCard({
     transition,
   };
 
+  // Append a snippet to the editor's markdown value (not the live Lexical
+  // selection): the value round-trip re-runs applyMarkdownToEditor, which is the
+  // only path that deserializes node patterns like `<ui-context/>` into chips.
+  // Drives the head-card action slot (e.g. the element picker). `textRef` reads
+  // the latest text so the callback identity stays stable across keystrokes.
+  const textRef = useRef(text);
+  textRef.current = text;
+  const insertText = useCallback(
+    (snippet: string) => {
+      const cur = textRef.current;
+      const sep = cur && !/[\s\n]$/.test(cur) ? " " : "";
+      onTextChange(`${cur}${sep}${snippet}`);
+    },
+    [onTextChange],
+  );
+
   const showRelate = isHead && !!onRelateModeChange;
 
   return (
@@ -169,6 +186,7 @@ export function TaskDraftCard({
           namespace={`task-draft-card-${cardId}`}
         />
       </div>
+      {isHead && <HeadToolbar insertText={insertText} />}
       <div className="flex flex-wrap items-center justify-between gap-2 pt-1.5">
         <div className="flex flex-wrap items-center gap-3">
           <ModelChip value={model} onChange={onModelChange} disabled={disabled} />

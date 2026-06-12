@@ -40,6 +40,19 @@ export function PickerOverlay({
       });
     };
 
+    // Swallow the press itself (capture phase, before it reaches the document).
+    // Picking is often launched from inside an open popover; without this the
+    // press on the underlying app element reads as an outside-press and dismisses
+    // the popover (and moves focus out of it) before the chip is injected.
+    // preventDefault also keeps focus on the popover so no focus-out dismissal
+    // fires. The actual pick happens on the subsequent `click`.
+    const onDown = (e: MouseEvent) => {
+      const el = resolveTarget(e.clientX, e.clientY);
+      if (!el) return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+
     const onClick = (e: MouseEvent) => {
       const el = resolveTarget(e.clientX, e.clientY);
       if (!el) return;
@@ -57,10 +70,12 @@ export function PickerOverlay({
     };
 
     window.addEventListener("mousemove", onMove, true);
+    window.addEventListener("pointerdown", onDown, true);
     window.addEventListener("click", onClick, true);
     window.addEventListener("keydown", onKey, true);
     return () => {
       window.removeEventListener("mousemove", onMove, true);
+      window.removeEventListener("pointerdown", onDown, true);
       window.removeEventListener("click", onClick, true);
       window.removeEventListener("keydown", onKey, true);
     };

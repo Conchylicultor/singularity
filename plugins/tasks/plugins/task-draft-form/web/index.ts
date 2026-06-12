@@ -18,6 +18,9 @@ export {
 } from "./active-relate-context";
 export type { ActiveRelateContext } from "./active-relate-context";
 
+export { TaskDraftFormSlots } from "./slots";
+export type { TaskDraftActionProps } from "./slots";
+
 export default {
   description:
     "Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.",
