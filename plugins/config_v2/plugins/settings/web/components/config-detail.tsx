@@ -1,12 +1,13 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useCallback, useState, useEffect } from "react";
-import { MdWarning, MdCode, MdTune, MdUndo, MdDifference, MdMerge } from "react-icons/md";
+import { MdWarning, MdCode, MdTune, MdUndo, MdDifference, MdMerge, MdLayersClear } from "react-icons/md";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
-import { useConfig, useConfigRegistrations } from "@plugins/config_v2/web";
-import type { ConfigV2Conflicts, ConfigV2Tiers } from "@plugins/config_v2/core";
+import { useCombinedResources, useResource } from "@plugins/primitives/plugins/live-state/web";
+import { useConfigRegistrations } from "@plugins/config_v2/web";
+import { configV2Resource, removeDescriptorScope } from "@plugins/config_v2/core";
+import type { ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
@@ -16,6 +17,7 @@ import { useTiers } from "../internal/use-tiers";
 import { ConfigFieldRow } from "./config-field-row";
 import { ConflictDiff } from "./conflict-diff";
 import { InvalidDiff } from "./invalid-diff";
+import { ScopeTabs } from "./scope-tabs";
 
 // Walks a structured zod issue path (["items", 6]) into the stored document to
 // recover the offending value, so the invalid banner can show exactly what's
@@ -47,49 +49,84 @@ export function ConfigDetail() {
   return <ConfigDetailInner registration={registration} />;
 }
 
-// All-or-nothing gate over conflicts + tiers (neither is boot-hydrated, so both
-// render pending on first paint). Gating the whole body avoids a flash of wrong
-// tier badges or a transiently-absent conflict banner. The config values
-// themselves come from useConfig (hydrated at boot), but the body reads them
-// alongside settled conflicts/tiers so the snapshot is always consistent.
+// All-or-nothing gate over values + conflicts + tiers — none is boot-hydrated
+// for an arbitrary scope, so all render pending on first paint. Gating the whole
+// body avoids a flash of wrong tier badges or a transiently-absent conflict
+// banner. The selected scope (undefined = Base) is local state owned here, above
+// the gate, so a tab switch re-keys every read and re-gates atomically. We read
+// values directly via the resource (not useConfig) so the body always reflects
+// the SELECTED scope — useConfig's base-oriented gating (forked || committed)
+// wouldn't fire for a fresh per-descriptor scope.
 function ConfigDetailInner({
   registration,
 }: {
   registration: ReturnType<typeof useConfigRegistrations>[number];
 }) {
-  const conflictsRes = useConflicts();
-  const tiersRes = useTiers(registration.storePath);
-  const gated = useCombinedResources({ conflicts: conflictsRes, tiers: tiersRes });
-  if (gated.pending) return <Loading />;
+  const [scopeId, setScopeId] = useState<string | undefined>(undefined);
+
+  // Reset to Base whenever a different descriptor opens in the pane.
+  useEffect(() => {
+    setScopeId(undefined);
+  }, [registration.storePath]);
+
+  const valuesRes = useResource(configV2Resource, {
+    path: registration.storePath,
+    ...(scopeId ? { scopeId } : {}),
+  });
+  const conflictsRes = useConflicts(scopeId);
+  const tiersRes = useTiers(registration.storePath, scopeId);
+  const gated = useCombinedResources({
+    values: valuesRes,
+    conflicts: conflictsRes,
+    tiers: tiersRes,
+  });
+
   return (
-    <ConfigDetailBody
-      registration={registration}
-      conflicts={gated.data.conflicts}
-      tiers={gated.data.tiers}
-    />
+    <div className="flex flex-col gap-1 p-3">
+      <ScopeTabs storePath={registration.storePath} scopeId={scopeId} onSelect={setScopeId} />
+      {gated.pending ? (
+        <Loading />
+      ) : (
+        <ConfigDetailBody
+          registration={registration}
+          scopeId={scopeId}
+          onSelectScope={setScopeId}
+          values={gated.data.values}
+          conflicts={gated.data.conflicts}
+          tiers={gated.data.tiers}
+        />
+      )}
+    </div>
   );
 }
 
 function ConfigDetailBody({
   registration,
+  scopeId,
+  onSelectScope,
+  values,
   conflicts,
   tiers,
 }: {
   registration: ReturnType<typeof useConfigRegistrations>[number];
+  scopeId: string | undefined;
+  onSelectScope: (scopeId: string | undefined) => void;
+  values: ConfigV2Values;
   conflicts: ConfigV2Conflicts;
   tiers: ConfigV2Tiers;
 }) {
   const [showRaw, setShowRaw] = useState(false);
   const [showDiff, setShowDiff] = useState(false);
   const [confirmReset, setConfirmReset] = useState(false);
-  const values = useConfig(registration.descriptor);
   const defaults = registration.descriptor.defaults as Record<string, unknown>;
   const conflictEntry = conflicts[registration.storePath];
 
+  // Re-collapse transient UI when the descriptor OR the selected scope changes —
+  // a fresh scope is a fresh editing context.
   useEffect(() => {
     setConfirmReset(false);
     setShowDiff(false);
-  }, [registration.storePath]);
+  }, [registration.storePath, scopeId]);
 
   // During a conflict the app resolves config to the origin (origin takes
   // precedence until reconciled), so `useConfig` returns the origin values.
@@ -130,21 +167,24 @@ function ConfigDetailBody({
   // useEndpointMutation (not void fetchEndpoint) so a failed reset/dismiss
   // surfaces via the global error toast instead of escaping as an unhandled
   // rejection. The config view refreshes via its live-state resource on success.
+  // Every reconcile body carries the selected `scopeId` (undefined = Base) so it
+  // targets the scope the user is editing.
   const { mutate: acknowledge } = useEndpointMutation(acknowledgeConflict);
   const { mutate: resetOverride } = useEndpointMutation(deleteOverride);
   const { mutate: merge } = useEndpointMutation(mergeConflict);
+  const { mutate: removeScope } = useEndpointMutation(removeDescriptorScope);
 
   const handleDismiss = useCallback(() => {
-    acknowledge({ body: { storePath: registration.storePath } });
-  }, [acknowledge, registration.storePath]);
+    acknowledge({ body: { storePath: registration.storePath, scopeId } });
+  }, [acknowledge, registration.storePath, scopeId]);
 
   const handleAcceptAll = useCallback(() => {
-    resetOverride({ body: { storePath: registration.storePath } });
-  }, [resetOverride, registration.storePath]);
+    resetOverride({ body: { storePath: registration.storePath, scopeId } });
+  }, [resetOverride, registration.storePath, scopeId]);
 
   const handleMerge = useCallback(() => {
-    merge({ body: { storePath: registration.storePath } });
-  }, [merge, registration.storePath]);
+    merge({ body: { storePath: registration.storePath, scopeId } });
+  }, [merge, registration.storePath, scopeId]);
 
   // A three-way merge is offered only when propagate captured an ancestor
   // snapshot (trueConflictKeys present). Its length is the count of fields the
@@ -154,17 +194,36 @@ function ConfigDetailBody({
   const canMerge = trueConflictKeys !== undefined;
 
   const handleResetAll = useCallback(() => {
-    resetOverride({ body: { storePath: registration.storePath } });
+    resetOverride({ body: { storePath: registration.storePath, scopeId } });
     setConfirmReset(false);
-  }, [resetOverride, registration.storePath]);
+  }, [resetOverride, registration.storePath, scopeId]);
+
+  // "Stop customizing" — drops this descriptor's whole per-app customization
+  // (distinct from "Reset all", which only reverts edits to the scoped origin).
+  // The tab disappears via the live scopes resource, so fall back to Base.
+  const handleStopCustomizing = useCallback(() => {
+    if (!scopeId) return;
+    removeScope({ body: { storePath: registration.storePath, scopeId } });
+    onSelectScope(undefined);
+  }, [removeScope, registration.storePath, scopeId, onSelectScope]);
 
   const toggleIcon = showRaw
     ? <MdTune className="size-3.5" />
     : <MdCode className="size-3.5" />;
 
   return (
-    <div className="flex flex-col gap-1 p-3">
+    <>
       <div className="mb-1 flex items-center justify-end gap-2">
+        {scopeId && !showRaw && (
+          <Button
+            variant="ghost"
+            size="xs"
+            onClick={handleStopCustomizing}
+          >
+            <MdLayersClear className="size-3.5" />
+            Stop customizing
+          </Button>
+        )}
         {hasAnyModified && !showRaw && (
           confirmReset ? (
             <div className="flex items-center gap-1">
@@ -206,7 +265,7 @@ function ConfigDetailBody({
         </Button>
       </div>
       {showRaw ? (
-        <RawFileView storePath={registration.storePath} />
+        <RawFileView storePath={registration.storePath} scopeId={scopeId} />
       ) : (
         <>
           {conflictEntry && (
@@ -343,6 +402,7 @@ function ConfigDetailBody({
               value={valueFor(key)}
               defaultValue={defaults[key]}
               storePath={registration.storePath}
+              scopeId={scopeId}
               originValue={conflictEntry?.originValues[key]}
               trueConflictKeys={trueConflictKeys}
               tier={tiers[key]}
@@ -350,13 +410,13 @@ function ConfigDetailBody({
           ))}
         </>
       )}
-    </div>
+    </>
   );
 }
 
-function RawFileView({ storePath }: { storePath: string }) {
+function RawFileView({ storePath, scopeId }: { storePath: string; scopeId: string | undefined }) {
   const { data, isPending } = useEndpoint(getConfigRawFile, {}, {
-    query: { storePath },
+    query: { storePath, ...(scopeId ? { scopeId } : {}) },
   });
 
   if (isPending) return <Loading />;

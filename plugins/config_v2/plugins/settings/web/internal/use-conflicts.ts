@@ -5,6 +5,7 @@ import type { ConfigV2Conflicts } from "@plugins/config_v2/core";
 
 // Raw gateable result — never collapse `pending` into `{}` (that hides
 // "still loading" from "genuinely no conflicts"). Callers gate.
-export function useConflicts(): ResourceResult<ConfigV2Conflicts> {
-  return useResource(configV2ConflictsResource);
+// `scopeId` selects which scope's conflicts map to read (undefined = Base).
+export function useConflicts(scopeId?: string): ResourceResult<ConfigV2Conflicts> {
+  return useResource(configV2ConflictsResource, scopeId ? { scopeId } : {});
 }

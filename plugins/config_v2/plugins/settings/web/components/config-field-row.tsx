@@ -41,6 +41,7 @@ export function ConfigFieldRow({
   value,
   defaultValue,
   storePath,
+  scopeId,
   originValue,
   trueConflictKeys,
   tier,
@@ -50,6 +51,7 @@ export function ConfigFieldRow({
   value: unknown;
   defaultValue: unknown;
   storePath: string;
+  scopeId?: string;
   originValue?: unknown;
   trueConflictKeys?: string[];
   tier?: "default" | "git" | "user";
@@ -72,18 +74,18 @@ export function ConfigFieldRow({
 
   const handleChange = useCallback(
     (newValue: unknown) => {
-      setField({ body: { storePath, key: fieldKey, value: newValue } });
+      setField({ body: { storePath, key: fieldKey, value: newValue, scopeId } });
     },
-    [setField, storePath, fieldKey],
+    [setField, storePath, fieldKey, scopeId],
   );
 
   const handleReset = useCallback(() => {
-    resetField({ body: { storePath, key: fieldKey } });
-  }, [resetField, storePath, fieldKey]);
+    resetField({ body: { storePath, key: fieldKey, scopeId } });
+  }, [resetField, storePath, fieldKey, scopeId]);
 
   const handleAcceptOrigin = useCallback(() => {
-    setField({ body: { storePath, key: fieldKey, value: originValue } });
-  }, [setField, storePath, fieldKey, originValue]);
+    setField({ body: { storePath, key: fieldKey, value: originValue, scopeId } });
+  }, [setField, storePath, fieldKey, originValue, scopeId]);
 
   return (
     <div>

@@ -17,7 +17,7 @@ import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./sco
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, setConfigGetter, setScopeForkedChecker } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
@@ -133,8 +133,14 @@ async function buildEntry(
     }
 
     notifyValues(storePath, scopeId);
-    configV2ConflictsServerResource.notify();
+    notifyConflicts(storePath, scopeId);
     notifyTiers(storePath, scopeId);
+    // A scoped origin/override file appearing or disappearing changes the
+    // descriptor's customized-scope set. The scopes loader recomputes own-config
+    // membership, so re-notify it keyed by storePath whenever a scoped file moves.
+    if (scopeId) {
+      configV2ScopesServerResource.notify({ path: storePath });
+    }
   };
 
   const disposables: Disposable[] = [];
@@ -193,6 +199,36 @@ function notifyTiers(storePath: string, scopeId: string): void {
   }
 }
 
+// Notify the conflicts resource for a (storePath, scopeId) change. The conflicts
+// loader is NOT per-path keyed — it returns the whole conflicts map — so the
+// notify key is `{ scopeId }` (or `{}` for base), never per storePath. A scoped
+// change re-notifies only that scope; a BASE change also re-notifies every known
+// un-forked scope, which resolves base live (mirrors notifyValues/notifyTiers).
+function notifyConflicts(storePath: string, scopeId: string): void {
+  if (scopeId) {
+    configV2ConflictsServerResource.notify({ scopeId });
+    return;
+  }
+  configV2ConflictsServerResource.notify({});
+  const descriptor = getDescriptorByStorePath(storePath);
+  for (const sid of knownScopeIds) {
+    if (descriptor && scopeHasOwnConfig(descriptor, sid)) continue;
+    configV2ConflictsServerResource.notify({ scopeId: sid });
+  }
+}
+
+// Fan out every read-resource notify for a (storePath, scopeId) change in one
+// call. Used by the per-descriptor fork/remove primitives, whose file writes
+// must surface immediately (rather than waiting on the debounced watcher), and
+// which also change the descriptor's customized-scope set. Mirrors the fan-out
+// the watcher's onFileChange performs.
+export function notifyDescriptorScopeChange(storePath: string, scopeId: string): void {
+  notifyValues(storePath, scopeId);
+  notifyConflicts(storePath, scopeId);
+  notifyTiers(storePath, scopeId);
+  configV2ScopesServerResource.notify({ path: storePath });
+}
+
 function getEntry(descriptor: ConfigDescriptor, scopeId: string = BASE_SCOPE): CacheEntry | undefined {
   return cacheByDescriptor.get(descriptor)?.get(scopeId);
 }
@@ -207,23 +243,6 @@ function isForked(descriptor: ConfigDescriptor, scopeId: string): boolean {
   const scopedDir = userScopedDir(hierarchyPath, scopeId);
   const overwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
   return jsoncConfigProxy(overwritesPath).exists();
-}
-
-// A scope "has its own config" when EITHER its scoped origin (a propagated git
-// scope — committed config/<hier>/@app/<id>/) OR its scoped override (a runtime
-// fork) exists. Such a scope resolves to its own values and is decoupled from
-// base; an untracked scope resolves base live. Broader than isForked, which is
-// override-only: a committed git scope has an origin but no user override, yet
-// must still resolve to its scoped values.
-function scopeHasOwnConfig(descriptor: ConfigDescriptor, scopeId: string): boolean {
-  if (!scopeId) return false;
-  const hierarchyPath = getHierarchyPath(descriptor);
-  if (!hierarchyPath) return false;
-  const scopedDir = userScopedDir(hierarchyPath, scopeId);
-  return (
-    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.jsonc`)).exists() ||
-    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.origin.jsonc`)).exists()
-  );
 }
 
 // Scope-level forked check: a scope is forked iff ANY of its `scope: "app"`

@@ -47,7 +47,10 @@ export const configV2ConflictEntrySchema = z.object({
 export const configV2ConflictsSchema = z.record(configV2ConflictEntrySchema);
 export type ConfigV2Conflicts = z.infer<typeof configV2ConflictsSchema>;
 
-export const configV2ConflictsResource = resourceDescriptor<ConfigV2Conflicts>(
+// Keyed by `{ scopeId? }` (mirrors configV2TiersResource's scope param, minus
+// the per-path key — the loader returns the WHOLE conflicts map, not a single
+// path). Base callers pass `{}`; a scoped subscription passes `{ scopeId }`.
+export const configV2ConflictsResource = resourceDescriptor<ConfigV2Conflicts, { scopeId?: string }>(
   "config-v2.conflicts",
   configV2ConflictsSchema,
   {},
@@ -60,6 +63,18 @@ export const configV2TiersResource = resourceDescriptor<ConfigV2Tiers, { path: s
   "config-v2.tiers",
   configV2TiersSchema,
   {},
+);
+
+// The list of scopeIds a single descriptor is customized for (has its own
+// config — a propagated git scope or a runtime fork). Keyed by `{ path }`
+// (the descriptor's storePath). Drives the per-descriptor scope tab bar.
+export const configV2ScopesSchema = z.array(z.string());
+export type ConfigV2Scopes = z.infer<typeof configV2ScopesSchema>;
+
+export const configV2ScopesResource = resourceDescriptor<ConfigV2Scopes, { path: string }>(
+  "config-v2.scopes",
+  configV2ScopesSchema,
+  [],
 );
 
 export const configV2ScopeForkedSchema = z.object({ forked: z.boolean() });

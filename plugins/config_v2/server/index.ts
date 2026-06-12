@@ -1,26 +1,28 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { forkScope as forkScopeEndpoint, deleteScope as deleteScopeEndpoint, configSnapshot as configSnapshotEndpoint } from "../core";
+import { forkScope as forkScopeEndpoint, deleteScope as deleteScopeEndpoint, forkDescriptorScope as forkDescriptorScopeEndpoint, removeDescriptorScope as removeDescriptorScopeEndpoint, configSnapshot as configSnapshotEndpoint } from "../core";
 import { initConfigWatcher, shutdownConfigWatcher } from "./internal/config-watcher";
 import { initRegistry, shutdownRegistry } from "./internal/registry";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2TiersServerResource, configV2ScopeForkedServerResource } from "./internal/resource";
-import { handleForkScope, handleDeleteScope } from "./internal/scope-handlers";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2TiersServerResource, configV2ScopeForkedServerResource } from "./internal/resource";
+import { handleForkScope, handleDeleteScope, handleForkDescriptorScope, handleRemoveDescriptorScope } from "./internal/scope-handlers";
 import { handleConfigSnapshot } from "./internal/snapshot-handler";
 
 export { ConfigV2 } from "./internal/contribution";
 export { forkConfig } from "./internal/fork";
 export { getConfig, setConfig, setConfigByPath, resetConfigByPath, watchConfig, acknowledgeConflictByPath, deleteOverrideByPath, mergeConflictByPath, getRawFileContent } from "./internal/registry";
 export { getAllDescriptors, getScopedDescriptors } from "./internal/resource";
-export { forkScope, deleteScope } from "./internal/scope-fork";
+export { forkScope, deleteScope, forkDescriptorScope, removeDescriptorScope } from "./internal/scope-fork";
 export { registerFieldStorageProvider, getFieldStorageProvider, hasFieldStorageProvider } from "./internal/field-storage-providers";
 export type { FieldStorageProvider } from "./internal/field-storage-providers";
 
 export default {
   description: "Typed JSONC config handles for server plugins.",
-  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource), Resource.Declare(configV2TiersServerResource), Resource.Declare(configV2ScopeForkedServerResource)],
+  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource), Resource.Declare(configV2ScopesServerResource), Resource.Declare(configV2TiersServerResource), Resource.Declare(configV2ScopeForkedServerResource)],
   httpRoutes: {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,
+    [forkDescriptorScopeEndpoint.route]: handleForkDescriptorScope,
+    [removeDescriptorScopeEndpoint.route]: handleRemoveDescriptorScope,
     [configSnapshotEndpoint.route]: handleConfigSnapshot,
   },
   // Blocking: the config registry must be built before resources resolve, so

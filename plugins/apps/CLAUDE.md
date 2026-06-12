@@ -13,7 +13,7 @@
   - Exports: Types: `ActiveApp`, `RailFramingContribution`, `TabsApi`; Values: `AppRail`, `Apps`, `useActiveApp`, `useCurrentAppId`, `useTabs`
 - Cross-plugin:
   - Slot contributors: `app-rail-framing`, `shell`
-  - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `shell/floating-bar`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
+  - Imported by: `apps/agent-manager/shell`, `apps/app-rail-framing`, `apps/app-rail-framing/rail`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/app-cards`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/shell`, `apps/story/shell`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/settings`, `shell/floating-bar`, `tasks/task-draft-form`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/variant-region`
 - Core:
   - Exports: Types: `RailFramingProps`
 - Sub-plugins:

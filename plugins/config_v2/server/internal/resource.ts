@@ -1,11 +1,10 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
-import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2ScopeForked } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
+import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
-import { CONFIG_DIR } from "./config-dir";
-import { userScopedDir, discoverScopeIdsIn } from "./scope-paths";
+import { userScopedDir, discoverScopeIdsIn, discoverScopeIds } from "./scope-paths";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 
@@ -119,15 +118,21 @@ export async function getConfigSnapshot(scopeId?: string): Promise<ConfigSnapsho
   return { global, scopes };
 }
 
-function computeAllConflicts(): ConfigV2Conflicts {
+// Compute every descriptor's conflict state for the given scope. `scopeId`
+// undefined → base config (paths land exactly where they do today, byte-for-byte
+// identical to the pre-scope behavior). A scoped call rebuilds the origin /
+// override / ancestor trio under the scope's @app/<id> segment via userScopedDir,
+// surfacing a stale scoped override the same way base conflicts surface.
+function computeAllConflicts(scopeId?: string): ConfigV2Conflicts {
   const conflicts: ConfigV2Conflicts = {};
   for (const [storePath, descriptor] of descriptorByPath) {
     const parts = storePath.replace(/\.jsonc$/, "").split("/");
     const dir = parts.slice(0, -1).join("/");
     const name = parts[parts.length - 1]!;
 
-    const userOriginPath = join(CONFIG_DIR, dir, `${name}.origin.jsonc`);
-    const userOverwritesPath = join(CONFIG_DIR, dir, `${name}.jsonc`);
+    const scopedDir = userScopedDir(dir, scopeId);
+    const userOriginPath = join(scopedDir, `${name}.origin.jsonc`);
+    const userOverwritesPath = join(scopedDir, `${name}.jsonc`);
 
     const origin = jsoncConfigProxy(userOriginPath);
     const overwrites = jsoncConfigProxy(userOverwritesPath);
@@ -148,7 +153,7 @@ function computeAllConflicts(): ConfigV2Conflicts {
       // fields. A corrupt ancestor fails loud here exactly like a corrupt
       // origin/override above — consistent with how this loop treats its inputs.
       let trueConflictKeys: string[] | undefined;
-      const ancestor = jsoncConfigProxy(join(CONFIG_DIR, dir, `${name}.ancestor.jsonc`));
+      const ancestor = jsoncConfigProxy(join(scopedDir, `${name}.ancestor.jsonc`));
       if (ancestor.exists()) {
         const base = ancestor.read()!.content as Record<string, JsonValue>;
         trueConflictKeys = threeWayMerge(
@@ -188,11 +193,30 @@ function computeAllConflicts(): ConfigV2Conflicts {
   return conflicts;
 }
 
-export const configV2ConflictsServerResource = defineResource<ConfigV2Conflicts>({
+export const configV2ConflictsServerResource = defineResource<ConfigV2Conflicts, { scopeId?: string }>({
   key: "config-v2.conflicts",
   mode: "push",
   schema: configV2ConflictsSchema,
-  loader: whenRegistryReady(() => computeAllConflicts()),
+  loader: whenRegistryReady(({ scopeId }) => computeAllConflicts(scopeId)),
+});
+
+// The scopeIds a single descriptor is customized for (has its own config). Keyed
+// by `{ path }` (storePath). Powers the per-descriptor scope tab bar in settings.
+function computeDescriptorScopes(path: string): ConfigV2Scopes {
+  const descriptor = descriptorByPath.get(path);
+  if (!descriptor) {
+    throw new Error(`[config-v2] no descriptor registered for scopes path "${path}"`);
+  }
+  const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+  if (!hierarchyPath) return [];
+  return discoverScopeIds(hierarchyPath).filter((sid) => scopeHasOwnConfig(descriptor, sid));
+}
+
+export const configV2ScopesServerResource = defineResource<ConfigV2Scopes, { path: string }>({
+  key: "config-v2.scopes",
+  mode: "push",
+  schema: configV2ScopesSchema,
+  loader: whenRegistryReady(({ path }) => computeDescriptorScopes(path)),
 });
 
 export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {
@@ -206,6 +230,23 @@ export function getDescriptorByStorePath(path: string): ConfigDescriptor | undef
 
 export function getHierarchyPath(descriptor: ConfigDescriptor): string | undefined {
   return hierarchyByDescriptor.get(descriptor);
+}
+
+// A scope "has its own config" when EITHER its scoped origin (a propagated git
+// scope — committed config/<hier>/@app/<id>/) OR its scoped override (a runtime
+// fork) exists. Such a scope resolves to its own values and is decoupled from
+// base; an untracked scope resolves base live. Broader than isForked, which is
+// override-only: a committed git scope has an origin but no user override, yet
+// must still resolve to its scoped values.
+export function scopeHasOwnConfig(descriptor: ConfigDescriptor, scopeId: string): boolean {
+  if (!scopeId) return false;
+  const hierarchyPath = hierarchyByDescriptor.get(descriptor);
+  if (!hierarchyPath) return false;
+  const scopedDir = userScopedDir(hierarchyPath, scopeId);
+  return (
+    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.jsonc`)).exists() ||
+    jsoncConfigProxy(join(scopedDir, `${descriptor.name}.origin.jsonc`)).exists()
+  );
 }
 
 // All registered descriptors tagged with the given scope kind, plus their
