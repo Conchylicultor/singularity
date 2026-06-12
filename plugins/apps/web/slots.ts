@@ -31,7 +31,8 @@ export const Apps = {
     docLabel: (p) => p.tooltip,
   }),
   /** The far-left app-rail framing (rail / hidden). The active variant owns the
-   * outer wrapper and the `--app-rail-width` contract the sidebar reads. */
+   * outer wrapper and the `--app-rail-width` var (the rail's own width); the
+   * rail sits as a flex sibling of the app body. */
   RailFraming: defineSlot<RailFramingContribution>("apps.rail-framing", {
     docLabel: () => "Rail framing",
   }),

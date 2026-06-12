@@ -3,9 +3,9 @@ import type { RailFramingProps } from "@plugins/apps/core";
 
 /**
  * The app-rail framing region: swaps the far-left app-switcher rail per the
- * global theme. `rail` (default) renders the icon rail and reserves
- * `--app-rail-width: 2.5rem`; `hidden` removes the rail and drives the var to
- * `0` so the sidebar slides flush to the viewport edge.
+ * global theme. `rail` (default) renders the icon rail (`--app-rail-width:
+ * 2.5rem`) as a flex sibling of the app body; `hidden` removes the rail so the
+ * body — and the sidebar bounded to it — slides flush to the viewport edge.
  *
  * Global scope (no `scope: "app"`) — the rail is the first global variant
  * region, so the choice applies across every app.

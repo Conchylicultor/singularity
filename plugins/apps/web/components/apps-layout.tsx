@@ -25,7 +25,9 @@ function redirectTo(url: string) {
 /**
  * Inline fallback when no app-rail-framing plugin is loaded — the default
  * 2.5rem icon rail. Mirrors DefaultFlushFraming in app-shell. The rail variant
- * owns the flex wrapper and the `--app-rail-width` contract the sidebar reads.
+ * owns the flex wrapper and the `--app-rail-width` var (the rail's own width);
+ * the rail is a flex sibling of `body`, so the sidebar bounded to `body` needs
+ * no rail-width offset of its own.
  */
 function DefaultRailFraming({ body }: RailFramingProps) {
   return (

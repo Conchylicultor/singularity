@@ -1,9 +1,10 @@
 import type { RailFramingProps } from "@plugins/apps/core";
 
 /**
- * Hidden rail: no app switcher. Drives `--app-rail-width: 0px` so the sidebar
- * slides flush to the viewport edge (sidebar.tsx's `,0px` fallback handles the
- * offset). Re-show the rail from the theme customizer's "App rail" picker.
+ * Hidden rail: no app switcher. No rail sibling, so `body` (and the sidebar
+ * bounded to it) fills the full width flush to the viewport edge; the
+ * `--app-rail-width: 0px` keeps the rail-width var consistent for any reader.
+ * Re-show the rail from the theme customizer's "App rail" picker.
  */
 export function HiddenFraming({ body }: RailFramingProps) {
   return (
