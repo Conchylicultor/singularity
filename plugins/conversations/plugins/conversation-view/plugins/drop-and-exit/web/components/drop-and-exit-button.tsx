@@ -1,6 +1,6 @@
 import { DropdownMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
-import { MdCheckCircle, MdDeleteForever, MdExitToApp } from "react-icons/md";
+import { MdCheckCircle, MdDeleteForever } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversation, useHasActiveSiblings } from "@plugins/conversations/web";
@@ -46,16 +46,18 @@ export function DropAndExitItem({
     }),
   });
 
-  const disabled = isPending || decision.pending || live.status === "gone" || live.status === "done" || live.status === "starting";
+  // Dropping the task only makes sense when this is the last active conversation
+  // on it. If a sibling is still active, the plain "Close" exit entry already
+  // covers closing this one — hide this entry rather than degrade it to a
+  // redundant "Close" (mirrors how Drop dependents hides when there's nothing
+  // to drop).
+  if (decision.pending || decision.data.hasOtherActive) return null;
 
-  // Neutral while loading — never the destructive default.
-  const { Icon, label, variant } = decision.pending
-    ? { Icon: MdExitToApp, label: "Close", variant: "default" as const }
-    : hasPush
-      ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Close", variant: "default" as const }
-      : decision.data.hasOtherActive
-        ? { Icon: MdExitToApp, label: isPending ? "Closing…" : "Close", variant: "default" as const }
-        : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Close", variant: "destructive" as const };
+  const disabled = isPending || live.status === "gone" || live.status === "done" || live.status === "starting";
+
+  const { Icon, label, variant } = hasPush
+    ? { Icon: MdCheckCircle, label: isPending ? "Completing…" : "Complete & Close", variant: "default" as const }
+    : { Icon: MdDeleteForever, label: isPending ? "Dropping…" : "Drop & Close", variant: "destructive" as const };
 
   return (
     <DropdownMenuItem
