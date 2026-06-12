@@ -272,6 +272,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Exports: Types: `InertialDragConfig`, `InertialDragHandle`; Values: `useInertialDrag`
               - Core:
                 - Exports: Types: `VelocityTracker`; Values: `createVelocityTracker`, `flingPosition`, `flingRest`, `flingVelocity`
+            - **`mini-keyboard`** — Stateless mini piano keyboard: renders a MIDI key range and lights up the given pitches. Range-parameterized fractional key geometry, no Sonata context.
+              - Cross-plugin:
+                - Imported by: `apps/sonata/rich/chord-readout`
+              - Web:
+                - Exports: Types: `KeyLane`, `MiniKeyboardProps`; Values: `isBlackPitch`, `keyLayout`, `MiniKeyboard`
         - **`progress`** — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
           - Plugins:
             - **`bars`** — Sonata progress marker: bar/measure tick marks along the progression bar, derived from the score's time signatures via bars().
@@ -308,7 +313,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
               - Web:
                 - Contributes: `Sonata.Section` "Current chord" → `ChordReadout`
-                - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/text.Text`
+                - Uses: `apps/sonata/primitives/mini-keyboard.MiniKeyboard`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `primitives/card.Card`, `primitives/persistent-draft.useDraft`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
             - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the shared Score + cursor via useSonata().
               - Web:
                 - Contributes: `Sonata.Hud` "key-chip" → `KeyChip`
@@ -363,7 +368,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`theory`** — Music-theory primitives for Sonata: the chord vocabulary (quality↔intervals↔symbol) and a chord-symbol parser shared by chord analyzers and chord-authoring sources.
           - Core:
             - Uses: `apps/sonata/score.accidentalGlyph`, `apps/sonata/score.Annotation`, `apps/sonata/score.bars`, `apps/sonata/score.beatGrid`, `apps/sonata/score.ChordData`, `apps/sonata/score.effectiveKeyAt`, `apps/sonata/score.emptyScore`, `apps/sonata/score.KeySignature`, `apps/sonata/score.KeySpeller`, `apps/sonata/score.makeKeySpeller`, `apps/sonata/score.Note`, `apps/sonata/score.Score`, `apps/sonata/score.scoreEndBeat`, `apps/sonata/score.TimeSigEvent`
-            - Exports: Types: `ChordMatch`, `ChordTemplate`, `ChordWindow`; Values: `CHORD_TEMPLATES`, `detectChord`, `detectChordWeighted`, `detectChordWindows`, `formatChordSymbol`, `formatSpelledChordSymbol`, `inferKeys`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
+            - Exports: Types: `ChordMatch`, `ChordTemplate`, `ChordWindow`; Values: `CHORD_TEMPLATES`, `chordPitches`, `detectChord`, `detectChordWeighted`, `detectChordWindows`, `formatChordSymbol`, `formatSpelledChordSymbol`, `inferKeys`, `invertVoicing`, `parseChordSymbol`, `PC_NAMES`, `qualitySymbol`, `qualityToIntervals`
         - **`track-mixer`** — Compact per-track control panel for the Sonata player: categorical color, mute (audio), and hide (piano-roll) per track, with name / instrument / note count. State persists per (song, track). Exposes color/hidden/muted hooks consumed by the piano-roll and audio engine. Persists per-(song, track) view overrides (color / muted / hidden) and serves the reactive rollup consumed by the piano-roll, the audio scheduler, and the track-mixer panel.
           - Web:
             - Contributes: `Sonata.Section` "Tracks" → `TrackMixerPanel`
@@ -2890,7 +2895,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `agents`, `apps`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/config`, `apps/sonata/library`, `apps/story/shell`, `apps/studio/contributions`, `apps/studio/contributions/tables`, `apps/studio/explorer`, `attempt-view`, `auth`, `auth/google`, `auth/google/setup-wizard`, `backup`, `build`, `code-explorer`, `config_v2/config-link`, `config_v2/settings`, `conversations-recover`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/open-app`, `conversations/conversation-view/push-profiling`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `conversations/conversation-view/terminal-pane`, `conversations/conversation-view/vscode`, `conversations/conversations-view`, `conversations/pane-restore`, `conversations/summary`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/crashes`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/profiling/build`, `debug/profiling/push`, `debug/queue`, `debug/worktree-cleanup`, `events-test`, `layouts/full-pane`, `layouts/host`, `layouts/miller`, `plugin-meta/plugin-view`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/sub-plugins`, `primitives/launch`, `review`, `screenshot`, `stats`, `stats/cost`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-detail`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `ui/theme-engine/theme-customizer`, `welcome`
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/push-and-exit`, `primitives/color-picker`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/push-and-exit`, `primitives/color-picker`, `tasks/task-draft-form`
       - Web:
         - Exports: Values: `useDraft`
     - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
@@ -3045,7 +3050,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.ControlSize`, `primitives/ui-kit.useControlSize`
         - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipSize`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`, `apps/story/render`, `apps/story/shell`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `notifications`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `review`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/story/render`, `apps/story/shell`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `notifications`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `review`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
     - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
       - Web:
         - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.Tooltip`, `primitives/ui-kit.TooltipContent`, `primitives/ui-kit.TooltipTrigger`

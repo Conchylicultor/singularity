@@ -24,12 +24,28 @@ const ORDINALS = ["Root", "1st", "2nd", "3rd", "4th", "5th"];
  * Fixed keyboard window: C4 (60) … B6 (95), three octaves. Chord-independent on
  * purpose — the keyboard frame stays identical across chords, so changing chord
  * only re-lights keys instead of re-laying-out the whole keyboard (no flicker).
- * `chordPitches` roots every chord in octave 4 (60–71) and inversions only stack
- * upward, so every detected triad/7th and all its inversions land inside this
- * window without clipping.
+ * Each chord's voicings are octave-transposed to sit centered in this window
+ * (see `centerInWindow`), so a triad and all its inversions fit with room to
+ * spare on both sides.
  */
 const KB_LOW = 60;
 const KB_HIGH = 95;
+const KB_CENTER = (KB_LOW + KB_HIGH) / 2;
+
+/**
+ * Shift a set of voicings by whole octaves so their overall midpoint lands as
+ * close as possible to the window center. The keyboard only illustrates chord
+ * *shape* (not the sounding octave), so an octave shift is free — and keeping it
+ * a multiple of 12 preserves which keys (pitch classes) light. The shift is
+ * computed over ALL inversions so it stays stable whether or not the inversions
+ * are expanded.
+ */
+function centerInWindow(voicings: number[][]): number[][] {
+  const all = voicings.flat();
+  const mid = (Math.min(...all) + Math.max(...all)) / 2;
+  const shift = Math.round((KB_CENTER - mid) / 12) * 12;
+  return shift === 0 ? voicings : voicings.map((v) => v.map((p) => p + shift));
+}
 
 /**
  * The "current chord" readout — a free-floating `Sonata.Section` panel (NOT a
@@ -67,7 +83,7 @@ export function ChordReadout() {
   const voicings = useMemo(() => {
     if (!current) return null;
     const root = chordPitches(current.data);
-    return root.map((_, k) => invertVoicing(root, k));
+    return centerInWindow(root.map((_, k) => invertVoicing(root, k)));
   }, [current]);
 
   return (
