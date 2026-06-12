@@ -22,11 +22,21 @@ export default {
         /claude --print exited (?:143|137)\b/.test(message),
     }),
     // A crash whose originating frontend tab is running an obsolete bundle
-    // (build id mismatch). Benign version-skew during a rollout, not a live
-    // bug — mute the notification but still record + file the (attributed) task.
+    // (build id mismatch). Benign version-skew during a rollout, not a live bug
+    // — record + file the (attributed) task, but mute its notification.
     CrashNoiseRule({
       id: "stale-frontend",
       matches: (i) => i.staleOrigin === true,
+    }),
+    // A missed-updates live-state wedge the watchdog attributed to a server
+    // restart that happened while the tab was backgrounded (the socket missed the
+    // restart's version bumps). This is benign deploy-skew, not a stuck pipeline
+    // — and the build-id check above can't catch it, because such a tab is still
+    // on the build the server is currently serving. Record + file the task, mute
+    // the notification.
+    CrashNoiseRule({
+      id: "live-state-wedge-restart",
+      matches: ({ errorType }) => errorType === "LiveStateWedge:missed-updates:restart",
     }),
   ],
 } satisfies ServerPluginDefinition;

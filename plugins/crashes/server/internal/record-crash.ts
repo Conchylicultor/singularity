@@ -130,12 +130,17 @@ export async function recordCrash(
     serverBuildId,
   });
   crashesResource.notify();
-  const desc = row.errorType
+  // Mirror the task title's "[Stale tab]" marker into the bell so the
+  // notification itself reads as benign version-skew at a glance — not just the
+  // task it links to. (Restart-induced wedges self-describe in their message.)
+  const stalePrefix = staleOrigin ? "[Stale tab] " : "";
+  const body = row.errorType
     ? `${row.errorType}: ${row.message}`
     : row.message;
+  const desc = `${stalePrefix}${body}`;
   void recordNotification({
     type: "crash",
-    title: "Crash recorded",
+    title: staleOrigin ? "Crash recorded (stale tab)" : "Crash recorded",
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
     variant: "error",
     muted: row.noise,

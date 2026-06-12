@@ -5,7 +5,9 @@ Built-in noise classification rules for the crashes plugin.
 Some crashes are structurally benign and high-frequency — the canonical example
 is the `ResizeObserver loop completed with undelivered notifications` browser
 warning. These are recorded and visible like any other crash, but classified as
-"noise" so they don't bump the notification badge or pop a toast.
+"noise" so the notification they file is `muted` (it stays out of the bell's
+unread surface). The deduped task is still filed — noise classification governs
+notification loudness, not whether the crash is tracked.
 
 This plugin contributes one `CrashNoiseRule` per known low-signal pattern via
 the generic `CrashNoiseRule` slot owned by the parent `crashes` plugin.
