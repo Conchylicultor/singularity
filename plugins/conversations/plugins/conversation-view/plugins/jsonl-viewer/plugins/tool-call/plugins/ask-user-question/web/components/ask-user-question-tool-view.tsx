@@ -210,7 +210,15 @@ export function Indicator({
   selected: boolean;
   multi: boolean;
 }) {
-  const shape = multi ? "rounded-sm" : "rounded-full";
+  // A checkbox (multi) and a radio (single) are semantic *fixed* shapes: they
+  // must stay a square / circle under every Shape preset. `rounded-full` already
+  // freezes the radio. The token-driven `rounded-sm` does NOT freeze the
+  // checkbox — it resolves to a `--radius`-derived value, so a generous Shape
+  // preset rounds this 12px (size-3) box into a near-circle, making multi-select
+  // look mutually-exclusive (like radios). Pin a small literal corner instead.
+  // The radius lint only scans className/cn contexts, so this const is clear of
+  // it; the fixed literal is the documented escape for a genuinely fixed shape.
+  const shape = multi ? "rounded-[3px]" : "rounded-full";
   if (!selected) {
     return (
       <span
