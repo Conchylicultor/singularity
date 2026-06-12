@@ -650,6 +650,13 @@ export class NotificationsClient {
     const upsertMap = new Map<string, unknown>();
     for (const [rowId, row] of upserts) upsertMap.set(rowId, element.parse(row));
 
+    // Set when the membership-changed branch finds an `order` id resolving to
+    // neither an upsert nor a cached row — i.e. the client's base has drifted
+    // behind the server snapshot (a missed/stale-dropped intermediate frame).
+    // Writing the rebuilt array anyway would punch `undefined` holes into it
+    // and crash any downstream consumer that iterates the rows; instead we keep
+    // the prior array untouched and force a fresh full base below.
+    const driftedIds: string[] = [];
     this.queryClient.setQueryData(queryKey, (prev: unknown) => {
       const prevRows = Array.isArray(prev) ? (prev as unknown[]) : [];
       if (order === undefined) {
@@ -663,8 +670,25 @@ export class NotificationsClient {
       // reusing prior row references for unchanged ids.
       const existingById = new Map<string, unknown>();
       for (const row of prevRows) existingById.set(keyOf(row), row);
-      return order.map((rowId) => upsertMap.get(rowId) ?? existingById.get(rowId));
+      const next: unknown[] = [];
+      for (const rowId of order) {
+        const row = upsertMap.get(rowId) ?? existingById.get(rowId);
+        if (row === undefined) {
+          driftedIds.push(rowId);
+          continue;
+        }
+        next.push(row);
+      }
+      // Any unresolved id ⇒ base drift: leave `prev` intact and resub below.
+      return driftedIds.length > 0 ? prev : next;
     });
+    if (driftedIds.length > 0) {
+      trace(
+        `applyDelta key=${key} params=${paramsKey(params)} reason=delta-drift-resub ids=${driftedIds.join(",")}`,
+      );
+      this.sendSub(channel, key, params);
+      return;
+    }
     this.markApplied(entry, key);
   }
 
