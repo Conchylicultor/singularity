@@ -1,0 +1,6 @@
+// @hash b520319858c3
+{
+  // How the piano keys are drawn.
+  // Allowed values: "flat", "realistic"
+  "keyStyle": "flat"
+}
