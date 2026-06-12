@@ -40,47 +40,42 @@ function DefaultRailFraming({ body }: RailFramingProps) {
 }
 
 /**
- * The tabbed app surface: the tab bar plus every open tab mounted at once, only
- * the focused one visible (`display:none` keeps the rest mounted with their
- * route + React state — keep-alive). Each tab gets its own `PaneSurfaceProvider`
- * binding its store + base path, so background tabs hold their route in memory
- * while the focused tab mirrors to the URL.
+ * The keep-alive tab surface: every open tab mounted at once, only the focused
+ * one visible (`display:none` keeps the rest mounted with their route + React
+ * state). Each tab gets its own `PaneSurfaceProvider` binding its store + base
+ * path, so background tabs hold their route in memory while the focused tab
+ * mirrors to the URL. This is the `body` the rail-framing wraps — it sits to the
+ * right of the rail, both below the top-level tab bar.
  */
 function AppTabsBody() {
   const { tabs, focusedTabId } = useTabs();
   const apps = Apps.App.useContributions();
   return (
-    <div className="flex min-w-0 flex-1 flex-col">
-      <AppTabBar />
-      {/* `transform-gpu` makes this a containing block for `position: fixed`
-          descendants, so an app shell's viewport-pinned sidebar (shadcn
-          `fixed inset-y-0`) bounds to the content area BELOW the tab bar
-          instead of overlapping it. Portalled overlays (floating bar, popovers,
-          dialogs) render at document.body and are unaffected. */}
-      <div className="relative min-h-0 flex-1 transform-gpu">
-        {tabs.map((tab) => {
-          const app = apps.find((a) => a.id === tab.appId);
-          if (!app) return null;
-          const focused = tab.tabId === focusedTabId;
-          return (
-            <div
-              key={tab.tabId}
-              className="absolute inset-0"
-              style={{ display: focused ? "block" : "none" }}
+    // `transform-gpu` makes this a containing block for `position: fixed`
+    // descendants, so an app shell's viewport-pinned sidebar (shadcn
+    // `fixed inset-y-0`) bounds to the content area BELOW the tab bar instead of
+    // overlapping it. Portalled overlays (floating bar, popovers, dialogs)
+    // render at document.body and are unaffected.
+    <div className="relative min-h-0 min-w-0 flex-1 transform-gpu">
+      {tabs.map((tab) => {
+        const app = apps.find((a) => a.id === tab.appId);
+        if (!app) return null;
+        const focused = tab.tabId === focusedTabId;
+        return (
+          <div
+            key={tab.tabId}
+            className="absolute inset-0"
+            style={{ display: focused ? "block" : "none" }}
+          >
+            <PaneSurfaceProvider
+              store={tab.store}
+              basePath={appPathFor(tab.appId, apps)}
             >
-              <PaneSurfaceProvider
-                store={tab.store}
-                basePath={appPathFor(tab.appId, apps)}
-              >
-                {renderIsolated(
-                  Apps.App.id,
-                  app as unknown as Contribution,
-                )}
-              </PaneSurfaceProvider>
-            </div>
-          );
-        })}
-      </div>
+              {renderIsolated(Apps.App.id, app as unknown as Contribution)}
+            </PaneSurfaceProvider>
+          </div>
+        );
+      })}
     </div>
   );
 }
@@ -126,12 +121,19 @@ export function AppsLayout() {
 
   // TooltipProvider stays outermost — AppRail uses WithTooltip and must sit
   // inside it; harmless over the rail-less `hidden` variant. TabsProvider wraps
-  // the framing (rail + body) so the rail's open-or-focus and the tab bar both
-  // read the same tab state.
+  // the tab bar + framing so the rail's open-or-focus and the tab bar both read
+  // the same tab state. The tab bar owns the full width at the top; the
+  // rail-framing (rail + tab body) fills the area beneath it — so the rail sits
+  // *below* the tab bar, not above it.
   return (
     <TooltipProvider delay={300}>
       <TabsProvider>
-        <FramedSurface />
+        <div className="flex h-full min-h-0 flex-col">
+          <AppTabBar />
+          <div className="min-h-0 min-w-0 flex-1">
+            <FramedSurface />
+          </div>
+        </div>
       </TabsProvider>
     </TooltipProvider>
   );
