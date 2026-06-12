@@ -277,6 +277,16 @@ const FALLBACK_SUBMIT_DELAY_MS = 150;
 
 const RULE_RE = /^─{10,}$/;
 const PROMPT_GLYPH = "❯";
+// When a turn is sent to a WORKING agent, the CLI queues it: the submitted text
+// moves ABOVE the box into the queued-message list, and the now-empty input box
+// is filled with the dim hint "Press up to edit queued messages" rather than
+// left blank. That hint is NOT a live user draft — it is the box's resting state
+// while a queued message is pending. We must read it as an empty box, otherwise
+// pasteTurn's Phase-2 verification (which waits for the live draft to clear after
+// Enter) would see a perpetually "non-empty" box and throw `draft did not clear`
+// after SUBMIT_TIMEOUT_MS, even though the message was queued successfully.
+// Matched loosely (no anchors) to tolerate leading glyphs / wording drift.
+const INPUT_PLACEHOLDER_RE = /Press up to edit queued messages/i;
 
 /**
  * Extract the current draft text from the pane's idle input box, or null when
@@ -285,6 +295,8 @@ const PROMPT_GLYPH = "❯";
  * it. We anchor on the bottom-most `❯` (always the live input prompt; transcript
  * rules/glyphs sit above it) and strip the glyph + surrounding whitespace, so
  * an empty box returns "" and a box holding the pasted draft returns non-empty.
+ * A box showing only the queued-message placeholder hint reads as empty (see
+ * INPUT_PLACEHOLDER_RE) — that hint marks a submitted/queued turn, not a draft.
  */
 async function captureInputDraft(conversationId: string): Promise<string | null> {
   const proc = Bun.spawn(
@@ -309,12 +321,13 @@ async function captureInputDraft(conversationId: string): Promise<string | null>
       break;
     }
   }
-  return lines
+  const draft = lines
     .slice(promptIdx, end)
     .join("\n")
     .split(PROMPT_GLYPH)
     .join("")
     .trim();
+  return INPUT_PLACEHOLDER_RE.test(draft) ? "" : draft;
 }
 
 async function sendEnter(conversationId: string): Promise<void> {
