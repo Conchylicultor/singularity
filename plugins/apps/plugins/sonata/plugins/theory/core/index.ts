@@ -18,6 +18,7 @@ export {
   formatChordSymbol,
   formatSpelledChordSymbol,
 } from "./chords";
+export { chordPitches, invertVoicing } from "./voicing";
 export { parseChordSymbol } from "./parse";
 export { detectChord, detectChordWeighted, detectChordWindows } from "./detect";
 export type { ChordMatch, ChordWindow } from "./detect";

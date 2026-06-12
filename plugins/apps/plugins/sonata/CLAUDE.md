@@ -12,7 +12,7 @@
   - **`piano-keyboard`** — Sonata PitchAxis: full 88-key piano keyboard rendered below the vertical roll. Requires the pitch-plane capability and draws every key from the display's published projection, so falling-note columns land exactly on their keys. Server registration of the piano-keyboard config (key-label scope).
   - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
   - **`playback-history`** — Per-song play count + last-played: records a play on playback start (Sonata.Effect), shows stats on each library card (Library.CardMeta), and adds Most/Recently played sort orderings (Library.Sort). Owns the sonata_songs_ext_playback side-table: per-song play count + last-played. Records a play on playback start and serves the reactive rollup.
-  - **`primitives`** [1 sub-plugin] — Umbrella for Sonata-local client primitives.
+  - **`primitives`** [2 sub-plugins] — Umbrella for Sonata-local client primitives.
   - **`progress`** [4 sub-plugins] — Song-navigation progress bar for Sonata: scrubber + contributed timeline markers.
   - **`rich`** [4 sub-plugins] — Rich annotation umbrella for Sonata: chord analyzer, chord overlay, chord readout.
   - **`score`**
