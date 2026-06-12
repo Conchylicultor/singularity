@@ -24,6 +24,20 @@ import { type KeyLane, keyLayout } from "./key-layout";
 /** Shared press transition — fast enough to track per-frame note onsets. */
 const PRESS_TRANSITION = "transform 80ms ease-out, box-shadow 80ms ease-out";
 
+/**
+ * Fixed bottom-corner radius for the keys. A piano key's front lip is only
+ * barely eased on a real instrument — far squarer than the UI's `--radius`
+ * shape token. Like the fixed key colors above, this is a physical-object
+ * shape that must NOT track the app's shape preset (a "Pill" theme should not
+ * round piano keys into lozenges), so it lives in an inline style rather than a
+ * `rounded-*` token class. The keys' top edge stays square (it tucks under the
+ * felt/fallboard).
+ */
+const KEY_BOTTOM_RADIUS: CSSProperties = {
+  borderBottomLeftRadius: "3.5px",
+  borderBottomRightRadius: "3.5px",
+};
+
 /** `color` at `pct`% opacity, for tint/glow layers over the key chrome. */
 const mix = (color: string, pct: number) =>
   `color-mix(in srgb, ${color} ${pct}%, transparent)`;
@@ -110,13 +124,20 @@ function blackKeyStyle(litColor: string | undefined): CSSProperties {
  * `renderKey` children, and at `z-index: -1` so it paints above the key's own
  * cap background but BEHIND the in-flow label (the `z-raised` black key is a
  * stacking context, so -1 stays inside the key). Pressing shortens the face
- * (14% → 8%): the key tilts forward and less of the face is visible.
+ * (14% → 8%): the key tilts forward and less of the face is visible. When lit,
+ * the face continues the cap's tinted bottom color (picking up where the cap's
+ * bottom gradient stop leaves off) and darkens toward the near edge — without
+ * this the face stayed near-black and read as an uncolored band under a lit
+ * cap.
  */
-const BLACK_FACE = (lit: boolean): CSSProperties => ({
-  height: lit ? "8%" : "14%",
+const BLACK_FACE = (litColor: string | undefined): CSSProperties => ({
+  height: litColor === undefined ? "14%" : "8%",
   zIndex: -1,
-  background: "linear-gradient(to bottom, #2e2e2e, #000000)",
-  transition: "height 80ms ease-out",
+  background:
+    litColor === undefined
+      ? "linear-gradient(to bottom, #2e2e2e, #000000)"
+      : `linear-gradient(to bottom, color-mix(in srgb, ${litColor} 48%, #060606), color-mix(in srgb, ${litColor} 28%, #000000))`,
+  transition: "height 80ms ease-out, background 80ms ease-out",
 });
 
 /**
@@ -178,20 +199,21 @@ export function Keyboard({ low, high, lit, renderKey, className }: KeyboardProps
       <div
         key={k.pitch}
         className={cn(
-          "absolute flex items-end justify-center rounded-b-sm",
+          "absolute flex items-end justify-center",
           k.isBlack ? "top-0 z-raised" : "bottom-0 top-0",
         )}
         style={{
           left: `${(k.center - k.width / 2) * 100}%`,
           width: `${k.width * 100}%`,
+          ...KEY_BOTTOM_RADIUS,
           ...(k.isBlack ? blackKeyStyle(litColor) : whiteKeyStyle(litColor)),
         }}
       >
         {k.isBlack && (
           <div
             aria-hidden
-            className="pointer-events-none absolute inset-x-0 bottom-0 rounded-b-sm"
-            style={BLACK_FACE(isLit)}
+            className="pointer-events-none absolute inset-x-0 bottom-0"
+            style={{ ...BLACK_FACE(litColor), ...KEY_BOTTOM_RADIUS }}
           />
         )}
         {renderKey?.(k, isLit)}
@@ -200,7 +222,13 @@ export function Keyboard({ low, high, lit, renderKey, className }: KeyboardProps
   };
 
   return (
-    <div className={cn("relative overflow-hidden rounded-sm", className)}>
+    <div
+      className={cn("relative overflow-hidden", className)}
+      // Physical keyboard frame — fixed shape, preset-independent (see
+      // KEY_BOTTOM_RADIUS). overflow-hidden would otherwise clip the corner
+      // keys to a theme-token radius.
+      style={{ borderRadius: "4px" }}
+    >
       {/* White keys (back layer). */}
       {whites.map(renderLane)}
       {/* Red felt strip across the keybed top — above whites, below blacks. */}
