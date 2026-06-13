@@ -1,4 +1,4 @@
-import { MdSmartToy } from "react-icons/md";
+import { MdAutoAwesome } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 import {
@@ -37,7 +37,7 @@ export function SystemFolder({
       </CollapsibleTrigger>
       <CollapsibleContent className="flex flex-col">
         {descriptors.map((d) => {
-          const Icon = d.icon ?? MdSmartToy;
+          const Icon = d.icon ?? MdAutoAwesome;
           const selected = d.id === selectedSystemId;
           return (
             <Row

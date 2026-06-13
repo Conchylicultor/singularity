@@ -1,4 +1,4 @@
-import { MdSmartToy } from "react-icons/md";
+import { MdAutoAwesome } from "react-icons/md";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 
 export function InvestigateEventButton({
@@ -25,7 +25,7 @@ export function InvestigateEventButton({
           title="Launch agent to investigate this event"
           className={`flex items-center justify-center rounded-md p-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${className ?? ""}`}
         >
-          <MdSmartToy className="size-3.5" />
+          <MdAutoAwesome className="size-3.5" />
         </button>
       }
       getRequest={(userText) => {
