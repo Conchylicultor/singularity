@@ -7,12 +7,13 @@ import {
   ATTACHMENT_MARKDOWN_RE,
   isAttachmentUrl,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
+import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Two-mode description editor:
-//   - Display: markdown rendered as plain text (with FileLinkText routing inline
-//     file paths to file-peek) and image refs rendered as inline thumbnails.
+//   - Display: text rendered with inline widgets via <InlineText> (file-path
+//     links routed to file-peek, active-data chips for conv/task/ui-context
+//     refs) and image refs rendered as inline thumbnails.
 //   - Edit: Lexical-based PromptEditor with paste-image support.
 // Click anywhere on the display to edit; blur returns to display.
 export function DescriptionView({
@@ -20,13 +21,11 @@ export function DescriptionView({
   onChange,
   onFocus,
   onBlur,
-  onFileOpen,
 }: {
   value: string;
   onChange: (v: string) => void;
   onFocus?: () => void;
   onBlur?: () => void;
-  onFileOpen?: (path: string) => void;
 }) {
   const [editing, setEditing] = useState(false);
 
@@ -67,7 +66,7 @@ export function DescriptionView({
       }}
     >
       {value ? (
-        <DescriptionDisplay text={value} onFileOpen={onFileOpen} />
+        <DescriptionDisplay text={value} />
       ) : (
         <span className="text-muted-foreground">Add a description…</span>
       )}
@@ -84,17 +83,12 @@ export function DescriptionView({
   );
 }
 
-// Render the markdown body as plain text + file-links, with attachment image
-// refs replaced by inline thumbnails. We don't run a full markdown renderer
-// here — task descriptions today are plain text with the occasional pasted
-// image, so this lighter pass keeps the display fast and predictable.
-function DescriptionDisplay({
-  text,
-  onFileOpen,
-}: {
-  text: string;
-  onFileOpen?: (path: string) => void;
-}) {
+// Render the body as plain text + inline widgets (file-links, active-data
+// chips), with attachment image refs replaced by inline thumbnails. We don't
+// run a full markdown renderer here — task descriptions today are plain text
+// with the occasional pasted image, so this lighter pass keeps the display
+// fast and predictable.
+function DescriptionDisplay({ text }: { text: string }) {
   const segments: Array<
     { kind: "text"; value: string } | { kind: "image"; id: string; alt: string }
   > = [];
@@ -121,7 +115,7 @@ function DescriptionDisplay({
     <p className="break-words whitespace-pre-wrap">
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
-          <FileLinkText key={i} text={seg.value} onFileOpen={onFileOpen} />
+          <InlineText key={i} text={seg.value} />
         ) : (
           <Fragment key={i}>
             <AttachmentThumbnail attachmentId={seg.id} alt={seg.alt} />

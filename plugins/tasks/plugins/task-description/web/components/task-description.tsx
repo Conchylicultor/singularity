@@ -8,13 +8,11 @@ import {
 import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { patchTask, useTask } from "@plugins/tasks/web";
 import { getTask as getTaskEndpoint, taskDetailResource } from "@plugins/tasks/core";
 import type { Task } from "@plugins/tasks/core";
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
 import { useFlushAll, useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
-import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { DescriptionView } from "./description-view";
 
 function TaskDescriptionInner({
@@ -27,9 +25,6 @@ function TaskDescriptionInner({
   detailTask: Task | null;
 }) {
   const flushAll = useFlushAll();
-  const openPane = useOpenPane();
-  const openFile = (path: string) =>
-    openPane(filePeekPane, { worktree: "main", filePath: path }, { mode: "push" });
 
   const descField = useEditableField({
     value: detailTask?.description ?? "",
@@ -52,7 +47,6 @@ function TaskDescriptionInner({
           onChange={descField.onChange}
           onFocus={descField.onFocus}
           onBlur={descField.onBlur}
-          onFileOpen={openFile}
         />
         <div className="flex justify-end">
           <LaunchControl

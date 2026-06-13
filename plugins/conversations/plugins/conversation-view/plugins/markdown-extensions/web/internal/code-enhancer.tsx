@@ -6,27 +6,10 @@ import {
   useMarkdownEnhancement,
   type MarkdownEnhancement,
 } from "@plugins/primitives/plugins/markdown/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversationById } from "@plugins/conversations/web";
-import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
-import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
+import { useFileOpen } from "./use-file-open";
 
 export function CodeEnhancer({ children }: { children: ReactNode }) {
-  const convId = conversationPane.useRouteEntry()?.params.convId ?? null;
-  const conversation = useConversationById(convId);
-  const taskEntry = taskDetailPane.useRouteEntry();
-  const openPane = useOpenPane();
-  const worktree = conversation?.attemptId ?? (taskEntry ? "main" : undefined);
-
-  const onFileOpen = useMemo(() => {
-    if (!worktree) return undefined;
-    return (path: string, line?: number) =>
-      openPane(filePeekPane, {
-        worktree,
-        filePath: line != null ? `${path}:${line}` : path,
-      }, { mode: "push" });
-  }, [worktree, openPane]);
+  const onFileOpen = useFileOpen();
 
   const inlineCode = useCallback(
     (text: string): ReactNode | null => {

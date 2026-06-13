@@ -16,7 +16,30 @@ const SKIP_TYPES = new Set(["code", "pre", "a"]);
 // element types) are also left opaque — they manage their own children and
 // rewriting them can corrupt the props the component depends on (e.g. the
 // active-data ConvChip relies on its children being the raw conv-id string).
+//
+// Public entry: guards the silent-no-op footgun (a custom-component *root* is
+// left opaque, so nothing inside is linkified — the sanctioned path is
+// <InlineText> with a string seed; see plugins/primitives/plugins/inline-text),
+// then walks. Never throws, so the rendered output is unchanged.
 export function linkifyChildren(
+  children: ReactNode,
+  onFileOpen?: (path: string, line?: number) => void,
+): ReactNode {
+  if (process.env.NODE_ENV !== "production") {
+    if (
+      isValidElement(children) &&
+      children.type !== Fragment &&
+      typeof children.type !== "string"
+    ) {
+      console.error(
+        "[file-links] linkifyChildren was seeded with a custom-component root; walkers leave custom components opaque, so nothing inside is linkified. Seed with a raw string via <InlineText> instead of hand-composing walkers.",
+      );
+    }
+  }
+  return walkLinkify(children, onFileOpen);
+}
+
+function walkLinkify(
   children: ReactNode,
   onFileOpen?: (path: string, line?: number) => void,
 ): ReactNode {
@@ -27,7 +50,7 @@ export function linkifyChildren(
   if (typeof children === "number") return children;
   if (Array.isArray(children)) {
     return Children.map(children, (child, i) => (
-      <Fragment key={i}>{linkifyChildren(child, onFileOpen)}</Fragment>
+      <Fragment key={i}>{walkLinkify(child, onFileOpen)}</Fragment>
     ));
   }
   if (isValidElement(children)) {
@@ -36,13 +59,13 @@ export function linkifyChildren(
     // active-data linkify) can wrap text in fragments and we still see the
     // strings inside.
     if (el.type === Fragment) {
-      return <Fragment>{linkifyChildren(el.props.children, onFileOpen)}</Fragment>;
+      return <Fragment>{walkLinkify(el.props.children, onFileOpen)}</Fragment>;
     }
     if (typeof el.type !== "string") return el;
     if (SKIP_TYPES.has(el.type)) return el;
     const inner = el.props.children;
     if (inner === undefined) return el;
-    return cloneElement(el, undefined, linkifyChildren(inner, onFileOpen));
+    return cloneElement(el, undefined, walkLinkify(inner, onFileOpen));
   }
   return children;
 }

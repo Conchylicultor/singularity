@@ -1,11 +1,6 @@
-import { useState, type ReactNode } from "react";
+import { useState } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
-import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
-import { useActiveDataLinkify } from "@plugins/active-data/web";
-import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { useConversationById } from "@plugins/conversations/web";
-import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
+import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
@@ -51,21 +46,13 @@ function InlineImage({ mime, data }: { mime: string; data: string }) {
   );
 }
 
-function SegmentedContent({
-  segments,
-  onFileOpen,
-  linkify,
-}: {
-  segments: UserTextSegment[];
-  onFileOpen: (path: string) => void;
-  linkify: (children: ReactNode) => ReactNode;
-}) {
+function SegmentedContent({ segments }: { segments: UserTextSegment[] }) {
   return (
     <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
           <Text as="div" variant="body" key={i} className="whitespace-pre-wrap break-words">
-            {linkifyChildren(linkify(seg.value), onFileOpen)}
+            <InlineText text={seg.value} />
           </Text>
         ) : (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
@@ -80,23 +67,11 @@ function SegmentedContent({
 
 export function UserTextRow({ event }: { event: JsonlEvent }) {
   const e = event as UserTextEvent;
-  const { convId } = conversationPane.useParams();
-  const conversation = useConversationById(convId);
-  const openPane = useOpenPane();
-  const linkify = useActiveDataLinkify();
   const imageCount = e.segments?.filter((s) => s.kind !== "text").length ?? 0;
   const collapsible = isLong(e.text, imageCount);
   const [expanded, setExpanded] = useState(false);
   const reportSticky = useStickyReport();
   const showCollapsed = collapsible && !expanded;
-
-  if (!conversation) return null;
-
-  const onFileOpen = (path: string) =>
-    openPane(filePeekPane, {
-      worktree: conversation.attemptId,
-      filePath: path,
-    }, { mode: "push" });
 
   return (
     <ContentScope>
@@ -106,10 +81,10 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
           style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
         >
           {e.segments ? (
-            <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} linkify={linkify} />
+            <SegmentedContent segments={e.segments} />
           ) : (
             <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-              {linkifyChildren(linkify(e.text), onFileOpen)}
+              <InlineText text={e.text} />
             </Text>
           )}
         </div>

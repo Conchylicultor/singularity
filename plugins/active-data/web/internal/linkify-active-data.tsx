@@ -60,6 +60,20 @@ function applyPatterns(text: string, contribs: PatternContrib[]): ReactNode {
   return <>{out}</>;
 }
 
+// Dev-only loud guard for the silent-no-op footgun: a walker seeded with a
+// custom-component *root* (not a string/host element/Fragment) leaves everything
+// opaque and renders nothing. The sanctioned path is <InlineText> (string seed)
+// — see plugins/primitives/plugins/inline-text. Never throws (so the rendered
+// output is unchanged); just surfaces the mistake instead of swallowing it.
+function warnIfOpaqueRoot(node: ReactNode): void {
+  if (process.env.NODE_ENV === "production") return;
+  if (isValidElement(node) && node.type !== Fragment && typeof node.type !== "string") {
+    console.error(
+      "[active-data] useActiveDataLinkify was seeded with a custom-component root; walkers leave custom components opaque, so nothing inside is linkified. Seed with a raw string via <InlineText> instead of hand-composing walkers.",
+    );
+  }
+}
+
 function walk(node: ReactNode, contribs: PatternContrib[], inPre = false): ReactNode {
   if (node == null || typeof node === "boolean") return node;
   if (typeof node === "string") return inPre ? node : applyPatterns(node, contribs);
@@ -108,6 +122,9 @@ export function useActiveDataLinkify(): (children: ReactNode) => ReactNode {
   );
   return useMemo(() => {
     if (contribs.length === 0) return (c: ReactNode) => c;
-    return (children: ReactNode) => walk(children, contribs);
+    return (children: ReactNode) => {
+      warnIfOpaqueRoot(children);
+      return walk(children, contribs);
+    };
   }, [contribs]);
 }

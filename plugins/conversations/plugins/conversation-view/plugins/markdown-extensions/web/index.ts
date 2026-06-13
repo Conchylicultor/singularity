@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
+import { InlineTextWalkerSlot } from "@plugins/primitives/plugins/inline-text/web";
 import { FileLinksEnhancer } from "./internal/file-links-enhancer";
+import { FileLinksInlineWalker } from "./internal/file-links-inline-walker";
 import { CodeEnhancer } from "./internal/code-enhancer";
 import { ImgEnhancer } from "./internal/img-enhancer";
 
@@ -12,6 +14,14 @@ export default {
       id: "file-links",
       order: 10,
       Component: FileLinksEnhancer,
+    }),
+    // Plain-text (non-markdown) counterpart of the file-links markdown
+    // enhancer, registered after active-data (order 10) so chips stay opaque
+    // and remaining file paths still linkify. Same onFileOpen resolution.
+    InlineTextWalkerSlot({
+      id: "file-links",
+      order: 10,
+      Component: FileLinksInlineWalker,
     }),
     MarkdownEnhancerSlot({
       id: "code-inline",
