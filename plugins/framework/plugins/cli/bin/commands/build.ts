@@ -11,7 +11,7 @@ import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/rout
 import { checkBroadcasts } from "../broadcasts";
 import { getMainRepoRoot } from "../git/main-repo-root";
 import { registerMergeDrivers } from "../git/register-merge-drivers";
-import { runChecks, discoverTscTargets, tsBuildInfoPath } from "@plugins/framework/plugins/tooling/plugins/checks/core";
+import { runChecks, listAllChecks, discoverTscTargets, tsBuildInfoPath } from "@plugins/framework/plugins/tooling/plugins/checks/core";
 import {
   libpqEnv,
   readDatabaseConfig,
@@ -853,6 +853,40 @@ export function registerBuild(program: Command) {
           }
 
           if (opts.skipChecks) {
+            // Cheap, structural checks opt into running even on the fast path
+            // (`--skip-checks`), so codegen-coupled obligations — e.g. a
+            // newly-reorderable slot that still owes an authored override —
+            // fail at build instead of slipping silently to `push`. Selected
+            // generically via the `alwaysRun` flag (never by naming a check).
+            const alwaysRunIds = (await listAllChecks())
+              .filter((c) => c.alwaysRun)
+              .map((c) => c.id);
+            // Guard: runChecks([]) falls through to running ALL checks.
+            if (alwaysRunIds.length > 0) {
+              parallel.push(
+                (async (): Promise<StepResult> => {
+                  const lines: StepResult["lines"] = [];
+                  const start = performance.now();
+                  const ok = await runChecks(alwaysRunIds, {
+                    logFile: join(worktreeDataDir(name), "check.log"),
+                    onCheckDone: (id, durationMs, wallStartMs) => {
+                      pushBuildSpan(`check:${id}`, "build:checks", id, durationMs, wallStartMs);
+                    },
+                    log: (line, stream) => {
+                      lines.push({ text: line, stream });
+                    },
+                  });
+                  return {
+                    id: "checks",
+                    label: "checks (always-run)",
+                    lines,
+                    durationMs: Math.round(performance.now() - start),
+                    success: ok,
+                  };
+                })(),
+              );
+            }
+
             const runtimeTargets = discoverTscTargets(root).filter((t) => t.hasEntrypoint);
             for (const target of runtimeTargets) {
               parallel.push(

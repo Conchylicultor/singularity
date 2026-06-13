@@ -1,5 +1,11 @@
 # Authoring reorder overrides
 
+A reorderable slot's on-screen order must be a deliberate, committed layout — not the
+non-deterministic natural order contributions happen to load in. So every reorderable slot
+owes a **hand-curated** override; the `reorder:configs-authored` check enforces this (it
+runs at build, including `--skip-checks` builds, not just at push). Authoring is
+intentionally manual: a human decides the order.
+
 Each reorderable slot has a generated `<slotId>.origin.jsonc` (the full catalog in
 natural order) and an override `<slotId>.jsonc` that curates it. The
 `reorder:configs-authored` check requires the override to exist.

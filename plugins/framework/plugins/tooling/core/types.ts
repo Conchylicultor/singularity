@@ -3,6 +3,14 @@ export interface Check {
   description: string;
   run(): Promise<CheckResult>;
   /**
+   * Run even when `./singularity build --skip-checks` is passed (and, as always,
+   * during a normal build and `push`). For cheap, structural, codegen-coupled
+   * invariants whose violation is painful to discover only at push — e.g. a
+   * newly-reorderable slot that still owes an authored override. Default false:
+   * the check only runs in the full check pass.
+   */
+  alwaysRun?: boolean;
+  /**
    * Cache-signature contribution. Combined with the working-tree content hash
    * to key a recorded PASS, so an unchanged tree can reuse a prior green run
    * (e.g. `push` reusing `build`'s checks):

@@ -1,9 +1,7 @@
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
+import type { Check } from "@plugins/framework/plugins/tooling/core";
 import { reorderableSlots } from "../shared/reorderable-slots.generated";
 import { grandfatheredSlots } from "./grandfathered-slots";
-
-type CheckResult = { ok: true } | { ok: false; message: string; hint?: string };
-type Check = { id: string; description: string; run(): Promise<CheckResult> };
 
 // A reorder directive descriptor is stored under
 // `config/<asPath(pluginId)>/<slotId>.jsonc` — the slash form of the DEFINING
@@ -26,6 +24,16 @@ const check: Check = {
   id: "reorder:configs-authored",
   description:
     "Every reorderable slot must have an authored config override (grandfathered slots are exempt until one is written)",
+  // Cheap (one `git ls-files` + the generated manifest) and codegen-coupled:
+  // making a slot reorderable is what creates the obligation, so fail at build
+  // — including `--skip-checks` builds — not only at push.
+  alwaysRun: true,
+  // Never cache: the verdict reads the git INDEX / untracked state
+  // (`git ls-files --cached --others`), which the content tree-hash cache key
+  // does not capture — an index-only change (e.g. an override removed from the
+  // index but not the working tree) would otherwise reuse a stale PASS. The
+  // check is cheap, so always re-running it is the correct trade.
+  cacheSignature: () => null,
   async run() {
     const root = await getRoot();
 
@@ -58,8 +66,13 @@ const check: Check = {
     const parts: string[] = [];
     if (missing.length > 0) {
       parts.push(
-        `${missing.length} reorderable slot(s) missing an authored config override:\n` +
-          missing.map((p) => `    ${p}`).join("\n"),
+        `${missing.length} reorderable slot(s) have no authored config override:\n` +
+          missing.map((p) => `    ${p}`).join("\n") +
+          "\n\nWhy this is required: a reorderable slot's on-screen order must be a " +
+          "deliberate, committed layout — not the non-deterministic natural order " +
+          "contributions happen to load in. Each new reorderable slot therefore owes " +
+          "a hand-curated override. This step is intentionally manual: a human decides " +
+          "the order.",
       );
     }
     if (redundant.length > 0) {
@@ -74,7 +87,7 @@ const check: Check = {
       message: parts.join("\n\n"),
       hint: [
         missing.length > 0 &&
-          "For each missing slot, author its override per plugins/reorder/authoring-overrides.md (copy .origin.jsonc to .jsonc, curate items, keep the leading // @hash line) — or set `reorder: false` on the slot if its order shouldn't be user-curated.",
+          "For each slot: copy its generated <slot>.origin.jsonc to <slot>.jsonc (same dir, drop \".origin\"), keep the leading // @hash line, and arrange the `items` array for how the slot actually renders (sidebar = vertical list, toolbar = horizontal bar, pane = stacked). See plugins/reorder/authoring-overrides.md. If this slot's order should NOT be user-curated, set `reorder: false` on its defineRenderSlot instead.",
         redundant.length > 0 &&
           "Delete the listed paths from plugins/reorder/check/grandfathered-slots.ts.",
       ]
