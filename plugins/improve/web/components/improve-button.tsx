@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
-import { MdAdd } from "react-icons/md";
+import { MdAutoAwesome } from "react-icons/md";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
 import { Improve } from "../commands";
 import { IMPROVEMENTS_META_TASK_ID } from "../../shared/constants";
@@ -23,7 +23,7 @@ export function ImproveButton() {
       }}
       trigger={
         <Button variant="outline" size="sm">
-          <MdAdd />
+          <MdAutoAwesome />
           Improve
         </Button>
       }
