@@ -126,18 +126,17 @@ function ensureFonts(): void {
     name: LABEL_FONT,
     style: {
       fontFamily: "Inter, sans-serif",
-      fontWeight: "600",
+      fontWeight: "500",
       fontSize: 32,
       fill: 0xffffff,
-      // The DOM label's halo (`text-shadow: 0 1px 1.5px rgba(0,0,0,.95), …`):
-      // keeps a white glyph legible on every palette hue without per-note
-      // luminance math.
-      dropShadow: {
+      // A flat dark outline (no blur) around each white glyph: a crisp border
+      // reads more sharply than a soft halo and keeps the letter legible on
+      // every palette hue without per-note luminance math. Width is in the
+      // 32px raster space (≈1px at a 9px label).
+      stroke: {
         color: 0x000000,
-        alpha: 0.9,
-        blur: 1.5,
-        distance: 1,
-        angle: Math.PI / 2,
+        width: 2,
+        alpha: 0.8,
       },
     },
     // A–G note letters, digits (bar numbers share glyph logic in tests; also
