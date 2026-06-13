@@ -113,7 +113,12 @@ function splitOnOperators(s: string): string[] {
       if ((c === "&" && next === "&") || (c === "|" && next === "|")) {
         parts.push(cur); cur = ""; i++; continue;
       }
-      if (c === ";" || c === "|" || c === "&") {
+      // Newlines are command separators too — a multi-line script must split
+      // into one call per line, or a dangerous call on line 2+ would collapse
+      // into line 1's token stream and lose its name/cwd attribution. A line
+      // continuation (`\<newline>`) is consumed by the `\\` escape branch above,
+      // so it never reaches here and correctly does NOT split.
+      if (c === ";" || c === "|" || c === "&" || c === "\n" || c === "\r") {
         parts.push(cur); cur = ""; continue;
       }
       cur += c;
