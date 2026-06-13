@@ -11,7 +11,8 @@ import { buildInitialConfig } from "../internal/lexical-config";
 import { EnterKeyPlugin } from "../internal/enter-key-plugin";
 import { DecoratorNavPlugin } from "../internal/decorator-nav-plugin";
 import { DecoratorBlockPlugin } from "../internal/decorator-block-plugin";
-import { TextEditorSlots } from "../slots";
+import { TextEditorSlots, useMergedNodeExtensions } from "../slots";
+import type { NodeExtension } from "../internal/node-extensions";
 import {
   applyMarkdownToEditor,
   serializeEditorToMarkdown,
@@ -48,14 +49,21 @@ export function TextEditor({
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
   bottomSlot?: React.ReactNode;
 }) {
+  const extensions = useMergedNodeExtensions();
+  // The Lexical composer must know every node class up-front and must not be
+  // rebuilt (that remounts the editor). The node-class set is fixed at boot, so
+  // key the config on the node types — `extensions` identity churns each render.
+  const nodeKey = extensions.map((ext) => ext.node.getType()).join("|");
   const initialConfig = useMemo(
     () =>
       buildInitialConfig({
         namespace,
         onError: (err) =>
           onError?.(err instanceof Error ? err.message : String(err)),
+        extensions,
       }),
-    [namespace, onError],
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- nodeKey captures the boot-stable node-class set; `extensions` identity churns each render
+    [namespace, onError, nodeKey],
   );
 
   return (
@@ -69,7 +77,7 @@ export function TextEditor({
         maxHeight={maxHeight}
         bottomSlot={bottomSlot}
       />
-      <ValueSyncPlugin value={value} onChange={onChange} />
+      <ValueSyncPlugin value={value} onChange={onChange} extensions={extensions} />
       <PluginSlot onError={onError} />
       <DecoratorNavPlugin />
       <DecoratorBlockPlugin />
@@ -186,20 +194,26 @@ function PluginSlot({ onError }: { onError?: (msg: string) => void }) {
 function ValueSyncPlugin({
   value,
   onChange,
+  extensions,
 }: {
   value: string;
   onChange: (markdown: string) => void;
+  extensions: readonly NodeExtension[];
 }) {
   const [editor] = useLexicalComposerContext();
   const selfWriteRef = useRef(false);
   const lastSerializedRef = useRef<string | null>(null);
   const onChangeRef = useRef(onChange);
   onChangeRef.current = onChange;
+  // Read fresh inside effects so the (boot-stable) extension set is never a
+  // dependency that would re-run the markdown sync.
+  const extensionsRef = useRef(extensions);
+  extensionsRef.current = extensions;
 
   useEffect(() => {
     if (lastSerializedRef.current === value) return;
     selfWriteRef.current = true;
-    applyMarkdownToEditor(editor, value);
+    applyMarkdownToEditor(editor, value, extensionsRef.current);
     lastSerializedRef.current = value;
     queueMicrotask(() => {
       selfWriteRef.current = false;
@@ -210,7 +224,7 @@ function ValueSyncPlugin({
     return editor.registerUpdateListener(({ dirtyElements, dirtyLeaves }) => {
       if (selfWriteRef.current) return;
       if (dirtyElements.size === 0 && dirtyLeaves.size === 0) return;
-      const md = serializeEditorToMarkdown(editor);
+      const md = serializeEditorToMarkdown(editor, extensionsRef.current);
       if (md === lastSerializedRef.current) return;
       lastSerializedRef.current = md;
       onChangeRef.current(md);

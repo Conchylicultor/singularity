@@ -7,8 +7,10 @@ the full plugin/slot **composition lineage**, containing pane, current URL, and 
 fine-grained element descriptor (tag + role + accessible label + an id/test-id
 anchored CSS path) — is captured, serialized to a single-line
 `<ui-context …>…</ui-context>` tag, and handed to the Improve popover via
-`Improve.OpenWithText`. There it renders as a rich inline chip (a Lexical
-`DecoratorNode`), and on submit the tag flows verbatim into the agent prompt.
+`Improve.OpenWithText`. There it renders as a rich inline chip, and on submit the
+tag flows verbatim into the agent prompt. The **same** chip renders wherever the
+tag later appears (the sent user message, assistant text) because it is just an
+`active-data` inline contribution — one registry, every surface (see below).
 
 ## How the pieces fit
 
@@ -28,11 +30,17 @@ anchored CSS path) — is captured, serialized to a single-line
   underlying element. Window capture-phase `mousemove`/`click`/`keydown` track
   the hovered element, select on click (`preventDefault`+`stopPropagation`), and
   cancel on Esc. Targets inside `[data-element-picker]` are skipped.
-- **Rich chip.** `internal/ui-context-node.tsx` is a `DecoratorNode` registered
-  via `registerNodeExtension`. `serializeNode`/`deserializePattern`
-  (`UI_CONTEXT_RE`) round-trip the `<ui-context>…</ui-context>` tag through the
-  editor's line-based markdown sync — the token is single-line so it survives the line
-  scan. The chip removes itself by node key (mirrors paste-images `ImageNode`).
+- **Rich chip.** `components/ui-context-tag.tsx` is an `active-data` **inline
+  contribution** (`ActiveData.Tag`, `display:"inline"`, pattern `UI_CONTEXT_RE`):
+  it parses the matched `<ui-context>…</ui-context>` substring back into metadata
+  and renders `UiContextChip`. This is the *only* registration — `active-data`
+  renders inline contributions on every text surface, including the Lexical
+  editor (via its generic `ActiveDataInlineNode` bridge into
+  `TextEditorSlots.NodeExtensions`) and read surfaces (markdown / user-text
+  `useActiveDataLinkify`). The token is single-line so it round-trips through the
+  editor's line-based markdown sync; copy/paste survives because the generic node
+  emits the raw tag as its text content. There is no element-picker-owned Lexical
+  node — registering the one inline contribution lights the chip up everywhere.
 
 ## Token format
 
@@ -63,8 +71,8 @@ still reads pre-split legacy flat-body tags (`LEGACY_BODY_PREAMBLE`).
 
 - Description: Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 - Web:
-  - Contributes: `ActionBar.Item` → `ElementPickerButton`, `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`
-  - Uses: `improve.ImproveCommands`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor.registerNodeExtension`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
+  - Contributes: `ActionBar.Item` → `ElementPickerButton`, `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`, `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
+  - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
 - Core:
   - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`
 

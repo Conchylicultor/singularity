@@ -1,5 +1,5 @@
 import type { InitialConfigType } from "@lexical/react/LexicalComposer";
-import { getNodeExtensions } from "./node-extensions";
+import type { NodeExtension } from "./node-extensions";
 
 export const TEXT_EDITOR_THEME = {
   paragraph: "m-0",
@@ -9,11 +9,12 @@ export const TEXT_EDITOR_THEME = {
 export function buildInitialConfig(opts: {
   namespace: string;
   onError: (err: Error) => void;
+  extensions: readonly NodeExtension[];
 }): InitialConfigType {
   return {
     namespace: opts.namespace,
     theme: TEXT_EDITOR_THEME,
-    nodes: getNodeExtensions().map((ext) => ext.node),
+    nodes: opts.extensions.map((ext) => ext.node),
     onError: opts.onError,
   };
 }

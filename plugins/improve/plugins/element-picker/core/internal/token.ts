@@ -56,8 +56,9 @@ export function serializeUiContext(m: UiContextMeta): string {
 export const UI_CONTEXT_RE =
   /<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>/g;
 
-export function parseUiContext(match: RegExpExecArray): UiContextMeta | null {
-  const tag = match[0];
+// Accepts the raw matched `<ui-context …>` substring (e.g. an active-data inline
+// contribution's `content`, or a `UI_CONTEXT_RE` match's [0]).
+export function parseUiContext(tag: string): UiContextMeta | null {
   const get = (k: string) => new RegExp(`${k}="([^"]*)"`).exec(tag)?.[1];
   const url = get("url");
   // New tags carry the label in <picked-content>; fall back to the legacy flat

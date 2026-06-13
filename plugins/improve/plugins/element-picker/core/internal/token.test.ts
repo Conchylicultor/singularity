@@ -11,7 +11,7 @@ function roundTrip(meta: UiContextMeta): UiContextMeta | null {
   const re = new RegExp(UI_CONTEXT_RE.source, UI_CONTEXT_RE.flags);
   const match = re.exec(tag);
   expect(match).not.toBeNull();
-  return parseUiContext(match!);
+  return parseUiContext(match![0]);
 }
 
 test("round-trips the full lineage path through serialize/parse", () => {
@@ -56,5 +56,5 @@ test("parses legacy flat-body tags (pre <hint>/<picked-content> split)", () => {
   const re = new RegExp(UI_CONTEXT_RE.source, UI_CONTEXT_RE.flags);
   const match = re.exec(legacy);
   expect(match).not.toBeNull();
-  expect(parseUiContext(match!)).toEqual({ url: "u", element: "div — Old label" });
+  expect(parseUiContext(match![0])).toEqual({ url: "u", element: "div — Old label" });
 });

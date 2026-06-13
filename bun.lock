@@ -56,6 +56,10 @@
     "plugins/active-data": {
       "name": "@singularity/plugin-active-data",
       "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
     },
     "plugins/active-data/plugins/attempt": {
       "name": "@singularity/plugin-active-data-attempt",
@@ -1461,10 +1465,6 @@
     "plugins/improve/plugins/element-picker": {
       "name": "@singularity/plugin-improve-element-picker",
       "version": "0.0.1",
-      "dependencies": {
-        "@lexical/react": "^0.44.0",
-        "lexical": "^0.44.0",
-      },
     },
     "plugins/infra": {
       "name": "@singularity/plugin-infra",

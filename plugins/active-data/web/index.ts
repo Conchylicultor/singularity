@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MarkdownEnhancerSlot } from "@plugins/primitives/plugins/markdown/web";
+import { TextEditorSlots } from "@plugins/primitives/plugins/text-editor/web";
 
 export { ActiveData } from "./slots";
 export type { ActiveDataContribution, ActiveDataBlockContribution, ActiveDataInlineContribution, ActiveDataCodeContribution } from "./slots";
@@ -17,6 +18,7 @@ export { useActiveDataBinding } from "./internal/use-active-data-binding";
 export type { ActiveDataBindingHandle } from "./internal/use-active-data-binding";
 
 import { ActiveDataMarkdownEnhancer } from "./internal/markdown-enhancer";
+import { useActiveDataNodeExtensions } from "./internal/node-extension-bridge";
 
 export default {
   collapsed: true,
@@ -27,6 +29,12 @@ export default {
       id: "active-data",
       order: 0,
       Component: ActiveDataMarkdownEnhancer,
+    }),
+    // Mirror inline tags into the Lexical editor so they render as chips while
+    // composing, not just on display.
+    TextEditorSlots.NodeExtensions({
+      id: "active-data-inline",
+      useExtensions: useActiveDataNodeExtensions,
     }),
   ],
 } satisfies PluginDefinition;

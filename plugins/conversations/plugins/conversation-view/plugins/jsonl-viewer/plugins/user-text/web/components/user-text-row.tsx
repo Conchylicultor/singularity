@@ -1,6 +1,7 @@
-import { useState } from "react";
+import { useState, type ReactNode } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
+import { useActiveDataLinkify } from "@plugins/active-data/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
@@ -53,16 +54,18 @@ function InlineImage({ mime, data }: { mime: string; data: string }) {
 function SegmentedContent({
   segments,
   onFileOpen,
+  linkify,
 }: {
   segments: UserTextSegment[];
   onFileOpen: (path: string) => void;
+  linkify: (children: ReactNode) => ReactNode;
 }) {
   return (
     <>
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
           <Text as="div" variant="body" key={i} className="whitespace-pre-wrap break-words">
-            <FileLinkText text={seg.value} onFileOpen={onFileOpen} />
+            {linkify(<FileLinkText text={seg.value} onFileOpen={onFileOpen} />)}
           </Text>
         ) : (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
@@ -80,6 +83,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const openPane = useOpenPane();
+  const linkify = useActiveDataLinkify();
   const imageCount = e.segments?.filter((s) => s.kind !== "text").length ?? 0;
   const collapsible = isLong(e.text, imageCount);
   const [expanded, setExpanded] = useState(false);
@@ -102,10 +106,10 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
           style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
         >
           {e.segments ? (
-            <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} />
+            <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} linkify={linkify} />
           ) : (
             <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-              <FileLinkText text={e.text} onFileOpen={onFileOpen} />
+              {linkify(<FileLinkText text={e.text} onFileOpen={onFileOpen} />)}
             </Text>
           )}
         </div>

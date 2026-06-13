@@ -7,10 +7,12 @@ import {
   $createTextNode,
   type LexicalEditor,
 } from "lexical";
-import { getNodeExtensions } from "./node-extensions";
+import { getNodeExtensions, type NodeExtension } from "./node-extensions";
 
-export function serializeEditorToMarkdown(editor: LexicalEditor): string {
-  const extensions = getNodeExtensions();
+export function serializeEditorToMarkdown(
+  editor: LexicalEditor,
+  extensions: readonly NodeExtension[] = getNodeExtensions(),
+): string {
   const lines: string[] = [];
   editor.getEditorState().read(() => {
     const root = $getRoot();
@@ -44,8 +46,8 @@ export function serializeEditorToMarkdown(editor: LexicalEditor): string {
 export function applyMarkdownToEditor(
   editor: LexicalEditor,
   markdown: string,
+  extensions: readonly NodeExtension[] = getNodeExtensions(),
 ): void {
-  const extensions = getNodeExtensions();
   editor.update(() => {
     const root = $getRoot();
     root.clear();

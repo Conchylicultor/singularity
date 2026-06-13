@@ -28,6 +28,20 @@ Hosts wire two helpers:
 Renderers needing the host conversation read it via
 `conversationPane.useData()` directly; the slot does not pipe it.
 
+## Editor bridge — inline tags render while composing too
+
+`display:'inline'` contributions also render as chips **inside the Lexical
+editor**, not only on read surfaces. `internal/node-extension-bridge.ts`
+contributes a single `TextEditorSlots.NodeExtensions` source that mirrors the
+inline registry into the editor: a union of every inline `pattern` feeds one
+generic `ActiveDataInlineNode` (`internal/active-data-inline-node.tsx`), which
+stores the raw matched substring, resolves the matching contribution at decorate
+time, and serializes back to that substring (so copy/paste and markdown sync
+round-trip). The upshot: registering one inline contribution lights the token up
+on **every** surface — compose editor + assistant markdown + user-text — with no
+per-tag Lexical wiring. (This is how the element-picker `<ui-context>` chip is
+defined; it owns no Lexical node of its own.)
+
 ## Persisting widget state — `useActiveDataBinding`
 
 Block widgets often have follow-up state — a task was created, a conversation
@@ -68,12 +82,12 @@ Behavior:
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 - Web:
   - Slots: `ActiveData.Tag`
-  - Contributes: `MarkdownEnhancerSlot`
-  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`
+  - Contributes: `MarkdownEnhancerSlot`, `TextEditorSlots.NodeExtensions`
+  - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`, `primitives/text-editor.TextEditorSlots`
   - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
 - Cross-plugin:
-  - Slot contributors: `attempt`, `conv`, `plugin-link`, `task`, `task-link`
-  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`
+  - Slot contributors: `attempt`, `conv`, `element-picker`, `plugin-link`, `task`, `task-link`
+  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `conversations/conversation-view/jsonl-viewer/user-text`, `improve/element-picker`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
