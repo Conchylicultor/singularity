@@ -37,31 +37,31 @@ export default createRule({
         "Empty .catch() silently swallows errors — this hides bugs. " +
         "Handle the specific exception and re-throw unknown errors, " +
         "or remove the .catch() and use `void promise` if fire-and-forget is intentional " +
-        "(the crashes plugin automatically captures unhandled rejections and files tasks). " +
+        "(the reports plugin automatically captures unhandled rejections and files tasks). " +
         "See CLAUDE.md § Promise handling.",
       consoleOnly:
         ".catch(console.error/warn) logs the error but swallows the rejection — " +
         "the caller sees success and the bug becomes invisible. " +
-        "Remove the .catch() and use `void promise` — the crashes plugin captures " +
+        "Remove the .catch() and use `void promise` — the reports plugin captures " +
         "unhandled rejections automatically and files tasks. " +
         "If local handling is needed, catch specific exceptions and re-throw unknown ones. " +
         "See CLAUDE.md § Promise handling.",
       emptyCatch:
         "Empty catch block silently swallows errors — this hides bugs. " +
         "Handle the specific exception and re-throw unknown errors. " +
-        "Unhandled exceptions are automatically captured by the crashes plugin. " +
+        "Unhandled exceptions are automatically captured by the reports plugin. " +
         "See CLAUDE.md § Promise handling.",
       consoleOnlyCatch:
         "catch block with only console.error/warn logs the error but swallows it — " +
         "the bug becomes invisible. Re-throw after logging, or remove the try/catch " +
-        "entirely — the crashes plugin automatically captures uncaught exceptions " +
+        "entirely — the reports plugin automatically captures uncaught exceptions " +
         "and files tasks. See CLAUDE.md § Promise handling.",
       swallowingCatch:
         "Parameterless `catch {` silently swallows the error — with no binding the " +
         "handler cannot inspect or re-throw it, so unexpected failures vanish. " +
         "Fail loudly instead: add a binding and re-throw everything you don't " +
         "specifically expect — `catch (err) { if (!isExpected(err)) throw err; … }`. " +
-        "The crashes plugin captures uncaught exceptions automatically. Swallowing " +
+        "The reports plugin captures uncaught exceptions automatically. Swallowing " +
         "all errors is a last resort: only when any propagation would be wrong " +
         "(best-effort cleanup / teardown), and you must say why with " +
         "`// eslint-disable-next-line promise-safety/no-bare-catch -- <why all errors are safe to drop here>`. " +

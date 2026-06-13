@@ -16,7 +16,7 @@ Consumers import the type/registry/`normalizeModel` from `@plugins/conversations
 - Description: Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata. Registry mapping logical ConversationModel IDs to pinned Claude CLI flags and display metadata.
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `ModelCorruptionReporter`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `crashes.report`, `primitives/ui-kit.cn`, `primitives/ui-kit.Select`, `primitives/ui-kit.SelectContent`, `primitives/ui-kit.SelectItem`, `primitives/ui-kit.SelectTrigger`, `primitives/ui-kit.SelectValue`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/ui-kit.cn`, `primitives/ui-kit.Select`, `primitives/ui-kit.SelectContent`, `primitives/ui-kit.SelectItem`, `primitives/ui-kit.SelectTrigger`, `primitives/ui-kit.SelectValue`, `reports.report`
   - Exports: Types: `ModelSelectProps`; Values: `familyClass`, `ModelSelect`, `useDefaultModel`, `useSetDefaultModel`, `useVisibleModels`
 - Server:
   - Uses: `config_v2.ConfigV2`

@@ -6,7 +6,7 @@ import { resolveCliFlag } from "@plugins/conversations/plugins/model-provider/se
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import { CLAUDE, TMUX } from "@plugins/infra/plugins/paths/server";
 import { isWorktreeOpActive } from "@plugins/infra/plugins/worktree/server";
-import { recordCrash } from "@plugins/crashes/server";
+import { recordReport } from "@plugins/reports/server";
 import { basename } from "node:path";
 import { resolveSessionState, type SessionState } from "./claude-session";
 // Sessions we manage: new ones use `conv-…`; `claude-…` is the pre-rename
@@ -396,7 +396,7 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
     // surfaced. Fall back to the proven fixed-delay submit — strictly better
     // than chaining Enter into the same PTY chunk as the paste.
     if (everObserved) {
-      void recordCrash({
+      void recordReport({
         source: "server-caught",
         errorType: "TmuxSubmitError",
         message: `tmux pasteTurn for ${conversationId}: paste did not surface in input box within ${PASTE_COMMIT_TIMEOUT_MS}ms; using fixed-delay fallback`,
@@ -552,7 +552,7 @@ async function paneIsWorking(conversationId: string): Promise<boolean> {
   try {
     state = await resolveSessionState(pane.panePid);
   } catch (err) {
-    void recordCrash({
+    void recordReport({
       source: "server-caught",
       errorType: "SessionStateError",
       message: `paneIsWorking: resolveSessionState failed for "${conversationId}": ${err instanceof Error ? err.message : String(err)}`,
@@ -579,7 +579,7 @@ export const tmuxRuntime: ConversationRuntime = {
         try {
           return await resolveSessionState(panes.get(id)!.panePid);
         } catch (err) {
-          void recordCrash({
+          void recordReport({
             source: "server-caught",
             errorType: "SessionStateError",
             message: `resolveSessionState failed for pane "${id}": ${err instanceof Error ? err.message : String(err)}`,

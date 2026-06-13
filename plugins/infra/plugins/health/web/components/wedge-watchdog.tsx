@@ -2,7 +2,7 @@ import { useEffect } from "react";
 import { subscribeWsStatus } from "@plugins/primitives/plugins/networking/web";
 import { getNotificationsClient, liveStateSocketKind } from "@plugins/primitives/plugins/live-state/web";
 import { ShellCommands } from "@plugins/shell/web";
-import { report } from "@plugins/crashes/web";
+import { report } from "@plugins/reports/web";
 import { getHealth } from "../internal/client";
 
 // How long a socket may stay non-open before we declare the live-state pipeline

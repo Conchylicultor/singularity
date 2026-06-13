@@ -949,26 +949,6 @@
         "fast-xml-parser": "^4.5.0",
       },
     },
-    "plugins/crashes": {
-      "name": "@singularity/plugin-crashes",
-      "version": "0.0.1",
-    },
-    "plugins/crashes/plugins/endpoint-errors": {
-      "name": "@singularity/plugin-crashes-endpoint-errors",
-      "version": "0.0.1",
-    },
-    "plugins/crashes/plugins/launch-fix": {
-      "name": "@singularity/plugin-crashes-launch-fix",
-      "version": "0.0.1",
-    },
-    "plugins/crashes/plugins/mutation-errors": {
-      "name": "@singularity/plugin-crashes-mutation-errors",
-      "version": "0.0.1",
-    },
-    "plugins/crashes/plugins/noise-rules": {
-      "name": "@singularity/plugin-crashes-noise-rules",
-      "version": "0.0.1",
-    },
     "plugins/database": {
       "name": "@singularity/plugin-database",
       "version": "0.0.1",
@@ -1024,10 +1004,6 @@
       "name": "@singularity/plugin-debug-claude-cli-calls",
       "version": "0.0.1",
     },
-    "plugins/debug/plugins/crashes": {
-      "name": "@singularity/plugin-debug-crashes",
-      "version": "0.0.1",
-    },
     "plugins/debug/plugins/live-state-health": {
       "name": "@singularity/plugin-debug-live-state-health",
       "version": "0.0.1",
@@ -1070,6 +1046,10 @@
     },
     "plugins/debug/plugins/queue": {
       "name": "@singularity/plugin-debug-queue",
+      "version": "0.0.1",
+    },
+    "plugins/debug/plugins/reports": {
+      "name": "@singularity/plugin-debug-reports",
       "version": "0.0.1",
     },
     "plugins/debug/plugins/worktree-cleanup": {
@@ -2201,6 +2181,26 @@
     },
     "plugins/reorder/plugins/node-types/plugins/spacer": {
       "name": "@singularity/plugin-reorder-node-types-spacer",
+      "version": "0.0.1",
+    },
+    "plugins/reports": {
+      "name": "@singularity/plugin-reports",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/endpoint-errors": {
+      "name": "@singularity/plugin-reports-endpoint-errors",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/launch-fix": {
+      "name": "@singularity/plugin-reports-launch-fix",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/mutation-errors": {
+      "name": "@singularity/plugin-reports-mutation-errors",
+      "version": "0.0.1",
+    },
+    "plugins/reports/plugins/noise-rules": {
+      "name": "@singularity/plugin-reports-noise-rules",
       "version": "0.0.1",
     },
     "plugins/review": {
@@ -3465,16 +3465,6 @@
 
     "@singularity/plugin-conversations-transcript-watcher": ["@singularity/plugin-conversations-transcript-watcher@workspace:plugins/conversations/plugins/transcript-watcher"],
 
-    "@singularity/plugin-crashes": ["@singularity/plugin-crashes@workspace:plugins/crashes"],
-
-    "@singularity/plugin-crashes-endpoint-errors": ["@singularity/plugin-crashes-endpoint-errors@workspace:plugins/crashes/plugins/endpoint-errors"],
-
-    "@singularity/plugin-crashes-launch-fix": ["@singularity/plugin-crashes-launch-fix@workspace:plugins/crashes/plugins/launch-fix"],
-
-    "@singularity/plugin-crashes-mutation-errors": ["@singularity/plugin-crashes-mutation-errors@workspace:plugins/crashes/plugins/mutation-errors"],
-
-    "@singularity/plugin-crashes-noise-rules": ["@singularity/plugin-crashes-noise-rules@workspace:plugins/crashes/plugins/noise-rules"],
-
     "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
 
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
@@ -3494,8 +3484,6 @@
     "@singularity/plugin-debug-broadcasts": ["@singularity/plugin-debug-broadcasts@workspace:plugins/debug/plugins/broadcasts"],
 
     "@singularity/plugin-debug-claude-cli-calls": ["@singularity/plugin-debug-claude-cli-calls@workspace:plugins/debug/plugins/claude-cli-calls"],
-
-    "@singularity/plugin-debug-crashes": ["@singularity/plugin-debug-crashes@workspace:plugins/debug/plugins/crashes"],
 
     "@singularity/plugin-debug-live-state-health": ["@singularity/plugin-debug-live-state-health@workspace:plugins/debug/plugins/live-state-health"],
 
@@ -3518,6 +3506,8 @@
     "@singularity/plugin-debug-profiling-stats": ["@singularity/plugin-debug-profiling-stats@workspace:plugins/debug/plugins/profiling/plugins/stats"],
 
     "@singularity/plugin-debug-queue": ["@singularity/plugin-debug-queue@workspace:plugins/debug/plugins/queue"],
+
+    "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
 
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 
@@ -4044,6 +4034,16 @@
     "@singularity/plugin-reorder-node-types-header": ["@singularity/plugin-reorder-node-types-header@workspace:plugins/reorder/plugins/node-types/plugins/header"],
 
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
+
+    "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
+
+    "@singularity/plugin-reports-endpoint-errors": ["@singularity/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
+
+    "@singularity/plugin-reports-launch-fix": ["@singularity/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
+
+    "@singularity/plugin-reports-mutation-errors": ["@singularity/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
+
+    "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 

@@ -1,4 +1,4 @@
-// @hash 3e15e7cea1e5
+// @hash cf3818728dd4
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -10,11 +10,11 @@
     "debug.claude-cli-calls:claude-cli-calls",
     "debug.broadcasts:broadcasts",
     "debug.memory:memory",
-    "debug.crashes:crashes",
     "debug.worktree-cleanup:worktree-cleanup",
     "debug.live-state-health:live-state-health",
     "debug.logs:logs",
     "debug.profiling:profiling",
-    "debug.queue:queue"
+    "debug.queue:queue",
+    "debug.reports:reports"
   ]
 }

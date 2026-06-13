@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { registerModelCorruptionReporter } from "../../core";
-import { report } from "@plugins/crashes/web";
+import { report } from "@plugins/reports/web";
 
 /**
  * Routes corrupt/unknown stored-model signals into the visible crash-report

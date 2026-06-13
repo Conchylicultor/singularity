@@ -7,7 +7,7 @@ import {
   markConversationClosed,
   notifyConversationsChanged,
 } from "@plugins/tasks/plugins/tasks-core/server";
-import { recordCrash } from "@plugins/crashes/server";
+import { recordReport } from "@plugins/reports/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
 import { isTransientDbError } from "@plugins/database/server";
 import { getConfig } from "@plugins/config_v2/server";
@@ -48,13 +48,13 @@ async function collectLive(): Promise<{
     } catch (err) {
       console.error(`[conversations.poller] runtime "${runtime.id}" list failed`, err);
       // eslint-disable-next-line promise-safety/no-bare-catch
-      await recordCrash({
+      await recordReport({
         source: "server-caught",
         errorType: "RuntimeListError",
         message: `Runtime "${runtime.id}" list failed: ${err instanceof Error ? err.message : String(err)}`,
         label: "conversations.poller.runtimeList",
       }).catch((e) => {
-        console.error("[conversations.poller] recordCrash failed", e);
+        console.error("[conversations.poller] recordReport failed", e);
       });
       failedRuntimes.add(runtime.id);
       continue;
@@ -113,13 +113,13 @@ async function tick(): Promise<void> {
         } catch (err) {
           console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);
           // eslint-disable-next-line promise-safety/no-bare-catch
-          await recordCrash({
+          await recordReport({
             source: "server-caught",
             errorType: "OrphanAdoptionError",
             message: `Failed to adopt orphan conversation ${id}: ${err instanceof Error ? err.message : String(err)}`,
             label: "conversations.poller.adoptOrphan",
           }).catch((e) => {
-            console.error("[conversations.poller] recordCrash failed", e);
+            console.error("[conversations.poller] recordReport failed", e);
           });
         }
       }
@@ -205,7 +205,7 @@ async function tick(): Promise<void> {
       getConfig(autoAnswerConfig).enabled
     ) {
       void flushInteractivePrompt(id).catch((err) => {
-        void recordCrash({
+        void recordReport({
           source: "server-caught",
           errorType: "AutoAnswerFlushError",
           message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
@@ -235,13 +235,13 @@ async function tick(): Promise<void> {
       // signal that the safety net actually fired. Dedup keeps repeats
       // collapsed into one task with a growing count.
       // eslint-disable-next-line promise-safety/no-bare-catch
-      await recordCrash({
+      await recordReport({
         source: "server-caught",
         errorType: "StuckStartingError",
         message: `Conversation ${id} stuck in "starting" for ${Math.round(ageMs / 1000)}s with no live session — sweeping to gone`,
         label: "conversations.poller.startingTimeout",
       }).catch((e) => {
-        console.error("[conversations.poller] recordCrash failed", e);
+        console.error("[conversations.poller] recordReport failed", e);
       });
     }
     if (dbRow.closeRequested) {
