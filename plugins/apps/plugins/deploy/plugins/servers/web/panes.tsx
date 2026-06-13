@@ -36,7 +36,7 @@ function useResolveServer({ serverId }: { serverId: string }) {
 export const serverDetailPane = Pane.define({
   id: "deploy-server-detail",
   defaultAncestors: [serversRootPane],
-  segment: "s/:serverId",
+  segment: "server/:serverId",
   component: ServerDetailBody,
   resolve: useResolveServer,
 });

@@ -239,6 +239,24 @@ function segmentParamNames(segment: string): string[] {
     .map((seg) => seg.slice(1).replace(/\*$/, ""));
 }
 
+/**
+ * Normalize a segment to its URL match pattern — param *names* are erased, only
+ * their structural shape survives. `s/:pageId` and `s/:serverId` both normalize
+ * to `s/:`, so two panes that match the same URLs collide; `page/:pageId`
+ * (`page/:`) does not collide with `s/:`. Used by {@link useSyncPaneRegistry}
+ * to enforce the globally-unique-segment invariant at the registry boundary.
+ */
+function normalizeSegmentPattern(segment: string): string {
+  return segment
+    .split("/")
+    .map((part) => {
+      if (part.startsWith(":") && part.endsWith("*")) return ":*";
+      if (part.startsWith(":")) return ":";
+      return part;
+    })
+    .join("/");
+}
+
 function matchSegmentParts(
   segment: string,
   urlSegments: string[],
@@ -1212,11 +1230,28 @@ export function useSyncPaneRegistry(): void {
   useMemo(() => {
     registry.clear();
     const seen = new Set<string>();
+    // Maps a normalized segment pattern → the paneId that first claimed it, so a
+    // second pane whose segment matches the same URLs is caught immediately.
+    const patternOwner = new Map<string, string>();
     for (const { pane } of contributions) {
       const internal = pane._internal;
       if (seen.has(internal.id)) {
         console.warn(`Pane "${internal.id}" registered twice.`);
         continue;
+      }
+      // Index/empty-segment panes resolve via `appPath`, not URL matching, so
+      // multiple empty segments are legal — only check real URL segments.
+      if (internal.segment && internal.segment !== "/" && internal.segment !== "") {
+        const pattern = normalizeSegmentPattern(internal.segment);
+        const owner = patternOwner.get(pattern);
+        if (owner) {
+          throw new Error(
+            `Pane segment collision: "${owner}" and "${internal.id}" both match the same URLs ` +
+              `("${registry.get(owner)!.segment}" vs "${internal.segment}"). Segments must be ` +
+              `globally unique across all registered panes — rename one to disambiguate.`,
+          );
+        }
+        patternOwner.set(pattern, internal.id);
       }
       seen.add(internal.id);
       registry.set(internal.id, internal);
