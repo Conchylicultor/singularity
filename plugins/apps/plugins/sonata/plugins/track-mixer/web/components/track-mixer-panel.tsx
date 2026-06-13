@@ -33,7 +33,7 @@ import {
   resetTrackViews,
 } from "../actions";
 import { useTrackMixerEntries, type TrackMixerEntry } from "../hooks";
-import { TRACK_PALETTE } from "../palette";
+import { TRACK_PALETTE, blackKeyColor } from "../palette";
 
 type IconType = ComponentType<{ className?: string }>;
 
@@ -64,7 +64,7 @@ function ColorSwatch({
           type="button"
           aria-label="Track color"
           className="size-4 shrink-0 rounded-full border border-border/60 transition-transform hover:scale-110"
-          style={{ background: color }}
+          style={{ background: blackKeyColor(color) }}
         />
       }
     >
