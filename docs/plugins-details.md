@@ -1251,7 +1251,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`user-text`** — Renders user text events in the JSONL viewer.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "user-text" → `UserTextRow`
-                - Uses: `active-data.useActiveDataLinkify`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code/file-pane.filePeekPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useStickyReport`, `primitives/file-links.FileLinkText`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/text.Text`
+                - Uses: `active-data.useActiveDataLinkify`, `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code/file-pane.filePeekPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useStickyReport`, `primitives/file-links.linkifyChildren`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/text.Text`
         - **`launch-prompts`** — Pre-configured prompts that launch a new background conversation in the same worktree. Pre-configured prompts that launch a new background conversation in the same worktree.
           - Web:
             - Contributes: `Conversation.PromptBar` "Launch" → `LaunchPromptsButton`, `ConfigV2.WebRegister`

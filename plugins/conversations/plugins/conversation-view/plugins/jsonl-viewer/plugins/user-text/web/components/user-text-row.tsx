@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
-import { FileLinkText } from "@plugins/primitives/plugins/file-links/web";
+import { linkifyChildren } from "@plugins/primitives/plugins/file-links/web";
 import { useActiveDataLinkify } from "@plugins/active-data/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -65,7 +65,7 @@ function SegmentedContent({
       {segments.map((seg, i) =>
         seg.kind === "text" ? (
           <Text as="div" variant="body" key={i} className="whitespace-pre-wrap break-words">
-            {linkify(<FileLinkText text={seg.value} onFileOpen={onFileOpen} />)}
+            {linkifyChildren(linkify(seg.value), onFileOpen)}
           </Text>
         ) : (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1.5 spaces an inline image segment from the preceding text segment
@@ -109,7 +109,7 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
             <SegmentedContent segments={e.segments} onFileOpen={onFileOpen} linkify={linkify} />
           ) : (
             <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-              {linkify(<FileLinkText text={e.text} onFileOpen={onFileOpen} />)}
+              {linkifyChildren(linkify(e.text), onFileOpen)}
             </Text>
           )}
         </div>
