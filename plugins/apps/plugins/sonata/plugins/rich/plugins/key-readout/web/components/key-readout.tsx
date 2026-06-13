@@ -15,13 +15,15 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 
 /**
- * Fixed keyboard window: C4 (60) … B5 (83), two octaves. Like the chord readout
- * the frame is content-independent on purpose — changing key only re-lights
- * keys, never re-lays-out the keyboard (no flicker). Two octaves let the scale's
- * repeating pattern read at a glance while keeping the panel compact.
+ * Fixed keyboard window: C4 (60) … B6 (95), three octaves. Matches the chord
+ * readout's window exactly so the two sibling section panels render piano keys
+ * at an identical size (both keyboards are `w-full` in the same-width column, so
+ * the key width is set by the octave span). The frame is content-independent on
+ * purpose — changing key only re-lights keys, never re-lays-out the keyboard
+ * (no flicker); the scale's repeating pattern reads across all three octaves.
  */
 const KB_LOW = 60;
-const KB_HIGH = 83;
+const KB_HIGH = 95;
 
 /** Pitch class (0–11) of a tonic note name like "C", "F#", "Bb". */
 const LETTER_PC: Record<string, number> = {
