@@ -71,6 +71,7 @@ function ColorSwatch({
       <SwatchGrid
         colors={[...TRACK_PALETTE]}
         value={color}
+        renderColor={blackKeyColor}
         onChange={(c) => setTrackColor(songId, trackId, c)}
       />
     </InlinePopover>

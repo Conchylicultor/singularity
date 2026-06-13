@@ -6,6 +6,14 @@ export interface SwatchGridProps {
   value?: string;
   onChange: (color: string) => void;
   className?: string;
+  /**
+   * Optional display transform: maps a swatch's canonical color to the CSS
+   * actually painted in its cell. `value` matching and `onChange` still operate
+   * on the canonical color — only the rendered background changes. Lets a
+   * consumer show a derived shade (e.g. Sonata's black-key color) while keeping
+   * the stored/selected value the base color.
+   */
+  renderColor?: (color: string) => string;
 }
 
 function colorsMatch(a: string, b: string): boolean {
@@ -20,6 +28,7 @@ export function SwatchGrid({
   value,
   onChange,
   className,
+  renderColor,
 }: SwatchGridProps) {
   return (
     <div className={cn("flex flex-wrap gap-xs", className)}>
@@ -37,7 +46,7 @@ export function SwatchGrid({
               selected &&
                 "scale-110 ring-2 ring-ring ring-offset-1 ring-offset-background",
             )}
-            style={{ background: c }}
+            style={{ background: renderColor ? renderColor(c) : c }}
           />
         );
       })}
