@@ -39,6 +39,13 @@ export type LaunchControlProps = {
   onLaunched?: (conversation: Conversation) => void;
   variant?: "default" | "outline" | "ghost";
   size?: "default" | "sm" | "icon";
+  /**
+   * Stretch the control to fill its container, with the model dropdown growing
+   * to absorb the slack and the launch button kept at its natural width. Use
+   * this instead of passing `className="w-full"` — that only widens the group
+   * box and leaves both buttons pinned left.
+   */
+  fullWidth?: boolean;
   disabled?: boolean;
   className?: string;
 };
@@ -87,6 +94,7 @@ export function LaunchControl({
   onLaunched,
   variant = "default",
   size = "default",
+  fullWidth = false,
   disabled,
   className,
 }: LaunchControlProps) {
@@ -186,7 +194,7 @@ export function LaunchControl({
   const btnSize = size === "sm" ? "sm" : "default";
 
   return (
-    <ButtonGroup className={className}>
+    <ButtonGroup className={cn(fullWidth && "w-full", className)}>
       <DropdownMenu>
         <DropdownMenuTrigger
           render={
@@ -194,7 +202,7 @@ export function LaunchControl({
               variant={btnVariant}
               size={btnSize}
               disabled={disabled}
-              className={cn("gap-xs", blue)}
+              className={cn("gap-xs", blue, fullWidth && "flex-1 justify-between")}
             />
           }
         >

@@ -49,7 +49,7 @@ export function ConversationList() {
       activeId={activeId}
       onNavigate={navigate}
       onCloseConversation={handleCloseConversation}
-      header={<LaunchControl variant="outline" size="sm" className="w-full" />}
+      header={<LaunchControl variant="outline" size="sm" fullWidth />}
     />
   );
 }
