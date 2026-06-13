@@ -74,6 +74,21 @@ export interface FxContext {
   getProjection(): Projection;
   /** Lane size in CSS px (latest — re-read per tick, never cache). */
   getLaneSize(): { width: number; height: number };
+  /**
+   * The live playback cursor in quarter-note beats (latest — re-read per tick).
+   *
+   * The clock a NOTE-ANCHORED effect must read instead of integrating
+   * `ticker.deltaMS`: a highlight glued to a moving note (e.g. fx-core's
+   * active-note brighten) derives its geometry as a pure function of (this
+   * cursor, the note), so it stays welded to the bar by construction — paused
+   * cursor ⇒ frozen highlight on the frozen bar, scrub ⇒ it follows. Wall-clock
+   * integration desyncs the moment playback isn't advancing at real-time speed.
+   *
+   * TRANSIENT strike bursts (sparks, glow, ripples, debris) do NOT use this —
+   * they spawn at the fixed now-line and play out a short wall-clock fade, with
+   * no note to track; freezing those on pause would suspend particles mid-air.
+   */
+  getPlaybackBeats(): number;
   /** The app ticker — add per-frame updates here; REMOVE them on unmount. */
   ticker: Ticker;
   /** The live renderer (texture generation, DPR). */

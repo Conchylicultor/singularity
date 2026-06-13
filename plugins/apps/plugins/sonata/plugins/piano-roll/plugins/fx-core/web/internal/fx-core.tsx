@@ -10,16 +10,19 @@
  *     (alpha ≈ 0.18) over the portion of the sounding bar still ABOVE the
  *     now-line, shrinking as the bar scrolls past it.
  *
- * BRIGHTEN GEOMETRY (the documented approximation): at onset the bar's bottom
- * sits exactly AT the now-line (laneY) and then scrolls DOWN below it at the
- * lane's px/sec rate. Because the bar's full pixel height corresponds to its
- * full wall-clock duration at that SAME rate, the still-above-the-line portion
- * is simply `rect.h · remaining/duration`, anchored bottom-at-laneY — no
- * scroll offset or px/sec constant needed. `rect` comes fresh from
- * `getProjection().noteToRect(note)` each tick, so resizes stay pixel-exact.
- * This is exact under constant tempo across the note; a tempo-map change (or
- * a live tempo-scale tweak) mid-note drifts the linear countdown slightly —
- * acceptable for a glow, and every seek clears in-flight bars via onReset.
+ * BRIGHTEN GEOMETRY — the brighten is welded to its note because it is a PURE
+ * FUNCTION of the playback cursor, not an integrated wall-clock timer. The bar
+ * spans beats [start, start+duration]; the now-line is the cursor, so the
+ * still-above-the-line fraction is exactly `(start + duration − cursor) /
+ * duration`. Height is `rect.h · fraction`, anchored bottom-at-laneY (`rect`
+ * comes fresh from `getProjection().noteToRect(note)` each tick, so resizes
+ * stay pixel-exact). Reading `fx.getPlaybackBeats()` rather than accumulating
+ * `ticker.deltaMS` is what guarantees the highlight stays on the note when
+ * playback isn't advancing at real time: PAUSED ⇒ frozen cursor ⇒ frozen
+ * highlight on the frozen bar; SCRUB ⇒ it tracks the bar both ways. It is also
+ * tempo-exact by construction (beats, not seconds), so a tempo-map or live
+ * tempo-scale change mid-note no longer drifts. Every seek still clears
+ * in-flight bars via onReset (navigation must not leave a stale highlight).
  *
  * Headless: renders nothing; all painting is imperative Pixi wired in one
  * effect with full teardown (unsubscribe, ticker.remove, destroy containers
@@ -79,10 +82,8 @@ function makeSparkTexture(renderer: Renderer): Texture {
 
 interface LiveBar {
   note: FxNoteEvent["note"];
-  /** Wall-clock duration at onset (FxNoteEvent.durationSeconds). */
+  /** Wall-clock duration at onset — only sizes the end-of-note release fade. */
   dur: number;
-  /** Elapsed wall-clock seconds since onset. */
-  t: number;
   sprite: Sprite;
 }
 
@@ -160,7 +161,7 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
         const sprite = acquireSprite();
         sprite.tint = e.color;
         sprite.alpha = BRIGHTEN_ALPHA;
-        liveBars.push({ note: e.note, dur: e.durationSeconds, t: 0, sprite });
+        liveBars.push({ note: e.note, dur: e.durationSeconds, sprite });
       }
     });
 
@@ -187,24 +188,32 @@ export function NoteGlowSparksFx({ fx }: { fx: FxContext }) {
         throw new Error("fx-core: projection lacks noteToRect (pitch-plane capability expected)");
       }
       const laneY = fx.getLaneSize().height;
+      // The playback cursor drives the brighten (NOT integrated wall-clock), so
+      // the highlight is glued to the bar on pause/scrub — see header geometry.
+      const cursorBeat = fx.getPlaybackBeats();
       for (let i = liveBars.length - 1; i >= 0; i--) {
         const bar = liveBars[i]!;
-        bar.t += dt;
-        const remaining = bar.dur - bar.t;
-        if (remaining <= 0) {
+        // Fraction of the bar still above the now-line at the current cursor:
+        // 1 at onset (cursor = start), 0 once the bar has fully passed.
+        const remainingFrac =
+          (bar.note.start + bar.note.duration - cursorBeat) / bar.note.duration;
+        if (remainingFrac <= 0) {
           releaseSprite(bar.sprite);
           liveBars.splice(i, 1);
           continue;
         }
-        // Fresh rect per tick → resize-proof; height shrinks linearly with
-        // remaining duration (the approximation documented in the header).
+        // Fresh rect per tick → resize-proof; height shrinks with the fraction
+        // of the bar still above the line (pure cursor function — header).
         const rect = noteToRect(bar.note);
-        const h = rect.h * (remaining / bar.dur);
+        const h = rect.h * Math.min(1, remainingFrac);
         const s = bar.sprite;
         s.position.set(rect.x, laneY - h);
         s.width = rect.w;
         s.height = h;
-        s.alpha = BRIGHTEN_ALPHA * Math.min(1, remaining / BRIGHTEN_RELEASE_SEC);
+        // Release fade over the note's final BRIGHTEN_RELEASE_SEC of wall-clock,
+        // derived from the same cursor-driven remaining fraction.
+        const remainingSec = remainingFrac * bar.dur;
+        s.alpha = BRIGHTEN_ALPHA * Math.min(1, remainingSec / BRIGHTEN_RELEASE_SEC);
       }
     };
     fx.ticker.add(tick);

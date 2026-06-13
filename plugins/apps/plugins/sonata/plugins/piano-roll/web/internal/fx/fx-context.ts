@@ -2,11 +2,12 @@
  * Builds the {@link FxContext} handed to every FX contribution — the bridge
  * between the live scene/app pair and the effect plugins' headless components.
  *
- * Built ONCE per scene (identity-stable across resizes): geometry flows
- * through the `getProjection`/`getLaneSize` ACCESSORS, which the host wires to
- * refs holding the latest values, so effects always read current geometry per
- * tick without the context object ever changing identity (which would force a
- * full effect remount on every lane resize).
+ * Built ONCE per scene (identity-stable across resizes): geometry and the
+ * playback cursor flow through the `getProjection`/`getLaneSize`/
+ * `getPlaybackBeats` ACCESSORS — the host wires the first two to refs holding
+ * the latest values and the last to the shared cursor store — so effects
+ * always read current values per tick without the context object ever changing
+ * identity (which would force a full effect remount on every lane resize).
  *
  * PARTICLE BUDGET: exposed as a live getter computed from the CURRENT lane
  * area — `min(2000, laneW·laneH / 400)`, floored at 256. The getter (rather
@@ -35,8 +36,9 @@ export function createFxContext(input: {
   app: Application;
   getProjection: () => Projection;
   getLaneSize: () => { width: number; height: number };
+  getPlaybackBeats: () => number;
 }): FxContext {
-  const { scene, app, getProjection, getLaneSize } = input;
+  const { scene, app, getProjection, getLaneSize, getPlaybackBeats } = input;
   return {
     layers: scene.fxLayers,
     // Wrapped (not passed bare) so the context never depends on the scene
@@ -45,6 +47,7 @@ export function createFxContext(input: {
     onReset: (cb) => scene.onReset(cb),
     getProjection,
     getLaneSize,
+    getPlaybackBeats,
     ticker: app.ticker,
     renderer: app.renderer,
     quality: {

@@ -267,6 +267,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             app: pixi.app,
             getProjection: () => projectionRef.current,
             getLaneSize: () => laneSizeRef.current,
+            // The shared playback cursor — the clock note-anchored effects read
+            // so their geometry stays a pure function of the cursor (glued to
+            // the notes on pause/scrub) instead of integrating wall-clock.
+            getPlaybackBeats: getCursorBeat,
           })
         : null,
     [pixi],
