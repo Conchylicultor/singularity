@@ -1,4 +1,5 @@
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
+import { refHeadResource } from "@plugins/infra/plugins/git-watcher/server";
 import { getAttempt, listPushesForAttempt, pushesResource } from "@plugins/tasks/plugins/tasks-core/server";
 import type { Push } from "@plugins/tasks/plugins/tasks-core/core";
 import {
@@ -35,11 +36,33 @@ function attemptIdsFromPushes(_upstreamParams: unknown, value: unknown): Params[
   return [...ids].map((attemptId) => ({ attemptId }));
 }
 
+// AttemptIds with a live chip/pane subscriber, tracked per resource via the
+// sub-lifecycle hooks. A git ref advance (local commit / rebase / sync-to-head,
+// or main moving) changes the ahead/behind of every visible delta, so any
+// refHeadResource notify fans out to exactly the attempts currently on screen.
+// git-watcher only tracks `main` + this worktree's own branch, so a notify
+// already implies a relevant ref moved — no need to inspect the refName.
+const activeDeltaAttempts = new Set<string>();
+const activeGraphAttempts = new Set<string>();
+
+function activeAttemptParams(active: ReadonlySet<string>): () => Params[] {
+  return () => [...active].map((attemptId) => ({ attemptId }));
+}
+
 export const commitDeltaResource = defineResource({
   key: "commits-graph.delta",
   mode: "push",
   schema: CommitDeltaSchema,
-  dependsOn: [{ resource: pushesResource, map: attemptIdsFromPushes }],
+  dependsOn: [
+    { resource: pushesResource, map: attemptIdsFromPushes },
+    { resource: refHeadResource, map: activeAttemptParams(activeDeltaAttempts) },
+  ],
+  onFirstSubscribe: ({ attemptId }: Params) => {
+    activeDeltaAttempts.add(attemptId);
+  },
+  onLastUnsubscribe: ({ attemptId }: Params) => {
+    activeDeltaAttempts.delete(attemptId);
+  },
   loader: async ({ attemptId }: Params): Promise<CommitDelta> => {
     const wt = await worktreeFor(attemptId);
     if (!wt) return EMPTY_DELTA;
@@ -51,7 +74,16 @@ export const commitsGraphResource = defineResource({
   key: "commits-graph.graph",
   mode: "push",
   schema: CommitsGraphSchema,
-  dependsOn: [{ resource: pushesResource, map: attemptIdsFromPushes }],
+  dependsOn: [
+    { resource: pushesResource, map: attemptIdsFromPushes },
+    { resource: refHeadResource, map: activeAttemptParams(activeGraphAttempts) },
+  ],
+  onFirstSubscribe: ({ attemptId }: Params) => {
+    activeGraphAttempts.add(attemptId);
+  },
+  onLastUnsubscribe: ({ attemptId }: Params) => {
+    activeGraphAttempts.delete(attemptId);
+  },
   loader: async ({ attemptId }: Params): Promise<CommitsGraph> => {
     const wt = await worktreeFor(attemptId);
     if (!wt) return EMPTY_GRAPH;

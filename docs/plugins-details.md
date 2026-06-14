@@ -1024,7 +1024,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pane.Register` "conv-commits-graph", `Pane.Register` "conv-commit-diff", `Conversation.ActionBar` → `CommitsChip`
             - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane/diff.DiffOrImageView`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/commit-list.CommitRowItem`, `primitives/commit-list.MergeBaseMarker`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`
           - Server:
-            - Uses: `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
+            - Uses: `infra/git-watcher.refHeadResource`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
@@ -2317,14 +2317,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`
       - Server:
         - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`
-    - **`git-watcher`** — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
+    - **`git-watcher`** — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
       - Server:
-        - Uses: `infra/events.defineTriggerEvent`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/worktree.ensureMainWorktreeRoot`
+        - Uses: `infra/events.defineTriggerEvent`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.GIT`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`
         - DB schema: `plugins/infra/plugins/git-watcher/server/internal/tables-ref-advanced.ts`
         - Exports: Types: `RefAdvancedPayload`, `RefHead`; Values: `_refAdvancedTriggers`, `refAdvanced`, `refHeadResource`, `RefHeadSchema`
         - Register: `defineTriggerEvent('git.refAdvanced')`
       - Cross-plugin:
-        - Imported by: `build`, `tasks`
+        - Imported by: `build`, `conversations/conversation-view/commits-graph`, `tasks`
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
       - Web:
         - Contributes: `Core.Root` → `ReconnectWatcher`, `Core.Root` → `WedgeWatchdog`, `ActionBar.Item` → `HealthDot`

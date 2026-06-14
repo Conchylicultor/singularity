@@ -144,7 +144,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
-    - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.
+    - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
     - **`jobs`** [load-bearing] — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.

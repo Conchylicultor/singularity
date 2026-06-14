@@ -11,7 +11,7 @@ export { RefHeadSchema } from "../shared/types";
 
 export default {
   description:
-    "Watches local git refs (refs/heads/main by default) via @parcel/watcher. Emits the git.refAdvanced trigger event and notifies the refHeadResource live-state resource on every advance.",
+    "Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.",
   loadBearing: true,
   contributions: [Resource.Declare(refHeadResource)],
   register: [refAdvanced],

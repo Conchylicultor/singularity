@@ -1,13 +1,24 @@
 import { createFileWatcher, type FileWatcher } from "@plugins/infra/plugins/file-watcher/server";
 import { isMain } from "@plugins/infra/plugins/paths/server";
+import { currentBranchRef } from "./current-branch-ref";
 import { gitCommonDir } from "./git-common-dir";
 import { readSha } from "./read-sha";
 import { refAdvanced } from "./tables-ref-advanced";
 import { refHeadResource } from "./ref-head-resource";
 
-// v1 only tracks refs/heads/main; the API supports more refs but no consumer
-// requires per-subscription dynamic registration yet.
-const TRACKED_REFS: ReadonlyArray<string> = ["refs/heads/main"];
+// Refs whose movement we surface via refHeadResource. Always `refs/heads/main`
+// (the refAdvanced trigger event keys off it) plus, in a worktree, that
+// worktree's own branch — the ref a local commit / rebase / sync-to-head
+// advances. Together these are the only refs whose movement changes a
+// commits-graph ahead/behind delta. Computed once at startup.
+async function computeTrackedRefs(): Promise<string[]> {
+  const refs = ["refs/heads/main"];
+  if (!isMain()) {
+    const branch = await currentBranchRef();
+    if (branch && !refs.includes(branch)) refs.push(branch);
+  }
+  return refs;
+}
 
 const lastKnownSha = new Map<string, string | null>();
 let watcher: FileWatcher | null = null;
@@ -28,7 +39,7 @@ export async function startGitWatcher(): Promise<void> {
   // Seed lastKnownSha without emitting — the watcher's contract is "fire on
   // advance from a known baseline." Consumers run their own startup catch-up
   // for "did anything change while I was down."
-  for (const ref of TRACKED_REFS) {
+  for (const ref of await computeTrackedRefs()) {
     try {
       lastKnownSha.set(ref, await readSha(ref));
     } catch (err) {
