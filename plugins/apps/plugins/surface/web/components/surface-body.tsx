@@ -13,6 +13,7 @@ import {
   useWindowGeometry,
   type Geometry,
 } from "../hooks/use-window-geometry";
+import { DesktopWallpaper } from "./desktop-wallpaper";
 import { WindowChrome, WINDOW_TITLEBAR_INSET } from "./window-chrome";
 
 /**
@@ -54,6 +55,9 @@ export function SurfaceBody() {
       data-theme-scope={CHROME_THEME_SCOPE}
       className="relative h-full w-full overflow-hidden bg-background transform-gpu"
     >
+      {/* Abstract wallpaper, revealed in desktop mode behind floating windows
+          (docked/solo tabs cover it full-bleed). */}
+      <DesktopWallpaper />
       {appIds.map((id) => (
         <ScopedAppTheme key={id} appId={id} />
       ))}
