@@ -16,3 +16,12 @@ export interface RailFramingProps {
   /** The active app's content subtree (already wrapped in PaneBasePathContext). */
   body: ReactNode;
 }
+
+/**
+ * Props for a surface-arrangement variant (tabs vs desktop). Both variants pull
+ * the whole `Tab[]` / `PaneStore` lifecycle from `useTabs()` themselves, so the
+ * host forwards nothing — the empty-object type makes that explicit. Mirrors
+ * `RailFramingProps` as a host-owned contract so a surface-arrangement plugin
+ * can contribute a variant without `apps` ever importing a specific one.
+ */
+export type SurfaceArrangementProps = Record<string, never>;

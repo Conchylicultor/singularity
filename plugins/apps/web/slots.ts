@@ -1,11 +1,16 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { RailFramingProps } from "../core";
+import type { RailFramingProps, SurfaceArrangementProps } from "../core";
 
 /** One framing host that wraps the rail + app content; see RailFramingProps. */
 export interface RailFramingContribution {
   component: ComponentType<RailFramingProps>;
+}
+
+/** One arrangement host that lays out the open tabs; see SurfaceArrangementProps. */
+export interface SurfaceArrangementContribution {
+  component: ComponentType<SurfaceArrangementProps>;
 }
 
 export const Apps = {
@@ -36,4 +41,11 @@ export const Apps = {
   RailFraming: defineSlot<RailFramingContribution>("apps.rail-framing", {
     docLabel: () => "Rail framing",
   }),
+  /** The surface arrangement (tabs / desktop) that lays out the open tabs. The
+   * active variant owns how the `Tab[]` is positioned on screen; both variants
+   * read the tab lifecycle from `useTabs()`, so the host forwards no props. */
+  SurfaceArrangement: defineSlot<SurfaceArrangementContribution>(
+    "apps.surface-arrangement",
+    { docLabel: () => "Surface arrangement" },
+  ),
 };

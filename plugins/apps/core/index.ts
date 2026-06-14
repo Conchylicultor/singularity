@@ -1,1 +1,1 @@
-export type { RailFramingProps } from "./types";
+export type { RailFramingProps, SurfaceArrangementProps } from "./types";

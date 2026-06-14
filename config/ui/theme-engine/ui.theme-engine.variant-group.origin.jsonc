@@ -1,4 +1,4 @@
-// @hash cebdf0955934
+// @hash 905703f049ed
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -16,6 +16,7 @@
     "ui.tokens.color-palette:color-palette",
     "ui.tokens.color-adjust:color-adjust",
     "ui.tokens.font-family:font-family",
-    "apps.app-rail-framing:app-rail-framing"
+    "apps.app-rail-framing:app-rail-framing",
+    "apps.surface-arrangement:apps-surface-arrangement"
   ]
 }
