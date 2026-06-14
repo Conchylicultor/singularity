@@ -51,6 +51,7 @@ do not duplicate it in `system`, `task-notification`, `meta-prompt`,
   - **`meta-prompt`** — Renders harness-injected prompt turns (loop/queue wakeups, resumes) distinctly from human user messages.
   - **`preprompt`** — Renders the launch special-instructions (preprompt) block as a collapsible section in the JSONL viewer.
   - **`queue-operation`** — Renders Claude Code prompt-queue events (enqueue/dequeue/remove) in the JSONL viewer.
+  - **`queued-prompt-card`** — Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
   - **`summary`** — Renders summary separator events in the JSONL viewer.
   - **`system`** — Renders system events in the JSONL viewer.
   - **`task-notification`** — Renders background task completion notifications in the JSONL viewer.

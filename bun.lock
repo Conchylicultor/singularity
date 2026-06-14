@@ -760,6 +760,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary",
       "version": "0.0.1",
@@ -3416,6 +3420,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-preprompt": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-preprompt@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/preprompt"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queue-operation@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queue-operation"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-queued-prompt-card@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/queued-prompt-card"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-summary@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/summary"],
 
