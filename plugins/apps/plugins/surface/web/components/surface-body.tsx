@@ -182,7 +182,13 @@ function containerClass(placement: Tab["placement"]): string {
     return "absolute overflow-hidden rounded-lg border bg-background shadow-lg";
   }
   if (placement === "solo") {
-    return "fixed inset-0 z-max bg-background";
+    // `z-overlay` (full-surface overlay), NOT `z-max`: the solo box portals to
+    // <body>, so a higher band than the portaled floating layers (`z-popover`)
+    // would paint its opaque `bg-background` over every popover/dropdown/dialog
+    // opened from inside the solo'd app. `z-overlay` still covers all app chrome
+    // (`z-nav`) and the surface backdrop, while letting floating layers surface
+    // above it. The reserved `z-max` band stays for the dev frame / critical banners.
+    return "fixed inset-0 z-overlay bg-background";
   }
   // docked → full-area backdrop (visibility gated inline).
   return "absolute inset-0";
@@ -192,7 +198,7 @@ function containerClass(placement: Tab["placement"]): string {
  * The inline box style per placement:
  * - docked → full-area (class `inset-0`); shown only when focused.
  * - floating → the geometry box (maximized → fill the backdrop); always visible.
- * - solo → `fixed inset-0 z-max` (class); shown only when focused.
+ * - solo → `fixed inset-0 z-overlay` (class); shown only when focused.
  */
 function placementStyle(
   placement: Tab["placement"],
