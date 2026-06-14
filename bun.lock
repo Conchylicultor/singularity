@@ -313,6 +313,10 @@
       "name": "@singularity/plugin-apps-sonata-rich-key-chip",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode": {
+      "name": "@singularity/plugin-apps-sonata-rich-key-mode",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout": {
       "name": "@singularity/plugin-apps-sonata-rich-key-readout",
       "version": "0.0.1",
@@ -3148,6 +3152,8 @@
     "@singularity/plugin-apps-sonata-rich-chord-readout": ["@singularity/plugin-apps-sonata-rich-chord-readout@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-readout"],
 
     "@singularity/plugin-apps-sonata-rich-key-chip": ["@singularity/plugin-apps-sonata-rich-key-chip@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/key-chip"],
+
+    "@singularity/plugin-apps-sonata-rich-key-mode": ["@singularity/plugin-apps-sonata-rich-key-mode@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode"],
 
     "@singularity/plugin-apps-sonata-rich-key-readout": ["@singularity/plugin-apps-sonata-rich-key-readout@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/key-readout"],
 

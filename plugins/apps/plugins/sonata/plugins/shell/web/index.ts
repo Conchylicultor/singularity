@@ -23,6 +23,12 @@ export {
   useCursorBeat,
   useCursorSelector,
 } from "./cursor-store";
+export {
+  getKeyAutoDetect,
+  setKeyAutoDetect,
+  subscribeKeyAutoDetect,
+  useKeyAutoDetect,
+} from "./key-mode-store";
 
 export default {
   description:

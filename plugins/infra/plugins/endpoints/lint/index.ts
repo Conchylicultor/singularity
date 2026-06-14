@@ -53,6 +53,10 @@ export default {
       "plugins/apps/plugins/sonata/plugins/sources/plugins/chord-grid/web/components/chord-grid-editor-section.tsx",
       // Play-count telemetry; an off-by-one on failure has no UX consequence.
       "plugins/apps/plugins/sonata/plugins/playback-history/web/components/record-play-observer.tsx",
+      // Per-song key-auto-detect toggle; set optimistically on the shell store
+      // first, and the keyAutoDetectResource push reaffirms it — a failed persist
+      // self-corrects on the next toggle.
+      "plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web/actions.ts",
 
     ],
   },

@@ -197,19 +197,36 @@ interface Region {
  *
  * Returns the score UNCHANGED when:
  *  - the score already has an authored key (`meta.key` set, or any authored
- *    `key` annotation) — v1 trusts authored truth; modulation inference over
- *    header-keyed files is a later improvement; or
+ *    `key` annotation) AND `opts.force` is not set — by default we trust
+ *    authored truth; modulation inference over header-keyed files is a later
+ *    improvement; or
  *  - the whole-score best correlation is below the confidence floor (atonal /
  *    percussive / ambiguous) — graceful degradation to normalized-only.
  *
- * Never touches `meta.key`; only appends annotations.
+ * With `opts.force` (the per-song "auto-detect key" override), any authored key
+ * is FIRST stripped — `meta.key` cleared and authored `key` annotations dropped —
+ * so the song is treated as keyless and the key is inferred from the notes. This
+ * makes the whole downstream pipeline (note spelling, chord analysis, the
+ * readout) use the inferred key, exactly as it would for a genuinely keyless
+ * song. Outside `force`, never touches `meta.key`; only appends annotations.
  */
-export function inferKeys(score: Score): Score {
-  // 1. Respect authored truth — bail if a key is already declared.
+export function inferKeys(score: Score, opts?: { force?: boolean }): Score {
+  // 1. Authored truth. By default, bail if a key is already declared. With
+  // `force`, instead strip it so inference below replaces it (and so the
+  // `hasAuthoredKey` check downstream sees a clean, keyless score).
   const hasAuthoredKey =
     score.meta.key !== undefined ||
     score.annotations.some((a) => a.type === "key" && a.source === "authored");
-  if (hasAuthoredKey) return score;
+  if (hasAuthoredKey) {
+    if (!opts?.force) return score;
+    score = {
+      ...score,
+      meta: { ...score.meta, key: undefined },
+      annotations: score.annotations.filter(
+        (a) => !(a.type === "key" && a.source === "authored"),
+      ),
+    };
+  }
 
   if (score.notes.length === 0) return score;
 

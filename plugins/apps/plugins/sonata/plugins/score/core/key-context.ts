@@ -13,8 +13,19 @@
  */
 import type { Annotation, KeySignature, Score } from "./types";
 
-/** A key established at a given beat (beat 0 for the starting key). */
-export type KeyEntry = { beat: number; key: KeySignature };
+/**
+ * A key established at a given beat (beat 0 for the starting key), tagged with
+ * its provenance so readouts can show "From MIDI" (authored) vs "Auto-detected"
+ * (derived). `meta.key` is authored truth by definition; annotations carry their
+ * own `source`/`confidence`.
+ */
+export type KeyEntry = {
+  beat: number;
+  key: KeySignature;
+  source: "authored" | "derived";
+  /** [0,1] confidence for derived keys (Krumhansl correlation); undefined for authored. */
+  confidence?: number;
+};
 
 /**
  * Defensive narrowing of an annotation's `unknown` data to a `KeySignature`:
@@ -39,19 +50,22 @@ export function asKeySignature(a: Annotation): KeySignature | null {
  * conflicting entries. Returned sorted ascending by beat.
  */
 export function collectKeyEntries(score: Score): KeyEntry[] {
-  const byBeat = new Map<number, KeySignature>();
+  const byBeat = new Map<number, Omit<KeyEntry, "beat">>();
 
-  if (score.meta.key) byBeat.set(0, score.meta.key);
+  // The starting key is authored truth by definition.
+  if (score.meta.key) byBeat.set(0, { key: score.meta.key, source: "authored" });
 
   for (const a of score.annotations) {
     if (a.type !== "key") continue;
     const key = asKeySignature(a);
     if (!key) continue; // skip malformed payloads — fail quietly, not loudly here.
-    byBeat.set(a.start, key); // an annotation at beat 0 overrides meta.key.
+    // An annotation at beat 0 overrides meta.key — and carries its own source,
+    // so a derived key at beat 0 (auto-detect) reads as derived, not authored.
+    byBeat.set(a.start, { key, source: a.source, confidence: a.confidence });
   }
 
   return [...byBeat.entries()]
-    .map(([beat, key]) => ({ beat, key }))
+    .map(([beat, entry]) => ({ beat, ...entry }))
     .sort((x, y) => x.beat - y.beat);
 }
 

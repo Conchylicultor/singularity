@@ -1,11 +1,15 @@
 import { useMemo } from "react";
 import {
   useCursorSelector,
+  useKeyAutoDetect,
+  setKeyAutoDetect,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
   accidentalGlyph,
@@ -13,6 +17,18 @@ import {
   makeKeySpeller,
   type KeySignature,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+
+/** The active key plus where it came from, for the source badge. */
+type ActiveKey = { key: KeySignature; source: "authored" | "derived" };
+
+function sameActiveKey(a: ActiveKey | undefined, b: ActiveKey | undefined): boolean {
+  if (a === undefined || b === undefined) return a === b;
+  return (
+    a.key.tonic === b.key.tonic &&
+    a.key.mode === b.key.mode &&
+    a.source === b.source
+  );
+}
 
 /**
  * Fixed keyboard window: C4 (60) … B6 (95), three octaves. Matches the chord
@@ -57,7 +73,8 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
  * accent, the other six diatonic degrees in a softer tint.
  */
 export function KeyReadout() {
-  const { score } = useSonata();
+  const { score, currentSongId } = useSonata();
+  const keyAutoDetect = useKeyAutoDetect();
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)
@@ -65,16 +82,37 @@ export function KeyReadout() {
   // only when the key changes — not on every cursor frame.
   const entries = useMemo(() => collectKeyEntries(score), [score]);
 
-  // The key in force at the playhead, with the same cursor-at-0 fallback the
-  // key chip uses so the panel is never blank on load when a key is known.
-  const current = useCursorSelector<KeySignature | undefined>((cursorBeat) => {
-    let active: KeySignature | undefined;
-    for (const e of entries) {
-      if (e.beat <= cursorBeat) active = e.key;
-      else break; // entries are ascending — no later one can apply.
-    }
-    return active ?? entries[0]?.key;
-  }, [entries]);
+  // The active entry (key + source) at the playhead, with the same cursor-at-0
+  // fallback the key chip uses so the panel is never blank on load. The selector
+  // mints a fresh object each call, so pass a value-comparing `isEqual` to keep
+  // the per-frame re-render bailout.
+  const active = useCursorSelector<ActiveKey | undefined>(
+    (cursorBeat) => {
+      let found: ActiveKey | undefined;
+      for (const e of entries) {
+        if (e.beat <= cursorBeat) found = { key: e.key, source: e.source };
+        else break; // entries are ascending — no later one can apply.
+      }
+      if (found) return found;
+      const first = entries[0];
+      return first ? { key: first.key, source: first.source } : undefined;
+    },
+    [entries],
+    sameActiveKey,
+  );
+  const current = active?.key;
+
+  // Show the per-song "auto-detect key" toggle only for songs that carry an
+  // authored key to override — or that already have the override on (in which
+  // case the authored key is stripped from `entries`, so OR the live flag).
+  const showToggle =
+    entries.some((e) => e.source === "authored") || keyAutoDetect;
+
+  const toggleAutoDetect = () => {
+    const next = !keyAutoDetect;
+    setKeyAutoDetect(next); // optimistic: re-spell/readout update instantly
+    if (currentSongId) saveKeyAutoDetect(currentSongId, next); // persist per song
+  };
 
   const scale = useMemo(() => {
     if (!current) return null;
@@ -114,8 +152,25 @@ export function KeyReadout() {
   return (
     <Card className="rounded-lg p-lg">
       <Stack gap="sm">
-        <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-          Current key
+        <div className="flex items-center justify-between gap-sm">
+          <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+            Current key
+          </div>
+          {showToggle && (
+            <ToggleChip
+              active={keyAutoDetect}
+              variant="ghost"
+              size="sm"
+              onClick={toggleAutoDetect}
+              title={
+                keyAutoDetect
+                  ? "Using a key auto-detected from the notes. Turn off to use the song's own (MIDI) key."
+                  : "Using the song's own (MIDI) key. Turn on to auto-detect the key from the notes instead."
+              }
+            >
+              Auto-detect
+            </ToggleChip>
+          )}
         </div>
         {current && scale ? (
           <>
@@ -127,9 +182,14 @@ export function KeyReadout() {
                   {current.mode}
                 </span>
               </div>
-              <Text as="div" variant="caption" className="text-muted-foreground">
-                relative {scale.relative.tonic} {scale.relative.mode}
-              </Text>
+              <div className="flex items-baseline justify-between gap-sm">
+                <Text as="div" variant="caption" className="text-muted-foreground">
+                  relative {scale.relative.tonic} {scale.relative.mode}
+                </Text>
+                <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground/80">
+                  {active?.source === "derived" ? "Auto-detected" : "From MIDI"}
+                </span>
+              </div>
             </Stack>
 
             <Stack gap="xs">

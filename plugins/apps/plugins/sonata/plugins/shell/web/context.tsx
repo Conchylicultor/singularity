@@ -25,6 +25,7 @@ import {
 import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Sonata } from "./slots";
 import { getCursorBeat, setCursorBeat } from "./cursor-store";
+import { useKeyAutoDetect } from "./key-mode-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
 const MIN_TEMPO_SCALE = 0;
@@ -230,6 +231,10 @@ const wallClock: TransportClock = { now: () => performance.now() / 1000 };
 export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
   const analyzers = Sonata.Analyzer.useContributions();
+  // Per-song key-source override (module store, written by the `key-mode`
+  // plugin's observer / the key-readout toggle). When on, the score pipeline
+  // ignores the authored key and infers it from the notes — see `baseScore`.
+  const keyAutoDetect = useKeyAutoDetect();
 
   // Open-song state. Navigation itself is URL-driven via the pane router (the
   // library index pane and the player pane); this only tracks which song the
@@ -304,11 +309,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     // fills each note's enharmonic `spelling` from the key in force. Order
     // matters — inference first, so both note-spelling and the chord analyzer
     // (which reads `effectiveKeyAt`) see the key.
-    const keyed = inferKeys(merged); // theory/core
+    // `force` ignores any authored key (strips meta.key + authored key
+    // annotations) so the song is treated as keyless and the key is inferred —
+    // the per-song "auto-detect key" override.
+    const keyed = inferKeys(merged, { force: keyAutoDetect }); // theory/core
     const spelled = spellScore(keyed); // score/core
     const derived = analyzers.flatMap((a) => a.analyze(spelled));
     return mergeAnnotations(spelled, derived);
-  }, [sources, analyzers, rawById]);
+  }, [sources, analyzers, rawById, keyAutoDetect]);
 
   // Fold the tempo scale into the tempo map ONCE here, so every consumer — the
   // transport loop below, the audio scheduler, and the displays — reads a single
