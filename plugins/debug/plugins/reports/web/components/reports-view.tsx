@@ -6,6 +6,7 @@ import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { useStaleFrontend } from "@plugins/build/web";
 import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
+import { Reports } from "@plugins/reports/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { navigate } from "@plugins/apps/web";
 
@@ -38,7 +39,6 @@ export function ReportsView() {
 }
 
 function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId: string | null }) {
-  const line = c.errorType ? `${c.errorType}: ${c.message}` : c.message;
   const tabId = getTabId();
   return (
     <li className="px-md py-sm">
@@ -50,19 +50,14 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
           <Badge variant="muted" size="md" className="font-mono">
             {c.source}
           </Badge>
-          {c.operationKind != null && c.durationMs != null && (
-            <Badge variant="warning" size="md" className="font-mono">
-              {(c.durationMs / 1000).toFixed(1)}s
-            </Badge>
-          )}
           {c.noise && (
             <Badge variant="warning" size="md">
               noise
             </Badge>
           )}
-          {c.crashLoop && (
+          {c.rateLimited && (
             <Badge variant="destructive" size="md">
-              loop
+              rate-limited
             </Badge>
           )}
           {c.lastClientId != null &&
@@ -98,7 +93,10 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
             </button>
           )}
         </Text>
-        <Text as="div" variant="body" className="truncate text-foreground">{line}</Text>
+        <Text as="div" variant="body" className="truncate text-foreground">
+          {/* Per-kind summary, dispatched by report.kind. */}
+          <Reports.KindView.Dispatch report={c} />
+        </Text>
       </div>
     </li>
   );

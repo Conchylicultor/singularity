@@ -2,6 +2,8 @@ export {
   recordSpan,
   recordEntrySpan,
   installSpanContextRuntime,
+  installProfilingSuppressionRuntime,
+  runWithoutProfiling,
   getRuntimeProfile,
   resetRuntimeProfile,
   onSlowSpan,

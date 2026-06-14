@@ -49,10 +49,10 @@ async function collectLive(): Promise<{
       console.error(`[conversations.poller] runtime "${runtime.id}" list failed`, err);
       // eslint-disable-next-line promise-safety/no-bare-catch
       await recordReport({
+        kind: "crash",
         source: "server-caught",
-        errorType: "RuntimeListError",
         message: `Runtime "${runtime.id}" list failed: ${err instanceof Error ? err.message : String(err)}`,
-        label: "conversations.poller.runtimeList",
+        data: { errorType: "RuntimeListError", label: "conversations.poller.runtimeList" },
       }).catch((e) => {
         console.error("[conversations.poller] recordReport failed", e);
       });
@@ -114,10 +114,10 @@ async function tick(): Promise<void> {
           console.error(`[conversations.poller] adopt orphan "${id}" failed`, err);
           // eslint-disable-next-line promise-safety/no-bare-catch
           await recordReport({
+            kind: "crash",
             source: "server-caught",
-            errorType: "OrphanAdoptionError",
             message: `Failed to adopt orphan conversation ${id}: ${err instanceof Error ? err.message : String(err)}`,
-            label: "conversations.poller.adoptOrphan",
+            data: { errorType: "OrphanAdoptionError", label: "conversations.poller.adoptOrphan" },
           }).catch((e) => {
             console.error("[conversations.poller] recordReport failed", e);
           });
@@ -206,10 +206,10 @@ async function tick(): Promise<void> {
     ) {
       void flushInteractivePrompt(id).catch((err) => {
         void recordReport({
+          kind: "crash",
           source: "server-caught",
-          errorType: "AutoAnswerFlushError",
           message: `Auto-open question prompt for ${id} failed: ${err instanceof Error ? err.message : String(err)}`,
-          label: "conversations.poller.autoAnswerFlush",
+          data: { errorType: "AutoAnswerFlushError", label: "conversations.poller.autoAnswerFlush" },
         });
       });
     }
@@ -236,10 +236,10 @@ async function tick(): Promise<void> {
       // collapsed into one task with a growing count.
       // eslint-disable-next-line promise-safety/no-bare-catch
       await recordReport({
+        kind: "crash",
         source: "server-caught",
-        errorType: "StuckStartingError",
         message: `Conversation ${id} stuck in "starting" for ${Math.round(ageMs / 1000)}s with no live session — sweeping to gone`,
-        label: "conversations.poller.startingTimeout",
+        data: { errorType: "StuckStartingError", label: "conversations.poller.startingTimeout" },
       }).catch((e) => {
         console.error("[conversations.poller] recordReport failed", e);
       });

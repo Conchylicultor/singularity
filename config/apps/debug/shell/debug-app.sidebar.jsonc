@@ -1,9 +1,10 @@
-// @hash cf3818728dd4
+// @hash 61a88173994a
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "debug.logs:logs",
     "debug.reports:reports",
+    "debug.slow-ops:slow-ops",
     "debug.profiling:profiling",
     "debug.queue:queue",
     "debug.live-state-health:live-state-health",

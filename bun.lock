@@ -1072,6 +1072,10 @@
       "name": "@singularity/plugin-debug-reports",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/slow-ops": {
+      "name": "@singularity/plugin-debug-slow-ops",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/worktree-cleanup": {
       "name": "@singularity/plugin-debug-worktree-cleanup",
     },
@@ -2227,6 +2231,10 @@
       "name": "@singularity/plugin-reports",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/crash": {
+      "name": "@singularity/plugin-reports-crash",
+      "version": "0.0.1",
+    },
     "plugins/reports/plugins/endpoint-errors": {
       "name": "@singularity/plugin-reports-endpoint-errors",
       "version": "0.0.1",
@@ -2241,10 +2249,6 @@
     },
     "plugins/reports/plugins/noise-rules": {
       "name": "@singularity/plugin-reports-noise-rules",
-      "version": "0.0.1",
-    },
-    "plugins/reports/plugins/slow-ops": {
-      "name": "@singularity/plugin-reports-slow-ops",
       "version": "0.0.1",
     },
     "plugins/review": {
@@ -2306,6 +2310,10 @@
     },
     "plugins/shell/plugins/toaster": {
       "name": "@singularity/plugin-shell-toaster",
+      "version": "0.0.1",
+    },
+    "plugins/slow-ops": {
+      "name": "@singularity/plugin-slow-ops",
       "version": "0.0.1",
     },
     "plugins/stats": {
@@ -3561,6 +3569,8 @@
 
     "@singularity/plugin-debug-reports": ["@singularity/plugin-debug-reports@workspace:plugins/debug/plugins/reports"],
 
+    "@singularity/plugin-debug-slow-ops": ["@singularity/plugin-debug-slow-ops@workspace:plugins/debug/plugins/slow-ops"],
+
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 
     "@singularity/plugin-fields": ["@singularity/plugin-fields@workspace:plugins/fields"],
@@ -4101,6 +4111,8 @@
 
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
 
+    "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
+
     "@singularity/plugin-reports-endpoint-errors": ["@singularity/plugin-reports-endpoint-errors@workspace:plugins/reports/plugins/endpoint-errors"],
 
     "@singularity/plugin-reports-launch-fix": ["@singularity/plugin-reports-launch-fix@workspace:plugins/reports/plugins/launch-fix"],
@@ -4108,8 +4120,6 @@
     "@singularity/plugin-reports-mutation-errors": ["@singularity/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
 
     "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
-
-    "@singularity/plugin-reports-slow-ops": ["@singularity/plugin-reports-slow-ops@workspace:plugins/reports/plugins/slow-ops"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 
@@ -4136,6 +4146,8 @@
     "@singularity/plugin-shell-notifications": ["@singularity/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 
     "@singularity/plugin-shell-toaster": ["@singularity/plugin-shell-toaster@workspace:plugins/shell/plugins/toaster"],
+
+    "@singularity/plugin-slow-ops": ["@singularity/plugin-slow-ops@workspace:plugins/slow-ops"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
 

@@ -33,11 +33,14 @@ export async function flushBufferedReports(): Promise<void> {
   const reports = readAndClearBuffer();
   for (const c of reports) {
     try {
+      // Buffered reports are always process-level server crashes — file them as
+      // the crash kind, wrapping the captured error fields into the crash
+      // payload the crash ReportKind validates.
       await recordReport({
+        kind: "crash",
         source: c.source,
-        errorType: c.errorType ?? null,
         message: c.message,
-        stack: c.stack ?? null,
+        data: { errorType: c.errorType ?? null, stack: c.stack ?? null },
       });
     // eslint-disable-next-line promise-safety/no-bare-catch
     } catch (err) {

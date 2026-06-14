@@ -20,42 +20,34 @@ export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]
   | (typeof CLIENT_REPORT_SOURCES)[number];
 
-// THE canonical report field list. This is the HTTP body the browser POSTs; the
-// server fills in worktree + count + timestamps. `source` is restricted to
-// client-reportable origins — server-* sources only arise from in-process
-// recordReport callers, never over HTTP.
+// THE canonical report field list — fully generic. This is the HTTP body the
+// browser POSTs; the server fills in worktree + count + timestamps. `source` is
+// restricted to client-reportable origins — server-* sources only arise from
+// in-process recordReport callers, never over HTTP.
 //
-// `kind` discriminates the type of event recorded. Today every report is a
-// `crash`; future kinds (e.g. a slow-operation report) reuse the same dedup /
-// count / noise / task-filing machinery by setting a different `kind`. It is
-// optional on the wire and defaults to "crash" server-side.
+// `kind` discriminates the type of event recorded; each kind owns the shape of
+// its `data` payload (validated server-side by its ReportKindSpec.schema). The
+// engine treats `data` as opaque jsonb. `message` is the generic one-line
+// summary shown in lists / notifications.
 //
 // Every other boundary (the endpoint contract, the recordReport input type) is
 // derived from this schema, so adding a field here can't silently drop it
 // downstream.
 export const ReportBodySchema = z.object({
-  kind: z.string().optional(),
+  kind: z.string(),
   source: z.enum(CLIENT_REPORT_SOURCES),
-  errorType: z.string().nullable().optional(),
-  message: z.string(),
-  stack: z.string().nullable().optional(),
-  componentStack: z.string().nullable().optional(),
+  // The kind's payload, validated server-side by its ReportKindSpec.schema.
+  // Every caller sends it (often `{}` for payload-less kinds); the engine never
+  // inspects it before handing it to the matching spec.
+  data: z.record(z.unknown()),
+  message: z.string().optional(),
   url: z.string().nullable().optional(),
   userAgent: z.string().nullable().optional(),
-  // For react-boundary crashes: which plugin slot rendered the throwing tree
-  // (e.g. "Shell.Toolbar") and which contribution inside it (the plugin id or
-  // a human label). Omitted for window-level errors — we don't know then.
-  slot: z.string().nullable().optional(),
-  label: z.string().nullable().optional(),
   // Tab that produced the report (sessionStorage-backed) and the build id of the
   // bundle that produced it. Used for attribution + stale-frontend detection.
+  // Stamped by web/report.ts, not by the caller.
   clientId: z.string().nullable().optional(),
   buildId: z.string().nullable().optional(),
-  // Slow-op fields — set only for kind "slow-op"; crash reports leave them unset.
-  operationKind: z.string().nullable().optional(),
-  operation: z.string().nullable().optional(),
-  durationMs: z.number().int().nullable().optional(),
-  thresholdMs: z.number().int().nullable().optional(),
 });
 export type ReportBody = z.infer<typeof ReportBodySchema>;
 

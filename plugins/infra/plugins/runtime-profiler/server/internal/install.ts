@@ -5,11 +5,27 @@
 // the runtime before Bun.serve starts handling requests.
 
 import { AsyncLocalStorage } from "node:async_hooks";
-import { installSpanContextRuntime, type SpanRef } from "../../core";
+import {
+  installSpanContextRuntime,
+  installProfilingSuppressionRuntime,
+  type SpanRef,
+} from "../../core";
 
 const als = new AsyncLocalStorage<SpanRef>();
 
 installSpanContextRuntime({
   run: (ctx, fn) => als.run(ctx, fn),
   current: () => als.getStore(),
+});
+
+// Separate ALS for the profiling-suppression scope. Backs runWithoutProfiling so
+// the observability subsystem's own DB writes (reports/slow-ops inserts) never
+// re-enter the recorder. AsyncLocalStorage propagates `true` across the awaited
+// DB work spawned synchronously inside the scope, so the connection-acquire and
+// query spans recorded by the pool wrapper during the await are suppressed too.
+const suppressAls = new AsyncLocalStorage<true>();
+
+installProfilingSuppressionRuntime({
+  run: (fn) => suppressAls.run(true, fn),
+  suppressed: () => suppressAls.getStore() === true,
 });

@@ -1,30 +1,35 @@
 import { useEffect } from "react";
 import { registerBoundaryReporter } from "@plugins/primitives/plugins/error-boundary/web";
-import { report } from "../report";
+import { report } from "@plugins/reports/web";
 
-export function ReportCollector() {
+// A Core.Root side-effect component (the old reports ReportCollector, now owned
+// by the crash kind). It owns the three browser crash signals — window errors,
+// unhandled rejections, and React error-boundary catches — and funnels all of
+// them into the generic report() entry point with kind "crash", wrapping the
+// crash-specific fields into the `data` payload. Renders nothing.
+export function CrashCollector() {
   useEffect(() => {
     const onError = (e: ErrorEvent) => {
       const err = e.error instanceof Error ? e.error : null;
       void report({
+        kind: "crash",
         source: "browser-error",
-        errorType: err?.name ?? null,
         message: err?.message ?? e.message,
-        stack: err?.stack ?? null,
         url: window.location.href,
         userAgent: navigator.userAgent,
+        data: { errorType: err?.name ?? null, stack: err?.stack ?? null },
       });
     };
 
     const onRejection = (e: PromiseRejectionEvent) => {
       const err = e.reason instanceof Error ? e.reason : null;
       void report({
+        kind: "crash",
         source: "browser-rejection",
-        errorType: err?.name ?? null,
         message: err?.message ?? String(e.reason ?? "Unhandled rejection"),
-        stack: err?.stack ?? null,
         url: window.location.href,
         userAgent: navigator.userAgent,
+        data: { errorType: err?.name ?? null, stack: err?.stack ?? null },
       });
     };
 
@@ -33,15 +38,18 @@ export function ReportCollector() {
 
     registerBoundaryReporter((r) => {
       const promise = report({
+        kind: "crash",
         source: "react-boundary",
-        errorType: r.error.name,
         message: r.error.message,
-        stack: r.error.stack ?? null,
-        componentStack: r.componentStack,
-        slot: r.slot,
-        label: r.label,
         url: window.location.href,
         userAgent: navigator.userAgent,
+        data: {
+          errorType: r.error.name,
+          stack: r.error.stack ?? null,
+          componentStack: r.componentStack,
+          slot: r.slot,
+          label: r.label,
+        },
       });
       return promise.then((result) => ({ taskId: result?.taskId ?? null }));
     });

@@ -79,6 +79,45 @@ export function installSpanContextRuntime(runtime: SpanContextRuntime): void {
   contextRuntime = runtime;
 }
 
+// --- Injected profiling-suppression runtime ---
+//
+// The observability subsystem (reports, slow-ops) issues its own DB writes. Left
+// unguarded, those writes are themselves `db` spans that the recorder aggregates
+// and pushes to `onSlowSpan` — re-entering the very code that produced them, a
+// self-amplifying feedback loop that storms the connection pool. The fix: an
+// injected suppression scope (mirroring the SpanContextRuntime injection so core
+// stays pure). Any span produced inside `runWithoutProfiling(fn)` is dropped at
+// the top of `record()` before any aggregation or push work. The server installs
+// an AsyncLocalStorage-backed runtime at boot; on the web the default no-op makes
+// it a transparent passthrough.
+
+interface ProfilingSuppressionRuntime {
+  run<T>(fn: () => T): T;
+  suppressed(): boolean;
+}
+
+let suppressionRuntime: ProfilingSuppressionRuntime = {
+  run: (fn) => fn(),
+  suppressed: () => false,
+};
+
+export function installProfilingSuppressionRuntime(
+  rt: ProfilingSuppressionRuntime,
+): void {
+  suppressionRuntime = rt;
+}
+
+/**
+ * Run `fn` in a scope where every span the recorder would otherwise capture is
+ * dropped. Use this to wrap the observability subsystem's own I/O so the
+ * profiler never measures itself. Suppression propagates to async continuations
+ * spawned synchronously within `fn` (AsyncLocalStorage semantics on the server),
+ * so an awaited DB operation kicked off inside `fn` is fully suppressed.
+ */
+export function runWithoutProfiling<T>(fn: () => T): T {
+  return suppressionRuntime.run(fn);
+}
+
 // --- Slow-span push seam ---
 
 // The push counterpart to the pull-only getRuntimeProfile(). Subscribers are
@@ -150,6 +189,10 @@ function record(
   parent: SpanRef | null,
 ): void {
   if (process.env.SINGULARITY_PROFILING === "0") return;
+  // Drop spans produced inside a runWithoutProfiling scope before any aggregate,
+  // slowest-ring, or onSlowSpan work — this is what breaks the observability
+  // self-feedback loop (see installProfilingSuppressionRuntime).
+  if (suppressionRuntime.suppressed()) return;
 
   const cappedLabel = label.length > MAX_LABEL_LEN ? label.slice(0, MAX_LABEL_LEN) : label;
 

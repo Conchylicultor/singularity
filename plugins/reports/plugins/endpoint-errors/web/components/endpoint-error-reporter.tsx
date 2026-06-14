@@ -48,12 +48,12 @@ function buildReport(info: EndpointErrorInfo) {
   }
 
   return {
+    kind: "crash" as const,
     source: "client-endpoint" as const,
-    errorType,
     message,
-    stack: null,
     url: window.location.href,
     userAgent: navigator.userAgent,
+    data: { errorType, stack: null },
   };
 }
 

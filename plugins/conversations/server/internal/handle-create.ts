@@ -30,11 +30,14 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
     // surfaces the failure pattern instead.
     // eslint-disable-next-line promise-safety/no-bare-catch
     await recordReport({
+      kind: "crash",
       source: "server-caught",
-      errorType: err instanceof Error ? err.name : "Error",
       message: `createConversation failed: ${message}`,
-      stack: err instanceof Error ? err.stack ?? null : null,
-      label: "conversations.handleCreate",
+      data: {
+        errorType: err instanceof Error ? err.name : "Error",
+        stack: err instanceof Error ? err.stack ?? null : null,
+        label: "conversations.handleCreate",
+      },
     }).catch((e) => {
       console.error("[conversations] recordReport failed", e);
     });

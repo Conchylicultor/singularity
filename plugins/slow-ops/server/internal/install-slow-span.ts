@@ -1,8 +1,8 @@
 import { onSlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
 import type { SlowSpan } from "@plugins/infra/plugins/runtime-profiler/core";
-import { recordReport } from "@plugins/reports/server";
 import type { ConfigValues } from "@plugins/config_v2/core";
-import type { slowOpConfig } from "../../shared/config";
+import { recordSlowOp } from "./record-slow-op";
+import type { slowOpConfig } from "../../core";
 
 type Thresholds = ConfigValues<(typeof slowOpConfig)["fields"]>;
 
@@ -48,19 +48,18 @@ export function installSlowSpanHook(thresholds: Thresholds): void {
     (span: SlowSpan) => {
       const threshold = thresholdFor(span.kind, thresholds);
       if (span.durationMs < threshold) return;
-      const durationMs = Math.round(span.durationMs);
       // Fire-and-forget: detaching the promise keeps the profiler hot path
-      // non-blocking, and a failed recordReport surfaces as an unhandled
+      // non-blocking, and a failed recordSlowOp surfaces as an unhandled
       // rejection that the reports plugin captures and files — never silently
-      // swallowed.
-      void recordReport({
-        kind: "slow-op",
-        source: "server-slow-op",
+      // swallowed. `span.parent` carries the caller attribution this refactor
+      // exists to capture.
+      void recordSlowOp({
         operationKind: span.kind,
         operation: span.label,
-        durationMs,
+        durationMs: span.durationMs,
         thresholdMs: threshold,
-        message: `${span.kind} ${span.label} took ${durationMs}ms (threshold ${threshold}ms)`,
+        source: "server-slow-op",
+        parent: span.parent,
       });
     },
     { thresholdMs: floor },

@@ -1,7 +1,7 @@
 import { appendFileSync, mkdirSync, readFileSync, unlinkSync } from "node:fs";
 import { join } from "node:path";
 import { REPORTS_DIR } from "@plugins/infra/plugins/paths/server";
-import type { ReportInput, ReportSource } from "../../shared/types";
+import type { ReportSource } from "../../shared/types";
 
 // Server crashes during `uncaughtException` can't write to Postgres (the
 // driver is async and the event loop is dying). We buffer to a JSONL file
@@ -33,7 +33,14 @@ export function appendReportSync(source: ReportSource, err: Error): void {
   }
 }
 
-export interface BufferedReport extends ReportInput {
+// A buffered process-level crash captured synchronously during a dying event
+// loop. Flat crash fields (not a ReportInput) — flushBufferedReports wraps these
+// into the crash ReportKind payload on the next boot.
+export interface BufferedReport {
+  source: ReportSource;
+  errorType: string;
+  message: string;
+  stack: string | undefined;
   at: string;
 }
 

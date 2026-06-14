@@ -1,5 +1,6 @@
 import { eq, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
+import { runWithoutProfiling } from "@plugins/infra/plugins/runtime-profiler/core";
 import { getServerBuildId } from "@plugins/build/server";
 import { createTask, getTask } from "@plugins/tasks/plugins/tasks-core/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
@@ -8,30 +9,24 @@ import { reportsResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { REPORTS_META_TASK_ID } from "./meta-reports";
-import {
-  fingerprint as fingerprintOf,
-  fingerprintSlowOp,
-} from "../../shared/fingerprint";
+import { ReportKind } from "./report-kinds";
 import type { ReportInput } from "../../shared/types";
 
 export interface RecordReportResult {
   taskId: string | null;
   wasNew: boolean;
-  crashLoop: boolean;
+  rateLimited: boolean;
 }
 
-// Report payloads are unbounded: an aggregated error (e.g. a ZodError listing one
-// issue per row across thousands of rows) can be hundreds of KB. Persisting that
-// verbatim balloons the report row, the derived task description, and ultimately
-// hangs the markdown renderer when the task is opened. Clamp every free-text
-// field at the ingestion boundary so nothing downstream can ever exceed these.
+// The generic one-line summary is unbounded (an aggregated error can be hundreds
+// of KB). Clamp it at the ingestion boundary so nothing downstream — the row,
+// the notification, the task title — can ever exceed this. Kind-specific payload
+// (stack, etc.) is clamped by the kind's renderTask when it builds the task
+// description, where the ballooning actually hurt (markdown render).
 const MESSAGE_MAX = 4_000;
-const STACK_MAX = 16_000;
-const COMPONENT_STACK_MAX = 8_000;
 
-// Truncate the middle, keeping head + tail. For stacks the innermost frames
-// (the tail) are usually the root cause; for aggregated errors the closing
-// context matters too — so we drop the redundant middle, not the end.
+// Truncate the middle, keeping head + tail. The closing context of an aggregated
+// error matters as much as the opening, so we drop the redundant middle.
 function clamp(value: string, max: number): string {
   if (value.length <= max) return value;
   const head = Math.ceil(max / 2);
@@ -44,144 +39,137 @@ function clamp(value: string, max: number): string {
 // avoids DB row locks saturating the connection pool under cold-start bursts.
 const taskCreationLocks = new Map<string, Promise<void>>();
 
-// Per-kind presentation labels for the task title tag and the bell notification.
-// Unknown kinds fall back to crash so a new kind never produces a blank label.
-const KIND_META = {
-  crash: { tag: "[crash]", notif: "Crash recorded", variant: "error" },
-  "slow-op": {
-    tag: "[slow-op]",
-    notif: "Slow operation recorded",
-    variant: "warning",
-  },
-} as const;
+// The noise pipeline classifies on a small, generic shape. Crash-shaped fields
+// (errorType / stack) that noise rules inspect live in the kind's `data` payload;
+// we surface them here as plain strings if present. A kind that has no such
+// fields simply yields nulls and matches no crash-specific noise rule.
+function noiseFieldsFrom(data: Record<string, unknown>): {
+  errorType: string | null;
+  stack: string | null;
+} {
+  const errorType = typeof data.errorType === "string" ? data.errorType : null;
+  const stack = typeof data.stack === "string" ? data.stack : null;
+  return { errorType, stack };
+}
 
 // Single entry point used by the HTTP handler, the boot-time flush, and the
-// process-level crash hooks (once the next boot flushes them through).
-// Every source collapses here so dedup + task-creation logic lives in one place.
+// process-level crash hooks. Every source collapses here so dedup + task-creation
+// logic lives in one place. The engine is fully generic: it looks up the matching
+// ReportKindSpec and delegates schema validation, fingerprinting, presentation,
+// and task rendering to it. It never names a kind.
 export async function recordReport(
   input: ReportInput,
 ): Promise<RecordReportResult> {
-  // Split the report into the fields that transform on the way to the row
-  // (clamped text, renamed attribution) and the verbatim ones that map 1:1 to
-  // columns of the same name. Spreading `verbatim` into the insert means a new
-  // plain report field persists automatically instead of being silently dropped
-  // by a hand-written column list — the only fields named explicitly below are
-  // the ones that genuinely differ from the report shape.
-  const {
-    kind: rawKind,
-    message: rawMessage,
-    stack: rawStack,
-    componentStack: rawComponentStack,
-    clientId,
-    buildId,
-    ...verbatim
-  } = input;
+  const { kind, source, message: rawMessage, url, userAgent, clientId, buildId } =
+    input;
 
-  const kind = rawKind ?? "crash";
-  const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.crash;
-  const fp =
-    kind === "slow-op"
-      ? await fingerprintSlowOp(input.operationKind ?? "", input.operation ?? "")
-      : await fingerprintOf(input.errorType, input.stack);
+  const spec = ReportKind.getContributions().find((k) => k.kind === kind);
+  if (!spec) {
+    // Fail loudly: a report whose kind has no registered spec is a wiring bug,
+    // not a runtime condition to paper over with a default.
+    throw new Error(
+      `recordReport: no ReportKind registered for kind "${kind}". ` +
+        `Registered kinds: ${ReportKind.getContributions()
+          .map((k) => k.kind)
+          .join(", ") || "(none)"}`,
+    );
+  }
+
+  // Validate the per-kind payload against the kind's schema. parse() throws on a
+  // malformed payload — again, a wiring bug we want surfaced, not swallowed. We
+  // store the wire-level `data` (already a Record) so the persisted jsonb keeps
+  // the exact shape the kind validated.
+  const data = input.data;
+  const parsed = spec.schema.parse(data);
+  const fp = await spec.fingerprint(parsed);
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
-  const message = clamp(rawMessage, MESSAGE_MAX);
-  const stack = rawStack != null ? clamp(rawStack, STACK_MAX) : null;
-  const componentStack =
-    rawComponentStack != null
-      ? clamp(rawComponentStack, COMPONENT_STACK_MAX)
-      : null;
-  const loop = bumpWindowAndCheck(fp);
-  // A crash whose originating bundle's build id differs from the server's
+  const message = clamp(rawMessage ?? "", MESSAGE_MAX);
+  const limited = bumpWindowAndCheck(fp);
+  // A report whose originating bundle's build id differs from the server's
   // current build id came from an outdated frontend tab — benign version-skew.
   const serverBuildId = getServerBuildId();
   const staleOrigin =
     buildId != null && serverBuildId != null && buildId !== serverBuildId;
+  const { errorType, stack } = noiseFieldsFrom(data);
   const noise = isNoiseReport({
-    source: input.source,
-    errorType: input.errorType ?? null,
-    message: input.message,
-    stack: input.stack ?? null,
+    source,
+    errorType,
+    message: rawMessage ?? "",
+    stack,
     staleOrigin,
   });
 
   const id = `report-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-  const [row] = await db
-    .insert(_reports)
-    .values({
-      id,
-      kind,
-      fingerprint: fp,
-      worktree,
-      // source, errorType, url, userAgent, slot, label — map 1:1 to columns.
-      ...verbatim,
-      // Clamped text + renamed last-writer-wins attribution columns.
-      message,
-      stack,
-      componentStack,
-      crashLoop: loop,
-      noise,
-      lastClientId: clientId ?? null,
-      lastBuildId: buildId ?? null,
-    })
-    .onConflictDoUpdate({
-      target: [_reports.fingerprint, _reports.worktree],
-      // Slow-op rows also refresh duration/threshold to the latest occurrence
-      // (the fingerprint excludes duration, so repeats land on the same row);
-      // crash rows leave these columns NULL.
-      set: {
-        count: sql`${_reports.count} + 1`,
-        lastSeenAt: new Date(),
-        updatedAt: new Date(),
-        crashLoop: sql`${_reports.crashLoop} OR ${loop}`,
+  // Wrapped in runWithoutProfiling: the reports insert/upsert is itself a `db`
+  // span that would otherwise re-feed the slow-op recorder, which then files a
+  // report, which writes again — a self-amplifying loop. Suppressing here covers
+  // every report kind (crash + slow-op). The ALS propagates through the awaited
+  // query, so the connection-acquire and query spans are suppressed too.
+  const [row] = await runWithoutProfiling(async () => {
+    // The await MUST run inside the suppression scope. A bare `() => db…`
+    // returns the lazy query unexecuted, so its execution (and the acquire +
+    // query spans) would run after the ALS scope exits — defeating suppression
+    // and re-opening the self-feedback loop.
+    const rows = await db
+      .insert(_reports)
+      .values({
+        id,
+        kind,
+        fingerprint: fp,
+        worktree,
+        source,
+        message,
+        url: url ?? null,
+        userAgent: userAgent ?? null,
+        data,
+        rateLimited: limited,
         noise,
         lastClientId: clientId ?? null,
         lastBuildId: buildId ?? null,
-        ...(kind === "slow-op"
-          ? {
-              durationMs: input.durationMs ?? null,
-              thresholdMs: input.thresholdMs ?? null,
-            }
-          : {}),
-      },
-    })
-    .returning();
+      })
+      .onConflictDoUpdate({
+        target: [_reports.fingerprint, _reports.worktree],
+        // Repeats land on the same row (the fingerprint is stable per kind): bump
+        // the count, refresh the latest message + payload + attribution.
+        set: {
+          message,
+          data,
+          count: sql`${_reports.count} + 1`,
+          lastSeenAt: new Date(),
+          updatedAt: new Date(),
+          rateLimited: sql`${_reports.rateLimited} OR ${limited}`,
+          noise,
+          lastClientId: clientId ?? null,
+          lastBuildId: buildId ?? null,
+        },
+      })
+      .returning();
+    return rows;
+  });
 
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-  if (!row) return { taskId: null, wasNew: false, crashLoop: loop };
+  if (!row) return { taskId: null, wasNew: false, rateLimited: limited };
 
-  if (row.crashLoop) {
+  if (row.rateLimited) {
     // Keep the row's count accurate but don't churn the task or the bus.
     reportsResource.notify();
-    return { taskId: row.taskId, wasNew: false, crashLoop: true };
+    return { taskId: row.taskId, wasNew: false, rateLimited: true };
   }
 
-  const outcome = await ensureTaskForReport(row.id, `${fp}|${worktree}`, {
-    kind,
-    tag: meta.tag,
-    staleOrigin,
-    serverBuildId,
-  });
+  const outcome = await ensureTaskForReport(row.id, `${fp}|${worktree}`, spec);
   reportsResource.notify();
   // Mirror the task title's "[Stale tab]" marker into the bell so the
-  // notification itself reads as benign version-skew at a glance — not just the
-  // task it links to. (Restart-induced wedges self-describe in their message.)
+  // notification itself reads as benign version-skew at a glance.
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
-  const body = row.errorType
-    ? `${row.errorType}: ${row.message}`
-    : row.message;
-  const desc = `${stalePrefix}${body}`;
+  const desc = `${stalePrefix}${row.message}`;
   void recordNotification({
     type: "report",
-    title: staleOrigin ? `${meta.notif} (stale tab)` : meta.notif,
+    title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
-    variant: meta.variant,
+    variant: spec.meta.variant,
     muted: row.noise,
-    // One bell row per report fingerprint, mirroring the deduped report row (and
-    // its single growing-count task). `row.id` is stable across occurrences —
-    // the upsert keyed on (fingerprint, worktree) returns the same row — so each
-    // recurrence refreshes this one notification in place, keeping its `muted`
-    // in sync with the row's latest last-writer-wins noise instead of inserting
-    // a fresh, frozen-classification row every time.
+    // One bell row per report fingerprint, mirroring the deduped report row.
+    // `row.id` is stable across occurrences (the upsert returns the same row).
     dedupeKey: row.id,
     linkTo: outcome.taskId ? `/tasks/t/${outcome.taskId}` : null,
     metadata: {
@@ -193,22 +181,17 @@ export async function recordReport(
       buildId: buildId ?? null,
     },
   });
-  return { ...outcome, crashLoop: false };
+  return { ...outcome, rateLimited: false };
 }
 
 async function ensureTaskForReport(
   reportId: string,
   lockKey: string,
-  origin: {
-    kind: string;
-    tag: string;
-    staleOrigin: boolean;
-    serverBuildId: string | null;
-  },
+  spec: { meta: { tag: string }; renderTask: (row: typeof _reports.$inferSelect) => { title: string; description: string } },
 ): Promise<{ taskId: string | null; wasNew: boolean }> {
   // Serialize concurrent callers for the same fingerprint. A request arriving
-  // while another is mid-creation waits on the prior promise, then re-reads
-  // the row and observes the task already linked.
+  // while another is mid-creation waits on the prior promise, then re-reads the
+  // row and observes the task already linked.
   while (taskCreationLocks.has(lockKey)) {
     await taskCreationLocks.get(lockKey);
   }
@@ -217,141 +200,38 @@ async function ensureTaskForReport(
   taskCreationLocks.set(lockKey, inflight);
 
   try {
-    const [latest] = await db
-      .select()
-      .from(_reports)
-      .where(eq(_reports.id, reportId))
-      .limit(1);
-    // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
-    if (!latest) return { taskId: null, wasNew: false };
+    // The task-creation DB work (select + getTask + createTask + update) is part
+    // of the observability subsystem's own I/O — suppress its spans so they never
+    // re-feed the slow-op recorder. The suppression ALS propagates through every
+    // awaited query, including the cross-plugin getTask/createTask DB calls.
+    return await runWithoutProfiling(async () => {
+      const [latest] = await db
+        .select()
+        .from(_reports)
+        .where(eq(_reports.id, reportId))
+        .limit(1);
+      // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
+      if (!latest) return { taskId: null, wasNew: false };
 
-    const linked = latest.taskId ? await getTask(latest.taskId) : null;
-    const recurrence = !!latest.taskId;
-    const needsTask = !linked || linked.status === "dropped";
-    if (!needsTask) return { taskId: latest.taskId, wasNew: false };
+      const linked = latest.taskId ? await getTask(latest.taskId) : null;
+      const needsTask = !linked || linked.status === "dropped";
+      if (!needsTask) return { taskId: latest.taskId, wasNew: false };
 
-    const task = await createTask({
-      folderId: REPORTS_META_TASK_ID,
-      title: taskTitle(latest, origin.tag, origin.staleOrigin, latest.noise),
-      description: taskDescription(
-        latest,
-        origin.kind,
-        recurrence,
-        origin.staleOrigin,
-        origin.serverBuildId,
-      ),
-      author: "reports-plugin",
+      const { title, description } = spec.renderTask(latest);
+      const task = await createTask({
+        folderId: REPORTS_META_TASK_ID,
+        title,
+        description,
+        author: "reports-plugin",
+      });
+      await db
+        .update(_reports)
+        .set({ taskId: task.id, updatedAt: new Date() })
+        .where(eq(_reports.id, latest.id));
+      return { taskId: task.id, wasNew: true };
     });
-    await db
-      .update(_reports)
-      .set({ taskId: task.id, updatedAt: new Date() })
-      .where(eq(_reports.id, latest.id));
-    return { taskId: task.id, wasNew: true };
   } finally {
     taskCreationLocks.delete(lockKey);
     release();
   }
-}
-
-function taskTitle(
-  row: { errorType: string | null; message: string },
-  tag: string,
-  staleOrigin: boolean,
-  noise: boolean,
-): string {
-  const prefix = row.errorType ? `${row.errorType}: ` : "";
-  const stalePrefix = staleOrigin ? "[Stale tab] " : "";
-  // Tag known-benign noise so the title itself reads as "expected", matching
-  // the muted notification — not just a dimmed row with no explanation.
-  const noisePrefix = noise ? "[noise] " : "";
-  const raw = `${stalePrefix}${noisePrefix}${tag} ${prefix}${row.message}`;
-  return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
-}
-
-function taskDescription(
-  row: {
-    source: string;
-    worktree: string;
-    fingerprint: string;
-    count: number;
-    firstSeenAt: Date;
-    lastSeenAt: Date;
-    stack: string | null;
-    componentStack: string | null;
-    url: string | null;
-    userAgent: string | null;
-    slot: string | null;
-    label: string | null;
-    message: string;
-    errorType: string | null;
-    lastBuildId: string | null;
-    operationKind: string | null;
-    operation: string | null;
-    durationMs: number | null;
-    thresholdMs: number | null;
-  },
-  kind: string,
-  recurrence: boolean,
-  staleOrigin: boolean,
-  serverBuildId: string | null,
-): string {
-  const lines: string[] = [];
-  if (staleOrigin) {
-    lines.push(
-      `**Origin:** stale frontend tab (build ${row.lastBuildId} vs current ${serverBuildId}) — likely benign version-skew, not a live bug.`,
-    );
-    lines.push("");
-  }
-  if (recurrence) {
-    lines.push(
-      `**Recurrence** — this fingerprint previously had a task that was dropped. It just happened again.`,
-    );
-    lines.push("");
-  }
-  // Slow-op: no stack, no error fence — surface the operation identity and the
-  // duration vs threshold that tripped the report. Crash-only blocks (slot,
-  // componentStack, error fence) don't apply.
-  if (kind === "slow-op") {
-    lines.push(`**Operation**`);
-    lines.push(`**operationKind:** ${row.operationKind ?? "unknown"}`);
-    lines.push(`**operation:** ${row.operation ?? "unknown"}`);
-    lines.push(
-      `**Duration:** ${row.durationMs} ms (threshold ${row.thresholdMs} ms)`,
-    );
-    lines.push("");
-    lines.push(`**Source:** ${row.source}`);
-    lines.push(`**Worktree:** ${row.worktree}`);
-    lines.push(`**Fingerprint:** ${row.fingerprint}`);
-    lines.push(`**Count:** ${row.count}`);
-    lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);
-    lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
-    if (row.url) lines.push(`**URL:** ${row.url}`);
-    return lines.join("\n");
-  }
-  lines.push(`**Source:** ${row.source}`);
-  lines.push(`**Worktree:** ${row.worktree}`);
-  lines.push(`**Fingerprint:** ${row.fingerprint}`);
-  lines.push(`**Count:** ${row.count}`);
-  lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);
-  lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
-  if (row.slot) {
-    const suffix = row.label ? ` (label: ${row.label})` : "";
-    lines.push(`**Slot:** ${row.slot}${suffix}`);
-  }
-  if (row.url) lines.push(`**URL:** ${row.url}`);
-  if (row.userAgent) lines.push(`**User-Agent:** ${row.userAgent}`);
-  lines.push("");
-  lines.push(`**Error**`);
-  lines.push("```");
-  lines.push(`${row.errorType ?? "Error"}: ${row.message}`);
-  if (row.stack) lines.push(row.stack);
-  lines.push("```");
-  if (row.componentStack) {
-    lines.push("");
-    lines.push("**Component stack**");
-    lines.push("```");
-    lines.push(row.componentStack);
-    lines.push("```");
-  }
-  return lines.join("\n");
 }

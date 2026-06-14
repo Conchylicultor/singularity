@@ -14,6 +14,8 @@ export { REPORTS_META_TASK_ID } from "./internal/meta-reports";
 export { recordReport } from "./internal/record-report";
 export { ReportNoiseRule } from "./internal/noise-rules";
 export type { ReportNoiseRuleSpec, ReportNoiseInput } from "./internal/noise-rules";
+export { ReportKind } from "./internal/report-kinds";
+export type { ReportKindSpec, ReportKindVariant, ReportRow } from "./internal/report-kinds";
 
 export default {
   description: "Records server/frontend crashes and files deduped tasks.",
@@ -25,10 +27,10 @@ export default {
     installProcessHooks();
     setErrorReporter((report) => {
       void recordReport({
+        kind: "crash",
         source: "server-caught",
         message: report.message,
-        stack: report.stack,
-        errorType: report.errorType,
+        data: { errorType: report.errorType, stack: report.stack },
       });
     });
     await ensureReportsMetaTask();

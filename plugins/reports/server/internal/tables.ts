@@ -2,6 +2,7 @@ import {
   boolean,
   index,
   integer,
+  jsonb,
   pgTable,
   text,
   timestamp,
@@ -12,10 +13,11 @@ import {
 // first report inserts + creates a task; repeats bump count and advance
 // last_seen_at. See research/2026-04-21-global-crashes-plugin.md.
 //
-// `kind` discriminates the event type; today every row is "crash". Crash-
-// specific columns (error_type, stack, component_stack, slot, label, crash_loop,
-// last_client_id, last_build_id) are nullable so a future kind can leave them
-// NULL and add its own columns without restructuring this table.
+// `kind` discriminates the event type and is fully generic — the reports engine
+// never names a kind. Each kind contributes a ReportKindSpec (schema +
+// fingerprint + meta + renderTask) and stores its per-kind payload in the
+// generic `data` jsonb column; the validated payload shape is owned by the
+// kind, not this table.
 export const _reports = pgTable(
   "reports",
   {
@@ -24,24 +26,20 @@ export const _reports = pgTable(
     fingerprint: text("fingerprint").notNull(),
     worktree: text("worktree").notNull(),
     source: text("source").notNull(),
-    errorType: text("error_type"),
+    // Generic one-line summary shown in lists / notifications. Kind-specific
+    // detail lives in `data`.
     message: text("message").notNull(),
-    stack: text("stack"),
-    componentStack: text("component_stack"),
     url: text("url"),
     userAgent: text("user_agent"),
-    slot: text("slot"),
-    label: text("label"),
+    // The kind's validated payload. Each ReportKindSpec.schema owns this shape;
+    // the engine persists whatever the schema parses without inspecting it.
+    data: jsonb("data").$type<Record<string, unknown>>().notNull().default({}),
     count: integer("count").notNull().default(1),
-    crashLoop: boolean("crash_loop").notNull().default(false),
+    // Generic velocity state: set when this fingerprint fired faster than the
+    // velocity window allows; while set, recordReport stops churning the task
+    // and skips the resource notify. (Was `crash_loop`.)
+    rateLimited: boolean("rate_limited").notNull().default(false),
     noise: boolean("noise").notNull().default(false),
-    // Slow-op-specific columns. NULL for crash rows; crash columns above
-    // (error_type, stack, component_stack, slot, label, crash_loop, …) likewise
-    // stay NULL for slow-op rows. operation drives the slow-op fingerprint.
-    operationKind: text("operation_kind"), // "page-load" | "element" | "loader" | "http" | "db"
-    operation: text("operation"), // stable operation identity
-    durationMs: integer("duration_ms"), // last observed duration
-    thresholdMs: integer("threshold_ms"), // threshold that was exceeded
     // Attribution (last-writer-wins): the tab + bundle build id of the most
     // recent report for this fingerprint. NOT part of the dedup key.
     lastClientId: text("last_client_id"),

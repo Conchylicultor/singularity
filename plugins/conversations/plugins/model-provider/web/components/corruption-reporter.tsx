@@ -14,12 +14,12 @@ export function ModelCorruptionReporter() {
       const err = new Error(message);
       err.name = "CorruptModelError";
       void report({
+        kind: "crash",
         source: "browser-error",
-        errorType: err.name,
         message: err.message,
-        stack: err.stack ?? null,
         url: window.location.href,
         userAgent: navigator.userAgent,
+        data: { errorType: err.name, stack: err.stack ?? null },
       });
     });
     return () => registerModelCorruptionReporter((m) => console.error(m));

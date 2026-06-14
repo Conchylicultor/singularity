@@ -62,14 +62,17 @@ function wedge(
   // mode a distinct fingerprint; the stable message/label still dedups repeats of
   // a given mode into one growing-count task.
   void report({
+    kind: "crash",
     source: "live-state-wedge",
-    errorType: `LiveStateWedge:${discriminator}`,
     message: opts.benign
       ? `live-state went stale across a server restart: ${kind} — ${detail}`
       : `live-state wedged: ${kind} — ${detail}`,
-    label: "live-state.watchdog",
     url: location.href,
     userAgent: navigator.userAgent,
+    data: {
+      errorType: `LiveStateWedge:${discriminator}`,
+      label: "live-state.watchdog",
+    },
   });
 }
 

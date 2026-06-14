@@ -1,0 +1,1 @@
+ALTER TABLE "slow_ops" ALTER COLUMN "total_ms" SET DATA TYPE double precision;

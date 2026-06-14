@@ -1,28 +1,22 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 
+// Web-safe view of a report row. Generic columns only — the per-kind payload
+// lives in `data` (validated server-side by each kind's ReportKindSpec.schema),
+// and kind-specific rendering is delegated to the matching Reports.KindView.
 export const ReportSchema = z.object({
   id: z.string(),
   kind: z.string(),
   fingerprint: z.string(),
   worktree: z.string(),
   source: z.string(),
-  errorType: z.string().nullable(),
   message: z.string(),
-  stack: z.string().nullable(),
-  componentStack: z.string().nullable(),
   url: z.string().nullable(),
   userAgent: z.string().nullable(),
-  slot: z.string().nullable(),
-  label: z.string().nullable(),
+  data: z.record(z.unknown()),
   count: z.number().int(),
-  crashLoop: z.boolean(),
+  rateLimited: z.boolean(),
   noise: z.boolean(),
-  // Slow-op fields — NULL for crash rows.
-  operationKind: z.string().nullable(),
-  operation: z.string().nullable(),
-  durationMs: z.number().int().nullable(),
-  thresholdMs: z.number().int().nullable(),
   lastClientId: z.string().nullable(),
   lastBuildId: z.string().nullable(),
   taskId: z.string().nullable(),

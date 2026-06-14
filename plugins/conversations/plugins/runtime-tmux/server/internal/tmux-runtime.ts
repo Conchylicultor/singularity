@@ -397,10 +397,10 @@ async function pasteTurn(conversationId: string, text: string): Promise<void> {
     // than chaining Enter into the same PTY chunk as the paste.
     if (everObserved) {
       void recordReport({
+        kind: "crash",
         source: "server-caught",
-        errorType: "TmuxSubmitError",
         message: `tmux pasteTurn for ${conversationId}: paste did not surface in input box within ${PASTE_COMMIT_TIMEOUT_MS}ms; using fixed-delay fallback`,
-        label: "tmux-runtime.pasteTurn",
+        data: { errorType: "TmuxSubmitError", label: "tmux-runtime.pasteTurn" },
       });
     }
     await Bun.sleep(FALLBACK_SUBMIT_DELAY_MS);
@@ -553,10 +553,10 @@ async function paneIsWorking(conversationId: string): Promise<boolean> {
     state = await resolveSessionState(pane.panePid);
   } catch (err) {
     void recordReport({
+      kind: "crash",
       source: "server-caught",
-      errorType: "SessionStateError",
       message: `paneIsWorking: resolveSessionState failed for "${conversationId}": ${err instanceof Error ? err.message : String(err)}`,
-      label: "tmux-runtime.paneIsWorking",
+      data: { errorType: "SessionStateError", label: "tmux-runtime.paneIsWorking" },
     });
     return true; // unknown → treat as working; never C-c into a possibly-streaming agent
   }
@@ -580,10 +580,10 @@ export const tmuxRuntime: ConversationRuntime = {
           return await resolveSessionState(panes.get(id)!.panePid);
         } catch (err) {
           void recordReport({
+            kind: "crash",
             source: "server-caught",
-            errorType: "SessionStateError",
             message: `resolveSessionState failed for pane "${id}": ${err instanceof Error ? err.message : String(err)}`,
-            label: "tmux-runtime.resolveSessionState",
+            data: { errorType: "SessionStateError", label: "tmux-runtime.resolveSessionState" },
           });
           return NULL_SESSION;
         }

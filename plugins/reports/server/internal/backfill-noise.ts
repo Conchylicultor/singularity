@@ -23,9 +23,8 @@ export async function backfillNoiseClassification(): Promise<void> {
     .select({
       id: _reports.id,
       source: _reports.source,
-      errorType: _reports.errorType,
       message: _reports.message,
-      stack: _reports.stack,
+      data: _reports.data,
       noise: _reports.noise,
       lastBuildId: _reports.lastBuildId,
     })
@@ -41,11 +40,15 @@ export async function backfillNoiseClassification(): Promise<void> {
       row.lastBuildId != null &&
       serverBuildId != null &&
       row.lastBuildId !== serverBuildId;
+    // Crash-shaped noise fields live in the kind's generic `data` payload.
+    const errorType =
+      typeof row.data.errorType === "string" ? row.data.errorType : null;
+    const stack = typeof row.data.stack === "string" ? row.data.stack : null;
     const noise = isNoiseReport({
       source: row.source,
-      errorType: row.errorType,
+      errorType,
       message: row.message,
-      stack: row.stack,
+      stack,
       staleOrigin,
     });
     if (noise !== row.noise) {

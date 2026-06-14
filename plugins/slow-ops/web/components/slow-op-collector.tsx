@@ -1,13 +1,13 @@
 import { useEffect, useRef } from "react";
 import { useConfig } from "@plugins/config_v2/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { registerSlowResourceReporter } from "@plugins/primitives/plugins/live-state/web";
-import { report } from "@plugins/reports/web";
-import { slowOpConfig } from "../../shared/config";
+import { slowOpConfig } from "../../core";
+import { submitClientSlowOp } from "../../shared/endpoints";
 
-// A Core.Root side-effect component (mirrors reports' ReportCollector). It owns
-// the two client-side slow-op signals — page-load timing and live-state element
-// settle — and funnels both into the shared report() entry point with
-// kind "slow-op". Renders nothing.
+// A Core.Root side-effect component. It owns the two client-side slow-op
+// signals — page-load timing and live-state element settle — and funnels both
+// into the slow-ops client endpoint. Renders nothing.
 export function SlowOpCollector() {
   const cfg = useConfig(slowOpConfig);
 
@@ -24,16 +24,21 @@ export function SlowOpCollector() {
       const t = cfgRef.current.pageLoadMs;
       if (ms <= t) return;
       const durationMs = Math.round(ms);
-      void report({
-        kind: "slow-op",
-        source: "client-slow-op",
-        operationKind: "page-load",
-        operation: location.pathname,
-        durationMs,
-        thresholdMs: t,
-        message: `page load ${durationMs}ms (threshold ${t}ms)`,
-        url: location.href,
-      });
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- passive slow-op telemetry beacon (keepalive, report:false): silent and self-correcting; a failed beacon must never toast or recurse into the report path.
+      void fetchEndpoint(
+        submitClientSlowOp,
+        {},
+        {
+          body: {
+            operationKind: "page-load",
+            operation: location.pathname,
+            durationMs,
+            thresholdMs: t,
+          },
+          keepalive: true,
+          report: false,
+        },
+      );
     });
     return () => cancelAnimationFrame(id);
   }, []);
@@ -46,20 +51,25 @@ export function SlowOpCollector() {
       // regression, not noise. The gateway hot-swaps only once the backend is
       // ready (warm pool, migrations applied) — so a slow settle right after a
       // swap means readiness flipped before the backend could serve fast. Fix
-      // that at the source; never suppress this signal. See this plugin's
-      // CLAUDE.md.
+      // that at the source; never suppress this signal.
       const t = cfgRef.current.elementMs;
       if (info.durationMs <= t) return;
       const durationMs = Math.round(info.durationMs);
-      void report({
-        kind: "slow-op",
-        source: "client-slow-op",
-        operationKind: "element",
-        operation: `${info.key} ${JSON.stringify(info.params)}`,
-        durationMs,
-        thresholdMs: t,
-        message: `element ${info.key} settled in ${durationMs}ms (threshold ${t}ms)`,
-      });
+      // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- passive slow-op telemetry beacon (keepalive, report:false): silent and self-correcting; a failed beacon must never toast or recurse into the report path.
+      void fetchEndpoint(
+        submitClientSlowOp,
+        {},
+        {
+          body: {
+            operationKind: "element",
+            operation: `${info.key} ${JSON.stringify(info.params)}`,
+            durationMs,
+            thresholdMs: t,
+          },
+          keepalive: true,
+          report: false,
+        },
+      );
     });
     return () => registerSlowResourceReporter(null);
   }, []);

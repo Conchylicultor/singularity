@@ -5,7 +5,7 @@ import { ReportBodySchema } from "./types";
 export const ReportResultSchema = z.object({
   taskId: z.string().nullable(),
   wasNew: z.boolean(),
-  crashLoop: z.boolean(),
+  rateLimited: z.boolean(),
 });
 export type ReportResult = z.infer<typeof ReportResultSchema>;
 
