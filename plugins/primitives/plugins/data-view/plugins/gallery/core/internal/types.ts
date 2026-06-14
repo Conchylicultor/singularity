@@ -42,13 +42,3 @@ export interface GalleryViewOptions<TRow> {
   /** Grid sizing: the min card width in px. Default 200. */
   minCardWidth?: number;
 }
-
-/**
- * Typed helper for consumers to build a `viewOptions` entry without the host
- * being generic over view internals: `viewOptions={{ ...galleryOptions(o) }}`.
- */
-export function galleryOptions<TRow>(
-  o: GalleryViewOptions<TRow>,
-): ["gallery", GalleryViewOptions<TRow>] {
-  return ["gallery", o];
-}

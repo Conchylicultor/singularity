@@ -2900,9 +2900,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
             - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
-            - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`, `galleryOptions`
+            - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
           - Core:
-            - Exports: Types: `CoverContent`, `GalleryViewOptions`; Values: `galleryOptions`
+            - Exports: Types: `CoverContent`, `GalleryViewOptions`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`

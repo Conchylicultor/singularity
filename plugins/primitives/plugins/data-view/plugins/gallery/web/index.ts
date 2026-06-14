@@ -6,7 +6,6 @@ import { GalleryView } from "./components/gallery-view";
 export { DataCard } from "./components/data-card";
 export type { DataCardProps } from "./components/data-card";
 export type { CoverContent, GalleryViewOptions } from "../core";
-export { galleryOptions } from "../core";
 
 export default {
   description:

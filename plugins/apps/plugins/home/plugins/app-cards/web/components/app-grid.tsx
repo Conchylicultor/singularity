@@ -34,7 +34,7 @@ export function AppGrid() {
       }
       emptyState="No apps installed."
       viewOptions={{
-        // Plain literal (not the gallery child's `galleryOptions`) to respect
+        // Plain literal (the gallery view child is never imported) to respect
         // data-view's collection-consumer separation. The icon cover renders
         // the app glyph in the default card's tinted cover frame.
         gallery: {

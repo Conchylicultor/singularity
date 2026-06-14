@@ -94,7 +94,7 @@ export function StoryGallery() {
             onRowActivate={openStory}
             emptyState={'No stories yet. Create one with "New story".'}
             viewOptions={{
-              // Plain literal (not the gallery child's `galleryOptions`) to respect
+              // Plain literal (the gallery view child is never imported) to respect
               // data-view's collection-consumer separation. The page icon renders in
               // the default card's tinted cover frame.
               gallery: {
