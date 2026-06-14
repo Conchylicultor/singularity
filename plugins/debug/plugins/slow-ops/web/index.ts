@@ -1,20 +1,15 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
-import { Pane, openPane } from "@plugins/primitives/plugins/pane/web";
-import { DebugApp } from "@plugins/apps/plugins/debug/plugins/shell/web";
-import { sidebarNavItem } from "@plugins/primitives/plugins/app-shell/web";
-import { MdSpeed } from "react-icons/md";
-import { slowOpsPane } from "./panes";
-
-export { slowOpsPane } from "./panes";
+import { Core } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { slowOpConfig } from "../core";
+import { SlowOpCollector } from "./components/slow-op-collector";
 
 export default {
+  collapsed: true,
   description:
-    "Debug pane showing a global, ranked overview of slow operations with per-operation caller attribution.",
+    "Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint.",
   contributions: [
-    Pane.Register({ pane: slowOpsPane }),
-    DebugApp.Sidebar({
-      id: "slow-ops",
-      ...sidebarNavItem({ title: "Slow Ops", icon: MdSpeed, onClick: () => openPane(slowOpsPane, {}, { mode: "root" }) }),
-    }),
+    ConfigV2.WebRegister({ descriptor: slowOpConfig }),
+    Core.Root({ component: SlowOpCollector }),
   ],
 } satisfies PluginDefinition;

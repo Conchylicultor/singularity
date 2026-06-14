@@ -11,7 +11,7 @@
   - Exports: Types: `ReportContext`; Values: `report`, `Reports`
 - Cross-plugin:
   - Slot contributors: `crash`
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/reports`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`, `slow-ops`
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/reports`, `debug/slow-ops`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`
 - Server:
   - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
   - DB schema: `plugins/reports/server/internal/tables.ts`

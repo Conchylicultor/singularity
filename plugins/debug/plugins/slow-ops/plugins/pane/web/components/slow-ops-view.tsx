@@ -13,7 +13,7 @@ import {
   slowOpsResource,
   type SlowOp,
   type CallerBreakdown,
-} from "@plugins/slow-ops/core";
+} from "@plugins/debug/plugins/slow-ops/core";
 
 // Default ranking: aggregate impact (total time across all occurrences). A
 // structural bottleneck — one query draining many routes — surfaces at the top.

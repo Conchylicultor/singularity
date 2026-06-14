@@ -1076,6 +1076,10 @@
       "name": "@singularity/plugin-debug-slow-ops",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/slow-ops/plugins/pane": {
+      "name": "@singularity/plugin-debug-slow-ops-pane",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/worktree-cleanup": {
       "name": "@singularity/plugin-debug-worktree-cleanup",
     },
@@ -2314,10 +2318,6 @@
     },
     "plugins/shell/plugins/toaster": {
       "name": "@singularity/plugin-shell-toaster",
-      "version": "0.0.1",
-    },
-    "plugins/slow-ops": {
-      "name": "@singularity/plugin-slow-ops",
       "version": "0.0.1",
     },
     "plugins/stats": {
@@ -3575,6 +3575,8 @@
 
     "@singularity/plugin-debug-slow-ops": ["@singularity/plugin-debug-slow-ops@workspace:plugins/debug/plugins/slow-ops"],
 
+    "@singularity/plugin-debug-slow-ops-pane": ["@singularity/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
+
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
 
     "@singularity/plugin-fields": ["@singularity/plugin-fields@workspace:plugins/fields"],
@@ -4152,8 +4154,6 @@
     "@singularity/plugin-shell-notifications": ["@singularity/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 
     "@singularity/plugin-shell-toaster": ["@singularity/plugin-shell-toaster@workspace:plugins/shell/plugins/toaster"],
-
-    "@singularity/plugin-slow-ops": ["@singularity/plugin-slow-ops@workspace:plugins/slow-ops"],
 
     "@singularity/plugin-stats": ["@singularity/plugin-stats@workspace:plugins/stats"],
 
