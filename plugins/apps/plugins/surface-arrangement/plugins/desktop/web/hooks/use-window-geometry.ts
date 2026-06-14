@@ -26,15 +26,23 @@ export interface Bounds {
 }
 
 /**
- * Pin a window's origin so the whole box stays inside the backdrop: `x` in
- * `[0, width - w]`, `y` in `[0, height - h]`. A window larger than the backdrop
- * clamps flush to the top-left (`max(0, …)` keeps the upper bound non-negative).
- * Returns `g` unchanged when already in bounds so `setGeo`'s identity guard can
- * skip the notify.
+ * The minimum slice of a window kept on-screen so its titlebar is always
+ * grabbable back. A window may hang off the left/right/bottom edges down to this
+ * sliver; the top is the exception (pinned to 0) since the titlebar lives there.
+ */
+export const MIN_VISIBLE = 48;
+
+/**
+ * Pin a window's origin so its titlebar stays reachable (macOS-style): the box
+ * may extend past the left, right, and bottom edges, but always keeps
+ * {@link MIN_VISIBLE}px on-screen so the titlebar can be grabbed back. The top is
+ * floored at 0 — the titlebar sits at the window's top, so a negative `y` would
+ * slide it above the surface where it can't be grabbed. Returns `g` unchanged
+ * when already in range so `setGeo`'s identity guard can skip the notify.
  */
 export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
-  const x = Math.min(Math.max(0, g.x), Math.max(0, bounds.width - g.w));
-  const y = Math.min(Math.max(0, g.y), Math.max(0, bounds.height - g.h));
+  const x = Math.min(Math.max(MIN_VISIBLE - g.w, g.x), bounds.width - MIN_VISIBLE);
+  const y = Math.min(Math.max(0, g.y), Math.max(0, bounds.height - MIN_VISIBLE));
   if (x === g.x && y === g.y) return g;
   return { ...g, x, y };
 }
