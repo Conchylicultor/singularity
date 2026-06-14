@@ -20,6 +20,7 @@ import { keyLayout as fractionalKeyLayout } from "@plugins/apps/plugins/sonata/p
 import {
   authoredSecondsOf,
   buildNoteVisuals,
+  buildProjection,
   KEYBOARD_HIGH,
   KEYBOARD_LOW,
 } from "./geometry";
@@ -99,6 +100,30 @@ test("note visuals are identical across tempoScale (given correctly-scaled maps)
   // Sanity: the second tempo segment (60bpm from beat 4) actually engaged —
   // beat 6 is 2s (beats 0–4 at 120) + 2s (beats 4–6 at 60) = 4s authored.
   expect(at1[2]!.y0Sec).toBeCloseTo(4, 10);
+});
+
+// --- spread (vertical zoom) ----------------------------------------------------
+
+test("buildProjection scales the whole Y axis by spread (and 1 is the baseline)", () => {
+  const notes = [note(60, 0, 1), note(62, 3, 2)];
+  const score = makeScore(notes);
+  const at = (spread: number) =>
+    buildProjection({ width: 520, height: 400, score, tempoScale: 1, spread });
+
+  const base = at(1);
+  const zoomed = at(2);
+  // Note positions (beatToY) scale linearly with spread. (The roll always
+  // offers the time-axis capability, so these closures are present.)
+  for (const beat of [0, 1, 3, 5]) {
+    expect(zoomed.beatToY!(beat)).toBeCloseTo(base.beatToY!(beat) * 2, 9);
+  }
+  // Note HEIGHTS scale too — the Synthesia "taller notes" zoom (unlike tempo,
+  // which leaves heights fixed). X is untouched.
+  const r1 = base.noteToRect!(notes[0]!);
+  const r2 = zoomed.noteToRect!(notes[0]!);
+  expect(r2.h).toBeCloseTo(r1.h * 2, 9);
+  expect(r2.x).toBeCloseTo(r1.x, 9);
+  expect(r2.w).toBeCloseTo(r1.w, 9);
 });
 
 // --- per-note fields -----------------------------------------------------------

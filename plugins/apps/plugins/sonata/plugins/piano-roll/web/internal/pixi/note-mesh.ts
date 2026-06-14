@@ -190,8 +190,10 @@ export interface NoteMeshHandle {
     visuals: readonly NoteVisual[],
     resolveColor: (expr: string) => number,
   ): void;
-  /** Update the pixel-mapping uniforms (lane resize / DPR change). O(1). */
-  setUniforms(scaleX: number, dpr: number): void;
+  /** Update the pixel-mapping uniforms (lane resize / DPR / spread change). The
+   *  `pxPerSec` Y-scale is the effective `PX_PER_SECOND * spread`, so the SDF
+   *  corner/inset math stays in real pixels at any zoom. O(1). */
+  setUniforms(scaleX: number, dpr: number, pxPerSec: number): void;
   /** Rewrite ONLY the color buffer (theme flip) — geometry untouched. */
   recolor(
     visuals: readonly NoteVisual[],
@@ -332,10 +334,10 @@ export function createNoteMesh(): NoteMeshHandle {
       indexBuffer.data = indices;
     },
 
-    setUniforms(scaleX, dpr) {
+    setUniforms(scaleX, dpr, pxPerSec) {
       const uScale = noteUniforms.uniforms.uScale as Float32Array;
       uScale[0] = scaleX;
-      uScale[1] = PX_PER_SECOND;
+      uScale[1] = pxPerSec;
       noteUniforms.uniforms.uDpr = dpr;
       noteUniforms.update();
     },

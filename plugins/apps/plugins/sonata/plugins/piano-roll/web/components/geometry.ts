@@ -49,13 +49,29 @@ import {
  */
 
 /**
- * Vertical pixels per authored-tempo second (at `tempoScale` 1). Anchored so a
- * 120 bpm passage (the default tempo, 2 beats/sec) scrolls at the same pixel
- * rate the old beat-based model used (`PX_PER_BEAT` of 90 → 180 px/sec). The
- * effective scroll rate is `PX_PER_SECOND * tempoScale`, so slowing the tempo
- * slows the scroll while note heights stay fixed.
+ * Vertical pixels per authored-tempo second at zoom 1× (`tempoScale` 1). This is
+ * the 1× BASELINE the spread wheel reads against — chosen as the Synthesia-style
+ * spread-out default (it was the old fixed 180 with the former 1.5 default folded
+ * in). The effective scale is `PX_PER_SECOND * tempoScale * spread`, so the wheel
+ * (spread) and tempo both scale the scroll rate from here; only spread also
+ * scales note heights.
  */
-export const PX_PER_SECOND = 180;
+export const PX_PER_SECOND = 270;
+
+/**
+ * Vertical zoom of the falling notes ("spread"), Synthesia-style — a pure
+ * multiplier on {@link PX_PER_SECOND}, read by the toolbar wheel as a zoom level
+ * (`1×` = the baseline above). Higher values make notes taller and the look-ahead
+ * shorter (and the roll scrolls proportionally faster, since the music plays at
+ * the same speed). Unlike `tempoScale` — which scales the scroll RATE but cancels
+ * out of note heights — `spread` scales EVERYTHING, including heights, which is
+ * exactly the "taller notes" zoom. The live value is ephemeral transport state
+ * (the Sonata context); these bounds + default are the persisted
+ * `pianoRollConfig.spread` field's clamp. Kept here so the geometry owns the one
+ * definition of the spread range. */
+export const SPREAD_MIN = 0.4;
+export const SPREAD_MAX = 3;
+export const SPREAD_DEFAULT = 1;
 
 /** Full 88-key piano range: A0 (21) … C8 (108). */
 export const KEYBOARD_LOW = 21;
@@ -222,8 +238,11 @@ export function buildProjection(viewport: {
   /** Playback tempo multiplier (1 = authored). Scales the scroll rate so slowing
    *  the tempo slows the scroll instead of stretching note heights. */
   tempoScale: number;
+  /** Vertical zoom (1 = base). Scales the whole Y axis — note positions AND
+   *  heights — so DOM overlays stay glued to the zoomed canvas notes. */
+  spread: number;
 }): Projection {
-  const { width, height, score, tempoScale } = viewport;
+  const { width, height, score, tempoScale, spread } = viewport;
   const keys = keyLayout(width);
   const byPitch = new Map<number, KeyLane>(keys.map((k) => [k.pitch, k]));
 
@@ -235,7 +254,8 @@ export function buildProjection(viewport: {
   // cursor's constant wall-clock sweep yields a scroll rate of
   // PX_PER_SECOND * tempoScale — slower tempo, slower scroll.
   const tempo = buildTempoIndex(score);
-  const pxPerSecond = PX_PER_SECOND * tempoScale;
+  // `spread` zooms the whole axis on top of the tempo-cancelled px/sec.
+  const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
   const beatToY = (beat: number): number =>
     -tempo.beatToSeconds(beat) * pxPerSecond;
   const pitchToX = (pitch: number): number => byPitch.get(pitch)?.center ?? 0;

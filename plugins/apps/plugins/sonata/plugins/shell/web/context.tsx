@@ -45,6 +45,16 @@ const MAX_TEMPO_SCALE = 4;
 export const TEMPO_MATH_FLOOR = 0.05;
 
 /**
+ * Vertical-zoom ("spread") clamp for the piano roll — how tall the falling notes
+ * render. Ephemeral transport state (the persisted default lives in
+ * `pianoRollConfig.spread`); the display threads it through its geometry. Kept
+ * here next to the tempo clamp because both are transport-level display knobs
+ * the shell owns and shares between the toolbar control and the renderer.
+ */
+const MIN_SPREAD = 0.4;
+const MAX_SPREAD = 3;
+
+/**
  * How finely the seek grid subdivides a bar at a given playback tempo: a whole
  * bar at authored tempo or faster, then halving each time the tempo halves
  * (half-bar at ≤50%, quarter-bar at ≤25%, eighth-bar at ≤12.5%, …). The
@@ -108,6 +118,14 @@ export interface SonataContextValue {
   isPlaying: boolean;
   /** Playback tempo multiplier (1 = authored tempo). */
   tempoScale: number;
+  /**
+   * Piano-roll vertical zoom (1 = base). Ephemeral, live-adjustable display
+   * state shared between the toolbar's spread control and the renderer — like
+   * `tempoScale`, but it scales note HEIGHTS too (the Synthesia "taller notes"
+   * zoom). The persisted default lives in `pianoRollConfig.spread`; the
+   * piano-roll seeds this from it on load and writes back on commit.
+   */
+  spread: number;
   activeSourceId: string | null;
   activeDisplayId: string | null;
   /**
@@ -200,6 +218,9 @@ export interface SonataContextValue {
   endScrub: () => void;
   /** Set the playback tempo multiplier (clamped to [0.25, 4]). */
   setTempoScale: (scale: number) => void;
+  /** Set the piano-roll vertical zoom (clamped to [0.4, 3]). Continuous — no
+   *  rounding — so a jog-wheel / pinch drag stays buttery. */
+  setSpread: (spread: number) => void;
 
   play: () => void;
   stop: () => void;
@@ -260,6 +281,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // provider is the sole writer (`cursor.setBeat`); reads use `cursor.getBeat()`.
   const [isPlaying, setIsPlaying] = useState(false);
   const [tempoScale, setTempoScaleState] = useState(1);
+  // Piano-roll vertical zoom. Seeded from pianoRollConfig.spread by the display
+  // on load; the 1 here is a pre-seed placeholder for the brief first frame.
+  const [spread, setSpreadState] = useState(1);
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
   const [seekEpoch, setSeekEpoch] = useState(0);
 
@@ -570,6 +594,12 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     setTempoScaleState(Math.round(clamped * 20) / 20);
   }, []);
 
+  // Continuous (unlike tempo's 0.05 grid) so a jog-wheel / pinch drag is smooth;
+  // the persisted config field carries the tidy step for the settings editor.
+  const setSpread = useCallback((next: number) => {
+    setSpreadState(Math.max(MIN_SPREAD, Math.min(MAX_SPREAD, next)));
+  }, []);
+
   // A tempo change rescales `score` mid-flight; re-anchor at the current cursor so
   // the visual transport doesn't jump (audio re-anchors via its score-dep effect).
   useEffect(() => {
@@ -674,6 +704,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       songOpenEpoch,
       isPlaying,
       tempoScale,
+      spread,
       activeSourceId,
       activeDisplayId,
       seekEpoch,
@@ -696,6 +727,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       startScrub,
       endScrub,
       setTempoScale,
+      setSpread,
       play,
       stop,
       registerClock,
@@ -707,6 +739,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       songOpenEpoch,
       isPlaying,
       tempoScale,
+      spread,
       activeSourceId,
       activeDisplayId,
       seekEpoch,
@@ -727,6 +760,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       startScrub,
       endScrub,
       setTempoScale,
+      setSpread,
       play,
       stop,
       registerClock,

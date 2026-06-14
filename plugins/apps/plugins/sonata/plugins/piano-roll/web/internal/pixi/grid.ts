@@ -60,6 +60,9 @@ export interface GridHandle {
   setBars(bars: readonly BarMarker[]): void;
   /** Set the pitch-axis boundary lines (once per score). */
   setPitchLines(lines: readonly PitchLine[]): void;
+  /** New vertical zoom: redraw the bar lines so each stays 1px tall under the
+   *  content scale.y = PX_PER_SECOND * spread. O(bars). */
+  setSpread(spread: number): void;
   /** Redraw the screen-space pitch lines for a new lane size. */
   resize(laneWidth: number, laneHeight: number): void;
   /** Re-tint both layers from the (re-resolved) border token. */
@@ -77,6 +80,21 @@ export function createGrid(): GridHandle {
   let lines: readonly PitchLine[] = [];
   let laneWidth = 0;
   let laneHeight = 0;
+  // Bars + zoom retained so a spread change can redraw bar lines at the right
+  // (zoom-compensated) authored-seconds height without a fresh score.
+  let lastBars: readonly BarMarker[] = [];
+  let spread = 1;
+
+  const redrawBars = (): void => {
+    barLines.clear();
+    for (const b of lastBars) {
+      // The DOM drew `border-t` at the bar's content Y, extending 1px DOWN
+      // (toward earlier time). y = -startSec; height = 1px after the content
+      // scale.y = PX_PER_SECOND * spread, so the authored-seconds height is
+      // 1 / (PX_PER_SECOND * spread) to stay exactly 1px at any zoom.
+      barLines.rect(0, -b.startSec, 1, 1 / (PX_PER_SECOND * spread)).fill(0xffffff);
+    }
+  };
 
   const redrawPitchLines = (): void => {
     pitchLines.clear();
@@ -95,18 +113,18 @@ export function createGrid(): GridHandle {
     pitchLines,
 
     setBars(bars) {
-      barLines.clear();
-      for (const b of bars) {
-        // The DOM drew `border-t` at the bar's content Y, extending 1px DOWN
-        // (toward earlier time). y = -startSec, height = 1px after the
-        // constant scale.y = PX_PER_SECOND.
-        barLines.rect(0, -b.startSec, 1, 1 / PX_PER_SECOND).fill(0xffffff);
-      }
+      lastBars = bars;
+      redrawBars();
     },
 
     setPitchLines(pitchBoundaries) {
       lines = pitchBoundaries;
       redrawPitchLines();
+    },
+
+    setSpread(nextSpread) {
+      spread = nextSpread;
+      redrawBars();
     },
 
     resize(width, height) {

@@ -182,6 +182,9 @@ export interface LabelLayerHandle {
   setBars(bars: readonly BarMarker[]): void;
   /** New lane size: re-derives every live label's font size and x position. */
   setLaneSize(width: number, height: number): void;
+  /** New vertical zoom (effective `PX_PER_SECOND * spread`): re-places every
+   *  pixel-space label and bar number and re-derives the visible window. */
+  setSpread(pxPerSec: number): void;
   setVisible(on: boolean): void;
   /** Per-frame: slide the label window to the current scroll position. */
   update(scrollSec: number): void;
@@ -189,9 +192,9 @@ export interface LabelLayerHandle {
   destroy(): void;
 }
 
-/** Extra onset range kept live beyond the visible lane, so labels at the
- *  edges don't pop as they cross in/out (~32px worth of seconds). */
-const WINDOW_PAD_SEC = 32 / PX_PER_SECOND;
+/** Extra onset range kept live beyond the visible lane, so labels at the edges
+ *  don't pop as they cross in/out (~32px worth of seconds, at the live zoom). */
+const WINDOW_PAD_PX = 32;
 
 export function createLabelLayer(): LabelLayerHandle {
   ensureFonts();
@@ -208,6 +211,12 @@ export function createLabelLayer(): LabelLayerHandle {
   let laneWidth = 0;
   let laneHeight = 0;
   let lastScrollSec = 0;
+  // Effective pixels-per-authored-second = PX_PER_SECOND * spread. Labels live
+  // in the unscaled pixel layer, so every authored-seconds → pixel conversion
+  // here multiplies by this (not the bare constant). Bars retained so a spread
+  // change can re-place the bar numbers without a fresh score.
+  let pxPerSec = PX_PER_SECOND;
+  let lastBars: readonly BarMarker[] = [];
   let dirty = true; // forces the next update() to re-place everything
 
   // Pool: live labels keyed by entry index, plus a free list.
@@ -272,7 +281,7 @@ export function createLabelLayer(): LabelLayerHandle {
     }
     step.y = 0;
     root.x = (e.v.xFrac + e.v.wFrac / 2) * laneWidth;
-    root.y = -e.v.y0Sec * PX_PER_SECOND - 3;
+    root.y = -e.v.y0Sec * pxPerSec - 3;
   };
 
   let lastStart = 0;
@@ -282,9 +291,11 @@ export function createLabelLayer(): LabelLayerHandle {
     lastScrollSec = scrollSec;
     if (!noteLabels.visible || laneHeight <= 0 || laneWidth <= 0) return;
     // Visible authored-seconds range: lane bottom is the cursor (scrollSec),
-    // lane top is laneHeight px further into the future.
-    const minSec = scrollSec - WINDOW_PAD_SEC;
-    const maxSec = scrollSec + laneHeight / PX_PER_SECOND + WINDOW_PAD_SEC;
+    // lane top is laneHeight px further into the future. Both the lane height
+    // and the edge pad are pixel quantities, so they convert at the live zoom.
+    const padSec = WINDOW_PAD_PX / pxPerSec;
+    const minSec = scrollSec - padSec;
+    const maxSec = scrollSec + laneHeight / pxPerSec + padSec;
     const { start, end } = windowOf(minSec, maxSec);
     if (!dirty && start === lastStart && end === lastEnd) return;
     lastStart = start;
@@ -298,7 +309,7 @@ export function createLabelLayer(): LabelLayerHandle {
       const e = entries[idx]!;
       const fontPx = noteLabelFontPx(
         e.v.wFrac * laneWidth,
-        (e.v.y1Sec - e.v.y0Sec) * PX_PER_SECOND,
+        (e.v.y1Sec - e.v.y0Sec) * pxPerSec,
         e.accidental !== "",
       );
       if (fontPx !== null) candidates.push({ idx, fontPx });
@@ -347,6 +358,7 @@ export function createLabelLayer(): LabelLayerHandle {
     },
 
     setBars(bars) {
+      lastBars = bars;
       for (const t of barTexts) t.destroy();
       barTexts.length = 0;
       for (const b of bars) {
@@ -355,7 +367,7 @@ export function createLabelLayer(): LabelLayerHandle {
           style: { fontFamily: BAR_FONT, fontSize: BAR_FONT_PX },
           // The DOM span sat `left-1 top-0.5` under the bar line.
           x: 4,
-          y: -b.startSec * PX_PER_SECOND + 2,
+          y: -b.startSec * pxPerSec + 2,
           alpha: BAR_NUMBER_ALPHA,
         });
         barTexts.push(text);
@@ -367,6 +379,18 @@ export function createLabelLayer(): LabelLayerHandle {
       if (width === laneWidth && height === laneHeight) return;
       laneWidth = width;
       laneHeight = height;
+      dirty = true;
+      refreshWindow(lastScrollSec);
+    },
+
+    setSpread(nextPxPerSec) {
+      if (nextPxPerSec === pxPerSec) return;
+      pxPerSec = nextPxPerSec;
+      // Bar numbers live in the unscaled layer, so re-place them at the new zoom.
+      for (let i = 0; i < barTexts.length; i++) {
+        barTexts[i]!.y = -lastBars[i]!.startSec * pxPerSec + 2;
+      }
+      // Note labels: font size + Y both depend on the zoom → full re-pass.
       dirty = true;
       refreshWindow(lastScrollSec);
     },

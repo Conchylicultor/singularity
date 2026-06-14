@@ -1,11 +1,12 @@
-// @hash d0d7b0517b70
+// @hash f1e43f5a4cd4
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
-  // Trailing zone (right, ml-auto), left-to-right: volume, transport.
+  // Trailing zone (right, ml-auto), left-to-right: volume, spread (zoom), transport.
   "items": [
     "apps.sonata.audio.engine:volume",
+    "apps.sonata.piano-roll:spread",
     "apps.sonata.transport-bar:playback"
   ]
 }

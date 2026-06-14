@@ -63,6 +63,11 @@ export interface PianoRollScene {
   resize(width: number, height: number, dpr: number): void;
   /** Per frame: scroll offset (authored sec) + cursor (beats) for onsets. */
   setScroll(authoredSec: number, cursorBeat: number): void;
+  /** Set the vertical zoom (1 = base). Rescales the content layer, note SDF
+   *  uniform, bar lines, and labels in place — geometry buffers are NOT rebuilt
+   *  (notes are stored in authored seconds), so this is a cheap O(1)+O(bars)
+   *  animatable knob. Re-applies the scroll so the cursor stays glued. */
+  setSpread(spread: number): void;
   /** Seek/jump: re-anchor the onset tracker and tell FX to drop in-flight state. */
   reset(): void;
   setShowLabels(on: boolean): void;
@@ -103,6 +108,13 @@ export function createPianoRollScene(app: Application): PianoRollScene {
   let laneWidth = 0;
   let laneHeight = 0;
   let scrollSec = 0;
+  // Vertical zoom. The effective px/authored-second is PX_PER_SECOND * spread,
+  // the single scale every content/pixel mapping below derives from. `lastDpr`
+  // is retained so a spread change can rewrite the note SDF uniform (which also
+  // carries DPR) without waiting for a resize.
+  let spread = 1;
+  let lastDpr = 1;
+  const pxPerSec = (): number => PX_PER_SECOND * spread;
 
   const noteOnSubs = new Set<(e: FxNoteEvent) => void>();
   const resetSubs = new Set<() => void>();
@@ -122,7 +134,7 @@ export function createPianoRollScene(app: Application): PianoRollScene {
   const applyScroll = (): void => {
     // The DOM ScrollLayer formula, verbatim: the cursor maps to the lane
     // bottom (the keyboard), content above it is the future.
-    scrollRoot.y = laneHeight + scrollSec * PX_PER_SECOND;
+    scrollRoot.y = laneHeight + scrollSec * pxPerSec();
   };
 
   return {
@@ -147,14 +159,29 @@ export function createPianoRollScene(app: Application): PianoRollScene {
     resize(width, height, dpr) {
       laneWidth = width;
       laneHeight = height;
+      lastDpr = dpr;
       app.renderer.resize(width, height, dpr);
       // THE payoff of authored-space geometry: a resize is one container
       // scale + two uniforms + a couple of redrawn octave lines — O(1) in
       // note count, vs. the DOM version's per-note style writes.
-      contentScaled.scale.set(width, PX_PER_SECOND);
-      mesh.setUniforms(width, dpr);
+      contentScaled.scale.set(width, pxPerSec());
+      mesh.setUniforms(width, dpr, pxPerSec());
       grid.resize(width, height);
       labels.setLaneSize(width, height);
+      applyScroll();
+    },
+
+    setSpread(nextSpread) {
+      if (nextSpread === spread) return;
+      spread = nextSpread;
+      // Notes are stored in authored seconds, so a zoom is just a rescale of
+      // the content layer + the SDF pixel-budget uniform — no buffer rebuild.
+      // The grid (bar-line height) and labels (pixel-space positions/fonts)
+      // each re-derive from the new effective px/sec; then re-glue the scroll.
+      contentScaled.scale.set(laneWidth, pxPerSec());
+      mesh.setUniforms(laneWidth, lastDpr, pxPerSec());
+      grid.setSpread(spread);
+      labels.setSpread(pxPerSec());
       applyScroll();
     },
 

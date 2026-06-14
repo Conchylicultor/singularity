@@ -40,6 +40,8 @@ export interface PianoRollCanvasProps {
   scoreNotes: Note[];
   showLabels: boolean;
   tempoScale: number;
+  /** Vertical zoom (1 = base). Pushed to the scene as one rescale. */
+  spread: number;
   /**
    * Fired with the live scene + app pair once init settles, and with null on
    * teardown. The app rides along because the FX context needs its ticker and
@@ -58,6 +60,7 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     scoreNotes,
     showLabels,
     tempoScale,
+    spread,
   } = props;
 
   const hostRef = useRef<HTMLDivElement | null>(null);
@@ -145,6 +148,13 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     if (!scene) return;
     scene.setShowLabels(showLabels);
   }, [scene, showLabels]);
+
+  // Vertical zoom. Runs after resize (which seeds the lane size the rescale
+  // reads); the parent's cursor re-sync layout effect then re-glues the scroll.
+  useLayoutEffect(() => {
+    if (!scene) return;
+    scene.setSpread(spread);
+  }, [scene, spread]);
 
   useEffect(() => {
     if (!scene) return;

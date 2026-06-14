@@ -1,8 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGraphicEq } from "react-icons/md";
 import { ConfigV2 } from "@plugins/config_v2/web";
-import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Sonata, SonataToolbar } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { PianoRoll } from "./components/piano-roll";
+import { SpreadWheel } from "./components/spread-wheel";
 import { pianoRollConfig } from "../shared/config";
 
 // The FX extension point: effect sub-plugins import these from this barrel
@@ -29,6 +30,11 @@ export default {
       capabilities: ["time-axis", "pitch-plane"],
       component: PianoRoll,
     }),
+    // Toolbar jog wheel for the roll's vertical zoom (spread), in the toolbar's
+    // End zone beside the transport controls. Lives in this plugin (not
+    // transport-bar) so it can own the private spread config it persists; the
+    // live value is shared via the Sonata transport context.
+    SonataToolbar.End({ id: "spread", component: SpreadWheel }),
     ConfigV2.WebRegister({ descriptor: pianoRollConfig }),
   ],
 } satisfies PluginDefinition;

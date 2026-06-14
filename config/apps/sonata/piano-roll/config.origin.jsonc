@@ -1,5 +1,7 @@
-// @hash 5fe95c1aaae9
+// @hash 146ce302eb35
 {
   // Show each note's name inside its falling bar, like Synthesia.
-  "showNoteNames": false
+  "showNoteNames": false,
+  // Vertical zoom of the falling notes (1 = default). Higher spreads them out, Synthesia-style. Drag the toolbar wheel or pinch / Ctrl+scroll over the roll to adjust.
+  "spread": 1
 }

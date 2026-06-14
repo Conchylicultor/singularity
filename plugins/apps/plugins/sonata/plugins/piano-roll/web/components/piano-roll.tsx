@@ -15,7 +15,7 @@ import {
   scoreEndBeat,
   type Score,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { useConfig } from "@plugins/config_v2/web";
+import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import {
   Sonata,
   useCursorApi,
@@ -68,6 +68,19 @@ const KEYBOARD_HEIGHT = 112;
  * theme, so the opaque note colors read exactly as Synthesia's, light or dark.
  */
 const ROLL_BG = "#262626";
+
+/**
+ * Wheel-zoom sensitivity: spread is multiplied by `exp(-deltaY * k)` per wheel
+ * event, so a Ctrl+scroll UP (deltaY < 0) zooms in and DOWN zooms out — the
+ * browser-zoom convention — multiplicatively (scale-free, smooth) and
+ * direction-symmetric. Tuned so a ~100px notch is ≈15% and a trackpad pinch's
+ * small deltas are a gentle, continuous drift.
+ */
+const ZOOM_WHEEL_K = 0.0015;
+
+/** After the wheel goes quiet this long, a zoom commits to the global config and
+ *  a wheel-paused playback resumes — mirroring the drag's resume-on-settle. */
+const WHEEL_IDLE_MS = 180;
 
 /** Observe an element's pixel size via ResizeObserver (no polling). */
 function useElementSize(): [
@@ -132,7 +145,21 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
 
   // Synthesia-style note-name labels (opt-in). Spelling follows the score's key
   // signature so accidentals read in-key (Eb vs D#), matching the keyboard below.
-  const { showNoteNames } = useConfig(pianoRollConfig);
+  // `spread` is the persisted GLOBAL vertical-zoom default; the live value is
+  // ephemeral transport state (`useSonata().spread`) the toolbar wheel + pinch/
+  // scroll gestures drive.
+  const { showNoteNames, spread: persistedSpread } = useConfig(pianoRollConfig);
+  const setConfig = useSetConfig(pianoRollConfig);
+  const { spread, setSpread, seekTo, isPlaying, play, stop } = useSonata();
+
+  // Seed the live zoom from the persisted global on load (and reflect a
+  // Settings-pane edit live). No loop: only an explicit commit (wheel settle /
+  // pinch idle) writes the config, and never during a drag — so post-commit the
+  // persisted value already equals the live one and this re-seed is a no-op.
+  useLayoutEffect(() => {
+    setSpread(persistedSpread);
+  }, [persistedSpread, setSpread]);
+
   const speller = useMemo(
     () => makeKeySpeller(score.meta.key),
     [score.meta.key],
@@ -150,8 +177,9 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         height: lane.height,
         score,
         tempoScale,
+        spread,
       }),
-    [lane.width, lane.height, score, tempoScale],
+    [lane.width, lane.height, score, tempoScale, spread],
   );
 
   // Tempo index, built once per score and reused by the ScrollLayer so it is
@@ -165,14 +193,15 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // under exponential friction and settles. We drive the shared absolute
   // `seekTo`, the same primitive the progression-bar scrubber uses, so audio +
   // cursor stay glued. The offset's time term is
-  // `seconds(cursor) * PX_PER_SECOND * tempoScale`, so a 1-pixel drag equals
-  // `1 / (PX_PER_SECOND * tempoScale)` authored-seconds of travel — hence
-  // `unitsPerPixel`. The physics (friction, momentum) lives in the reusable
-  // inertial-drag primitive; this site only maps pixels↔seconds and bridges the
-  // transport (pause on grab, restore the pre-drag play state once motion ends).
-  const { seekTo, isPlaying, play, stop } = useSonata();
+  // `seconds(cursor) * PX_PER_SECOND * tempoScale * spread`, so a 1-pixel drag
+  // equals `1 / (PX_PER_SECOND * tempoScale * spread)` authored-seconds of
+  // travel — hence `unitsPerPixel` (zoom in ⇒ a pixel covers less time). The
+  // physics (friction, momentum) lives in the reusable inertial-drag primitive;
+  // this site only maps pixels↔seconds and bridges the transport (pause on grab,
+  // restore the pre-drag play state once motion ends). (`seekTo`/`isPlaying`/
+  // `play`/`stop` come from the single `useSonata()` destructure above.)
   const hasNotes = score.notes.length > 0;
-  const pxPerSecond = PX_PER_SECOND * tempoScale;
+  const pxPerSecond = PX_PER_SECOND * tempoScale * spread;
   const endSeconds = tempo.beatToSeconds(scoreEndBeat(score));
   const wasPlaying = useRef(false);
 
@@ -293,6 +322,13 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   tempoRef.current = tempo;
   const tempoScaleRef = useRef(tempoScale);
   tempoScaleRef.current = tempoScale;
+  // Live zoom, read imperatively by the per-frame DOM offset and the wheel
+  // handler (which must not re-attach on every zoom tick).
+  const spreadRef = useRef(spread);
+  spreadRef.current = spread;
+  // Play state read imperatively by the wheel-seek pause/resume bridge.
+  const isPlayingRef = useRef(isPlaying);
+  isPlayingRef.current = isPlaying;
 
   const applyCursor = useCallback((beat: number, seek = false) => {
     const scene = sceneRef.current;
@@ -306,13 +342,14 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     // Canvas: one O(1) container move in authored seconds.
     scene?.setScroll(authoredSecondsOf(tempo, ts, beat), beat);
     // DOM overlays: the same lane-bottom offset the scene applies to its scroll
-    // root, so overlays and canvas notes stay glued. `PX_PER_SECOND * ts`
-    // mirrors the geometry's pixels-per-second, so a slower tempo scrolls slower.
+    // root, so overlays and canvas notes stay glued. `PX_PER_SECOND * ts *
+    // spread` mirrors the geometry's effective pixels-per-second, so a slower
+    // tempo scrolls slower and a higher zoom spreads the overlays in lockstep.
     const el = scrollLayerRef.current;
     if (el) {
       const offset =
         laneSizeRef.current.height +
-        tempo.beatToSeconds(beat) * PX_PER_SECOND * ts;
+        tempo.beatToSeconds(beat) * PX_PER_SECOND * ts * spreadRef.current;
       el.style.transform = `translateY(${offset}px)`;
     }
   }, []);
@@ -324,12 +361,82 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     [applyCursor, cursor],
   );
 
-  // Re-sync after any reactive change (scene ready, resize, tempo) and on mount,
-  // so the view lands correctly even while paused (no cursor tick fires then).
+  // --- Wheel gestures on the lane: plain scroll SEEKS, pinch / Ctrl+scroll
+  // ZOOMS. A native non-passive listener (React's onWheel is passive and can't
+  // preventDefault) so the page never scrolls under the gesture. Live zoom +
+  // play-state are read from refs so a 60fps gesture never re-attaches.
+  useEffect(() => {
+    const el = laneRef.current;
+    if (!el || !hasNotes) return;
+
+    let idle: number | null = null;
+    let pausedByWheel = false;
+    let zoomed = false;
+    const settle = () => {
+      idle = null;
+      // Commit the zoom to the global default and resume any wheel-paused play.
+      if (zoomed) {
+        zoomed = false;
+        setConfig("spread", spreadRef.current);
+      }
+      if (pausedByWheel) {
+        pausedByWheel = false;
+        play();
+      }
+    };
+    const bumpIdle = () => {
+      if (idle !== null) window.clearTimeout(idle);
+      idle = window.setTimeout(settle, WHEEL_IDLE_MS);
+    };
+
+    const onWheel = (e: WheelEvent) => {
+      e.preventDefault();
+      if (e.ctrlKey) {
+        // Pinch / Ctrl+scroll → multiplicative zoom (context clamps the range).
+        zoomed = true;
+        setSpread(spreadRef.current * Math.exp(-e.deltaY * ZOOM_WHEEL_K));
+      } else {
+        // Plain scroll → seek. Map wheel pixels to authored-seconds with the
+        // SAME px/sec the drag uses (down/forward), then drive shared `seekTo`.
+        if (isPlayingRef.current && !pausedByWheel) {
+          pausedByWheel = true;
+          stop();
+        }
+        const perPx = 1 / (PX_PER_SECOND * tempoScale * spreadRef.current);
+        const cur = tempo.beatToSeconds(cursor.getBeat());
+        const next = Math.max(0, Math.min(endSeconds, cur + e.deltaY * perPx));
+        seekTo(tempo.secondsToBeat(next));
+      }
+      bumpIdle();
+    };
+
+    el.addEventListener("wheel", onWheel, { passive: false });
+    return () => {
+      el.removeEventListener("wheel", onWheel);
+      if (idle !== null) window.clearTimeout(idle);
+    };
+  }, [
+    laneRef,
+    hasNotes,
+    cursor,
+    tempo,
+    endSeconds,
+    tempoScale,
+    seekTo,
+    setSpread,
+    setConfig,
+    play,
+    stop,
+  ]);
+
+  // Re-sync after any reactive change (scene ready, resize, tempo, zoom) and on
+  // mount, so the view lands correctly even while paused (no cursor tick fires
+  // then). A spread change resizes the content in place, so the DOM offset must
+  // be re-applied here in lockstep with the scene's own rescale (app.tsx).
   // Layout effect so the transform is applied before paint (no flash).
   useLayoutEffect(() => {
     applyCursor(cursor.getBeat());
-  }, [applyCursor, cursor, pixi, lane.height, tempo, tempoScale]);
+  }, [applyCursor, cursor, pixi, lane.height, tempo, tempoScale, spread]);
 
   // The cursor-invariant DOM content, MEMOIZED on its real inputs. The overlay
   // subtree's element identity stays stable between frames (this component no
@@ -374,6 +481,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           scoreNotes={score.notes}
           showLabels={showNoteNames}
           tempoScale={tempoScale}
+          spread={spread}
           onSceneReady={setPixi}
         />
 
