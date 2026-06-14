@@ -53,6 +53,15 @@ export function AppTabBar() {
   } = useTabs();
   const apps = Apps.App.useContributions();
 
+  // The focused tab's placement determines what `+` spawns: a floating "new
+  // window" while in desktop mode (any floating window focused), a docked "new
+  // tab" otherwise. Solo falls through to docked — the tab bar is covered while
+  // a tab is solo, so `+` is unreachable in that state anyway.
+  const focusedPlacement = tabs.find(
+    (t) => t.tabId === focusedTabId,
+  )?.placement;
+  const desktopMode = focusedPlacement === "floating";
+
   const { containerRef, measureRef, visibleCount } = useResponsiveOverflow({
     count: tabs.length,
     gap: CHIP_GAP_PX,
@@ -120,9 +129,9 @@ export function AppTabBar() {
       </div>
       <IconButton
         icon={MdAdd}
-        label="New tab"
+        label={desktopMode ? "New window" : "New tab"}
         size="icon-sm"
-        onClick={() => openTab("home")}
+        onClick={() => openTab("home", desktopMode ? "floating" : "docked")}
       />
       {/* Trailing action zone — the `surface` plugin drops its in-strip
           placement control here, next to `+`. */}

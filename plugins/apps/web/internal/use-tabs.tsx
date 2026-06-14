@@ -41,8 +41,13 @@ export interface TabsApi {
   titles: Record<string, string>;
   /** Publish (or clear, with `undefined`) the resolved content title for a tab. */
   setTabTitle(tabId: string, title: string | undefined): void;
-  /** Always opens a NEW tab for `appId` (multi-instance). Returns its tabId. */
-  openTab(appId: string): string;
+  /**
+   * Always opens a NEW tab for `appId` (multi-instance), with the given spatial
+   * `placement` (defaults to {@link DEFAULT_PLACEMENT}). Passing `"floating"`
+   * makes the `+` button a "new window" affordance while in desktop mode.
+   * Returns its tabId.
+   */
+  openTab(appId: string, placement?: Placement): string;
   /** Swap `tabId`'s app in place (keeps the tabId) and focus it. */
   replaceTabApp(tabId: string, appId: string): void;
   /**
@@ -320,12 +325,16 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [activate, persist],
   );
 
-  /** Open a new tab for `appId` at its index. Used by the `+` new-tab button. */
+  /**
+   * Open a new tab for `appId` at its index. Used by the `+` new-tab button,
+   * which passes the focused tab's placement so `+` spawns a floating "new
+   * window" while in desktop mode and a docked tab otherwise.
+   */
   const openTab = useCallback(
-    (appId: string): string => {
+    (appId: string, placement: Placement = DEFAULT_PLACEMENT): string => {
       const tabId = crypto.randomUUID();
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store, placement: DEFAULT_PLACEMENT };
+      const tab: Tab = { tabId, appId, store, placement };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
