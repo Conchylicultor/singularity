@@ -1,30 +1,45 @@
 import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { MdClose, MdRemove, MdCropSquare, MdFilterNone } from "react-icons/md";
-import { TabSurface, Apps, type Tab } from "@plugins/apps/web";
+import { Apps } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/ui-kit/web";
-import { useWindowGeometry, clampToBounds, type Bounds } from "../hooks/use-window-geometry";
+import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-geometry";
 import { WindowResizeHandles } from "./window-resize-handles";
 
-interface WindowFrameProps {
-  tab: Tab;
-  focused: boolean;
+/** Fixed titlebar height; mirrored by `WINDOW_TITLEBAR_INSET` so content clears it. */
+export const WINDOW_TITLEBAR_INSET = "2.25rem";
+
+interface WindowChromeProps {
+  appId: string;
   title: string | undefined;
-  onFocus: () => void;
+  focused: boolean;
+  geo: Geometry;
+  setGeo: (next: (g: Geometry) => Geometry) => void;
   onClose: () => void;
 }
 
 /**
- * One free-floating window on the desktop: a draggable/resizable frame around a
- * keep-alive {@link TabSurface}. Geometry (position, size, z, min/max state)
- * lives in the per-tab geometry store; the content stays mounted across
- * minimize so the app keeps its React state.
+ * Floating-window chrome rendered as a *sibling overlay* of the keep-alive
+ * `TabSurface` (never a parent of it), so tearing a tab off / docking it never
+ * remounts its content. Provides the draggable titlebar (move, bounds-clamped),
+ * the minimize/maximize/close controls, and the perimeter resize handles. The
+ * geometry *box* itself is applied to the stable tab container by `SurfaceBody`'s
+ * `placementStyle`; this only paints the chrome on top.
+ *
+ * Split out of the old `WindowFrame` (which wrapped `<TabSurface>`): the wrapper
+ * box-style + theme scope moved to `SurfaceBody`, the titlebar + handles became
+ * this overlay.
  */
-export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFrameProps) {
-  const [geo, setGeo, bringToFront] = useWindowGeometry(tab.tabId);
+export function WindowChrome({
+  appId,
+  title,
+  focused,
+  geo,
+  setGeo,
+  onClose,
+}: WindowChromeProps) {
   const apps = Apps.App.useContributions();
-  const app = apps.find((a) => a.id === tab.appId);
+  const app = apps.find((a) => a.id === appId);
 
   // Drag the titlebar: the `resize-handle.tsx` pointer idiom — capture the
   // pointer, translate window pointermove deltas into geometry moves, and tear
@@ -35,8 +50,8 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
       e.preventDefault();
       let lastX = e.clientX;
       let lastY = e.clientY;
-      // The window frame is a direct child of the desktop backdrop; its inner box
-      // is the drag bound. Captured at pointer-down since it's stable for the drag.
+      // Titlebar → tab container → surface backdrop: the backdrop is the drag
+      // bound. Captured at pointer-down since it's stable for the drag.
       const backdrop = e.currentTarget.parentElement?.parentElement ?? null;
       const bounds: Bounds | null = backdrop
         ? { width: backdrop.clientWidth, height: backdrop.clientHeight }
@@ -74,9 +89,8 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
     );
   }, [setGeo]);
 
-  // Minimize toggle: a flag only — the content wrapper hides (display:none) but
-  // stays mounted, and the frame shrinks to its titlebar strip (mirrors
-  // use-column-collapse's toggle).
+  // Minimize toggle: a flag only — the content wrapper hides (handled by
+  // SurfaceBody) but stays mounted; here we just flip the bit.
   const toggleMinimize = useCallback(() => {
     setGeo((g) => ({ ...g, minimized: !g.minimized }));
   }, [setGeo]);
@@ -84,38 +98,17 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
   const Icon = app?.icon;
   const label = title ?? app?.tooltip ?? "Window";
 
-  // Maximized windows fill the backdrop; otherwise honor the stored box. Numeric
-  // inline zIndex (not a z-* class) — each window is its own stacking context, so
-  // the inner app's z-nav/z-float chrome can't bleed across windows.
-  const boxStyle = geo.maximized
-    ? { left: 0, top: 0, right: 0, bottom: 0, zIndex: geo.z }
-    : { left: geo.x, top: geo.y, width: geo.w, height: geo.h, zIndex: geo.z };
-
   return (
-    <div
-      // Focus + raise on any pointer-down inside the window, before inner
-      // handlers run, so clicking a background window brings it forward first.
-      onPointerDownCapture={() => {
-        onFocus();
-        bringToFront();
-      }}
-      // Tags this window's subtree so the matching scoped theme block (mounted by
-      // AppWindowsBody as `ScopedAppTheme`) overrides its inline content with this
-      // app's palette. Portaled descendants escape to document.body, so they no
-      // longer match this attribute — they instead re-adopt this window's theme via
-      // the PortalThemeScopeProvider wrapping TabSurface below.
-      data-theme-scope={`app:${tab.appId}`}
-      className="absolute flex flex-col overflow-hidden rounded-lg border bg-background shadow-lg"
-      style={boxStyle}
-    >
-      {/* Titlebar — drag surface + window controls. */}
+    <>
+      {/* Titlebar — absolutely pinned to the top of the window box, overlaying the
+          surface (which SurfaceBody insets below it). Drag surface + controls. */}
       <div
         onPointerDown={onTitlePointerDown}
         onDoubleClick={toggleMaximize}
-        className={`flex shrink-0 items-center gap-xs border-b px-sm py-xs ${
+        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b px-sm py-xs ${
           geo.maximized ? "" : "cursor-grab"
         } ${focused ? "bg-muted" : "bg-muted/40"}`}
-        style={{ touchAction: "none" }}
+        style={{ height: WINDOW_TITLEBAR_INSET, touchAction: "none" }}
       >
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
         <Text variant="label" as="span" className="min-w-0 flex-1 truncate">
@@ -134,21 +127,9 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
         </div>
       </div>
 
-      {/* Content — always mounted (keep-alive); hidden, not unmounted, while
-          minimized so the app preserves its React state. `transform-gpu` makes
-          this a containing block for the app shell's fixed sidebars, per window. */}
-      <div
-        className="relative min-h-0 flex-1 transform-gpu"
-        style={geo.minimized ? { display: "none" } : undefined}
-      >
-        <PortalThemeScopeProvider scope={`app:${tab.appId}`}>
-          <TabSurface tab={tab} />
-        </PortalThemeScopeProvider>
-      </div>
-
       {/* Resize handles only in the normal state — a min/maximized window has no
           free border to drag. */}
       {!geo.minimized && !geo.maximized && <WindowResizeHandles setGeo={setGeo} />}
-    </div>
+    </>
   );
 }

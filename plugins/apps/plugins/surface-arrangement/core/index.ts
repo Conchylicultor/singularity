@@ -1,1 +1,0 @@
-export { surfaceArrangement } from "./region";

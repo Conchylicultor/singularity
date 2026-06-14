@@ -4,7 +4,7 @@ import { AppsLayout } from "./components/apps-layout";
 export {
   Apps,
   type RailFramingContribution,
-  type SurfaceArrangementContribution,
+  type SurfaceContribution,
 } from "./slots";
 export { AppRail } from "./components/app-rail";
 export { TabSurface } from "./components/tab-surface";
@@ -12,7 +12,15 @@ export { AppTabsBody } from "./components/apps-layout";
 export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
 export { useCurrentAppId } from "./use-current-app-id";
 export { type Tab } from "./internal/tabs-store";
-export { useTabs, navigate, type TabsApi } from "./internal/use-tabs";
+export {
+  useTabs,
+  navigate,
+  setFocusedTabPlacement,
+  getFocusedPlacement,
+  useFocusedPlacement,
+  type TabsApi,
+} from "./internal/use-tabs";
+export type { Placement } from "../core";
 
 export default {
   description:

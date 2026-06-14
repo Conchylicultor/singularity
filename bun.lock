@@ -464,16 +464,8 @@
       "name": "@singularity/plugin-apps-studio-shell",
       "version": "0.0.1",
     },
-    "plugins/apps/plugins/surface-arrangement": {
-      "name": "@singularity/plugin-apps-surface-arrangement",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface-arrangement/plugins/desktop": {
-      "name": "@singularity/plugin-apps-surface-arrangement-desktop",
-      "version": "0.0.1",
-    },
-    "plugins/apps/plugins/surface-arrangement/plugins/tabs": {
-      "name": "@singularity/plugin-apps-surface-arrangement-tabs",
+    "plugins/apps/plugins/surface": {
+      "name": "@singularity/plugin-apps-surface",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/workflows": {
@@ -3271,11 +3263,7 @@
 
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
-    "@singularity/plugin-apps-surface-arrangement": ["@singularity/plugin-apps-surface-arrangement@workspace:plugins/apps/plugins/surface-arrangement"],
-
-    "@singularity/plugin-apps-surface-arrangement-desktop": ["@singularity/plugin-apps-surface-arrangement-desktop@workspace:plugins/apps/plugins/surface-arrangement/plugins/desktop"],
-
-    "@singularity/plugin-apps-surface-arrangement-tabs": ["@singularity/plugin-apps-surface-arrangement-tabs@workspace:plugins/apps/plugins/surface-arrangement/plugins/tabs"],
+    "@singularity/plugin-apps-surface": ["@singularity/plugin-apps-surface@workspace:plugins/apps/plugins/surface"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 

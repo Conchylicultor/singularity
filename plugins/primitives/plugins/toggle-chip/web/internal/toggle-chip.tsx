@@ -116,7 +116,7 @@ export function SegmentedControl<T extends string>({
   className,
 }: SegmentedControlProps<T>) {
   return (
-    <div role="radiogroup" className={cn("flex flex-wrap gap-xs", className)}>
+    <div role="radiogroup" className={cn("flex shrink-0 flex-nowrap gap-xs", className)}>
       {options.map((opt) => (
         <ToggleChip
           key={opt.id}

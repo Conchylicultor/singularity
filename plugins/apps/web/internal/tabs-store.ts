@@ -1,5 +1,6 @@
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import type { PaneSlot, PaneStore } from "@plugins/primitives/plugins/pane/web";
+import type { Placement } from "../../core";
 import type { ActiveApp } from "./use-active-app";
 
 /**
@@ -7,11 +8,16 @@ import type { ActiveApp } from "./use-active-app";
  * + base path), so the same app can appear in multiple tabs and a background
  * tab keeps its route while another is focused. Exactly one store is `live` at
  * a time (the focused tab's); the tab manager flips liveness on focus switch.
+ *
+ * `placement` is the per-tab spatial state (docked / floating / solo) the
+ * `surface` plugin reads to position the tab; the surface "mode" is emergent
+ * from the per-tab placements, never a global setting.
  */
 export interface Tab {
   tabId: string;
   appId: string;
   store: PaneStore;
+  placement: Placement;
 }
 
 /**
@@ -30,6 +36,8 @@ export interface PersistedTab {
   tabId: string;
   appId: string;
   route: PersistedSlot[];
+  /** Optional for back-compat: pre-placement payloads default to `docked`. */
+  placement?: Placement;
 }
 
 export interface PersistedTabs {
@@ -78,6 +86,7 @@ export function savePersistedTabs(tabs: Tab[], focusedTabId: string): void {
       tabId: t.tabId,
       appId: t.appId,
       route: serializeRoute(t.store),
+      placement: t.placement,
     })),
     focusedTabId,
   };

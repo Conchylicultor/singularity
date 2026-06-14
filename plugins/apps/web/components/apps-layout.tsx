@@ -153,14 +153,16 @@ export function AppsLayout() {
   );
 }
 
-/** Renders the active surface arrangement inside the active rail-framing variant. */
+/** Renders the surface body inside the active rail-framing variant. */
 function FramedSurface() {
   const framing = Apps.RailFraming.useContributions()[0];
-  const arrangement = Apps.SurfaceArrangement.useContributions()[0];
-  const body = arrangement ? (
+  const surface = Apps.Surface.useContributions()[0];
+  // The `surface` plugin owns the multi-placement body; with no contributor,
+  // `apps` degrades to its built-in docked-only strip.
+  const body = surface ? (
     renderIsolated(
-      Apps.SurfaceArrangement.id,
-      arrangement as unknown as Contribution,
+      Apps.Surface.id,
+      surface as unknown as Contribution,
       {},
     )
   ) : (

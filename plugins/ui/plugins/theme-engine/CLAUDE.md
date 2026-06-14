@@ -12,7 +12,7 @@
   - Exports: Types: `ColorAdjustment`, `ColorMode`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `TokenGroupPresets`, `VariantGroupContribution`; Values: `ChromeTheme`, `ColorAdjustContext`, `ScopedAppTheme`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useColorMode`, `useResolvedColorMode`, `useThemeScopeId`, `useTokenGroupPresetOptions`, `useTokenGroupPresets`
 - Cross-plugin:
   - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `font-family`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `type-scale`
-  - Imported by: `apps/surface-arrangement/desktop`, `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
+  - Imported by: `apps/surface`, `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Core:

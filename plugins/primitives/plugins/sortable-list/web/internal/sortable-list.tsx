@@ -29,8 +29,19 @@ export interface SortableListProps {
    * strategy (e.g. `rectSortingStrategy` for 2-D wrap layouts) wins.
    */
   strategy?: SortingStrategy;
+  /**
+   * Opt-in "tear-off" gesture (default undefined → zero behavior change). When
+   * provided, a drag that releases *beyond the list's cross-axis extent* (past a
+   * margin below a horizontal strip, or beside a vertical one) fires `onDragOut`
+   * with the released item id and the drop point, INSTEAD of `onMove`. Used by
+   * the app tab bar to tear a chip into a floating window, Chrome-style.
+   */
+  onDragOut?: (id: string, point: { x: number; y: number }) => void;
   children: ReactNode;
 }
+
+/** Cross-axis margin (px) a release must clear past the strip to count as a tear-off. */
+const TEAR_OFF_MARGIN = 24;
 
 export function SortableList({
   items,
@@ -40,6 +51,7 @@ export function SortableList({
   collisionDetection,
   orientation,
   strategy,
+  onDragOut,
   children,
 }: SortableListProps) {
   const resolvedStrategy =
@@ -69,6 +81,34 @@ export function SortableList({
       onDragStart={(e) => setActiveId(String(e.active.id))}
       onDragEnd={(e: DragEndEvent) => {
         setActiveId(null);
+        // Tear-off check (opt-in): if the dragged box was released beyond the
+        // strip's cross-axis extent by a margin, fire onDragOut and skip the
+        // reorder entirely. `initial` is the strip-aligned start box; `translated`
+        // is the live dragged box at release.
+        if (onDragOut) {
+          const initial = e.active.rect.current.initial;
+          const dragged = e.active.rect.current.translated;
+          if (initial && dragged) {
+            const horizontal = orientation === "horizontal";
+            const draggedCenter = horizontal
+              ? dragged.top + dragged.height / 2
+              : dragged.left + dragged.width / 2;
+            const lo = horizontal ? initial.top : initial.left;
+            const hi = horizontal
+              ? initial.top + initial.height
+              : initial.left + initial.width;
+            if (
+              draggedCenter > hi + TEAR_OFF_MARGIN ||
+              draggedCenter < lo - TEAR_OFF_MARGIN
+            ) {
+              onDragOut(String(e.active.id), {
+                x: dragged.left + dragged.width / 2,
+                y: dragged.top + dragged.height / 2,
+              });
+              return;
+            }
+          }
+        }
         if (e.over && String(e.active.id) !== String(e.over.id)) {
           const oldIdx = effectiveItems.indexOf(String(e.active.id));
           const overIdx = effectiveItems.indexOf(String(e.over.id));

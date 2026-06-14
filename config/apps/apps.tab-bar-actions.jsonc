@@ -1,0 +1,7 @@
+// @hash 01165221b9b1
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  "items": [
+    "apps.surface:placement-control"
+  ]
+}

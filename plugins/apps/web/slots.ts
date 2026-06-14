@@ -1,16 +1,22 @@
 import type { ComponentType } from "react";
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
-import type { RailFramingProps, SurfaceArrangementProps } from "../core";
+import type { RailFramingProps } from "../core";
 
 /** One framing host that wraps the rail + app content; see RailFramingProps. */
 export interface RailFramingContribution {
   component: ComponentType<RailFramingProps>;
 }
 
-/** One arrangement host that lays out the open tabs; see SurfaceArrangementProps. */
-export interface SurfaceArrangementContribution {
-  component: ComponentType<SurfaceArrangementProps>;
+/**
+ * The single surface body that renders every open tab at once, positioning each
+ * by its own per-tab {@link Placement}. There is no global arrangement mode — the
+ * surface "looks like" tabs / desktop / full-app emergently from the tabs'
+ * placements. The body reads the whole tab lifecycle from `useTabs()`, so the
+ * host forwards no props (the empty-object contract, as before).
+ */
+export interface SurfaceContribution {
+  component: ComponentType<Record<string, never>>;
 }
 
 export const Apps = {
@@ -41,11 +47,17 @@ export const Apps = {
   RailFraming: defineSlot<RailFramingContribution>("apps.rail-framing", {
     docLabel: () => "Rail framing",
   }),
-  /** The surface arrangement (tabs / desktop) that lays out the open tabs. The
-   * active variant owns how the `Tab[]` is positioned on screen; both variants
-   * read the tab lifecycle from `useTabs()`, so the host forwards no props. */
-  SurfaceArrangement: defineSlot<SurfaceArrangementContribution>(
-    "apps.surface-arrangement",
-    { docLabel: () => "Surface arrangement" },
+  /** The surface body that lays out every open tab by its per-tab placement. A
+   * single-contribution render slot (the `surface` plugin); `apps` falls back to
+   * its built-in docked-only strip when no contributor is present. */
+  Surface: defineSlot<SurfaceContribution>("apps.surface", {
+    docLabel: () => "Surface",
+  }),
+  /** Trailing tab-bar action zone (next to `+`), where the `surface` plugin
+   * drops its in-strip placement control. `apps` owns only the seam; the control
+   * stays plugin-owned. */
+  TabBarActions: defineRenderSlot<{ component: ComponentType }>(
+    "apps.tab-bar-actions",
+    { docLabel: () => "Tab bar actions" },
   ),
 };

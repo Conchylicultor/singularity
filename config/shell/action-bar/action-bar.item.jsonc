@@ -1,7 +1,8 @@
-// @hash caaf04201b40
+// @hash 94f33342262e
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
+    "apps.surface:placement",
     "improve:improve",
     "build:build",
     { "type": "spacer", "id": "spacer-1" },

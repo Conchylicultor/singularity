@@ -1,4 +1,4 @@
-// @hash caaf04201b40
+// @hash 94f33342262e
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -14,6 +14,7 @@
     "improve:improve",
     "improve.element-picker:element-picker",
     "build:build",
-    "fullscreen:fullscreen-toggle"
+    "fullscreen:fullscreen-toggle",
+    "apps.surface:placement"
   ]
 }

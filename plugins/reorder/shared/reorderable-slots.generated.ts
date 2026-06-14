@@ -21,6 +21,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "agents.system-agent", pluginId: "conversations.agents" },
   { slotId: "agents.view", pluginId: "conversations.agents" },
   { slotId: "apps.app", pluginId: "apps" },
+  { slotId: "apps.tab-bar-actions", pluginId: "apps" },
   { slotId: "build-detail.section", pluginId: "build" },
   { slotId: "conversation-item.chips", pluginId: "conversations.conversation-ui.item" },
   { slotId: "conversation.above-prompt-input", pluginId: "conversations.conversation-view" },

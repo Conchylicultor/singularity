@@ -40,8 +40,16 @@ const CHIP_GAP_PX = 2;
  * a non-scrolling sibling of the strip so it's always reachable.
  */
 export function AppTabBar() {
-  const { tabs, focusedTabId, focusTab, closeTab, openTab, moveTab, titles } =
-    useTabs();
+  const {
+    tabs,
+    focusedTabId,
+    focusTab,
+    closeTab,
+    openTab,
+    moveTab,
+    setPlacement,
+    titles,
+  } = useTabs();
   const apps = Apps.App.useContributions();
 
   const { containerRef, measureRef, visibleCount } = useResponsiveOverflow({
@@ -72,6 +80,12 @@ export function AppTabBar() {
         <SortableList
           items={resolved.map(({ tab }) => tab.tabId)}
           onMove={(activeId, overId) => moveTab(activeId, overId)}
+          // Chrome-style tear-off: dragging a chip out of the strip floats the
+          // tab as a window (then focuses it so it lands on top).
+          onDragOut={(id) => {
+            setPlacement(id, "floating");
+            focusTab(id);
+          }}
           orientation="horizontal"
           disabled={tabs.length < 2}
         >
@@ -109,6 +123,9 @@ export function AppTabBar() {
         size="icon-sm"
         onClick={() => openTab("home")}
       />
+      {/* Trailing action zone — the `surface` plugin drops its in-strip
+          placement control here, next to `+`. */}
+      <Apps.TabBarActions.Render />
       {/* Hidden full-label measure strip: drives the collapse decision without
           affecting layout. Mirrors the responsive-overflow primitive's pattern. */}
       {resolved.length > 0 &&

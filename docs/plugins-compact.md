@@ -54,10 +54,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
-    - **`surface-arrangement`** — Surface-arrangement region (tabs / desktop). Contributes its variant-region host into Apps.SurfaceArrangement. Surface-arrangement region (tabs / desktop). Registers the config descriptor for the Apps.SurfaceArrangement variant region.
-      - Plugins:
-        - **`desktop`** — Desktop surface arrangement — the open tabs laid out as free-floating, draggable, resizable windows (drag, resize, z-order on focus, maximize, minimize).
-        - **`tabs`** — Tabs surface arrangement — one fullscreen tab at a time (the default keep-alive surface).
+    - **`surface`** — Per-tab surface: renders every open tab at once positioned by its own placement (docked / floating / solo). Owns the multi-placement body, floating window chrome, geometry store, and the 3-way placement control + Esc-to-exit-solo.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 
 - **`auth`** [load-bearing] [3 sub-plugins] — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.

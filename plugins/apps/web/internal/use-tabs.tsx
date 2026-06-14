@@ -6,6 +6,7 @@ import {
   useMemo,
   useRef,
   useState,
+  useSyncExternalStore,
   type ReactNode,
 } from "react";
 import {
@@ -16,6 +17,7 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
+import { DEFAULT_PLACEMENT, type Placement } from "../../core";
 import { Apps } from "../slots";
 import { useActiveApp } from "./use-active-app";
 import { resolveAppForPath } from "./resolve-app";
@@ -55,6 +57,13 @@ export interface TabsApi {
   closeTab(tabId: string): void;
   /** Reorder: move the tab `activeId` to the position of `overId`. */
   moveTab(activeId: string, overId: string): void;
+  /**
+   * Set a tab's spatial placement (docked / floating / solo). Pure per-tab
+   * state — focus, route, and store liveness are untouched; the `surface`
+   * plugin re-positions the (still-mounted) tab in response, so a placement
+   * change never reloads the tab.
+   */
+  setPlacement(tabId: string, placement: Placement): void;
 }
 
 const TabsContext = createContext<TabsApi | null>(null);
@@ -82,6 +91,59 @@ export function navigate(url: string): void {
   tabsNavigator(url);
 }
 
+// Module-level handle to the focused tab's placement + a setter, mirroring the
+// `tabsNavigator` pattern above. Lets out-of-provider callers (the floating
+// action bar's placement control, the global Esc shortcut) read/drive the
+// focused tab's placement without the `useTabs` hook. A subscribable snapshot
+// (useFocusedPlacement) keeps those consumers reactive.
+let focusedPlacement: Placement = DEFAULT_PLACEMENT;
+let setFocusedPlacementFn: ((placement: Placement) => void) | null = null;
+const focusedPlacementSubscribers = new Set<() => void>();
+
+function publishFocusedPlacement(
+  placement: Placement,
+  setter: ((placement: Placement) => void) | null,
+): void {
+  setFocusedPlacementFn = setter;
+  if (placement !== focusedPlacement) {
+    focusedPlacement = placement;
+    for (const fn of focusedPlacementSubscribers) fn();
+  }
+}
+
+/**
+ * Imperatively set the focused tab's placement from anywhere — the persistent
+ * home for the placement control on the floating action bar, and the Esc-exit
+ * shortcut. No-op (rather than throw) before the provider mounts: a stray
+ * shortcut keystroke pre-mount is benign, not a bug.
+ */
+export function setFocusedTabPlacement(placement: Placement): void {
+  setFocusedPlacementFn?.(placement);
+}
+
+/**
+ * Non-hook read of the focused tab's placement — for plain-function callers
+ * (e.g. a shortcut `when`/`handler` guard) that can't use the hook form.
+ */
+export function getFocusedPlacement(): Placement {
+  return focusedPlacement;
+}
+
+/**
+ * Reactive read of the focused tab's placement, callable outside
+ * `<TabsProvider>`. Backs the floating-bar placement control + solo exit.
+ */
+export function useFocusedPlacement(): Placement {
+  return useSyncExternalStore(
+    (cb) => {
+      focusedPlacementSubscribers.add(cb);
+      return () => focusedPlacementSubscribers.delete(cb);
+    },
+    () => focusedPlacement,
+    () => focusedPlacement,
+  );
+}
+
 export function useTabs(): TabsApi {
   const ctx = useContext(TabsContext);
   if (!ctx) {
@@ -105,7 +167,12 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
   if (persisted.route.length > 0) {
     store.restoreRoute(persisted.route);
   }
-  return { tabId: persisted.tabId, appId: persisted.appId, store };
+  return {
+    tabId: persisted.tabId,
+    appId: persisted.appId,
+    store,
+    placement: persisted.placement ?? DEFAULT_PLACEMENT,
+  };
 }
 
 interface BootState {
@@ -131,7 +198,12 @@ function bootTabs(apps: AppList, initialAppId: string): BootState {
         // renderer's useSyncPaneRegistry) hydrate the route from the URL.
         const store = createPaneStore({ live: true });
         store.setBasePath(appPathFor(p.appId, apps));
-        return { tabId: p.tabId, appId: p.appId, store };
+        return {
+          tabId: p.tabId,
+          appId: p.appId,
+          store,
+          placement: p.placement ?? DEFAULT_PLACEMENT,
+        };
       }
       return rebuildBackgroundTab(p, apps);
     });
@@ -141,7 +213,10 @@ function bootTabs(apps: AppList, initialAppId: string): BootState {
   const tabId = crypto.randomUUID();
   const store = createPaneStore({ live: true });
   store.setBasePath(appPathFor(initialAppId, apps));
-  return { tabs: [{ tabId, appId: initialAppId, store }], focusedTabId: tabId };
+  return {
+    tabs: [{ tabId, appId: initialAppId, store, placement: DEFAULT_PLACEMENT }],
+    focusedTabId: tabId,
+  };
 }
 
 /**
@@ -249,7 +324,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     (appId: string): string => {
       const tabId = crypto.randomUUID();
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store };
+      const tab: Tab = { tabId, appId, store, placement: DEFAULT_PLACEMENT };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
@@ -272,7 +347,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       if (idx < 0) return;
       tabsRef.current[idx]!.store.live = false;
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store };
+      const tab: Tab = { tabId, appId, store, placement: DEFAULT_PLACEMENT };
       const nextTabs = [...tabsRef.current];
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
@@ -340,7 +415,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
         // Never allow zero tabs — seed a fresh Home tab and focus it.
         const seedId = crypto.randomUUID();
         const store = createPaneStore({ live: false });
-        const seed: Tab = { tabId: seedId, appId: "home", store };
+        const seed: Tab = {
+          tabId: seedId,
+          appId: "home",
+          store,
+          placement: DEFAULT_PLACEMENT,
+        };
         tabsRef.current = [seed];
         setTabs([seed]);
         activate(seed);
@@ -386,10 +466,38 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     [persist],
   );
 
-  const api = useMemo<TabsApi>(
-    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab }),
-    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab],
+  // Set a tab's placement. Pure per-tab state — no focus/liveness change, so the
+  // surface plugin re-positions the still-mounted tab (Chrome-style: no reload).
+  const setPlacement = useCallback(
+    (tabId: string, placement: Placement) => {
+      const prev = tabsRef.current;
+      const idx = prev.findIndex((t) => t.tabId === tabId);
+      if (idx < 0 || prev[idx]!.placement === placement) return;
+      const next = [...prev];
+      next[idx] = { ...prev[idx]!, placement };
+      tabsRef.current = next;
+      setTabs(next);
+      persist();
+    },
+    [persist],
   );
+
+  const api = useMemo<TabsApi>(
+    () => ({ tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab, setPlacement }),
+    [tabs, focusedTabId, titles, setTabTitle, openTab, replaceTabApp, navigate, focusTab, closeTab, moveTab, setPlacement],
+  );
+
+  // Publish the focused tab's placement + a bound setter at module scope so
+  // out-of-provider callers (floating-bar placement control, Esc shortcut) can
+  // read and drive it. Mirrors the `setTabsNavigator` handle above.
+  const focusedTabPlacement =
+    tabs.find((t) => t.tabId === focusedTabId)?.placement ?? DEFAULT_PLACEMENT;
+  useEffect(() => {
+    publishFocusedPlacement(focusedTabPlacement, (p) =>
+      setPlacement(focusedRef.current, p),
+    );
+    return () => publishFocusedPlacement(DEFAULT_PLACEMENT, null);
+  }, [focusedTabPlacement, setPlacement]);
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;
 }

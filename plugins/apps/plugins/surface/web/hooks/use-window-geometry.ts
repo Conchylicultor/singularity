@@ -49,7 +49,7 @@ export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
 
 // Per-window geometry, mirroring `use-column-widths.ts`: a module-global Map
 // keyed by tabId + a subscriber Set fed into `useSyncExternalStore`, so every
-// `WindowFrame` reading the same tabId stays in sync and survives remounts.
+// floating window reading the same tabId stays in sync and survives remounts.
 const geoState = new Map<string, Geometry>();
 const subscribers = new Set<() => void>();
 
@@ -126,7 +126,7 @@ type GeometryUpdater = Geometry | ((g: Geometry) => Geometry);
 /**
  * Drop geometry for windows whose tab is no longer open, so a closed window's
  * box doesn't linger in the map (and re-appear if a new window reuses its slot).
- * Called from `AppWindowsBody` keyed on the current open-tab id set.
+ * Called from `SurfaceBody` keyed on the current open-tab id set.
  */
 export function pruneWindowGeometry(openTabIds: Set<string>) {
   let changed = false;
