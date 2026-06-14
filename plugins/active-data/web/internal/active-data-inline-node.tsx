@@ -1,5 +1,7 @@
 import type { ReactNode } from "react";
+import { MdClose } from "react-icons/md";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
+import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import {
   UNSAFE_unsealSlotComponent,
   type SealContributions,
@@ -68,7 +70,7 @@ export class ActiveDataInlineNode extends DecoratorNode<ReactNode> {
   }
 
   decorate(): ReactNode {
-    return <ActiveDataInlineChip text={this.__text} />;
+    return <ActiveDataInlineChip text={this.__text} nodeKey={this.__key} />;
   }
 }
 
@@ -76,7 +78,15 @@ export class ActiveDataInlineNode extends DecoratorNode<ReactNode> {
 // full-string match (anchored) so a shorter pattern that merely appears *inside*
 // a longer token (e.g. a `conv-…` id embedded in a `<ui-context …>` tag) never
 // wins over the token that actually produced the node.
-function ActiveDataInlineChip({ text }: { text: string }) {
+//
+// Only ever rendered from `decorate()`, i.e. inside a `LexicalComposer`, so it
+// can read the editor context. When the editor is editable it wraps the chip in
+// a generic hover-reveal × removal affordance — every inline contribution gets
+// it for free, with zero per-contributor wiring. Read surfaces render the
+// contribution component directly (via linkify/segments), never through this
+// node, so they never get the × (mirrors paste-images' ImageNode).
+function ActiveDataInlineChip({ text, nodeKey }: { text: string; nodeKey: NodeKey }) {
+  const [editor] = useLexicalComposerContext();
   const contributions = ActiveData.Tag.useContributions();
   const inline = contributions.filter(
     (c): c is SealContributions<ActiveDataInlineContribution> =>
@@ -89,7 +99,29 @@ function ActiveDataInlineChip({ text }: { text: string }) {
   );
   if (!match) return <>{text}</>;
   const Component = UNSAFE_unsealSlotComponent(match.component);
-  return <Component content={text} attrs={{}} />;
+  const chip = <Component content={text} attrs={{}} />;
+
+  if (!editor.isEditable()) return chip;
+
+  return (
+    <span className="group relative inline-flex align-middle" contentEditable={false}>
+      {chip}
+      <button
+        type="button"
+        onClick={(e) => {
+          e.stopPropagation();
+          editor.update(() => {
+            const node = editor.getEditorState()._nodeMap.get(nodeKey);
+            if (node) (node as LexicalNode).remove();
+          });
+        }}
+        className="bg-background/90 border-border text-foreground absolute -top-1 -right-1 flex size-4 items-center justify-center rounded-full border opacity-0 transition-opacity group-hover:opacity-100"
+        aria-label="Remove"
+      >
+        <MdClose className="size-3" />
+      </button>
+    </span>
+  );
 }
 
 function stripGlobal(flags: string): string {

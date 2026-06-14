@@ -1,4 +1,4 @@
-import { MdAdsClick, MdClose } from "react-icons/md";
+import { MdAdsClick } from "react-icons/md";
 import type { UiContextMeta } from "../../core";
 import { Inset, Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -26,13 +26,7 @@ function DetailRow({ label, value }: { label: string; value?: string }) {
 
 /** The compact inline chip representing a captured UI element. Clicking it opens
  * a popover with the full captured metadata. */
-export function UiContextChip({
-  meta,
-  onRemove,
-}: {
-  meta: UiContextMeta;
-  onRemove?: () => void;
-}) {
+export function UiContextChip({ meta }: { meta: UiContextMeta }) {
   const trigger = (
     <Inset
       as="button"
@@ -59,19 +53,6 @@ export function UiContextChip({
             <Text as="span" variant="label" className="min-w-0 break-all">
               {meta.element}
             </Text>
-            {onRemove && (
-              <button
-                type="button"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemove();
-                }}
-                className="text-muted-foreground hover:text-foreground ml-auto shrink-0"
-                aria-label="Remove UI element context"
-              >
-                <MdClose className="size-4" />
-              </button>
-            )}
           </Stack>
           <Stack gap="2xs">
             <DetailRow label="Plugin" value={meta.pluginId} />
