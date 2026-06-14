@@ -11,8 +11,8 @@
   - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`
   - Exports: Values: `JsonlViewerAttachment`
 - Cross-plugin:
-  - Slot contributors: `command-permissions`, `deferred-tools-delta`, `edited-text-file`, `nested-memory`, `skill-listing`, `task-reminder`
-  - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+  - Slot contributors: `command-permissions`, `deferred-tools-delta`, `edited-text-file`, `nested-memory`, `queued-command`, `skill-listing`, `task-reminder`
+  - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
 - Core:
   - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
 - Sub-plugins:
@@ -20,6 +20,7 @@
   - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
   - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
   - **`nested-memory`** — Renders nested-memory attachment events showing which CLAUDE.md files were loaded as context.
+  - **`queued-command`** — Renders queued_command attachment events — a prompt the user queued while the agent was busy, awaiting delivery on the next turn.
   - **`skill-listing`** — Renders skill-listing attachment events showing skills available in the current session.
   - **`task-reminder`** — Renders task-reminder attachment events showing periodic task list injections.
 

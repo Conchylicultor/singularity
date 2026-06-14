@@ -712,6 +712,10 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/queued-command": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-queued-command",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/skill-listing": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing",
       "version": "0.0.1",
@@ -3388,6 +3392,8 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/edited-text-file"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-queued-command": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-queued-command@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/queued-command"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-skill-listing@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/skill-listing"],
 
