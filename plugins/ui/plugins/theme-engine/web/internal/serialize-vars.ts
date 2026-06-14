@@ -21,11 +21,20 @@ export function buildVarsBlock(
     .join("\n");
 }
 
-/** The full `:root{…}.dark{…}` block for one token group, given resolved values. */
+/**
+ * The full `<light>{…}<dark>{…}` block for one token group, given resolved values.
+ *
+ * `selectors` defaults to the global `:root` / `.dark` pair so the global injector
+ * (and the localStorage cache that must stay byte-identical to it) keeps emitting
+ * exactly the same text — the warm-reload no-flash guarantee depends on that
+ * identity. Scoped callers (per-window desktop overrides) pass a `[data-theme-scope]`
+ * pair instead, e.g. `{ light: '[data-theme-scope="app:x"]', dark: '.dark [data-theme-scope="app:x"]' }`.
+ */
 export function renderGroupBlock(
   descriptor: VarsDescriptor,
   light: Record<string, string>,
   dark: Record<string, string>,
+  selectors: { light: string; dark: string } = { light: ":root", dark: ".dark" },
 ): string {
-  return `:root {\n${buildVarsBlock(descriptor, light)}\n}\n.dark {\n${buildVarsBlock(descriptor, dark)}\n}`;
+  return `${selectors.light} {\n${buildVarsBlock(descriptor, light)}\n}\n${selectors.dark} {\n${buildVarsBlock(descriptor, dark)}\n}`;
 }

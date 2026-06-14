@@ -98,6 +98,11 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
         onFocus();
         bringToFront();
       }}
+      // Tags this window's subtree so the matching scoped theme block (mounted by
+      // AppWindowsBody as `ScopedAppTheme`) overrides its inline content with this
+      // app's palette. Portaled descendants escape to document.body and keep the
+      // global (focused-app) chrome theme by design.
+      data-theme-scope={`app:${tab.appId}`}
       className="absolute flex flex-col overflow-hidden rounded-lg border bg-background shadow-lg"
       style={boxStyle}
     >

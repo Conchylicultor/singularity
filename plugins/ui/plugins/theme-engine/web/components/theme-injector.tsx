@@ -77,7 +77,21 @@ function WithAdjustment({
   );
 }
 
-function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId?: string }) {
+function GroupStyle({
+  group,
+  scopeId,
+  appScope,
+}: {
+  group: TokenGroupContribution;
+  scopeId?: string;
+  // When set, this GroupStyle emits a *scoped* override block targeting
+  // `[data-theme-scope="app:<appScope>"]` instead of global `:root`/`.dark`, so
+  // it themes only one desktop window's subtree. Scoped blocks use a distinct
+  // `theme-scope-` style id (kept out of the global `theme-engine-` prune sweep)
+  // and never report to the pre-paint cache (overrides paint via useLayoutEffect
+  // before the window subtree is shown, so the warm-reload cache is irrelevant).
+  appScope?: string;
+}) {
   const adjustment = useContext(ColorAdjustContext);
   const report = useContext(CssReportContext);
   const state = useTokenGroupPresets(group.id);
@@ -132,7 +146,11 @@ function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId
 
   useLayoutEffect(() => {
     if (!mergedLight || !mergedDark) return;
-    const id = styleIdFor(group.id);
+    // Scoped overrides get a distinct `theme-scope-` id so they're excluded from
+    // the global `style[id^="theme-engine-"]` prune (and cleaned up by their own
+    // ScopedAppTheme unmount); the global path keeps the `theme-engine-` id the
+    // pre-paint replay and cache rely on.
+    const id = appScope ? `theme-scope-${appScope}-${group.id}` : styleIdFor(group.id);
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement("style");
@@ -143,14 +161,21 @@ function GroupStyle({ group, scopeId }: { group: TokenGroupContribution; scopeId
       group.descriptor,
       transformValues(mergedLight, adjustment),
       transformValues(mergedDark, adjustment),
+      appScope
+        ? {
+            light: `[data-theme-scope="app:${appScope}"]`,
+            dark: `.dark [data-theme-scope="app:${appScope}"]`,
+          }
+        : undefined,
     );
     el.textContent = text;
-    report(group.id, text);
+    // Scoped overrides never feed the pre-paint cache — only the global path does.
+    if (!appScope) report(group.id, text);
     return () => {
       el.remove();
-      report(group.id, null);
+      if (!appScope) report(group.id, null);
     };
-  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment, report]);
+  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment, report, appScope]);
 
   return null;
 }
@@ -280,6 +305,39 @@ export function ThemeInjector() {
       <CssReportContext.Provider value={report}>
         {content}
       </CssReportContext.Provider>
+    </ThemeScopeProvider>
+  );
+}
+
+// Scoped sibling of ThemeInjector for a single app id. Where ThemeInjector writes
+// the focused app's theme to global `:root`/`.dark` (and feeds the pre-paint
+// cache + the `<html>.dark` toggle), this writes a purely *additive* override
+// block targeting `[data-theme-scope="app:<id>"]`, so one desktop window's
+// subtree shows ITS app's theme while chrome and portals keep the global one.
+//
+// It reuses the same preset resolution, merge, color-transform adjustment, and
+// completeness backstop as the global path (all live inside GroupStyle /
+// WithAdjustment) — only the selector and style id differ (via `appScope`).
+// Deliberately omits ColorModeApplier (light/dark stays global), the
+// CssReportContext provider (the default no-op; `appScope` gates reports off
+// regardless), and the cache / active-scope-storage side effects.
+export function ScopedAppTheme({ appId }: { appId: string }) {
+  const scopeId = `app:${appId}`;
+  const groups = ThemeEngine.TokenGroup.useContributions();
+  const colorTransforms = ThemeEngine.ColorTransform.useContributions();
+
+  const styles = groups.map((g) => (
+    <GroupStyle key={g.id} group={g} scopeId={scopeId} appScope={appId} />
+  ));
+
+  const firstTransform = colorTransforms[0];
+  return (
+    <ThemeScopeProvider scopeId={scopeId}>
+      {firstTransform ? (
+        <WithAdjustment contrib={firstTransform}>{styles}</WithAdjustment>
+      ) : (
+        <>{styles}</>
+      )}
     </ThemeScopeProvider>
   );
 }

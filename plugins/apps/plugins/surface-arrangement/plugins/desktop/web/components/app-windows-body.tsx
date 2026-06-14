@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
 import { useTabs } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { ScopedAppTheme } from "@plugins/ui/plugins/theme-engine/web";
 import { WindowFrame } from "./window-frame";
 import { pruneWindowGeometry } from "../hooks/use-window-geometry";
 
@@ -29,11 +30,22 @@ export function AppWindowsBody() {
     openTab(focused?.appId ?? "home");
   };
 
+  // One scoped theme `<style>` per DISTINCT mounted app — two windows of the same
+  // app share a single override block (keyed on app id, not tab id). Each window's
+  // subtree is tagged `data-theme-scope="app:<id>"` (see WindowFrame), so these
+  // blocks theme inline (non-portaled) content per window while chrome/portals
+  // keep the global focused-app theme.
+  const appIds = useMemo(() => [...new Set(tabs.map((t) => t.appId))], [tabs]);
+
   return (
     // The desktop backdrop. `transform-gpu` makes it the containing block for the
     // absolutely-positioned windows (and their fixed-position app chrome), so
     // windows are clipped to the surface below the tab bar.
     <div className="relative h-full w-full overflow-hidden transform-gpu">
+      {appIds.map((id) => (
+        <ScopedAppTheme key={id} appId={id} />
+      ))}
+
       {tabs.map((tab) => (
         <WindowFrame
           key={tab.tabId}
