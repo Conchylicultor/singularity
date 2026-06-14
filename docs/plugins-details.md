@@ -946,7 +946,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `conversationPane.Actions`
         - Contributes: `Pane.Register` "conversation", `Conversation.Header` → `ConversationTitle`
-        - Uses: `conversations.useConversationById`, `conversations/conversation-view/action-bar.ActionBarView`, `conversations/conversation-view/header.Conversation`, `conversations/conversation-view/header.HeaderView`, `conversations/conversation-view/jsonl-viewer.JsonlPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`, `primitives/text.Text`, `tasks/task-draft-form.setActiveRelateContext`
+        - Uses: `conversations.useConversationById`, `conversations/conversation-view/action-bar.ActionBarView`, `conversations/conversation-view/header.Conversation`, `conversations/conversation-view/header.HeaderView`, `conversations/conversation-view/jsonl-viewer.JsonlPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/surface-id.useSurfaceTabId`, `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`, `primitives/text.Text`, `tasks/task-draft-form.setActiveRelateContext`
         - Exports: Types: `ConversationRecord`; Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
       - Cross-plugin:
         - Slot contributors: `agents`, `allow-monitor`, `attempt-view`, `branch`, `code-explorer`, `commits-graph`, `conversation-category`, `conversation-preprompt`, `conversation-progress`, `dependencies`, `dependent-count`, `docs-button`, `event-counter`, `fork-conversation`, `launch-prompts`, `model`, `notes`, `op-status`, `open-app`, `prompt-input`, `push-profiling`, `review`, `status`, `tasks-panel`, `terminal-pane`, `turn-summary`, `vscode`
@@ -2364,7 +2364,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `PaneLayoutHost`
     - **`miller`** — Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
       - Web:
-        - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+        - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/surface-id.useSurfaceTabId`
         - Exports: Values: `MillerColumns`, `PaneOverlayHost`
       - Cross-plugin:
         - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/studio/shell`, `apps/workflows/shell`, `layouts/host`
@@ -3119,9 +3119,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Slots: `Shortcuts.Shortcut`
         - Contributes: `Core.Root` → `ShortcutManager`
         - Uses: `primitives/surface-id.useSurfaceTabId`
-        - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `getFocusedSurfaceId`, `isEditableTarget`, `setFocusedSurfaceId`, `Shortcuts`, `useSurfaceShortcuts`
+        - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `getFocusedSurfaceId`, `isEditableTarget`, `setFocusedSurfaceId`, `Shortcuts`, `subscribeFocusedSurface`, `useFocusedSurfaceId`, `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: `apps`, `apps/sonata/controls`, `apps/surface`, `primitives/icon-button`, `primitives/launch`, `reorder/edit-mode`
+        - Imported by: `apps`, `apps/sonata/controls`, `apps/surface`, `primitives/icon-button`, `primitives/launch`, `reorder/edit-mode`, `tasks/task-draft-form`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
         - Uses: `primitives/ui-kit.ControlSize`, `primitives/ui-kit.ControlSizeProvider`
@@ -3159,7 +3159,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `page/editor`, `page/inline-page-link`, `primitives/card`, `primitives/collapsible-wrap`, `primitives/command-palette`
     - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
       - Cross-plugin:
-        - Imported by: `apps/sonata/controls`, `primitives/pane`, `primitives/shortcuts`
+        - Imported by: `apps/sonata/controls`, `conversations/conversation-view`, `layouts/miller`, `primitives/pane`, `primitives/shortcuts`
       - Web:
         - Exports: Values: `SurfaceIdContext`, `useSurfaceTabId`
     - **`syntax-highlight`** — Shared shiki-based syntax highlighter primitive. Exposes getHighlighter, themeForMode, languageForPath, useDarkMode, and a <HighlightedCode> component for plugins rendering code.
@@ -3576,7 +3576,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `TaskDraftFormSlots.Action`
         - Contributes: `ConfigV2.WebRegister`
-        - Uses: `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`, `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/notifications.toast`
+        - Uses: `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`, `conversations/model-provider.ModelSelect`, `conversations/preprompts.PrepromptSelect`, `infra/attachments.uploadAttachment`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/persistent-draft.useDraft`, `primitives/popover.InlinePopover`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/shortcuts.subscribeFocusedSurface`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.extractAttachmentIds`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/notifications.toast`
         - Exports: Types: `ActiveRelateContext`, `CaptureKind`, `CardDraft`, `ChainModel`, `TaskDraftActionProps`, `TaskDraftPopoverProps`, `TaskDraftRelate`; Values: `setActiveRelateContext`, `TaskDraftFormSlots`, `TaskDraftPopover`, `useActiveRelateContext`
       - Cross-plugin:
         - Slot contributors: `element-picker`

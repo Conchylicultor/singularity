@@ -96,6 +96,7 @@ export function navigate(url: string): void {
 // action bar's placement control, the global Esc shortcut) read/drive the
 // focused tab's placement without the `useTabs` hook. A subscribable snapshot
 // (useFocusedPlacement) keeps those consumers reactive.
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the FOCUSED tab's placement, mirroring tabsNavigator/focusedSurfaceId. Driven by single global chrome (the floating-bar placement control + global Esc) outside any surface tree, so it cannot be a per-surface scoped store.
 let focusedPlacement: Placement = DEFAULT_PLACEMENT;
 let setFocusedPlacementFn: ((placement: Placement) => void) | null = null;
 const focusedPlacementSubscribers = new Set<() => void>();
