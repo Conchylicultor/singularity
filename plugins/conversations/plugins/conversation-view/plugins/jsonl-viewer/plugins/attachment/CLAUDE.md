@@ -11,12 +11,13 @@
   - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`
   - Exports: Values: `JsonlViewerAttachment`
 - Cross-plugin:
-  - Slot contributors: `command-permissions`, `deferred-tools-delta`, `edited-text-file`, `hook-additional-context`, `hook-success`, `nested-memory`, `queued-command`, `skill-listing`, `task-reminder`
-  - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
+  - Slot contributors: `command-permissions`, `date-change`, `deferred-tools-delta`, `edited-text-file`, `hook-additional-context`, `hook-success`, `nested-memory`, `queued-command`, `skill-listing`, `task-reminder`
+  - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/date-change`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
 - Core:
   - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`
 - Sub-plugins:
   - **`command-permissions`** — Renders command-permissions attachment events showing permission grants for the session.
+  - **`date-change`** — Renders date_change attachment events (harness notice that the calendar date advanced mid-conversation).
   - **`deferred-tools-delta`** — Renders deferred-tools-delta attachment events showing tools becoming available or removed mid-session.
   - **`edited-text-file`** — Renders edited-text-file attachment events as a collapsible file path with the resulting file content shown as a syntax-highlighted code listing.
   - **`hook-additional-context`** — Renders hook_additional_context attachment events: the context a PreToolUse/PostToolUse hook injected into the agent before a tool ran.
