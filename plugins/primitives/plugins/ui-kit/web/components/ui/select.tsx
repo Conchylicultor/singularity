@@ -2,6 +2,7 @@ import * as React from "react"
 import { Select as SelectPrimitive } from "@base-ui/react/select"
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
 import { MdExpandMore, MdCheck, MdExpandLess } from "react-icons/md"
 
 const Select = SelectPrimitive.Root
@@ -69,9 +70,11 @@ function SelectContent({
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
   >) {
+  const themeScope = usePortalThemeScope()
   return (
     <SelectPrimitive.Portal>
       <SelectPrimitive.Positioner
+        data-theme-scope={themeScope}
         side={side}
         sideOffset={sideOffset}
         align={align}

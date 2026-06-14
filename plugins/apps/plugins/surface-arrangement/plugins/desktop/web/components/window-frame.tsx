@@ -3,6 +3,7 @@ import { MdClose, MdRemove, MdCropSquare, MdFilterNone } from "react-icons/md";
 import { TabSurface, Apps, type Tab } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/ui-kit/web";
 import { useWindowGeometry, clampToBounds, type Bounds } from "../hooks/use-window-geometry";
 import { WindowResizeHandles } from "./window-resize-handles";
 
@@ -100,8 +101,9 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
       }}
       // Tags this window's subtree so the matching scoped theme block (mounted by
       // AppWindowsBody as `ScopedAppTheme`) overrides its inline content with this
-      // app's palette. Portaled descendants escape to document.body and keep the
-      // global (focused-app) chrome theme by design.
+      // app's palette. Portaled descendants escape to document.body, so they no
+      // longer match this attribute — they instead re-adopt this window's theme via
+      // the PortalThemeScopeProvider wrapping TabSurface below.
       data-theme-scope={`app:${tab.appId}`}
       className="absolute flex flex-col overflow-hidden rounded-lg border bg-background shadow-lg"
       style={boxStyle}
@@ -139,7 +141,9 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
         className="relative min-h-0 flex-1 transform-gpu"
         style={geo.minimized ? { display: "none" } : undefined}
       >
-        <TabSurface tab={tab} />
+        <PortalThemeScopeProvider scope={`app:${tab.appId}`}>
+          <TabSurface tab={tab} />
+        </PortalThemeScopeProvider>
       </div>
 
       {/* Resize handles only in the normal state — a min/maximized window has no

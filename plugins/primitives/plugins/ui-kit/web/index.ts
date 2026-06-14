@@ -41,6 +41,10 @@ export {
   DropdownMenuSubContent,
 } from "./components/ui/dropdown-menu";
 export { Input } from "./components/ui/input";
+export {
+  PortalThemeScopeProvider,
+  usePortalThemeScope,
+} from "./components/portal-theme-scope";
 export { Popover, PopoverTrigger, PopoverContent } from "./components/ui/popover";
 export {
   ResizableHandle,

@@ -2,6 +2,7 @@ import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
 import { MdChevronRight, MdCheck } from "react-icons/md"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {
@@ -28,9 +29,11 @@ function DropdownMenuContent({
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  const themeScope = usePortalThemeScope()
   return (
     <MenuPrimitive.Portal>
       <MenuPrimitive.Positioner
+        data-theme-scope={themeScope}
         className="isolate z-popover outline-none"
         align={align}
         alignOffset={alignOffset}

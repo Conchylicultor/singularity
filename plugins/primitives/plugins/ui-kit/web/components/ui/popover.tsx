@@ -1,6 +1,7 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
@@ -24,9 +25,16 @@ function PopoverContent({
     PopoverPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
+  // Portaled content escapes the originating window's DOM subtree to
+  // document.body, so it no longer matches that window's [data-theme-scope]
+  // block. Re-stamp the scope here (flowing through React context, which
+  // crosses portals) so the popup adopts the launching window's scoped theme
+  // instead of the global :root chrome theme. Undefined → no attribute → default.
+  const themeScope = usePortalThemeScope()
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
+        data-theme-scope={themeScope}
         className="isolate z-popover outline-none"
         align={align}
         alignOffset={alignOffset}
