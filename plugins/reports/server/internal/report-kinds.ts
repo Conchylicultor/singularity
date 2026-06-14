@@ -25,7 +25,17 @@ export interface ReportKindSpec<TData = unknown> {
   schema: z.ZodType<TData>;
   // Dedup strategy: repeats sharing a fingerprint collapse onto one row.
   fingerprint(data: TData): Promise<string> | string;
-  meta: { tag: string; notif: string; variant: ReportKindVariant };
+  meta: {
+    tag: string;
+    notif: string;
+    variant: ReportKindVariant;
+    // Notification re-arm policy. When set, the bell notification re-alerts:
+    // each cooldown window starts a fresh unread row, while all reports within a
+    // window coalesce onto that one row (no spam). Omit (default) for
+    // identity-dedup kinds like crash that should never resurface once seen —
+    // those collapse forever onto a single row keyed by the report id.
+    notifCooldownMs?: number;
+  };
   renderTask(row: ReportRow): { title: string; description: string };
 }
 

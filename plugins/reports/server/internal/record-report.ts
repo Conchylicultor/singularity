@@ -150,7 +150,13 @@ export async function recordReport(
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
   if (!row) return { taskId: null, wasNew: false, rateLimited: limited };
 
-  if (row.rateLimited) {
+  // Gate on the per-call `limited`, NOT the persisted `row.rateLimited`. The
+  // throttle is ephemeral by design (see velocity.ts) — it suppresses task/bell
+  // churn only while a fingerprint is actively bursting. `row.rateLimited` is an
+  // OR-accumulated display flag ("was ever rate-limited") that is never reset, so
+  // gating on it would permanently mute any long-lived singleton fingerprint
+  // (e.g. the slow-op rollup) after its first burst.
+  if (limited) {
     // Keep the row's count accurate but don't churn the task or the bus.
     reportsResource.notify();
     return { taskId: row.taskId, wasNew: false, rateLimited: true };
@@ -162,15 +168,24 @@ export async function recordReport(
   // notification itself reads as benign version-skew at a glance.
   const stalePrefix = staleOrigin ? "[Stale tab] " : "";
   const desc = `${stalePrefix}${row.message}`;
+  // Notification dedup granularity is the kind's re-arm policy. Without a
+  // cooldown (default) the bell row is keyed by the stable report id — one row
+  // per fingerprint that updates in place and never resurfaces once read (right
+  // for crashes: one tracked task per distinct crash). With a cooldown, the key
+  // also carries the current time bucket, so each window starts a fresh unread
+  // row while reports inside the window collapse onto it — re-alert without spam
+  // (right for slow ops: a recurring metric, not a one-shot incident).
+  const cooldownMs = spec.meta.notifCooldownMs;
+  const notifDedupeKey = cooldownMs
+    ? `${row.id}:${Math.floor(Date.now() / cooldownMs)}`
+    : row.id;
   void recordNotification({
     type: "report",
     title: staleOrigin ? `${spec.meta.notif} (stale tab)` : spec.meta.notif,
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
     variant: spec.meta.variant,
     muted: row.noise,
-    // One bell row per report fingerprint, mirroring the deduped report row.
-    // `row.id` is stable across occurrences (the upsert returns the same row).
-    dedupeKey: row.id,
+    dedupeKey: notifDedupeKey,
     linkTo: outcome.taskId ? `/tasks/t/${outcome.taskId}` : null,
     metadata: {
       reportId: row.id,

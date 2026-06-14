@@ -2,6 +2,11 @@ import { ReportKind } from "@plugins/reports/server";
 import type { ReportRow } from "@plugins/reports/server";
 import { SlowOpReportPayloadSchema } from "../../core";
 
+// Bell re-alert cooldown for the slow-op rollup: re-alert at most once per
+// minute while slowness persists. All slow ops within a window collapse onto
+// that window's single notification row, so a burst surfaces one alert.
+const SLOW_OP_NOTIF_COOLDOWN_MS = 60_000;
+
 // The slow-op report kind. Unlike crash (one task per distinct fingerprint),
 // slow ops dedup onto a SINGLE rollup task via a fixed fingerprint — slow ops
 // are metrics that hide structural issues, so they want one ranked overview,
@@ -15,6 +20,11 @@ export const slowOpKind = ReportKind({
     tag: "[slow-op]",
     notif: "Slow operations detected",
     variant: "warning",
+    // Slow ops are a recurring metric on a singleton fingerprint, not a one-shot
+    // incident: re-alert the bell at most once per window while slowness
+    // persists. All slow ops within a window collapse onto that window's single
+    // notification row, so a cold-start burst surfaces one alert, not a storm.
+    notifCooldownMs: SLOW_OP_NOTIF_COOLDOWN_MS,
   },
   renderTask: (row: ReportRow) => ({
     title: "[slow-op] Slow operations detected",
