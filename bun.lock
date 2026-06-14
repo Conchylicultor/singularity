@@ -708,6 +708,14 @@
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file",
       "version": "0.0.1",
     },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-additional-context": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context",
+      "version": "0.0.1",
+    },
+    "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-success": {
+      "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success",
+      "version": "0.0.1",
+    },
     "plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory": {
       "name": "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory",
       "version": "0.0.1",
@@ -3398,6 +3406,10 @@
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-deferred-tools-delta@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/deferred-tools-delta"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-edited-text-file@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/edited-text-file"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-additional-context@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-additional-context"],
+
+    "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-hook-success@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/hook-success"],
 
     "@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory": ["@singularity/plugin-conversations-conversation-view-jsonl-viewer-attachment-nested-memory@workspace:plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/plugins/nested-memory"],
 
