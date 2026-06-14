@@ -3,7 +3,7 @@ import { MdClose, MdRemove, MdCropSquare, MdFilterNone } from "react-icons/md";
 import { TabSurface, Apps, type Tab } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { useWindowGeometry } from "../hooks/use-window-geometry";
+import { useWindowGeometry, clampToBounds, type Bounds } from "../hooks/use-window-geometry";
 import { WindowResizeHandles } from "./window-resize-handles";
 
 interface WindowFrameProps {
@@ -34,12 +34,22 @@ export function WindowFrame({ tab, focused, title, onFocus, onClose }: WindowFra
       e.preventDefault();
       let lastX = e.clientX;
       let lastY = e.clientY;
+      // The window frame is a direct child of the desktop backdrop; its inner box
+      // is the drag bound. Captured at pointer-down since it's stable for the drag.
+      const backdrop = e.currentTarget.parentElement?.parentElement ?? null;
+      const bounds: Bounds | null = backdrop
+        ? { width: backdrop.clientWidth, height: backdrop.clientHeight }
+        : null;
       const onMove = (ev: PointerEvent) => {
         const dx = ev.clientX - lastX;
         const dy = ev.clientY - lastY;
         lastX = ev.clientX;
         lastY = ev.clientY;
-        if (dx !== 0 || dy !== 0) setGeo((g) => ({ ...g, x: g.x + dx, y: g.y + dy }));
+        if (dx !== 0 || dy !== 0)
+          setGeo((g) => {
+            const moved = { ...g, x: g.x + dx, y: g.y + dy };
+            return bounds ? clampToBounds(moved, bounds) : moved;
+          });
       };
       const onUp = () => {
         window.removeEventListener("pointermove", onMove);

@@ -19,6 +19,26 @@ export interface Geometry {
 export const MIN_W = 320;
 export const MIN_H = 200;
 
+/** The desktop backdrop's inner box a window is clamped within. */
+export interface Bounds {
+  width: number;
+  height: number;
+}
+
+/**
+ * Pin a window's origin so the whole box stays inside the backdrop: `x` in
+ * `[0, width - w]`, `y` in `[0, height - h]`. A window larger than the backdrop
+ * clamps flush to the top-left (`max(0, …)` keeps the upper bound non-negative).
+ * Returns `g` unchanged when already in bounds so `setGeo`'s identity guard can
+ * skip the notify.
+ */
+export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
+  const x = Math.min(Math.max(0, g.x), Math.max(0, bounds.width - g.w));
+  const y = Math.min(Math.max(0, g.y), Math.max(0, bounds.height - g.h));
+  if (x === g.x && y === g.y) return g;
+  return { ...g, x, y };
+}
+
 // Per-window geometry, mirroring `use-column-widths.ts`: a module-global Map
 // keyed by tabId + a subscriber Set fed into `useSyncExternalStore`, so every
 // `WindowFrame` reading the same tabId stays in sync and survives remounts.
