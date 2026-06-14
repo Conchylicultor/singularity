@@ -32,12 +32,13 @@ const CHIP_GAP_PX = 2;
  * pane/route (falling back to the app name) — with an active highlight on the
  * focused tab; clicking focuses it. Hovering a tab reveals a trailing `×`.
  *
- * Overflow: when full-label chips don't all fit, inactive tabs collapse to
- * icon-only (the focused tab keeps its label) so the strip stays within the bar.
- * A hidden measure strip (via {@link useResponsiveOverflow}) reports how many
- * full chips fit; `collapsed` flips when not all do — measured independently of
- * the rendered state, so there's no expand/collapse flip-flop. The `+` button is
- * a non-scrolling sibling of the strip so it's always reachable.
+ * Overflow: tabs collapse to icon-only one at a time, only as the bar runs out
+ * of space — the chips that fit keep their labels; the overflowing ones (from
+ * the right) drop to icons (the focused tab always keeps its label). A hidden
+ * measure strip (via {@link useResponsiveOverflow}) reports how many full chips
+ * fit; chips past that count collapse — measured independently of the rendered
+ * state, so there's no expand/collapse flip-flop. The `+` button is a
+ * non-scrolling sibling of the strip so it's always reachable.
  */
 export function AppTabBar() {
   const {
@@ -56,7 +57,6 @@ export function AppTabBar() {
     count: tabs.length,
     gap: CHIP_GAP_PX,
   });
-  const collapsed = visibleCount < tabs.length;
 
   const resolved = tabs.flatMap((tab) => {
     const app = apps.find((a) => a.id === tab.appId);
@@ -89,7 +89,7 @@ export function AppTabBar() {
           orientation="horizontal"
           disabled={tabs.length < 2}
         >
-          {resolved.map(({ tab, app, label }) => {
+          {resolved.map(({ tab, app, label }, i) => {
             const active = tab.tabId === focusedTabId;
             return (
               // Whole-chip drag: the sortable-list PointerSensor's 4px activation
@@ -105,9 +105,10 @@ export function AppTabBar() {
                     icon={app.icon}
                     label={label}
                     active={active}
-                    // Focused tab always keeps its label; inactive tabs go
-                    // icon-only once the strip is crowded.
-                    collapsed={collapsed && !active}
+                    // Focused tab always keeps its label; other tabs go
+                    // icon-only only once they overflow the bar (those past the
+                    // count that fits at full width).
+                    collapsed={i >= visibleCount && !active}
                     onActivate={() => focusTab(tab.tabId)}
                     onClose={() => closeTab(tab.tabId)}
                   />
