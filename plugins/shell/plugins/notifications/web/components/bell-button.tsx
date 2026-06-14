@@ -154,9 +154,16 @@ export function BellButton() {
   }
 
   const list = notificationsResult.data;
-  const unreadCount = list.filter(
+  const unread = list.filter(
     (n) => !n.read && !n.muted && (n.variant === "error" || n.variant === "warning"),
-  ).length;
+  );
+  const unreadCount = unread.length;
+  // Match the badge color to the most severe unread item: red only when a crash
+  // (error) is present, otherwise orange for warning-only noise (e.g. slow ops).
+  const hasUnreadError = unread.some((n) => n.variant === "error");
+  const badgeColor = hasUnreadError
+    ? "bg-destructive text-destructive-foreground"
+    : "bg-warning text-warning-foreground";
 
   const uniqueTypes = Array.from(new Set(list.map((n) => n.type))).filter(Boolean);
   const hasErrors = list.some((n) => n.variant === "error");
@@ -204,7 +211,7 @@ export function BellButton() {
             className={unreadCount > 0 ? undefined : "text-muted-foreground"}
           />
           {unreadCount > 0 && (
-            <span className="absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full bg-destructive text-destructive-foreground text-3xs font-bold tabular-nums pointer-events-none">
+            <span className={`absolute -top-0.5 -right-0.5 flex items-center justify-center size-4 rounded-full ${badgeColor} text-3xs font-bold tabular-nums pointer-events-none`}>
               {unreadCount > 9 ? "9+" : unreadCount}
             </span>
           )}
@@ -254,7 +261,7 @@ export function BellButton() {
           <div className="max-h-96 overflow-y-auto">
             {unreadFiltered.length > 0 && (
               <>
-                <div className="px-md py-xs text-3xs font-semibold uppercase tracking-wider text-destructive bg-destructive/5 border-b">
+                <div className={`px-md py-xs text-3xs font-semibold uppercase tracking-wider border-b ${hasUnreadError ? "text-destructive bg-destructive/5" : "text-warning bg-warning/5"}`}>
                   Unread ({unreadFiltered.length})
                 </div>
                 <ul>
