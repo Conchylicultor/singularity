@@ -13,6 +13,7 @@ import {
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import {
+  blackKeyColor,
   useHiddenTrackIds,
   useMutedTrackIds,
   useTrackColorMap,
@@ -130,6 +131,9 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
       low={low}
       high={high}
       lit={sounding}
+      // A lit black key shows the same darker accidental shade as the falling
+      // note that lands on it — the exact `blackKeyColor` the piano-roll uses.
+      accidentalColor={blackKeyColor}
       className="absolute inset-0 rounded-none bg-muted/30"
       renderKey={(k, lit) => {
         const text = keyLabel(k, speller, scope);

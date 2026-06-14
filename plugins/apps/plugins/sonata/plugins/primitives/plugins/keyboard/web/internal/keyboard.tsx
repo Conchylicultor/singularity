@@ -107,7 +107,6 @@ const FLAT_WHITE_BG = "#fafafa";
 const FLAT_WHITE_BORDER = "#52525b"; // inter-key separators (dark, strong)
 const FLAT_WHITE_LIP = "#3f3f46"; // front bottom lip — slightly darker
 const FLAT_BLACK_BG = "#1a1a1a";
-const FLAT_BLACK_FACE_REST = "#0d0d0d";
 
 /**
  * Flat white-key borders, drawn with inset box-shadows so they never shift
@@ -178,38 +177,25 @@ function blackKeyStyle(
 
 /**
  * The black key's vertical front face — the surface facing the player at the
- * key's bottom (near) end. Absolutely positioned so it never displaces
- * `renderKey` children, and at `z-index: -1` so it paints above the key's own
- * cap background but BEHIND the in-flow label (the `z-raised` black key is a
- * stacking context, so -1 stays inside the key). Realistic shortens the face on
- * press (14% → 8%) for the forward-tilt read; flat keeps a fixed solid band
- * (darker than the cap as the front edge), tinted to the note color when lit.
+ * key's bottom (near) end. REALISTIC ONLY: it's a skeuomorphic depth cue (a
+ * lighter lip that shortens 14% → 8% on press for the forward-tilt read). The
+ * flat / Synthesia style draws each black key as a single uniform solid block
+ * (see the `style === "realistic"` guard on the render site), so it gets no
+ * face — a darker foot band would read as an artifact against the flat fill.
+ * Absolutely positioned so it never displaces `renderKey` children, and at
+ * `z-index: -1` so it paints above the key's own cap background but BEHIND the
+ * in-flow label (the `z-raised` black key is a stacking context, so -1 stays
+ * inside the key).
  */
-const BLACK_FACE = (
-  litColor: string | undefined,
-  style: KeyStyle,
-): CSSProperties => {
-  if (style === "flat") {
-    return {
-      height: "12%",
-      zIndex: -1,
-      background:
-        litColor === undefined
-          ? FLAT_BLACK_FACE_REST
-          : `color-mix(in srgb, ${litColor} 65%, #000)`,
-      transition: "background 80ms ease-out",
-    };
-  }
-  return {
-    height: litColor === undefined ? "14%" : "8%",
-    zIndex: -1,
-    background:
-      litColor === undefined
-        ? "linear-gradient(to bottom, #2e2e2e, #000000)"
-        : `linear-gradient(to bottom, color-mix(in srgb, ${litColor} 48%, #060606), color-mix(in srgb, ${litColor} 28%, #000000))`,
-    transition: "height 80ms ease-out, background 80ms ease-out",
-  };
-};
+const BLACK_FACE = (litColor: string | undefined): CSSProperties => ({
+  height: litColor === undefined ? "14%" : "8%",
+  zIndex: -1,
+  background:
+    litColor === undefined
+      ? "linear-gradient(to bottom, #2e2e2e, #000000)"
+      : `linear-gradient(to bottom, color-mix(in srgb, ${litColor} 48%, #060606), color-mix(in srgb, ${litColor} 28%, #000000))`,
+  transition: "height 80ms ease-out, background 80ms ease-out",
+});
 
 /**
  * Which keys are highlighted and how:
@@ -232,6 +218,17 @@ export interface KeyboardProps {
    * owns all content styling.
    */
   renderKey?: (key: KeyLane, lit: boolean) => ReactNode;
+  /**
+   * Derives the color a lit BLACK key shows from its base lit color — Synthesia
+   * draws accidentals a shade darker than naturals, so a lit black key is darker
+   * than a lit white key of the same track. Injected (rather than imported) to
+   * keep this primitive dependency-free: the caller owns the actual palette
+   * relationship (the same `blackKeyColor` the falling notes use), so the key and
+   * the note that lands on it stay in lockstep. Applied only in the `flat` style;
+   * `realistic` derives its own darkness from the gradient over near-black, so it
+   * takes the base color to avoid compounding. Defaults to identity.
+   */
+  accidentalColor?: (base: string) => string;
   className?: string;
 }
 
@@ -245,7 +242,14 @@ export interface KeyboardProps {
  * own config so the choice applies everywhere a keyboard renders. Height is set
  * by the caller via `className` (e.g. `h-16`); keys fill it.
  */
-export function Keyboard({ low, high, lit, renderKey, className }: KeyboardProps) {
+export function Keyboard({
+  low,
+  high,
+  lit,
+  renderKey,
+  accidentalColor = (c) => c,
+  className,
+}: KeyboardProps) {
   const { keyStyle } = useConfig(keyboardStyleConfig);
   const style = keyStyle as KeyStyle;
   const lanes = useMemo(() => keyLayout(low, high), [low, high]);
@@ -270,6 +274,13 @@ export function Keyboard({ low, high, lit, renderKey, className }: KeyboardProps
     // One inline-style path for both highlight forms: the accent is just an
     // explicit color of `var(--primary)`.
     const litColor = raw === undefined ? undefined : raw || "var(--primary)";
+    // A lit black key takes the darker accidental shade in the flat style (where
+    // the key IS the fill color); realistic builds its own darkness from the
+    // gradient over near-black, so it keeps the base color (see `accidentalColor`).
+    const blackLit =
+      litColor !== undefined && style === "flat"
+        ? accidentalColor(litColor)
+        : litColor;
     return (
       <div
         key={k.pitch}
@@ -282,15 +293,15 @@ export function Keyboard({ low, high, lit, renderKey, className }: KeyboardProps
           width: `${k.width * 100}%`,
           ...KEY_BOTTOM_RADIUS,
           ...(k.isBlack
-            ? blackKeyStyle(litColor, style)
+            ? blackKeyStyle(blackLit, style)
             : whiteKeyStyle(litColor, style, k.pitch === firstWhitePitch)),
         }}
       >
-        {k.isBlack && (
+        {k.isBlack && style === "realistic" && (
           <div
             aria-hidden
             className="pointer-events-none absolute inset-x-0 bottom-0"
-            style={{ ...BLACK_FACE(litColor, style), ...KEY_BOTTOM_RADIUS }}
+            style={{ ...BLACK_FACE(litColor), ...KEY_BOTTOM_RADIUS }}
           />
         )}
         {renderKey?.(k, isLit)}
