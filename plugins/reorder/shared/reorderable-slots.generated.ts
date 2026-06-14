@@ -2,7 +2,7 @@
 // (see plugins/framework/plugins/tooling/plugins/codegen/core/reorderable-slots-gen.ts).
 //
 // The list of reorderable render slots (those whose `.Render` applies the
-// reorder middleware, i.e. `defineRenderSlot` without `reorder: false`). Each
+// reorder middleware, i.e. every `defineRenderSlot`; mount slots are excluded). Each
 // entry's `pluginId` is the *defining* plugin's id (its tree path), so reorder
 // registers the slot's config_v2 directive under `config/<pluginId>/`.
 //
@@ -25,7 +25,9 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "conversation-item.chips", pluginId: "conversations.conversation-ui.item" },
   { slotId: "conversation.above-prompt-input", pluginId: "conversations.conversation-view" },
   { slotId: "conversation.action-bar", pluginId: "conversations.conversation-view.action-bar" },
+  { slotId: "conversation.exit-menu.item", pluginId: "conversations.conversation-view.exit-menu" },
   { slotId: "conversation.header", pluginId: "conversations.conversation-view.header" },
+  { slotId: "conversation.jsonl-viewer.overlay", pluginId: "conversations.conversation-view.jsonl-viewer" },
   { slotId: "conversation.jsonl-viewer.row-action", pluginId: "conversations.conversation-view.jsonl-viewer" },
   { slotId: "conversation.prompt-bar", pluginId: "conversations.conversation-view" },
   { slotId: "conversation.prompt-input", pluginId: "conversations.conversation-view" },
@@ -35,6 +37,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "file-explorer.sidebar", pluginId: "apps.file-explorer.shell" },
   { slotId: "file-explorer.toolbar", pluginId: "apps.file-explorer.shell" },
   { slotId: "home.section", pluginId: "apps.home.shell" },
+  { slotId: "page.editor.turn-into", pluginId: "page.editor" },
   { slotId: "pages.detail.section", pluginId: "apps.pages.page-tree" },
   { slotId: "pages.sidebar", pluginId: "apps.pages.shell" },
   { slotId: "pages.toolbar", pluginId: "apps.pages.shell" },
@@ -48,9 +51,13 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "settings.sidebar", pluginId: "apps.settings.shell" },
   { slotId: "shell.sidebar", pluginId: "shell" },
   { slotId: "shell.toolbar", pluginId: "shell" },
+  { slotId: "sonata.home", pluginId: "apps.sonata.shell" },
+  { slotId: "sonata.hud", pluginId: "apps.sonata.shell" },
+  { slotId: "sonata.library.card-meta", pluginId: "apps.sonata.library" },
   { slotId: "sonata.section", pluginId: "apps.sonata.shell" },
   { slotId: "sonata.toolbar.end", pluginId: "apps.sonata.shell" },
   { slotId: "sonata.toolbar.start", pluginId: "apps.sonata.shell" },
+  { slotId: "sonata.transport", pluginId: "apps.sonata.shell" },
   { slotId: "stats.chart", pluginId: "stats" },
   { slotId: "story.toolbar.end", pluginId: "apps.story.shell" },
   { slotId: "story.toolbar.start", pluginId: "apps.story.shell" },
@@ -64,6 +71,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "tasks.task-actions", pluginId: "tasks.task-list" },
   { slotId: "text-editor.plugin", pluginId: "primitives.text-editor" },
   { slotId: "theme-customizer.section", pluginId: "ui.theme-engine.theme-customizer" },
+  { slotId: "ui.theme-engine.variant-group", pluginId: "ui.theme-engine" },
   { slotId: "workflows-app.sidebar", pluginId: "apps.workflows.shell" },
   { slotId: "workflows-app.toolbar", pluginId: "apps.workflows.shell" },
 ];
