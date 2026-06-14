@@ -15,6 +15,7 @@ Sub-plugins:
 - Description: Plugins about the plugin system itself — browsing, inspecting, and publishing.
 - Sub-plugins:
   - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
+  - **`closure`**
   - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
   - **`parse-utils`**
   - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.

@@ -23,6 +23,8 @@ existing web slot. The diff projection (`crossRefsToComparable`, the deduped
 - Core:
   - Uses: `framework/plugin-id.asPath`, `framework/plugin-id.RUNTIME_FOLDERS`, `plugin-meta/facets.defineFacet`
   - Exports: Types: `ApiUse`, `CrossRefsData`, `RawUse`; Values: `crossRefsFacetDef`, `crossRefsToComparable`
+- Cross-plugin:
+  - Imported by: `plugin-meta/closure`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin cross-refs section in the plugin detail pane.

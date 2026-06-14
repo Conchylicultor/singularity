@@ -2097,7 +2097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`cli`**
     - **`plugin-id`** — Canonical plugin identity: the branded PluginId type and its derived path encodings.
       - Cross-plugin:
-        - Imported by: `framework/tooling/codegen`, `framework/web-sdk`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/exports`, `plugin-meta/plugin-tree`
+        - Imported by: `framework/tooling/codegen`, `framework/web-sdk`, `plugin-meta/closure`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/exports`, `plugin-meta/plugin-tree`
       - Core:
         - Exports: Types: `PluginId`, `RuntimeFolder`; Values: `asFsPath`, `asPath`, `asPluginId`, `pluginIdSegments`, `RUNTIME_FOLDERS`
     - **`resource-runtime`**
@@ -2536,12 +2536,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/tooling/codegen`, `plugin-meta/plugin-tree`
       - Core:
         - Exports: Types: `AutoStubEntry`; Values: `AUTO_STUB_CSS`, `AUTO_STUB_PACKAGES`, `importBarrel`, `registerBarrelStubs`
+    - **`closure`**
+      - Core:
+        - Uses: `framework/plugin-id.asPluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginTree`
+        - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`; Values: `classifyEdges`, `explainInclusion`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`
         - Exports: Types: `DocFact`, `ExtractContext`, `Facet`, `FacetDef`, `RenderDocContext`; Values: `createFacet`, `defineFacet`, `facetCollectedDir`, `getFacet`, `loadFacets`, `setFacet`
       - Cross-plugin:
-        - Imported by: `framework/tooling/codegen`, `plugin-meta/facets/commands`, `plugin-meta/facets/contributions`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/db-schema`, `plugin-meta/facets/exports`, `plugin-meta/facets/registrations`, `plugin-meta/facets/resources`, `plugin-meta/facets/routes`, `plugin-meta/facets/slots`, `plugin-meta/facets/structure`, `plugin-meta/plugin-tree`
+        - Imported by: `framework/tooling/codegen`, `plugin-meta/closure`, `plugin-meta/facets/commands`, `plugin-meta/facets/contributions`, `plugin-meta/facets/cross-refs`, `plugin-meta/facets/db-schema`, `plugin-meta/facets/exports`, `plugin-meta/facets/registrations`, `plugin-meta/facets/resources`, `plugin-meta/facets/routes`, `plugin-meta/facets/slots`, `plugin-meta/facets/structure`, `plugin-meta/plugin-tree`
       - Plugins:
         - **`commands`**
           - Core:
@@ -2565,7 +2569,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `plugin-meta/facets.defineFacet`
             - Exports: Types: `Contribution`, `ContributionsFacetData`, `DocMetaContribution`; Values: `contributionId`, `contributionsFacetDef`, `contributionsToComparable`
           - Cross-plugin:
-            - Imported by: `framework/tooling/codegen`
+            - Imported by: `framework/tooling/codegen`, `plugin-meta/closure`
           - Plugins:
             - **`render-contributions`** — Aggregated cross-plugin contributions table in the Studio Contributions view.
               - Web:
@@ -2583,6 +2587,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `framework/plugin-id.asPath`, `framework/plugin-id.RUNTIME_FOLDERS`, `plugin-meta/facets.defineFacet`
             - Exports: Types: `ApiUse`, `CrossRefsData`, `RawUse`; Values: `crossRefsFacetDef`, `crossRefsToComparable`
+          - Cross-plugin:
+            - Imported by: `plugin-meta/closure`
           - Plugins:
             - **`render-contributions`** — Aggregated cross-plugin cross-refs table in the Studio Contributions view.
               - Web:
@@ -2686,7 +2692,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `plugin-meta/facets.defineFacet`
             - Exports: Types: `SlotDef`; Values: `slotsFacetDef`, `slotsToComparable`
           - Cross-plugin:
-            - Imported by: `framework/tooling/codegen`
+            - Imported by: `framework/tooling/codegen`, `plugin-meta/closure`
           - Plugins:
             - **`render-contributions`** — Aggregated cross-plugin slots table in the Studio Contributions view.
               - Web:
@@ -2742,7 +2748,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.readIfExists`, `plugin-meta/parse-utils.stripTypes`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `resolvePluginSpecifier`, `stripTypes`, `walkFiles`
       - Cross-plugin:
-        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`
+        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Slots: `PluginViewSlots.Section`, `pluginViewPane.Actions`
