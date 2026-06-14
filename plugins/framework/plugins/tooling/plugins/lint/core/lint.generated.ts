@@ -31,6 +31,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/radius", id: "primitives.radius", loader: () => import("@plugins/primitives/plugins/radius/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/row", id: "primitives.row", loader: () => import("@plugins/primitives/plugins/row/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/scoped-store", id: "primitives.scoped-store", loader: () => import("@plugins/primitives/plugins/scoped-store/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/spacing", id: "primitives.spacing", loader: () => import("@plugins/primitives/plugins/spacing/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/surface", id: "primitives.surface", loader: () => import("@plugins/primitives/plugins/surface/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/text", id: "primitives.text", loader: () => import("@plugins/primitives/plugins/text/lint"), dependsOn: [] },

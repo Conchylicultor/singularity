@@ -3,7 +3,7 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
 /**
  * no-module-mutable-store
  *
- * Bans the hand-rolled module-level mutable external store inside app surfaces:
+ * Bans the hand-rolled module-level mutable external store ANYWHERE in the repo:
  * a module-scope `let`/`var` holding the store's value, a sibling listener `Set`,
  * and a `useSyncExternalStore` whose snapshot reads that `let`/`var` back.
  *
@@ -13,11 +13,11 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  *   useSyncExternalStore(subscribe, getSnapshot);
  *
  * A module-level binding is PROCESS-GLOBAL, so a single value is SHARED across
- * every surface instance. App surfaces now mount multiple times at once (desktop
+ * every surface instance. Surfaces now mount multiple times at once (desktop
  * multi-window, keep-alive tabs), so such a store tears — playback, cursors, view
- * state bleed between windows. Sonata's four such stores were migrated to the
- * per-surface `scoped-store` primitive; this rule keeps the anti-pattern from
- * recurring.
+ * state bleed between windows. This rule is the sanctioned home of the
+ * `scoped-store` primitive (the per-surface replacement), so it lives here and
+ * runs repo-wide — not just inside app surface trees.
  *
  * DETECTION — deliberately narrow (a false positive breaks the build, since
  * plugin rules run as `error`; a false negative merely misses an evasive case):
@@ -36,10 +36,17 @@ import { ESLintUtils, type TSESTree } from "@typescript-eslint/utils";
  * never returned as the snapshot, so they are correctly NOT flagged. A bare
  * module `let` with no `useSyncExternalStore` is likewise out of scope.
  *
- * Escape hatch — a genuinely process-global store (one value for the whole app,
- * by design) disables this per-site with a reason:
+ * KNOWN LIMITATION: the rule cannot catch the *keyed-`const`-Map by a
+ * non-surface-unique key* variant — a `const Map` keyed by, say, a `paneId`
+ * string that is identical across surfaces still bleeds, but is statically
+ * indistinguishable from a `Map` correctly keyed by a surface id. Those cases
+ * are caught in review, not here.
  *
- *   // eslint-disable-next-line apps/no-module-mutable-store -- <reason>
+ * Escape hatch — a genuinely process-global store (one value for the whole page,
+ * by design: a focused-surface signal, a server boot fact, a cross-surface
+ * registry) disables this per-site with a reason:
+ *
+ *   // eslint-disable-next-line scoped-store/no-module-mutable-store -- <reason>
  */
 
 const createRule = ESLintUtils.RuleCreator(
@@ -99,26 +106,23 @@ export default createRule({
     docs: {
       description:
         "Disallow a module-level mutable store (a module-scope `let`/`var` read " +
-        "by a `useSyncExternalStore` snapshot) in an app surface — it is shared " +
-        "across all surface instances. Use defineScopedStore for per-surface state.",
+        "by a `useSyncExternalStore` snapshot) — it is shared across all surface " +
+        "instances. Use defineScopedStore for per-surface state.",
     },
     schema: [],
     messages: {
       moduleMutableStore:
         "Module-level mutable store (`let`/`var` `{{name}}` read by a " +
-        "`useSyncExternalStore` snapshot) in an app surface is shared across ALL " +
-        "surface instances — desktop / keep-alive mounts the app multiple times, " +
-        "so state bleeds between windows. Use defineScopedStore " +
+        "`useSyncExternalStore` snapshot) is shared across ALL mounted surfaces — " +
+        "desktop / keep-alive mounts surfaces multiple times at once, so state " +
+        "bleeds between windows. Use defineScopedStore " +
         "(@plugins/primitives/plugins/scoped-store/web) so state is per-surface. " +
-        "For a genuinely process-global store, disable this rule on the line with " +
-        "a reason.",
+        "For a genuinely page-global store, disable this rule on the line with " +
+        "a reason (`-- <why this is intentionally global>`).",
     },
   },
   defaultOptions: [],
   create(context) {
-    // Contributed rule, runs repo-wide; restrict to app sub-plugin files.
-    if (!context.filename.includes("/plugins/apps/plugins/")) return {};
-
     /**
      * Resolve a same-file binding name to the node whose body reads the store
      * value: a `function getSnapshot() { return state; }` declaration, or a

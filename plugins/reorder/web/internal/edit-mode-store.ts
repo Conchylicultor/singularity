@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a single chrome pen button (Shell.Toolbar / floating bar) toggles ONE edit mode for every reorderable slot across all mounted surfaces. There is no per-surface toggle, so this is intentionally global state.
 let editMode = false;
 const listeners = new Set<() => void>();
 

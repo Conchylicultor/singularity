@@ -4,7 +4,12 @@ import { ShortcutManager } from "./internal/shortcut-manager";
 export { Shortcuts } from "./slots";
 export { defineShortcut } from "./internal/define-shortcut";
 export { useSurfaceShortcuts } from "./internal/use-surface-shortcut";
-export { setFocusedSurfaceId, getFocusedSurfaceId } from "./internal/focused-surface";
+export {
+  setFocusedSurfaceId,
+  getFocusedSurfaceId,
+  useFocusedSurfaceId,
+  subscribeFocusedSurface,
+} from "./internal/focused-surface";
 export { formatShortcutLabel } from "./internal/format-keys";
 export { isEditableTarget } from "./internal/editable-target";
 export type { ShortcutDescriptor } from "./internal/types";

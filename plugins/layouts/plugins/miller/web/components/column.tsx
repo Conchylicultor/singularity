@@ -4,6 +4,7 @@ import {
   PaneResolveGuard,
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
 import { useClearMaximize, useColumnMaximize, useMaximizedId } from "../hooks/use-column-maximize";
 import { hasStoredWidth, useColumnWidth } from "../hooks/use-column-widths";
@@ -23,6 +24,7 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
   const [isMaximized, toggleMaximize] = useColumnMaximize(entry.uuid);
   const maximizedId = useMaximizedId();
   const clearMaximize = useClearMaximize();
+  const tabId = useSurfaceTabId();
   const [width, setWidth] = useColumnWidth(
     entry.pane.id,
     entry.pane.width ?? DEFAULT_WIDTH,
@@ -45,12 +47,12 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
   const paneId = entry.pane.id;
 
   useLayoutEffect(() => {
-    if (!isLast && capturedWidthRef.current > 0 && !hasStoredWidth(paneId)) {
+    if (!isLast && capturedWidthRef.current > 0 && !hasStoredWidth(tabId, paneId)) {
       // First time a column opens to our right and the user hasn't set a custom
       // width: split the space 50/50 so both columns start roughly equal.
       setWidthRef.current(Math.round(capturedWidthRef.current / 2));
     }
-  }, [isLast, paneId]);
+  }, [isLast, paneId, tabId]);
 
   // Some other column in THIS surface is maximized → collapse this one
   // (overrides isLast guard).

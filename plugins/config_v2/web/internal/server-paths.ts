@@ -6,6 +6,7 @@ import { useSyncExternalStore } from "react";
 // of throwing false positives. Once set, useConfig asserts membership: a
 // descriptor registered on web but missing here is a half-registration that
 // would otherwise silently read back defaults.
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a server boot fact (which descriptors the server registered), identical for every mounted surface — not per-surface state.
 let knownServerPaths: Set<string> | null = null;
 const listeners = new Set<() => void>();
 

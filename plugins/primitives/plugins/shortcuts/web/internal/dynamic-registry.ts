@@ -11,6 +11,7 @@ const listeners = new Set<() => void>();
 
 // Memoized snapshot so useSyncExternalStore's getSnapshot stays referentially
 // stable between notifications (re-derived only when a registration changes).
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a registry of ALL surfaces' dynamic shortcuts; each registration carries its own surfaceId and is gated per-surface at dispatch. Not per-surface state.
 let snapshot: ShortcutDescriptor[] = [];
 
 function recompute(): void {

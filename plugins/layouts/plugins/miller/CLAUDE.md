@@ -96,17 +96,21 @@ Pane.define({
 `Pane.define`, separate from chrome so `chrome: false` panes can still
 set it). Defaults to 400. The leaf column ignores its own width and
 flex-grows to fill remaining space. Users can drag the divider between
-columns to resize at runtime; widths persist within the SPA session
-(reset on full reload).
+columns to resize at runtime. Width state is **per-surface** (keyed by the
+column's `PaneStore` via a `WeakMap`), so two mounted surfaces (desktop
+multi-window / keep-alive tabs) resize independently; persistence is keyed by
+`(tabId, paneId)` in `localStorage`, so a tab keeps its widths across reload
+without bleeding across surfaces.
 
 ## Collapse
 
 Each non-leaf column has a chevron button on its right edge (the resize
 handle) that collapses it to a 32px-wide vertical bar with the pane
-title rotated 90°. Click the bar to expand. Collapse state is keyed by
-`paneId` and persisted to sessionStorage (`miller.collapse.${paneId}`),
-so it survives navigation within a tab session and resets on full
-reload.
+title rotated 90°. Click the bar to expand. Collapse state is **per-surface**
+(keyed by the column's `PaneStore` via a `WeakMap`), so collapsing a column in
+one mounted surface never collapses it in another; it is persisted to
+sessionStorage keyed by `(tabId, paneId)` (`miller.collapse.${tabId}.${paneId}`),
+so it survives navigation within a tab session and resets on full reload.
 
 When a column is collapsed, its component subtree is unmounted. Panes
 that need to stay alive across collapse (e.g. terminal sessions) are
@@ -119,7 +123,7 @@ not yet supported — see the open question in
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/surface-id.useSurfaceTabId`
   - Exports: Values: `MillerColumns`, `PaneOverlayHost`
 - Cross-plugin:
   - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/studio/shell`, `apps/workflows/shell`, `layouts/host`
