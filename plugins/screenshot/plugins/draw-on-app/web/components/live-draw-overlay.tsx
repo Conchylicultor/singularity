@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { MdClear, MdUndo } from "react-icons/md";
 import { DrawCanvas, type Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { ViewportOverlay } from "@plugins/primitives/plugins/viewport-overlay/web";
 
 const COLORS = ["#ef4444", "#f59e0b", "#22c55e", "#3b82f6", "#a855f7", "#000000", "#ffffff"];
 
@@ -48,7 +49,7 @@ export function LiveDrawOverlay({
   const natural = { w: viewport.w, h: viewport.h };
 
   return (
-    <div className="fixed inset-0 z-draw">
+    <ViewportOverlay layer="draw">
       <DrawCanvas
         displayed={displayed}
         natural={natural}
@@ -134,6 +135,6 @@ export function LiveDrawOverlay({
           </div>
         </>
       )}
-    </div>
+    </ViewportOverlay>
   );
 }

@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { MdAdsClick } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { UiContextMeta } from "../../core";
@@ -29,17 +28,15 @@ export function PickerButton({
         disabled={active}
         onClick={() => setActive(true)}
       />
-      {active &&
-        createPortal(
-          <PickerOverlay
-            onPick={(el) => {
-              setActive(false);
-              onPick(collectMeta(el));
-            }}
-            onCancel={() => setActive(false)}
-          />,
-          document.body,
-        )}
+      {active && (
+        <PickerOverlay
+          onPick={(el) => {
+            setActive(false);
+            onPick(collectMeta(el));
+          }}
+          onCancel={() => setActive(false)}
+        />
+      )}
     </>
   );
 }

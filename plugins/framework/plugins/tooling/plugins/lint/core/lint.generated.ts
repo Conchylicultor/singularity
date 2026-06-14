@@ -35,6 +35,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/spacing", id: "primitives.spacing", loader: () => import("@plugins/primitives/plugins/spacing/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/surface", id: "primitives.surface", loader: () => import("@plugins/primitives/plugins/surface/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/text", id: "primitives.text", loader: () => import("@plugins/primitives/plugins/text/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/viewport-overlay", id: "primitives.viewport-overlay", loader: () => import("@plugins/primitives/plugins/viewport-overlay/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/z-layers", id: "primitives.z-layers", loader: () => import("@plugins/primitives/plugins/z-layers/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/lint"), dependsOn: [] },
 ];

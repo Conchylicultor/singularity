@@ -2199,6 +2199,10 @@
         "tailwindcss": "^4.1.4",
       },
     },
+    "plugins/primitives/plugins/viewport-overlay": {
+      "name": "@singularity/plugin-primitives-viewport-overlay",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/z-layers": {
       "name": "@singularity/plugin-primitives-z-layers",
       "version": "0.0.1",
@@ -4094,6 +4098,8 @@
     "@singularity/plugin-primitives-truncating-text": ["@singularity/plugin-primitives-truncating-text@workspace:plugins/primitives/plugins/truncating-text"],
 
     "@singularity/plugin-primitives-ui-kit": ["@singularity/plugin-primitives-ui-kit@workspace:plugins/primitives/plugins/ui-kit"],
+
+    "@singularity/plugin-primitives-viewport-overlay": ["@singularity/plugin-primitives-viewport-overlay@workspace:plugins/primitives/plugins/viewport-overlay"],
 
     "@singularity/plugin-primitives-z-layers": ["@singularity/plugin-primitives-z-layers@workspace:plugins/primitives/plugins/z-layers"],
 

@@ -11,6 +11,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ViewportOverlay } from "@plugins/primitives/plugins/viewport-overlay/web";
 
 type Tab = "jobs" | "events" | "triggers";
 
@@ -197,8 +198,9 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
 
 function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
   return (
-    <div
-      className="fixed inset-0 z-popover flex justify-end bg-black/30"
+    <ViewportOverlay
+      layer="popover"
+      className="flex justify-end bg-black/30"
       onClick={onClose}
     >
       <div
@@ -244,7 +246,7 @@ function JobDrawer({ job, onClose }: { job: JobRow; onClose: () => void }) {
           )}
         </Text>
       </div>
-    </div>
+    </ViewportOverlay>
   );
 }
 
@@ -325,7 +327,7 @@ function EmissionDrawer({
   onClose: () => void;
 }) {
   return (
-    <div className="fixed inset-0 z-popover flex justify-end bg-black/30" onClick={onClose}>
+    <ViewportOverlay layer="popover" className="flex justify-end bg-black/30" onClick={onClose}>
       <div
         className="flex h-full w-[560px] flex-col overflow-hidden border-l bg-background"
         onClick={(e) => e.stopPropagation()}
@@ -365,7 +367,7 @@ function EmissionDrawer({
           </Field>
         </Text>
       </div>
-    </div>
+    </ViewportOverlay>
   );
 }
 

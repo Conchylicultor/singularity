@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
 import { Inset } from "@plugins/primitives/plugins/spacing/web";
+import { ViewportOverlay } from "@plugins/primitives/plugins/viewport-overlay/web";
 import { collectMarkerLineage } from "../internal/marker-lineage";
 
 interface Highlight {
@@ -84,10 +85,10 @@ export function PickerOverlay({
   return (
     // pointer-events:none so document.elementFromPoint returns the underlying
     // app element rather than this overlay.
-    <div
+    <ViewportOverlay
+      layer="max"
       data-element-picker
-      className="fixed inset-0 z-max"
-      style={{ pointerEvents: "none" }}
+      className="pointer-events-none"
     >
       {highlight && (
         <>
@@ -122,6 +123,6 @@ export function PickerOverlay({
       >
         Click an element to attach it as context · Esc to cancel
       </Inset>
-    </div>
+    </ViewportOverlay>
   );
 }

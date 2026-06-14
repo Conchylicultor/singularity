@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { createPortal } from "react-dom";
 import { flushSync } from "react-dom";
 import { MdGesture } from "react-icons/md";
 import { captureApp } from "@plugins/screenshot/web";
@@ -73,22 +72,20 @@ export function DrawOnAppButton() {
         disabled={active}
         onClick={() => setActive(true)}
       />
-      {active &&
-        createPortal(
-          <LiveDrawOverlay
-            strokes={strokes}
-            onStrokesChange={setStrokes}
-            color={color}
-            onColorChange={setColor}
-            width={width}
-            onWidthChange={setWidth}
-            chromeVisible={chromeVisible}
-            busy={busy}
-            onDone={onDone}
-            onCancel={onCancel}
-          />,
-          document.body,
-        )}
+      {active && (
+        <LiveDrawOverlay
+          strokes={strokes}
+          onStrokesChange={setStrokes}
+          color={color}
+          onColorChange={setColor}
+          width={width}
+          onWidthChange={setWidth}
+          chromeVisible={chromeVisible}
+          busy={busy}
+          onDone={onDone}
+          onCancel={onCancel}
+        />
+      )}
     </>
   );
 }

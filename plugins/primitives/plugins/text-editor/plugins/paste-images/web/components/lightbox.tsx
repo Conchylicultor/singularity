@@ -1,6 +1,6 @@
 import { useEffect } from "react";
-import { createPortal } from "react-dom";
 import { MdClose } from "react-icons/md";
+import { ViewportOverlay } from "@plugins/primitives/plugins/viewport-overlay/web";
 import { attachmentUrl } from "../internal/markdown";
 
 export function Lightbox({
@@ -20,10 +20,11 @@ export function Lightbox({
     return () => window.removeEventListener("keydown", onKey);
   }, [onClose]);
 
-  return createPortal(
-    <div
+  return (
+    <ViewportOverlay
+      layer="popover"
       onClick={onClose}
-      className="fixed inset-0 z-popover flex items-center justify-center bg-black/70 p-lg backdrop-blur-sm"
+      className="flex items-center justify-center bg-black/70 p-lg backdrop-blur-sm"
       role="dialog"
       aria-modal="true"
     >
@@ -44,7 +45,6 @@ export function Lightbox({
         onClick={(e) => e.stopPropagation()}
         className="max-h-full max-w-full rounded-md shadow-2xl"
       />
-    </div>,
-    document.body,
+    </ViewportOverlay>
   );
 }
