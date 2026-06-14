@@ -1,0 +1,10 @@
+// @hash 7eb8639ef6a8
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  // Trailing zone (right, ml-auto): Author/renderer view switcher + split toggle.
+  "items": [
+    "apps.story.shell:view-switcher"
+  ]
+}

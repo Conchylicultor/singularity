@@ -1,0 +1,10 @@
+// @hash 95259da0024d
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.story.shell:back",
+    "apps.story.shell:title"
+  ]
+}
