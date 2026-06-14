@@ -44,6 +44,8 @@ export interface SlowSpan {
   parent: SpanRef | null;
 }
 
+export type SlowSpanHandler = (span: SlowSpan) => void;
+
 export interface Aggregate {
   label: string;
   count: number;
@@ -75,6 +77,33 @@ let contextRuntime: SpanContextRuntime = {
 
 export function installSpanContextRuntime(runtime: SpanContextRuntime): void {
   contextRuntime = runtime;
+}
+
+// --- Slow-span push seam ---
+
+// The push counterpart to the pull-only getRuntimeProfile(). Subscribers are
+// notified synchronously from record() for any span at/over their thresholdMs.
+const slowSpanSubs: { thresholdMs: number; handler: SlowSpanHandler }[] = [];
+
+/**
+ * Subscribe to spans whose duration meets `thresholdMs`. This is the push seam
+ * consumed by the `reports` plugin to file slow-op reports. The static
+ * `thresholdMs` is a coarse performance floor so the hot path never calls back
+ * for fast spans; consumers still do final per-kind gating in their handler.
+ * Returns a disposer that unsubscribes.
+ */
+export function onSlowSpan(
+  handler: SlowSpanHandler,
+  opts: { thresholdMs: number },
+): { dispose: () => void } {
+  const sub = { thresholdMs: opts.thresholdMs, handler };
+  slowSpanSubs.push(sub);
+  return {
+    dispose: () => {
+      const i = slowSpanSubs.indexOf(sub);
+      if (i >= 0) slowSpanSubs.splice(i, 1);
+    },
+  };
 }
 
 // --- Store ---
@@ -160,8 +189,9 @@ function record(
     }
   }
 
+  const atMs = performance.now();
   const ring = slowest[kind];
-  ring.push({ kind, label: cappedLabel, durationMs, atMs: performance.now(), parent });
+  ring.push({ kind, label: cappedLabel, durationMs, atMs, parent });
   if (ring.length > SLOWEST_CAP) {
     // Drop the single fastest entry to keep the slowest N.
     let minIdx = 0;
@@ -169,6 +199,17 @@ function record(
       if (ring[i]!.durationMs < ring[minIdx]!.durationMs) minIdx = i;
     }
     ring.splice(minIdx, 1);
+  }
+
+  // Push seam: notify subscribers past their floor. Only build the span when
+  // someone is listening to keep the hot path cheap. The handler is a
+  // non-throwing fire-and-forget scheduler, so we don't guard it — failing
+  // loudly is correct per repo policy.
+  if (slowSpanSubs.length > 0) {
+    const span: SlowSpan = { kind, label: cappedLabel, durationMs, atMs, parent };
+    for (const sub of slowSpanSubs) {
+      if (durationMs >= sub.thresholdMs) sub.handler(span);
+    }
   }
 }
 

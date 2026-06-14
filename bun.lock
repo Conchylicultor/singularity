@@ -2211,6 +2211,10 @@
       "name": "@singularity/plugin-reports-noise-rules",
       "version": "0.0.1",
     },
+    "plugins/reports/plugins/slow-ops": {
+      "name": "@singularity/plugin-reports-slow-ops",
+      "version": "0.0.1",
+    },
     "plugins/review": {
       "name": "@singularity/plugin-review",
       "version": "0.0.1",
@@ -4056,6 +4060,8 @@
     "@singularity/plugin-reports-mutation-errors": ["@singularity/plugin-reports-mutation-errors@workspace:plugins/reports/plugins/mutation-errors"],
 
     "@singularity/plugin-reports-noise-rules": ["@singularity/plugin-reports-noise-rules@workspace:plugins/reports/plugins/noise-rules"],
+
+    "@singularity/plugin-reports-slow-ops": ["@singularity/plugin-reports-slow-ops@workspace:plugins/reports/plugins/slow-ops"],
 
     "@singularity/plugin-review": ["@singularity/plugin-review@workspace:plugins/review"],
 

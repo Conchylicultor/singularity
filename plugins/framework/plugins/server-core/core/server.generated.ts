@@ -136,6 +136,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/terminal", id: "primitives.terminal", loader: () => import("@plugins/primitives/plugins/terminal/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "reorder", id: "reorder", loader: () => import("@plugins/reorder/server"), dependsOn: ["config_v2"] },
   { pluginPath: "reports/plugins/noise-rules", id: "reports.noise-rules", loader: () => import("@plugins/reports/plugins/noise-rules/server"), dependsOn: ["reports"] },
+  { pluginPath: "reports/plugins/slow-ops", id: "reports.slow-ops", loader: () => import("@plugins/reports/plugins/slow-ops/server"), dependsOn: ["config_v2", "infra/plugins/runtime-profiler", "reports"] },
   { pluginPath: "reports", id: "reports", loader: () => import("@plugins/reports/server"), dependsOn: ["build", "database", "infra/plugins/endpoints", "infra/plugins/paths", "shell/plugins/notifications", "tasks/plugins/tasks-core"] },
   { pluginPath: "review/plugins/code-review", id: "review.code-review", loader: () => import("@plugins/review/plugins/code-review/server"), dependsOn: ["config_v2"] },
   { pluginPath: "review/plugins/plugin-changes", id: "review.plugin-changes", loader: () => import("@plugins/review/plugins/plugin-changes/server"), dependsOn: ["code-explorer", "conversations/plugins/conversation-view/plugins/code", "infra/plugins/endpoints", "infra/plugins/paths", "tasks/plugins/tasks-core"] },

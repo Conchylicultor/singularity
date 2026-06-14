@@ -12,6 +12,17 @@ export async function fingerprint(
   return sha256Hex(input).then((h) => h.slice(0, 16));
 }
 
+// Slow-op rows have no stack; identity is operationKind + operation so the
+// fingerprint is stable across occurrences (duration excluded) → repeats dedup
+// by operation rather than by call site.
+export async function fingerprintSlowOp(
+  operationKind: string,
+  operation: string,
+): Promise<string> {
+  const input = `slow-op|${operationKind}|${operation}`;
+  return sha256Hex(input).then((h) => h.slice(0, 16));
+}
+
 function normalizeFrames(stack: string): string[] {
   return stack
     .split("\n")

@@ -6,6 +6,7 @@ export const SERVER_REPORT_SOURCES = [
   "server-uncaught",
   "server-unhandled",
   "server-caught",
+  "server-slow-op",
 ] as const;
 export const CLIENT_REPORT_SOURCES = [
   "browser-error",
@@ -13,6 +14,7 @@ export const CLIENT_REPORT_SOURCES = [
   "react-boundary",
   "client-endpoint",
   "live-state-wedge",
+  "client-slow-op",
 ] as const;
 export type ReportSource =
   | (typeof SERVER_REPORT_SOURCES)[number]
@@ -49,6 +51,11 @@ export const ReportBodySchema = z.object({
   // bundle that produced it. Used for attribution + stale-frontend detection.
   clientId: z.string().nullable().optional(),
   buildId: z.string().nullable().optional(),
+  // Slow-op fields — set only for kind "slow-op"; crash reports leave them unset.
+  operationKind: z.string().nullable().optional(),
+  operation: z.string().nullable().optional(),
+  durationMs: z.number().int().nullable().optional(),
+  thresholdMs: z.number().int().nullable().optional(),
 });
 export type ReportBody = z.infer<typeof ReportBodySchema>;
 

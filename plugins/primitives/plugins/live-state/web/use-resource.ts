@@ -6,6 +6,7 @@ import {
   type NonUndefinedGuard,
 } from "@tanstack/react-query";
 import { NotificationsClient, queryKeyFor } from "./notifications-client";
+import { reportSlowResource } from "./slow-resource-reporter";
 import type { ChannelStatuses } from "./notifications-client";
 import type { ResourceDescriptor } from "../core/resource";
 import type { WsStatus } from "@plugins/primitives/plugins/networking/web";
@@ -192,6 +193,11 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   const origin = resource.origin;
   const p = (params ?? ({} as P)) as ResourceParams;
 
+  // Measure mount→settle so a domain plugin can report slow resources. Reported
+  // once, the first time `pending` flips true→false (see effect below).
+  const startRef = useRef(performance.now());
+  const reportedRef = useRef(false);
+
   const schema = resource.schema;
   const select = options?.select;
   const gate = options?.gate === true;
@@ -232,6 +238,17 @@ export function useResource<T, S, P extends ResourceParams = ResourceParams>(
   useEffect(() => {
     if (gate && !pending && settledKey !== keyStr) setSettledKey(keyStr);
   }, [gate, pending, settledKey, keyStr]);
+
+  // Report the mount→settle duration once, the first time this resource leaves
+  // `pending`. live-state stays threshold-agnostic — the registered reporter (a
+  // domain plugin) decides what counts as slow.
+  useEffect(() => {
+    if (!pending && !reportedRef.current) {
+      reportedRef.current = true;
+      reportSlowResource({ key, params: p, durationMs: performance.now() - startRef.current });
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- stringify params for stable dep; mirrors the observe effect above
+  }, [pending, key, JSON.stringify(p)]);
 
   // Gate transition render (settled, but the select-scoped sub not applied
   // yet): apply the selector manually so callers always see the slice type.

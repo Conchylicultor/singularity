@@ -50,6 +50,11 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
           <Badge variant="muted" size="md" className="font-mono">
             {c.source}
           </Badge>
+          {c.operationKind != null && c.durationMs != null && (
+            <Badge variant="warning" size="md" className="font-mono">
+              {(c.durationMs / 1000).toFixed(1)}s
+            </Badge>
+          )}
           {c.noise && (
             <Badge variant="warning" size="md">
               noise

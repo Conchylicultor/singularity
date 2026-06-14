@@ -18,6 +18,11 @@ export const ReportSchema = z.object({
   count: z.number().int(),
   crashLoop: z.boolean(),
   noise: z.boolean(),
+  // Slow-op fields — NULL for crash rows.
+  operationKind: z.string().nullable(),
+  operation: z.string().nullable(),
+  durationMs: z.number().int().nullable(),
+  thresholdMs: z.number().int().nullable(),
   lastClientId: z.string().nullable(),
   lastBuildId: z.string().nullable(),
   taskId: z.string().nullable(),

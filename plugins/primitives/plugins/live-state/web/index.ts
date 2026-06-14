@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { NotificationsProvider, useResource, hydrateResource, hydrateQuery, useNotificationsStatus, useNotificationsChannelStatuses, useNotificationsClient, getNotificationsClient } from "./use-resource";
 export { hydrateEndpoint } from "./hydrate-endpoint";
+export { registerSlowResourceReporter } from "./slow-resource-reporter";
+export type { SlowResourceInfo } from "./slow-resource-reporter";
 export type { ResourceResult } from "./use-resource";
 export { combineResources, useCombinedResources } from "./resource-utils";
 export type { GateInput, GateDataOf, CombinedResources } from "./resource-utils";

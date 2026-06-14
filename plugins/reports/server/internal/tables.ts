@@ -35,6 +35,13 @@ export const _reports = pgTable(
     count: integer("count").notNull().default(1),
     crashLoop: boolean("crash_loop").notNull().default(false),
     noise: boolean("noise").notNull().default(false),
+    // Slow-op-specific columns. NULL for crash rows; crash columns above
+    // (error_type, stack, component_stack, slot, label, crash_loop, …) likewise
+    // stay NULL for slow-op rows. operation drives the slow-op fingerprint.
+    operationKind: text("operation_kind"), // "page-load" | "element" | "loader" | "http" | "db"
+    operation: text("operation"), // stable operation identity
+    durationMs: integer("duration_ms"), // last observed duration
+    thresholdMs: integer("threshold_ms"), // threshold that was exceeded
     // Attribution (last-writer-wins): the tab + bundle build id of the most
     // recent report for this fingerprint. NOT part of the dedup key.
     lastClientId: text("last_client_id"),

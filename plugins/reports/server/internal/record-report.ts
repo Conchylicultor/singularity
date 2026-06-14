@@ -8,7 +8,10 @@ import { reportsResource } from "./resources";
 import { bumpWindowAndCheck } from "./velocity";
 import { isNoiseReport } from "./noise-rules";
 import { REPORTS_META_TASK_ID } from "./meta-reports";
-import { fingerprint as fingerprintOf } from "../../shared/fingerprint";
+import {
+  fingerprint as fingerprintOf,
+  fingerprintSlowOp,
+} from "../../shared/fingerprint";
 import type { ReportInput } from "../../shared/types";
 
 export interface RecordReportResult {
@@ -41,6 +44,17 @@ function clamp(value: string, max: number): string {
 // avoids DB row locks saturating the connection pool under cold-start bursts.
 const taskCreationLocks = new Map<string, Promise<void>>();
 
+// Per-kind presentation labels for the task title tag and the bell notification.
+// Unknown kinds fall back to crash so a new kind never produces a blank label.
+const KIND_META = {
+  crash: { tag: "[crash]", notif: "Crash recorded", variant: "error" },
+  "slow-op": {
+    tag: "[slow-op]",
+    notif: "Slow operation recorded",
+    variant: "warning",
+  },
+} as const;
+
 // Single entry point used by the HTTP handler, the boot-time flush, and the
 // process-level crash hooks (once the next boot flushes them through).
 // Every source collapses here so dedup + task-creation logic lives in one place.
@@ -64,7 +78,11 @@ export async function recordReport(
   } = input;
 
   const kind = rawKind ?? "crash";
-  const fp = await fingerprintOf(input.errorType, input.stack);
+  const meta = KIND_META[kind as keyof typeof KIND_META] ?? KIND_META.crash;
+  const fp =
+    kind === "slow-op"
+      ? await fingerprintSlowOp(input.operationKind ?? "", input.operation ?? "")
+      : await fingerprintOf(input.errorType, input.stack);
   const worktree = process.env.SINGULARITY_WORKTREE ?? "unknown";
   const message = clamp(rawMessage, MESSAGE_MAX);
   const stack = rawStack != null ? clamp(rawStack, STACK_MAX) : null;
@@ -107,6 +125,9 @@ export async function recordReport(
     })
     .onConflictDoUpdate({
       target: [_reports.fingerprint, _reports.worktree],
+      // Slow-op rows also refresh duration/threshold to the latest occurrence
+      // (the fingerprint excludes duration, so repeats land on the same row);
+      // crash rows leave these columns NULL.
       set: {
         count: sql`${_reports.count} + 1`,
         lastSeenAt: new Date(),
@@ -115,6 +136,12 @@ export async function recordReport(
         noise,
         lastClientId: clientId ?? null,
         lastBuildId: buildId ?? null,
+        ...(kind === "slow-op"
+          ? {
+              durationMs: input.durationMs ?? null,
+              thresholdMs: input.thresholdMs ?? null,
+            }
+          : {}),
       },
     })
     .returning();
@@ -129,6 +156,8 @@ export async function recordReport(
   }
 
   const outcome = await ensureTaskForReport(row.id, `${fp}|${worktree}`, {
+    kind,
+    tag: meta.tag,
     staleOrigin,
     serverBuildId,
   });
@@ -143,9 +172,9 @@ export async function recordReport(
   const desc = `${stalePrefix}${body}`;
   void recordNotification({
     type: "report",
-    title: staleOrigin ? "Crash recorded (stale tab)" : "Crash recorded",
+    title: staleOrigin ? `${meta.notif} (stale tab)` : meta.notif,
     description: desc.length > 140 ? `${desc.slice(0, 137)}...` : desc,
-    variant: "error",
+    variant: meta.variant,
     muted: row.noise,
     // One bell row per report fingerprint, mirroring the deduped report row (and
     // its single growing-count task). `row.id` is stable across occurrences —
@@ -170,7 +199,12 @@ export async function recordReport(
 async function ensureTaskForReport(
   reportId: string,
   lockKey: string,
-  origin: { staleOrigin: boolean; serverBuildId: string | null },
+  origin: {
+    kind: string;
+    tag: string;
+    staleOrigin: boolean;
+    serverBuildId: string | null;
+  },
 ): Promise<{ taskId: string | null; wasNew: boolean }> {
   // Serialize concurrent callers for the same fingerprint. A request arriving
   // while another is mid-creation waits on the prior promise, then re-reads
@@ -198,9 +232,10 @@ async function ensureTaskForReport(
 
     const task = await createTask({
       folderId: REPORTS_META_TASK_ID,
-      title: taskTitle(latest, origin.staleOrigin, latest.noise),
+      title: taskTitle(latest, origin.tag, origin.staleOrigin, latest.noise),
       description: taskDescription(
         latest,
+        origin.kind,
         recurrence,
         origin.staleOrigin,
         origin.serverBuildId,
@@ -220,6 +255,7 @@ async function ensureTaskForReport(
 
 function taskTitle(
   row: { errorType: string | null; message: string },
+  tag: string,
   staleOrigin: boolean,
   noise: boolean,
 ): string {
@@ -228,7 +264,7 @@ function taskTitle(
   // Tag known-benign noise so the title itself reads as "expected", matching
   // the muted notification — not just a dimmed row with no explanation.
   const noisePrefix = noise ? "[noise] " : "";
-  const raw = `${stalePrefix}${noisePrefix}[crash] ${prefix}${row.message}`;
+  const raw = `${stalePrefix}${noisePrefix}${tag} ${prefix}${row.message}`;
   return raw.length > 120 ? `${raw.slice(0, 117)}...` : raw;
 }
 
@@ -249,7 +285,12 @@ function taskDescription(
     message: string;
     errorType: string | null;
     lastBuildId: string | null;
+    operationKind: string | null;
+    operation: string | null;
+    durationMs: number | null;
+    thresholdMs: number | null;
   },
+  kind: string,
   recurrence: boolean,
   staleOrigin: boolean,
   serverBuildId: string | null,
@@ -266,6 +307,26 @@ function taskDescription(
       `**Recurrence** — this fingerprint previously had a task that was dropped. It just happened again.`,
     );
     lines.push("");
+  }
+  // Slow-op: no stack, no error fence — surface the operation identity and the
+  // duration vs threshold that tripped the report. Crash-only blocks (slot,
+  // componentStack, error fence) don't apply.
+  if (kind === "slow-op") {
+    lines.push(`**Operation**`);
+    lines.push(`**operationKind:** ${row.operationKind ?? "unknown"}`);
+    lines.push(`**operation:** ${row.operation ?? "unknown"}`);
+    lines.push(
+      `**Duration:** ${row.durationMs} ms (threshold ${row.thresholdMs} ms)`,
+    );
+    lines.push("");
+    lines.push(`**Source:** ${row.source}`);
+    lines.push(`**Worktree:** ${row.worktree}`);
+    lines.push(`**Fingerprint:** ${row.fingerprint}`);
+    lines.push(`**Count:** ${row.count}`);
+    lines.push(`**First seen:** ${row.firstSeenAt.toISOString()}`);
+    lines.push(`**Last seen:** ${row.lastSeenAt.toISOString()}`);
+    if (row.url) lines.push(`**URL:** ${row.url}`);
+    return lines.join("\n");
   }
   lines.push(`**Source:** ${row.source}`);
   lines.push(`**Worktree:** ${row.worktree}`);
