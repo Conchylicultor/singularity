@@ -102,6 +102,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`stats`** — Stats endpoint profiling for the Gantt debug pane. Stats endpoint profiling data endpoint.
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
+    - **`slow-ops`** — Debug pane showing a global, ranked overview of slow operations with per-operation caller attribution.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
 
 - **`fields`** [43 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
@@ -288,6 +289,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
     - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
+
+- **`slow-ops`** — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one rollup task.
 
 - **`stats`** [4 sub-plugins] — Root plugin hosting stacked chart contributions from child plugins.
 
