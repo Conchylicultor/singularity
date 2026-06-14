@@ -159,7 +159,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource), Resource.Declare(pushesResource), Resource.Declare(conversationsLiveResource)],
+  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true })],
   register: [pushLanded, taskStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

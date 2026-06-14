@@ -216,6 +216,15 @@ export interface ResourceRuntime {
     params: Record<string, string>,
   ) => Promise<Response>;
   withNotifyBatch: <T>(fn: () => Promise<T>) => Promise<T>;
+  /**
+   * Load any registered resource by key, routing through the same `timedLoad`
+   * path `handleSub` uses (schema parse + profiler span). Throws if the key is
+   * not registered. The single right home for "load any registered resource"
+   * — used by the boot-snapshot warm-up and snapshot handler so they hit the
+   * identical loader the boot burst hits. See
+   * research/2026-06-14-global-cold-load-instant-boot.md.
+   */
+  loadResourceByKey: (key: string, params?: ResourceParams) => Promise<unknown>;
 }
 
 const HEARTBEAT_MS = 20_000;
@@ -912,5 +921,22 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     );
   }
 
-  return { defineResource, notificationsWsHandler, handleResourceHttp, withNotifyBatch };
+  // Load any registered resource by key through the same `timedLoad` path
+  // `handleSub` uses (schema parse + profiler span). Throws on an unknown key.
+  function loadResourceByKey(
+    key: string,
+    params?: ResourceParams,
+  ): Promise<unknown> {
+    const entry = registry.get(key);
+    if (!entry) throw new Error(`unknown resource key: ${key}`);
+    return timedLoad(entry, params ?? {});
+  }
+
+  return {
+    defineResource,
+    notificationsWsHandler,
+    handleResourceHttp,
+    withNotifyBatch,
+    loadResourceByKey,
+  };
 }

@@ -6,7 +6,8 @@
 
 - Description: Nested tasks with attempts linking to conversations. Nested tasks with attempts linking to conversations.
 - Web:
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
+  - Contributes: `BootSnapshot.Hydrate`, `BootSnapshot.Hydrate`, `BootSnapshot.Hydrate`
+  - Uses: `infra/boot-snapshot.BootSnapshot`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
   - Exports: Types: `AutoStartModel`, `TaskPatch`; Values: `patchTask`, `setAutoStart`, `useTask`
 - Server:
   - Uses: `conversations.maybeLaunchTaskJob`, `infra/attachments.getAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/jobs.defineJob`, `infra/mcp.Mcp`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/auto-start.setTaskAutoStart`, `tasks/task-preprompt.inheritTaskPreprompt`, `tasks/task-preprompt.setTaskPreprompt`, `tasks/task-title.scheduleTaskTitleUpdate`, `tasks/task-title.synthesiseTitleFallback`, `tasks/tasks-core.addTaskDependency`, `tasks/tasks-core.backfillMetaParent`, `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.getTask`, `tasks/tasks-core.getTaskDependencyIds`, `tasks/tasks-core.hasBlockingDep`, `tasks/tasks-core.insertPush`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listDependentIds`, `tasks/tasks-core.listPushShasIn`, `tasks/tasks-core.listTasks`, `tasks/tasks-core.removeTaskDependency`, `tasks/tasks-core.taskAttachments`, `tasks/tasks-core.updateTask`

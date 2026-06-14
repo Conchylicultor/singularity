@@ -107,6 +107,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "improve", id: "improve", loader: () => import("@plugins/improve/server"), dependsOn: ["conversations", "conversations/plugins/conversations-view/plugins/grouped", "database", "infra/plugins/events", "infra/plugins/jobs", "tasks/plugins/tasks-core"] },
   { pluginPath: "infra/plugins/asset-mirror", id: "infra.asset-mirror", loader: () => import("@plugins/infra/plugins/asset-mirror/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "infra/plugins/attachments", id: "infra.attachments", loader: () => import("@plugins/infra/plugins/attachments/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/jobs", "infra/plugins/paths", "primitives/plugins/log-channels"] },
+  { pluginPath: "infra/plugins/boot-snapshot", id: "infra.boot-snapshot", loader: () => import("@plugins/infra/plugins/boot-snapshot/server"), dependsOn: ["database", "database/plugins/migrations", "infra/plugins/endpoints"] },
   { pluginPath: "infra/plugins/claude-cli", id: "infra.claude-cli", loader: () => import("@plugins/infra/plugins/claude-cli/server"), dependsOn: ["conversations/plugins/model-provider", "database", "infra/plugins/paths"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/server"), dependsOn: [] },
   { pluginPath: "infra/plugins/entity-extensions", id: "infra.entity-extensions", loader: () => import("@plugins/infra/plugins/entity-extensions/server"), dependsOn: ["database"] },

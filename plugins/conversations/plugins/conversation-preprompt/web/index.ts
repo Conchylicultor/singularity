@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { conversationPrepromptsResource } from "../shared";
 import { PrepromptChip } from "./components/preprompt-chip";
 import { PrepromptListIcon } from "./components/preprompt-list-icon";
 
@@ -12,5 +14,6 @@ export default {
   contributions: [
     Conversation.Header({ id: "preprompt", component: PrepromptChip }),
     Item.Chips({ id: "preprompt", component: PrepromptListIcon }),
+    BootSnapshot.Hydrate({ descriptor: conversationPrepromptsResource }),
   ],
 } satisfies PluginDefinition;

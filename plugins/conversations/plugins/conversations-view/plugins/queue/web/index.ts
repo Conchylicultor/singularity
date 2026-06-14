@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdLowPriority } from "react-icons/md";
+import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { ConversationsView } from "@plugins/conversations/plugins/conversations-view/web";
+import { queueRanksResource } from "../shared";
 import { QueueView } from "./components/queue-view";
 
 export default {
@@ -14,5 +16,6 @@ export default {
       order: 5,
       component: QueueView,
     }),
+    BootSnapshot.Hydrate({ descriptor: queueRanksResource }),
   ],
 } satisfies PluginDefinition;

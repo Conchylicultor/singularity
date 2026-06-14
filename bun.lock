@@ -1494,6 +1494,10 @@
       "name": "@singularity/plugin-infra-attachments",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/boot-snapshot": {
+      "name": "@singularity/plugin-infra-boot-snapshot",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/claude-cli": {
       "name": "@singularity/plugin-infra-claude-cli",
       "version": "0.0.1",
@@ -3742,6 +3746,8 @@
     "@singularity/plugin-infra-asset-mirror": ["@singularity/plugin-infra-asset-mirror@workspace:plugins/infra/plugins/asset-mirror"],
 
     "@singularity/plugin-infra-attachments": ["@singularity/plugin-infra-attachments@workspace:plugins/infra/plugins/attachments"],
+
+    "@singularity/plugin-infra-boot-snapshot": ["@singularity/plugin-infra-boot-snapshot@workspace:plugins/infra/plugins/boot-snapshot"],
 
     "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
 

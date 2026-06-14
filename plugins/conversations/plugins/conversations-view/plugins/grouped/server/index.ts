@@ -30,5 +30,5 @@ export default {
     [addConversationGroupMembers.route]:  handleAddMember,
     [removeConversationGroupMember.route]: handleRemoveMember,
   },
-  contributions: [Resource.Declare(conversationGroupsResource)],
+  contributions: [Resource.Declare(conversationGroupsResource, { bootCritical: true })],
 } satisfies ServerPluginDefinition;

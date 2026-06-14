@@ -1,6 +1,8 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
+import { worktreeOpsResource } from "../shared";
 import { OpStatusBanner } from "./components/op-status-banner";
 import { OpStatusChip } from "./components/op-status-chip";
 
@@ -10,5 +12,6 @@ export default {
   contributions: [
     Conversation.AbovePromptInput({ id: "op-status", component: OpStatusBanner }),
     Item.Chips({ id: "op-status", component: OpStatusChip }),
+    BootSnapshot.Hydrate({ descriptor: worktreeOpsResource }),
   ],
 } satisfies PluginDefinition;

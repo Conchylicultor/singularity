@@ -13,6 +13,7 @@ export {
   Resource,
   defineResource,
   handleResourceHttp,
+  loadResourceByKey,
   notificationsWsHandler,
   withNotifyBatch,
 } from "./resources";

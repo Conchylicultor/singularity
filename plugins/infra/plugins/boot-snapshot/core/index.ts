@@ -1,0 +1,1 @@
+export { bootSnapshot } from "./endpoints";

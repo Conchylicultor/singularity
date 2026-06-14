@@ -17,7 +17,7 @@ import { buildConfig } from "../shared";
 import { triggerBuildEndpoint } from "../core/endpoints";
 
 export default {
-  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource), Resource.Declare(buildHistoryResource), Resource.Declare(frontendHashResource), Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: buildRunJob, with: {}, oneShot: false })],
+  contributions: [ConfigV2.Register({ descriptor: buildConfig }), Resource.Declare(mainAheadCountResource, { bootCritical: true }), Resource.Declare(buildHistoryResource, { bootCritical: true }), Resource.Declare(frontendHashResource, { bootCritical: true }), Trigger({ on: refAdvanced.where({ refName: "refs/heads/main" }), do: buildRunJob, with: {}, oneShot: false })],
   httpRoutes: {
     [triggerBuildEndpoint.route]: handleBuild,
   },

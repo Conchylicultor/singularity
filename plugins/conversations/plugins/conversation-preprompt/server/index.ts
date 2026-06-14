@@ -14,7 +14,7 @@ export default {
   description:
     "Snapshots the launching task's selected preprompt (id + title + text) onto each newly created conversation, surfaced as a chip in the conversation header.",
   contributions: [
-    Resource.Declare(conversationPrepromptsResource),
+    Resource.Declare(conversationPrepromptsResource, { bootCritical: true }),
     Trigger({ on: conversationCreated, do: recordPrepromptJob, with: {}, oneShot: false }),
   ],
   register: [recordPrepromptJob],

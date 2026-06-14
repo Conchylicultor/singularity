@@ -38,7 +38,7 @@ export default {
     [launchAgent.route]: handleLaunch,
     [listAgentLaunches.route]: handleListLaunches,
   },
-  contributions: [Resource.Declare(agentsResource), Resource.Declare(agentLaunchesResource)],
+  contributions: [Resource.Declare(agentsResource, { bootCritical: true }), Resource.Declare(agentLaunchesResource, { bootCritical: true })],
   onReady: async () => {
     await ensureAgentsMetaTask();
     await backfillAgentSvgNodes();

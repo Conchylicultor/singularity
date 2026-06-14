@@ -16,7 +16,7 @@ export default {
     "After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.",
   contributions: [
     ConfigV2.Register({ descriptor: turnSummaryConfig }),
-    Resource.Declare(turnSummariesResource),
+    Resource.Declare(turnSummariesResource, { bootCritical: true }),
     Trigger({ on: conversationTurnCompleted, do: generateTurnSummaryJob, with: {}, oneShot: false }),
   ],
   register: [generateTurnSummaryJob],

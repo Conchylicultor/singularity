@@ -6,8 +6,8 @@
 
 - Description: Free-form per-conversation notes, auto-saved to the server. Always visible when notes exist; toggle via the note button. Per-conversation free-form notes, auto-saved to the server.
 - Web:
-  - Contributes: `Conversation.AbovePromptInput` → `NotesArea`, `Conversation.PromptBar` "Notes" → `NotesToggleButton`
-  - Uses: `conversations/conversation-view.Conversation`, `infra/endpoints.fetchEndpoint`, `primitives/editable-field.EditableField`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/ui-kit.Button`
+  - Contributes: `Conversation.AbovePromptInput` → `NotesArea`, `Conversation.PromptBar` "Notes" → `NotesToggleButton`, `BootSnapshot.Hydrate`
+  - Uses: `conversations/conversation-view.Conversation`, `infra/boot-snapshot.BootSnapshot`, `infra/endpoints.fetchEndpoint`, `primitives/editable-field.EditableField`, `primitives/editable-field.useEditableField`, `primitives/live-state.useResource`, `primitives/ui-kit.Button`
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/notes/server/internal/tables.ts`

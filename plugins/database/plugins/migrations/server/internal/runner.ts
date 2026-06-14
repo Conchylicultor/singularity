@@ -15,6 +15,18 @@ interface Migration {
   sqlText: string;
 }
 
+// Completion barrier for migrations. A parallel `onReadyBlocking` hook (e.g. the
+// boot-snapshot warm-up) can await this instead of relying on hook ordering —
+// `onReadyBlocking` hooks run in parallel. `runMigrations` settles it: resolves
+// when migrations complete, rejects if they throw. See
+// research/2026-06-14-global-cold-load-instant-boot.md.
+let resolveMigrationsReady!: () => void;
+let rejectMigrationsReady!: (err: unknown) => void;
+export const migrationsReady: Promise<void> = new Promise<void>((resolve, reject) => {
+  resolveMigrationsReady = resolve;
+  rejectMigrationsReady = reject;
+});
+
 function loadMigrations(dir: string): Migration[] {
   const files = readdirSync(dir).filter((f) => MIGRATION_RE.test(f));
   const migrations: Migration[] = files.map((f) => {
@@ -32,43 +44,49 @@ function loadMigrations(dir: string): Migration[] {
 }
 
 export async function runMigrations(db: NodePgDatabase): Promise<void> {
-  const dir = join(import.meta.dir, "..", "..", "data");
-  const migrations = loadMigrations(dir);
+  try {
+    const dir = join(import.meta.dir, "..", "..", "data");
+    const migrations = loadMigrations(dir);
 
-  await db.execute(drizzleSql`
-    CREATE TABLE IF NOT EXISTS __singularity_migrations (
-      hash text PRIMARY KEY,
-      file text NOT NULL,
-      applied_at timestamptz NOT NULL DEFAULT now()
-    )
-  `);
+    await db.execute(drizzleSql`
+      CREATE TABLE IF NOT EXISTS __singularity_migrations (
+        hash text PRIMARY KEY,
+        file text NOT NULL,
+        applied_at timestamptz NOT NULL DEFAULT now()
+      )
+    `);
 
-  const applied = await db.execute<{ hash: string }>(
-    drizzleSql`SELECT hash FROM __singularity_migrations`,
-  );
-  const appliedHashes = new Set(applied.rows.map((r) => r.hash));
+    const applied = await db.execute<{ hash: string }>(
+      drizzleSql`SELECT hash FROM __singularity_migrations`,
+    );
+    const appliedHashes = new Set(applied.rows.map((r) => r.hash));
 
-  // Drift warning: a hash recorded as applied but with no matching file on disk
-  // means someone rebased away a migration after it ran here. The DB retains
-  // whatever that migration did, silently diverging from the codebase.
-  const onDiskHashes = new Set(migrations.map((m) => m.hash));
-  for (const h of appliedHashes) {
-    if (!onDiskHashes.has(h)) {
-      log.publish(
-        `[migrate] applied hash ${h} has no matching file on disk — DB may have drifted`,
-        "stderr",
-      );
+    // Drift warning: a hash recorded as applied but with no matching file on disk
+    // means someone rebased away a migration after it ran here. The DB retains
+    // whatever that migration did, silently diverging from the codebase.
+    const onDiskHashes = new Set(migrations.map((m) => m.hash));
+    for (const h of appliedHashes) {
+      if (!onDiskHashes.has(h)) {
+        log.publish(
+          `[migrate] applied hash ${h} has no matching file on disk — DB may have drifted`,
+          "stderr",
+        );
+      }
     }
-  }
 
-  for (const m of migrations) {
-    if (appliedHashes.has(m.hash)) continue;
-    log.publish(`[migrate] applying ${m.file}`);
-    await db.transaction(async (tx) => {
-      await tx.execute(drizzleSql.raw(m.sqlText));
-      await tx.execute(
-        drizzleSql`INSERT INTO __singularity_migrations (hash, file) VALUES (${m.hash}, ${m.file})`,
-      );
-    });
+    for (const m of migrations) {
+      if (appliedHashes.has(m.hash)) continue;
+      log.publish(`[migrate] applying ${m.file}`);
+      await db.transaction(async (tx) => {
+        await tx.execute(drizzleSql.raw(m.sqlText));
+        await tx.execute(
+          drizzleSql`INSERT INTO __singularity_migrations (hash, file) VALUES (${m.hash}, ${m.file})`,
+        );
+      });
+    }
+    resolveMigrationsReady();
+  } catch (err) {
+    rejectMigrationsReady(err);
+    throw err;
   }
 }

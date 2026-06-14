@@ -1,6 +1,6 @@
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
 
-export { runMigrations } from "./internal/runner";
+export { runMigrations, migrationsReady } from "./internal/runner";
 
 export default {
   description: "DDL lifecycle: migration runner and SQL files.",

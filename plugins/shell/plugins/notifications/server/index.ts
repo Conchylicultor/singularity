@@ -21,7 +21,7 @@ export { setMutedByMetadata } from "./internal/reclassify-muted";
 
 export default {
   description: "Persistent bell-button notifications backed by the DB.",
-  contributions: [Resource.Declare(notificationsResource)],
+  contributions: [Resource.Declare(notificationsResource, { bootCritical: true })],
   // ttlCleanupJob declares `schedule` — the jobs worker seeds its cron item at
   // startup, so no onReady enqueue is needed.
   register: [ttlCleanupJob],

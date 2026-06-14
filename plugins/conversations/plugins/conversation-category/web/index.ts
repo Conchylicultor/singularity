@@ -1,8 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { BootSnapshot } from "@plugins/infra/plugins/boot-snapshot/web";
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { Conversation } from "@plugins/conversations/plugins/conversation-view/plugins/header/web";
 import { Item } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { conversationCategoryConfig } from "../shared";
+import { conversationCategoryConfig, conversationCategoriesResource } from "../shared";
 import { CategoryChipToolbar } from "./components/category-chip-toolbar";
 import { CategoryAvatarRow } from "./components/category-avatar-row";
 
@@ -20,5 +21,6 @@ export default {
       match: ({ conv }) => conv.kind !== "agent",
       component: CategoryAvatarRow,
     }),
+    BootSnapshot.Hydrate({ descriptor: conversationCategoriesResource }),
   ],
 } satisfies PluginDefinition;

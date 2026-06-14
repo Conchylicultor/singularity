@@ -27,8 +27,8 @@ A persistent global trigger on `conversationTurnCompleted` (installed in this pl
 
 - Description: Inline card above the prompt input showing a Haiku-generated summary of the latest assistant turn, with caveats and suggested actions. After every assistant turn, runs Haiku on the (user, assistant) pair to produce a one-line summary, caveats list, and actions list. Renders above the prompt input.
 - Web:
-  - Contributes: `Conversation.AbovePromptInput` → `TurnSummaryCard`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `conversations/conversation-view.Conversation`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/live-state.useResource`, `primitives/spacing.Stack`, `primitives/text.Text`
+  - Contributes: `Conversation.AbovePromptInput` → `TurnSummaryCard`, `ConfigV2.WebRegister`, `BootSnapshot.Hydrate`
+  - Uses: `config_v2.ConfigV2`, `conversations/conversation-view.Conversation`, `infra/boot-snapshot.BootSnapshot`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/live-state.useResource`, `primitives/spacing.Stack`, `primitives/text.Text`
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations.conversationTurnCompleted`, `conversations.readConversationTurns`, `database.db`, `infra/claude-cli.ClaudeCliError`, `infra/claude-cli.runClaudePrint`, `infra/entity-extensions.defineExtension`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core._conversations`, `tasks/tasks-core.getConversation`
   - DB schema: `plugins/conversations/plugins/conversation-view/plugins/turn-summary/server/internal/tables.ts`

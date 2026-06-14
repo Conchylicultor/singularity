@@ -35,7 +35,7 @@ export default {
   description:
     "Stable-rank global queue. Ranks seeded once on creation (newest first). Pinned top conversation persists as the user's current focus.",
   contributions: [
-    Resource.Declare(queueRanksResource),
+    Resource.Declare(queueRanksResource, { bootCritical: true }),
     Trigger({ on: conversationCreated, do: seedRankJob, with: {}, oneShot: false }),
     Trigger({ on: conversationTurnCompleted, do: validatePinJob, with: {}, oneShot: false }),
     Trigger({ on: userTurnSent, do: advancePinJob, with: {}, oneShot: false }),

@@ -58,9 +58,9 @@ recovery for a snapshot-chain Y-fork after rebasing onto main.)
 - Description: DDL lifecycle: migration runner and SQL files.
 - Server:
   - Uses: `primitives/log-channels.Log`
-  - Exports: Values: `runMigrations`
+  - Exports: Values: `migrationsReady`, `runMigrations`
 - Cross-plugin:
-  - Imported by: `database`
+  - Imported by: `database`, `infra/boot-snapshot`
 - Structure:
   - Non-standard folders: `data/`
   - Loose top-level files: `drizzle.config.ts`

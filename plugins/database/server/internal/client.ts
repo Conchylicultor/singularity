@@ -24,7 +24,7 @@ const conn = config.pgbouncer
 
 const pool = new Pool({
   connectionString: buildConnectionString(conn, worktree),
-  max: 5,
+  max: 16,
   idleTimeoutMillis: 20_000,
 });
 
