@@ -1184,7 +1184,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by: `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/write`
             - **`investigate-event`** — Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
               - Web:
-                - Uses: `primitives/launch.LaunchAgentPopover`
+                - Uses: `primitives/launch.LaunchAgentPopover`, `shell/notifications.toast`
                 - Exports: Values: `InvestigateEventButton`
               - Cross-plugin:
                 - Imported by: `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/unknown`
@@ -3327,7 +3327,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`launch-fix`** — Adds a Fix button to the plugin crash banner that launches an agent on the auto-created crash task with optional freeform context.
       - Web:
         - Contributes: `ErrorBoundary.Action` → `LaunchFixButton`
-        - Uses: `primitives/error-boundary.ErrorBoundary`, `primitives/launch.LaunchAgentPopover`
+        - Uses: `primitives/error-boundary.ErrorBoundary`, `primitives/launch.LaunchAgentPopover`, `shell/notifications.toast`
     - **`mutation-errors`** — Warning toast and persistent notification for unhandled TanStack Query mutation errors.
       - Web:
         - Contributes: `Core.Root` → `MutationErrorWatcher`
@@ -3441,7 +3441,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `notifications` (push)
         - Routes: `POST /api/notifications`, `POST /api/notifications/dismiss-all`, `POST /api/notifications/mark-all-read`, `POST /api/notifications/:id/dismiss`
       - Cross-plugin:
-        - Imported by: `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `database/fork`, `debug/queue`, `infra/events-test`, `reports`, `reports/mutation-errors`, `screenshot`, `screenshot/draw-on-app`, `shell/floating-bar`, `tasks/task-draft-form`, `tasks/task-preprompt`
+        - Imported by: `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `database/fork`, `debug/queue`, `infra/events-test`, `reports`, `reports/launch-fix`, `reports/mutation-errors`, `screenshot`, `screenshot/draw-on-app`, `shell/floating-bar`, `tasks/task-draft-form`, `tasks/task-preprompt`
       - Shared:
         - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.

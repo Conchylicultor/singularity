@@ -16,12 +16,6 @@ export type LaunchAgentPopoverProps = {
   align?: "start" | "end";
   width?: string;
   disabled?: boolean;
-  /**
-   * Whether to open the freshly created conversation in a pane. Defaults to
-   * `true`. Pass `false` to launch in the background — the caller typically
-   * surfaces a confirmation toast via `onLaunched` instead.
-   */
-  openAfterLaunch?: boolean;
   onLaunched?: (conversation: Conversation) => void;
   /** Whether to show the preprompt picker. Defaults to `true`. */
   showPreprompt?: boolean;
@@ -36,7 +30,6 @@ export function LaunchAgentPopover({
   align = "start",
   width = "w-[420px]",
   disabled,
-  openAfterLaunch = true,
   onLaunched,
   showPreprompt = true,
 }: LaunchAgentPopoverProps) {
@@ -79,7 +72,9 @@ export function LaunchAgentPopover({
       <LaunchControl
         size="sm"
         disabled={disabled}
-        openAfterLaunch={openAfterLaunch}
+        // The popover is always a fire-and-forget background launch; callers
+        // surface a confirmation toast via onLaunched.
+        openAfterLaunch={false}
         getRequest={async () => {
           const req = await getRequest(text);
           return prepromptId ? { ...req, prepromptId } : req;

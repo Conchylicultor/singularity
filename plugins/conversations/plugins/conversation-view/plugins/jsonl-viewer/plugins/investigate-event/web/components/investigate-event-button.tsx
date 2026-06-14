@@ -1,5 +1,6 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 
 export function InvestigateEventButton({
   label,
@@ -28,6 +29,15 @@ export function InvestigateEventButton({
           <MdAutoAwesome className="size-3.5" />
         </button>
       }
+      onLaunched={(conv) => {
+        toast({
+          type: "investigate",
+          title: "Investigating event",
+          description: "Agent launched in the background — open it from here or the bell.",
+          variant: "info",
+          linkTo: `/c/${conv.id}`,
+        });
+      }}
       getRequest={(userText) => {
         const body = userText.trim();
         const prompt = [

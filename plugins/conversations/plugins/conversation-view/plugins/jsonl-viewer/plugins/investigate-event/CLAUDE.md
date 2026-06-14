@@ -14,7 +14,7 @@ slot contributions — callers import the component directly.
 
 - Description: Presentational hover-revealed button on JSONL fallback rows that launches an investigation agent seeded with the raw event JSON and source conversation id.
 - Web:
-  - Uses: `primitives/launch.LaunchAgentPopover`
+  - Uses: `primitives/launch.LaunchAgentPopover`, `shell/notifications.toast`
   - Exports: Values: `InvestigateEventButton`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/unknown`

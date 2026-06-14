@@ -2,6 +2,7 @@ import { MdAutoFixHigh } from "react-icons/md";
 import type { BoundaryErrorReport } from "@plugins/primitives/plugins/error-boundary/web";
 import type { ReportContext } from "@plugins/reports/web";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 
 export function LaunchFixButton({
   report,
@@ -37,6 +38,15 @@ export function LaunchFixButton({
       placeholder="Extra context (optional) — e.g. what you were doing, expected behaviour…"
       align="end"
       disabled={disabled}
+      onLaunched={(conv) => {
+        toast({
+          type: "crash",
+          title: "Fixing crash",
+          description: "Agent launched in the background — open it from here or the bell.",
+          variant: "info",
+          linkTo: `/c/${conv.id}`,
+        });
+      }}
       getRequest={(userText) => {
         const parts: string[] = [];
         parts.push(`## Crash report\n`);
