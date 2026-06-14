@@ -6,7 +6,6 @@ import {
   Sonata,
   SonataToolbar,
   TEMPO_MATH_FLOOR,
-  publishSonataTransport,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { songsResource } from "../core";
@@ -113,18 +112,8 @@ function useSonataPlayerResolve({ songId }: { songId: string }) {
 function SonataPlayerSurface(): ReactElement {
   const { songId } = sonataPlayerPane.useParams();
   const input = sonataPlayerPane.useInput();
-  const {
-    score,
-    tempoScale,
-    activeDisplayId,
-    setCurrentSong,
-    clearCurrentSong,
-    togglePlay,
-    seekBar,
-    startScrub,
-    endScrub,
-    nudgeTempo,
-  } = useSonata();
+  const { score, tempoScale, activeDisplayId, setCurrentSong, clearCurrentSong } =
+    useSonata();
 
   // Mark this song open on mount (once per open — each open is a fresh
   // `mode:"root"` instance, so this fires exactly once and bumps `songOpenEpoch`).
@@ -139,21 +128,6 @@ function SonataPlayerSurface(): ReactElement {
     // are stable. `input.title` is intentionally read once at open.
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [songId]);
-
-  // Publish the transport to the module-level bus while the player is mounted,
-  // so global keyboard shortcuts (Space/arrows) drive playback only on this
-  // surface. The "player on screen" gate is implicit: the bus is empty on the
-  // library, so no `view` check is needed.
-  useEffect(() => {
-    publishSonataTransport({
-      togglePlay,
-      seekBar,
-      startScrub,
-      endScrub,
-      nudgeTempo,
-    });
-    return () => publishSonataTransport(null);
-  }, [togglePlay, seekBar, startScrub, endScrub, nudgeTempo]);
 
   // Enumerate displays via the dispatch slot's contributions — the `Extra`
   // metadata (id/label/icon/capabilities) is fully readable; only `component`

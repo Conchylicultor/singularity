@@ -1,44 +1,48 @@
-import { useRef, useSyncExternalStore, type DependencyList } from "react";
+import { useMemo, type DependencyList } from "react";
+import {
+  defineScopedStore,
+  type ScopedStore,
+} from "@plugins/primitives/plugins/scoped-store/web";
 
 /**
- * The playback cursor (playhead position in quarter-note beats) as a module-level
- * store rather than React context state.
+ * The playback cursor (playhead position in quarter-note beats) as a
+ * PER-SURFACE scoped store rather than a module singleton.
  *
- * The transport advances the cursor ~60×/sec from a `requestAnimationFrame` loop.
- * Holding it in `SonataContextValue` would mint a new context object every frame
- * and re-render EVERY `useSonata()` consumer — including ones that only forward
- * the cursor to an imperative handle (the Pixi piano-roll scene, the audio
- * scheduler) or whose output changes only at region boundaries (the key/chord
- * HUD). Keeping it here lets each consumer opt into exactly the read path it
- * needs and leaves the context value identity-stable during playback (so
- * non-readers stop re-rendering entirely).
+ * The transport advances the cursor ~60×/sec from a `requestAnimationFrame`
+ * loop. Holding it in `SonataContextValue` would mint a new context object every
+ * frame and re-render EVERY `useSonata()` consumer — including ones that only
+ * forward the cursor to an imperative handle (the Pixi piano-roll scene, the
+ * audio scheduler) or whose output changes only at region boundaries (the
+ * key/chord HUD). Keeping it in an external store lets each consumer opt into
+ * exactly the read path it needs and leaves the context value identity-stable
+ * during playback (so non-readers stop re-rendering entirely).
  *
- * Three read paths:
- *  - {@link subscribeCursor} / {@link getCursorBeat} — imperative; drive a scene
- *    handle or DOM transform directly with ZERO React renders.
+ * Scoping it to the `<CursorStoreProvider>` (mounted in `SonataLayout`, wrapping
+ * `SonataProvider`) gives every Sonata surface its own isolated cursor — desktop
+ * multi-window / keep-alive tabs mount several surfaces at once, and a module
+ * singleton would tear (playback bleeding between windows).
+ *
+ * Three read paths, mirroring the scoped-store primitive this builds on:
+ *  - {@link useCursorApi} — imperative facade for in-subtree readers (rAF loops,
+ *    synchronous reads). Drives a scene handle or DOM transform with ZERO React
+ *    renders.
  *  - {@link useCursorBeat} — raw reactive; re-renders the caller every frame
  *    (for consumers whose output genuinely changes per frame).
  *  - {@link useCursorSelector} — derived-with-bailout; re-renders only when the
  *    selected value changes (for frame-invariant HUD/readout consumers).
- *
- * Mirrors the `audio-store` / `transport-store` module-store precedent: one
- * Sonata app mounts at a time, so a singleton is correct (no per-instance state).
- * Only the provider writes; everyone else reads.
  */
 
-let cursorBeat = 0;
-const listeners = new Set<(seek: boolean) => void>();
-
-/** Imperative / snapshot read of the current cursor beat. */
-export function getCursorBeat(): number {
-  return cursorBeat;
+interface CursorState {
+  beat: number;
 }
+const cursorStore = defineScopedStore<CursorState>({ beat: 0 });
+
+export const CursorStoreProvider = cursorStore.Provider;
+export type CursorStore = ScopedStore<CursorState>;
 
 /**
- * Move the playhead. Only `SonataProvider` calls this (rAF loop, seek, scrub,
- * score-change reset). Early-returns on an unchanged beat (unless it's a seek)
- * so `getCursorBeat`'s value is referentially stable while the store hasn't
- * moved — required for the `useSyncExternalStore` tearing check not to loop.
+ * Typed imperative facade over the per-surface cursor store. Carries the `seek`
+ * flag through scoped-store's `meta`.
  *
  * `seek: true` marks a jump (seek / scrub / score reset) as opposed to a smooth
  * playback advance. Imperative onset-driven consumers (the piano-roll scene)
@@ -46,37 +50,41 @@ export function getCursorBeat(): number {
  * position — navigation must not spray note-strike FX. It's threaded through the
  * subscription callback rather than inferred, because the synchronous store
  * write reaches imperative subscribers BEFORE React commits any `seekEpoch`.
+ *
+ * `setBeat` early-returns on an unchanged beat (unless it's a seek) so the
+ * snapshot stays referentially stable while the store hasn't moved — required
+ * for the `useSyncExternalStore` tearing check not to loop.
  */
-export function setCursorBeat(beat: number, opts?: { seek?: boolean }): void {
-  const seek = opts?.seek ?? false;
-  if (beat === cursorBeat && !seek) return;
-  cursorBeat = beat;
-  for (const listener of listeners) listener(seek);
+export interface CursorApi {
+  getBeat(): number;
+  setBeat(beat: number, opts?: { seek?: boolean }): void;
+  subscribe(cb: (seek: boolean) => void): () => void;
 }
 
-/**
- * Subscribe to cursor changes. Returns an unsubscribe. The callback receives
- * whether the change was a `seek` (jump) vs a playback advance. Used both by
- * `useSyncExternalStore` (which ignores the arg) and by imperative consumers
- * that drive a handle per frame without rendering (the piano-roll scene + DOM
- * scroll layer).
- */
-export function subscribeCursor(onChange: (seek: boolean) => void): () => void {
-  listeners.add(onChange);
-  return () => listeners.delete(onChange);
+/** Build the imperative cursor facade for a given scoped store instance. */
+export function cursorApiFor(store: CursorStore): CursorApi {
+  return {
+    getBeat: () => store.getState().beat,
+    setBeat: (beat, opts) =>
+      store.setState((p) => (p.beat === beat && !opts?.seek ? p : { beat }), {
+        meta: { seek: !!opts?.seek },
+      }),
+    subscribe: (cb) =>
+      store.subscribe((meta) =>
+        cb(Boolean((meta as { seek?: boolean } | undefined)?.seek)),
+      ),
+  };
+}
+
+/** Imperative cursor facade for in-subtree readers (rAF loops, synchronous reads). */
+export function useCursorApi(): CursorApi {
+  const store = cursorStore.useStoreApi();
+  return useMemo(() => cursorApiFor(store), [store]);
 }
 
 /** Reactive raw read — re-renders the caller on every cursor change. */
 export function useCursorBeat(): number {
-  return useSyncExternalStore(subscribeCursor, getCursorBeat);
-}
-
-function depsChanged(a: DependencyList, b: DependencyList): boolean {
-  if (a.length !== b.length) return true;
-  for (let i = 0; i < a.length; i++) {
-    if (!Object.is(a[i], b[i])) return true;
-  }
-  return false;
+  return cursorStore.useSelector((s) => s.beat, []);
 }
 
 /**
@@ -96,37 +104,7 @@ function depsChanged(a: DependencyList, b: DependencyList): boolean {
 export function useCursorSelector<T>(
   selector: (beat: number) => T,
   deps: DependencyList,
-  isEqual: (a: T, b: T) => boolean = Object.is,
+  isEqual?: (a: T, b: T) => boolean,
 ): T {
-  const selectorRef = useRef(selector);
-  selectorRef.current = selector;
-  const isEqualRef = useRef(isEqual);
-  isEqualRef.current = isEqual;
-
-  // Cache keyed on the cursor beat keeps getSnapshot referentially stable while
-  // the store hasn't moved; reset when deps change so a new score/tempo can't
-  // return a stale value at an unchanged beat.
-  const cacheRef = useRef<{ beat: number; value: T } | null>(null);
-  const depsRef = useRef<DependencyList | null>(null);
-  if (depsRef.current === null || depsChanged(depsRef.current, deps)) {
-    depsRef.current = deps;
-    cacheRef.current = null;
-  }
-
-  const getSnapshot = (): T => {
-    const beat = getCursorBeat();
-    const prev = cacheRef.current;
-    if (prev !== null && prev.beat === beat) return prev.value;
-    const next = selectorRef.current(beat);
-    if (prev !== null && isEqualRef.current(prev.value, next)) {
-      // Value-equal across the beat change: keep the previous reference so
-      // useSyncExternalStore bails and the component does not re-render.
-      cacheRef.current = { beat, value: prev.value };
-      return prev.value;
-    }
-    cacheRef.current = { beat, value: next };
-    return next;
-  };
-
-  return useSyncExternalStore(subscribeCursor, getSnapshot);
+  return cursorStore.useSelector((s) => selector(s.beat), deps, isEqual);
 }

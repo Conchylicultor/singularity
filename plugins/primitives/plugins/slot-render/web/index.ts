@@ -4,6 +4,7 @@ export {
   defineRenderSlot,
   defineMountSlot,
   defineDispatchSlot,
+  defineWrapperSlot,
   renderIsolated,
   RenderSlotSubIdContext,
 } from "./internal/render-slot";
@@ -16,6 +17,9 @@ export type {
   DispatchSlot,
   DispatchContribution,
   DispatchSlotConfig,
+  WrapperSlot,
+  WrapperSlotConfig,
+  WrapContribution,
 } from "./internal/render-slot";
 export type {
   SlotItemMiddleware,

@@ -24,7 +24,7 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { inferKeys } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Sonata } from "./slots";
-import { getCursorBeat, setCursorBeat } from "./cursor-store";
+import { useCursorApi } from "./cursor-store";
 import { useKeyAutoDetect } from "./key-mode-store";
 
 /** Tempo scale clamp — slowest 0× (frozen / 0%) to fastest 4× (quadruple). */
@@ -167,15 +167,13 @@ export interface SonataContextValue {
    */
   clearCurrentSong: () => void;
   /**
-   * Toggle play/pause from the current cursor. Stable; the player surface
-   * publishes it to the global transport bus while mounted, so the gate on
-   * "player on screen" is implicit (the bus is empty on the library).
+   * Toggle play/pause from the current cursor. Stable; the controls plugin
+   * registers it as a per-surface, focus-scoped Space shortcut while a song is
+   * open, so each Sonata window toggles only its own transport.
    */
   togglePlay: () => void;
   /** Nudge the playback tempo scale by `delta` (e.g. +0.1 = 10% faster). */
   nudgeTempo: (delta: number) => void;
-  /** Move the playhead (e.g. scrub / seek). */
-  setCursorBeat: (beat: number) => void;
   /** Nudge the playhead by `deltaBeat` beats, clamped to [0, end]; re-anchors playback. */
   seekBy: (deltaBeat: number) => void;
   /** Seek the playhead to an absolute `beat`, clamped to [0, end]; re-anchors playback. */
@@ -231,10 +229,18 @@ const wallClock: TransportClock = { now: () => performance.now() / 1000 };
 export function SonataProvider({ children }: { children: ReactNode }) {
   const sources = Sonata.Source.useContributions();
   const analyzers = Sonata.Analyzer.useContributions();
-  // Per-song key-source override (module store, written by the `key-mode`
-  // plugin's observer / the key-readout toggle). When on, the score pipeline
-  // ignores the authored key and infers it from the notes — see `baseScore`.
+  // Per-song key-source override (per-surface scoped store, written by the
+  // `key-mode` plugin's observer / the key-readout toggle). When on, the score
+  // pipeline ignores the authored key and infers it from the notes — see
+  // `baseScore`.
   const keyAutoDetect = useKeyAutoDetect();
+  // The per-surface cursor store's imperative facade. Resolves to the
+  // `<CursorStoreProvider>` mounted in `SonataLayout` (wrapping this provider),
+  // so every surface gets its own playhead. Memoized on the stable store, so it
+  // is referentially stable across renders — safe to read directly in the rAF
+  // loop and stable callbacks without a ref. The provider is the sole writer
+  // (`cursor.setBeat`); reads use `cursor.getBeat()`.
+  const cursor = useCursorApi();
 
   // Open-song state. Navigation itself is URL-driven via the pane router (the
   // library index pane and the player pane); this only tracks which song the
@@ -249,9 +255,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // Raw input keyed by source id — each source keeps its own input so they
   // accumulate and merge, rather than one active source replacing another.
   const [rawById, setRawById] = useState<Record<string, unknown>>({});
-  // The playhead lives in the module-level cursor store (not React state) so the
+  // The playhead lives in the per-surface cursor store (not React state) so the
   // ~60fps transport advance doesn't re-render every `useSonata()` consumer. The
-  // provider is the sole writer (`setCursorBeat`); reads use `getCursorBeat()`.
+  // provider is the sole writer (`cursor.setBeat`); reads use `cursor.getBeat()`.
   const [isPlaying, setIsPlaying] = useState(false);
   const [tempoScale, setTempoScaleState] = useState(1);
   // Bumped on every seek so the audio scheduler can restart from the new cursor.
@@ -337,9 +343,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // (which don't change `rawById`), so switching the visible Loader does NOT
   // reset the playhead — only loading or editing input does.
   useEffect(() => {
-    setCursorBeat(0, { seek: true });
+    cursor.setBeat(0, { seek: true });
     setIsPlaying(false);
-  }, [baseScore]);
+  }, [baseScore, cursor]);
 
   // --- Transport: a requestAnimationFrame loop (no polling). ----------------
   // We anchor at the playback clock's time + beat where playback started, then
@@ -364,7 +370,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   tempoIndexRef.current = tempoIndex;
   // Live mirrors so stable callbacks (seek, re-anchor, clock swaps, store
   // actions) read current values WITHOUT depending on them and re-anchoring.
-  // The cursor's live value comes from the store via `getCursorBeat()`.
+  // The cursor's live value comes from the store via `cursor.getBeat()`.
   const isPlayingRef = useRef(isPlaying);
   isPlayingRef.current = isPlaying;
   const tempoScaleRef = useRef(tempoScale);
@@ -385,15 +391,15 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const registerClock = useCallback(
     (clock: TransportClock) => {
       clockRef.current = clock;
-      if (isPlayingRef.current) reanchor(getCursorBeat());
+      if (isPlayingRef.current) reanchor(cursor.getBeat());
       return () => {
         if (clockRef.current === clock) {
           clockRef.current = wallClock;
-          if (isPlayingRef.current) reanchor(getCursorBeat());
+          if (isPlayingRef.current) reanchor(cursor.getBeat());
         }
       };
     },
-    [reanchor],
+    [reanchor, cursor],
   );
 
   const stop = useCallback(() => {
@@ -432,20 +438,20 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     (beat: number) => {
       const end = scoreEndBeat(scoreRef.current);
       const next = Math.max(0, Math.min(end, beat));
-      setCursorBeat(next, { seek: true });
+      cursor.setBeat(next, { seek: true });
       reanchor(next);
       // Signal anchored consumers (the audio scheduler) to restart from `next`.
       // The score is unchanged, so without this the audio would keep playing
       // from the pre-seek position while only the visual cursor jumps.
       setSeekEpoch((n) => n + 1);
     },
-    [reanchor],
+    [reanchor, cursor],
   );
 
   // Relative seek (keyboard arrows) delegates to the absolute primitive.
   const seekBy = useCallback(
-    (deltaBeat: number) => seekTo(getCursorBeat() + deltaBeat),
-    [seekTo],
+    (deltaBeat: number) => seekTo(cursor.getBeat() + deltaBeat),
+    [seekTo, cursor],
   );
 
   // Single-press jump along the tempo-adaptive seek grid (a whole bar at normal
@@ -455,7 +461,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   const seekBar = useCallback(
     (direction: -1 | 1) => {
       const score = scoreRef.current;
-      const here = getCursorBeat();
+      const here = cursor.getBeat();
       const end = scoreEndBeat(score);
       const grid = subdivideBars(score, seekSubdivisions(tempoScaleRef.current));
       if (direction > 0) {
@@ -471,7 +477,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       const next = nextLine(grid, here, end);
       seekTo(here > (cur + next) / 2 ? cur : prevLine(grid, cur));
     },
-    [seekTo],
+    [seekTo, cursor],
   );
 
   // --- Press-and-hold repeat. ----------------------------------------------
@@ -518,20 +524,20 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       const interval = Math.max(MIN_INTERVAL, START_INTERVAL - held * ACCEL);
       if (acc >= interval) {
         acc = 0;
-        const here = getCursorBeat();
+        const here = cursor.getBeat();
         const next =
           direction < 0 ? prevLine(grid, here) : nextLine(grid, here, end);
         // Move the visual cursor directly — no `seekTo` (no re-anchor / seekEpoch
         // bump) since playback is suspended. The store write is read back by the
-        // next step's `getCursorBeat()` and the final `endScrub` commit. A
+        // next step's `cursor.getBeat()` and the final `endScrub` commit. A
         // bar-jump is navigation, not playback — flag it a seek so onset FX
         // don't fire on every step.
-        if (next !== here) setCursorBeat(next, { seek: true });
+        if (next !== here) cursor.setBeat(next, { seek: true });
       }
       scrubRafRef.current = requestAnimationFrame(step);
     };
     scrubRafRef.current = requestAnimationFrame(step);
-  }, []);
+  }, [cursor]);
 
   const endScrub = useCallback(() => {
     if (scrubRafRef.current === null) return;
@@ -544,9 +550,9 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     } else {
       // Paused: commit the landing beat (re-anchor + signal once) so a later
       // play starts from exactly where the scrub stopped.
-      seekTo(getCursorBeat());
+      seekTo(cursor.getBeat());
     }
-  }, [play, seekTo]);
+  }, [play, seekTo, cursor]);
 
   // Cancel any in-flight scrub loop on unmount so the rAF doesn't outlive us.
   useEffect(() => {
@@ -567,8 +573,8 @@ export function SonataProvider({ children }: { children: ReactNode }) {
   // A tempo change rescales `score` mid-flight; re-anchor at the current cursor so
   // the visual transport doesn't jump (audio re-anchors via its score-dep effect).
   useEffect(() => {
-    reanchor(getCursorBeat());
-  }, [score, reanchor]);
+    reanchor(cursor.getBeat());
+  }, [score, reanchor, cursor]);
 
   // 0% speed freezes the transport: pause so neither the cursor nor the audio
   // advances. Stepping the speed back up requires pressing play again.
@@ -587,7 +593,7 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     }
 
     // Anchor against the current cursor + active clock so play/pause/seek compose.
-    reanchor(getCursorBeat());
+    reanchor(cursor.getBeat());
 
     const tick = () => {
       const anchor = anchorRef.current;
@@ -606,11 +612,11 @@ export function SonataProvider({ children }: { children: ReactNode }) {
         tempoIndexRef.current.secondsToBeat(elapsedSeconds),
       );
       if (beat >= endBeat) {
-        setCursorBeat(endBeat);
+        cursor.setBeat(endBeat);
         setIsPlaying(false);
         return;
       }
-      setCursorBeat(beat);
+      cursor.setBeat(beat);
       rafRef.current = requestAnimationFrame(tick);
     };
 
@@ -623,13 +629,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     };
     // Re-anchor only on play/stop transitions (and clock swaps, handled in
     // registerClock) — not on every cursor change; the loop owns cursorBeat
-    // while playing. `reanchor` is stable.
-  }, [isPlaying, reanchor]);
+    // while playing. `reanchor` and `cursor` are both stable (memoized), so this
+    // effect still only re-runs on the play/stop transition.
+  }, [isPlaying, reanchor, cursor]);
 
-  // Stable transport verbs the player surface publishes to the module-level bus
-  // (for out-of-React global keyboard shortcuts) while it is mounted. Publishing
-  // only from the player makes the "player on screen" gate implicit — the bus is
-  // empty on the library, so Space/arrows are inert there with no `view` check.
+  // Stable transport verbs the controls plugin registers as per-surface, focus-
+  // scoped keyboard shortcuts (Space / ↑ / ↓ and the ←/→ seek-hold controller),
+  // each gated on a song being open (`currentSongId`) so they are inert on the
+  // library and never cross between two open Sonata windows.
   const togglePlay = useCallback(() => {
     isPlayingRef.current ? stop() : play();
   }, [play, stop]);
@@ -683,7 +690,6 @@ export function SonataProvider({ children }: { children: ReactNode }) {
       clearCurrentSong,
       togglePlay,
       nudgeTempo,
-      setCursorBeat,
       seekBy,
       seekTo,
       seekBar,
@@ -727,7 +733,14 @@ export function SonataProvider({ children }: { children: ReactNode }) {
     ],
   );
 
+  // Fold every contributed per-surface provider around the children, INSIDE the
+  // SonataContext so contributed wrappers may `useSonata()`. This lets a plugin
+  // the shell can't import (cycle) inject one provider above a surface's whole
+  // subtree — e.g. an audio engine and a volume control in different slot
+  // branches sharing one per-surface context.
   return (
-    <SonataContext.Provider value={value}>{children}</SonataContext.Provider>
+    <SonataContext.Provider value={value}>
+      <Sonata.SurfaceProvider.Wrap>{children}</Sonata.SurfaceProvider.Wrap>
+    </SonataContext.Provider>
   );
 }

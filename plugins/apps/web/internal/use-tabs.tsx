@@ -15,6 +15,7 @@ import {
   type PaneSlot,
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
+import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import { Apps } from "../slots";
 import { useActiveApp } from "./use-active-app";
 import { resolveAppForPath } from "./resolve-app";
@@ -310,6 +311,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     },
     [replaceTabAppWithRoute],
   );
+
+  // Push focus changes into the shortcuts focused-surface signal (push-based, no
+  // polling) so surface-scoped shortcuts read the focused surface from the
+  // window keydown handler outside any React subtree.
+  useEffect(() => {
+    setFocusedSurfaceId(focusedTabId);
+  }, [focusedTabId]);
 
   // Publish the cross-app navigator at module scope so out-of-provider callers
   // (the floating bar, a sibling Core.Root) can reach it via the free

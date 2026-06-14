@@ -17,9 +17,8 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { useConfig } from "@plugins/config_v2/web";
 import {
-  getCursorBeat,
   Sonata,
-  subscribeCursor,
+  useCursorApi,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { useInertialDrag } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/inertial-drag/web";
@@ -124,6 +123,10 @@ const ScrollLayer = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
 );
 
 function PianoRollInner({ score, tempoScale }: PianoRollProps) {
+  // Imperative per-surface cursor facade. Stable (memoized on the store), so the
+  // subscription/scroll closures below never go stale and can list it in deps.
+  const cursor = useCursorApi();
+
   // We measure the LANE (above the keyboard); its height drives the time axis.
   const [laneRef, lane] = useElementSize();
 
@@ -177,7 +180,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     axis: "y",
     unitsPerPixel: 1 / pxPerSecond,
     bounds: [0, endSeconds],
-    origin: () => tempo.beatToSeconds(getCursorBeat()),
+    origin: () => tempo.beatToSeconds(cursor.getBeat()),
     onScrub: (sec) => seekTo(tempo.secondsToBeat(sec)),
     onGrab: () => {
       if (isPlaying) {
@@ -270,10 +273,10 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             // The shared playback cursor — the clock note-anchored effects read
             // so their geometry stays a pure function of the cursor (glued to
             // the notes on pause/scrub) instead of integrating wall-clock.
-            getPlaybackBeats: getCursorBeat,
+            getPlaybackBeats: () => cursor.getBeat(),
           })
         : null,
-    [pixi],
+    [pixi, cursor],
   );
 
   // --- Imperative cursor path. The playhead advances ~60fps via the cursor
@@ -317,16 +320,16 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   // Drive the imperative path on every cursor change — no React render. The
   // store tells us whether the change was a seek so we re-anchor onsets.
   useEffect(
-    () => subscribeCursor((seek) => applyCursor(getCursorBeat(), seek)),
-    [applyCursor],
+    () => cursor.subscribe((seek) => applyCursor(cursor.getBeat(), seek)),
+    [applyCursor, cursor],
   );
 
   // Re-sync after any reactive change (scene ready, resize, tempo) and on mount,
   // so the view lands correctly even while paused (no cursor tick fires then).
   // Layout effect so the transform is applied before paint (no flash).
   useLayoutEffect(() => {
-    applyCursor(getCursorBeat());
-  }, [applyCursor, pixi, lane.height, tempo, tempoScale]);
+    applyCursor(cursor.getBeat());
+  }, [applyCursor, cursor, pixi, lane.height, tempo, tempoScale]);
 
   // The cursor-invariant DOM content, MEMOIZED on its real inputs. The overlay
   // subtree's element identity stays stable between frames (this component no

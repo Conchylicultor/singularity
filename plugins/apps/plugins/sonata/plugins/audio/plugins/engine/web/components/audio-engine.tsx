@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef } from "react";
 import {
-  getCursorBeat,
   Sonata,
+  useCursorApi,
   useSonata,
   type InstrumentVoices,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
@@ -10,12 +10,7 @@ import {
   useTrackInstrumentMap,
 } from "@plugins/apps/plugins/sonata/plugins/track-mixer/web";
 import { startScheduling, type ScheduleHandle } from "../scheduler";
-import {
-  DEFAULT_VOLUME,
-  setAudioLoadError,
-  setAudioStatus,
-  useAudioState,
-} from "../audio-store";
+import { DEFAULT_VOLUME, useAudioControls, useAudioState } from "../audio-store";
 
 /**
  * The headless Sonata audio engine — a `Sonata.Effect`, mounted once inside
@@ -29,7 +24,8 @@ import {
  * collapsing the panel unmounted the component and `ctx.close()`'d the
  * `AudioContext` mid-playback — killing all sound. Splitting the graph into this
  * always-mounted effect makes panel visibility purely cosmetic; the slider and
- * status line in `AudioPanel` now talk to the engine through the `audio-store`.
+ * status line now talk to the engine through the per-surface `audio-store`
+ * (provided above both via the `Sonata.SurfaceProvider` wrapper slot).
  *
  * On each `isPlaying → true` transition it captures one anchor (`ctx.currentTime`
  * + the cursor beat) and hands it to `startScheduling`, which schedules notes
@@ -49,6 +45,14 @@ import {
  */
 export function AudioEngine() {
   const { score, isPlaying, seekEpoch, registerClock } = useSonata();
+
+  // Imperative per-surface cursor facade. Read through a ref inside the
+  // scheduling effect so the effect's deps stay unchanged (the cursor is read
+  // straight at the play instant, NOT a render input — see below). `cursor` is
+  // stable (memoized on the store), so the ref simply mirrors it.
+  const cursor = useCursorApi();
+  const cursorRef = useRef(cursor);
+  cursorRef.current = cursor;
 
   // Muted tracks are dropped from the play-list before scheduling. Deriving a
   // filtered score (rather than passing the set down) keeps `startScheduling`
@@ -93,6 +97,9 @@ export function AudioEngine() {
 
   // Master volume is owned by the shared store (the panel slider writes it).
   const { volume } = useAudioState();
+  // Imperative writers for the engine's health slice. Memoized-stable on the
+  // store handle, so listing it in effect deps below doesn't re-run effects.
+  const { setStatus, setLoadError } = useAudioControls();
 
   // --- Web Audio graph: AudioContext + master gain, owned in refs. ----------
   const ctxRef = useRef<AudioContext | null>(null);
@@ -179,7 +186,7 @@ export function AudioEngine() {
         () => {},
         (err: unknown) => {
           if (!cancelled) {
-            setAudioLoadError(err instanceof Error ? err.message : String(err));
+            setLoadError(err instanceof Error ? err.message : String(err));
           }
         },
       );
@@ -193,14 +200,15 @@ export function AudioEngine() {
       changed = true;
     }
 
-    if (changed) setAudioLoadError(null);
+    if (changed) setLoadError(null);
 
     return () => {
       cancelled = true;
     };
     // `inUseKey` is the stable fingerprint of `inUseIds`; `instrumentById` only
-    // changes when contributions change. Both are intentional deps.
-  }, [inUseKey, inUseIds, instrumentById]);
+    // changes when contributions change. `setLoadError` is memoized-stable. All
+    // intentional deps.
+  }, [inUseKey, inUseIds, instrumentById, setLoadError]);
 
   // --- Scheduling effect: anchor on play, schedule upfront, allOff on stop. --
   // Re-runs on `seekEpoch` too: a seek repositions the playback origin without
@@ -228,7 +236,7 @@ export function AudioEngine() {
     // read straight from the store (it's not a render input here) — a seek bumps
     // `seekEpoch`, re-running this effect so the read reflects the new position.
     const audioAnchor = ctx.currentTime;
-    const fromBeat = getCursorBeat();
+    const fromBeat = cursorRef.current.getBeat();
 
     // Route a track to its instrument's manager, reading the ref live so it
     // always reflects the latest reconcile.
@@ -264,14 +272,14 @@ export function AudioEngine() {
   useEffect(() => {
     const managers = [...managersRef.current.values()];
     if (managers.length === 0) {
-      setAudioStatus("empty");
+      setStatus("empty");
       return;
     }
-    setAudioStatus("loading");
+    setStatus("loading");
     let cancelled = false;
     void Promise.all(managers.map((m) => m.loaded)).then(
       () => {
-        if (!cancelled) setAudioStatus("ready");
+        if (!cancelled) setStatus("ready");
       },
       () => {
         // The load error is surfaced by the reconcile effect; leave status at
@@ -281,7 +289,9 @@ export function AudioEngine() {
     return () => {
       cancelled = true;
     };
-  }, [inUseKey]);
+    // `setStatus` is memoized-stable, so adding it doesn't change when this
+    // re-evaluates (still on every in-use-set change via `inUseKey`).
+  }, [inUseKey, setStatus]);
 
   return null;
 }

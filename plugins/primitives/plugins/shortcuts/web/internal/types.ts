@@ -22,4 +22,9 @@ export type ShortcutDescriptor = {
    * win inside inputs.
    */
   enableInInputs?: boolean;
+  /**
+   * If set, this shortcut is eligible only when its surface is the focused
+   * surface; unset = global, always eligible.
+   */
+  surfaceId?: string;
 };

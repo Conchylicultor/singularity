@@ -10,6 +10,7 @@ import {
   type ReactNode,
 } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
+import { SurfaceIdContext } from "@plugins/primitives/plugins/surface-id/web";
 import { Pane as PaneSlots } from "./slots";
 
 // ---------------------------------------------------------------------------
@@ -726,12 +727,16 @@ export function PaneSurfaceProvider({
   store,
   basePath,
   appId,
+  surfaceId,
   children,
 }: {
   store: PaneStore;
   basePath: string;
   /** Owning app of this surface; read via {@link useSurfaceAppId}. */
   appId?: string;
+  /** Stable per-surface-instance id (the tab's `tabId`); read via `useSurfaceTabId`
+   *  from `@plugins/primitives/plugins/surface-id/web`. */
+  surfaceId?: string;
   children: ReactNode;
 }): ReactNode {
   return createElement(
@@ -740,7 +745,11 @@ export function PaneSurfaceProvider({
     createElement(
       PaneBasePathContext.Provider,
       { value: basePath },
-      createElement(PaneSurfaceAppContext.Provider, { value: appId }, children),
+      createElement(
+        PaneSurfaceAppContext.Provider,
+        { value: appId },
+        createElement(SurfaceIdContext.Provider, { value: surfaceId }, children),
+      ),
     ),
   );
 }

@@ -2065,6 +2065,10 @@
       "name": "@singularity/plugin-primitives-row",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/scoped-store": {
+      "name": "@singularity/plugin-primitives-scoped-store",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/search": {
       "name": "@singularity/plugin-primitives-search",
       "version": "0.0.1",
@@ -2103,6 +2107,10 @@
     },
     "plugins/primitives/plugins/status-dot": {
       "name": "@singularity/plugin-primitives-status-dot",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/surface-id": {
+      "name": "@singularity/plugin-primitives-surface-id",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/syntax-highlight": {
@@ -4011,6 +4019,8 @@
 
     "@singularity/plugin-primitives-row": ["@singularity/plugin-primitives-row@workspace:plugins/primitives/plugins/row"],
 
+    "@singularity/plugin-primitives-scoped-store": ["@singularity/plugin-primitives-scoped-store@workspace:plugins/primitives/plugins/scoped-store"],
+
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
 
     "@singularity/plugin-primitives-section-label": ["@singularity/plugin-primitives-section-label@workspace:plugins/primitives/plugins/section-label"],
@@ -4030,6 +4040,8 @@
     "@singularity/plugin-primitives-spinner": ["@singularity/plugin-primitives-spinner@workspace:plugins/primitives/plugins/spinner"],
 
     "@singularity/plugin-primitives-status-dot": ["@singularity/plugin-primitives-status-dot@workspace:plugins/primitives/plugins/status-dot"],
+
+    "@singularity/plugin-primitives-surface-id": ["@singularity/plugin-primitives-surface-id@workspace:plugins/primitives/plugins/surface-id"],
 
     "@singularity/plugin-primitives-syntax-highlight": ["@singularity/plugin-primitives-syntax-highlight@workspace:plugins/primitives/plugins/syntax-highlight"],
 

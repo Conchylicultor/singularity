@@ -310,6 +310,81 @@ export function defineMountSlot<P = {}>(
   return mountSlot;
 }
 
+/**
+ * A wrapper contribution: a component that renders `children`. Contributed to a
+ * wrapper slot so the slot can fold it (and every sibling) around the host's
+ * content — e.g. a per-surface React context Provider injected from a plugin the
+ * host cannot import.
+ */
+export interface WrapContribution {
+  id?: string;
+  component: ComponentType<{ children: ReactNode }>;
+}
+
+export interface WrapperSlotConfig<P extends object> {
+  docLabel?: (c: WrapContribution & P) => string | undefined;
+}
+
+export interface WrapperSlot<P extends object = {}>
+  extends Slot<WrapContribution & P> {
+  /**
+   * Folds every contributed wrapper OUTSIDE-IN around `children`, in
+   * contribution order: the first contribution is the OUTERMOST wrapper, the
+   * last is innermost (nearest `children`). With no contributions, returns
+   * `children` unchanged.
+   */
+  Wrap: ComponentType<{ children: ReactNode }>;
+}
+
+/**
+ * A slot whose contributions are `{children}` wrappers folded around the host's
+ * content. Unlike `.Render`/`.Mount`, a wrapper slot does NOT render the
+ * contributions as siblings — it nests them, so several plugins can each inject
+ * a wrapping component (typically a React context Provider) above ONE shared
+ * subtree. The canonical use: a plugin that the host can't import (a cycle)
+ * needs a provider above the host's children; it contributes the provider here
+ * and the host folds it in.
+ *
+ * NOT isolated by the item middlewares: a wrapper that crashes must crash the
+ * subtree it wraps (a missing provider can't be "skipped" — its consumers would
+ * throw anyway), and error boundaries don't compose with arbitrary providers.
+ * This mirrors `Core.Root`'s direct unseal for the same structural reason.
+ *
+ * Fold direction: `reduceRight` makes `contributions[0]` the outermost wrapper —
+ * matching `applyItemMiddlewares`, where the first (lowest-priority) middleware
+ * also ends up outermost.
+ */
+export function defineWrapperSlot<P extends object = {}>(
+  id: string,
+  config?: WrapperSlotConfig<P>,
+): WrapperSlot<P> {
+  const slot = defineSlot<WrapContribution & P>(id, {
+    docLabel: config?.docLabel ? (c) => config.docLabel!(c) : undefined,
+  });
+
+  const wrapperSlot = slot as unknown as WrapperSlot<P>;
+
+  wrapperSlot.Wrap = function SlotWrap({ children }: { children: ReactNode }) {
+    const ctx = useContext(PluginRuntimeContext);
+    if (!ctx) {
+      throw new Error("SlotWrap must be used within PluginProvider");
+    }
+
+    const cleanItems = slot.useContributions();
+
+    return cleanItems.reduceRight<ReactNode>((acc, clean) => {
+      const component = (clean as { component?: unknown }).component;
+      if (typeof component !== "function") return acc;
+      const C = UNSAFE_unsealSlotComponent(
+        component as unknown as SealedComponent,
+      ) as ComponentType<{ children: ReactNode }>;
+      return createElement(C, null, acc);
+    }, children);
+  };
+
+  return wrapperSlot;
+}
+
 export interface DispatchContribution<Props, Key extends string> {
   /**
    * Plain string = exact match; RegExp = pattern match; predicate = arbitrary

@@ -4,6 +4,7 @@ import {
   defineDispatchSlot,
   defineMountSlot,
   defineRenderSlot,
+  defineWrapperSlot,
 } from "@plugins/primitives/plugins/slot-render/web";
 import { definePaneToolbar } from "@plugins/primitives/plugins/pane-toolbar/web";
 import type {
@@ -68,7 +69,8 @@ export const Sonata = {
   // dispatch key is the active display id, carried in the render props so the
   // shell stays the single owner of `activeDisplayId`. The playback cursor is
   // NOT a prop — displays read it from the cursor store (`useCursorBeat` /
-  // `subscribeCursor`) so a per-frame advance never re-renders the dispatch site.
+  // `useCursorApi().subscribe`) so a per-frame advance never re-renders the
+  // dispatch site.
   Display: defineDispatchSlot<
     {
       score: Score;
@@ -138,6 +140,15 @@ export const Sonata = {
   Home: defineRenderSlot<{ component: ComponentType }>("sonata.home", {
     docLabel: (p) => p.id,
   }),
+
+  // SURFACE PROVIDER — per-surface React context wrappers folded around the
+  // SonataProvider's children (inside SonataContext, so wrappers may
+  // `useSonata()`). Lets a plugin the shell can't import (a cycle) inject ONE
+  // provider above a Sonata surface's whole subtree — so sibling consumers in
+  // different slot branches (e.g. an audio engine and its volume control) share
+  // one per-surface context. Contributions nest outside-in in contribution
+  // order; the slot paints nothing itself.
+  SurfaceProvider: defineWrapperSlot("sonata.surface-provider"),
 
   // EFFECT — headless, always-mounted Sonata-scoped side effects. Components
   // contributed here render nothing; they observe shared context (current song,

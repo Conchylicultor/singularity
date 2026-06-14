@@ -28,6 +28,7 @@ export function TabSurface({ tab }: { tab: Tab }) {
       store={tab.store}
       basePath={appPathFor(tab.appId, apps)}
       appId={tab.appId}
+      surfaceId={tab.tabId}
     >
       <TabTitleReporter tabId={tab.tabId} />
       {renderIsolated(Apps.App.id, app as unknown as Contribution)}

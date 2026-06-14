@@ -1,15 +1,17 @@
-import { useEffect } from "react";
-import { isEditableTarget } from "@plugins/primitives/plugins/shortcuts/web";
-import { getSonataTransport } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { useEffect, useRef } from "react";
+import {
+  getFocusedSurfaceId,
+  isEditableTarget,
+} from "@plugins/primitives/plugins/shortcuts/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 
 /**
- * Headless ←/→ seek controller (a `Sonata.Effect`, so it is mounted exactly
- * while the Sonata app is open — the same implicit "player on screen" gate the
- * transport bus gives the other shortcuts).
- *
- * It owns the arrow keys directly rather than going through the keydown-only
- * shortcut registry, because good seek UX needs to tell a *tap* from a
- * *press-and-hold*, which requires both keyup and the OS auto-repeat signal:
+ * Headless ←/→ seek controller (a `Sonata.Effect`, so it mounts once per Sonata
+ * surface inside `SonataProvider`). It owns the arrow keys directly rather than
+ * going through the keydown-only shortcut registry, because good seek UX needs to
+ * tell a *tap* from a *press-and-hold*, which requires both keyup and the OS
+ * auto-repeat signal:
  *
  *  - **Tap** (a single keydown) → jump to the previous / next bar line: one
  *    press rewinds / advances a whole measure (Synthesia-style), an immediate
@@ -18,11 +20,40 @@ import { getSonataTransport } from "@plugins/apps/plugins/sonata/plugins/shell/w
  *    repeat at an accelerating cadence until release, with the audio scheduler
  *    suspended for the duration (so the rapid stepping never flickers).
  *
+ * Because it runs from a raw window listener (not the surface-scoped shortcut
+ * registry), it must enforce focus and the "player on screen" gate itself:
+ *
+ *  - **Focus** — it bails unless THIS surface is the focused one
+ *    (`getFocusedSurfaceId()`), so an arrow-key hold in a foreground window can't
+ *    scrub a background Sonata window (the cross-window bug the transport bus had).
+ *  - **Song** — it bails when no song is open (`currentSongId == null`). The old
+ *    transport bus was empty on the library; `SonataProvider` now wraps both
+ *    library and player, so this gate is restored explicitly.
+ *
  * Plain arrow presses are claimed (and `preventDefault`'d so the page doesn't
  * scroll) only when no text field is focused; inside an input the arrows move
  * the caret as usual.
  */
 export function SeekHoldController() {
+  const { seekBar, startScrub, endScrub, currentSongId } = useSonata();
+  const surfaceId = useSurfaceTabId();
+
+  // The window listeners are installed once; read the live transport verbs,
+  // surface id, and song-open gate through refs so the effect closure never goes
+  // stale and we never re-install the listeners (which would drop an in-flight
+  // hold). `useSonata()` verbs are referentially stable, but the song-open gate
+  // is not — refs keep the single listener correct across opens.
+  const seekBarRef = useRef(seekBar);
+  seekBarRef.current = seekBar;
+  const startScrubRef = useRef(startScrub);
+  startScrubRef.current = startScrub;
+  const endScrubRef = useRef(endScrub);
+  endScrubRef.current = endScrub;
+  const surfaceIdRef = useRef(surfaceId);
+  surfaceIdRef.current = surfaceId;
+  const hasSongRef = useRef(currentSongId != null);
+  hasSongRef.current = currentSongId != null;
+
   useEffect(() => {
     // The key currently driving a press (so keyup matches its own keydown) and
     // whether that press has escalated into a continuous scrub.
@@ -35,9 +66,10 @@ export function SeekHoldController() {
     const onKeyDown = (e: KeyboardEvent) => {
       const direction = dirOf(e.key);
       if (direction === null) return;
+      // Only the focused surface, and only when a song is open here.
+      if (getFocusedSurfaceId() !== surfaceIdRef.current) return;
+      if (!hasSongRef.current) return;
       if (isEditableTarget(e.target)) return; // let the field move its caret
-      const transport = getSonataTransport();
-      if (!transport) return;
       e.preventDefault();
 
       if (e.repeat) {
@@ -45,7 +77,7 @@ export function SeekHoldController() {
         // (once — further repeats are absorbed by the running scrub loop).
         if (!scrubbing) {
           scrubbing = true;
-          transport.startScrub(direction);
+          startScrubRef.current(direction);
         }
         return;
       }
@@ -53,7 +85,7 @@ export function SeekHoldController() {
       // Initial press: jump one bar immediately so a quick tap is crisp. If the
       // key keeps being held, the first auto-repeat above takes over from here.
       heldKey = e.key as "ArrowLeft" | "ArrowRight";
-      transport.seekBar(direction);
+      seekBarRef.current(direction);
     };
 
     const release = (key: string) => {
@@ -61,7 +93,7 @@ export function SeekHoldController() {
       heldKey = null;
       if (scrubbing) {
         scrubbing = false;
-        getSonataTransport()?.endScrub();
+        endScrubRef.current();
       }
     };
 
@@ -80,7 +112,7 @@ export function SeekHoldController() {
       window.removeEventListener("keyup", onKeyUp);
       window.removeEventListener("blur", onBlur);
       // Unmounting mid-hold (app closed) must not strand a running scrub.
-      if (scrubbing) getSonataTransport()?.endScrub();
+      if (scrubbing) endScrubRef.current();
     };
   }, []);
 

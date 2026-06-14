@@ -2,19 +2,21 @@ import type { CSSProperties } from "react";
 import { MdVolumeDown, MdVolumeOff, MdVolumeUp } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { setAudioVolume, toggleAudioMute, useAudioState } from "../audio-store";
+import { useAudioControls, useAudioState } from "../audio-store";
 import "./volume-control.css";
 
 /**
  * The master-volume control pinned into the Sonata top toolbar
- * (`Sonata.Toolbar`): a mute toggle (level-reflecting icon) plus a compact
+ * (`SonataToolbar.End`): a mute toggle (level-reflecting icon) plus a compact
  * slider. Like `transport-bar`'s controls it owns no audio — it only
- * reads/writes the shared `audio-store`, which the always-mounted `AudioEngine`
+ * reads/writes the per-surface `audio-store` (provided via the
+ * `Sonata.SurfaceProvider` wrapper slot), which the always-mounted `AudioEngine`
  * reads to drive master gain. Living in the engine plugin keeps the
  * `audio-store` import plugin-local.
  */
 export function VolumeControl() {
   const { volume } = useAudioState();
+  const { setVolume, toggleMute } = useAudioControls();
   const muted = volume === 0;
   const Icon = muted ? MdVolumeOff : volume < 0.5 ? MdVolumeDown : MdVolumeUp;
 
@@ -23,7 +25,7 @@ export function VolumeControl() {
       <IconButton
         icon={Icon}
         label={muted ? "Unmute" : "Mute"}
-        onClick={toggleAudioMute}
+        onClick={toggleMute}
       />
       <input
         type="range"
@@ -31,7 +33,7 @@ export function VolumeControl() {
         max={1}
         step={0.01}
         value={volume}
-        onChange={(e) => setAudioVolume(Number(e.target.value))}
+        onChange={(e) => setVolume(Number(e.target.value))}
         aria-label="Volume"
         className="volume-slider w-28"
         style={{ "--fill": volume * 100 } as CSSProperties}

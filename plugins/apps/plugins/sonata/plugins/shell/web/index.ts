@@ -13,21 +13,18 @@ export {
   type TransportClock,
 } from "./context";
 export {
-  getSonataTransport,
-  publishSonataTransport,
-  type SonataTransportActions,
-} from "./transport-store";
-export {
-  getCursorBeat,
-  subscribeCursor,
+  CursorStoreProvider,
+  cursorApiFor,
+  useCursorApi,
   useCursorBeat,
   useCursorSelector,
+  type CursorApi,
+  type CursorStore,
 } from "./cursor-store";
 export {
-  getKeyAutoDetect,
-  setKeyAutoDetect,
-  subscribeKeyAutoDetect,
+  KeyModeStoreProvider,
   useKeyAutoDetect,
+  useSetKeyAutoDetect,
 } from "./key-mode-store";
 
 export default {

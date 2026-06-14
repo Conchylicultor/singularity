@@ -2,7 +2,7 @@ import { useMemo } from "react";
 import {
   useCursorSelector,
   useKeyAutoDetect,
-  setKeyAutoDetect,
+  useSetKeyAutoDetect,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
@@ -75,6 +75,7 @@ const SCALE_TINT = "color-mix(in srgb, var(--primary) 32%, transparent)";
 export function KeyReadout() {
   const { score, currentSongId } = useSonata();
   const keyAutoDetect = useKeyAutoDetect();
+  const setKeyAutoDetect = useSetKeyAutoDetect();
 
   // Beat-indexed key entries — recomputed only when the Score changes. Walking
   // the memoized list (rather than `effectiveKeyAt`, which rebuilds it each call)

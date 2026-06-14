@@ -7,11 +7,12 @@ export interface SlotDef {
   /**
    * Which slot factory defined this slot. `"render"` for `defineRenderSlot`,
    * `"mount"` for `defineMountSlot`, `"dispatch"` for `defineDispatchSlot`,
-   * `"slot"` for `defineSlot`. Best-effort for runtime-discovered slots (the
-   * static parse can't always tell them apart). Reorderability derives from
-   * `kind`: `"render"` slots are always reorderable; `"mount"` never are.
+   * `"wrap"` for `defineWrapperSlot`, `"slot"` for `defineSlot`. Best-effort for
+   * runtime-discovered slots (the static parse can't always tell them apart).
+   * Reorderability derives from `kind`: `"render"` slots are always reorderable;
+   * every other kind (including `"wrap"`) never is.
    */
-  kind?: "render" | "mount" | "dispatch" | "slot";
+  kind?: "render" | "mount" | "dispatch" | "wrap" | "slot";
 }
 
 export const slotsFacetDef = defineFacet<SlotDef[]>("slots");

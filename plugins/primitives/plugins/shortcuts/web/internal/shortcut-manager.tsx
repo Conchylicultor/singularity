@@ -1,10 +1,19 @@
-import { useEffect, useRef } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import { Shortcuts } from "../slots";
 import { getCachedCombo, matchesEvent } from "./parse-keys";
 import { comboHasModifier, isEditableTarget } from "./editable-target";
+import { useDynamicShortcuts } from "./dynamic-registry";
+import { getFocusedSurfaceId } from "./focused-surface";
 
 export function ShortcutManager() {
-  const shortcuts = Shortcuts.Shortcut.useContributions();
+  const staticShortcuts = Shortcuts.Shortcut.useContributions();
+  const dynamicShortcuts = useDynamicShortcuts();
+  // Static path stays byte-identical; the dynamic (surface-scoped) list is
+  // simply concatenated to build the active set.
+  const shortcuts = useMemo(
+    () => [...staticShortcuts, ...dynamicShortcuts],
+    [staticShortcuts, dynamicShortcuts],
+  );
   const shortcutsRef = useRef(shortcuts);
   shortcutsRef.current = shortcuts;
 
@@ -49,6 +58,7 @@ export function ShortcutManager() {
         )
           continue;
         if (shortcut.when && !shortcut.when()) continue;
+        if (shortcut.surfaceId !== undefined && shortcut.surfaceId !== getFocusedSurfaceId()) continue;
 
         const priority = shortcut.priority ?? 0;
         if (priority > winnerPriority) {

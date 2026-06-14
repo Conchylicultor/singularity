@@ -26,8 +26,8 @@ function isSlotLike(v: unknown): v is { id: string } {
  */
 function parseSlotCalls(
   src: string,
-  builder: "defineRenderSlot" | "defineMountSlot",
-  kind: "render" | "mount",
+  builder: "defineRenderSlot" | "defineMountSlot" | "defineWrapperSlot",
+  kind: "render" | "mount" | "wrap",
 ): SlotDef[] {
   const out: SlotDef[] = [];
   const callRe = new RegExp(`${builder}\\s*(?:<[^]*?>)?\\s*\\(`, "g");
@@ -73,14 +73,15 @@ function safeEntries(obj: Record<string, unknown>): [string, unknown][] {
 /**
  * Best-effort `kind` for a slot surfaced only via the runtime fallback.
  * `defineRenderSlot` attaches a `.Render` component, `defineMountSlot` a
- * `.Mount` component, and `defineDispatchSlot` a `.Dispatch` component to the
- * slot object.
+ * `.Mount` component, `defineDispatchSlot` a `.Dispatch` component, and
+ * `defineWrapperSlot` a `.Wrap` component to the slot object.
  */
 function runtimeKindHints(slot: { id: string }): Partial<SlotDef> {
   const s = slot as Record<string, unknown>;
   if (typeof s.Mount === "function") return { kind: "mount" };
   if (typeof s.Render === "function") return { kind: "render" };
   if (typeof s.Dispatch === "function") return { kind: "dispatch" };
+  if (typeof s.Wrap === "function") return { kind: "wrap" };
   return { kind: "slot" };
 }
 
@@ -172,6 +173,7 @@ export default createFacet<SlotDef[]>({
       // `defineSlot`, so the group parser below won't double-count them).
       slots.push(...parseSlotCalls(stripped, "defineRenderSlot", "render"));
       slots.push(...parseSlotCalls(stripped, "defineMountSlot", "mount"));
+      slots.push(...parseSlotCalls(stripped, "defineWrapperSlot", "wrap"));
       slots.push(...parseDefineGroup(
         stripped,
         "defineSlot",

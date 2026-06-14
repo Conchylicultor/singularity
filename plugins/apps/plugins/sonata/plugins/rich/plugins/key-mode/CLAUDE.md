@@ -32,7 +32,7 @@ inferred key.
 - Description: Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and syncs it into the shell's score pipeline via a headless Sonata.Effect observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves the reactive rollup.
 - Web:
   - Contributes: `Sonata.Effect` "key-mode-sync" → `KeyModeObserver`
-  - Uses: `apps/sonata/shell.setKeyAutoDetect`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
+  - Uses: `apps/sonata/shell.Sonata`, `apps/sonata/shell.useSetKeyAutoDetect`, `apps/sonata/shell.useSonata`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`
   - Exports: Values: `saveKeyAutoDetect`
 - Server:
   - Uses: `apps/sonata/library._songs`, `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`

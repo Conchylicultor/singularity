@@ -1,9 +1,11 @@
+import noModuleMutableStore from "./no-module-mutable-store";
 import noRawHistoryNav from "./no-raw-history-nav";
 
 export default {
   name: "apps",
   rules: {
     "no-raw-history-nav": noRawHistoryNav,
+    "no-module-mutable-store": noModuleMutableStore,
   },
   ignores: {
     "no-raw-history-nav": [
