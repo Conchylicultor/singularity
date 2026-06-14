@@ -46,6 +46,12 @@ export function SurfaceBody() {
   // backdrop itself wears the chrome scope so chrome/portals keep the global theme.
   const appIds = useMemo(() => [...new Set(tabs.map((t) => t.appId))], [tabs]);
 
+  // The wallpaper is ONLY the desktop backdrop — visible behind floating windows.
+  // In tab (all-docked) and solo mode the focused tab covers the surface
+  // full-bleed, so the wallpaper must not render at all (it would otherwise bleed
+  // through any transparent region of the app and never reads as "in the app").
+  const desktopMode = tabs.some((t) => t.placement === "floating");
+
   return (
     // The shared backdrop for all placements. `transform-gpu` makes it the
     // containing block for the absolutely-positioned tabs (and their fixed-position
@@ -55,9 +61,10 @@ export function SurfaceBody() {
       data-theme-scope={CHROME_THEME_SCOPE}
       className="relative h-full w-full overflow-hidden bg-background transform-gpu"
     >
-      {/* Abstract wallpaper, revealed in desktop mode behind floating windows
-          (docked/solo tabs cover it full-bleed). */}
-      <DesktopWallpaper />
+      {/* Abstract wallpaper, ONLY rendered in desktop mode (a tab is floating) so
+          it reads purely as the backdrop behind floating windows. In tab/solo
+          mode it isn't rendered, so it never bleeds into the app. */}
+      {desktopMode && <DesktopWallpaper />}
       {appIds.map((id) => (
         <ScopedAppTheme key={id} appId={id} />
       ))}
