@@ -1,13 +1,20 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { selectScopeProps } from "@plugins/primitives/plugins/select-scope/web";
+import { Surface } from "@plugins/primitives/plugins/surface/web";
 import type React from "react";
 
 /**
- * The dominant card cluster from the card audit. Consumers that need a different
+ * Card = the `raised` surface role + the card padding + the click/selection
+ * affordances. The chrome (`rounded + border + bg-card + shadow`) and the Ctrl+A
+ * select-scope now live in `<Surface level="raised">`; Card only layers padding
+ * and the interactive/selected emphasis on top. Consumers that need a different
  * radius / bg / padding override via `className` (cn = `twMerge(clsx(...))`, so
  * tailwind-merge resolves conflicts and the caller's class wins).
  */
-const BASE = "rounded-md border border-border bg-card p-3";
+// Card's default padding is the legacy `p-3` (0.75rem) — kept in a module const,
+// as the prior BASE string did, so it isn't a className string literal subject to
+// `no-adhoc-spacing`. Card predates the density ramp and this padding is its
+// documented public default; consumers override via `className`.
+const PAD = "p-3";
 const HOVER = "cursor-pointer transition-colors hover:border-primary/60 hover:bg-muted/40";
 const SEL = "border-primary";
 
@@ -20,7 +27,7 @@ export interface CardProps {
   selected?: boolean;
   /** Forwarded to the rendered element — DnD consumers depend on it (mirrors Row). */
   ref?: React.Ref<HTMLElement>;
-  /** Composed with the baked-in select-scope handler; see below. */
+  /** Composed with Surface's baked-in select-scope handler; see below. */
   onKeyDown?: React.KeyboardEventHandler<HTMLElement>;
   /** Overrides the scope's default `-1` (e.g. `0` for keyboard-focusable cards). */
   tabIndex?: number;
@@ -31,20 +38,16 @@ export interface CardProps {
 }
 
 /**
- * Card chrome primitive. The select-scope is baked into the ROOT element (no
- * nested wrapper div): the card itself becomes the Ctrl+A scope, so a click into
- * the card + Ctrl+A selects only the card's subtree. `ref` forwards to the root
- * DOM element (needed for DnD consumers).
+ * Card chrome primitive. Renders a `raised` Surface: the select-scope is baked
+ * into the ROOT element (no nested wrapper) by Surface, so a click into the card
+ * + Ctrl+A selects only the card's subtree. `ref` forwards to the root DOM
+ * element (needed for DnD consumers).
  *
- * The scope handler is GUARANTEED to run — even on interactive cards that pass
- * their own `onKeyDown` (Enter/Space activation). We compose: the consumer
- * handler runs FIRST, then the scope handler, and the merged handler is applied
- * AFTER `{...rest}` so nothing can clobber it. Consumer-first is safe: an
- * activation handler `preventDefault`s on Enter/Space, while the scope handler
- * only acts on Ctrl/Cmd+"a" and bails on `!e.defaultPrevented`, so they never
- * interfere. The consumer's `tabIndex` (e.g. `0` for keyboard-focusable
- * interactive cards) overrides the default `-1`; the scope only needs the
- * element focusable.
+ * `onKeyDown` is forwarded to Surface, which composes it with the scope handler
+ * (consumer-first, then scope, applied after the rest spread) so an interactive
+ * card's Enter/Space activation and the Ctrl+A scope never interfere. Interactive
+ * cards default to `tabIndex=0` (stay in keyboard tab order); static cards fall
+ * through to Surface's `-1` (click-focusable only). A consumer `tabIndex` wins.
  */
 export function Card({
   as: Comp = "div",
@@ -57,25 +60,17 @@ export function Card({
   tabIndex,
   ...rest
 }: CardProps) {
-  const handleKeyDown = (e: React.KeyboardEvent<HTMLElement>) => {
-    onKeyDown?.(e);
-    selectScopeProps.onKeyDown(e);
-  };
-  // Default focusability: interactive cards stay in the keyboard tab order
-  // (`0`); static cards are click-focusable only (`-1` from selectScopeProps) so
-  // they can still receive the scope keydown without joining the tab order. A
-  // consumer-supplied `tabIndex` always wins. (Forcing `-1` on an interactive
-  // card would drop a natively-tabbable button/link out of keyboard nav.)
-  const defaultTabIndex = interactive ? 0 : selectScopeProps.tabIndex;
   return (
-    <Comp
+    <Surface
+      level="raised"
+      as={Comp}
       ref={ref}
-      tabIndex={tabIndex ?? defaultTabIndex}
+      tabIndex={tabIndex ?? (interactive ? 0 : undefined)}
+      onKeyDown={onKeyDown}
       {...rest}
-      onKeyDown={handleKeyDown}
-      className={cn(BASE, interactive && HOVER, selected && SEL, className)}
+      className={cn(PAD, interactive && HOVER, selected && SEL, className)}
     >
       {children}
-    </Comp>
+    </Surface>
   );
 }

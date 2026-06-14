@@ -2,6 +2,8 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { cn } from "./lib/utils";
 
+export { SURFACE_LEVELS, type SurfaceLevel } from "./theme/surface";
+
 export {
   ControlSizeProvider,
   useControlSize,

@@ -2113,6 +2113,10 @@
       "name": "@singularity/plugin-primitives-status-dot",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/surface": {
+      "name": "@singularity/plugin-primitives-surface",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/surface-id": {
       "name": "@singularity/plugin-primitives-surface-id",
       "version": "0.0.1",
@@ -4046,6 +4050,8 @@
     "@singularity/plugin-primitives-spinner": ["@singularity/plugin-primitives-spinner@workspace:plugins/primitives/plugins/spinner"],
 
     "@singularity/plugin-primitives-status-dot": ["@singularity/plugin-primitives-status-dot@workspace:plugins/primitives/plugins/status-dot"],
+
+    "@singularity/plugin-primitives-surface": ["@singularity/plugin-primitives-surface@workspace:plugins/primitives/plugins/surface"],
 
     "@singularity/plugin-primitives-surface-id": ["@singularity/plugin-primitives-surface-id@workspace:plugins/primitives/plugins/surface-id"],
 

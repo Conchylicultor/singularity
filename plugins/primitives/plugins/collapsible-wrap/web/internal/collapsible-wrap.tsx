@@ -1,4 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Surface } from "@plugins/primitives/plugins/surface/web";
 import {
   useCallback,
   useLayoutEffect,
@@ -163,9 +164,10 @@ export function CollapsibleWrap({
   const wrapBox = (
     <div className={cn("relative min-w-0 flex-1", expanded && "z-popover")}>
       {showBackdrop && (
-        <div
+        <Surface
+          level="overlay"
           aria-hidden
-          className="pointer-events-none absolute -z-10 rounded-md border bg-popover shadow-md"
+          className="pointer-events-none absolute -z-10"
           style={{
             top: -PANEL_PAD,
             left: -PANEL_PAD,

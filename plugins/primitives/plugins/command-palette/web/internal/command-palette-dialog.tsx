@@ -1,4 +1,5 @@
 import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/ui-kit/web";
+import { Surface } from "@plugins/primitives/plugins/surface/web";
 import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "react";
 import { MdSearch } from "react-icons/md";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
@@ -137,7 +138,7 @@ export function CommandPaletteDialog({
   return (
     <Dialog open={open} onOpenChange={(o) => { if (!o) onClose(); }}>
       <DialogContent>
-        <div className="w-full max-w-lg overflow-hidden rounded-xl border bg-popover text-popover-foreground shadow-2xl">
+        <Surface level="overlay" className="w-full max-w-lg overflow-hidden rounded-xl shadow-2xl">
           <div className="flex items-center gap-sm border-b px-md py-sm">
             <MdSearch className="size-4 shrink-0 text-muted-foreground" />
             <input
@@ -232,7 +233,7 @@ export function CommandPaletteDialog({
               close
             </span>
           </Text>
-        </div>
+        </Surface>
       </DialogContent>
     </Dialog>
   );

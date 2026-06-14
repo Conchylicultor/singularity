@@ -8,6 +8,7 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { Surface } from "@plugins/primitives/plugins/surface/web";
 import type { Block, BlockHandle } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import {
@@ -162,13 +163,13 @@ export function SlashMenuPlugin({
 
   return (
     // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 is the popover's caret-gap offset below the block's bottom edge; a positioning nudge on an absolute element, not sibling rhythm
-    <div className="bg-popover absolute left-0 top-full z-popover mt-1 w-56 rounded-md border p-xs shadow-md">
+    <Surface level="overlay" className="absolute left-0 top-full z-popover mt-1 w-56 p-xs">
       <BlockTypeList
         blocks={filtered}
         activeIndex={activeIndex}
         onSelect={handleSelect}
         onHoverIndex={setActiveIndex}
       />
-    </div>
+    </Surface>
   );
 }

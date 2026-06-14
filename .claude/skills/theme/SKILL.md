@@ -56,6 +56,7 @@ Use the primitive instead of raw Tailwind classes — each ad-hoc class is banne
 - **Radius** → `rounded-*` from `--radius`, bans bare/arbitrary — [`plugins/primitives/plugins/radius/CLAUDE.md`](../../../plugins/primitives/plugins/radius/CLAUDE.md)
 - **Control size** → `control-{xs,sm,md,lg}` height scale + density-from-context (above) — [`plugins/primitives/plugins/control-size/CLAUDE.md`](../../../plugins/primitives/plugins/control-size/CLAUDE.md)
 - **Z-index** → `z-base..z-max`, bans raw `z-*` — [`plugins/primitives/plugins/z-layers/CLAUDE.md`](../../../plugins/primitives/plugins/z-layers/CLAUDE.md)
+- **Surface elevation** → `<Surface level={sunken|base|raised|overlay}>` (or `<Card>` / `PopoverContent`), bans open-coded raised (`bg-card`+border+rounded+pad) and overlay (`bg-popover`+shadow+rounded) recipes via `no-adhoc-surface` — [`plugins/primitives/plugins/surface/CLAUDE.md`](../../../plugins/primitives/plugins/surface/CLAUDE.md)
 - **Icons** → no direct `lucide-react` — [`plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/CLAUDE.md`](../../../plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/CLAUDE.md)
 
 ---

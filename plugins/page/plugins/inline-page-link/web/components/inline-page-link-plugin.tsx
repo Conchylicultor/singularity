@@ -14,6 +14,7 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Surface } from "@plugins/primitives/plugins/surface/web";
 import {
   usePageOptions,
   PageOptionsList,
@@ -217,8 +218,9 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
   if (!open || !caret) return null;
 
   return createPortal(
-    <div
-      className="bg-popover z-popover fixed w-72 rounded-md border p-xs shadow-md"
+    <Surface
+      level="overlay"
+      className="z-popover fixed w-72 p-xs"
       style={{ left: caret.left, top: caret.top + 4 }}
     >
       <div className="max-h-64 overflow-y-auto">
@@ -234,7 +236,7 @@ export function InlinePageLinkPlugin(_: BlockTextPluginProps) {
           />
         )}
       </div>
-    </div>,
+    </Surface>,
     document.body,
   );
 }

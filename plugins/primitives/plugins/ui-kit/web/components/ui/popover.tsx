@@ -2,6 +2,7 @@ import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
 import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
+import { SURFACE_LEVELS } from "@plugins/primitives/plugins/ui-kit/web/theme/surface"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {
@@ -44,7 +45,8 @@ function PopoverContent({
         <PopoverPrimitive.Popup
           data-slot="popover-content"
           className={cn(
-            "z-popover origin-(--transform-origin) rounded-lg bg-popover p-md text-popover-foreground shadow-md ring-1 ring-foreground/10 duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
+            SURFACE_LEVELS.overlay,
+            "z-popover origin-(--transform-origin) p-md duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:fade-out-0 data-closed:zoom-out-95",
             className,
           )}
           {...props}
