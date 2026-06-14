@@ -182,7 +182,8 @@ export const Sonata = {
  * (left: ← Library, title, display picker) and `.End` (right: transport, volume)
  * are both **reorderable** render-slot zones; the player surface renders `.Host`.
  * Hand-rolling a toolbar `<div>` is banned by the `no-adhoc-pane-toolbar` lint
- * rule. Exported top-level (not nested in `Sonata`) so the build's slot facet
- * discovers `.Start`/`.End` as reorderable — the same shape as `TaskDetail` etc.
+ * rule. Nesting depth no longer matters: the build's slot facet does a
+ * full-depth runtime walk over the barrel exports, so `.Start`/`.End` are
+ * discovered as reorderable whether this lives top-level or nested under a group.
  */
 export const SonataToolbar = definePaneToolbar("sonata.toolbar");

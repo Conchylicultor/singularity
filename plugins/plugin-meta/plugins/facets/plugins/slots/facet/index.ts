@@ -72,34 +72,73 @@ function safeEntries(obj: Record<string, unknown>): [string, unknown][] {
 }
 
 /**
- * Best-effort `kind` (and `reorder`) for a slot surfaced only via the runtime
- * fallback. `defineRenderSlot` attaches a `.Render` component and
- * `defineDispatchSlot` a `.Dispatch` component to the slot object. The `reorder`
- * flag is closed over inside `.Render` and not observable at runtime, so render
- * slots discovered this way default to `reorder: true`.
+ * `kind` (and `reorder`) for a slot discovered via the runtime walk.
+ * `defineRenderSlot` attaches a `.Render` component and `defineDispatchSlot` a
+ * `.Dispatch` component to the slot object. `defineRenderSlot` also stores its
+ * `reorder` flag on the object, so the walk reads it directly (default `true`
+ * when absent).
  */
 function runtimeKindHints(slot: { id: string }): Partial<SlotDef> {
   const s = slot as Record<string, unknown>;
-  if (typeof s.Render === "function") return { kind: "render", reorder: true };
+  if (typeof s.Render === "function") {
+    return { kind: "render", reorder: typeof s.reorder === "boolean" ? s.reorder : true };
+  }
   if (typeof s.Dispatch === "function") return { kind: "dispatch" };
   return { kind: "slot" };
 }
 
+/**
+ * Whether a value is a plain-ish object we should recurse into. Excludes arrays
+ * and React elements (objects carrying a `$$typeof` symbol) so the walk never
+ * descends into element trees.
+ */
+function isWalkableObject(val: unknown): val is Record<string, unknown> {
+  if (!val || typeof val !== "object" || Array.isArray(val)) return false;
+  if ("$$typeof" in (val as Record<string | symbol, unknown>)) return false;
+  return true;
+}
+
+/**
+ * Full-depth recursive walk over each barrel module's export object graph. A
+ * slot can be exposed at any nesting depth — e.g. a factory result nested under
+ * an export object (`Sonata.Toolbar.Start`) — so we descend until we hit a
+ * slot, recording it (deduped by id) without recursing into it. A `WeakSet`
+ * guards against cycles and re-visiting shared objects.
+ */
 function collectRuntimeSlots(importedModules: { mod: Record<string, unknown> }[]): SlotDef[] {
   const seen = new Set<string>();
   const out: SlotDef[] = [];
+  const visited = new WeakSet<object>();
+
+  // `groupName` is the top-level export key under which a slot is found;
+  // `memberName` is the immediate parent key. For a top-level slot both equal
+  // the key; for a slot inside a group object member = its key, group = the
+  // export key; deeper still, member = the immediate key, group = the export key.
+  function walk(obj: Record<string, unknown>, groupName: string): void {
+    for (const [key, val] of safeEntries(obj)) {
+      if (isSlotLike(val)) {
+        if (!seen.has(val.id)) {
+          seen.add(val.id);
+          out.push({ memberName: key, slotId: val.id, groupName, ...runtimeKindHints(val) });
+        }
+      } else if (isWalkableObject(val) && !visited.has(val)) {
+        visited.add(val);
+        walk(val, groupName);
+      }
+      // functions that aren't slots, primitives, arrays, React elements → ignore
+    }
+  }
+
   for (const { mod } of importedModules) {
     for (const [key, val] of safeEntries(mod)) {
-      if (isSlotLike(val) && !seen.has(val.id)) {
-        seen.add(val.id);
-        out.push({ memberName: key, slotId: val.id, groupName: key, ...runtimeKindHints(val) });
-      } else if (val && typeof val === "object" && !Array.isArray(val)) {
-        for (const [member, inner] of safeEntries(val as Record<string, unknown>)) {
-          if (isSlotLike(inner) && !seen.has(inner.id)) {
-            seen.add(inner.id);
-            out.push({ memberName: member, slotId: inner.id, groupName: key, ...runtimeKindHints(inner) });
-          }
+      if (isSlotLike(val)) {
+        if (!seen.has(val.id)) {
+          seen.add(val.id);
+          out.push({ memberName: key, slotId: val.id, groupName: key, ...runtimeKindHints(val) });
         }
+      } else if (isWalkableObject(val) && !visited.has(val)) {
+        visited.add(val);
+        walk(val, key);
       }
     }
   }
@@ -110,8 +149,21 @@ export default createFacet<SlotDef[]>({
   def: slotsFacetDef,
 
   extract(ctx) {
-    const slots: SlotDef[] = [];
+    // Two discovery modes:
+    //  - Imports present (the normal build): the runtime walk over the barrel
+    //    export graph is the SOLE authoritative source. It sees every slot at
+    //    any nesting depth — including factory-produced slots (e.g.
+    //    `Sonata.Toolbar.Start`) that no static text parse could reach — and
+    //    reads the real `reorder` flag off each slot object.
+    //  - No imports (`skipBarrelImport` build mode): fall back to the static
+    //    text parse of `web/slots.ts`. This cannot see factory slots (their
+    //    `defineRenderSlot` call lives in the factory file, not `slots.ts`), but
+    //    it is the only option when barrels aren't imported.
+    if (ctx.importedModules && ctx.importedModules.length > 0) {
+      return collectRuntimeSlots(ctx.importedModules);
+    }
 
+    const slots: SlotDef[] = [];
     const src = readIfExists(join(ctx.dir, "web", "slots.ts"));
     if (src) {
       // stripTypes drops comments on the happy path; masking comments/regex
@@ -132,26 +184,13 @@ export default createFacet<SlotDef[]>({
         (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "dispatch" }),
       ));
     }
-
-    if (ctx.importedModules && ctx.importedModules.length > 0) {
-      const seen = new Set(slots.map(s => s.slotId));
-      for (const rs of collectRuntimeSlots(ctx.importedModules)) {
-        if (!seen.has(rs.slotId)) {
-          seen.add(rs.slotId);
-          (rs as SlotDef & { _runtimeOnly?: boolean })._runtimeOnly = true;
-          slots.push(rs);
-        }
-      }
-    }
-
     return slots;
   },
 
   renderDoc(data) {
-    const staticSlots = data.filter(s => !(s as SlotDef & { _runtimeOnly?: boolean })._runtimeOnly);
-    if (staticSlots.length === 0) return [];
+    if (data.length === 0) return [];
     return [
-      { folder: "web", key: "Slots", values: staticSlots.map((s) => `\`${s.groupName}.${s.memberName}\``) },
+      { folder: "web", key: "Slots", values: data.map((s) => `\`${s.groupName}.${s.memberName}\``) },
     ];
   },
 });

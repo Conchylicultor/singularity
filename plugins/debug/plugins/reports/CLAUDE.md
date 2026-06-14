@@ -28,6 +28,7 @@ All reports are listed — noise is surfaced via the badge, never filtered out.
 
 - Description: Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
 - Web:
+  - Slots: `reportsPane.Actions`
   - Contributes: `Pane.Register` "reports", `DebugApp.Sidebar` "Reports" → `component`
   - Uses: `apps.navigate`, `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`
   - Exports: Values: `reportsPane`

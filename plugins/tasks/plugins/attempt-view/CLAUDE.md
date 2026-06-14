@@ -6,6 +6,7 @@
 
 - Description: Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
 - Web:
+  - Slots: `attemptPane.Actions`
   - Contributes: `Pane.Register` "attempt", `Conversation.ActionBar` → `AttemptSwitchButton`
   - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneInstanceContext`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
   - Exports: Values: `attemptPane`

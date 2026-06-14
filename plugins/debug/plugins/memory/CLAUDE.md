@@ -21,6 +21,7 @@ Browse Claude Code auto-memory files for the current project. Lists all `.md` fi
 
 - Description: Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
 - Web:
+  - Slots: `memoryPane.Actions`
   - Contributes: `Pane.Register` "debug-memory", `DebugApp.Sidebar` "Memory" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
   - Exports: Values: `memoryPane`

@@ -6,6 +6,7 @@
 
 - Description: Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
 - Web:
+  - Slots: `backupPane.Actions`
   - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `config_v2.ConfigV2`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`
   - Exports: Values: `backupPane`

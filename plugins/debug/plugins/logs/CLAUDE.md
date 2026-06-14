@@ -13,6 +13,7 @@ those channels (`tail`/`cat` the `.jsonl` files directly for raw access).
 
 - Description: System logs pane, opened from the Debug sidebar.
 - Web:
+  - Slots: `logChannelPane.Actions`, `logsPane.Actions`
   - Contributes: `Pane.Register` "logs", `Pane.Register` "logs-channel", `DebugApp.Sidebar` "Logs" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/networking.ReconnectingEventSource`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/ui-kit.cn`
   - Exports: Values: `logChannelPane`, `logsPane`

@@ -14,17 +14,19 @@ sibling plugins (e.g. publish's tree component).
 
 - Description: Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 - Web:
+  - Slots: `PluginViewSlots.Section`, `pluginViewPane.Actions`
   - Contributes: `Pane.Register` "plugin-view"
   - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/section-label.SectionLabel`, `primitives/spacing.Stack`, `primitives/text.Text`
   - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
+- Cross-plugin:
+  - Slot contributors: `file-tree`, `plugin-health`, `render-detail`, `runtimes`, `source-path`, `sub-plugins`
+  - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
   - Routes: `GET /api/plugin-view/tree`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
   - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
-- Cross-plugin:
-  - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
 - Sub-plugins:
   - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.

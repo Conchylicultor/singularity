@@ -6,6 +6,7 @@
 
 - Description: Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
 - Web:
+  - Slots: `configDetailPane.Actions`, `configNavPane.Actions`
   - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail"
   - Uses: `apps.Apps`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/spacing.Stack`, `primitives/status-dot.StatusDot`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/tree.TreeRowChrome`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`
   - Exports: Values: `configDetailPane`, `ConfigNav`, `configNavPane`, `ConfigSidebarButton`

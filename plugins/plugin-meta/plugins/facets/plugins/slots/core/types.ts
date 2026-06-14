@@ -13,10 +13,10 @@ export interface SlotDef {
   /**
    * Only meaningful for render slots. `true` (the default) means the slot's
    * `.Render` applies the reorder list middleware (it is reorderable). `false`
-   * means `defineRenderSlot(id, { reorder: false })` opted out. Statically read
-   * from the call-site options; defaults to `true` when the option is absent and
-   * for render slots surfaced only via the runtime fallback (the flag isn't
-   * observable at runtime).
+   * means `defineRenderSlot(id, { reorder: false })` opted out. Read directly
+   * off the slot object by the runtime walk (`defineRenderSlot` stores it), or
+   * from the call-site options by the static text-parse fallback; defaults to
+   * `true` when absent.
    */
   reorder?: boolean;
 }

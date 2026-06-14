@@ -76,6 +76,13 @@ export interface RenderSlot<P>
   Render: ComponentType<
     RenderProps<P & { id: string; excludeFromReorder?: boolean; reorderWrapperClassName?: string }>
   >;
+  /**
+   * Whether contributions to this slot participate in reorder (list
+   * middlewares). Mirrors `RenderSlotConfig.reorder` (default `true`), stored on
+   * the slot object so the build-time runtime walk can read it directly instead
+   * of inferring it from a text parse.
+   */
+  reorder: boolean;
 }
 
 import { createContext } from "react";
@@ -94,6 +101,7 @@ export function defineRenderSlot<P>(
 
   const renderSlot = slot as unknown as RenderSlot<P>;
   const reorder = config?.reorder ?? true;
+  renderSlot.reorder = reorder;
   const controlSize = config?.controlSize;
 
   renderSlot.Render = function SlotRender({

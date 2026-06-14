@@ -6,7 +6,7 @@
 
 - Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
 - Web:
-  - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
+  - Slots: `Tasks.View`, `Tasks.TaskActions`, `Tasks.ListActions`
   - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `primitives/ui-kit.cn`, `tasks.patchTask`
   - Exports: Types: `TaskViewProps`; Values: `Tasks`

@@ -331,6 +331,10 @@ No `web/index.ts` or `server/index.ts` required unless the umbrella itself has c
 ## Plugin reference
 
 - Description: Web plugin runtime: slots, commands, contributions, loader
+- Web:
+  - Slots: `Core.Root`, `Core.Boot`
+- Cross-plugin:
+  - Slot contributors: `apps`, `command-palette`, `endpoint-errors`, `floating-bar`, `google-fonts`, `health`, `model-provider`, `mutation-errors`, `reports`, `shortcuts`, `theme-engine`, `toaster`
 - Core:
   - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
   - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`

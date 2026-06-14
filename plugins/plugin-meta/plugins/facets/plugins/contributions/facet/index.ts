@@ -133,12 +133,13 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    // Compute slotContributors across tree (from slots + static contributions)
-    // Only consider statically-defined slots (not _runtimeOnly) to match prior behavior
+    // Compute slotContributors across tree (from slots + static contributions).
+    // The slots facet's runtime walk now discovers every slot (including
+    // factory-produced ones at any nesting depth), so all slot groups resolve
+    // their contribution owners here.
     const slotGroupToOwner = new Map<string, PluginNode>();
     for (const info of tree.byDir.values()) {
-      const nodeSlots = (getFacet(info, slotsFacetDef) ?? [])
-        .filter(s => !(s as { _runtimeOnly?: boolean })._runtimeOnly);
+      const nodeSlots = getFacet(info, slotsFacetDef) ?? [];
       for (const slot of nodeSlots) {
         if (!slotGroupToOwner.has(slot.groupName)) {
           slotGroupToOwner.set(slot.groupName, info);

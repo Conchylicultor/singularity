@@ -6,6 +6,7 @@
 
 - Description: Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
 - Web:
+  - Slots: `worktreeCleanupPane.Actions`
   - Contributes: `Pane.Register` "worktree-cleanup", `DebugApp.Sidebar` "Worktree Cleanup" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.reportEndpointError`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
   - Exports: Values: `worktreeCleanupPane`

@@ -67,6 +67,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps.Apps`, `apps.navigate`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/text.Text`, `shell.Shell`
         - **`welcome`** — Landing pane (agent-manager index) shown at `/agents`.
           - Web:
+            - Slots: `welcomePane.Actions`
             - Contributes: `Pane.Register` "welcome"
             - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `primitives/card.Card`, `primitives/launch.LaunchControl`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `primitives/spacing.Stack`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - Exports: Values: `welcomePane`
@@ -76,16 +77,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/live-state.useResource`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `primitives/truncating-text.TruncatingText`, `shell.Shell`
     - **`app-rail-framing`** — App-rail framing region (rail / hidden). Contributes its variant-region host into Apps.RailFraming.
       - Web:
+        - Slots: `AppRailFraming.Variant`
         - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "App rail variant", `ThemeEngine.VariantGroup` "App rail" → `Picker`, `Apps.RailFraming` "Rail framing" → `Region`
         - Uses: `apps.Apps`, `ui/variant-region.defineVariantRegionWeb`
         - Exports: Values: `AppRailFraming`
+      - Cross-plugin:
+        - Slot contributors: `hidden`, `rail`
+        - Imported by: `apps/app-rail-framing/hidden`, `apps/app-rail-framing/rail`
       - Server:
         - Uses: `ui/variant-region.variantRegionServerContribution`
       - Core:
         - Uses: `ui/variant-region.defineVariantRegion`
         - Exports: Values: `appRailFraming`
-      - Cross-plugin:
-        - Imported by: `apps/app-rail-framing/hidden`, `apps/app-rail-framing/rail`
       - Plugins:
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
           - Web:
@@ -110,6 +113,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`servers`** — Server registry for the deployment platform. Server registry for the deployment platform.
           - Web:
+            - Slots: `addServerPane.Actions`, `serverDetailPane.Actions`, `serversRootPane.Actions`
             - Contributes: `Pane.Register` "deploy-servers", `Pane.Register` "deploy-add-server", `Pane.Register` "deploy-server-detail"
             - Uses: `apps/deploy/shell.Deploy`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/spacing.Stack`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.Button`
             - Exports: Types: `Server`; Values: `addServerPane`, `serverDetailPane`, `serversResource`, `serversRootPane`
@@ -220,7 +224,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `apps/sonata/shell.getSonataTransport`, `apps/sonata/shell.Sonata`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.isEditableTarget`
         - **`library`** — Source-agnostic song library landing for Sonata. Renders the gallery of saved songs (via Sonata.Home) and opens a song into the player by collecting every source's raw through the Library.Source registry. Sources contribute persistence/hydration + their own add affordances. Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.
           - Web:
-            - Slots: `Library.CardMeta`, `Library.Source`, `Library.Sort`
+            - Slots: `Library.Source`, `Library.CardMeta`, `Library.Sort`
             - Contributes: `Sonata.Home` "library" → `SongLibrary`, `SonataToolbar.Start` "back" → `BackToLibrary`, `SonataToolbar.Start` "title" → `SongTitle`, `SonataToolbar.Start` "display-picker" → `DisplayPicker`, `Pane.Register` "sonata-library", `Pane.Register` "sonata-player"
             - Uses: `apps/sonata/shell.publishSonataTransport`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.TEMPO_MATH_FLOOR`, `apps/sonata/shell.useSonata`, `infra/endpoints.useEndpointMutation`, `primitives/card.Card`, `primitives/data-view.DataView`, `primitives/icon-button.IconButton`, `primitives/live-state.matchResource`, `primitives/live-state.useResource`, `primitives/pane.clearRoute`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/persistent-draft.useDraft`, `primitives/relative-time.formatRelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
             - Exports: Types: `SortOrderProps`; Values: `Library`, `useOpenSong`
@@ -244,6 +248,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config_v2.ConfigV2`
         - **`piano-roll`** — Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
           - Web:
+            - Slots: `PianoRollFx.PianoRollFx`
             - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `ConfigV2.WebRegister`
             - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.getCursorBeat`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.subscribeCursor`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.blackKeyColor`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/section-label.SectionLabel`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.cn`
             - Exports: Types: `EmitterOptions`, `FxContext`, `FxNoteEvent`, `FxToggleConfig`, `ParticleEmitter`, `SpawnSpec`; Values: `createEmitter`, `easeOutCubic`, `PianoRollFx`
@@ -357,12 +362,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `Annotation`, `Capability`, `ChordAnnotation`, `ChordData`, `KeyEntry`, `KeyLane`, `KeySignature`, `KeySpeller`, `Note`, `PitchSpelling`, `Projection`, `Score`, `SectionAnnotation`, `SectionData`, `TempoEvent`, `TempoIndex`, `TimeSigEvent`, `TrackMeta`, `VoicingAnnotation`, `VoicingData`; Values: `accidentalGlyph`, `asKeySignature`, `bars`, `beatGrid`, `beatToSeconds`, `buildTempoIndex`, `collectKeyEntries`, `currentLine`, `effectiveKeyAt`, `emptyScore`, `makeKeySpeller`, `mergeAnnotations`, `mergeScores`, `nextLine`, `prevLine`, `scaleTempo`, `scoreEndBeat`, `spellScore`, `subdivideBars`
         - **`shell`** — App shell for Sonata. Registers the /sonata app entry, owns SonataContext + transport, and defines the Sonata.{Source,Display,Analyzer,Overlay,Instrument,Transport,Section} slots.
           - Web:
-            - Slots: `Sonata.Home`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Hud`, `Sonata.Section`, `Sonata.Source`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Display`
+            - Slots: `Sonata.Source`, `Sonata.Display`, `Sonata.Analyzer`, `Sonata.Overlay`, `Sonata.PitchAxis`, `Sonata.Instrument`, `Sonata.Home`, `Sonata.Effect`, `Sonata.Transport`, `Sonata.Hud`, `Sonata.Section`, `SonataToolbar.Start`, `SonataToolbar.End`
             - Contributes: `Apps.App` "Sonata" → `SonataLayout`
             - Uses: `apps.Apps`, `layouts/full-pane.FullPane`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
             - Exports: Types: `InstrumentVoices`, `ScheduledNote`, `SonataContextValue`, `SonataTransportActions`, `TransportClock`; Values: `getCursorBeat`, `getSonataTransport`, `publishSonataTransport`, `Sonata`, `SonataProvider`, `SonataToolbar`, `subscribeCursor`, `TEMPO_MATH_FLOOR`, `useCursorBeat`, `useCursorSelector`, `useSonata`
           - Cross-plugin:
-            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `controls`, `engine`, `key-chip`, `key-readout`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`
+            - Slot contributors: `chord-analyzer`, `chord-grid`, `chord-overlay`, `chord-readout`, `controls`, `engine`, `key-chip`, `key-readout`, `library`, `midi`, `piano`, `piano-keyboard`, `piano-roll`, `playback-history`, `scrubber`, `track-mixer`, `transport-bar`
             - Imported by: `apps/sonata/audio/engine`, `apps/sonata/audio/piano`, `apps/sonata/audio/soundfont`, `apps/sonata/controls`, `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/playback-history`, `apps/sonata/progress/scrubber`, `apps/sonata/rich/chord-analyzer`, `apps/sonata/rich/chord-overlay`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-chip`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`
         - **`sources`** — Input source sub-plugins for Sonata (MIDI, chord-grid, …).
           - Plugins:
@@ -497,10 +502,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
               - Web:
+                - Slots: `TableDetail.Section`, `tableDetailPane.Actions`
                 - Contributes: `Pane.Register` "table-detail"
                 - Uses: `primitives/detail-sections.defineDetailSections`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
                 - Exports: Values: `TableDetail`, `tableDetailPane`
               - Cross-plugin:
+                - Slot contributors: `columns`, `foreign-keys`, `indexes`, `row-count`, `sample-rows`
                 - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `plugin-meta/facets/db-schema/render-contributions`
               - Plugins:
                 - **`columns`** — Table column definitions section in the table detail view.
@@ -620,7 +627,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`auth`** — Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
   - Web:
-    - Slots: `Auth.Provider`
+    - Slots: `Auth.Provider`, `accountsPane.Actions`
     - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/ui-kit.Button`, `shell/notifications.toast`
     - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
   - Cross-plugin:
@@ -650,6 +657,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`setup-wizard`** — Interactive setup wizard for Google OAuth credentials. Replaces the Settings redirect with a guided step-by-step pane.
           - Web:
+            - Slots: `googleSetupPane.Actions`
             - Contributes: `Pane.Register` "google-setup"
             - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.Input`
             - Exports: Values: `googleSetupPane`
@@ -668,6 +676,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`backup`** — Backup orchestrator UI: run backups, view history, configure targets. Backup orchestrator: assembles archives from DB, secrets, and attachments, dispatches to registered storage targets.
   - Web:
+    - Slots: `backupPane.Actions`
     - Contributes: `ConfigV2.WebRegister`, `Pane.Register` "backup", `DebugApp.Sidebar` "Backup" → `component`
     - Uses: `apps/debug/shell.DebugApp`, `config_v2.ConfigV2`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/app-shell.sidebarNavItem`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`
     - Exports: Values: `backupPane`
@@ -699,9 +708,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`build`** — Trigger `./singularity build` from the toolbar.
   - Web:
+    - Slots: `BuildDetailSlots.Section`, `buildDetailPane.Actions`, `buildPane.Actions`
     - Contributes: `ActionBar.Item` → `BuildButton`, `Pane.Register` "build", `Pane.Register` "build-detail", `ConfigV2.WebRegister`
     - Uses: `config_v2.ConfigV2`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/commit-list.CommitRowItem`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useNotificationsChannelStatuses`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/action-bar.ActionBar`, `shell/notifications.toast`
     - Exports: Values: `buildDetailPane`, `BuildDetailSlots`, `buildPane`, `useStaleFrontend`
+  - Cross-plugin:
+    - Slot contributors: `build-commits`, `build-fix`, `build-info`, `build-logs`, `build-profiling`
+    - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`, `debug/reports`, `reports`
   - Server:
     - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `database.db`, `infra/endpoints.implement`, `infra/events.Trigger`, `infra/git-watcher.refAdvanced`, `infra/git-watcher.refHeadResource`, `infra/jobs.defineJob`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`, `infra/paths.WEB_DIST_DIR`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `primitives/log-channels.Log`, `shell/notifications.recordNotification`
     - DB schema: `plugins/build/server/internal/tables.ts`
@@ -712,8 +725,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Core:
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/commit-list.CommitRowSchema`, `primitives/live-state.resourceDescriptor`
     - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`, `triggerBuildEndpoint`
-  - Cross-plugin:
-    - Imported by: `build/build-commits`, `build/build-fix`, `build/build-info`, `build/build-logs`, `build/build-profiling`, `debug/reports`, `reports`
   - Shared:
     - Exports: Types: `BuildRun`, `FrontendHash`, `MainAheadCount`; Values: `buildConfig`, `buildHistoryResource`, `BuildRunSchema`, `frontendHashResource`, `FrontendHashSchema`, `mainAheadCountResource`, `MainAheadCountSchema`
   - Plugins:
@@ -789,17 +800,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`config_v2`** — Reactive useConfig hook for reading typed JSONC config in the browser. Typed JSONC config handles for server plugins.
   - Web:
+    - Slots: `ConfigV2.WebRegister`
     - Contributes: `Core.Boot`
     - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.hydrateResource`, `primitives/live-state.useResource`
     - Exports: Types: `ConfigRegistration`; Values: `ConfigV2`, `useConfig`, `useConfigRegistrations`, `useScopeForked`, `useSetConfig`
+  - Cross-plugin:
+    - Slot contributors: `backup`, `build`, `categorical`, `chart`, `code-review`, `color-adjust`, `color-palette`, `commits`, `conversation-category`, `conversations`, `cost`, `density`, `floating-bar`, `folders`, `font-family`, `fx-comets`, `fx-core`, `fx-ripples`, `fx-shatter`, `google`, `google-drive`, `keyboard`, `launch-prompts`, `local`, `model-provider`, `notion`, `piano-keyboard`, `piano-roll`, `preprompts`, `prompt-templates`, `push-and-exit`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `task-draft-form`, `theme-engine`, `turn-summary`, `type-scale`
+    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `shell/floating-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
   - Server:
     - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`
     - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkDescriptorScope`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `mergeConflictByPath`, `registerFieldStorageProvider`, `removeDescriptorScope`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Core:
     - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
     - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ScopeForked`, `ConfigV2Scopes`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkDescriptorScope`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
-  - Cross-plugin:
-    - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`, `framework/tooling/codegen`, `reorder`, `review/code-review`, `shell/floating-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
       - Web:
@@ -815,6 +828,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `config_v2/settings`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/text/config`
     - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
       - Web:
+        - Slots: `configDetailPane.Actions`, `configNavPane.Actions`
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail"
         - Uses: `apps.Apps`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/spacing.Stack`, `primitives/status-dot.StatusDot`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/tree.TreeRowChrome`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`
         - Exports: Values: `configDetailPane`, `ConfigNav`, `configNavPane`, `ConfigSidebarButton`
@@ -847,7 +861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`agents`** — Named agent definitions that launch conversations. Named agent definitions that launch conversations.
       - Web:
-        - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`
+        - Slots: `Agents.List`, `Agents.ListActions`, `Agents.View`, `Agents.AgentActions`, `Agents.SystemAgent`, `agentDetailPane.Actions`, `agentSidePane.Actions`, `agentsRootPane.Actions`, `systemAgentDetailPane.Actions`
         - Contributes: `Pane.Register` "agents-root", `Pane.Register` "agent-detail", `Pane.Register` "agent-system-detail", `Pane.Register` "agent-side", `agentSidePane.Actions` → `ExpandAgentButton`, `Shell.Sidebar` "Agents" → `component`, `Item.Avatar` → `AgentAvatarRow`, `Conversation.Header` → `AgentAvatarTitlePrefix`, `Agents.AgentActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Agents.AgentActions` "delete" → `DeleteAgentAction`
         - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-ui/item.ConversationItemConv`, `conversations/conversation-ui/item.Item`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/header.Conversation`, `conversations/model-provider.useVisibleModels`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/avatar.Avatar`, `primitives/avatar.AVATAR_COLOR_KEYS`, `primitives/avatar.AvatarPicker`, `primitives/avatar.DEFAULT_AGENT_AVATAR`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/collapsible.ExpandAllButton`, `primitives/editable-field.useEditableField`, `primitives/live-state.matchResource`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.SelectionCheckbox`, `primitives/multi-select.useMultiSelect`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/row.Row`, `primitives/section-label.SectionLabel`, `primitives/slot-render.defineRenderSlot`, `primitives/status-dot.StatusDot`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.TreeItem`, `primitives/tree.TreeList`, `primitives/tree.useSubtreeExpandAll`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell.Shell`
         - Exports: Types: `SystemAgentDescriptor`; Values: `agentDetailPane`, `Agents`, `agentSidePane`, `agentsResource`, `agentsRootPane`, `defineSystemAgent`, `patchAgent`, `systemAgentDetailPane`
@@ -911,7 +925,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Imported by: `active-data/conv`, `active-data/task`, `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/dependent-count`, `conversations/conversation-view/op-status`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `tasks/attempt-view`, `tasks/task-events`
     - **`conversation-view`** — Conversation pane host. Header and prompt bar are slot-driven; Conversation.Header hosts title and toolbar chips.
       - Web:
-        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`
+        - Slots: `Conversation.PromptBar`, `Conversation.PromptInput`, `Conversation.AbovePromptInput`, `conversationPane.Actions`
         - Contributes: `Pane.Register` "conversation", `Conversation.Header` → `ConversationTitle`
         - Uses: `conversations.useConversationById`, `conversations/conversation-view/action-bar.ActionBarView`, `conversations/conversation-view/header.Conversation`, `conversations/conversation-view/header.HeaderView`, `conversations/conversation-view/jsonl-viewer.JsonlPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`, `primitives/text.Text`, `tasks/task-draft-form.setActiveRelateContext`
         - Exports: Types: `ConversationRecord`; Values: `Conversation`, `conversationPane`, `ConversationView`, `draftToPlainText`, `isDraftEmpty`, `PromptInsertProvider`, `usePromptInsert`
@@ -959,7 +973,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code.gitStatusDot`, `conversations/conversation-view/code.useEditedFiles`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
             - **`file-pane`** — Hosts the file-peek pane and the FilePane.Renderer slot.
               - Web:
-                - Slots: `FilePane.Renderer`
+                - Slots: `FilePane.Renderer`, `filePeekPane.Actions`
                 - Contributes: `Pane.Register` "file-peek"
                 - Uses: `code-explorer/file-resolve.FileDisambiguation`, `code-explorer/file-resolve.useResolvedFile`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code.useEditedFiles`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
                 - Exports: Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`; Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
@@ -1065,7 +1079,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `holdAndExit`
         - **`jsonl-viewer`** — Renders the raw Claude JSONL session log as the conversation's main content. Hosts the JsonlViewer.EventRenderer slot for child plugins to render specific event kinds. Parses Claude's raw JSONL session log and streams it as structured events via the jsonl-events resource.
           - Web:
-            - Slots: `JsonlViewer.RowAction`, `JsonlViewer.Overlay`, `JsonlViewer.EventFilter`, `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`
+            - Slots: `JsonlViewer.EventRenderer`, `JsonlViewer.PendingPrompt`, `JsonlViewer.EventFilter`, `JsonlViewer.RowAction`, `JsonlViewer.Overlay`
             - Contributes: `JsonlViewer.RowAction` "timestamp" → `TimestampAction`, `JsonlViewer.RowAction` "raw-json" → `RawJsonAction`
             - Uses: `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/badge.Badge`, `primitives/copy-to-clipboard.useCopyToClipboard`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/popover.InlinePopover`, `primitives/relative-time.RelativeTime`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
             - Exports: Types: `EventFilterContribution`, `OverlayContribution`, `RowActionContribution`; Values: `CopyTextAction`, `EventLine`, `formatTime`, `JsonlPane`, `JsonlViewer`, `RowActionButton`, `Timestamp`, `useJsonlConversationId`, `useLastAssistantEvent`, `useRowMarkdown`, `useStickyReport`
@@ -1334,6 +1348,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `resumeConversationEndpoint`
         - **`side-task`** — Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
           - Web:
+            - Slots: `taskSidePane.Actions`
             - Contributes: `Pane.Register` "task-side", `taskSidePane.Actions` → `ExpandTaskButton`
             - Uses: `conversations/conversation-view.conversationPane`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `tasks.useTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskTreeDetail`
             - Exports: Values: `taskSidePane`
@@ -1369,10 +1384,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/pane.PaneIconAction`
     - **`conversations-view`** — Sidebar list of all conversations.
       - Web:
+        - Slots: `ConversationsView.View`
         - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
         - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/pane-restore.loadRouteForConversation`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/cursor-pagination.useCursorPagination`, `primitives/launch.LaunchControl`, `primitives/pane.restoreRoute`, `primitives/pane.useOpenPane`, `primitives/tabbed-view.defineTabbedView`, `primitives/text.Text`, `shell.Shell`
         - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
       - Cross-plugin:
+        - Slot contributors: `grouped`, `history`, `queue`
         - Imported by: `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`
       - Plugins:
         - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.
@@ -1439,6 +1456,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `prepromptsConfig`
     - **`recover`** — Sidebar entry + pane listing recently-closed conversations with restore buttons. Batch-restore recently-closed conversations that were killed by a crash.
       - Web:
+        - Slots: `recoveryPane.Actions`
         - Contributes: `Pane.Register` "conversations-recover", `DebugApp.Sidebar` "Recovery" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
         - Exports: Values: `recoveryPane`
@@ -1535,6 +1553,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`broadcasts`** — View and edit cli/broadcasts.json broadcast messages for stale worktrees. View and edit cli/broadcasts.json from the UI.
       - Web:
+        - Slots: `broadcastsPane.Actions`
         - Contributes: `Pane.Register` "debug-broadcasts", `DebugApp.Sidebar` "Broadcasts" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`
         - Exports: Values: `broadcastsPane`
@@ -1545,21 +1564,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `WriteBroadcastsBody`; Values: `getBroadcasts`, `writeBroadcasts`, `WriteBroadcastsBodySchema`
     - **`claude-cli-calls`** — Debug pane listing every single-shot `claude --print` call (Haiku/Sonnet/Opus) with prompt, output, source, and duration.
       - Web:
+        - Slots: `claudeCliCallsPane.Actions`
         - Contributes: `Pane.Register` "claude-cli-calls", `DebugApp.Sidebar` "Claude CLI Calls" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `conversations/model-provider.familyClass`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/collapsible.useCollapsible`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.FilterGroup`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/text.Text`, `primitives/ui-kit.cn`
         - Exports: Values: `claudeCliCallsPane`
     - **`live-state-health`** — Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
       - Web:
+        - Slots: `liveStateHealthPane.Actions`
         - Contributes: `Pane.Register` "live-state-health", `DebugApp.Sidebar` "Live State" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.ChannelStatuses`, `primitives/live-state.DebugSnapshot`, `primitives/live-state.DebugSub`, `primitives/live-state.LeaderInfo`, `primitives/live-state.useNotificationsClient`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/section-label.SectionLabel`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/truncating-text.TruncatingText`
         - Exports: Values: `liveStateHealthPane`
     - **`logs`** — System logs pane, opened from the Debug sidebar.
       - Web:
+        - Slots: `logChannelPane.Actions`, `logsPane.Actions`
         - Contributes: `Pane.Register` "logs", `Pane.Register` "logs-channel", `DebugApp.Sidebar` "Logs" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/networking.ReconnectingEventSource`, `primitives/networking.useReconnectingWebSocket`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/ui-kit.cn`
         - Exports: Values: `logChannelPane`, `logsPane`
     - **`memory`** — Browse Claude Code auto-memory files for the current project. Browse Claude Code auto-memory files for the current project.
       - Web:
+        - Slots: `memoryPane.Actions`
         - Contributes: `Pane.Register` "debug-memory", `DebugApp.Sidebar` "Memory" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
         - Exports: Values: `memoryPane`
@@ -1570,7 +1593,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `listMemoryFiles`, `readMemoryFile`
     - **`profiling`** — Gantt chart of build steps and server startup phases.
       - Web:
-        - Slots: `Profiling.Section`
+        - Slots: `Profiling.Section`, `profilingPane.Actions`
         - Contributes: `Pane.Register` "debug-profiling", `DebugApp.Sidebar` "Profiling" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/section-label.SectionLabel`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
         - Exports: Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`; Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`
@@ -1589,6 +1612,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBootProfiling`
         - **`build`** — Build step profiling for the Gantt debug pane. Build step profiling data endpoint.
           - Web:
+            - Slots: `buildProfileDetailPane.Actions`
             - Contributes: `Profiling.Section` → `BuildSection`, `Pane.Register` "debug-profiling-build-detail"
             - Uses: `debug/profiling.GanttSection`, `debug/profiling.groupByPhase`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useProfilingContext`, `infra/endpoints.fetchEndpoint`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/placeholder.Placeholder`, `primitives/spacing.Inset`
             - Exports: Values: `buildProfileDetailPane`
@@ -1601,6 +1625,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getBuildProfiling`
         - **`push`** — Push contention profiling for the Gantt debug pane. Push contention profiling data endpoint.
           - Web:
+            - Slots: `pushDetailPane.Actions`
             - Contributes: `Profiling.Section` → `PushSection`, `Pane.Register` "debug-profiling-push-detail"
             - Uses: `conversations/conversation-view.conversationPane`, `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Profiling`, `debug/profiling.ProfilingContext`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.SpanRow`, `debug/profiling.useProfilingContext`, `debug/profiling/build.buildProfileDetailPane`, `debug/profiling/push/push-gantt.PushData`, `debug/profiling/push/push-gantt.PushGantt`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/spacing.Stack`, `primitives/text.Text`, `shell.ShellCommands`, `tasks/attempt-view.attemptPane`
             - Exports: Values: `getPushProfiling`, `pushDetailPane`
@@ -1637,16 +1662,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Values: `getStatsProfiling`
     - **`queue`** — Inspect and debug the jobs queue, events emission log, and active triggers.
       - Web:
+        - Slots: `queuePane.Actions`
         - Contributes: `Pane.Register` "queue", `DebugApp.Sidebar` "Queue" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/notifications.toast`
         - Exports: Values: `queuePane`
     - **`reports`** — Debug pane listing all recorded reports (including low-signal/noise crashes) with kind, source, count, noise flag, and linked task.
       - Web:
+        - Slots: `reportsPane.Actions`
         - Contributes: `Pane.Register` "reports", `DebugApp.Sidebar` "Reports" → `component`
         - Uses: `apps.navigate`, `apps/debug/shell.DebugApp`, `build.useStaleFrontend`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/tab-id.getTabId`, `primitives/text.Text`
         - Exports: Values: `reportsPane`
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
       - Web:
+        - Slots: `worktreeCleanupPane.Actions`
         - Contributes: `Pane.Register` "worktree-cleanup", `DebugApp.Sidebar` "Worktree Cleanup" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.reportEndpointError`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
         - Exports: Values: `worktreeCleanupPane`
@@ -1774,14 +1802,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`config`** — Dynamic enum field type: config-render capability (options resolved at render time from slot contributions, for config-v2.fields.renderer) plus the dynamicEnumField factory.
           - Web:
+            - Slots: `DynamicEnum.Options`
             - Contributes: `config-v2.fields.renderer` "dynamic-enum" → `DynamicEnumRenderer`
             - Uses: `config_v2/fields.Fields`, `primitives/text.Text`, `primitives/ui-kit.Select`, `primitives/ui-kit.SelectContent`, `primitives/ui-kit.SelectItem`, `primitives/ui-kit.SelectTrigger`, `primitives/ui-kit.SelectValue`
             - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
+          - Cross-plugin:
+            - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `font-family`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `theme-engine`, `type-scale`
+            - Imported by: `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/variant-region`
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`
             - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`
-          - Cross-plugin:
-            - Imported by: `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/variant-region`
     - **`enum`** — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "enum"
@@ -2083,6 +2113,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Loose top-level files: `vite.config.ts`
         - Composition root: yes
     - **`web-sdk`** — Web plugin runtime: slots, commands, contributions, loader
+      - Web:
+        - Slots: `Core.Root`, `Core.Boot`
+      - Cross-plugin:
+        - Slot contributors: `apps`, `command-palette`, `endpoint-errors`, `floating-bar`, `google-fonts`, `health`, `model-provider`, `mutation-errors`, `reports`, `shortcuts`, `theme-engine`, `toaster`
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
         - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
@@ -2182,6 +2216,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/workflows/engine`, `build`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `improve`, `infra/events-test`, `infra/git-watcher`, `page/editor`, `page/image`, `page/links`, `tasks`, `tasks/task-title`, `tasks/tasks-core`
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.
       - Web:
+        - Slots: `eventsTestPane.Actions`
         - Contributes: `Pane.Register` "events-test", `DebugApp.Sidebar` "Events Test" → `component`
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.Input`, `shell/notifications.toast`
         - Exports: Values: `eventsTestPane`
@@ -2321,7 +2356,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/story/story-core`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
-        - Slots: `Editor.TurnInto`, `Editor.Block`
+        - Slots: `Editor.Block`, `Editor.TurnInto`
         - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
       - Cross-plugin:
@@ -2438,7 +2473,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/spacing.Stack`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the commands facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Commands"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Commands"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`contributions`**
           - Core:
@@ -2457,7 +2492,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.ConsumerList`, `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/spacing.Stack`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the contributions facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Contributions"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Contributions"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`cross-refs`**
           - Core:
@@ -2474,7 +2509,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.ExportRuntime`, `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.RUNTIME_COLORS`, `plugin-meta/plugin-view.Section`, `plugin-meta/plugin-view.SubHeading`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - **`render-diff`** — Diff renderer for the cross-refs facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Uses"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Uses"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`db-schema`**
           - Core:
@@ -2491,7 +2526,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `plugin-meta/plugin-view.SubHeading`, `primitives/spacing.Stack`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the db-schema facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Tables"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Tables"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`exports`**
           - Core:
@@ -2508,7 +2543,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.ConsumerList`, `plugin-meta/plugin-view.ExportRuntime`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.RUNTIME_COLORS`, `plugin-meta/plugin-view.Section`, `primitives/badge.Badge`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/row.Row`, `primitives/spacing.Stack`, `primitives/ui-kit.cn`
             - **`render-diff`** — Diff renderer for the exports facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Exports"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Exports"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`registrations`**
           - Core:
@@ -2525,7 +2560,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.RUNTIME_COLORS`, `plugin-meta/plugin-view.Section`, `primitives/spacing.Stack`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the registrations facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Registrations"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Registrations"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`resources`**
           - Core:
@@ -2542,7 +2577,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/spacing.Stack`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the resources facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Resources"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Resources"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`routes`**
           - Core:
@@ -2559,7 +2594,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginLink`, `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - **`render-diff`** — Diff renderer for the routes facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Routes"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Routes"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`slots`**
           - Core:
@@ -2578,7 +2613,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/spacing.Stack`, `primitives/text.Text`
             - **`render-diff`** — Diff renderer for the slots facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Slots"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Slots"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
         - **`structure`**
           - Core:
@@ -2595,7 +2630,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Uses: `plugin-meta/plugin-view.PluginNode`, `plugin-meta/plugin-view.PluginViewSlots`, `plugin-meta/plugin-view.Section`, `primitives/badge.Badge`, `primitives/spacing.Stack`
             - **`render-diff`** — Diff renderer for the structure facet (PR review).
               - Web:
-                - Contributes: `PluginChanges.DiffRenderer` "Structure"
+                - Contributes: `PluginChangesSlots.DiffRenderer` "Structure"
                 - Uses: `review/plugin-changes.PluginChangesSlots`
     - **`parse-utils`**
       - Cross-plugin:
@@ -2625,17 +2660,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
+        - Slots: `PluginViewSlots.Section`, `pluginViewPane.Actions`
         - Contributes: `Pane.Register` "plugin-view"
         - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/section-label.SectionLabel`, `primitives/spacing.Stack`, `primitives/text.Text`
         - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
+      - Cross-plugin:
+        - Slot contributors: `file-tree`, `plugin-health`, `render-detail`, `runtimes`, `source-path`, `sub-plugins`
+        - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
       - Server:
         - Uses: `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
         - Routes: `GET /api/plugin-view/tree`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
-      - Cross-plugin:
-        - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
       - Plugins:
         - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
           - Web:
@@ -2759,7 +2796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/profiling/runtime`, `primitives/data-view/table`
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
-        - Slots: `DataViewSlots.View`
+        - Slots: `DataViewSlots.View`, `DataViewSlots.Cell`, `DataViewSlots.Filter`
         - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
         - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
       - Cross-plugin:
@@ -2860,10 +2897,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Exports: Types: `SvgNode`
     - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
+      - Web:
+        - Slots: `InlineTextWalkerSlot.InlineTextWalkerSlot`
+        - Exports: Types: `InlineTextWalker`, `StackedInlineWalkers`; Values: `InlineText`, `InlineTextWalkerContext`, `InlineTextWalkerSlot`, `useInlineTextWalker`
       - Cross-plugin:
         - Imported by: `active-data`, `conversations/conversation-view/jsonl-viewer/user-text`, `conversations/conversation-view/markdown-extensions`, `tasks/task-description`
-      - Web:
-        - Exports: Types: `InlineTextWalker`, `StackedInlineWalkers`; Values: `InlineText`, `InlineTextWalkerContext`, `InlineTextWalkerSlot`, `useInlineTextWalker`
     - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
       - Web:
         - Uses: `conversations/conversation-view.conversationPane`, `conversations/model-provider.useDefaultModel`, `conversations/model-provider.useSetDefaultModel`, `conversations/model-provider.useVisibleModels`, `conversations/preprompts.PrepromptSelect`, `infra/endpoints.fetchEndpoint`, `primitives/pane.PaneOpenMode`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/shortcuts.formatShortcutLabel`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/tooltip.Kbd`, `primitives/ui-kit.Button`, `primitives/ui-kit.ButtonGroup`, `primitives/ui-kit.cn`, `primitives/ui-kit.DropdownMenu`, `primitives/ui-kit.DropdownMenuContent`, `primitives/ui-kit.DropdownMenuItem`, `primitives/ui-kit.DropdownMenuTrigger`
@@ -2905,7 +2943,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/migrations`, `infra/attachments`, `primitives/live-state`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
-        - Slots: `Markdown.Extension`
+        - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot`
         - Uses: `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
         - Exports: Types: `MarkdownEnhancement`; Values: `langFromClassName`, `Markdown`, `MarkdownEnhancementContext`, `MarkdownEnhancerSlot`, `nodeToText`, `useMarkdownEnhancement`
       - Cross-plugin:
@@ -3219,10 +3257,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`review`** — Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
   - Web:
+    - Slots: `ReviewSlots.Section`, `convReviewPane.Actions`
     - Contributes: `Pane.Register` "conv-review", `Conversation.ActionBar` → `ReviewButton`
     - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`
     - Exports: Types: `ReviewProps`, `Source`; Values: `convReviewPane`, `ReviewSlots`
   - Cross-plugin:
+    - Slot contributors: `code-review`, `plugin-changes`
     - Imported by: `review/code-review`, `review/plugin-changes`
   - Plugins:
     - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.
@@ -3235,30 +3275,32 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `reviewConfig`
     - **`plugin-changes`** — Shows which plugins were added/modified and their public API diff. Computes structured diffs of plugin public APIs between the worktree and main.
       - Web:
-        - Slots: `PluginChanges.Section`, `PluginChanges.DiffRenderer`
+        - Slots: `PluginChangesSlots.Section`, `PluginChangesSlots.DiffRenderer`
         - Contributes: `ReviewSlots.Section` "plugin-changes" → `PluginChangesSection`
         - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/card.Card`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/loading.Loading`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `review.ReviewSlots`
         - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
+      - Cross-plugin:
+        - Slot contributors: `api-changes`, `file-changes`, `render-diff`
+        - Imported by: `plugin-meta/facets/commands/render-diff`, `plugin-meta/facets/contributions/render-diff`, `plugin-meta/facets/cross-refs/render-diff`, `plugin-meta/facets/db-schema/render-diff`, `plugin-meta/facets/exports/render-diff`, `plugin-meta/facets/registrations/render-diff`, `plugin-meta/facets/resources/render-diff`, `plugin-meta/facets/routes/render-diff`, `plugin-meta/facets/slots/render-diff`, `plugin-meta/facets/structure/render-diff`, `review/plugin-changes/api-changes`, `review/plugin-changes/file-changes`
       - Server:
         - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
         - Routes: `GET /api/review/plugin-changes`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `DiffList`, `DiffRenderer`, `PluginChangedFile`, `PluginChangeDiff`, `PluginChangesResponse`, `PluginReviewProps`; Values: `getPluginChanges`
-      - Cross-plugin:
-        - Imported by: `plugin-meta/facets/commands/render-diff`, `plugin-meta/facets/contributions/render-diff`, `plugin-meta/facets/cross-refs/render-diff`, `plugin-meta/facets/db-schema/render-diff`, `plugin-meta/facets/exports/render-diff`, `plugin-meta/facets/registrations/render-diff`, `plugin-meta/facets/resources/render-diff`, `plugin-meta/facets/routes/render-diff`, `plugin-meta/facets/slots/render-diff`, `plugin-meta/facets/structure/render-diff`, `review/plugin-changes/api-changes`, `review/plugin-changes/file-changes`
       - Plugins:
         - **`api-changes`** — API surface diff section for per-plugin review cards.
           - Web:
-            - Contributes: `PluginChanges.Section` → `ApiChangesSection`
+            - Contributes: `PluginChangesSlots.Section` → `ApiChangesSection`
             - Uses: `primitives/badge.Badge`, `primitives/spacing.Stack`, `primitives/text.Text`, `review/plugin-changes.FacetDiff`, `review/plugin-changes.PluginChangesSlots`, `review/plugin-changes.usePluginFacetDiffs`
         - **`file-changes`** — File-level diff section for per-plugin review cards.
           - Web:
-            - Contributes: `PluginChanges.Section` → `FileChangesSection`
+            - Contributes: `PluginChangesSlots.Section` → `FileChangesSection`
             - Uses: `conversations.useConversationById`, `conversations/conversation-view/code.gitStatusBadge`, `conversations/conversation-view/code/file-pane/diff.DiffOrImageView`, `primitives/badge.Badge`, `primitives/collapsible.CollapsibleChevron`, `primitives/copy-to-clipboard.CopyButton`, `primitives/loading.Loading`, `primitives/text.Text`, `review/plugin-changes.PluginChangesSlots`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Web:
+    - Slots: `screenshotPane.Actions`
     - Contributes: `Pane.Register` "screenshot", `ActionBar.Item` → `ScreenshotButton`
     - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/icon-button.IconButton`, `primitives/launch.LaunchControl`, `primitives/launch.LaunchRequest`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/text-editor.TextEditor`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `screenshot/draw-canvas.applyStrokes`, `screenshot/draw-canvas.DrawCanvas`, `screenshot/draw-canvas.Stroke`, `shell/action-bar.ActionBar`, `shell/notifications.toast`
     - Exports: Values: `captureApp`, `screenshotPane`
@@ -3328,7 +3370,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`stats`** — Root plugin hosting stacked chart contributions from child plugins.
   - Web:
-    - Slots: `Stats.Chart`
+    - Slots: `Stats.Chart`, `statsPane.Actions`
     - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
     - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.Shell`
     - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`
@@ -3400,6 +3442,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `active-data/task`, `tasks/task-events`
     - **`attempt-view`** — Main pane at /a/:id showing an attempt's conversations on the left and the selected conversation on the right. Adds a toolbar button to the conversation view to switch into it.
       - Web:
+        - Slots: `attemptPane.Actions`
         - Contributes: `Pane.Register` "attempt", `Conversation.ActionBar` → `AttemptSwitchButton`
         - Uses: `conversations.useConversationById`, `conversations/conversation-ui/item.CONV_STATUS_DOT`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/badge.Badge`, `primitives/launch.LaunchControl`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneInstanceContext`, `primitives/pane.useOpenPane`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
         - Exports: Values: `attemptPane`
@@ -3432,10 +3475,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/editable-field.useEditableField`, `primitives/inline-text.InlineText`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/row.SectionHeaderRow`, `primitives/text-editor.TextEditor`, `primitives/text-editor/paste-images.ATTACHMENT_MARKDOWN_RE`, `primitives/text-editor/paste-images.AttachmentThumbnail`, `primitives/text-editor/paste-images.isAttachmentUrl`, `primitives/text.Text`, `primitives/ui-kit.Button`, `tasks.patchTask`, `tasks.useTask`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useFlushAll`, `tasks/task-detail.useRegisterFlush`
     - **`task-detail`** — Owns the /tasks pane host and the right-pane detail view for a selected task. Defines TaskDetail.{Above,Section} slots and the file-open + flush-registry contexts that section sub-plugins share.
       - Web:
+        - Slots: `TaskDetailSlots.Section`, `taskDetailPane.Actions`, `tasksRootPane.Actions`
         - Contributes: `Pane.Register` "tasks-root", `Pane.Register` "task-detail", `Shell.Sidebar` "Tasks" → `component`
         - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `shell.Shell`, `tasks.useTask`, `tasks/task-list.Tasks`, `tasks/task-list/tree.TasksList`
         - Exports: Values: `TaskDetail`, `taskDetailPane`, `TaskDetailSlots`, `TaskNavigateProvider`, `tasksRootPane`, `TaskTreeDetail`, `useFlushAll`, `useRegisterFlush`, `useTaskNavigate`
       - Cross-plugin:
+        - Slot contributors: `task-attachments`, `task-dependencies`, `task-description`, `task-events`, `task-graph`, `task-header`, `task-preprompt`
         - Imported by: `active-data/task-link`, `conversations/conversation-view/markdown-extensions`, `conversations/conversation-view/side-task`, `conversations/conversation-view/tasks-panel`, `tasks/task-attachments`, `tasks/task-dependencies`, `tasks/task-description`, `tasks/task-events`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-preprompt`
     - **`task-draft-form`** — Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button. Reusable popover + chain form for drafting one or more tasks. Powers the Improve toolbar button and the conversation new-child-task button.
       - Web:
@@ -3462,7 +3507,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations.useConversationById`, `conversations/model-provider.ModelSelect`, `primitives/editable-field.useEditableField`, `primitives/pane.useOpenPane`, `primitives/relative-time.RelativeTime`, `primitives/section-label.SectionLabel`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `tasks.AutoStartModel`, `tasks.patchTask`, `tasks.setAutoStart`, `tasks.useTask`, `tasks/auto-start.useTaskAutoStart`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useRegisterFlush`, `tasks/task-status.StatusSignal`
     - **`task-list`** — Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
       - Web:
-        - Slots: `Tasks.TaskActions`, `Tasks.ListActions`
+        - Slots: `Tasks.View`, `Tasks.TaskActions`, `Tasks.ListActions`
         - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `primitives/ui-kit.cn`, `tasks.patchTask`
         - Exports: Types: `TaskViewProps`; Values: `Tasks`
@@ -3527,38 +3572,41 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
   - Plugins:
     - **`segmented-progress-bar`** — Pluggable segmented progress bar with switchable visual variants.
       - Web:
-        - Slots: `SegmentedProgressBar.Variant`
+        - Slots: `SegmentedProgressBarSlots.Variant`
         - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Progress bar variant", `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`
         - Exports: Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`; Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
+      - Cross-plugin:
+        - Slot contributors: `dots`, `segmented`
+        - Imported by: `conversations/conversation-progress`, `ui/segmented-progress-bar/dots`, `ui/segmented-progress-bar/segmented`
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`
         - Exports: Types: `SegmentedProgressBarProps`, `Step`; Values: `segmentedProgressBarConfig`
-      - Cross-plugin:
-        - Imported by: `conversations/conversation-progress`, `ui/segmented-progress-bar/dots`, `ui/segmented-progress-bar/segmented`
       - Plugins:
         - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
           - Web:
-            - Contributes: `SegmentedProgressBar.Variant` "Dots" → `DotsRenderer`
+            - Contributes: `SegmentedProgressBarSlots.Variant` "Dots" → `DotsRenderer`
             - Uses: `primitives/text.Text`, `primitives/tooltip.WithTooltip`, `ui/segmented-progress-bar.SegmentedProgressBarSlots`
         - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.
           - Web:
-            - Contributes: `SegmentedProgressBar.Variant` "Segmented" → `SegmentedRenderer`
+            - Contributes: `SegmentedProgressBarSlots.Variant` "Segmented" → `SegmentedRenderer`
             - Uses: `primitives/ui-kit.Tooltip`, `primitives/ui-kit.TooltipContent`, `primitives/ui-kit.TooltipTrigger`, `ui/segmented-progress-bar.SegmentedProgressBarSlots`
     - **`sidebar-framing`** — Per-app sidebar framing region (flush / floating / inset). Contributes its variant-region host into AppShell.Framing.
       - Web:
+        - Slots: `SidebarFraming.Variant`
         - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Sidebar framing variant", `ThemeEngine.VariantGroup` "Sidebar framing" → `Picker`, `AppShell.Framing` "Framing" → `Region`
         - Uses: `primitives/app-shell.AppShell`, `ui/variant-region.defineVariantRegionWeb`
         - Exports: Values: `SidebarFraming`
+      - Cross-plugin:
+        - Slot contributors: `floating`, `flush`, `inset`
+        - Imported by: `ui/sidebar-framing/floating`, `ui/sidebar-framing/flush`, `ui/sidebar-framing/inset`
       - Server:
         - Uses: `ui/variant-region.variantRegionServerContribution`
       - Core:
         - Uses: `ui/variant-region.defineVariantRegion`
         - Exports: Values: `sidebarFraming`
-      - Cross-plugin:
-        - Imported by: `ui/sidebar-framing/floating`, `ui/sidebar-framing/flush`, `ui/sidebar-framing/inset`
       - Plugins:
         - **`floating`** — Floating sidebar framing — the sidebar renders as a rounded, detached card.
           - Web:
@@ -3589,10 +3637,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
           - Web:
+            - Slots: `ThemeCustomizer.Section`, `themeCustomizerPane.Actions`
             - Contributes: `Pane.Register` "theme-customizer", `ActionBar.Item` → `ThemeCustomizerButton`
             - Uses: `apps.navigate`, `apps.useActiveApp`, `apps.useCurrentAppId`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useScopeForked`, `config_v2.useSetConfig`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/color-picker.Color`, `primitives/color-picker.ColorPickerPopover`, `primitives/detail-sections.defineDetailSections`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.ThemeScopeProvider`, `ui/theme-engine.useThemeScopeId`
             - Exports: Types: `TokenMode`, `TokenRowProps`; Values: `ThemeCustomizer`, `themeCustomizerPane`, `TokenModeContext`, `TokenRow`
           - Cross-plugin:
+            - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `community-browser`, `density`, `font-family`, `shadow`, `shape`, `sidebar-palette`, `type-scale`
             - Imported by: `apps/settings/appearance`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`
     - **`theme-toggle`** — Toolbar toggle for light/dark mode.
       - Web:

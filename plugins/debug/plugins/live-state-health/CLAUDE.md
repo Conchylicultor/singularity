@@ -19,6 +19,7 @@ instrumentation of its own.
 
 - Description: Live health inspector for the client live-state pipeline (sockets, leader election, per-resource subscriptions), opened from the Debug sidebar.
 - Web:
+  - Slots: `liveStateHealthPane.Actions`
   - Contributes: `Pane.Register` "live-state-health", `DebugApp.Sidebar` "Live State" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.ChannelStatuses`, `primitives/live-state.DebugSnapshot`, `primitives/live-state.DebugSub`, `primitives/live-state.LeaderInfo`, `primitives/live-state.useNotificationsClient`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/relative-time.RelativeTime`, `primitives/section-label.SectionLabel`, `primitives/status-dot.StatusDot`, `primitives/text.Text`, `primitives/truncating-text.TruncatingText`
   - Exports: Values: `liveStateHealthPane`

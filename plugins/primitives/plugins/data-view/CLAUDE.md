@@ -68,7 +68,7 @@ zero consumer changes — exactly the segmented-progress-bar collection model.
 
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
-  - Slots: `DataViewSlots.View`
+  - Slots: `DataViewSlots.View`, `DataViewSlots.Cell`, `DataViewSlots.Filter`
   - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
   - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
 - Cross-plugin:

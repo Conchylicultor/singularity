@@ -15,6 +15,7 @@ chip in `active-data/task` opens this pane.
 
 - Description: Right side pane that shows a single task's detail alongside the host conversation (read-only-ish; expand to pop out).
 - Web:
+  - Slots: `taskSidePane.Actions`
   - Contributes: `Pane.Register` "task-side", `taskSidePane.Actions` → `ExpandTaskButton`
   - Uses: `conversations/conversation-view.conversationPane`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `tasks.useTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskTreeDetail`
   - Exports: Values: `taskSidePane`

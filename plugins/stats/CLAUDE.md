@@ -6,7 +6,7 @@
 
 - Description: Root plugin hosting stacked chart contributions from child plugins.
 - Web:
-  - Slots: `Stats.Chart`
+  - Slots: `Stats.Chart`, `statsPane.Actions`
   - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
   - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.Shell`
   - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`

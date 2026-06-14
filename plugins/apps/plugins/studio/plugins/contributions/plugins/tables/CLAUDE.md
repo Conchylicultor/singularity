@@ -6,10 +6,12 @@
 
 - Description: Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
 - Web:
+  - Slots: `TableDetail.Section`, `tableDetailPane.Actions`
   - Contributes: `Pane.Register` "table-detail"
   - Uses: `primitives/detail-sections.defineDetailSections`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`
   - Exports: Values: `TableDetail`, `tableDetailPane`
 - Cross-plugin:
+  - Slot contributors: `columns`, `foreign-keys`, `indexes`, `row-count`, `sample-rows`
   - Imported by: `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `plugin-meta/facets/db-schema/render-contributions`
 - Sub-plugins:
   - **`columns`** — Table column definitions section in the table detail view.

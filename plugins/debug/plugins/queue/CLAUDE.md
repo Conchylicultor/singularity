@@ -6,6 +6,7 @@
 
 - Description: Inspect and debug the jobs queue, events emission log, and active triggers.
 - Web:
+  - Slots: `queuePane.Actions`
   - Contributes: `Pane.Register` "queue", `DebugApp.Sidebar` "Queue" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/filter-chips.FilterChip`, `primitives/filter-chips.useChipFilter`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `shell/notifications.toast`
   - Exports: Values: `queuePane`
