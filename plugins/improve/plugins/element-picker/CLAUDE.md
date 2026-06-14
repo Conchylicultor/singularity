@@ -49,7 +49,7 @@ split — structured machine coordinates in attributes, human/model-readable
 prose in the body, itself split into two sibling tags:
 
 ```
-<ui-context url="…" plugin="…" slot="…" contribution="…" pane="…" path="…" selector="…" source="…"><hint>The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to.</hint><picked-content><element label></picked-content></ui-context>
+<ui-context url="…" plugin="…" slot="…" contribution="…" pane="…" path="…" selector="…" source="…" owner="…"><hint>The user pointed at this element in the live app using the element-picker inspector; it is the UI element their request refers to.</hint><picked-content><element label></picked-content></ui-context>
 ```
 
 The tag flows **verbatim into the agent prompt**, so the body carries a fixed
@@ -57,16 +57,24 @@ The tag flows **verbatim into the agent prompt**, so the body carries a fixed
 produced it* — an agent reading it cold shouldn't have to infer that from a bag
 of attributes — kept **separate** from the `<picked-content>` element label so
 the model never has to disentangle framing from data. `plugin`/`slot`/
-`contribution`/`pane`/`path`/`selector`/`source` attributes are omitted when
+`contribution`/`pane`/`path`/`selector`/`source`/`owner` attributes are omitted when
 absent; `path` carries the outer→inner lineage `plugin@Slot > plugin@Slot` and is
 only emitted when it adds more than the innermost plugin/slot. `contribution`
 carries the innermost slot contribution's stable `pluginId:id` key (the
 author-supplied contribution id), sharpening slot-boundary picks. `source` carries
-the repo-relative `file:line` of the picked element's source, stamped onto host DOM
-elements by the source-location build transform — available only when that
-transform is active (i.e. when the element-picker plugin is part of the app
-composition); it resolves plain-JSX picks (e.g. a `LaunchControl` button rendered
-inline) that have no slot contribution boundary. Attribute values and the picked label are
+the repo-relative `file:line` of the picked element's source — the **leaf** host
+element where the JSX tag is literally written — stamped onto host DOM elements by
+the source-location build transform (available only when that transform is active,
+i.e. when the element-picker plugin is part of the app composition). `owner`
+carries `Name@file:line` of the nearest **semantic** component that owns the picked
+element — stamped by injecting `data-ui-owner` on component (uppercase) JSX
+callsites, which rides the composed primitive's `{...props}` spread (and base-ui's
+`data-*` forwarding) onto the host element. This names the *composing* component
+(e.g. `LaunchControl`) for picks where it authors no host element of its own and is
+not a slot contribution — exactly the case `source` (a leaf primitive like
+`button-group.tsx`) and `plugin`/`contribution` (the outer slot wrapper) both miss.
+`owner` is omitted when the picked element doesn't flow through a prop-forwarding
+primitive (graceful fallback to `source`). Attribute values and the picked label are
 sanitized to be quote/angle-bracket/newline-free (the only `<` in the body are
 the two nested body tags themselves) so the tag stays single-line and
 round-trippable through the editor's line-based markdown sync. `parseUiContext`

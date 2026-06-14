@@ -25,8 +25,19 @@ test("round-trips the full lineage path through serialize/parse", () => {
     element: "button — Improve this app",
     selector: "div#root>header>button",
     source: "plugins/foo/web/components/bar.tsx:42",
+    owner:
+      "LaunchControl@plugins/primitives/plugins/launch/web/components/launch-control.tsx:197",
   };
   expect(roundTrip(meta)).toEqual(meta);
+});
+
+test("owner (`Name@file:line`, with @ : /) survives serialize/parse", () => {
+  const meta: UiContextMeta = {
+    url: "u",
+    element: "button — Opus 4.8",
+    owner: "LaunchControl@plugins/a/b/launch-control.tsx:197",
+  };
+  expect(roundTrip(meta)?.owner).toBe(meta.owner);
 });
 
 test("path containing `>` does not break the tag regex", () => {

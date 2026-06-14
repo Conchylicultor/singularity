@@ -15,6 +15,14 @@ export interface UiContextMeta {
   // Repo-relative source `file:line` of the picked element, stamped by the
   // source-location build transform (present only when that transform is active).
   source?: string;
+  // The nearest *semantic* component that owns the picked element, as
+  // `Name@file:line` (e.g. "LaunchControl@plugins/.../launch-control.tsx:197").
+  // Stamped by injecting `data-ui-owner` on component callsites, which rides the
+  // composed primitive's `{...props}` spread onto the host element — so it names
+  // the composing component (which authors no host element of its own) rather
+  // than the leaf primitive `source` points at. Complements `source`; omitted
+  // when the picked element doesn't flow through a prop-forwarding primitive.
+  owner?: string;
 }
 
 // Attribute values are quote-delimited, so only `"` would break them (a `>`
@@ -49,7 +57,7 @@ export function serializeUiContext(m: UiContextMeta): string {
   const open =
     `<ui-context url="${sanitizeAttr(m.url)}"` +
     `${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}${attr("contribution", m.contributionId)}` +
-    `${attr("pane", m.paneId)}${attr("path", m.path)}${attr("selector", m.selector)}${attr("source", m.source)}>`;
+    `${attr("pane", m.paneId)}${attr("path", m.path)}${attr("selector", m.selector)}${attr("source", m.source)}${attr("owner", m.owner)}>`;
   return `${open}<hint>${HINT}</hint><picked-content>${sanitizeBody(m.element)}</picked-content></ui-context>`;
 }
 
@@ -90,5 +98,6 @@ export function parseUiContext(tag: string): UiContextMeta | null {
     path: get("path"),
     selector: get("selector"),
     source: get("source"),
+    owner: get("owner"),
   };
 }
