@@ -70,27 +70,33 @@ export function AgentToolView({ event }: ToolRendererProps) {
           {description}
         </span>
       )}
-      {result && (
-        <span
-          role="button"
-          tabIndex={0}
-          className="shrink-0 cursor-pointer rounded-md p-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
-          onClick={openReport}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault();
-              openReport(e);
-            }
-          }}
-        >
-          <MdArticle className="size-3.5" />
-        </span>
-      )}
     </span>
   );
 
+  // The report affordance must be a header *sibling*, not part of `summary`:
+  // summary content is click-through (pointer-events-none, toggles the card).
+  // `aside` is auto-wrapped in CardHeaderAction by CollapsibleCard, restoring
+  // its own click.
+  const aside = result ? (
+    <span
+      role="button"
+      tabIndex={0}
+      title={result.isError ? "View error" : "View report"}
+      className="shrink-0 cursor-pointer rounded-md p-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
+      onClick={openReport}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          openReport(e);
+        }
+      }}
+    >
+      <MdArticle className="size-3.5" />
+    </span>
+  ) : undefined;
+
   return (
-    <ToolCallCard event={event} summary={summary}>
+    <ToolCallCard event={event} summary={summary} aside={aside}>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
       <Stack gap="sm" className="mt-2">
         {/* Prompt */}
