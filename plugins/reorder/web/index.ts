@@ -18,7 +18,7 @@ export type { ReorderLayout } from "./internal/reorder-layout";
 
 export default {
   description:
-    "Generic reorder primitive. Slots opt in via defineRenderSlot reorder config; DnD is automatic via middleware.",
+    "Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware.",
   loadBearing: true,
   register: [
     {

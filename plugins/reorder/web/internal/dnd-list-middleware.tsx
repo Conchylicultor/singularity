@@ -155,7 +155,7 @@ export function ReorderListMiddleware({
   // slot share one directive; subIds aren't known at build time).
   const descriptor = reorderDescriptors.get(slotId);
 
-  // No descriptor (runtime-only render slot, `reorder:false`, or unresolved id)
+  // No descriptor (runtime-only render slot, a mount slot, or unresolved id)
   // → render naturally with no reorder applied.
   if (!descriptor) {
     return <>{contributions.map((c) => renderItem(c))}</>;
