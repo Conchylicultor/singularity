@@ -25,3 +25,18 @@ export const reorderDescriptorEntries: Array<{
   descriptor: reorderDescriptors.get(s.slotId)!,
   pluginId: s.pluginId,
 }));
+
+/** The defining plugin's dot-form id for a reorderable slot (for the stage endpoint). */
+const reorderPluginIdBySlot: Map<string, string> = new Map(
+  reorderableSlots.map((s) => [s.slotId, s.pluginId]),
+);
+
+/**
+ * Look up the dot-form `pluginId` of the plugin that defines `slotId`. The
+ * staging fork sends this so the server writes the override under the defining
+ * plugin's `config/` directory. Returns `""` for an unknown slot (never thrown —
+ * the caller only stages known reorderable slots).
+ */
+export function reorderPluginIdForSlot(slotId: string): string {
+  return reorderPluginIdBySlot.get(slotId) ?? "";
+}

@@ -5,6 +5,7 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
   name?: string;
   fields: F;
   scope?: "app";
+  promotableToGit?: boolean;
 }): ConfigDescriptor<F> {
   for (const key of Object.keys(opts.fields)) {
     if (key.includes(".")) {
@@ -26,5 +27,6 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
     fields: opts.fields,
     defaults,
     scope: opts.scope,
+    promotableToGit: opts.promotableToGit,
   });
 }

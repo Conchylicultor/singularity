@@ -45,4 +45,7 @@ export interface ConfigDescriptor<F extends FieldsRecord = FieldsRecord> {
   // Optional scope axis. When set, this descriptor can be forked per scope of
   // the given kind (e.g. "app" → per-app). Omitted = global-only (base scope).
   readonly scope?: "app";
+  // When true, an in-app edit may be staged as a committed git-layer default
+  // (the reorder "default for everyone" path) instead of a per-user override.
+  readonly promotableToGit?: boolean;
 }

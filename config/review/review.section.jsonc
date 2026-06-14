@@ -1,7 +1,8 @@
-// @hash dffd24ad40d6
+// @hash dbd6f633aeda
 {
   "items": [
     "review.code-review:code-review",
+    "review.reorder-defaults:reorder-defaults",
     "review.plugin-changes:plugin-changes"
   ]
 }

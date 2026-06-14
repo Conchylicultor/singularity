@@ -24,8 +24,10 @@ import {
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
-import { reorderDescriptors } from "./descriptors";
+import { useStageReorderDefault } from "@plugins/reorder/plugins/staging/web";
+import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
 import { useEditMode } from "./edit-mode-store";
+import { useReorderScope } from "./scope-store";
 import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
 import {
   applyTree,
@@ -163,6 +165,7 @@ export function ReorderListMiddleware({
 
   return (
     <ReorderListMiddlewareInner
+      slotId={slotId}
       descriptor={descriptor}
       contributions={contributions}
       renderItem={renderItem}
@@ -199,10 +202,12 @@ function useReorderConfig(descriptor: ConfigDescriptor): ReorderHoistedConfig {
  * subscription per render site is cheap even for per-row reorderable slots.
  */
 function ReorderListMiddlewareInner({
+  slotId,
   descriptor,
   contributions,
   renderItem,
 }: {
+  slotId: string;
   descriptor: ConfigDescriptor;
   contributions: Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
@@ -210,6 +215,7 @@ function ReorderListMiddlewareInner({
   const { items, setConfig } = useReorderConfig(descriptor);
   return (
     <ReorderInner
+      slotId={slotId}
       items={items}
       setConfig={setConfig}
       contributions={contributions}
@@ -226,17 +232,21 @@ function ReorderListMiddlewareInner({
  * path.
  */
 function ReorderInner({
+  slotId,
   items,
   setConfig,
   contributions,
   renderItem,
 }: {
+  slotId: string;
   items: ReorderTree;
   setConfig: (key: string, value: unknown) => void;
   contributions: Contribution[];
   renderItem: (contribution: Contribution) => ReactNode;
 }) {
   const editMode = useEditMode();
+  const scope = useReorderScope();
+  const stage = useStageReorderDefault();
   const injected = useContext(ReorderLayoutContext);
   const nodeTypes = useReorderNodeTypes();
 
@@ -304,17 +314,38 @@ function ReorderInner({
     () => state.hidden.map((c) => contributionKey(c)!),
     [state.hidden],
   );
-  const setConfigRef = useRef(setConfig);
-  setConfigRef.current = setConfig;
   const nodeTypesRef = useRef(nodeTypes);
   nodeTypesRef.current = nodeTypes;
+
+  // --- Write sink: personal (user config) vs. everyone (staged git default) --
+  // Every in-app edit funnels its freshly-materialized tree through this single
+  // choke-point. The two paths are STRICTLY DISJOINT: "everyone" stages the tree
+  // for review and NEVER touches the user config layer (no double-write), so the
+  // author's live layout keeps showing the current effective order.
+  const commitTree = useCallback(
+    (tree: ReorderTree) => {
+      if (scope === "everyone") {
+        stage.mutate({
+          body: {
+            slotId,
+            pluginId: reorderPluginIdForSlot(slotId),
+            items: tree,
+          },
+        });
+        return;
+      }
+      setConfig("items", tree);
+    },
+    [scope, slotId, setConfig, stage],
+  );
+  const commitTreeRef = useRef(commitTree);
+  commitTreeRef.current = commitTree;
 
   // --- Hide / restore (config-backed) ---------------------------------------
 
   const hideItem = useCallback((key: string) => {
     if (hiddenKeysRef.current.includes(key)) return;
-    setConfigRef.current(
-      "items",
+    commitTreeRef.current(
       materializeTree(entriesRef.current, hiddenKeysRef.current, {
         hideKey: key,
       }),
@@ -323,8 +354,7 @@ function ReorderInner({
 
   const restoreItem = useCallback((key: string) => {
     if (!hiddenKeysRef.current.includes(key)) return;
-    setConfigRef.current(
-      "items",
+    commitTreeRef.current(
       materializeTree(entriesRef.current, hiddenKeysRef.current, {
         restoreKey: key,
       }),
@@ -366,8 +396,7 @@ function ReorderInner({
 
     // Re-append the excluded tail (pinned last) so it isn't dropped.
     const tail = list.filter((x) => excludedOf(x));
-    setConfigRef.current(
-      "items",
+    commitTreeRef.current(
       materializeTree([...next, ...tail], hiddenKeysRef.current),
     );
   }, []);
@@ -390,7 +419,7 @@ function ReorderInner({
             hiddenKeysRef.current,
           );
           tree.push(insert.create());
-          setConfigRef.current("items", tree);
+          commitTreeRef.current(tree);
         },
       });
     }
@@ -400,10 +429,7 @@ function ReorderInner({
   // --- Remove a node by id ---------------------------------------------------
 
   const onRemoveNode = useCallback((id: string) => {
-    setConfigRef.current(
-      "items",
-      mapNodeById(itemsRef.current, id, () => null),
-    );
+    commitTreeRef.current(mapNodeById(itemsRef.current, id, () => null));
   }, []);
 
   const onRemoveNodeRef = useRef(onRemoveNode);
@@ -438,8 +464,7 @@ function ReorderInner({
 
       // Persisted id → verbatim id-addressed map (top-level or one level deep).
       if (target.id) {
-        setConfigRef.current(
-          "items",
+        commitTreeRef.current(
           mapNodeById(itemsRef.current, target.id, (node) => {
             if (typeof node === "string" || "item" in node) return node;
             return { ...node, ...partial };
@@ -457,7 +482,7 @@ function ReorderInner({
           ? { ...node, id: crypto.randomUUID(), ...partial }
           : node,
       );
-      setConfigRef.current("items", next);
+      commitTreeRef.current(next);
     },
     [],
   );

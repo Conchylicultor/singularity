@@ -2251,6 +2251,10 @@
       "name": "@singularity/plugin-reorder-node-types-spacer",
       "version": "0.0.1",
     },
+    "plugins/reorder/plugins/staging": {
+      "name": "@singularity/plugin-reorder-staging",
+      "version": "0.0.1",
+    },
     "plugins/reports": {
       "name": "@singularity/plugin-reports",
       "version": "0.0.1",
@@ -2293,6 +2297,10 @@
     },
     "plugins/review/plugins/plugin-changes/plugins/file-changes": {
       "name": "@singularity/plugin-review-plugin-changes-file-changes",
+      "version": "0.0.1",
+    },
+    "plugins/review/plugins/reorder-defaults": {
+      "name": "@singularity/plugin-review-reorder-defaults",
       "version": "0.0.1",
     },
     "plugins/screenshot": {
@@ -4141,6 +4149,8 @@
 
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
 
+    "@singularity/plugin-reorder-staging": ["@singularity/plugin-reorder-staging@workspace:plugins/reorder/plugins/staging"],
+
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
 
     "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
@@ -4162,6 +4172,8 @@
     "@singularity/plugin-review-plugin-changes-api-changes": ["@singularity/plugin-review-plugin-changes-api-changes@workspace:plugins/review/plugins/plugin-changes/plugins/api-changes"],
 
     "@singularity/plugin-review-plugin-changes-file-changes": ["@singularity/plugin-review-plugin-changes-file-changes@workspace:plugins/review/plugins/plugin-changes/plugins/file-changes"],
+
+    "@singularity/plugin-review-reorder-defaults": ["@singularity/plugin-review-reorder-defaults@workspace:plugins/review/plugins/reorder-defaults"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

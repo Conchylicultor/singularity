@@ -3,6 +3,7 @@ import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { getEditMode, setEditMode } from "@plugins/reorder/web";
 import { PenButton } from "./internal/pen-button";
+import { ScopeToggle } from "./internal/scope-toggle";
 
 export default {
   description:
@@ -12,6 +13,11 @@ export default {
       id: "reorder-pen",
       excludeFromReorder: true,
       component: PenButton,
+    }),
+    ActionBar.Item({
+      id: "reorder-scope-toggle",
+      excludeFromReorder: true,
+      component: ScopeToggle,
     }),
     defineShortcut({
       id: "reorder.exit-edit-mode",

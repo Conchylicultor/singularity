@@ -13,6 +13,17 @@ export {
   setEditMode,
   useEditMode,
 } from "./internal/edit-mode-store";
+export {
+  getReorderScope,
+  setReorderScope,
+  useReorderScope,
+} from "./internal/scope-store";
+export type { ReorderScope } from "./internal/scope-store";
+export { diffReorderTrees } from "./internal/diff";
+export type {
+  ReorderDiffEntry,
+  ReorderTreesDiff,
+} from "./internal/diff";
 export { ReorderLayoutContext } from "./internal/reorder-layout";
 export type { ReorderLayout } from "./internal/reorder-layout";
 
