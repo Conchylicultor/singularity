@@ -2141,6 +2141,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Exports: Types: `BuildLintConfigOptions`, `ParserTypeSource`; Values: `buildLintConfig`, `findPluginDirs`, `lintCollectedDir`
           - Plugins:
+            - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io

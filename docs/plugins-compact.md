@@ -122,6 +122,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
         - **`lint`** — Global ESLint rules (promise-safety) and discovery helpers for the ESLint config
           - Plugins:
+            - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io

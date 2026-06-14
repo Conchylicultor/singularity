@@ -1439,6 +1439,10 @@
       "name": "@singularity/plugin-framework-tooling-lint",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-bun-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-icon-safety",
       "version": "0.0.1",
@@ -3730,6 +3734,8 @@
     "@singularity/plugin-framework-tooling-guards": ["@singularity/plugin-framework-tooling-guards@workspace:plugins/framework/plugins/tooling/plugins/guards"],
 
     "@singularity/plugin-framework-tooling-lint": ["@singularity/plugin-framework-tooling-lint@workspace:plugins/framework/plugins/tooling/plugins/lint"],
+
+    "@singularity/plugin-framework-tooling-lint-bun-safety": ["@singularity/plugin-framework-tooling-lint-bun-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety"],
 
     "@singularity/plugin-framework-tooling-lint-icon-safety": ["@singularity/plugin-framework-tooling-lint-icon-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety"],
 
