@@ -3,6 +3,7 @@ import { Toaster as Sonner, toast as sonnerToast } from "sonner";
 import { ShellCommands, type ToastArgs } from "@plugins/shell/web";
 import { useColorMode } from "@plugins/ui/plugins/theme-engine/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { CHROME_THEME_SCOPE } from "@plugins/primitives/plugins/ui-kit/web";
 
 /** Mutable holder so the click handler can read the toast id assigned after `toast()` returns. */
 type ToastIdHolder = { id?: number | string };
@@ -53,17 +54,24 @@ export function ToasterRoot() {
   });
 
   return (
-    <Sonner
-      theme={colorMode}
-      className="toaster group"
-      style={
-        {
-          "--normal-bg": "var(--popover)",
-          "--normal-text": "var(--popover-foreground)",
-          "--normal-border": "var(--border)",
-          "--border-radius": "var(--radius)",
-        } as React.CSSProperties
-      }
-    />
+    // Sonner renders its toast list inline (a fixed-position `<ol
+    // data-sonner-toaster>`, not a React portal), so wrapping it in the chrome
+    // scope makes the `var(--popover)` / `var(--border)` / `var(--radius)` in the
+    // style prop resolve from the stable chrome theme instead of the focused
+    // app's `:root`.
+    <div data-theme-scope={CHROME_THEME_SCOPE}>
+      <Sonner
+        theme={colorMode}
+        className="toaster group"
+        style={
+          {
+            "--normal-bg": "var(--popover)",
+            "--normal-text": "var(--popover-foreground)",
+            "--normal-border": "var(--border)",
+            "--border-radius": "var(--radius)",
+          } as React.CSSProperties
+        }
+      />
+    </div>
   );
 }

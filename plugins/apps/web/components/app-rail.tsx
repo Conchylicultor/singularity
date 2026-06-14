@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, CHROME_THEME_SCOPE } from "@plugins/primitives/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Apps } from "../slots";
 import { useActiveApp } from "../internal/use-active-app";
@@ -12,7 +12,10 @@ export function AppRail() {
   const activeAppId = useActiveApp()?.id;
   const { focusedTabId, replaceTabApp } = useTabs();
   return (
-    <div className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-xs border-r bg-background pt-md">
+    <div
+      data-theme-scope={CHROME_THEME_SCOPE}
+      className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-xs border-r bg-background pt-md"
+    >
       <Apps.App.Render>
         {(app) => (
           <WithTooltip content={app.tooltip} side="right">

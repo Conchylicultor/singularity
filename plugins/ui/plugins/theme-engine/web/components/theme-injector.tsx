@@ -9,6 +9,11 @@ import {
 } from "react";
 import { useConfig, useScopeForked } from "@plugins/config_v2/web";
 import { useActiveApp } from "@plugins/apps/web";
+import {
+  CHROME_THEME_SCOPE,
+  appThemeScope,
+  themeScopeSelectors,
+} from "@plugins/primitives/plugins/ui-kit/web";
 import { useResolvedColorMode, type ColorMode } from "../use-color-mode";
 import { themeEngineConfig } from "../../core";
 import { persistActiveForkedScope } from "../internal/active-scope-storage";
@@ -80,17 +85,18 @@ function WithAdjustment({
 function GroupStyle({
   group,
   scopeId,
-  appScope,
+  scopeToken,
 }: {
   group: TokenGroupContribution;
   scopeId?: string;
   // When set, this GroupStyle emits a *scoped* override block targeting
-  // `[data-theme-scope="app:<appScope>"]` instead of global `:root`/`.dark`, so
-  // it themes only one desktop window's subtree. Scoped blocks use a distinct
-  // `theme-scope-` style id (kept out of the global `theme-engine-` prune sweep)
-  // and never report to the pre-paint cache (overrides paint via useLayoutEffect
-  // before the window subtree is shown, so the warm-reload cache is irrelevant).
-  appScope?: string;
+  // `[data-theme-scope="<scopeToken>"]` instead of global `:root`/`.dark` (e.g.
+  // `"app:home"` for one desktop window's subtree, or `"chrome"` for the global
+  // app chrome). Scoped blocks use a distinct `theme-scope-` style id (kept out
+  // of the global `theme-engine-` prune sweep) and never report to the pre-paint
+  // cache (overrides paint via useLayoutEffect before the scoped subtree is
+  // shown, so the warm-reload cache is irrelevant).
+  scopeToken?: string;
 }) {
   const adjustment = useContext(ColorAdjustContext);
   const report = useContext(CssReportContext);
@@ -150,7 +156,7 @@ function GroupStyle({
     // the global `style[id^="theme-engine-"]` prune (and cleaned up by their own
     // ScopedAppTheme unmount); the global path keeps the `theme-engine-` id the
     // pre-paint replay and cache rely on.
-    const id = appScope ? `theme-scope-${appScope}-${group.id}` : styleIdFor(group.id);
+    const id = scopeToken ? `theme-scope-${scopeToken}-${group.id}` : styleIdFor(group.id);
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement("style");
@@ -161,21 +167,16 @@ function GroupStyle({
       group.descriptor,
       transformValues(mergedLight, adjustment),
       transformValues(mergedDark, adjustment),
-      appScope
-        ? {
-            light: `[data-theme-scope="app:${appScope}"]`,
-            dark: `.dark [data-theme-scope="app:${appScope}"]`,
-          }
-        : undefined,
+      scopeToken ? themeScopeSelectors(scopeToken) : undefined,
     );
     el.textContent = text;
     // Scoped overrides never feed the pre-paint cache — only the global path does.
-    if (!appScope) report(group.id, text);
+    if (!scopeToken) report(group.id, text);
     return () => {
       el.remove();
-      if (!appScope) report(group.id, null);
+      if (!scopeToken) report(group.id, null);
     };
-  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment, report, appScope]);
+  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment, report, scopeToken]);
 
   return null;
 }
@@ -317,22 +318,50 @@ export function ThemeInjector() {
 //
 // It reuses the same preset resolution, merge, color-transform adjustment, and
 // completeness backstop as the global path (all live inside GroupStyle /
-// WithAdjustment) — only the selector and style id differ (via `appScope`).
+// WithAdjustment) — only the selector and style id differ (via `scopeToken`).
 // Deliberately omits ColorModeApplier (light/dark stays global), the
-// CssReportContext provider (the default no-op; `appScope` gates reports off
+// CssReportContext provider (the default no-op; `scopeToken` gates reports off
 // regardless), and the cache / active-scope-storage side effects.
 export function ScopedAppTheme({ appId }: { appId: string }) {
-  const scopeId = `app:${appId}`;
+  const scopeId = appThemeScope(appId);
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
 
   const styles = groups.map((g) => (
-    <GroupStyle key={g.id} group={g} scopeId={scopeId} appScope={appId} />
+    <GroupStyle key={g.id} group={g} scopeId={scopeId} scopeToken={appThemeScope(appId)} />
   ));
 
   const firstTransform = colorTransforms[0];
   return (
     <ThemeScopeProvider scopeId={scopeId}>
+      {firstTransform ? (
+        <WithAdjustment contrib={firstTransform}>{styles}</WithAdjustment>
+      ) : (
+        <>{styles}</>
+      )}
+    </ThemeScopeProvider>
+  );
+}
+
+// Stable theme for the global app chrome (sonner toaster, desktop backdrop, tab
+// bar, app rail). Like ScopedAppTheme it emits a purely *additive* override
+// block — but under the non-`app:` `chrome` token and fed by the GLOBAL
+// (unscoped) config instead of an `app:<id>` config. So the chrome wears the
+// user's base theme and does NOT track the focused window: switching desktop
+// windows no longer flips the surrounding chrome's palette. Always mounted
+// (chrome exists in every surface arrangement). Light/dark still follows the
+// global `<html>.dark` (no ColorModeApplier here — palette only).
+export function ChromeTheme() {
+  const groups = ThemeEngine.TokenGroup.useContributions();
+  const colorTransforms = ThemeEngine.ColorTransform.useContributions();
+
+  const styles = groups.map((g) => (
+    <GroupStyle key={g.id} group={g} scopeId={undefined} scopeToken={CHROME_THEME_SCOPE} />
+  ));
+
+  const firstTransform = colorTransforms[0];
+  return (
+    <ThemeScopeProvider scopeId={undefined}>
       {firstTransform ? (
         <WithAdjustment contrib={firstTransform}>{styles}</WithAdjustment>
       ) : (

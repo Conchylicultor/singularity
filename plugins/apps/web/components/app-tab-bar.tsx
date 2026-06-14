@@ -7,7 +7,11 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { MdAdd, MdClose } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import {
+  cn,
+  CHROME_THEME_SCOPE,
+  PortalThemeScopeProvider,
+} from "@plugins/primitives/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TruncatingText } from "@plugins/primitives/plugins/truncating-text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
@@ -56,7 +60,11 @@ export function AppTabBar() {
   });
 
   return (
-    <div className="flex shrink-0 items-center border-b bg-background px-xs py-2xs">
+    <PortalThemeScopeProvider scope={CHROME_THEME_SCOPE}>
+    <div
+      data-theme-scope={CHROME_THEME_SCOPE}
+      className="flex shrink-0 items-center border-b bg-background px-xs py-2xs"
+    >
       <div
         ref={containerRef}
         className="flex min-w-0 items-center gap-2xs overflow-x-auto [&::-webkit-scrollbar]:hidden"
@@ -132,6 +140,7 @@ export function AppTabBar() {
           document.body,
         )}
     </div>
+    </PortalThemeScopeProvider>
   );
 }
 

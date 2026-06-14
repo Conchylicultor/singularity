@@ -2,7 +2,7 @@ import { type PluginDefinition, Core } from "@plugins/framework/plugins/web-sdk/
 import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { themeEngineConfig } from "../core";
-import { ThemeInjector } from "./components/theme-injector";
+import { ThemeInjector, ChromeTheme } from "./components/theme-injector";
 import { themeScopeBootTask } from "./internal/boot";
 import { ThemeEngine } from "./slots";
 
@@ -19,7 +19,7 @@ export type {
 } from "./slots";
 export { ThemeScope } from "./components/theme-scope";
 export { ThemeScopeProvider, useThemeScopeId } from "./components/theme-scope-context";
-export { ColorAdjustContext, ScopedAppTheme } from "./components/theme-injector";
+export { ColorAdjustContext, ScopedAppTheme, ChromeTheme } from "./components/theme-injector";
 export { useColorMode, useResolvedColorMode } from "./use-color-mode";
 export type { ColorMode } from "./use-color-mode";
 export { transformValues } from "./internal/transform";
@@ -29,6 +29,7 @@ export default {
     "Central settings pane for switching visual variants of pluggable UI components.",
   contributions: [
     Core.Root({ component: ThemeInjector }),
+    Core.Root({ component: ChromeTheme }),
     themeScopeBootTask,
     ConfigV2.WebRegister({ descriptor: themeEngineConfig }),
     DynamicEnum.Options({

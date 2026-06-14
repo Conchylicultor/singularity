@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
 import { useTabs } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { CHROME_THEME_SCOPE } from "@plugins/primitives/plugins/ui-kit/web";
 import { ScopedAppTheme } from "@plugins/ui/plugins/theme-engine/web";
 import { WindowFrame } from "./window-frame";
 import { pruneWindowGeometry } from "../hooks/use-window-geometry";
@@ -41,7 +42,10 @@ export function AppWindowsBody() {
     // The desktop backdrop. `transform-gpu` makes it the containing block for the
     // absolutely-positioned windows (and their fixed-position app chrome), so
     // windows are clipped to the surface below the tab bar.
-    <div className="relative h-full w-full overflow-hidden transform-gpu">
+    <div
+      data-theme-scope={CHROME_THEME_SCOPE}
+      className="relative h-full w-full overflow-hidden bg-background transform-gpu"
+    >
       {appIds.map((id) => (
         <ScopedAppTheme key={id} appId={id} />
       ))}
