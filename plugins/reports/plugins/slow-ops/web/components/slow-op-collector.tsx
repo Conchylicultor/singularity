@@ -41,6 +41,13 @@ export function SlowOpCollector() {
   // Element signal: live-state resources hand us their mount → settle duration.
   useEffect(() => {
     registerSlowResourceReporter((info) => {
+      // Mount→first-data settle IS the user-perceived time-to-content. Report it
+      // as-is, including the cold-start boot wave: a slow boot is a real UX
+      // regression, not noise. The gateway hot-swaps only once the backend is
+      // ready (warm pool, migrations applied) — so a slow settle right after a
+      // swap means readiness flipped before the backend could serve fast. Fix
+      // that at the source; never suppress this signal. See this plugin's
+      // CLAUDE.md.
       const t = cfgRef.current.elementMs;
       if (info.durationMs <= t) return;
       const durationMs = Math.round(info.durationMs);
