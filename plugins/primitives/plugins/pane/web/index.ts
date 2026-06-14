@@ -31,6 +31,8 @@ export {
   PaneStoreContext,
   usePaneStore,
   PaneSurfaceProvider,
+  PaneSurfaceAppContext,
+  useSurfaceAppId,
 } from "./pane";
 export type {
   PaneObject,

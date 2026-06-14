@@ -119,7 +119,7 @@ not yet supported — see the open question in
 
 - Description: Miller-columns layout renderer. Maps the matched pane chain to a horizontal sequence of resizable, collapsible columns.
 - Web:
-  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.getRoute`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.reorderRoute`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.MatchEntry`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.PaneStore`, `primitives/pane.setBasePath`, `primitives/pane.usePaneRoute`, `primitives/pane.usePaneStore`, `primitives/pane.useRoute`, `primitives/pane.useSyncPaneRegistry`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
   - Exports: Values: `MillerColumns`, `PaneOverlayHost`
 - Cross-plugin:
   - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/shell`, `apps/settings/shell`, `apps/studio/shell`, `apps/workflows/shell`, `layouts/host`

@@ -5,7 +5,7 @@ import {
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
-import { clearMaximize, getMaximizedId, useColumnMaximize } from "../hooks/use-column-maximize";
+import { useClearMaximize, useColumnMaximize, useMaximizedId } from "../hooks/use-column-maximize";
 import { hasStoredWidth, useColumnWidth } from "../hooks/use-column-widths";
 import { CollapsedBar } from "./collapsed-bar";
 import { ResizeHandle } from "./resize-handle";
@@ -21,6 +21,8 @@ interface ColumnProps {
 export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
   const [collapsed, toggleCollapse] = useColumnCollapse(entry.uuid);
   const [isMaximized, toggleMaximize] = useColumnMaximize(entry.uuid);
+  const maximizedId = useMaximizedId();
+  const clearMaximize = useClearMaximize();
   const [width, setWidth] = useColumnWidth(
     entry.pane.id,
     entry.pane.width ?? DEFAULT_WIDTH,
@@ -50,8 +52,9 @@ export function Column({ entry, isLast, dragHandleProps }: ColumnProps) {
     }
   }, [isLast, paneId]);
 
-  // Some other column is maximized → collapse this one (overrides isLast guard).
-  const forcedCollapse = !isMaximized && getMaximizedId() !== null;
+  // Some other column in THIS surface is maximized → collapse this one
+  // (overrides isLast guard).
+  const forcedCollapse = !isMaximized && maximizedId !== null;
   if (forcedCollapse) {
     return <CollapsedBar entry={entry} onExpand={clearMaximize} />;
   }

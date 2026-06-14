@@ -1,7 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdChevronLeft } from "react-icons/md";
-import { clearRoute } from "@plugins/primitives/plugins/pane/web";
+import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
 import { StoryRender } from "@plugins/apps/plugins/story/plugins/render/web";
 import { useStories, markStory } from "@plugins/apps/plugins/story/plugins/marker/web";
@@ -18,6 +18,7 @@ import { StoryViewSwitcher } from "./story-view-switcher";
  */
 export function StoryEditor() {
   const { pageId } = storyDetailPane.useParams();
+  const store = usePaneStore();
 
   // The persisted default renderer for this story (null until the user picks
   // one). Read back from the marker so reopening the story restores the lens.
@@ -49,7 +50,7 @@ export function StoryEditor() {
   return (
     <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
       <div className="flex items-center gap-md border-b border-border py-md pl-lg pr-floating-bar">
-        <Button variant="outline" size="xs" onClick={() => clearRoute()}>
+        <Button variant="outline" size="xs" onClick={() => store.clearRoute()}>
           <MdChevronLeft className="size-4" />
           Stories
         </Button>

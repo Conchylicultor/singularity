@@ -1,6 +1,6 @@
 import { MdPalette } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { navigate, useActiveApp } from "@plugins/apps/web";
 import { themeCustomizerPane } from "../panes";
 
@@ -17,6 +17,7 @@ export function ThemeCustomizerButton() {
   // though this button renders outside any pane (no PaneMatchContext).
   const { isOpen } = themeCustomizerPane.useToggle({}, { mode: "root" });
   const activeApp = useActiveApp();
+  const openPane = useOpenPane();
 
   const handleClick = () => {
     if (isOpen) {

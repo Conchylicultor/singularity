@@ -699,6 +699,20 @@ export function usePaneStore(): PaneStore {
   return useContext(PaneStoreContext);
 }
 
+// ---------------------------------------------------------------------------
+// Surface app context. Carries the owning `appId` of the surface (tab/window)
+// so consumers can read "which app owns the surface I'm rendered in" without
+// touching `window.location` — the focused-URL read is wrong the moment a
+// second surface is visible. `undefined` outside any `PaneSurfaceProvider`, so
+// `useActiveApp`/`useCurrentAppId` fall back to the URL-derived focused app.
+// ---------------------------------------------------------------------------
+
+export const PaneSurfaceAppContext = createContext<string | undefined>(undefined);
+
+export function useSurfaceAppId(): string | undefined {
+  return useContext(PaneSurfaceAppContext);
+}
+
 /**
  * Single provider supplying BOTH the active {@link PaneStore} (via
  * {@link PaneStoreContext}) and the app base path (via the existing
@@ -711,16 +725,23 @@ export function usePaneStore(): PaneStore {
 export function PaneSurfaceProvider({
   store,
   basePath,
+  appId,
   children,
 }: {
   store: PaneStore;
   basePath: string;
+  /** Owning app of this surface; read via {@link useSurfaceAppId}. */
+  appId?: string;
   children: ReactNode;
 }): ReactNode {
   return createElement(
     PaneStoreContext.Provider,
     { value: store },
-    createElement(PaneBasePathContext.Provider, { value: basePath }, children),
+    createElement(
+      PaneBasePathContext.Provider,
+      { value: basePath },
+      createElement(PaneSurfaceAppContext.Provider, { value: appId }, children),
+    ),
   );
 }
 

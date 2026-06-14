@@ -36,7 +36,7 @@ and the editor.
 
 - Description: Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
 - Web:
-  - Uses: `config_v2.useConfigRegistrations`, `config_v2/settings.configDetailPane`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`, `primitives/section-label.SectionLabel`
+  - Uses: `config_v2.useConfigRegistrations`, `config_v2/settings.configDetailPane`, `primitives/icon-button.IconButton`, `primitives/pane.useOpenPane`, `primitives/section-label.SectionLabel`
   - Exports: Types: `ConfigGearButtonProps`, `ConfigPopoverHeaderProps`; Values: `ConfigGearButton`, `ConfigPopoverHeader`, `useOpenConfig`
 - Cross-plugin:
   - Imported by: `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/prompt-templates`

@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { sonataPlayerPane } from "./panes";
 
 /**
@@ -14,11 +14,15 @@ import { sonataPlayerPane } from "./panes";
  * (open-immediately-after-create).
  */
 export function useOpenSong(): (song: { id: string; title: string }) => void {
-  return useCallback((song) => {
-    openPane(
-      sonataPlayerPane,
-      { songId: song.id },
-      { mode: "root", input: { title: song.title } },
-    );
-  }, []);
+  const openPane = useOpenPane();
+  return useCallback(
+    (song) => {
+      openPane(
+        sonataPlayerPane,
+        { songId: song.id },
+        { mode: "root", input: { title: song.title } },
+      );
+    },
+    [openPane],
+  );
 }

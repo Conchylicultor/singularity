@@ -2,7 +2,7 @@ import { MdAdd, MdAutoStories } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   pagesResource,
   pageData,
@@ -32,6 +32,7 @@ export function StoryGallery() {
   const storiesResult = useResource(storiesResource);
   const pagesResult = useResource(pagesResource);
   const all = useCombinedResources({ stories: storiesResult, pages: pagesResult });
+  const openPane = useOpenPane();
 
   const openStory = (page: Block) => {
     openPane(

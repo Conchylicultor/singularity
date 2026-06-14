@@ -17,7 +17,7 @@ chip in `active-data/task` opens this pane.
 - Web:
   - Slots: `taskSidePane.Actions`
   - Contributes: `Pane.Register` "task-side", `taskSidePane.Actions` → `ExpandTaskButton`
-  - Uses: `conversations/conversation-view.conversationPane`, `primitives/live-state.useResource`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `tasks.useTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskTreeDetail`
+  - Uses: `conversations/conversation-view.conversationPane`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.PaneIconAction`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `tasks.useTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskTreeDetail`
   - Exports: Values: `taskSidePane`
 - Cross-plugin:
   - Imported by: `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`

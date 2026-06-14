@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { clearRoute } from "@plugins/primitives/plugins/pane/web";
+import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Picker } from "./display-picker";
 
@@ -14,8 +14,9 @@ import { Picker } from "./display-picker";
 
 /** ← Library — clears the route back to the library index pane. */
 export function BackToLibrary() {
+  const store = usePaneStore();
   return (
-    <Button variant="outline" size="xs" onClick={() => clearRoute()}>
+    <Button variant="outline" size="xs" onClick={() => store.clearRoute()}>
       ← Library
     </Button>
   );

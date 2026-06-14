@@ -76,6 +76,7 @@ function AppTabsBody() {
             <PaneSurfaceProvider
               store={tab.store}
               basePath={appPathFor(tab.appId, apps)}
+              appId={tab.appId}
             >
               <TabTitleReporter tabId={tab.tabId} />
               {renderIsolated(Apps.App.id, app as unknown as Contribution)}

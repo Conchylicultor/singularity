@@ -1,13 +1,12 @@
 import { useCallback, useContext, useLayoutEffect, useRef } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
 import {
-  getRoute,
   type PaneMatch,
   PaneBasePathContext,
   PaneInstanceContext,
   PaneMatchContext,
-  reorderRoute,
   usePaneRoute,
+  usePaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import {
   SortableItem,
@@ -17,6 +16,7 @@ import { Column } from "./column";
 
 export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
   const basePath = useContext(PaneBasePathContext);
+  const store = usePaneStore();
 
   // Always run the self-resolve hooks to keep hook order stable; it is cheap
   // and idempotent. When a `match` prop is supplied (by the mixing host) we use
@@ -35,14 +35,17 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
     lastLength.current = len;
   }, [match?.panes.length]);
 
-  const handleMove = useCallback((activeId: string, overId: string) => {
-    const chain = getRoute();
-    const fromIdx = chain.findIndex((s) => String(s.instanceId) === activeId);
-    const toIdx = chain.findIndex((s) => String(s.instanceId) === overId);
-    if (fromIdx >= 0 && toIdx >= 0) {
-      reorderRoute(fromIdx, toIdx);
-    }
-  }, []);
+  const handleMove = useCallback(
+    (activeId: string, overId: string) => {
+      const chain = store.getRoute();
+      const fromIdx = chain.findIndex((s) => String(s.instanceId) === activeId);
+      const toIdx = chain.findIndex((s) => String(s.instanceId) === overId);
+      if (fromIdx >= 0 && toIdx >= 0) {
+        store.reorderRoute(fromIdx, toIdx);
+      }
+    },
+    [store],
+  );
 
   if (!match) return null;
 

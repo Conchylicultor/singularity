@@ -1,12 +1,13 @@
 import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdTune } from "react-icons/md";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "../internal/panes";
 import { useConflictPaths } from "../internal/use-conflicts";
 
 export function ConfigSidebarButton() {
   const conflicts = useConflictPaths();
   const hasConflicts = !conflicts.pending && conflicts.data.length > 0;
+  const openPane = useOpenPane();
 
   return (
     <SidebarMenu>

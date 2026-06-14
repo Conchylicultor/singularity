@@ -1,5 +1,5 @@
 import { useCallback } from "react";
-import { openPane } from "@plugins/primitives/plugins/pane/web";
+import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { configDetailPane } from "@plugins/config_v2/plugins/settings/web";
@@ -11,6 +11,7 @@ import { configDetailPane } from "@plugins/config_v2/plugins/settings/web";
 // already reads with useConfig().
 export function useOpenConfig() {
   const registrations = useConfigRegistrations();
+  const openPane = useOpenPane();
   return useCallback(
     (descriptor: ConfigDescriptor) => {
       const reg = registrations.find((r) => r.descriptor === descriptor);
@@ -28,6 +29,6 @@ export function useOpenConfig() {
         { mode: "root" },
       );
     },
-    [registrations],
+    [registrations, openPane],
   );
 }
