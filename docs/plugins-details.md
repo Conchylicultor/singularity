@@ -2130,7 +2130,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PluginNode`, `PluginTree`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `collectTokenGroupVars`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
-            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `plugin-meta/facets`
+            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/facets`
           - Core:
             - Exports: Types: `CollectedDirDef`, `CollectedEntry`, `LoadCollectedDirOptions`; Values: `defineCollectedDir`, `isCollectedDirDef`, `loadCollectedDir`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -2183,7 +2183,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ActionBar.Item` → `ElementPickerButton`, `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`, `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
         - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
       - Core:
-        - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`
+        - Uses: `framework/tooling/collected-dir.defineCollectedDir`
+        - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`, `viteCollectedDir`
 
 - **`infra`** — Umbrella for cross-cutting server-side primitives used by feature plugins: jobs, events, secrets, mcp, attachments.
   - Plugins:

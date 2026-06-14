@@ -23,6 +23,13 @@ export function PluginMarkerMiddleware({
       style={{ display: "contents" }}
       data-plugin-id={contribution._pluginId ?? ""}
       data-slot-id={slotId}
+      data-contribution-id={
+        contribution.id
+          ? contribution._pluginId
+            ? `${contribution._pluginId}:${contribution.id as string}`
+            : String(contribution.id)
+          : ""
+      }
     >
       {children}
     </span>

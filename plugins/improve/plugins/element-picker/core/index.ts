@@ -1,3 +1,4 @@
+export { viteCollectedDir } from "./collected-dir";
 export type { UiContextMeta } from "./internal/token";
 export {
   serializeUiContext,

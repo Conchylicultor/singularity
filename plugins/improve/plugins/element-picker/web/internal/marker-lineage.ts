@@ -3,6 +3,7 @@
 export interface UiMarker {
   pluginId: string;
   slotId?: string;
+  contributionId?: string;
 }
 
 export interface MarkerLineage {
@@ -29,7 +30,11 @@ export function collectMarkerLineage(el: Element): MarkerLineage {
     // The middleware stamps `data-plugin-id=""` when a contribution has no plugin
     // id; skip those so the lineage only carries real owners.
     if (pluginId) {
-      markers.unshift({ pluginId, slotId: marker.dataset.slotId || undefined });
+      markers.unshift({
+        pluginId,
+        slotId: marker.dataset.slotId || undefined,
+        contributionId: marker.dataset.contributionId || undefined,
+      });
     }
     cur = marker.parentElement;
   }

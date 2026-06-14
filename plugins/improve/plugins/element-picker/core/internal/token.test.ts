@@ -19,10 +19,12 @@ test("round-trips the full lineage path through serialize/parse", () => {
     url: "https://x.localhost:9000/tasks",
     pluginId: "improve/element-picker",
     slotId: "ActionBar.Item",
+    contributionId: "improve/element-picker:element-picker",
     paneId: "tasks-root",
     path: "tasks/task-header@TaskDetail.Section > improve/element-picker@ActionBar.Item",
     element: "button — Improve this app",
     selector: "div#root>header>button",
+    source: "plugins/foo/web/components/bar.tsx:42",
   };
   expect(roundTrip(meta)).toEqual(meta);
 });

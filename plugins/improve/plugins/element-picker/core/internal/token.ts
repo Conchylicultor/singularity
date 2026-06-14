@@ -2,6 +2,9 @@ export interface UiContextMeta {
   url: string;
   pluginId?: string;
   slotId?: string;
+  // Author-supplied contribution id, keyed for cross-plugin uniqueness as
+  // `pluginId:id` (e.g. "improve/element-picker:element-picker").
+  contributionId?: string;
   paneId?: string;
   // Composition lineage outer→inner, e.g. "tasks/task-header@TaskDetail.Section >
   // improve/element-picker@ActionBar.Item". Points at the contributing source far
@@ -9,6 +12,9 @@ export interface UiContextMeta {
   path?: string;
   element: string; // e.g. "button — Improve this app"
   selector?: string; // short CSS path for precision, e.g. "header>div>button"
+  // Repo-relative source `file:line` of the picked element, stamped by the
+  // source-location build transform (present only when that transform is active).
+  source?: string;
 }
 
 // Attribute values are quote-delimited, so only `"` would break them (a `>`
@@ -42,8 +48,8 @@ export function serializeUiContext(m: UiContextMeta): string {
   const attr = (k: string, v?: string) => (v ? ` ${k}="${sanitizeAttr(v)}"` : "");
   const open =
     `<ui-context url="${sanitizeAttr(m.url)}"` +
-    `${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}` +
-    `${attr("pane", m.paneId)}${attr("path", m.path)}${attr("selector", m.selector)}>`;
+    `${attr("plugin", m.pluginId)}${attr("slot", m.slotId)}${attr("contribution", m.contributionId)}` +
+    `${attr("pane", m.paneId)}${attr("path", m.path)}${attr("selector", m.selector)}${attr("source", m.source)}>`;
   return `${open}<hint>${HINT}</hint><picked-content>${sanitizeBody(m.element)}</picked-content></ui-context>`;
 }
 
@@ -79,8 +85,10 @@ export function parseUiContext(tag: string): UiContextMeta | null {
     element,
     pluginId: get("plugin"),
     slotId: get("slot"),
+    contributionId: get("contribution"),
     paneId: get("pane"),
     path: get("path"),
     selector: get("selector"),
+    source: get("source"),
   };
 }

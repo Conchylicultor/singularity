@@ -41,6 +41,21 @@ function isMarkerSpan(el: Element): boolean {
   return el instanceof HTMLElement && el.dataset.slotId !== undefined;
 }
 
+/** The nearest build-stamped `data-source` (repo-relative `file:line`) above the
+ * element, skipping the marker middleware's own `display:contents` span — that span
+ * is JSX in marker-middleware.tsx so it ALSO carries a `data-source` pointing at the
+ * middleware, which would mis-attribute every pick. */
+function nearestSource(el: Element): string | undefined {
+  let cur: Element | null = el;
+  while (cur) {
+    const m: HTMLElement | null = cur.closest<HTMLElement>("[data-source]");
+    if (!m) return undefined;
+    if (!isMarkerSpan(m)) return m.dataset.source;
+    cur = m.parentElement;
+  }
+  return undefined;
+}
+
 /** One selector segment: prefer a stable, unique anchor (id, then test id) and
  * otherwise fall back to the bare tag name. */
 function segmentFor(el: Element): string {
@@ -77,10 +92,12 @@ export function collectMeta(el: Element): UiContextMeta {
     url: window.location.href,
     pluginId: innermost?.pluginId,
     slotId: innermost?.slotId,
+    contributionId: innermost?.contributionId,
     paneId,
     // Only emit the path when it adds something beyond plugin/slot (>1 marker).
     path: markers.length > 1 ? formatPath(markers) : undefined,
     element: describeElement(el),
     selector: preciseSelector(el),
+    source: nearestSource(el),
   };
 }

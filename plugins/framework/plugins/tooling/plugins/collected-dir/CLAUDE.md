@@ -38,7 +38,7 @@ paths itself and uses throw-on-failure semantics.
 
 - Description: Generic loader for build-time collected-dir registries (loadCollectedDir).
 - Cross-plugin:
-  - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `plugin-meta/facets`
+  - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/facets`
 - Core:
   - Exports: Types: `CollectedDirDef`, `CollectedEntry`, `LoadCollectedDirOptions`; Values: `defineCollectedDir`, `isCollectedDirDef`, `loadCollectedDir`
 
