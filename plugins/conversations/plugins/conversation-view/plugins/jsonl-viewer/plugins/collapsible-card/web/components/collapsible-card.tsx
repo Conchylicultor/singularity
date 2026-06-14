@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Card } from "@plugins/primitives/plugins/card/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
+import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
 /**
  * Wrapper that makes header content interactive inside the card's click-through
@@ -115,6 +116,9 @@ export function CollapsibleCard({
             {trailing}
           </CardHeaderAction>
         )}
+        <CardHeaderAction className={cn("shrink-0", !trailing && "ml-auto")}>
+          <RowActions />
+        </CardHeaderAction>
       </div>
       {open && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header

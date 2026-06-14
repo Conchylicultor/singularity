@@ -1,5 +1,6 @@
 import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
 
 type UserImageEvent = Extract<JsonlEvent, { kind: "user-image" }>;
@@ -9,7 +10,8 @@ export function UserImageRow({ event }: { event: JsonlEvent }) {
   const [expanded, setExpanded] = useState(false);
   const src = `data:${e.mime};base64,${e.data}`;
   return (
-    <div className="rounded-md border border-border/60 bg-background px-md py-sm">
+    <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
+      <RowActions floating className="absolute right-2 top-2 z-raised" />
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1 spaces the label from the image below it */}
       <SectionLabel className="mb-1 flex items-center gap-sm text-3xs">
         <span>User image</span>

@@ -2,7 +2,7 @@ import { useState } from "react";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
 import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
+import { RowActions, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
@@ -75,7 +75,8 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
 
   return (
     <ContentScope>
-      <div className="rounded-md border border-border/60 bg-background px-md py-sm">
+      <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
+        <RowActions floating className="absolute right-2 top-2 z-raised" />
         <div
           className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
           style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
