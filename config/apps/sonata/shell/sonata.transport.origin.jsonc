@@ -1,0 +1,9 @@
+// @hash e6d517a9b65e
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.sonata.progress.scrubber:progress-bar"
+  ]
+}

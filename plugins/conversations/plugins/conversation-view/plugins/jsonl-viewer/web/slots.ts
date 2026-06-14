@@ -56,6 +56,6 @@ export const JsonlViewer = {
   ),
   Overlay: defineRenderSlot<OverlayContribution>(
     "conversation.jsonl-viewer.overlay",
-    { reorder: false, docLabel: (p) => p.id },
+    { docLabel: (p) => p.id },
   ),
 };

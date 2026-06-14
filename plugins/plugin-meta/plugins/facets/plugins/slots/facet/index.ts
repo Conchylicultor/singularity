@@ -16,21 +16,24 @@ function isSlotLike(v: unknown): v is { id: string } {
 }
 
 /**
- * Parse `defineRenderSlot(...)` calls. Mirrors `parseDefineGroup`, but render
- * slots aren't always assigned inside a `Member: builder(...)` group entry (some
- * are standalone, e.g. `VariantGroup: defineRenderSlot<T>("id", {...})`), and we
- * additionally need the optional 2nd-arg `{ reorder?: boolean }` which lives past
- * the id string. So we scan each `defineRenderSlot(` occurrence directly: take the
- * first string literal as the id, the nearest preceding `Member:` as the member
- * name, and read `reorder` from the call's argument span. Default `reorder: true`
- * when the option is absent.
+ * Parse `defineRenderSlot(...)` / `defineMountSlot(...)` calls. Mirrors
+ * `parseDefineGroup`, but these slots aren't always assigned inside a
+ * `Member: builder(...)` group entry (some are standalone, e.g.
+ * `VariantGroup: defineRenderSlot<T>("id", {...})`). So we scan each builder
+ * occurrence directly: take the first string literal as the id and the nearest
+ * preceding `Member:` (or `const Member =`) as the member name. `kind` is fixed
+ * by the builder — `"render"` (always reorderable) or `"mount"` (never).
  */
-function parseRenderSlots(src: string): SlotDef[] {
+function parseSlotCalls(
+  src: string,
+  builder: "defineRenderSlot" | "defineMountSlot",
+  kind: "render" | "mount",
+): SlotDef[] {
   const out: SlotDef[] = [];
-  const callRe = /defineRenderSlot\s*(?:<[^]*?>)?\s*\(/g;
+  const callRe = new RegExp(`${builder}\\s*(?:<[^]*?>)?\\s*\\(`, "g");
   let m: RegExpExecArray | null;
   while ((m = callRe.exec(src))) {
-    const parenStart = src.indexOf("(", m.index + "defineRenderSlot".length - 1);
+    const parenStart = src.indexOf("(", m.index + builder.length - 1);
     if (parenStart < 0) continue;
     const parenEnd = matchBracket(src, parenStart, "(", ")");
     if (parenEnd < 0) continue;
@@ -53,11 +56,7 @@ function parseRenderSlots(src: string): SlotDef[] {
     const groupMatch = [...prefix.matchAll(/export\s+const\s+([A-Z]\w*)\s*=\s*\{/g)].pop();
     const groupName = groupMatch ? groupMatch[1]! : memberName;
 
-    // `reorder: false` may appear anywhere in the options object (before or after
-    // `docLabel`). Absence ⇒ default `true`.
-    const reorder = !/\breorder\s*:\s*false\b/.test(argsBody);
-
-    out.push({ memberName, slotId, groupName, kind: "render", reorder });
+    out.push({ memberName, slotId, groupName, kind });
   }
   return out;
 }
@@ -72,17 +71,15 @@ function safeEntries(obj: Record<string, unknown>): [string, unknown][] {
 }
 
 /**
- * `kind` (and `reorder`) for a slot discovered via the runtime walk.
- * `defineRenderSlot` attaches a `.Render` component and `defineDispatchSlot` a
- * `.Dispatch` component to the slot object. `defineRenderSlot` also stores its
- * `reorder` flag on the object, so the walk reads it directly (default `true`
- * when absent).
+ * Best-effort `kind` for a slot surfaced only via the runtime fallback.
+ * `defineRenderSlot` attaches a `.Render` component, `defineMountSlot` a
+ * `.Mount` component, and `defineDispatchSlot` a `.Dispatch` component to the
+ * slot object.
  */
 function runtimeKindHints(slot: { id: string }): Partial<SlotDef> {
   const s = slot as Record<string, unknown>;
-  if (typeof s.Render === "function") {
-    return { kind: "render", reorder: typeof s.reorder === "boolean" ? s.reorder : true };
-  }
+  if (typeof s.Mount === "function") return { kind: "mount" };
+  if (typeof s.Render === "function") return { kind: "render" };
   if (typeof s.Dispatch === "function") return { kind: "dispatch" };
   return { kind: "slot" };
 }
@@ -154,7 +151,8 @@ export default createFacet<SlotDef[]>({
     //    export graph is the SOLE authoritative source. It sees every slot at
     //    any nesting depth — including factory-produced slots (e.g.
     //    `Sonata.Toolbar.Start`) that no static text parse could reach — and
-    //    reads the real `reorder` flag off each slot object.
+    //    reads each slot's `kind` from its constructor marker (`.Mount` →
+    //    mount, `.Render` → render, `.Dispatch` → dispatch).
     //  - No imports (`skipBarrelImport` build mode): fall back to the static
     //    text parse of `web/slots.ts`. This cannot see factory slots (their
     //    `defineRenderSlot` call lives in the factory file, not `slots.ts`), but
@@ -170,9 +168,10 @@ export default createFacet<SlotDef[]>({
       // (keeping slot-id strings) additionally defends the transpile-failure
       // fallback so a commented `defineSlot("x")` is never parsed as a real slot.
       const stripped = maskSource(stripTypes(src), { strings: false });
-      // Render slots first: they read the `reorder` flag and `defineSlot` would
-      // not match `defineRenderSlot` calls anyway (distinct builder name).
-      slots.push(...parseRenderSlots(stripped));
+      // Render and mount slots first: scanned by builder name (distinct from
+      // `defineSlot`, so the group parser below won't double-count them).
+      slots.push(...parseSlotCalls(stripped, "defineRenderSlot", "render"));
+      slots.push(...parseSlotCalls(stripped, "defineMountSlot", "mount"));
       slots.push(...parseDefineGroup(
         stripped,
         "defineSlot",

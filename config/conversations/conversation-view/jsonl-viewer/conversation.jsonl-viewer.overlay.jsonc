@@ -1,0 +1,10 @@
+// @hash 200a587262d8
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "conversations.conversation-view.jsonl-viewer.message-toc:message-toc",
+    "conversations.conversation-view.jsonl-viewer.tool-call.task-tools:task-progress"
+  ]
+}

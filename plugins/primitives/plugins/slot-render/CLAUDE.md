@@ -1,5 +1,29 @@
 # slot-render
 
+## `defineRenderSlot` vs `defineMountSlot`
+
+Two constructors for "render all contributions, each error-boundary-isolated",
+distinguished by whether the contributions are *visible*:
+
+- **`defineRenderSlot(id, config?)`** — a **visible** slot. `.Render` paints
+  every contribution (item middlewares + the list/reorder middleware). Always
+  **reorderable** — there is no opt-out. Every render slot appears in the
+  reorder manifest and gets an authored config override.
+
+- **`defineMountSlot<P>(id, config?)`** — a **headless** slot. Its `.Mount`
+  component (prop-less) mounts every contribution wrapped only in the item
+  middlewares (error-boundary isolation) — no list/reorder middleware, no flex
+  sentinel, no `controlSize`. The contribution `component` is typed
+  `(props) => null`, a **compile-time** guarantee that a mount contribution
+  renders nothing: a component that returns JSX (or `ReactElement | null`) fails
+  to type-check. Mount slots are **never reorderable** and are absent from the
+  reorder manifest. Use them for side-effect-only contributions (observers,
+  recorders) that need per-contribution crash isolation but paint no UI.
+
+Reorderability is now a property of the **constructor**, not a boolean flag.
+There is no `reorder?: boolean` option — pick `defineMountSlot` for headless
+slots and `defineRenderSlot` for everything visible.
+
 ## Single-line discipline for horizontal slots
 
 `.Render` detects whether its host is a **flex row** at runtime (via a
@@ -37,7 +61,7 @@ What this does and does NOT do:
 - Load-bearing: yes
 - Web:
   - Uses: `primitives/ui-kit.ControlSize`, `primitives/ui-kit.ControlSizeProvider`
-  - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineDispatchSlot`, `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `renderIsolated`, `RenderSlotSubIdContext`
+  - Exports: Types: `DispatchContribution`, `DispatchSlot`, `DispatchSlotConfig`, `MountComponent`, `MountSlot`, `MountSlotConfig`, `RenderSlot`, `RenderSlotConfig`, `SlotItemMiddleware`, `SlotListMiddleware`; Values: `defineDispatchSlot`, `defineMountSlot`, `defineRenderSlot`, `registerSlotItemMiddleware`, `registerSlotListMiddleware`, `renderIsolated`, `RenderSlotSubIdContext`
 - Cross-plugin:
   - Imported by: `apps`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/home/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/settings/shell`, `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/progress/scrubber`, `apps/sonata/shell`, `apps/story/render`, `apps/studio/explorer`, `apps/studio/shell`, `apps/workflows/shell`, `config_v2/fields`, `conversations/agents`, `conversations/conversation-ui/item`, `conversations/conversation-view`, `conversations/conversation-view/action-bar`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/exit-menu`, `conversations/conversation-view/header`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/tool-call`, `debug/profiling`, `improve/element-picker`, `page/editor`, `primitives/app-shell`, `primitives/data-view`, `primitives/detail-sections`, `primitives/error-boundary`, `primitives/pane`, `primitives/pane-toolbar`, `primitives/prompt-editor`, `primitives/tabbed-view`, `primitives/text-editor`, `reorder`, `review/plugin-changes`, `shell`, `shell/action-bar`, `stats`, `tasks/task-draft-form`, `tasks/task-list`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/variant-region`
 

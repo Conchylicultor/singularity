@@ -27,12 +27,6 @@ import {
 export interface RenderSlotConfig<P> {
   docLabel?: (props: P & { id: string }) => string | undefined;
   /**
-   * When `false`, `.Render` applies item middlewares (error-boundary isolation)
-   * but skips list middlewares, so contributions are isolated but not
-   * draggable/reorderable. Defaults to `true`.
-   */
-  reorder?: boolean;
-  /**
    * Declares this slot size-owning: `.Render` wraps every contribution in a
    * `ControlSizeProvider` of this density, so each contributed control inherits
    * one height (text → `control-sm`, icon → `control-icon-sm`, chip → its `sm`)
@@ -66,6 +60,28 @@ export function applyItemMiddlewares(
   return node;
 }
 
+/**
+ * Per-contribution render path shared by `.Render` (its default, non-`children`
+ * branch) and `.Mount`: unseal the clean contribution's `component`, render it
+ * as `<C/>`, and wrap in the item middlewares (error-boundary isolation). The
+ * caller supplies the matched clean item and its raw stamped contribution.
+ * Returns `null` when the clean item has no callable `component`.
+ */
+function renderContributionIsolated(
+  clean: unknown,
+  contribution: Contribution,
+  slotId: string,
+): ReactNode {
+  const component = (clean as { component?: unknown }).component;
+  const node: ReactNode =
+    typeof component === "function"
+      ? ((C: ComponentType) => <C />)(
+          UNSAFE_unsealSlotComponent(component as unknown as SealedComponent),
+        )
+      : null;
+  return applyItemMiddlewares(node, slotId, contribution);
+}
+
 interface RenderProps<P> {
   children?: (item: P) => ReactNode;
   subId?: string;
@@ -76,13 +92,6 @@ export interface RenderSlot<P>
   Render: ComponentType<
     RenderProps<P & { id: string; excludeFromReorder?: boolean; reorderWrapperClassName?: string }>
   >;
-  /**
-   * Whether contributions to this slot participate in reorder (list
-   * middlewares). Mirrors `RenderSlotConfig.reorder` (default `true`), stored on
-   * the slot object so the build-time runtime walk can read it directly instead
-   * of inferring it from a text parse.
-   */
-  reorder: boolean;
 }
 
 import { createContext } from "react";
@@ -100,8 +109,6 @@ export function defineRenderSlot<P>(
   );
 
   const renderSlot = slot as unknown as RenderSlot<P>;
-  const reorder = config?.reorder ?? true;
-  renderSlot.reorder = reorder;
   const controlSize = config?.controlSize;
 
   renderSlot.Render = function SlotRender({
@@ -155,18 +162,13 @@ export function defineRenderSlot<P>(
         const clean = cleanById.get(cId as (P & { id: string })["id"]);
         if (!clean) return null;
 
-        const node: ReactNode = children
-          ? children(clean as unknown as P & { id: string })
-          : "component" in clean &&
-              typeof clean.component === "function"
-            ? ((C: ComponentType) => <C />)(
-                UNSAFE_unsealSlotComponent(
-                  clean.component as unknown as SealedComponent,
-                ),
-              )
-            : null;
-
-        const wrapped = applyItemMiddlewares(node, id, contribution);
+        const wrapped = children
+          ? applyItemMiddlewares(
+              children(clean as unknown as P & { id: string }),
+              id,
+              contribution,
+            )
+          : renderContributionIsolated(clean, contribution, id);
         return horizontal ? (
           <div key={cId} className="flex min-w-0 items-center">
             {wrapped}
@@ -183,21 +185,19 @@ export function defineRenderSlot<P>(
     );
 
     let result: ReactNode = defaultRendering;
-    if (reorder) {
-      const listMws = getSlotListMiddlewares();
-      for (let i = listMws.length - 1; i >= 0; i--) {
-        const Mw = listMws[i]!.Component;
-        const captured = result;
-        result = (
-          <Mw
-            slotId={id}
-            contributions={rawContributions}
-            renderItem={renderItem}
-          >
-            {captured}
-          </Mw>
-        );
-      }
+    const listMws = getSlotListMiddlewares();
+    for (let i = listMws.length - 1; i >= 0; i--) {
+      const Mw = listMws[i]!.Component;
+      const captured = result;
+      result = (
+        <Mw
+          slotId={id}
+          contributions={rawContributions}
+          renderItem={renderItem}
+        >
+          {captured}
+        </Mw>
+      );
     }
 
     // Sentinel: a zero-layout (`display:none`) sibling of the contributions,
@@ -234,6 +234,80 @@ export function defineRenderSlot<P>(
   };
 
   return renderSlot;
+}
+
+/**
+ * A headless contribution: mounts for side effects, renders nothing. Typed as
+ * `=> null` so a component that returns JSX fails to compile — the structural
+ * guarantee that a mount slot is non-visual.
+ */
+export type MountComponent<P = {}> = (props: P) => null;
+
+export interface MountSlotConfig<P> {
+  docLabel?: (props: P & { id: string }) => string | undefined;
+}
+
+export interface MountSlot<P>
+  extends Slot<{ id: string; component: MountComponent<P> } & P> {
+  /**
+   * Mounts every contribution wrapped in item middlewares (error-boundary
+   * isolation), no list/reorder middleware. Prop-less; renders null visually.
+   */
+  Mount: ComponentType;
+}
+
+/**
+ * Headless sibling of `defineRenderSlot`: contributions mount for their side
+ * effects and render nothing. `.Mount` wraps each contribution in the item
+ * middlewares (error-boundary isolation) — exactly the per-item path `.Render`
+ * uses — but applies NO list/reorder middleware, no `controlSize`, and no flex
+ * sentinel, all irrelevant to invisible content. The component type is
+ * constrained to `(props) => null` so a JSX-returning contributor fails to
+ * compile.
+ */
+export function defineMountSlot<P = {}>(
+  id: string,
+  config?: MountSlotConfig<P>,
+): MountSlot<P> {
+  const slot = defineSlot<{ id: string; component: MountComponent<P> } & P>(
+    id,
+    { docLabel: config?.docLabel },
+  );
+
+  const mountSlot = slot as unknown as MountSlot<P>;
+
+  mountSlot.Mount = function SlotMount() {
+    const ctx = useContext(PluginRuntimeContext);
+    if (!ctx) {
+      throw new Error("SlotMount must be used within PluginProvider");
+    }
+
+    const rawContributions = ctx.bySlot.get(id) ?? [];
+    const cleanItems = slot.useContributions();
+
+    const cleanById = useMemo(
+      () => new Map(cleanItems.map((item) => [item.id as string, item])),
+      [cleanItems],
+    );
+
+    return (
+      <>
+        {rawContributions.map((contribution) => {
+          const cId = contribution.id as string | undefined;
+          if (!cId) return null;
+          const clean = cleanById.get(cId);
+          if (!clean) return null;
+          return (
+            <Fragment key={cId}>
+              {renderContributionIsolated(clean, contribution, id)}
+            </Fragment>
+          );
+        })}
+      </>
+    );
+  };
+
+  return mountSlot;
 }
 
 export interface DispatchContribution<Props, Key extends string> {

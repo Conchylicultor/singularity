@@ -87,7 +87,7 @@ export function useTokenGroupPresetOptions(
 export const ThemeEngine = {
   VariantGroup: defineRenderSlot<VariantGroupContribution>(
     "ui.theme-engine.variant-group",
-    { docLabel: (p) => p.componentLabel, reorder: false },
+    { docLabel: (p) => p.componentLabel },
   ),
   TokenGroup: defineSlot<TokenGroupContribution>(
     "ui.theme-engine.token-group",

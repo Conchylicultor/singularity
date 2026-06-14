@@ -4,5 +4,5 @@ import { ExitItem } from "./components/exit-button";
 
 export default {
   description: "Exit-menu entry that closes the conversation without changing any task state.",
-  contributions: [ExitMenu.Item({ id: "exit", component: ExitItem, order: 1 })],
+  contributions: [ExitMenu.Item({ id: "exit", component: ExitItem })],
 } satisfies PluginDefinition;

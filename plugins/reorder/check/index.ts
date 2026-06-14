@@ -87,7 +87,7 @@ const check: Check = {
       message: parts.join("\n\n"),
       hint: [
         missing.length > 0 &&
-          "For each slot: copy its generated <slot>.origin.jsonc to <slot>.jsonc (same dir, drop \".origin\"), keep the leading // @hash line, and arrange the `items` array for how the slot actually renders (sidebar = vertical list, toolbar = horizontal bar, pane = stacked). See plugins/reorder/authoring-overrides.md. If this slot's order should NOT be user-curated, set `reorder: false` on its defineRenderSlot instead.",
+          "For each slot: copy its generated <slot>.origin.jsonc to <slot>.jsonc (same dir, drop \".origin\"), keep the leading // @hash line, and arrange the `items` array for how the slot actually renders (sidebar = vertical list, toolbar = horizontal bar, pane = stacked). See plugins/reorder/authoring-overrides.md. If this slot's order should NOT be user-curated, it is headless — declare it with `defineMountSlot` instead of `defineRenderSlot` (mount slots are not reorderable).",
         redundant.length > 0 &&
           "Delete the listed paths from plugins/reorder/check/grandfathered-slots.ts.",
       ]

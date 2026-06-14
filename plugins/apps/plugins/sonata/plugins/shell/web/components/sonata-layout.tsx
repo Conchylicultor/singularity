@@ -17,9 +17,7 @@ export function SonataLayout() {
     <SonataProvider>
       <div className="h-full min-h-0">
         <FullPane />
-        <Sonata.Effect.Render>
-          {(e) => <e.component key={e.id} />}
-        </Sonata.Effect.Render>
+        <Sonata.Effect.Mount />
       </div>
     </SonataProvider>
   );

@@ -1,0 +1,21 @@
+// @hash cebdf0955934
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "ui.sidebar-framing:sidebar-framing",
+    "ui.segmented-progress-bar:segmented-progress-bar",
+    "ui.tokens.shape:shape",
+    "ui.tokens.sidebar-palette:sidebar-palette",
+    "ui.tokens.type-scale:type-scale",
+    "ui.tokens.shadow:shadow",
+    "ui.tokens.chart:chart",
+    "ui.tokens.density:density",
+    "ui.tokens.categorical:categorical",
+    "ui.tokens.color-palette:color-palette",
+    "ui.tokens.color-adjust:color-adjust",
+    "ui.tokens.font-family:font-family",
+    "apps.app-rail-framing:app-rail-framing"
+  ]
+}

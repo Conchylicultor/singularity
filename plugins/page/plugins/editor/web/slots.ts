@@ -34,5 +34,5 @@ export const Editor = {
    */
   TurnInto: defineRenderSlot<{
     component: ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>;
-  }>("page.editor.turn-into", { reorder: false }),
+  }>("page.editor.turn-into"),
 };

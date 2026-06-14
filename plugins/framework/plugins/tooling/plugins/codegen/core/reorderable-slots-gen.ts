@@ -32,7 +32,7 @@ const MANIFEST_HEADER = [
   "// (see plugins/framework/plugins/tooling/plugins/codegen/core/reorderable-slots-gen.ts).",
   "//",
   "// The list of reorderable render slots (those whose `.Render` applies the",
-  "// reorder middleware, i.e. `defineRenderSlot` without `reorder: false`). Each",
+  "// reorder middleware, i.e. every `defineRenderSlot`; mount slots are excluded). Each",
   "// entry's `pluginId` is the *defining* plugin's id (its tree path), so reorder",
   "// registers the slot's config_v2 directive under `config/<pluginId>/`.",
   "//",
@@ -73,7 +73,6 @@ async function collectReorderableSlots(
     const slots = getFacet(node, slotsFacetDef) ?? [];
     for (const slot of slots) {
       if (slot.kind !== "render") continue;
-      if (slot.reorder === false) continue;
       if (definingPath.has(slot.slotId)) continue;
       definingPath.set(slot.slotId, node.id);
     }

@@ -5,5 +5,5 @@ import { HoldAndExitItem } from "./components/hold-and-exit-button";
 export default {
   description:
     "Exit-menu entry that marks the task as held and closes the conversation.",
-  contributions: [ExitMenu.Item({ id: "hold-and-exit", component: HoldAndExitItem, order: 0 })],
+  contributions: [ExitMenu.Item({ id: "hold-and-exit", component: HoldAndExitItem })],
 } satisfies PluginDefinition;

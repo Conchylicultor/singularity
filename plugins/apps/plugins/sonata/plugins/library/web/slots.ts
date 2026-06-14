@@ -50,7 +50,7 @@ export const Library = {
   }>("sonata.library.source", { docLabel: (c) => c.sourceId }),
   CardMeta: defineRenderSlot<{ component: ComponentType<{ song: Song }> }>(
     "sonata.library.card-meta",
-    { reorder: false, docLabel: (p) => p.id },
+    { docLabel: (p) => p.id },
   ),
   Sort: defineDispatchSlot<SortOrderProps, string, { id: string; label: string }>(
     "sonata.library.sort",

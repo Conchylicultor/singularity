@@ -6,19 +6,12 @@ export interface SlotDef {
   groupName: string;
   /**
    * Which slot factory defined this slot. `"render"` for `defineRenderSlot`,
-   * `"dispatch"` for `defineDispatchSlot`, `"slot"` for `defineSlot`. Best-effort
-   * for runtime-discovered slots (the static parse can't always tell them apart).
+   * `"mount"` for `defineMountSlot`, `"dispatch"` for `defineDispatchSlot`,
+   * `"slot"` for `defineSlot`. Best-effort for runtime-discovered slots (the
+   * static parse can't always tell them apart). Reorderability derives from
+   * `kind`: `"render"` slots are always reorderable; `"mount"` never are.
    */
-  kind?: "render" | "dispatch" | "slot";
-  /**
-   * Only meaningful for render slots. `true` (the default) means the slot's
-   * `.Render` applies the reorder list middleware (it is reorderable). `false`
-   * means `defineRenderSlot(id, { reorder: false })` opted out. Read directly
-   * off the slot object by the runtime walk (`defineRenderSlot` stores it), or
-   * from the call-site options by the static text-parse fallback; defaults to
-   * `true` when absent.
-   */
-  reorder?: boolean;
+  kind?: "render" | "mount" | "dispatch" | "slot";
 }
 
 export const slotsFacetDef = defineFacet<SlotDef[]>("slots");

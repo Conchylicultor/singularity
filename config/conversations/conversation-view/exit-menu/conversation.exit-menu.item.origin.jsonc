@@ -1,0 +1,12 @@
+// @hash ac79b885bb2e
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "conversations.conversation-view.exit:exit",
+    "conversations.conversation-view.hold-and-exit:hold-and-exit",
+    "conversations.conversation-view.drop-dependents:drop-dependents",
+    "conversations.conversation-view.drop-and-exit:drop-and-exit"
+  ]
+}
