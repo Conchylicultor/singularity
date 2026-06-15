@@ -63,7 +63,7 @@ const ERROR_CARD = "border-destructive/60 bg-destructive/5";
 // font is a property of the card chrome, not of each renderer. Without it,
 // call sites drifted (some plain strings in sans, some font-mono spans).
 const HEADER =
-  "relative flex w-full items-center gap-sm whitespace-nowrap font-sans text-2xs text-muted-foreground hover:text-foreground";
+  "relative flex w-full region-line gap-sm font-sans text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
   label,
