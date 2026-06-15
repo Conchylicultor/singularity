@@ -1,7 +1,8 @@
-import { cn, CHROME_THEME_SCOPE } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Apps } from "../slots";
 import { useActiveApp } from "../internal/use-active-app";
+import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
 import { useTabs } from "../internal/use-tabs";
 
 export function AppRail() {
@@ -11,9 +12,12 @@ export function AppRail() {
   // (single source of truth — no `w-10`-vs-`2.5rem` drift).
   const activeAppId = useActiveApp()?.id;
   const { focusedTabId, replaceTabApp } = useTabs();
+  // Docked → wear the focused app's theme so the rail reads as one surface with
+  // it; desktop/solo → the neutral chrome theme. See useChromeThemeScope.
+  const themeScope = useChromeThemeScope();
   return (
     <div
-      data-theme-scope={CHROME_THEME_SCOPE}
+      data-theme-scope={themeScope}
       className="relative z-nav flex w-(--app-rail-width) shrink-0 flex-col items-center gap-xs border-r bg-background pt-md"
     >
       <Apps.App.Render>

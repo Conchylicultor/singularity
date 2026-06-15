@@ -9,7 +9,6 @@ import { createPortal } from "react-dom";
 import { MdAdd, MdClose } from "react-icons/md";
 import {
   cn,
-  CHROME_THEME_SCOPE,
   PortalThemeScopeProvider,
 } from "@plugins/primitives/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
@@ -21,6 +20,7 @@ import {
   SortableItem,
 } from "@plugins/primitives/plugins/sortable-list/web";
 import { Apps } from "../slots";
+import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
 import { useTabs } from "../internal/use-tabs";
 
 /** Chip gap in px (`gap-2xs` ≈ 0.125rem) — fed to the overflow measurer. */
@@ -52,6 +52,9 @@ export function AppTabBar() {
     titles,
   } = useTabs();
   const apps = Apps.App.useContributions();
+  // Docked → wear the focused app's theme so the tab bar reads as one surface
+  // with it; desktop/solo → the neutral chrome theme. See useChromeThemeScope.
+  const themeScope = useChromeThemeScope();
 
   // The focused tab's placement determines what `+` spawns: a floating "new
   // window" while in desktop mode (any floating window focused), a docked "new
@@ -77,9 +80,9 @@ export function AppTabBar() {
   });
 
   return (
-    <PortalThemeScopeProvider scope={CHROME_THEME_SCOPE}>
+    <PortalThemeScopeProvider scope={themeScope}>
     <div
-      data-theme-scope={CHROME_THEME_SCOPE}
+      data-theme-scope={themeScope}
       className="flex shrink-0 items-center border-b bg-background px-xs py-2xs"
     >
       <div
