@@ -1065,6 +1065,13 @@
       "tag": "20260614_224400_add96e61__optimize_attempts_view",
       "hash": "add96e61",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781558067000,
+      "tag": "20260615_211427_331e34de__conversation_status_changed_event",
+      "hash": "331e34de",
+      "breakpoints": true
     }
   ]
 }

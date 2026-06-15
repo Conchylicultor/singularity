@@ -3,7 +3,8 @@ import { db } from "@plugins/database/server";
 import { _tasks } from "./tables";
 import { tasks } from "./schema";
 import type { TaskStatus } from "./schema";
-import { taskStatusChanged } from "./tables-events";
+import type { ConversationStatus } from "../../core/conversation-status";
+import { taskStatusChanged, conversationStatusChanged } from "./tables-events";
 
 // Status is computed from the `tasks_v` view (see schema.ts). There is no
 // stored status column to compare against, so callers that mutate
@@ -55,5 +56,26 @@ export async function emitStatusChangeIfChanged(
     // avoid lying about a non-existent transition; subscribers that care
     // about the difference can compare the two fields.
     previousStatus: previous ?? after,
+  });
+}
+
+// Emit `conversation.statusChanged` when a single conversation's status column
+// actually changes. Callers snapshot the prior status before the write and pass
+// it here after the write commits (mirrors `emitStatusChangeIfChanged`). No-op
+// when the status is unchanged.
+export async function emitConversationStatusChange(
+  conversationId: string,
+  taskId: string | null,
+  previousStatus: ConversationStatus | null,
+  nextStatus: ConversationStatus,
+): Promise<void> {
+  if (previousStatus === nextStatus) return;
+  await conversationStatusChanged.emit({
+    conversationId,
+    taskId,
+    status: nextStatus,
+    // First insert (previous null) reports previousStatus = current, matching
+    // the task-status convention above.
+    previousStatus: previousStatus ?? nextStatus,
   });
 }

@@ -1,15 +1,20 @@
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { conversationsLiveResource } from "@plugins/tasks/plugins/tasks-core/server";
 import { QueueDataSchema, type QueueData, type QueueRankRow } from "../../shared/resources";
 import { conversationsQueue } from "./tables";
-import { validatePin } from "./pinned";
+import { getPinnedId } from "./pinned";
 
+// Pure read. Ranks are mutated only by the queue's own handlers/jobs (each
+// self-notifies); the pin is written transactionally by those same handlers and
+// revalidated on conversation status changes by `pinRevalidateJob` (bound to
+// `conversation.statusChanged`). The loader therefore never re-validates or
+// writes — it just reads current rank rows + the persisted pin. There is
+// deliberately NO dependsOn the conversations resource: a status tick does not
+// change a rank row, and pin revalidation now arrives via the explicit event.
 export const queueRanksResource = defineResource({
   key: "queue-ranks",
   mode: "push",
   schema: QueueDataSchema,
-  dependsOn: [{ resource: conversationsLiveResource }],
   loader: async (): Promise<QueueData> => {
     const rows = await db
       .select({
@@ -18,7 +23,7 @@ export const queueRanksResource = defineResource({
       })
       .from(conversationsQueue.table);
     const ranks = rows.map((r) => ({ conversationId: r.parentId, rank: r.rank })) as unknown as QueueRankRow[];
-    const pinnedConversationId = await validatePin();
+    const pinnedConversationId = await getPinnedId();
     return { ranks, pinnedConversationId };
   },
 });

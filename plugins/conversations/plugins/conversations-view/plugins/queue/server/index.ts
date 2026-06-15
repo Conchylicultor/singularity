@@ -3,17 +3,16 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { Trigger } from "@plugins/infra/plugins/events/server";
 import {
   conversationCreated,
-  conversationTurnCompleted,
   userTurnSent,
 } from "@plugins/conversations/server";
-import { taskStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
+import { taskStatusChanged, conversationStatusChanged } from "@plugins/tasks/plugins/tasks-core/server";
 import { handleReorder } from "./internal/handle-reorder";
 import { handlePromote } from "./internal/handle-promote";
 import { handleDemote } from "./internal/handle-demote";
 import { handleStepDown } from "./internal/handle-step-down";
 import { handleRerank } from "./internal/handle-rerank";
 import { seedRankJob } from "./internal/seed-rank-job";
-import { validatePinJob } from "./internal/validate-pin-job";
+import { pinRevalidateJob } from "./internal/pin-revalidate-job";
 import { advancePinJob } from "./internal/advance-pin-job";
 import { taskStatusPinJob } from "./internal/task-status-pin-job";
 import { queueRanksResource } from "./internal/resource";
@@ -37,11 +36,19 @@ export default {
   contributions: [
     Resource.Declare(queueRanksResource, { bootCritical: true }),
     Trigger({ on: conversationCreated, do: seedRankJob, with: {}, oneShot: false }),
-    Trigger({ on: conversationTurnCompleted, do: validatePinJob, with: {}, oneShot: false }),
+    // Authoritative pin revalidation on any conversation status change. Replaces
+    // both the old conversationTurnCompleted→validatePinJob trigger and the
+    // queueRanks→conversationsLive cascade edge.
+    Trigger({ on: conversationStatusChanged, do: pinRevalidateJob, with: {}, oneShot: false }),
+    // Low-latency fast-path: sendTurn does not write status synchronously (the
+    // flip to `working` lands on the next poller tick), so advance the pin off
+    // the just-sent conversation immediately.
     Trigger({ on: userTurnSent, do: advancePinJob, with: {}, oneShot: false }),
+    // Task blocked/unblocked changes pin validity (notBlocked) without any
+    // conversation status change, so it is not covered by conversationStatusChanged.
     Trigger({ on: taskStatusChanged, do: taskStatusPinJob, with: {}, oneShot: false }),
   ],
-  register: [seedRankJob, validatePinJob, advancePinJob, taskStatusPinJob],
+  register: [seedRankJob, pinRevalidateJob, advancePinJob, taskStatusPinJob],
   httpRoutes: {
     [reorderQueue.route]:  handleReorder,
     [promoteQueue.route]:  handlePromote,

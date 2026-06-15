@@ -7,7 +7,7 @@ import {
   pushesResource,
   conversationsLiveResource,
 } from "./internal/resources";
-import { pushLanded, taskStatusChanged } from "./internal/tables-events";
+import { pushLanded, taskStatusChanged, conversationStatusChanged } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 
 // Per-domain attachment link handles (FK cascade on owner deletion). In their
@@ -147,6 +147,15 @@ export {
 } from "./internal/tables-events";
 export type { TaskStatusChangedPayload } from "./internal/tables-events";
 
+// Emitted at the conversation status-write chokepoint whenever a single
+// conversation's status column changes. Finer-grained than taskStatusChanged;
+// the queue plugin subscribes to revalidate the focus pin.
+export {
+  conversationStatusChanged,
+  _conversationStatusChangedTriggers,
+} from "./internal/tables-events";
+export type { ConversationStatusChangedPayload } from "./internal/tables-events";
+
 // Helpers to read the derived status of a task and emit a status-change
 // event when it flips. Used internally by tasks-core mutations and exposed
 // for plugins that perform writes outside the core mutation surface.
@@ -160,6 +169,6 @@ export default {
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
   contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true })],
-  register: [pushLanded, taskStatusChanged],
+  register: [pushLanded, taskStatusChanged, conversationStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;
