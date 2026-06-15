@@ -32,6 +32,7 @@ export function DependentCountBadge({
     >
       {count}
       <span className={expanded ? "inline" : "hidden group-hover/blocked:inline"}>
+        {" "}
         blocked
       </span>
     </Badge>
