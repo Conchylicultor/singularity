@@ -4,19 +4,20 @@
 
 ## Plugin reference
 
-- Description: Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/discard) plus the staged-defaults live resource descriptor. Worktree-local staging for reorder layouts promoted as committed git-layer defaults: stage/apply/discard endpoints, a live resource, and the atomic git-layer writer.
+- Description: Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/apply-all/discard) plus the staged-defaults live resource descriptor. Staging for reorder layouts promoted as committed git-layer defaults: stage/apply/apply-all/discard endpoints, a live resource, the atomic git-layer writer, and a non-blocking job that lands defaults directly on main via a throwaway worktree.
 - Web:
   - Uses: `infra/endpoints.useEndpointMutation`
-  - Exports: Types: `StagedReorderDefault`; Values: `StagedReorderDefaultSchema`, `stagedReorderDefaultsResource`, `useApplyReorderDefault`, `useDiscardReorderDefault`, `useStageReorderDefault`
+  - Exports: Types: `StagedReorderDefault`; Values: `StagedReorderDefaultSchema`, `stagedReorderDefaultsResource`, `useApplyAllReorderDefaults`, `useApplyReorderDefault`, `useDiscardReorderDefault`, `useStageReorderDefault`
 - Server:
-  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPO_ROOT`, `reorder.reorderableSlots`, `reorder.reorderDirectiveDescriptor`
+  - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `reorder.reorderableSlots`, `reorder.reorderDirectiveDescriptor`
   - DB schema: `plugins/reorder/plugins/staging/server/internal/tables.ts`
   - Exports: Values: `_reorderStagedDefault`, `stagedReorderDefaultsResource`
+  - Register: `defineJob('reorder.land-defaults')`
   - Resources: `reorder-staged-defaults` (push)
-  - Routes: `POST /api/reorder/staged-defaults`, `POST /api/reorder/staged-defaults/:slotId/apply`, `DELETE /api/reorder/staged-defaults/:slotId`
+  - Routes: `POST /api/reorder/staged-defaults`, `POST /api/reorder/staged-defaults/:slotId/apply`, `POST /api/reorder/staged-defaults/apply-all`, `DELETE /api/reorder/staged-defaults/:slotId`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`
-  - Exports: Types: `StageReorderDefaultBody`; Values: `applyReorderDefault`, `discardReorderDefault`, `stageReorderDefault`, `StageReorderDefaultBodySchema`
+  - Exports: Types: `StageReorderDefaultBody`; Values: `applyAllReorderDefaults`, `applyReorderDefault`, `discardReorderDefault`, `stageReorderDefault`, `StageReorderDefaultBodySchema`
 - Cross-plugin:
   - Imported by: `reorder`, `review/reorder-defaults`
 

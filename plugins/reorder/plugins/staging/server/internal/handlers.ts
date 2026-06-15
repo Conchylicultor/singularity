@@ -8,11 +8,12 @@ import {
 import {
   stageReorderDefault,
   applyReorderDefault,
+  applyAllReorderDefaults,
   discardReorderDefault,
 } from "../../core/endpoints";
 import { _reorderStagedDefault } from "./tables";
 import { stagedReorderDefaultsResource } from "./resource";
-import { writeGitLayerOverride } from "./git-layer-writer";
+import { landDefaultsJob } from "./land-job";
 
 export const handleStageReorderDefault = implement(
   stageReorderDefault,
@@ -55,36 +56,27 @@ export const handleApplyReorderDefault = implement(
     const { slotId } = params;
 
     const [row] = await db
-      .select()
+      .select({ slotId: _reorderStagedDefault.slotId })
       .from(_reorderStagedDefault)
       .where(eq(_reorderStagedDefault.slotId, slotId))
       .limit(1);
     // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
     if (!row) throw new HttpError(404, "No staged reorder default for this slot.");
 
-    // Validate the materialized tree against the slot's canonical descriptor
-    // schema. Fail loud (422) on a malformed/legacy shape rather than writing a
-    // broken committed override.
-    const descriptor = reorderDirectiveDescriptor(slotId);
-    const parsed = descriptor.schema.safeParse({ items: row.items });
-    if (!parsed.success) {
-      const detail = parsed.error.issues
-        .map((i) => `${i.path.join(".") || "(root)"}: ${i.message}`)
-        .join("; ");
-      throw new HttpError(422, `Staged reorder items are invalid: ${detail}`);
-    }
+    // Heavy git worktree + push work must not block the HTTP handler: enqueue
+    // the non-blocking landing job. It validates, writes the committed override
+    // via a throwaway worktree off main, pushes, drains the landed row, and
+    // notifies the live resource so the pane updates when the row disappears.
+    await landDefaultsJob.enqueue({ slotIds: [slotId] });
+    // return undefined → 204
+  },
+);
 
-    writeGitLayerOverride({
-      slotId,
-      pluginId: row.pluginId,
-      items: row.items as unknown[],
-    });
-
-    await db
-      .delete(_reorderStagedDefault)
-      .where(eq(_reorderStagedDefault.slotId, slotId));
-
-    stagedReorderDefaultsResource.notify();
+export const handleApplyAllReorderDefaults = implement(
+  applyAllReorderDefaults,
+  async () => {
+    // Land every staged default in a single push (one throwaway worktree).
+    await landDefaultsJob.enqueue({});
     // return undefined → 204
   },
 );

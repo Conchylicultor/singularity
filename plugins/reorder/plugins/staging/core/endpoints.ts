@@ -23,6 +23,10 @@ export const applyReorderDefault = defineEndpoint({
   route: "POST /api/reorder/staged-defaults/:slotId/apply",
 });
 
+export const applyAllReorderDefaults = defineEndpoint({
+  route: "POST /api/reorder/staged-defaults/apply-all",
+});
+
 export const discardReorderDefault = defineEndpoint({
   route: "DELETE /api/reorder/staged-defaults/:slotId",
 });

@@ -9,7 +9,6 @@ import {
 import { randomUUID } from "node:crypto";
 import { dirname, join } from "node:path";
 import { parse as parseJsonc } from "jsonc-parser";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import {
   computeHash,
@@ -31,15 +30,22 @@ const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
  * body**, not of the override document — this is exactly what
  * `config-origins-in-sync` compares. Restamping against the live origin means
  * the override stays green.
+ *
+ * `baseDir` is the checkout root the `config/` tree is rooted under — the
+ * throwaway landing worktree, not necessarily the current checkout. Both the
+ * origin (read) and the override (written) live under this base.
  */
-export function writeGitLayerOverride(args: {
-  slotId: string;
-  pluginId: string; // dot-form
-  items: unknown[];
-}): void {
+export function writeGitLayerOverride(
+  baseDir: string,
+  args: {
+    slotId: string;
+    pluginId: string; // dot-form
+    items: unknown[];
+  },
+): void {
   const { slotId, pluginId, items } = args;
   const hierarchyPath = asPath(asPluginId(pluginId));
-  const dir = join(REPO_ROOT, "config", hierarchyPath);
+  const dir = join(baseDir, "config", hierarchyPath);
   const originPath = join(dir, `${slotId}.origin.jsonc`);
   const overridePath = join(dir, `${slotId}.jsonc`);
 

@@ -1,6 +1,7 @@
 export {
   stageReorderDefault,
   applyReorderDefault,
+  applyAllReorderDefaults,
   discardReorderDefault,
   StageReorderDefaultBodySchema,
 } from "./endpoints";

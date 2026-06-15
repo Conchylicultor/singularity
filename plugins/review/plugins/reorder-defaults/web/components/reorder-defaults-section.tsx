@@ -1,4 +1,4 @@
-import { useCallback, useContext, useMemo } from "react";
+import { useContext, useMemo } from "react";
 import { MdCheck, MdClose } from "react-icons/md";
 import { parse as parseJsonc } from "jsonc-parser";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
@@ -22,6 +22,7 @@ import {
 import {
   stagedReorderDefaultsResource,
   useApplyReorderDefault,
+  useApplyAllReorderDefaults,
   useDiscardReorderDefault,
   type StagedReorderDefault,
 } from "@plugins/reorder/plugins/staging/web";
@@ -30,8 +31,12 @@ import type { Source } from "@plugins/review/web";
 /**
  * The "Reorder Defaults" review section. Lists every staged "default for
  * everyone" reorder edit (worktree-global, so `conversationId`/`source` are
- * ignored for filtering) with a before→after diff and per-slot Apply / Discard,
- * plus an Apply-all action when more than one slot is staged.
+ * ignored for filtering) with a before→after diff and per-slot "Commit to main"
+ * / Discard, plus an "Apply all" action when more than one slot is staged.
+ *
+ * Committing lands the override directly on `main` (a non-blocking job spins up
+ * a throwaway worktree off main, writes the committed config, and pushes); the
+ * row disappears from this list once the job drains it.
  */
 export function ReorderDefaultsSection({
   conversationId: _conversationId,
@@ -42,16 +47,8 @@ export function ReorderDefaultsSection({
 }) {
   const staged = useResource(stagedReorderDefaultsResource);
   const apply = useApplyReorderDefault();
+  const applyAll = useApplyAllReorderDefaults();
   const discard = useDiscardReorderDefault();
-
-  const onApplyAll = useCallback(
-    (rows: StagedReorderDefault[]) => {
-      for (const row of rows) {
-        apply.mutate({ params: { slotId: row.slotId } });
-      }
-    },
-    [apply],
-  );
 
   if (staged.pending) {
     return (
@@ -73,21 +70,27 @@ export function ReorderDefaultsSection({
 
   return (
     <div className="flex min-h-0 flex-col">
-      <div className="sticky top-0 z-raised flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
-        <Text as="div" variant="label">
-          {rows.length} staged {rows.length === 1 ? "slot" : "slots"}
+      <div className="sticky top-0 z-raised flex flex-col gap-2xs border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
+        <div className="flex items-center gap-md">
+          <Text as="div" variant="label">
+            {rows.length} staged {rows.length === 1 ? "slot" : "slots"}
+          </Text>
+          {rows.length > 1 && (
+            <div className="flex flex-1 items-center justify-end">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => applyAll.mutate({})}
+              >
+                Apply all
+              </Button>
+            </div>
+          )}
+        </div>
+        <Text as="div" variant="caption" tone="muted">
+          Committing pushes the new default directly to{" "}
+          <span className="font-medium">main</span>.
         </Text>
-        {rows.length > 1 && (
-          <div className="flex flex-1 items-center justify-end">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => onApplyAll(rows)}
-            >
-              Apply all
-            </Button>
-          </div>
-        )}
       </div>
       <Body>
         <div className="flex flex-col gap-md p-md">
@@ -184,7 +187,7 @@ function CardHeader({
         {humanizeSlotId(label)}
       </Text>
       <Button variant="outline" size="sm" onClick={onApply}>
-        Apply
+        Commit to main
       </Button>
       <IconButton
         icon={MdClose}

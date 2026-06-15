@@ -8,11 +8,12 @@ export type { StagedReorderDefault } from "../shared/resources";
 export {
   useStageReorderDefault,
   useApplyReorderDefault,
+  useApplyAllReorderDefaults,
   useDiscardReorderDefault,
 } from "./hooks";
 
 export default {
   description:
-    "Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/discard) plus the staged-defaults live resource descriptor.",
+    "Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/apply-all/discard) plus the staged-defaults live resource descriptor.",
   contributions: [],
 } satisfies PluginDefinition;

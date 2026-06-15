@@ -2,6 +2,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import {
   stageReorderDefault,
   applyReorderDefault,
+  applyAllReorderDefaults,
   discardReorderDefault,
 } from "../core/endpoints";
 
@@ -11,10 +12,17 @@ export function useStageReorderDefault() {
   return useEndpointMutation(stageReorderDefault);
 }
 
-// Apply a staged reorder default: write the committed git-layer override and
-// drop the staged row.
+// Apply a single staged reorder default: enqueue the landing job, which lands
+// the committed git-layer override on `main` via a throwaway worktree and drops
+// the staged row on success.
 export function useApplyReorderDefault() {
   return useEndpointMutation(applyReorderDefault);
+}
+
+// Apply every staged reorder default in one batch: enqueues a single landing
+// job that lands all staged overrides on `main` in one push.
+export function useApplyAllReorderDefaults() {
+  return useEndpointMutation(applyAllReorderDefaults);
 }
 
 // Discard a staged reorder default without writing anything.

@@ -270,7 +270,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`edit-mode`** — Pen button on the top toolbar that toggles global edit mode for all reorderable slots; Esc exits edit mode.
     - **`editor`** — Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
     - **`node-types`** [2 sub-plugins] — Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
-    - **`staging`** — Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/discard) plus the staged-defaults live resource descriptor. Worktree-local staging for reorder layouts promoted as committed git-layer defaults: stage/apply/discard endpoints, a live resource, and the atomic git-layer writer.
+    - **`staging`** — Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/apply-all/discard) plus the staged-defaults live resource descriptor. Staging for reorder layouts promoted as committed git-layer defaults: stage/apply/apply-all/discard endpoints, a live resource, the atomic git-layer writer, and a non-blocking job that lands defaults directly on main via a throwaway worktree.
 
 - **`reports`** [5 sub-plugins] — Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 

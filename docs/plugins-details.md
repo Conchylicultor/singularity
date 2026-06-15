@@ -2360,7 +2360,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
         - Exports: Types: `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listJobs`, `retryJob`
       - Cross-plugin:
-        - Imported by: `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/transcript-retention`, `database/fork`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/image`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
+        - Imported by: `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/transcript-retention`, `database/fork`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/image`, `page/links`, `reorder/staging`, `shell/notifications`, `tasks`, `tasks/task-title`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
@@ -2397,7 +2397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`
         - Exports: Types: `DerivePushDeps`, `PushHolder`, `WorktreeOp`, `WorktreeOpInfo`, `WorktreeOpPhase`; Values: `clearPushHolder`, `clearWorktreeOp`, `derivePushPhases`, `ensureMainWorktreeRoot`, `isWorktreeOpActive`, `listActiveWorktreeOps`, `markWorktreeOpStart`, `PUSH_LOCK_PATH`, `pushLockHeld`, `readPushHolder`, `removeWorktree`, `resolveActiveWorktreeOps`, `setupWorktree`, `setWorktreeOpPhase`, `worktreePathFor`, `worktreesDir`, `writePushHolder`
       - Cross-plugin:
-        - Imported by: `code-explorer`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `plugin-meta/plugin-health`, `stats/commits`, `stats/cost`, `tasks`
+        - Imported by: `code-explorer`, `conversations`, `conversations/conversation-view/op-status`, `conversations/runtime-tmux`, `debug/broadcasts`, `debug/memory`, `debug/profiling/push`, `debug/worktree-cleanup`, `infra/git-watcher`, `plugin-meta/plugin-health`, `reorder/staging`, `stats/commits`, `stats/cost`, `tasks`
 
 - **`layouts`** — Umbrella for layout renderers that map the pane chain to a visible arrangement (columns, tabs, grid, overlays).
   - Plugins:
@@ -3373,19 +3373,20 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `ReorderNodes.NodeType` "spacer"
             - Uses: `reorder/editor.SpacerReorderItem`, `reorder/node-types.ReorderNodes`
-    - **`staging`** — Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/discard) plus the staged-defaults live resource descriptor. Worktree-local staging for reorder layouts promoted as committed git-layer defaults: stage/apply/discard endpoints, a live resource, and the atomic git-layer writer.
+    - **`staging`** — Web hooks for staging reorder layouts as committed git-layer defaults (stage/apply/apply-all/discard) plus the staged-defaults live resource descriptor. Staging for reorder layouts promoted as committed git-layer defaults: stage/apply/apply-all/discard endpoints, a live resource, the atomic git-layer writer, and a non-blocking job that lands defaults directly on main via a throwaway worktree.
       - Web:
         - Uses: `infra/endpoints.useEndpointMutation`
-        - Exports: Types: `StagedReorderDefault`; Values: `StagedReorderDefaultSchema`, `stagedReorderDefaultsResource`, `useApplyReorderDefault`, `useDiscardReorderDefault`, `useStageReorderDefault`
+        - Exports: Types: `StagedReorderDefault`; Values: `StagedReorderDefaultSchema`, `stagedReorderDefaultsResource`, `useApplyAllReorderDefaults`, `useApplyReorderDefault`, `useDiscardReorderDefault`, `useStageReorderDefault`
       - Server:
-        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.REPO_ROOT`, `reorder.reorderableSlots`, `reorder.reorderDirectiveDescriptor`
+        - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `reorder.reorderableSlots`, `reorder.reorderDirectiveDescriptor`
         - DB schema: `plugins/reorder/plugins/staging/server/internal/tables.ts`
         - Exports: Values: `_reorderStagedDefault`, `stagedReorderDefaultsResource`
+        - Register: `defineJob('reorder.land-defaults')`
         - Resources: `reorder-staged-defaults` (push)
-        - Routes: `POST /api/reorder/staged-defaults`, `POST /api/reorder/staged-defaults/:slotId/apply`, `DELETE /api/reorder/staged-defaults/:slotId`
+        - Routes: `POST /api/reorder/staged-defaults`, `POST /api/reorder/staged-defaults/:slotId/apply`, `POST /api/reorder/staged-defaults/apply-all`, `DELETE /api/reorder/staged-defaults/:slotId`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
-        - Exports: Types: `StageReorderDefaultBody`; Values: `applyReorderDefault`, `discardReorderDefault`, `stageReorderDefault`, `StageReorderDefaultBodySchema`
+        - Exports: Types: `StageReorderDefaultBody`; Values: `applyAllReorderDefaults`, `applyReorderDefault`, `discardReorderDefault`, `stageReorderDefault`, `StageReorderDefaultBodySchema`
       - Cross-plugin:
         - Imported by: `reorder`, `review/reorder-defaults`
 
@@ -3476,7 +3477,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`reorder-defaults`** — Lists staged reorder 'default for everyone' edits in the review pane with a before→after diff and Apply / Discard.
       - Web:
         - Contributes: `ReviewSlots.Section` "reorder-defaults" → `ReorderDefaultsSection`
-        - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/card.Card`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`, `reorder.diffReorderTrees`, `reorder.ReorderDiffEntry`, `reorder/staging.StagedReorderDefault`, `reorder/staging.stagedReorderDefaultsResource`, `reorder/staging.useApplyReorderDefault`, `reorder/staging.useDiscardReorderDefault`, `review.ReviewSlots`
+        - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/card.Card`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`, `reorder.diffReorderTrees`, `reorder.ReorderDiffEntry`, `reorder/staging.StagedReorderDefault`, `reorder/staging.stagedReorderDefaultsResource`, `reorder/staging.useApplyAllReorderDefaults`, `reorder/staging.useApplyReorderDefault`, `reorder/staging.useDiscardReorderDefault`, `review.ReviewSlots`
 
 - **`screenshot`** — Capture the current page and edit it (crop, draw) in a new tab. Bottom prompt form launches a conversation with the edited screenshot attached. Stores in-flight screenshots so a freshly opened tab can fetch them.
   - Web:
