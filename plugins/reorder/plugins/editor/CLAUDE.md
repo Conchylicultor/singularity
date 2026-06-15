@@ -54,6 +54,25 @@ editor renders both opaquely and knows nothing about spacers, headers, etc.
 `SortableReorderItem` and `SpacerReorderItem` are exported so node-type plugins
 and consumers wrap with the same draggable primitive.
 
+### `fill` — bounding a height-filling contribution
+
+`SortableReorderItem` takes a `fill?: boolean` prop (default `false`). A non-fill
+row sizes to its content; the edit-mode chrome leaves its layout untouched. A
+**fill** contribution wants to consume its host column's remaining height and
+scroll internally (an inner `flex-1 min-h-0` region — e.g. the conversations
+sidebar section). For those, `fill` makes the edit-mode wrapper a bounded flex
+column at **both** levels (the outer item box and the inner content wrapper) so
+the scroll region clamps instead of expanding to its natural height and
+overflowing onto the rows below. The `reorder` list middleware maps it from the
+contribution's `reorderFill: true` field; the field renderer never fills.
+
+Because a fill contribution works in normal mode without any opt-in (the wrapper
+is `display:contents`, so the child participates in its host column directly) and
+only breaks in edit mode, a forgotten `fill` is a silent, mode-specific footgun.
+`SortableReorderItem` therefore detects it after mount: if the contribution's
+root box declares `flex-grow` but `fill` is false, it logs a one-time
+`console.error` naming the contribution and pointing at `reorderFill: true`.
+
 ### `editMode` is a prop, not a signal
 
 The editor must not depend on `reorder`, so the global `useEditMode()` signal is

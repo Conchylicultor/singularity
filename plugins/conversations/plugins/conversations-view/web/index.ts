@@ -15,7 +15,9 @@ export default {
       title: "Conversations",
       icon: MdForum,
       component: ConversationsSidebar,
-      reorderWrapperClassName: "flex flex-col flex-1 min-h-0",
+      // This section fills the sidebar column and scrolls internally; keep that
+      // bound in reorder edit mode so it doesn't overflow onto sibling sections.
+      reorderFill: true,
     }),
   ],
 } satisfies PluginDefinition;

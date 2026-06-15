@@ -1,5 +1,5 @@
 import { Button, cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
-import { createContext, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
+import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
@@ -25,17 +25,42 @@ export const ReorderAreaContext = createContext<ReorderAreaCtxValue | null>(
 
 // --- Sortable reorder item ---------------------------------------------------
 
+// A fill contribution that forgets `reorderFill` works fine in normal mode (the
+// wrapper is `display:contents` and the child participates in its host column
+// directly) and only breaks in edit mode — a silent, mode-specific footgun. We
+// can't infer "wants to fill" without the flag, but we CAN detect the symptom
+// after mount and surface the missing opt-in loudly. Warn once per contribution.
+const warnedMissingFill = new Set<string>();
+
+// Descend past layout-neutral `display:contents` wrappers (e.g. the element-
+// picker marker span) to the contribution's first real box.
+function firstBoxDescendant(root: HTMLElement): HTMLElement | null {
+  let el = root.firstElementChild as HTMLElement | null;
+  while (el && getComputedStyle(el).display === "contents") {
+    el = el.firstElementChild as HTMLElement | null;
+  }
+  return el;
+}
+
 export function SortableReorderItem({
   itemKey,
   editMode,
   label,
-  wrapperClassName,
+  fill = false,
   children,
 }: {
   itemKey: string;
   editMode: boolean;
   label: string;
-  wrapperClassName?: string;
+  /**
+   * The contribution fills its host's height with an inner `flex-1 min-h-0`
+   * scroll region (e.g. the conversations sidebar section). The edit-mode
+   * wrapper must stay a bounded flex column at BOTH levels — the outer item box
+   * and the inner content wrapper — so that scroll region clamps and scrolls
+   * instead of expanding to its natural height and overflowing onto the rows
+   * below. A non-fill row leaves both levels untouched.
+   */
+  fill?: boolean;
   children: ReactNode;
 }) {
   const ctx = useContext(ReorderAreaContext);
@@ -59,6 +84,28 @@ export function SortableReorderItem({
     return () => observer.disconnect();
   }, [editMode]);
 
+  // Loud detection of a missing `fill` opt-in: if the contribution's root box
+  // declares `flex-grow` (it wants to fill its host's height and scroll), but
+  // `fill` wasn't passed, the edit-mode wrapper isn't a bounded flex column, so
+  // its content overflows onto sibling rows. Turn that silent visual bug into an
+  // actionable console error instead of leaving authors to discover it by eye.
+  useEffect(() => {
+    if (!editMode || fill || isEmpty) return;
+    const el = contentRef.current;
+    if (!el) return;
+    const root = firstBoxDescendant(el);
+    if (!root) return;
+    if (getComputedStyle(root).flexGrow !== "0" && !warnedMissingFill.has(itemKey)) {
+      warnedMissingFill.add(itemKey);
+      console.error(
+        `[reorder] Contribution "${itemKey}" fills its host (its root sets ` +
+          `flex-grow) but reorder was not told it fills: in edit mode its ` +
+          `content overflows onto the rows below. Set \`reorderFill: true\` on ` +
+          `its render-slot contribution.`,
+      );
+    }
+  }, [editMode, fill, isEmpty, itemKey]);
+
   function handleHide(e: React.MouseEvent) {
     e.stopPropagation();
     ctx?.onHide(itemKey);
@@ -79,7 +126,9 @@ export function SortableReorderItem({
                 // column (`w-full`) like the un-wrapped list rows they replace.
                 "group/reorder-item relative flex control-min-sm items-center cursor-grab rounded-md ring-1 ring-primary/50",
                 isHorizontal ? "" : "w-full",
-                wrapperClassName,
+                // Fill contributions span the column height as a bounded flex
+                // column so their inner scroll region clamps (see `fill` docs).
+                fill && "flex-col flex-1 min-h-0",
                 isDragging && "opacity-40",
               )
           : "contents"
@@ -105,6 +154,10 @@ export function SortableReorderItem({
               // Skip when empty — an empty `w-full` div would steal the whole row
               // from the placeholder sibling, wrapping its label onto two lines.
               editMode && !isHorizontal && !isEmpty && "w-full",
+              // Propagate the fill bound to the content wrapper too, so the
+              // contribution's inner `flex-1 min-h-0` scroll region resolves
+              // against a bounded box instead of growing to its natural height.
+              editMode && fill && !isEmpty && "flex flex-col flex-1 min-h-0 overflow-hidden",
             )}
           >
             {children}

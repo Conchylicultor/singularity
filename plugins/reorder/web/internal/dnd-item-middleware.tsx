@@ -33,8 +33,7 @@ export function ReorderItemMiddleware({
   const excluded = (contribution as Record<string, unknown>).excludeFromReorder;
   if (excluded) return <>{children}</>;
 
-  const wrapperClassName = (contribution as Record<string, unknown>)
-    .reorderWrapperClassName as string | undefined;
+  const fill = !!(contribution as Record<string, unknown>).reorderFill;
 
   const label =
     (contribution as Record<string, unknown>).label as string | undefined
@@ -45,7 +44,7 @@ export function ReorderItemMiddleware({
       itemKey={key}
       editMode={editMode}
       label={label}
-      wrapperClassName={wrapperClassName}
+      fill={fill}
     >
       {children}
     </SortableReorderItem>
