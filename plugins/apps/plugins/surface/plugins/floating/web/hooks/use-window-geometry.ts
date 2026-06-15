@@ -1,4 +1,4 @@
-import { useSyncExternalStore } from "react";
+import { useCallback, useSyncExternalStore } from "react";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 
 /** A window's free-floating box on the desktop, plus its chrome state. */
@@ -160,22 +160,28 @@ export function useWindowGeometry(
     () => read(tabId),
   );
 
-  const setGeo = (next: GeometryUpdater) => {
-    const current = read(tabId);
-    const value = typeof next === "function" ? next(current) : next;
-    if (value === current) return;
-    geoState.set(tabId, value);
-    persist();
-    notify();
-  };
+  // Stable callbacks (keyed only on tabId): consumers push these into effect deps
+  // / state, so an unstable identity per render would loop. A store handle must
+  // return steady references.
+  const setGeo = useCallback(
+    (next: GeometryUpdater) => {
+      const current = read(tabId);
+      const value = typeof next === "function" ? next(current) : next;
+      if (value === current) return;
+      geoState.set(tabId, value);
+      persist();
+      notify();
+    },
+    [tabId],
+  );
 
-  const bringToFront = () => {
+  const bringToFront = useCallback(() => {
     const current = read(tabId);
     if (current.z === nextZ) return; // already on top
     geoState.set(tabId, { ...current, z: ++nextZ });
     persist();
     notify();
-  };
+  }, [tabId]);
 
   return [geo, setGeo, bringToFront];
 }

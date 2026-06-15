@@ -17,8 +17,9 @@ import {
   type PaneStore,
 } from "@plugins/primitives/plugins/pane/web";
 import { setFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
-import { DEFAULT_PLACEMENT, type Placement } from "../../core";
+import { type Placement } from "../../core";
 import { Apps } from "../slots";
+import { getDefaultPlacement } from "./placement-registry";
 import { useActiveApp } from "./use-active-app";
 import { resolveAppForPath } from "./resolve-app";
 import {
@@ -43,9 +44,9 @@ export interface TabsApi {
   setTabTitle(tabId: string, title: string | undefined): void;
   /**
    * Always opens a NEW tab for `appId` (multi-instance), with the given spatial
-   * `placement` (defaults to {@link DEFAULT_PLACEMENT}). Passing `"floating"`
-   * makes the `+` button a "new window" affordance while in desktop mode.
-   * Returns its tabId.
+   * `placement` (defaults to the registry default placement). Passing the
+   * focused tab's placement makes the `+` button a "new window" affordance while
+   * in desktop mode. Returns its tabId.
    */
   openTab(appId: string, placement?: Placement): string;
   /** Swap `tabId`'s app in place (keeps the tabId) and focus it. */
@@ -102,7 +103,7 @@ export function navigate(url: string): void {
 // focused tab's placement without the `useTabs` hook. A subscribable snapshot
 // (useFocusedPlacement) keeps those consumers reactive.
 // eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the FOCUSED tab's placement, mirroring tabsNavigator/focusedSurfaceId. Driven by single global chrome (the floating-bar placement control + global Esc) outside any surface tree, so it cannot be a per-surface scoped store.
-let focusedPlacement: Placement = DEFAULT_PLACEMENT;
+let focusedPlacement: Placement = "";
 let setFocusedPlacementFn: ((placement: Placement) => void) | null = null;
 const focusedPlacementSubscribers = new Set<() => void>();
 
@@ -177,7 +178,7 @@ function rebuildBackgroundTab(persisted: PersistedTab, apps: AppList): Tab {
     tabId: persisted.tabId,
     appId: persisted.appId,
     store,
-    placement: persisted.placement ?? DEFAULT_PLACEMENT,
+    placement: persisted.placement ?? getDefaultPlacement(),
   };
 }
 
@@ -208,7 +209,7 @@ function bootTabs(apps: AppList, initialAppId: string): BootState {
           tabId: p.tabId,
           appId: p.appId,
           store,
-          placement: p.placement ?? DEFAULT_PLACEMENT,
+          placement: p.placement ?? getDefaultPlacement(),
         };
       }
       return rebuildBackgroundTab(p, apps);
@@ -220,7 +221,7 @@ function bootTabs(apps: AppList, initialAppId: string): BootState {
   const store = createPaneStore({ live: true });
   store.setBasePath(appPathFor(initialAppId, apps));
   return {
-    tabs: [{ tabId, appId: initialAppId, store, placement: DEFAULT_PLACEMENT }],
+    tabs: [{ tabId, appId: initialAppId, store, placement: getDefaultPlacement() }],
     focusedTabId: tabId,
   };
 }
@@ -331,10 +332,11 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
    * window" while in desktop mode and a docked tab otherwise.
    */
   const openTab = useCallback(
-    (appId: string, placement: Placement = DEFAULT_PLACEMENT): string => {
+    (appId: string, placement?: Placement): string => {
+      const p = placement ?? getDefaultPlacement();
       const tabId = crypto.randomUUID();
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store, placement };
+      const tab: Tab = { tabId, appId, store, placement: p };
       const nextTabs = [...tabsRef.current, tab];
       tabsRef.current = nextTabs;
       setTabs(nextTabs);
@@ -355,9 +357,13 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
     (tabId: string, appId: string, route: PaneSlot[]) => {
       const idx = tabsRef.current.findIndex((t) => t.tabId === tabId);
       if (idx < 0) return;
+      // Preserve the tab's existing placement — swapping the app in place must
+      // not relocate the tab (e.g. picking an app from Home inside a floating
+      // tab keeps it floating, never resets it to the default / background).
+      const placement = tabsRef.current[idx]!.placement;
       tabsRef.current[idx]!.store.live = false;
       const store = makeBackgroundStore(appId, appsRef.current);
-      const tab: Tab = { tabId, appId, store, placement: DEFAULT_PLACEMENT };
+      const tab: Tab = { tabId, appId, store, placement };
       const nextTabs = [...tabsRef.current];
       nextTabs[idx] = tab;
       tabsRef.current = nextTabs;
@@ -429,7 +435,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
           tabId: seedId,
           appId: "home",
           store,
-          placement: DEFAULT_PLACEMENT,
+          placement: getDefaultPlacement(),
         };
         tabsRef.current = [seed];
         setTabs([seed]);
@@ -501,12 +507,12 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
   // out-of-provider callers (floating-bar placement control, Esc shortcut) can
   // read and drive it. Mirrors the `setTabsNavigator` handle above.
   const focusedTabPlacement =
-    tabs.find((t) => t.tabId === focusedTabId)?.placement ?? DEFAULT_PLACEMENT;
+    tabs.find((t) => t.tabId === focusedTabId)?.placement ?? getDefaultPlacement();
   useEffect(() => {
     publishFocusedPlacement(focusedTabPlacement, (p) =>
       setPlacement(focusedRef.current, p),
     );
-    return () => publishFocusedPlacement(DEFAULT_PLACEMENT, null);
+    return () => publishFocusedPlacement(getDefaultPlacement(), null);
   }, [focusedTabPlacement, setPlacement]);
 
   return <TabsContext.Provider value={api}>{children}</TabsContext.Provider>;

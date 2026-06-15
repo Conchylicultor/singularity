@@ -4,6 +4,7 @@ import {
 } from "@plugins/primitives/plugins/ui-kit/web";
 import { useActiveApp } from "./use-active-app";
 import { useFocusedPlacement } from "./use-tabs";
+import { placementHasAppThemeScope } from "./placement-registry";
 
 /**
  * The `data-theme-scope` token the cross-app chrome surfaces (app rail, tab bar,
@@ -27,7 +28,7 @@ import { useFocusedPlacement } from "./use-tabs";
 export function useChromeThemeScope(): string {
   const activeApp = useActiveApp();
   const placement = useFocusedPlacement();
-  return placement !== "floating" && activeApp
+  return placementHasAppThemeScope(placement) && activeApp
     ? appThemeScope(activeApp.id)
     : CHROME_THEME_SCOPE;
 }

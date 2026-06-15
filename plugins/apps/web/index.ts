@@ -21,6 +21,15 @@ export {
   useFocusedPlacement,
   type TabsApi,
 } from "./internal/use-tabs";
+export {
+  registerPlacementCapabilities,
+  getDefaultPlacement,
+  useDefaultPlacement,
+  tearOffPlacement,
+  placementIsNewTabFollows,
+  placementHasAppThemeScope,
+  type PlacementCapabilities,
+} from "./internal/placement-registry";
 export type { Placement } from "../core";
 
 export default {

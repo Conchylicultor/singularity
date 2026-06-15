@@ -1,12 +1,17 @@
 import { Apps, type ActiveApp, useCurrentAppId, useTabs } from "@plugins/apps/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
 import { MdAdd } from "react-icons/md";
 
 export function AppGrid() {
   const apps = Apps.App.useContributions();
   const currentId = useCurrentAppId();
   const { focusedTabId, replaceTabApp } = useTabs();
+  // Target the grid's OWN surface tab — in desktop mode multiple Home windows
+  // can be open, so the global focused tab is the wrong target. Falls back to
+  // the focused tab when rendered outside a surface.
+  const ownTabId = useSurfaceTabId();
   const launchable = apps.filter((a) => a.id !== currentId);
 
   return (
@@ -22,7 +27,7 @@ export function AppGrid() {
       // The grid only renders inside the visible (focused) Home tab, so the
       // launcher navigates that tab into the picked app in place.
       onRowActivate={(a) =>
-        a.onClick ? a.onClick() : replaceTabApp(focusedTabId, a.id)
+        a.onClick ? a.onClick() : replaceTabApp(ownTabId ?? focusedTabId, a.id)
       }
       actions={
         <IconButton

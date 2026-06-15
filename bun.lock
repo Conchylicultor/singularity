@@ -484,6 +484,18 @@
       "name": "@singularity/plugin-apps-surface",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/surface/plugins/docked": {
+      "name": "@singularity/plugin-apps-surface-docked",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/surface/plugins/floating": {
+      "name": "@singularity/plugin-apps-surface-floating",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/surface/plugins/solo": {
+      "name": "@singularity/plugin-apps-surface-solo",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/workflows": {
       "name": "@singularity/plugin-apps-workflows",
       "version": "0.0.1",
@@ -3360,6 +3372,12 @@
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@singularity/plugin-apps-surface": ["@singularity/plugin-apps-surface@workspace:plugins/apps/plugins/surface"],
+
+    "@singularity/plugin-apps-surface-docked": ["@singularity/plugin-apps-surface-docked@workspace:plugins/apps/plugins/surface/plugins/docked"],
+
+    "@singularity/plugin-apps-surface-floating": ["@singularity/plugin-apps-surface-floating@workspace:plugins/apps/plugins/surface/plugins/floating"],
+
+    "@singularity/plugin-apps-surface-solo": ["@singularity/plugin-apps-surface-solo@workspace:plugins/apps/plugins/surface/plugins/solo"],
 
     "@singularity/plugin-apps-workflows": ["@singularity/plugin-apps-workflows@workspace:plugins/apps/plugins/workflows"],
 

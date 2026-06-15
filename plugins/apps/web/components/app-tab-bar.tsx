@@ -22,6 +22,11 @@ import {
 import { Apps } from "../slots";
 import { useChromeThemeScope } from "../internal/use-chrome-theme-scope";
 import { useTabs } from "../internal/use-tabs";
+import {
+  getDefaultPlacement,
+  placementIsNewTabFollows,
+  tearOffPlacement,
+} from "../internal/placement-registry";
 
 /** Chip gap in px (`gap-2xs` ≈ 0.125rem) — fed to the overflow measurer. */
 const CHIP_GAP_PX = 2;
@@ -56,14 +61,18 @@ export function AppTabBar() {
   // with it; desktop/solo → the neutral chrome theme. See useChromeThemeScope.
   const themeScope = useChromeThemeScope();
 
-  // The focused tab's placement determines what `+` spawns: a floating "new
-  // window" while in desktop mode (any floating window focused), a docked "new
-  // tab" otherwise. Solo falls through to docked — the tab bar is covered while
-  // a tab is solo, so `+` is unreachable in that state anyway.
+  // The focused tab's placement determines what `+` spawns: a placement that
+  // "follows" the focused tab (e.g. another floating window in desktop mode)
+  // opens a "new window"; otherwise `+` opens a "new tab" in the default
+  // placement. The tab bar is covered while a tab is solo, so `+` is
+  // unreachable in that state anyway.
   const focusedPlacement = tabs.find(
     (t) => t.tabId === focusedTabId,
   )?.placement;
-  const desktopMode = focusedPlacement === "floating";
+  const newTabPlacement =
+    focusedPlacement && placementIsNewTabFollows(focusedPlacement)
+      ? focusedPlacement
+      : getDefaultPlacement();
 
   const { containerRef, measureRef, visibleCount } = useResponsiveOverflow({
     count: tabs.length,
@@ -95,7 +104,7 @@ export function AppTabBar() {
           // Chrome-style tear-off: dragging a chip out of the strip floats the
           // tab as a window (then focuses it so it lands on top).
           onDragOut={(id) => {
-            setPlacement(id, "floating");
+            setPlacement(id, tearOffPlacement() ?? getDefaultPlacement());
             focusTab(id);
           }}
           orientation="horizontal"
@@ -132,9 +141,9 @@ export function AppTabBar() {
       </div>
       <IconButton
         icon={MdAdd}
-        label={desktopMode ? "New window" : "New tab"}
+        label={newTabPlacement !== getDefaultPlacement() ? "New window" : "New tab"}
         size="icon-sm"
-        onClick={() => openTab("home", desktopMode ? "floating" : "docked")}
+        onClick={() => openTab("home", newTabPlacement)}
       />
       {/* Push the trailing action zone to the far right edge so it sits at a
           fixed corner (like the former floating bar), independent of tab count. */}

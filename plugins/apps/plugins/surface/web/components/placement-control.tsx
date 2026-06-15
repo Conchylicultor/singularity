@@ -1,34 +1,10 @@
-import { MdViewSidebar, MdWebAsset, MdFullscreen } from "react-icons/md";
+import { useMemo } from "react";
 import {
   useFocusedPlacement,
   setFocusedTabPlacement,
-  type Placement,
 } from "@plugins/apps/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
-
-const OPTIONS = [
-  { id: "docked" as const, label: "", icon: <MdViewSidebar />, title: "Dock in tab strip" },
-  { id: "floating" as const, label: "", icon: <MdWebAsset />, title: "Float as window" },
-  { id: "solo" as const, label: "", icon: <MdFullscreen />, title: "Fullscreen (solo)" },
-];
-
-/** The shared 3-way control; presentation only — callers wire value/onChange. */
-function PlacementSegmented({
-  value,
-  onChange,
-}: {
-  value: Placement;
-  onChange: (p: Placement) => void;
-}) {
-  return (
-    <SegmentedControl<Placement>
-      options={OPTIONS}
-      value={value}
-      onChange={onChange}
-      variant="ghost"
-    />
-  );
-}
+import { Surface } from "../slots";
 
 /**
  * Placement control contributed into `ActionBar.Item`. Provider-free: it reads
@@ -36,10 +12,29 @@ function PlacementSegmented({
  * (`useFocusedPlacement`) and drives it via `setFocusedTabPlacement`, so it
  * renders correctly both inside `TabsProvider` (the docked tab-bar strip) and
  * outside it (the globally-mounted floating overlay).
+ *
+ * The options are derived from the `Surface.Placement` registry (sorted by
+ * `order`) — never a hardcoded list — so adding / removing a placement
+ * sub-plugin updates the control with zero edits here. With no placements
+ * contributed it renders nothing.
  */
 export function ActionBarPlacementControl() {
+  const defs = Surface.Placement.useContributions();
+  const options = useMemo(
+    () =>
+      [...defs]
+        .sort((a, b) => a.order - b.order)
+        .map((d) => ({ id: d.id, label: "", icon: <d.icon />, title: d.label })),
+    [defs],
+  );
   const placement = useFocusedPlacement();
+  if (options.length === 0) return null;
   return (
-    <PlacementSegmented value={placement} onChange={setFocusedTabPlacement} />
+    <SegmentedControl<string>
+      options={options}
+      value={placement}
+      onChange={setFocusedTabPlacement}
+      variant="ghost"
+    />
   );
 }

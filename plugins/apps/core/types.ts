@@ -24,19 +24,14 @@ export interface RailFramingProps {
  * app" when the focused tab is solo. Chrome-style: tearing a tab off a strip
  * just changes its placement.
  *
- * - `docked` — lives in the tab strip; rendered full-area when it is the focused
- *   tab (today's "tabs").
- * - `floating` — a free window with its own geometry (today's "desktop"), drawn
- *   on the shared backdrop.
- * - `solo` — fills the whole viewport and hides the tab bar + rail (the "full
- *   app" fullscreen mode).
- *
- * Owned by `apps` core because placement is per-tab *state* and the tab model is
- * the home of per-tab state; the shell reads it (Esc-to-exit, tab-bar control)
- * and the `surface` plugin reads it to render. All *presentation* lives in the
- * plugin, never here.
+ * Placement is an **opaque id** owned by the `surface` registry — each placement
+ * is a self-contained sub-plugin contributing a descriptor under the
+ * `Surface.Placement` slot, and the id is whatever that descriptor declares.
+ * `apps` stores the id on the tab and routes it (open/replace/set, the focused
+ * snapshot), but never enumerates the valid set and never knows the default:
+ * those live in the `surface` registry, surfaced back to `apps` through the
+ * apps-owned placement-capability registry. Keeping it a named alias (rather
+ * than bare `string`) documents the intent at call sites. All *presentation*
+ * lives in the placement sub-plugins, never here.
  */
-export type Placement = "docked" | "floating" | "solo";
-
-/** The default placement for a freshly opened tab. */
-export const DEFAULT_PLACEMENT: Placement = "docked";
+export type Placement = string;
