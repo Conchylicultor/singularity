@@ -75,7 +75,7 @@ export function defineTabbedView<ViewProps extends object>(
                       title={v.title}
                       // eslint-disable-next-line row/no-adhoc-row -- tabbed-view's own tab control (flex-1 justify-center layout differs from SegmentedControl)
                       className={cn(
-                        "flex flex-1 items-center justify-center gap-xs rounded-sm px-sm py-xs text-caption",
+                        "flex flex-1 items-center justify-center gap-xs whitespace-nowrap rounded-sm px-sm py-xs text-caption",
                         selected
                           ? "bg-accent text-foreground"
                           : "text-muted-foreground hover:bg-accent/50",

@@ -116,7 +116,7 @@ export function ConversationItem({
         <AvatarSlot conv={conv} size="sm" />
       </span>
       <Stack gap="2xs" className="min-w-0 flex-1">
-        <div className="flex items-center gap-xs overflow-hidden">
+        <div className="flex items-center gap-xs overflow-hidden whitespace-nowrap">
           <ConvTitle conv={conv} />
           <ConvSysBadge conv={conv} />
         </div>

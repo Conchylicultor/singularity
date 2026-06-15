@@ -234,7 +234,7 @@ export function ResponsiveOverflow({
 
       <div
         ref={containerRef}
-        className={cn("inline-flex min-w-0 overflow-hidden", className)}
+        className={cn("inline-flex min-w-0 overflow-hidden whitespace-nowrap", className)}
         style={{ gap }}
       >
         {children.slice(0, visibleCount)}

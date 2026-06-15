@@ -74,7 +74,7 @@ export function ToggleChip({
       disabled={isButton ? disabled : undefined}
       aria-pressed={ariaPressed}
       className={cn(
-        "inline-flex items-center gap-xs rounded-full font-medium transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+        "inline-flex items-center gap-xs whitespace-nowrap rounded-full font-medium transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
         effectiveSize === "sm" && "control-xs p-chip text-2xs",
         effectiveSize === "md" && "control-sm p-control text-caption",

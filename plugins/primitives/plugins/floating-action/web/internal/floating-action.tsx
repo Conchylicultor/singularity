@@ -96,6 +96,7 @@ export function FloatingAction({
       <div className={cn("absolute w-max", anchorClasses[anchor])}>
         <div
           ref={panelRef}
+          // eslint-disable-next-line truncating-text/no-clip-without-nowrap -- generic morph panel: overflow-hidden clips the width/height transition, not text; single-line-ness is the consumer's call, not this primitive's
           className={cn(
             "flex overflow-hidden rounded-md",
             "transition-[width,max-width,max-height,padding,background-color,box-shadow,border-color] duration-200 ease-out",

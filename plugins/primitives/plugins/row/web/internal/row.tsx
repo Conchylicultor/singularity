@@ -56,7 +56,7 @@ export function Row({
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}
       className={cn(
-        "group flex w-full items-center rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
+        "group flex w-full items-center whitespace-nowrap rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
         size === "sm" && "gap-xs text-caption",
         size === "md" && "gap-sm text-body",

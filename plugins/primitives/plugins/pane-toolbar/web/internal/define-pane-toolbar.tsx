@@ -84,7 +84,7 @@ export function definePaneToolbar(
     return (
       <header
         className={cn(
-          "flex items-center border-b pl-chrome pr-floating-bar h-chrome-bar gap-sm bg-background overflow-hidden",
+          "flex items-center whitespace-nowrap border-b pl-chrome pr-floating-bar h-chrome-bar gap-sm bg-background overflow-hidden",
           className,
         )}
       >

@@ -60,7 +60,7 @@ export interface CollapsibleCardProps {
 const CARD_CHROME = "border-border/50 bg-muted/20";
 const ERROR_CARD = "border-destructive/60 bg-destructive/5";
 const HEADER =
-  "relative flex w-full items-center gap-sm text-2xs text-muted-foreground hover:text-foreground";
+  "relative flex w-full items-center gap-sm whitespace-nowrap text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
   label,
