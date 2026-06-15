@@ -1,0 +1,9 @@
+// @hash 07a75d8a26c7
+{
+  // Stacked landing sections (top → bottom): quick-create first so first-time
+  // users see the create affordance, then recent pages below it.
+  "items": [
+    "apps.pages.welcome.quick-create:quick-create",
+    "apps.pages.welcome.recent-pages:recent-pages"
+  ]
+}

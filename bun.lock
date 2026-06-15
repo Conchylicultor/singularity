@@ -164,6 +164,18 @@
       "name": "@singularity/plugin-apps-pages-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/welcome": {
+      "name": "@singularity/plugin-apps-pages-welcome",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/pages/plugins/welcome/plugins/quick-create": {
+      "name": "@singularity/plugin-apps-pages-welcome-quick-create",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/pages/plugins/welcome/plugins/recent-pages": {
+      "name": "@singularity/plugin-apps-pages-welcome-recent-pages",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/settings": {
       "name": "@singularity/plugin-apps-settings",
       "version": "0.0.1",
@@ -3252,6 +3264,12 @@
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-shell": ["@singularity/plugin-apps-pages-shell@workspace:plugins/apps/plugins/pages/plugins/shell"],
+
+    "@singularity/plugin-apps-pages-welcome": ["@singularity/plugin-apps-pages-welcome@workspace:plugins/apps/plugins/pages/plugins/welcome"],
+
+    "@singularity/plugin-apps-pages-welcome-quick-create": ["@singularity/plugin-apps-pages-welcome-quick-create@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/quick-create"],
+
+    "@singularity/plugin-apps-pages-welcome-recent-pages": ["@singularity/plugin-apps-pages-welcome-recent-pages@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/recent-pages"],
 
     "@singularity/plugin-apps-settings": ["@singularity/plugin-apps-settings@workspace:plugins/apps/plugins/settings"],
 
