@@ -43,14 +43,8 @@ export function AgentListingDeltaView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label={
-        <span className="font-mono">
-          {att.isInitial ? "Agents Available" : "Agents Delta"}{" "}
-          <span className="text-muted-foreground/60">
-            {att.isInitial ? counts : `(${counts})`}
-          </span>
-        </span>
-      }
+      label={att.isInitial ? "Agents Available" : "Agents Delta"}
+      note={att.isInitial ? counts : `(${counts})`}
     >
       {agents.length === 0 && removed.length === 0 ? (
         <Text as="p" variant="caption" className="text-muted-foreground/60 italic">

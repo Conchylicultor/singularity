@@ -28,14 +28,8 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
   return (
     <CollapsibleCard
       error={failed}
-      label={
-        <span className="font-mono">
-          Hook {att.hookName ?? att.hookEvent ?? "ran"}
-          {typeof att.durationMs === "number" && (
-            <span className="text-muted-foreground/60"> · {att.durationMs}ms</span>
-          )}
-        </span>
-      }
+      label={`Hook ${att.hookName ?? att.hookEvent ?? "ran"}`}
+      note={typeof att.durationMs === "number" ? `· ${att.durationMs}ms` : undefined}
     >
       <Text
         as="div"

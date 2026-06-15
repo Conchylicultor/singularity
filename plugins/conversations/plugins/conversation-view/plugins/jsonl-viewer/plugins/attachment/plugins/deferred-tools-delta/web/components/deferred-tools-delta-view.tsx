@@ -23,14 +23,8 @@ export function DeferredToolsDeltaView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label={
-        <span className="font-mono">
-          Tools Delta{" "}
-          <span className="text-muted-foreground/60">
-            {counts ? `(${counts})` : "(no changes)"}
-          </span>
-        </span>
-      }
+      label="Tools Delta"
+      note={counts ? `(${counts})` : "(no changes)"}
     >
       {added === 0 && removed === 0 ? (
         <Text as="p" variant="caption" className="text-muted-foreground/60 italic">

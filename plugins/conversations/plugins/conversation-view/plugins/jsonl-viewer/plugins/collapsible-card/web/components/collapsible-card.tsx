@@ -32,11 +32,22 @@ export function CardHeaderAction({
 }
 
 export interface CollapsibleCardProps {
-  /** In-trigger content after the built-in chevron (label, or badge+summary).
-   *  Natural case — never all-caps (jsonl-viewer rule). Display content is
-   *  click-through (toggles the card); interactive content placed here MUST be
-   *  wrapped in `<CardHeaderAction>` so it keeps its own click. */
+  /** Leading icon before the title. Rendered by the card inside the title
+   *  group, so it inherits the canonical title size/color — pass the raw icon
+   *  element (e.g. `<MdReplay className="size-3.5" />`), never a styled wrapper. */
+  icon?: ReactNode;
+  /** Title content after the built-in chevron. Natural case — never all-caps
+   *  (jsonl-viewer rule). The card owns the title TYPOGRAPHY (house font + size);
+   *  pass content only — `font-*`/`text-*` classes here are banned by lint
+   *  (`collapsible-card/no-adhoc-card-title-font`). A semantic color accent
+   *  (e.g. `text-primary` for the Instructions callout) is fine. Display content
+   *  is click-through (toggles the card); interactive content placed here MUST
+   *  be wrapped in `<CardHeaderAction>` so it keeps its own click. */
   label: ReactNode;
+  /** Muted secondary suffix rendered after the title — a count, duration, or
+   *  delta (`(3)`, `· 12ms`). The card paints it muted; pass the bare content
+   *  including any separator, never the muted color class. */
+  note?: ReactNode;
   /** Convenience: render a clickable FilePath as the sibling aside. */
   filePath?: string;
   /** Sibling affordance after the label. Overrides filePath. Wrapped in
@@ -66,7 +77,9 @@ const HEADER =
   "relative flex w-full region-line gap-sm font-sans text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
+  icon,
   label,
+  note,
   filePath,
   aside,
   trailing,
@@ -101,12 +114,22 @@ export function CollapsibleCard({
             overlay button beneath, so the chevron+label area toggles too. */}
         <span className="pointer-events-none relative flex min-w-0 items-center gap-sm">
           <CollapsibleChevron open={open} className="size-3" />
-          {/* No `truncate` here: this row holds identity chips (e.g. the
+          {/* The card OWNS the title group: leading icon, the title content, and
+              an optional muted note, all painted in the one canonical title font
+              (inherited from HEADER). Call sites pass content — never their own
+              `font-*`/`text-*` — so the family/size can't drift per renderer.
+              No `truncate` here: this row holds identity chips (e.g. the
               tool-name Badge, `shrink-0`) next to free text. `overflow:hidden`
               would clip the chips too once the row gets tight. Truncation is the
               job of the flexible leaf (a `flex-1 truncate` summary span), never
               the container — so chips stay whole and only the text ellipsizes. */}
-          <span className="flex min-w-0 items-center gap-sm">{label}</span>
+          <span className="flex min-w-0 items-center gap-xs">
+            {icon}
+            {label}
+            {note != null && (
+              <span className="text-muted-foreground/60">{note}</span>
+            )}
+          </span>
         </span>
         {/* Interactive siblings opt back in via CardHeaderAction. min-w-0 lets
             the aside (typically a FilePath with its own overflow ellipsis)

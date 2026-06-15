@@ -33,14 +33,7 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
   const count = att.skillCount ?? skills.length;
 
   return (
-    <CollapsibleCard
-      label={
-        <span className="font-mono">
-          Skills Available{" "}
-          <span className="text-muted-foreground/60">({count})</span>
-        </span>
-      }
-    >
+    <CollapsibleCard label="Skills Available" note={`(${count})`}>
       {skills.length === 0 ? (
         <Text as="p" variant="caption" className="text-muted-foreground/60 italic">
           No skills listed.

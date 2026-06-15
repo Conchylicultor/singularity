@@ -14,6 +14,7 @@ export interface CollectedEntry {
 
 export const lintEntries: CollectedEntry[] = [
   { pluginPath: "apps", id: "apps", loader: () => import("@plugins/apps/lint"), dependsOn: [] },
+  { pluginPath: "conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card", id: "conversations.conversation-view.jsonl-viewer.collapsible-card", loader: () => import("@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/bun-safety", id: "framework.tooling.lint.bun-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/icon-safety", id: "framework.tooling.lint.icon-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety/lint"), dependsOn: [] },
   { pluginPath: "framework/plugins/tooling/plugins/lint/plugins/promise-safety", id: "framework.tooling.lint.promise-safety", loader: () => import("@plugins/framework/plugins/tooling/plugins/lint/plugins/promise-safety/lint"), dependsOn: [] },

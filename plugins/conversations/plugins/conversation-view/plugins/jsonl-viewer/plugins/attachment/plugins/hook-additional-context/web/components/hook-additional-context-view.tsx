@@ -16,14 +16,8 @@ export function HookAdditionalContextView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label={
-        <span className="font-mono">
-          Hook Context
-          {att.hookName && (
-            <span className="text-muted-foreground/60"> · {att.hookName}</span>
-          )}
-        </span>
-      }
+      label="Hook Context"
+      note={att.hookName ? `· ${att.hookName}` : undefined}
     >
       {items.length === 0 ? (
         <Text as="p" variant="caption" className="text-muted-foreground/60 italic">

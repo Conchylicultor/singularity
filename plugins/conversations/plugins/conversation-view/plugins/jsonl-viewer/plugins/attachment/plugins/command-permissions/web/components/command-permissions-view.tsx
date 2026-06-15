@@ -13,12 +13,8 @@ export function CommandPermissionsView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label={
-        <span>
-          Command Permissions{" "}
-          <span className="text-muted-foreground/60">({tools.length})</span>
-        </span>
-      }
+      label="Command Permissions"
+      note={`(${tools.length})`}
     >
       {tools.length === 0 ? (
         <Text as="p" variant="caption" className="text-muted-foreground/60 italic">

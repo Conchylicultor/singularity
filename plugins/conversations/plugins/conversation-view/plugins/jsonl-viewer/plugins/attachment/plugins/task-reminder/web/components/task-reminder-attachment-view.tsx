@@ -33,14 +33,8 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label={
-        <span className="font-mono">
-          Task Reminder{" "}
-          <span className="text-muted-foreground/60">
-            ({count === 0 ? "no tasks" : `${count} task${count === 1 ? "" : "s"}`})
-          </span>
-        </span>
-      }
+      label="Task Reminder"
+      note={`(${count === 0 ? "no tasks" : `${count} task${count === 1 ? "" : "s"}`})`}
     >
       {count === 0 ? (
         <Text as="p" variant="caption" className="text-muted-foreground/60 italic">

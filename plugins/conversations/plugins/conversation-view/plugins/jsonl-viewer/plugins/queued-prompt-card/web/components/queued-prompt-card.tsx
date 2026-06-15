@@ -28,12 +28,8 @@ export function QueuedPromptCard({
   return (
     <CollapsibleCard
       defaultOpen={defaultOpen}
-      label={
-        <span className="flex items-center gap-xs">
-          <MdSchedule className="size-3.5" />
-          {isPrompt ? "Queued message" : "Queued command"}
-        </span>
-      }
+      icon={<MdSchedule className="size-3.5" />}
+      label={isPrompt ? "Queued message" : "Queued command"}
     >
       <Text
         as="div"

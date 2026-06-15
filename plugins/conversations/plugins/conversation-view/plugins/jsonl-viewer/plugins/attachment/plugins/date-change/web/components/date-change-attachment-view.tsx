@@ -34,14 +34,12 @@ export function DateChangeAttachmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
+      icon={<MdEvent className="size-3.5 shrink-0" />}
       label={
-        <span className="flex items-center gap-sm">
-          <MdEvent className="size-3.5 shrink-0" />
-          <span>
-            Date advanced to{" "}
-            <span className="text-foreground">
-              {formatCalendarDate(att.newDate)}
-            </span>
+        <span>
+          Date advanced to{" "}
+          <span className="text-foreground">
+            {formatCalendarDate(att.newDate)}
           </span>
         </span>
       }
