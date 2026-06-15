@@ -468,6 +468,14 @@
       "name": "@singularity/plugin-apps-studio-explorer-membership",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/graph": {
+      "name": "@singularity/plugin-apps-studio-graph",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/membership-tint": {
+      "name": "@singularity/plugin-apps-studio-membership-tint",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/shell": {
       "name": "@singularity/plugin-apps-studio-shell",
       "version": "0.0.1",
@@ -2025,6 +2033,14 @@
       "name": "@singularity/plugin-primitives-folder-picker",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/graph-canvas": {
+      "name": "@singularity/plugin-primitives-graph-canvas",
+      "version": "0.0.1",
+      "dependencies": {
+        "@xyflow/react": "^12.3.5",
+        "dagre": "^0.8.5",
+      },
+    },
     "plugins/primitives/plugins/icon-auto": {
       "name": "@singularity/plugin-primitives-icon-auto",
       "version": "0.0.1",
@@ -3333,6 +3349,10 @@
 
     "@singularity/plugin-apps-studio-explorer-membership": ["@singularity/plugin-apps-studio-explorer-membership@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/membership"],
 
+    "@singularity/plugin-apps-studio-graph": ["@singularity/plugin-apps-studio-graph@workspace:plugins/apps/plugins/studio/plugins/graph"],
+
+    "@singularity/plugin-apps-studio-membership-tint": ["@singularity/plugin-apps-studio-membership-tint@workspace:plugins/apps/plugins/studio/plugins/membership-tint"],
+
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
     "@singularity/plugin-apps-surface": ["@singularity/plugin-apps-surface@workspace:plugins/apps/plugins/surface"],
@@ -4080,6 +4100,8 @@
     "@singularity/plugin-primitives-floating-action": ["@singularity/plugin-primitives-floating-action@workspace:plugins/primitives/plugins/floating-action"],
 
     "@singularity/plugin-primitives-folder-picker": ["@singularity/plugin-primitives-folder-picker@workspace:plugins/primitives/plugins/folder-picker"],
+
+    "@singularity/plugin-primitives-graph-canvas": ["@singularity/plugin-primitives-graph-canvas@workspace:plugins/primitives/plugins/graph-canvas"],
 
     "@singularity/plugin-primitives-icon-auto": ["@singularity/plugin-primitives-icon-auto@workspace:plugins/primitives/plugins/icon-auto"],
 

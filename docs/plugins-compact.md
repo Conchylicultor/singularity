@@ -55,6 +55,8 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
             - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
+        - **`graph`** — Studio Plugin Graph pane: focused closure subgraph (deps + dependents) around a plugin, tinted by the active composition's membership, with depth / direction controls and click-to-recenter.
+        - **`membership-tint`** — Single source of truth for the membership-state tint + legend (shared by the Explorer membership band and the Studio graph pane).
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
     - **`surface`** — Per-tab surface: renders every open tab at once positioned by its own placement (docked / floating / solo). Owns the multi-placement body, floating window chrome, geometry store, and the 3-way placement control + Esc-to-exit-solo.
     - **`workflows`** [4 sub-plugins] — Workflows app.
@@ -210,6 +212,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
     - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
+    - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: read-only pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API.
     - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.

@@ -1,6 +1,7 @@
-import { MdMyLocation } from "react-icons/md";
+import { MdMyLocation, MdHub } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { openPane } from "@plugins/primitives/plugins/pane/web";
 import {
   useActiveMembership,
   useDiffMap,
@@ -8,21 +9,9 @@ import {
   pinAsRoot,
   type DiffState,
 } from "@plugins/plugin-meta/plugins/composition/web";
+import { graphCanvasPane } from "@plugins/apps/plugins/studio/plugins/graph/web";
+import { STATE_TINT } from "@plugins/apps/plugins/studio/plugins/membership-tint/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import type { MembershipState } from "@plugins/plugin-meta/plugins/closure/core";
-
-// Translucent semantic-token tints for the six membership states. Each is low
-// opacity so the row text stays legible through the band and the selected
-// `bg-accent` on the row root blends through. `excluded` has no band (null below).
-// `z-base` keeps the band on the base layer (the plan's chosen layer); the tint is
-// translucent so content reads through it rather than relying on negative z.
-const STATE_TINT: Record<Exclude<MembershipState, "excluded">, string> = {
-  entry: "bg-primary/25",
-  required: "bg-primary/10",
-  contributor: "bg-success/20",
-  "via-contributor": "bg-success/10",
-  available: "bg-info/10",
-};
 
 // COMPARE-mode tints, sourced from the themeable categorical palette so they read
 // as a deliberately DIFFERENT scheme from the single-composition membership tints
@@ -88,6 +77,15 @@ function BandWithPin({ node, tint }: { node: PluginNode; tint: string | null }) 
           onClick={(e) => {
             e.stopPropagation();
             pinAsRoot(node.id);
+          }}
+        />
+        <IconButton
+          icon={MdHub}
+          label="Open in graph"
+          size="sm"
+          onClick={(e) => {
+            e.stopPropagation();
+            openPane(graphCanvasPane, { focusId: node.id }, { mode: "root" });
           }}
         />
       </span>

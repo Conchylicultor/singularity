@@ -1,0 +1,10 @@
+{
+  "name": "@singularity/plugin-primitives-graph-canvas",
+  "description": "Generic dagre+xyflow graph canvas primitive: read-only pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@xyflow/react": "^12.3.5",
+    "dagre": "^0.8.5"
+  }
+}
