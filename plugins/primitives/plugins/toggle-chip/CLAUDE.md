@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.
+- Description: Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
 - Web:
-  - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.ControlSize`, `primitives/ui-kit.useControlSize`
+  - Uses: `primitives/badge.Badge`, `primitives/ui-kit.cn`, `primitives/ui-kit.ControlSize`, `primitives/ui-kit.useControlSize`
   - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipSize`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
 - Cross-plugin:
   - Imported by: `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/story/render`, `apps/story/shell`, `apps/studio/compositions`, `apps/surface`, `config_v2/settings`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `reorder/edit-mode`, `review`, `shell/notifications`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`

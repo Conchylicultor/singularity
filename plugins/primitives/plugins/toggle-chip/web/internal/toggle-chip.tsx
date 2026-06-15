@@ -1,4 +1,5 @@
 import { cn, type ControlSize, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type React from "react";
 
 export type ToggleChipVariant = "solid" | "ghost";
@@ -69,23 +70,28 @@ export function ToggleChip({
   const ariaPressed =
     isButton && rest.role === undefined ? active : undefined;
   return (
-    <As
+    <Badge
+      as={As}
+      shape="pill"
+      icon={icon}
+      colorClass={
+        active ? VARIANT_CLASS[variant].active : VARIANT_CLASS[variant].inactive
+      }
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-pressed={ariaPressed}
       className={cn(
-        "inline-flex items-center gap-xs whitespace-nowrap rounded-full font-medium transition-colors [&_svg:not([class*='size-'])]:icon-auto",
-        "disabled:pointer-events-none disabled:opacity-50",
+        // ToggleChip's identity over the shared chip shell: a control that
+        // height-matches the buttons beside it, with hover/disabled transitions.
+        "transition-colors disabled:pointer-events-none disabled:opacity-50",
         effectiveSize === "sm" && "control-xs p-chip text-2xs",
         effectiveSize === "md" && "control-sm p-control text-caption",
-        active ? VARIANT_CLASS[variant].active : VARIANT_CLASS[variant].inactive,
         className,
       )}
       {...rest}
     >
-      {icon}
       {children}
-    </As>
+    </Badge>
   );
 }
 

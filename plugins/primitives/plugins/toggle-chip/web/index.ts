@@ -12,6 +12,6 @@ export {
 
 export default {
   description:
-    "Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.",
+    "Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.",
   contributions: [],
 } satisfies PluginDefinition;

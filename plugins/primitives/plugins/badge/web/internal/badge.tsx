@@ -9,6 +9,8 @@ export type BadgeVariant =
   | "success"
   | "info";
 export type BadgeSize = "sm" | "md";
+/** Corner treatment. "rect" = status-label rounded rectangle; "pill" = filter/toggle pill. */
+export type BadgeShape = "rect" | "pill";
 
 const VARIANT_CLASS: Record<BadgeVariant, string> = {
   muted: "bg-muted text-muted-foreground",
@@ -24,10 +26,14 @@ export interface BadgeProps {
   variant?: BadgeVariant;
   /** Size token. sm → text-3xs, md → text-caption. Default "md". */
   size?: BadgeSize;
+  /** Corner treatment. Default "rect" (rounded rectangle); "pill" → fully rounded. */
+  shape?: BadgeShape;
   /** Color-only escape hatch: replaces the variant bg/text classes (map-driven colors). */
   colorClass?: string;
-  /** Leading icon or StatusDot, rendered before children. */
+  /** Leading icon or StatusDot, rendered before the label (stays rigid; never truncates). */
   icon?: React.ReactNode;
+  /** Monospace label (for ids). Applies font-mono to the label wrapper. */
+  mono?: boolean;
   /** Element to render. Default "span"; pass "button" for interactive badges. */
   as?: React.ElementType;
   className?: string;
@@ -40,8 +46,10 @@ export interface BadgeProps {
 export function Badge({
   variant = "muted",
   size = "md",
+  shape = "rect",
   colorClass,
   icon,
+  mono,
   as: As = "span",
   className,
   children,
@@ -50,7 +58,14 @@ export function Badge({
   return (
     <As
       className={cn(
-        "inline-flex items-center gap-xs whitespace-nowrap rounded-md p-chip font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
+        // The chip shell, shared by every chip role (LinkChip/ToggleChip compose this).
+        // region-line = items-center + whitespace-nowrap (the single-line invariant).
+        // max-w-full + the inner truncate span make a chip a well-behaved content leaf:
+        // a long label ellipsizes instead of overflowing. align-baseline is free on flex
+        // children and correct when a chip sits inline in running text.
+        "inline-flex region-line max-w-full gap-xs p-chip align-baseline font-medium tabular-nums [&_svg:not([class*='size-'])]:icon-auto",
+        shape === "rect" && "rounded-md",
+        shape === "pill" && "rounded-full",
         size === "sm" && "text-3xs",
         size === "md" && "text-caption",
         colorClass ?? VARIANT_CLASS[variant],
@@ -59,7 +74,7 @@ export function Badge({
       {...rest}
     >
       {icon}
-      {children}
+      <span className={cn("truncate", mono && "font-mono")}>{children}</span>
     </As>
   );
 }

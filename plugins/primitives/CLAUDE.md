@@ -9,7 +9,7 @@
   - **`app-shell`** — Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
   - **`auto-scroll`** — Stick-to-bottom scroll primitive for streaming surfaces. Hook tracks pin state and detects content growth via ResizeObserver; companion JumpToBottomButton offers an affordance when the user has scrolled up.
   - **`avatar`** — Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
-  - **`badge`** — Semantic badge primitive: size × variant chip with a colorClass escape hatch, optional leading icon, and a single theme-derived radius.
+  - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. LinkChip and ToggleChip compose it.
   - **`bar`** — Single-line chrome-strip primitive: the horizontal toolbar/header band (border-b + chrome height + inset, never-wrap via region-line) shared by app/pane toolbars and pane headers. Two tiers (chrome | pane); consumers compose it and own what they host.
   - **`breadcrumb`** — Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
   - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
@@ -37,7 +37,7 @@
   - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
   - **`inline-text`** — Renders a raw string with every registered inline-text walker (active-data chips, file-links) applied in registry order. Consumers write <InlineText text={…}/>; walkers register via InlineTextWalkerSlot. The string seed makes wrong-order composition structurally impossible.
   - **`launch`** — Reusable split [model dropdown | launch] control for creating conversations.
-  - **`link-chip`** — Inline, clickable navigational chip: bg-muted + text-primary with hover underline, baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
+  - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
   - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
   - **`loading`** — Single entry point for the loading state: text / spinner / skeleton-rows / skeleton-cards / shimmer-block variants composing Placeholder and Spinner, with a built-in CSS delay-before-show (~120ms) so fast loads never flash.
   - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
@@ -75,7 +75,7 @@
   - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
   - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
   - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
-  - **`toggle-chip`** — Toggle-chip primitive: solid/ghost interactive pill with active state, optional icon and polymorphic `as`, plus a SegmentedControl single-select group helper.
+  - **`toggle-chip`** — Toggle-chip control: a stateful solid/ghost pill (composes Badge) with active state, button-height matching, polymorphic `as`, plus a SegmentedControl single-select group helper.
   - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
   - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.
   - **`truncating-text`** — Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.

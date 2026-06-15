@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import type React from "react";
 
 export interface LinkChipProps {
@@ -23,17 +23,17 @@ export function LinkChip({
   children,
 }: LinkChipProps) {
   return (
-    <button
+    <Badge
+      as="button"
       type="button"
       onClick={onClick}
       title={title}
-      className={cn(
-        "inline-flex max-w-full items-center gap-xs rounded-md bg-muted p-chip align-baseline text-caption text-primary hover:bg-muted/80 hover:underline [&_svg:not([class*='size-'])]:icon-auto",
-        className,
-      )}
+      icon={leading}
+      mono={mono}
+      colorClass="bg-muted text-primary hover:bg-muted/80 hover:underline"
+      className={className}
     >
-      {leading}
-      <span className={cn("truncate", mono && "font-mono")}>{children}</span>
-    </button>
+      {children}
+    </Badge>
   );
 }
