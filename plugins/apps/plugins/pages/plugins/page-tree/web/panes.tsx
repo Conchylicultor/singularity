@@ -2,7 +2,7 @@ import { type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
-import { BlockEditor } from "@plugins/page/plugins/editor/web";
+import { BlockEditor, BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageCover } from "./components/page-cover";
@@ -46,21 +46,25 @@ function usePageTitle({ pageId }: { pageId: string }): string | undefined {
 function PageDetailBody(): ReactElement {
   const { pageId } = pageDetailPane.useParams();
   const openPane = useOpenPane();
-  const title = usePageTitle({ pageId });
 
   return (
-    <PaneChrome pane={pageDetailPane} title={title}>
-      {/* Full-bleed cover scrolls away with the page (Notion-style). The
-          breadcrumb sits in a centered strip above it; below, a centered reading
-          column keeps a comfortable ~768px measure on wide panes. The header and
-          block editor inset their own content by BLOCK_GUTTER so title and block
-          text share one left edge. */}
+    // The breadcrumb trail is the page's single home for its title — it lives in
+    // the pane-chrome bar (passed as `title`), so the big in-body title below
+    // appears exactly once.
+    <PaneChrome pane={pageDetailPane} title={<PageBreadcrumb pageId={pageId} />}>
+      {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
+          one centered reading column hosts the header and blocks. The header and
+          block editor each self-inset their content by BLOCK_GUTTER (reserving
+          the left rail for the page icon and the blocks' hover controls), and
+          the column adds a matching right gutter so the icon, title, and every
+          block share one left rail while the measure sits centered in the pane
+          rather than shifted right against an empty void. */}
       <div className="flex flex-col">
-        <div className="mx-auto w-full max-w-3xl px-lg">
-          <PageBreadcrumb pageId={pageId} />
-        </div>
         <PageCover pageId={pageId} />
-        <div className="mx-auto flex w-full max-w-3xl flex-col gap-lg px-lg pb-2xl">
+        <div
+          className="mx-auto flex w-full max-w-4xl flex-col gap-lg px-lg pb-2xl"
+          style={{ paddingRight: BLOCK_GUTTER }}
+        >
           <PageHeader pageId={pageId} />
           <BlockEditor
             pageId={pageId}

@@ -7,7 +7,6 @@ import {
 } from "@plugins/primitives/plugins/breadcrumb/web";
 import { pagesResource, pageData, type Block } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
 import { pageAncestors } from "../ancestors";
 import { pageDetailPane } from "../panes";
 
@@ -22,9 +21,14 @@ function SegmentLabel({ page }: { page: Block }): ReactElement {
 }
 
 /**
- * Notion-style ancestor trail shown above the page header. Each ancestor is a
- * clickable segment; the current page is the inert trailing leaf. Renders
- * nothing for root pages (no ancestors) or while the pages resource loads.
+ * Notion-style ancestor trail rendered in the page pane's chrome title bar — the
+ * single home for the page's title. Ancestors are clickable segments; the
+ * current page is the inert trailing leaf, so the big in-body title is the only
+ * other place the title appears. A root page with no ancestors still shows its
+ * own title as the lone segment; renders nothing only while the pages resource
+ * loads. Typography size is owned by PaneChrome's title container — this trail
+ * carries only the per-segment weight/color baked into the Breadcrumb primitive,
+ * never its own size or inset.
  */
 export function PageBreadcrumb({ pageId }: { pageId: string }): ReactElement | null {
   const openPane = useOpenPane();
@@ -34,7 +38,6 @@ export function PageBreadcrumb({ pageId }: { pageId: string }): ReactElement | n
   const current = result.data.find((p) => p.id === pageId);
   if (!current) return null;
   const ancestors = pageAncestors(result.data, pageId);
-  if (ancestors.length === 0) return null;
 
   const chain = [...ancestors, current];
   const segments: BreadcrumbSegment[] = chain.map((page) => ({
@@ -43,13 +46,11 @@ export function PageBreadcrumb({ pageId }: { pageId: string }): ReactElement | n
   }));
 
   return (
-    <Text as="div" variant="caption" tone="muted" className="px-xs">
-      <Breadcrumb
-        segments={segments}
-        onNavigate={(_i, seg) =>
-          openPane(pageDetailPane, { pageId: seg.key }, { mode: "swap" })
-        }
-      />
-    </Text>
+    <Breadcrumb
+      segments={segments}
+      onNavigate={(_i, seg) =>
+        openPane(pageDetailPane, { pageId: seg.key }, { mode: "swap" })
+      }
+    />
   );
 }
