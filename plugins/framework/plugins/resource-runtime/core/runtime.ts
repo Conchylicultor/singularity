@@ -110,6 +110,23 @@ export interface ResourceDefinition<T, P extends ResourceParams = ResourceParams
    */
   dependsOn?: ReadonlyArray<DependsOnEntry<P>>;
   /**
+   * Fixed-window trailing debounce (ms) for this resource's flushes. When set
+   * (and > 0), a `notify()` (or cascaded `mergePending`) into this entry does
+   * NOT ride the immediate microtask flush; instead it arms a per-entry timer
+   * that triggers a flush after the window. The timer is NOT re-armed on
+   * subsequent notifies within the window (fixed window, starvation-free), so a
+   * continuously-ticking source still flushes at least every `debounceMs`. The
+   * merge into `pendingNotifies` is unchanged, so all coalescing keeps working —
+   * the debounce only delays *when* the accumulated pending map drains.
+   * Piggyback: if any other (non-debounced) resource triggers a flush during the
+   * window, that flush drains this entry's pending too and cancels the timer, so
+   * debounced data never adds latency beyond an already-happening flush.
+   * Do NOT use on keyed resources driving optimistic-mutation delta-sync —
+   * debounce the *source* instead. See
+   * research/2026-06-15-global-live-state-cascade-contention.md.
+   */
+  debounceMs?: number;
+  /**
    * Sub-lifecycle hooks. Fire on the 0→1 and N→0 global refcount transitions
    * for a given params tuple (counted across every open socket; a socket
    * closing releases the refs it held).
@@ -180,6 +197,14 @@ interface RegistryEntry {
   versions: Map<string, number>;
   /** Coalesced pending notifies per params-tuple. */
   pendingNotifies: Map<string, PendingNotify>;
+  /** Fixed-window trailing debounce (ms) for this entry's flushes. 0/undefined = immediate. */
+  debounceMs?: number;
+  /**
+   * Armed debounce timer handle, or undefined when not armed. Set when the first
+   * notify in a window arrives; cleared on fire (which schedules a flush) or when
+   * `flushNotifies` drains this entry's pending out from under it (piggyback).
+   */
+  debounceTimer?: ReturnType<typeof setTimeout>;
   /** Global subscriber refcount per params-tuple (across all sockets). */
   subCounts: Map<string, number>;
   /** Upstream keys this entry listens to (for cycle detection). */
@@ -340,6 +365,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       snapshots: mode === "keyed" ? new Map() : undefined,
       versions: new Map(),
       pendingNotifies: new Map(),
+      debounceMs: def.debounceMs,
       subCounts: new Map(),
       upstreamKeys,
       downstream: [],
@@ -444,6 +470,14 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
     }
   }
 
+  // Schedule a single global microtask flush, guarded so concurrent callers
+  // coalesce onto one flush. The immediate (non-debounced) path.
+  function scheduleFlush(): void {
+    if (flushScheduled) return;
+    flushScheduled = true;
+    queueMicrotask(() => { void flushNotifies(); });
+  }
+
   async function withNotifyBatch<T>(fn: () => Promise<T>): Promise<T> {
     batchDepth++;
     try {
@@ -453,8 +487,7 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       if (batchDepth === 0 && !flushScheduled) {
         for (const entry of registry.values()) {
           if (entry.pendingNotifies.size > 0) {
-            flushScheduled = true;
-            queueMicrotask(() => { void flushNotifies(); });
+            scheduleFlush();
             break;
           }
         }
@@ -469,9 +502,19 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
   ): void {
     mergePending(entry.pendingNotifies, paramsKey(params), params, affected);
     if (batchDepth > 0) return;
-    if (flushScheduled) return;
-    flushScheduled = true;
-    queueMicrotask(() => { void flushNotifies(); });
+    // Debounced entries do not ride the immediate flush: arm a per-entry
+    // fixed-window timer (only if not already armed — never re-armed within a
+    // window, so a continuously-ticking source still flushes every debounceMs).
+    if (entry.debounceMs) {
+      if (entry.debounceTimer === undefined) {
+        entry.debounceTimer = setTimeout(() => {
+          entry.debounceTimer = undefined;
+          scheduleFlush();
+        }, entry.debounceMs);
+      }
+      return;
+    }
+    scheduleFlush();
   }
 
   // Build the id→hash map for a keyed resource's array value. The hash is the
@@ -551,6 +594,13 @@ export function createResourceRuntime(opts: ResourceRuntimeOptions = {}): Resour
       if (entry.pendingNotifies.size === 0) continue;
       const pending = Array.from(entry.pendingNotifies.values());
       entry.pendingNotifies.clear();
+      // Piggyback: this entry's pending is being drained now (possibly by a flush
+      // some other resource scheduled), so cancel any armed debounce timer — it
+      // would otherwise fire redundantly on an already-empty pending map.
+      if (entry.debounceTimer !== undefined) {
+        clearTimeout(entry.debounceTimer);
+        entry.debounceTimer = undefined;
+      }
       for (const { params, affected } of pending) {
         const pk = paramsKey(params);
         // Scoped notify (Layer 2): `affected !== null` means recompute only those

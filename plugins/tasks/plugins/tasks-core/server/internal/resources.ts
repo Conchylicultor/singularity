@@ -30,6 +30,12 @@ export const conversationsLiveResource = defineResource({
   key: conversationsResource.key,
   mode: "push",
   schema: conversationsResource.schema,
+  // Highest fan-out source: one notify cascades to attempts → tasks + FULL
+  // recomputes (queueRanks, agentLaunches). The poller can notify multiple times
+  // per tick; a fixed-window trailing debounce collapses a tick's status changes
+  // into one flush. Source-only — never on the keyed attempts/tasks resources.
+  // See research/2026-06-15-global-live-state-cascade-contention.md.
+  debounceMs: 250,
   loader: async (): Promise<ConversationListPayload> => {
     const [active, goneRows, totalGoneCount, system] = await Promise.all([
       listActiveConversations(),
