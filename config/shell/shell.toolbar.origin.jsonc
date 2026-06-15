@@ -1,10 +1,4 @@
-// @hash e24b31facb2c
+// @hash dfc9a7e375eb
 {
-  // Hide: { "item": "<key>", "hidden": true }
-  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
-  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
-  "items": [
-    "shell.action-bar:action-bar",
-    "apps.agent-manager.worktree-switcher:worktree-switcher"
-  ]
+  "items": []
 }

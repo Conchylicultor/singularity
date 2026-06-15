@@ -1,6 +1,5 @@
 import { MdViewSidebar, MdWebAsset, MdFullscreen } from "react-icons/md";
 import {
-  useTabs,
   useFocusedPlacement,
   setFocusedTabPlacement,
   type Placement,
@@ -32,28 +31,11 @@ function PlacementSegmented({
 }
 
 /**
- * In-strip placement control (contributed into `Apps.TabBarActions`). Renders
- * inside `TabsProvider`, so it reads/sets the focused tab's placement via the
- * `useTabs` hook directly.
- */
-export function TabBarPlacementControl() {
-  const { tabs, focusedTabId, setPlacement } = useTabs();
-  const focused = tabs.find((t) => t.tabId === focusedTabId);
-  if (!focused) return null;
-  return (
-    <PlacementSegmented
-      value={focused.placement}
-      onChange={(p) => setPlacement(focused.tabId, p)}
-    />
-  );
-}
-
-/**
- * Action-bar placement control (contributed into `ActionBar.Item`). The
- * action-bar / floating-bar render OUTSIDE `TabsProvider`, so this drives the
- * module-level `setFocusedTabPlacement` + the subscribable `useFocusedPlacement`
- * snapshot. This is the persistent home that gives solo a visible exit in every
- * app (the floating bar is portalled and shows even over a solo surface).
+ * Placement control contributed into `ActionBar.Item`. Provider-free: it reads
+ * the focused tab's placement from the module-level focused-placement store
+ * (`useFocusedPlacement`) and drives it via `setFocusedTabPlacement`, so it
+ * renders correctly both inside `TabsProvider` (the docked tab-bar strip) and
+ * outside it (the globally-mounted floating overlay).
  */
 export function ActionBarPlacementControl() {
   const placement = useFocusedPlacement();

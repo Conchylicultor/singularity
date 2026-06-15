@@ -1,8 +1,9 @@
-// @hash e8ee9e1602f4
+// @hash 7a0793a5dd61
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
-    "apps.surface:placement",
+    "apps.surface:placement-control",
+    "apps.agent-manager.worktree-switcher:worktree-switcher",
     "improve:improve",
     "build:build",
     { "type": "spacer", "id": "spacer-1" },

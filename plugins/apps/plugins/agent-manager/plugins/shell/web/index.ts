@@ -13,7 +13,6 @@ export default {
       tooltip: "Agent Manager",
       component: AgentManagerLayout,
       path: "/agents",
-      hostsToolbar: true,
       fallback: true,
     }),
   ],

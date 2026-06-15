@@ -12,11 +12,11 @@
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
 - Cross-plugin:
-  - Slot contributors: `action-bar`, `agents`, `code-explorer`, `conversations-view`, `stats`, `task-detail`, `worktree-switcher`
-  - Imported by: `apps/agent-manager/shell`, `apps/agent-manager/worktree-switcher`, `code-explorer`, `conversations/agents`, `conversations/conversation-view/push-profiling`, `conversations/conversations-view`, `debug/profiling/push`, `infra/health`, `shell/action-bar`, `shell/notifications`, `shell/toaster`, `stats`, `tasks/task-detail`
+  - Slot contributors: `agents`, `code-explorer`, `conversations-view`, `stats`, `task-detail`
+  - Imported by: `apps/agent-manager/shell`, `code-explorer`, `conversations/agents`, `conversations/conversation-view/push-profiling`, `conversations/conversations-view`, `debug/profiling/push`, `infra/health`, `shell/notifications`, `shell/toaster`, `stats`, `tasks/task-detail`
 - Sub-plugins:
-  - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot; the agent-manager toolbar and the floating bar both render it.
-  - **`floating-bar`** — Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover. Floating action bar (top-right) surfacing the main toolbar's actions in every app. Collapses to a status icon; expands on hover.
+  - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.
+  - **`global-action-bar`** — Global action bar rendering the shared ActionBar.Item set on every app, with two mutually-exclusive mount points keyed on the persisted pin: a floating top-right overlay (Core.Root) when unpinned — visible in every placement mode including solo — and a docked right-aligned strip in the tab bar (Apps.TabBarActions) when pinned. Shared cross-app action set: registers the action-bar config so the bar's enabled toggle persists.
   - **`notifications`** — Persistent bell-button notifications backed by the DB. Persistent bell-button notifications backed by the DB.
   - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
 

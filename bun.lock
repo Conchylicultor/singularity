@@ -2364,8 +2364,8 @@
       "name": "@singularity/plugin-shell-action-bar",
       "version": "0.0.1",
     },
-    "plugins/shell/plugins/floating-bar": {
-      "name": "@singularity/plugin-shell-floating-bar",
+    "plugins/shell/plugins/global-action-bar": {
+      "name": "@singularity/plugin-shell-global-action-bar",
       "version": "0.0.1",
     },
     "plugins/shell/plugins/notifications": {
@@ -4233,7 +4233,7 @@
 
     "@singularity/plugin-shell-action-bar": ["@singularity/plugin-shell-action-bar@workspace:plugins/shell/plugins/action-bar"],
 
-    "@singularity/plugin-shell-floating-bar": ["@singularity/plugin-shell-floating-bar@workspace:plugins/shell/plugins/floating-bar"],
+    "@singularity/plugin-shell-global-action-bar": ["@singularity/plugin-shell-global-action-bar@workspace:plugins/shell/plugins/global-action-bar"],
 
     "@singularity/plugin-shell-notifications": ["@singularity/plugin-shell-notifications@workspace:plugins/shell/plugins/notifications"],
 

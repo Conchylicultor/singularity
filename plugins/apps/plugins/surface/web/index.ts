@@ -7,10 +7,7 @@ import {
 import { ActionBar } from "@plugins/shell/plugins/action-bar/web";
 import { defineShortcut } from "@plugins/primitives/plugins/shortcuts/web";
 import { SurfaceBody } from "./components/surface-body";
-import {
-  TabBarPlacementControl,
-  ActionBarPlacementControl,
-} from "./components/placement-control";
+import { ActionBarPlacementControl } from "./components/placement-control";
 
 export default {
   description:
@@ -18,11 +15,9 @@ export default {
   contributions: [
     // The single body that lays out every tab by its per-tab placement.
     Apps.Surface({ component: SurfaceBody }),
-    // The in-strip placement control, next to the tab bar `+`.
-    Apps.TabBarActions({ id: "placement-control", component: TabBarPlacementControl }),
-    // The persistent action-bar control (agent-manager toolbar + floating bar),
-    // reachable in every app including a solo (fullscreen) surface.
-    ActionBar.Item({ id: "placement", component: ActionBarPlacementControl }),
+    // The placement control, contributed as a shared action-bar item so it
+    // renders in both the docked tab-bar strip and the floating overlay.
+    ActionBar.Item({ id: "placement-control", component: ActionBarPlacementControl }),
     // Esc exits a solo (fullscreen) tab back to docked.
     defineShortcut({
       id: "surface.exit-solo",

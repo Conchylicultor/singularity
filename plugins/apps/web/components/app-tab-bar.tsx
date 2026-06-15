@@ -133,8 +133,11 @@ export function AppTabBar() {
         size="icon-sm"
         onClick={() => openTab("home", desktopMode ? "floating" : "docked")}
       />
-      {/* Trailing action zone — the `surface` plugin drops its in-strip
-          placement control here, next to `+`. */}
+      {/* Push the trailing action zone to the far right edge so it sits at a
+          fixed corner (like the former floating bar), independent of tab count. */}
+      <div className="flex-1" />
+      {/* Trailing action zone — the `surface` plugin drops its placement control
+          here and the global action bar pins itself to the right edge. */}
       <Apps.TabBarActions.Render />
       {/* Hidden full-label measure strip: drives the collapse decision without
           affecting layout. Mirrors the responsive-overflow primitive's pattern. */}

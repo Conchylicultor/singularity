@@ -1,4 +1,4 @@
-// @hash e8ee9e1602f4
+// @hash 7a0793a5dd61
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -16,6 +16,7 @@
     "improve.element-picker:element-picker",
     "build:build",
     "fullscreen:fullscreen-toggle",
-    "apps.surface:placement"
+    "apps.agent-manager.worktree-switcher:worktree-switcher",
+    "apps.surface:placement-control"
   ]
 }

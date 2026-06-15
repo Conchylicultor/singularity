@@ -1,9 +1,9 @@
-// @hash 01165221b9b1
+// @hash af6b2d6b674f
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.surface:placement-control"
+    "shell.global-action-bar:global-action-bar"
   ]
 }

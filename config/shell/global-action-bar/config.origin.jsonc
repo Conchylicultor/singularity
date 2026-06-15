@@ -1,0 +1,5 @@
+// @hash 293a7e80a4ef
+{
+  // Show the global action bar in the tab bar, surfacing the main actions (Improve, Build, Screenshot, …). Collapses to a status icon that expands on hover; pin it to keep it expanded.
+  "enabled": true
+}

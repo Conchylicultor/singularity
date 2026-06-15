@@ -8,7 +8,7 @@ import { notificationsResource } from "@plugins/shell/plugins/notifications/web"
 
 export type StatusTone = "ok" | "warning" | "destructive";
 
-export interface FloatingBarStatus {
+export interface ActionBarStatus {
   /** True while notifications are still loading — consumer should show a neutral dot. */
   pending: boolean;
   tone: StatusTone;
@@ -18,13 +18,13 @@ export interface FloatingBarStatus {
 
 /**
  * Aggregates the existing "needs attention" signals into a single tone +
- * tooltip for the floating bar's collapsed status dot:
+ * tooltip for the action bar's collapsed status dot:
  *  - server/central WS disconnected → destructive
  *  - reconnecting/connecting        → warning (pulsing)
  *  - frontend rebuilt since load    → warning (stale tab)
  *  - unread error/warning notifs    → warning
  */
-export function useFloatingBarStatus(): FloatingBarStatus {
+export function useActionBarStatus(): ActionBarStatus {
   const { worktree, central } = useNotificationsChannelStatuses();
 
   // Stale-tab detection — frontend rebuilt since this tab loaded.

@@ -334,7 +334,7 @@ No `web/index.ts` or `server/index.ts` required unless the umbrella itself has c
 - Web:
   - Slots: `Core.Root`, `Core.Boot`
 - Cross-plugin:
-  - Slot contributors: `apps`, `command-palette`, `crash`, `endpoint-errors`, `floating-bar`, `google-fonts`, `health`, `model-provider`, `mutation-errors`, `shortcuts`, `slow-ops`, `theme-engine`, `toaster`
+  - Slot contributors: `apps`, `command-palette`, `crash`, `endpoint-errors`, `global-action-bar`, `google-fonts`, `health`, `model-provider`, `mutation-errors`, `shortcuts`, `slow-ops`, `theme-engine`, `toaster`
 - Core:
   - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
   - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`
