@@ -9,7 +9,7 @@ export function GenericAttachmentView({ event }: AttachmentRendererProps) {
 
   return (
     <CollapsibleCard
-      label={<span className="font-mono">attachment:{event.subtype}</span>}
+      label={`attachment:${event.subtype}`}
       trailing={
         <InvestigateEventButton
           label={`attachment:${event.subtype}`}

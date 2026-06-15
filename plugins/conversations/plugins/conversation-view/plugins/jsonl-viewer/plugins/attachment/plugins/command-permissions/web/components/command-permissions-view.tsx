@@ -14,7 +14,7 @@ export function CommandPermissionsView({ event }: AttachmentRendererProps) {
   return (
     <CollapsibleCard
       label={
-        <span className="font-mono">
+        <span>
           Command Permissions{" "}
           <span className="text-muted-foreground/60">({tools.length})</span>
         </span>

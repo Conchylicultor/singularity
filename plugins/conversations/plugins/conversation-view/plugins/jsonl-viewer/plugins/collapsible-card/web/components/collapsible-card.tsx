@@ -59,8 +59,11 @@ export interface CollapsibleCardProps {
 // in a per-family tone. See research/2026-06-12-conversations-transcript-card-design-system.md.
 const CARD_CHROME = "border-border/50 bg-muted/20";
 const ERROR_CARD = "border-destructive/60 bg-destructive/5";
+// font-sans pins one house font for every transcript card title — the header
+// font is a property of the card chrome, not of each renderer. Without it,
+// call sites drifted (some plain strings in sans, some font-mono spans).
 const HEADER =
-  "relative flex w-full items-center gap-sm whitespace-nowrap text-2xs text-muted-foreground hover:text-foreground";
+  "relative flex w-full items-center gap-sm whitespace-nowrap font-sans text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
   label,

@@ -12,7 +12,7 @@ export function UnknownRow({ event }: { event: JsonlEvent }) {
 
   return (
     <CollapsibleCard
-      label={<span className="font-mono">{e.type}</span>}
+      label={e.type}
       trailing={
         <InvestigateEventButton
           label={e.type}
