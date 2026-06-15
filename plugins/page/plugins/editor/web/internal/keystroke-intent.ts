@@ -58,11 +58,6 @@ function hasPrevSibling(nodes: BlockNode[], node: BlockNode): boolean {
   return siblings.findIndex((s) => s.id === node.id) > 0;
 }
 
-function textLengthOf(node: BlockNode): number {
-  const data = node.data as Record<string, unknown> | null | undefined;
-  return data && typeof data.text === "string" ? data.text.length : 0;
-}
-
 function hasExpandedChildren(nodes: BlockNode[], node: BlockNode): boolean {
   return node.expanded && childrenOf(nodes, node.id).length > 0;
 }
@@ -81,17 +76,19 @@ export function resolveKeystroke(
       // Shift+Enter inserts a soft newline (native).
       if (mods.shift) return { type: "passthrough" };
       const position = caret.offset;
+      // Every "is the caret at the end of the block?" decision gates on the live
+      // caret edge (`caret.atEnd`), never the reducer node length: the latter lags
+      // a just-applied markdown conversion (`### ` → heading) by one keystroke,
+      // which would make the very next Enter miss the type swap or the nest.
+      //
       // Honor an explicit contributor `asChild`; otherwise nest the split-off
       // content as the first child only when splitting at the very end of a block
       // that has visible children (Notion's Enter-at-end behavior).
       const asChild =
         ctx.splitOptions?.asChild ??
-        (hasExpandedChildren(ctx.nodes, node) && position === textLengthOf(node));
+        (hasExpandedChildren(ctx.nodes, node) && caret.atEnd);
       // Enter at the END of a block can produce a sibling of a different type
       // (e.g. a heading yields a body paragraph). Mid-block splits keep the type.
-      // Gate on the live caret edge, not the reducer node length: the latter lags
-      // a just-applied markdown conversion (`### ` → heading), which would make the
-      // very next Enter miss the type swap.
       const siblingType =
         !asChild && caret.atEnd ? ctx.splitOptions?.splitInto : undefined;
       return {

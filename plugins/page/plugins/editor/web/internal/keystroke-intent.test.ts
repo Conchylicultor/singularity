@@ -95,8 +95,8 @@ describe("Enter", () => {
   });
 
   test("asChild when splitting at the end of a block with expanded children", () => {
-    // "hello".length === 5; A is expanded with child A1.
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 5 }), ctx("A"));
+    // A is expanded with child A1; the live caret is at the block end.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 5, atEnd: true }), ctx("A"));
     expect(intent).toEqual({
       type: "split",
       position: 5,
@@ -107,8 +107,17 @@ describe("Enter", () => {
   });
 
   test("not asChild when splitting mid-text even with children", () => {
-    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2 }), ctx("A"));
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: false }), ctx("A"));
     expect(intent).toMatchObject({ type: "split", asChild: false });
+  });
+
+  test("asChild gates on the live caret edge, not the stale reducer text length", () => {
+    // Regression: right after a markdown conversion the reducer node text lags the
+    // live editor by one keystroke (node A still reads "hello", len 5), but the
+    // live caret is genuinely at the end (atEnd) at a shorter offset. The nest must
+    // fire off the live edge, not `offset === textLength`.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: true }), ctx("A"));
+    expect(intent).toMatchObject({ type: "split", asChild: true });
   });
 
   test("explicit splitOptions.asChild is honored", () => {
