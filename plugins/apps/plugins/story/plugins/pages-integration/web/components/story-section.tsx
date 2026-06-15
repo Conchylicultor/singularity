@@ -1,4 +1,4 @@
-import { MdAutoStories, MdOpenInNew } from "react-icons/md";
+import { MdOpenInNew } from "react-icons/md";
 import { navigate } from "@plugins/apps/web";
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
@@ -14,9 +14,15 @@ import {
 } from "@plugins/apps/plugins/story/plugins/render/web";
 
 /**
- * Embedded story surface in the Pages page-detail pane. When the page is a story
- * it shows a renderer picker, a live preview, and a link out to the focused Story
- * Builder editor; otherwise a subtle "Make this a story" affordance.
+ * Embedded story surface in the Pages page-detail pane. Renders only for pages
+ * that are already stories — a renderer picker, a live preview, and a link out
+ * to the focused Story Builder editor.
+ *
+ * Converting a plain page into a story is intentionally NOT offered here: a
+ * body-level "Make this a story" button read as a debug affordance leaking onto
+ * every clean document. Conversion lives in the contextual page-tree row action
+ * (`UpgradeAction`, the sidebar's per-page menu), mirroring how Notion keeps
+ * page-level conversions in the sidebar rather than the document body.
  *
  * No local state: `markStory`/`unmarkStory` notify `storiesResource`, so the
  * picked renderer (persisted as the marker's `defaultRendererId`) flows straight
@@ -26,25 +32,13 @@ export function StorySection({ pageId }: { pageId: string }) {
   const storiesRes = useStories();
   const renderers = Story.Renderer.useContributions();
 
-  // Hold the section until the marker set resolves — flashing the "Make this a
-  // story" affordance before flipping to the preview would be jarring.
   if (storiesRes.pending) return null;
 
   const mark = storiesRes.data.find((m) => m.pageId === pageId) ?? null;
 
-  if (!mark) {
-    return (
-      <Button
-        variant="ghost"
-        size="xs"
-        className="text-muted-foreground self-start"
-        onClick={() => markStory(pageId)}
-      >
-        <MdAutoStories className="size-4" />
-        Make this a story
-      </Button>
-    );
-  }
+  // Non-story pages show nothing here — conversion is offered through the
+  // page-tree row action, not as a body affordance on the document.
+  if (!mark) return null;
 
   // Embedded preview falls back to the first contributed renderer when the story
   // has no saved default, so it shows something useful immediately (the picker
