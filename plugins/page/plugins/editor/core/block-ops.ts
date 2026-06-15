@@ -386,8 +386,23 @@ function applyInsert(
     newParentId = op.parentId ?? null;
     const lastChild = lastOf(childrenOf(blocks, newParentId));
     newRank = Rank.between(lastChild ? Rank.from(lastChild.rank) : null, null);
+    // Denormalized nearest page ancestor — same rule as the server's
+    // `computePageId`. The reducer runs over a single page's *content* forest
+    // (`loadPageBlocks` excludes the page row itself), so:
+    //   - parent found, is a (sub-)page node → that page's id;
+    //   - parent found, content block        → inherit its pageId;
+    //   - parent NOT in the forest           → its id IS the page (a top-level
+    //     insert is parented to the page row, which is excluded), so the new
+    //     block's nearest page ancestor is `newParentId`;
+    //   - no parent at all (root insert)     → null.
+    // Using `parent.pageId` unconditionally dropped a top-level block's pageId to
+    // null (a page's own pageId is null), hiding it from the page-scoped query.
     const parent = newParentId ? byId(blocks, newParentId) : undefined;
-    pageId = parent ? parent.pageId : null;
+    pageId = parent
+      ? parent.type === PAGE_BLOCK_TYPE
+        ? parent.id
+        : parent.pageId
+      : newParentId;
   }
 
   // Open the parent (if any) so the new block is visible.

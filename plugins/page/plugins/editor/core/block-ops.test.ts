@@ -376,6 +376,26 @@ describe("insert", () => {
     expect(ids(out, null)).toEqual(["A", "NEW"]);
     expect(out.find((b) => b.id === "NEW")!.pageId).toBe(null);
   });
+
+  test("append under the page row (excluded from the content forest) → pageId is the page id, not null", () => {
+    // The reducer runs over `loadPageBlocks(pageId)` — the page's content blocks,
+    // which does NOT include the page row itself. A top-level insert is parented
+    // to that absent page row, so the new block's nearest page ancestor is the
+    // parentId. Using `parent.pageId` (parent not found → null) hid the block
+    // from the page-scoped query on reload.
+    const blocks = [mk("A", "PAGE", a, { pageId: "PAGE" })];
+    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", parentId: "PAGE" });
+    expect(out.find((b) => b.id === "NEW")!.pageId).toBe("PAGE");
+  });
+
+  test("append under an in-forest sub-page node → pageId is that sub-page's id", () => {
+    // A sub-page (type="page") nested inside this page IS in the forest; its
+    // children are scoped to the sub-page itself (parent.id), mirroring
+    // computePageId / insertForest.
+    const blocks = [mk("SUB", null, a, { type: "page", pageId: "PAGE" })];
+    const out = run(blocks, { kind: "insert", newId: "NEW", type: "text", parentId: "SUB" });
+    expect(out.find((b) => b.id === "NEW")!.pageId).toBe("SUB");
+  });
 });
 
 // ---------------------------------------------------------------------------

@@ -1,0 +1,26 @@
+import { z } from "zod";
+import { MdLightbulb } from "react-icons/md";
+import { defineBlock, SvgNodeSchema } from "@plugins/page/plugins/editor/core";
+
+export const CALLOUT_COLORS = ["default", "info", "success", "warning", "danger"] as const;
+export type CalloutColor = (typeof CALLOUT_COLORS)[number];
+
+export const calloutDataSchema = z.object({
+  text: z.string().default(""),
+  // Material Design icon key (highlights the current icon in the picker grid).
+  icon: z.string().nullable().default(null),
+  // The icon's extracted SVG child-tree, rendered without importing any icon module.
+  iconSvgNodes: z.array(SvgNodeSchema).nullable().default(null),
+  // Semantic tint; maps to theme color tokens in the web renderer.
+  color: z.enum(CALLOUT_COLORS).default("default"),
+});
+
+export const calloutBlock = defineBlock({
+  type: "callout",
+  schema: calloutDataSchema,
+  label: "Callout",
+  icon: MdLightbulb,
+  aliases: ["note", "info", "warning", "tip", "aside", "highlight", "banner"],
+  empty: () => ({ text: "", icon: null, iconSvgNodes: null, color: "default" as CalloutColor }),
+  placeholder: "Type something…",
+});

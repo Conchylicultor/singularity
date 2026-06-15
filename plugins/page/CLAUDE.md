@@ -7,6 +7,7 @@
 - Description: Block-based page editor.
 - Sub-plugins:
   - **`bulleted-list`** — Bulleted-list block type for the page editor.
+  - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.
   - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
   - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
