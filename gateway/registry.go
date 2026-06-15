@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -35,7 +36,7 @@ func NewRegistry(cfg *Config) *Registry {
 }
 
 // HasName reports whether a worktree with the given name is registered.
-// Used by sweepStaleSockets to identify orphan socket files.
+// Used by reconcileOrphanBackends to classify orphan socket files.
 func (r *Registry) HasName(name string) bool {
 	r.mu.RLock()
 	defer r.mu.RUnlock()
@@ -319,39 +320,122 @@ func legacyNameFromPath(p string) string {
 	return strings.TrimSuffix(filepath.Base(p), ".json")
 }
 
-// sweepStaleSockets removes any *.sock file in dir whose stem is not a
-// registered worktree. Cosmetic — per-spawn unlink-before-bind already
-// covers the normal case. This catches orphans left after a worktree's
-// JSON manifest was removed while its socket file lingered.
-func sweepStaleSockets(dir string, reg *Registry) {
+const (
+	reconcileDialTimeout = 300 * time.Millisecond
+	reconcileKillGrace   = 2 * time.Second
+	reconcileConcurrency = 8
+)
+
+// socketStem derives the worktree name from a <name>.sock or <name>.next.sock
+// filename.
+func socketStem(name string) string {
+	if s, ok := strings.CutSuffix(name, ".next.sock"); ok {
+		return s
+	}
+	return strings.TrimSuffix(name, ".sock")
+}
+
+// reconcileOrphanBackends asserts the gateway's ownership invariant at boot:
+// since the gateway has spawned ZERO backends at this point, any process still
+// bound to a worktree socket is an orphan from a prior gateway generation and
+// must be reaped. It supersedes the old name-based stale-socket sweep —
+// crucially, it does NOT skip registered worktrees (a registered worktree with
+// a live orphan socket is exactly the leak this fixes).
+//
+// MUST run synchronously before the watcher/sweep/eager-central goroutines
+// start (see main.go) — the "zero backends yet" invariant evaporates the instant
+// the gateway begins spawning, so this is safe only at boot and is never run
+// periodically.
+//
+// Per socket: a bare connect is the liveness gate (a wedged-but-bound backend
+// still completes the connection — and we want to reap it). Not live → remove
+// the socket + pid sidecar. Live + sidecar → kill the recorded process group,
+// then remove. Live + no sidecar (legacy backend predating the sidecar) → log
+// loudly and leave it; the per-spawn unlink and the backend's own ppid-poll
+// escape hatch clean it up.
+func reconcileOrphanBackends(dir string, reg *Registry) {
 	entries, err := os.ReadDir(dir)
 	if err != nil {
 		slog.Warn("sockets dir scan failed", "dir", dir, "err", err)
 		return
 	}
-	removed := 0
+
+	sockets := make(map[string]bool)
+	var wg sync.WaitGroup
+	sem := make(chan struct{}, reconcileConcurrency)
 	for _, e := range entries {
 		name := e.Name()
 		if !strings.HasSuffix(name, ".sock") {
 			continue
 		}
-		// Derive worktree name from either <name>.sock or <name>.next.sock.
-		var stem string
-		if s, ok := strings.CutSuffix(name, ".next.sock"); ok {
-			stem = s
-		} else {
-			stem = strings.TrimSuffix(name, ".sock")
-		}
-		if reg.HasName(stem) {
-			continue
-		}
+		sockets[name] = true
 		path := filepath.Join(dir, name)
-		if err := os.Remove(path); err != nil {
-			slog.Warn("orphan socket remove failed", "path", path, "err", err)
+		stem := socketStem(name)
+		wg.Add(1)
+		sem <- struct{}{}
+		go func(path, stem string) {
+			defer wg.Done()
+			defer func() { <-sem }()
+			reconcileOneSocket(path, stem, reg)
+		}(path, stem)
+	}
+	wg.Wait()
+
+	// GC orphan *.pid sidecars whose socket file is already gone (the live
+	// branches above remove sidecars alongside their sockets, so those are
+	// already handled).
+	for _, e := range entries {
+		name := e.Name()
+		if !strings.HasSuffix(name, ".pid") {
 			continue
 		}
-		removed++
-		slog.Info("orphan socket removed", "path", path)
+		sockName := strings.TrimSuffix(name, ".pid")
+		if sockets[sockName] {
+			continue
+		}
+		if _, statErr := os.Stat(filepath.Join(dir, sockName)); errors.Is(statErr, os.ErrNotExist) {
+			p := filepath.Join(dir, name)
+			if rmErr := os.Remove(p); rmErr != nil && !errors.Is(rmErr, os.ErrNotExist) {
+				slog.Warn("remove orphan sidecar failed", "path", p, "err", rmErr)
+			} else {
+				slog.Info("removed orphan pid sidecar", "path", p)
+			}
+		}
 	}
-	slog.Info("socket sweep complete", "removed", removed, "dir", dir)
+
+	slog.Info("orphan reconcile complete", "dir", dir)
+}
+
+func reconcileOneSocket(path, stem string, reg *Registry) {
+	registered := reg.HasName(stem)
+	if !backendListening(path) {
+		// Nothing bound — stale socket file. Remove socket + sidecar.
+		_ = removeBackendArtifacts(path)
+		slog.Info("removed stale socket", "path", path, "registered", registered)
+		return
+	}
+	// A process is bound at boot: an orphan from a prior gateway generation.
+	sc, err := readBackendSidecar(path)
+	if err != nil || sc == nil {
+		slog.Error("live orphan backend with no pid record; reap manually (lsof -U / kill)",
+			"path", path, "registered", registered, "err", err)
+		return
+	}
+	slog.Warn("reaping orphan backend from prior gateway generation",
+		"path", path, "pid", sc.PID, "pgid", sc.PGID, "wallStart", sc.WallStart, "registered", registered)
+	reapPgid(sc.PGID, sc.PID, reconcileKillGrace, path)
+	_ = removeBackendArtifacts(path)
+}
+
+// backendListening reports whether a process is bound to the Unix socket. A bare
+// connect suffices: the kernel completes it into the listen backlog even if the
+// backend's event loop is wedged and never accept()s — which is precisely a case
+// we want to treat as "live, reap it".
+func backendListening(socketPath string) bool {
+	c, err := net.DialTimeout("unix", socketPath, reconcileDialTimeout)
+	if err != nil {
+		return false
+	}
+	_ = c.Close()
+	return true
 }

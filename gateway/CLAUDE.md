@@ -128,12 +128,17 @@ The gateway expects backends to:
 
 In Bun: `Bun.serve({ unix: process.env.SOCKET_PATH, fetch, websocket })`. There is no standalone dev mode — the backend is always spawned by the gateway.
 
-## Stale-socket cleanup
+## Orphan-backend reaping & stale-socket cleanup
 
-Two layers, both gateway-side:
+The gateway owns backend lifecycles, but tracks live backends only in memory — so a gateway crash/restart (or `./singularity start` re-launch) could leave the previous generation's backends orphaned. Cleanup has three layers:
 
-1. **Per-spawn unlink-before-bind** — `os.Remove(socketPath)` immediately before each spawn. Handles the case where a previous process crashed and left a socket file behind.
-2. **Boot sweep** — at gateway startup, any `*.sock` or `*.next.sock` file under `~/.singularity/sockets/` whose worktree name isn't registered gets removed. Cosmetic; prevents accumulation when worktrees are deleted while their socket lingers.
+1. **Durable pid sidecar** — at spawn, `startBackend` writes `<socket>.pid` (JSON: `pid`, `pgid`, `wallStart`, `worktree`) next to the socket, atomically (temp + rename). It is removed with the socket everywhere via `removeBackendArtifacts(socketPath)` (socket-first, then sidecar). This makes the gateway's ownership of a backend survive its own restart.
+2. **Per-spawn unlink-before-bind** — `removeBackendArtifacts(socketPath)` immediately before each spawn, clearing any socket + sidecar a crashed predecessor left on that path.
+3. **Boot reconcile** (`reconcileOrphanBackends`, replaces the old name-based `sweepStaleSockets`) — runs once at startup, **before** any backend is spawned, so the gateway owns zero backends and *any* process still bound to a worktree socket is an orphan from a prior generation. Per socket: a bare `net.Dial` is the liveness gate (a wedged-but-bound backend still completes the connect — reap it). **Not live** → remove socket + sidecar (covers registered worktrees too — this is what fixes a lingering `<name>.next.sock` with no live process). **Live + sidecar** → kill the recorded process group (SIGTERM → grace → SIGKILL, ESRCH-tolerant), then remove. **Live + no sidecar** (legacy backend) → log loudly and leave it.
+
+This boot reconcile is the authoritative path and must stay before the watcher/sweep/eager-central goroutines in `main.go` (the "zero backends yet" invariant). It is **boot-only** — a periodic reconcile would risk killing the gateway's own live backends and is unnecessary, since intra-generation teardown is handled by `drainAndStop`/`Stop`.
+
+The backend's own ppid-poll escape hatch (`server-core/bin/index.ts` — self-exit when reparented to PID 1) is kept as complementary defense-in-depth: it reaps the one case the dir-scan reconcile cannot see — a live backend whose socket file was already unlinked by a later cold-start — and orphans left while the gateway stays down.
 
 ## Path-length limit
 

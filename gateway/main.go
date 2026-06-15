@@ -94,7 +94,12 @@ func main() {
 		slog.Error("registry load failed", "err", err)
 		os.Exit(1)
 	}
-	sweepStaleSockets(cfg.SocketsDir, reg)
+	// Reap orphan backends left by a prior gateway generation. MUST run here —
+	// after the registry is loaded but BEFORE the watcher/sweep goroutines and
+	// the eager-central spawn below — because it relies on the gateway having
+	// spawned zero backends yet (so any live socket is a prior-generation
+	// orphan). Do not move it after anything that can start a backend.
+	reconcileOrphanBackends(cfg.SocketsDir, reg)
 
 	routes := NewCentralRoutesStore(cfg.CentralRoutesFile)
 	home, _ := os.UserHomeDir()

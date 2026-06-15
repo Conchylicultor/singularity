@@ -3,6 +3,7 @@ package main
 import (
 	"bufio"
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"io"
@@ -299,13 +300,13 @@ func (w *Worktree) Ensure(ctx context.Context) (*backend, error) {
 
 	if spawnErr != nil {
 		wrapped := fmt.Errorf("%w: %v", ErrSpawnFailed, spawnErr)
-		// Kill if the process started; wait for the exit goroutine to close exitCh.
+		// Kill if the process started; wait (bounded) for the exit goroutine.
 		if bk != nil && bk.cmd != nil && bk.cmd.Process != nil {
-			killGroup(bk.cmd, syscall.SIGKILL)
-			<-bk.exitCh
+			signalBackend(bk, syscall.SIGKILL, w.Name)
+			waitBackendExit(bk, w.Name, postKillTimeout)
 		}
 		if bk != nil {
-			_ = os.Remove(bk.socketPath)
+			_ = removeBackendArtifacts(bk.socketPath)
 		}
 		w.mu.Lock()
 		w.active = nil
@@ -341,6 +342,12 @@ func (w *Worktree) snapshotAfterSpawn() (*backend, error) {
 }
 
 const drainTimeout = 30 * time.Second
+
+// postKillTimeout bounds the wait for a backend to exit after SIGKILL. The kill
+// can silently fail to land (e.g. EPERM, or a wedged group), and the exit
+// goroutine that closes bk.exitCh would then never fire — an unbounded receive
+// would hang the calling goroutine forever. Cap it and log loudly instead.
+const postKillTimeout = 3 * time.Second
 
 // Restart performs a zero-downtime restart: spawns a new backend on the
 // alternate socket, waits for it to be ready, atomically swaps the proxy
@@ -384,11 +391,11 @@ func (w *Worktree) Restart(ctx context.Context) error {
 	// --- Step 4 (failure): keep old backend, revert state ---
 	if spawnErr != nil {
 		if newBk != nil && newBk.cmd != nil && newBk.cmd.Process != nil {
-			_ = killGroup(newBk.cmd, syscall.SIGKILL)
-			<-newBk.exitCh
+			signalBackend(newBk, syscall.SIGKILL, w.Name)
+			waitBackendExit(newBk, w.Name, postKillTimeout)
 		}
 		if newBk != nil {
-			_ = os.Remove(newBk.socketPath)
+			_ = removeBackendArtifacts(newBk.socketPath)
 		}
 		w.mu.Lock()
 		if w.state == StateRestarting {
@@ -433,15 +440,15 @@ func (w *Worktree) drainAndStop(bk *backend) {
 			"worktree", w.Name, "wsConns", n)
 	}
 	if bk.cmd != nil && bk.cmd.Process != nil {
-		_ = killGroup(bk.cmd, syscall.SIGTERM)
+		signalBackend(bk, syscall.SIGTERM, w.Name)
 		select {
 		case <-bk.exitCh:
 		case <-time.After(w.cfg.ShutdownGrace):
-			_ = killGroup(bk.cmd, syscall.SIGKILL)
-			<-bk.exitCh
+			signalBackend(bk, syscall.SIGKILL, w.Name)
+			waitBackendExit(bk, w.Name, postKillTimeout)
 		}
 	}
-	_ = os.Remove(bk.socketPath)
+	_ = removeBackendArtifacts(bk.socketPath)
 	slog.Info("hot restart: old backend drained and stopped",
 		"worktree", w.Name, "socket", bk.socketPath)
 }
@@ -483,17 +490,17 @@ func (w *Worktree) Stop(ctx context.Context) error {
 	w.mu.Unlock()
 
 	if bk != nil && bk.cmd != nil && bk.cmd.Process != nil {
-		_ = killGroup(bk.cmd, syscall.SIGTERM)
+		signalBackend(bk, syscall.SIGTERM, w.Name)
 		select {
 		case <-bk.exitCh:
 		case <-time.After(w.cfg.ShutdownGrace):
-			_ = killGroup(bk.cmd, syscall.SIGKILL)
-			<-bk.exitCh
+			signalBackend(bk, syscall.SIGKILL, w.Name)
+			waitBackendExit(bk, w.Name, postKillTimeout)
 		}
 	}
 
 	if bk != nil {
-		_ = os.Remove(bk.socketPath)
+		_ = removeBackendArtifacts(bk.socketPath)
 	}
 	w.mu.Lock()
 	w.active = nil
@@ -565,7 +572,8 @@ func (w *Worktree) ShouldSweep(idleTimeout time.Duration) bool {
 // Returns a *backend with cmd and exitCh populated; proxy is nil until the
 // caller confirms readiness and calls newReverseProxy.
 func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error) {
-	if err := os.Remove(socketPath); err != nil && !errors.Is(err, os.ErrNotExist) {
+	// Clear any stale socket + pid sidecar a crashed predecessor left on this path.
+	if err := removeBackendArtifacts(socketPath); err != nil {
 		return nil, fmt.Errorf("unlink stale socket: %w", err)
 	}
 
@@ -591,6 +599,13 @@ func (w *Worktree) startBackend(spec *Spec, socketPath string) (*backend, error)
 	w.logBuf.Append("gateway", marker, now.UnixMilli())
 	if err := cmd.Start(); err != nil {
 		return nil, err
+	}
+
+	// Record a durable pid sidecar next to the socket so a future gateway
+	// generation can reap this backend if we die before stopping it. Best-effort:
+	// a missing sidecar degrades to the reconcile's "live, no record" branch.
+	if err := writeBackendSidecar(socketPath, w.Name, cmd); err != nil {
+		slog.Warn("write pid sidecar failed", "worktree", w.Name, "socket", socketPath, "err", err)
 	}
 
 	bk := &backend{
@@ -628,7 +643,7 @@ func (w *Worktree) onBackendExit(bk *backend, err error) {
 	}
 
 	slog.Warn("backend exited unexpectedly", "worktree", w.Name, "err", err)
-	_ = os.Remove(bk.socketPath)
+	_ = removeBackendArtifacts(bk.socketPath)
 
 	w.mu.Lock()
 	defer w.mu.Unlock()
@@ -679,13 +694,151 @@ func waitReady(socketPath string, timeout time.Duration, exitCh <-chan struct{})
 	return fmt.Errorf("readiness timeout after %s", timeout)
 }
 
-// killGroup sends a signal to the process group of cmd, so backends that
-// spawn children (like terminal PTYs) clean up too.
+// killPgid sends a signal to a whole process group (negative pid), so backends
+// that spawn children (like terminal PTYs) clean up too. The backend is the
+// group leader (spawned with Setpgid), so pgid == its pid.
+func killPgid(pgid int, sig syscall.Signal) error {
+	return syscall.Kill(-pgid, sig)
+}
+
+// killGroup signals the process group of cmd.
 func killGroup(cmd *exec.Cmd, sig syscall.Signal) error {
 	if cmd == nil || cmd.Process == nil {
 		return nil
 	}
-	return syscall.Kill(-cmd.Process.Pid, sig)
+	return killPgid(cmd.Process.Pid, sig)
+}
+
+// signalBackend sends sig to the backend's process group and logs any error
+// other than ESRCH (the process is already gone — a benign no-op). Callers
+// proceed to wait on exitCh regardless.
+func signalBackend(bk *backend, sig syscall.Signal, worktree string) {
+	if err := killGroup(bk.cmd, sig); err != nil && !errors.Is(err, syscall.ESRCH) {
+		slog.Warn("signal backend failed",
+			"worktree", worktree, "signal", sig.String(), "pid", backendPID(bk), "err", err)
+	}
+}
+
+// waitBackendExit blocks until the backend's cmd.Wait goroutine closes exitCh,
+// bounded by timeout. Without the bound, a kill that never lands would hang the
+// caller forever; we cap it and log loudly so the leak is visible.
+func waitBackendExit(bk *backend, worktree string, timeout time.Duration) {
+	select {
+	case <-bk.exitCh:
+	case <-time.After(timeout):
+		slog.Error("backend did not exit after SIGKILL; possible leak",
+			"worktree", worktree, "socket", bk.socketPath, "pid", backendPID(bk))
+	}
+}
+
+// backendPID returns the backend's pid for logging, or -1 if unknown.
+func backendPID(bk *backend) int {
+	if bk == nil || bk.cmd == nil || bk.cmd.Process == nil {
+		return -1
+	}
+	return bk.cmd.Process.Pid
+}
+
+// processAlive reports whether pid names a live process (signal-0 probe).
+// EPERM means it exists but we can't signal it (still "alive"); ESRCH means gone.
+func processAlive(pid int) bool {
+	err := syscall.Kill(pid, 0)
+	return err == nil || errors.Is(err, syscall.EPERM)
+}
+
+// reapPgid terminates an orphaned backend's process group: SIGTERM, wait up to
+// grace for the leader to vanish, then SIGKILL. ESRCH at any step is success
+// (already gone). Used by the boot reconcile, which knows only the sidecar pid.
+func reapPgid(pgid, leaderPid int, grace time.Duration, label string) {
+	if !processAlive(leaderPid) {
+		return
+	}
+	if err := killPgid(pgid, syscall.SIGTERM); err != nil && !errors.Is(err, syscall.ESRCH) {
+		slog.Warn("orphan SIGTERM failed", "label", label, "pgid", pgid, "err", err)
+	}
+	deadline := time.Now().Add(grace)
+	for time.Now().Before(deadline) {
+		if !processAlive(leaderPid) {
+			return
+		}
+		time.Sleep(50 * time.Millisecond)
+	}
+	if !processAlive(leaderPid) {
+		return
+	}
+	if err := killPgid(pgid, syscall.SIGKILL); err != nil && !errors.Is(err, syscall.ESRCH) {
+		slog.Error("orphan SIGKILL failed; possible leak", "label", label, "pgid", pgid, "err", err)
+	}
+}
+
+// ─── backend pid sidecar ─────────────────────────────────────
+//
+// A small durable record written next to each socket at spawn so the gateway's
+// ownership of a backend survives its own restart. The socket file's presence
+// is the trigger for reconcile; the sidecar carries the pid to reap.
+
+type backendSidecar struct {
+	PID       int    `json:"pid"`
+	PGID      int    `json:"pgid"`
+	WallStart string `json:"wallStart"`
+	Worktree  string `json:"worktree"`
+}
+
+func sidecarPath(socketPath string) string { return socketPath + ".pid" }
+
+// writeBackendSidecar atomically writes the pid record for a freshly-spawned
+// backend. pgid == pid because the backend is its own group leader (Setpgid).
+func writeBackendSidecar(socketPath, worktree string, cmd *exec.Cmd) error {
+	if cmd == nil || cmd.Process == nil {
+		return errors.New("no process to record")
+	}
+	pid := cmd.Process.Pid
+	data, err := json.Marshal(backendSidecar{
+		PID:       pid,
+		PGID:      pid,
+		WallStart: time.Now().UTC().Format(time.RFC3339),
+		Worktree:  worktree,
+	})
+	if err != nil {
+		return err
+	}
+	tmp := sidecarPath(socketPath) + ".tmp"
+	if err := os.WriteFile(tmp, data, 0o644); err != nil {
+		return err
+	}
+	return os.Rename(tmp, sidecarPath(socketPath))
+}
+
+// readBackendSidecar reads and validates the pid record for a socket.
+func readBackendSidecar(socketPath string) (*backendSidecar, error) {
+	data, err := os.ReadFile(sidecarPath(socketPath))
+	if err != nil {
+		return nil, err
+	}
+	var sc backendSidecar
+	if err := json.Unmarshal(data, &sc); err != nil {
+		return nil, err
+	}
+	if sc.PID <= 0 || sc.PGID <= 0 {
+		return nil, fmt.Errorf("invalid sidecar: pid=%d pgid=%d", sc.PID, sc.PGID)
+	}
+	return &sc, nil
+}
+
+// removeBackendArtifacts removes a backend's socket file then its pid sidecar.
+// Socket-first is crash-safe: a leftover sidecar with no socket is reaped by the
+// reconcile's dial gate, whereas a leftover socket with no sidecar degrades to
+// the recoverable "live, no record" branch. Missing files are not an error;
+// only a socket-removal failure (which would block a rebind) is returned.
+func removeBackendArtifacts(socketPath string) error {
+	sockErr := os.Remove(socketPath)
+	if sockErr != nil && errors.Is(sockErr, os.ErrNotExist) {
+		sockErr = nil
+	}
+	if err := os.Remove(sidecarPath(socketPath)); err != nil && !errors.Is(err, os.ErrNotExist) {
+		slog.Warn("remove pid sidecar failed", "path", sidecarPath(socketPath), "err", err)
+	}
+	return sockErr
 }
 
 // newReverseProxy builds a reverse proxy that dials the backend's Unix socket.

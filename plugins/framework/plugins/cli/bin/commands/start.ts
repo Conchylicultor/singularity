@@ -182,9 +182,23 @@ export function registerStart(program: Command) {
         console.log(`Stopping existing gateway (PID ${existingPid})...`);
         try {
           process.kill(existingPid!, "SIGTERM");
-          await Bun.sleep(2000);
         // eslint-disable-next-line promise-safety/no-bare-catch
         } catch {}
+        // Wait for the old gateway to actually exit before spawning the
+        // replacement. A fixed sleep let the old gateway keep tearing down its
+        // backends while the new one booted and ran its orphan reconcile —
+        // overlapping generations, the routine trigger for orphaned backends.
+        // Poll until the pid is gone, bounded to the gateway's own 15s shutdown
+        // budget.
+        const stopDeadline = Date.now() + 15_000;
+        while (isRunning(existingPid!) && Date.now() < stopDeadline) {
+          await Bun.sleep(100);
+        }
+        if (isRunning(existingPid!)) {
+          console.warn(
+            `Existing gateway (PID ${existingPid}) still running after 15s; continuing.`,
+          );
+        }
       }
 
       const repoRoot = await getMainRepoRoot();

@@ -8,8 +8,10 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"os"
+	"os/exec"
 	"path/filepath"
 	"strings"
+	"syscall"
 	"testing"
 	"time"
 )
@@ -111,11 +113,15 @@ func TestNewReverseProxyOverUDS(t *testing.T) {
 	}
 }
 
-func TestSweepStaleSockets(t *testing.T) {
-	dir := t.TempDir()
-	mustTouch(t, filepath.Join(dir, "alive.sock"))
-	mustTouch(t, filepath.Join(dir, "alive.next.sock"))
-	mustTouch(t, filepath.Join(dir, "orphan.sock"))
+// TestReconcileRemovesDeadSockets covers the incident regression: a socket file
+// with no live listener is removed even for a REGISTERED worktree (the old
+// name-based sweep kept registered sockets, which is how a `.next.sock`-only
+// leftover lingered). Non-.sock files are untouched.
+func TestReconcileRemovesDeadSockets(t *testing.T) {
+	dir := shortTempDir(t)
+	mustTouch(t, filepath.Join(dir, "alive.sock"))      // registered, but no listener → dead
+	mustTouch(t, filepath.Join(dir, "alive.next.sock")) // the incident's leftover
+	mustTouch(t, filepath.Join(dir, "orphan.sock"))     // unregistered, no listener
 	mustTouch(t, filepath.Join(dir, "orphan.next.sock"))
 	mustTouch(t, filepath.Join(dir, "ignore.txt"))
 
@@ -127,22 +133,101 @@ func TestSweepStaleSockets(t *testing.T) {
 	}
 	reg.byName["alive"] = wt
 
-	sweepStaleSockets(dir, reg)
+	reconcileOrphanBackends(dir, reg)
 
-	if _, err := os.Stat(filepath.Join(dir, "alive.sock")); err != nil {
-		t.Fatalf("alive.sock should remain: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "alive.next.sock")); err != nil {
-		t.Fatalf("alive.next.sock should remain: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "orphan.sock")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("orphan.sock should be removed; stat err: %v", err)
-	}
-	if _, err := os.Stat(filepath.Join(dir, "orphan.next.sock")); !errors.Is(err, os.ErrNotExist) {
-		t.Fatalf("orphan.next.sock should be removed; stat err: %v", err)
+	for _, dead := range []string{"alive.sock", "alive.next.sock", "orphan.sock", "orphan.next.sock"} {
+		if _, err := os.Stat(filepath.Join(dir, dead)); !errors.Is(err, os.ErrNotExist) {
+			t.Fatalf("%s should be removed (no listener); stat err: %v", dead, err)
+		}
 	}
 	if _, err := os.Stat(filepath.Join(dir, "ignore.txt")); err != nil {
-		t.Fatalf("ignore.txt should remain (only *.sock is swept): %v", err)
+		t.Fatalf("ignore.txt should remain (only *.sock is reconciled): %v", err)
+	}
+}
+
+// TestReconcileReapsLiveOrphan covers the core fix: a live backend bound to a
+// socket with a pid sidecar is killed and its artifacts removed. A real child
+// process in its own group stands in for the orphan; a separate listener makes
+// the liveness gate fire.
+func TestReconcileReapsLiveOrphan(t *testing.T) {
+	dir := shortTempDir(t)
+	sockPath := filepath.Join(dir, "wt.sock")
+	l, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("listen unix: %v", err)
+	}
+	t.Cleanup(func() { _ = l.Close() })
+
+	cmd := exec.Command("sleep", "60")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := cmd.Start(); err != nil {
+		t.Fatalf("start sleep: %v", err)
+	}
+	pid := cmd.Process.Pid
+	// Reap the zombie when our child dies so processAlive() sees it gone (in
+	// production the orphan is launchd's child and is reaped immediately).
+	go func() { _ = cmd.Wait() }()
+	t.Cleanup(func() { _ = cmd.Process.Kill() })
+
+	if err := writeBackendSidecar(sockPath, "wt", cmd); err != nil {
+		t.Fatalf("writeBackendSidecar: %v", err)
+	}
+
+	cfg := &Config{SocketsDir: dir}
+	reg := NewRegistry(cfg)
+	reconcileOrphanBackends(dir, reg)
+
+	waitGone(t, pid, 3*time.Second)
+	if _, err := os.Stat(sockPath); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("socket should be removed after reap; stat err: %v", err)
+	}
+	if _, err := os.Stat(sockPath + ".pid"); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("sidecar should be removed after reap; stat err: %v", err)
+	}
+}
+
+// TestReconcileLeavesLiveBackendWithoutSidecar: a live socket with no pid record
+// (legacy backend) is left in place — we can't safely identify the pid to kill.
+func TestReconcileLeavesLiveBackendWithoutSidecar(t *testing.T) {
+	dir := shortTempDir(t)
+	sockPath := filepath.Join(dir, "legacy.sock")
+	l, err := net.Listen("unix", sockPath)
+	if err != nil {
+		t.Fatalf("listen unix: %v", err)
+	}
+	t.Cleanup(func() { _ = l.Close() })
+
+	cfg := &Config{SocketsDir: dir}
+	reconcileOrphanBackends(dir, NewRegistry(cfg))
+
+	if _, err := os.Stat(sockPath); err != nil {
+		t.Fatalf("live socket without sidecar should remain: %v", err)
+	}
+}
+
+// TestReconcileGCsOrphanSidecar: a *.pid whose socket is already gone is removed.
+func TestReconcileGCsOrphanSidecar(t *testing.T) {
+	dir := shortTempDir(t)
+	orphanPid := filepath.Join(dir, "gone.sock.pid")
+	mustTouch(t, orphanPid)
+
+	cfg := &Config{SocketsDir: dir}
+	reconcileOrphanBackends(dir, NewRegistry(cfg))
+
+	if _, err := os.Stat(orphanPid); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("orphan sidecar should be GC'd; stat err: %v", err)
+	}
+}
+
+// TestWaitBackendExitBounded proves the previously-unbounded post-SIGKILL wait
+// now returns within the timeout when exitCh never closes (Leak 1).
+func TestWaitBackendExitBounded(t *testing.T) {
+	bk := &backend{exitCh: make(chan struct{}), socketPath: "/tmp/never.sock"}
+	start := time.Now()
+	waitBackendExit(bk, "t", 100*time.Millisecond)
+	elapsed := time.Since(start)
+	if elapsed < 80*time.Millisecond || elapsed > time.Second {
+		t.Fatalf("waitBackendExit should return ~100ms, took %v", elapsed)
 	}
 }
 
@@ -374,6 +459,19 @@ func shortTempDir(t *testing.T) string {
 	}
 	t.Cleanup(func() { _ = os.RemoveAll(dir) })
 	return dir
+}
+
+// waitGone blocks until pid is no longer a live process, or fails after timeout.
+func waitGone(t *testing.T, pid int, timeout time.Duration) {
+	t.Helper()
+	deadline := time.Now().Add(timeout)
+	for time.Now().Before(deadline) {
+		if err := syscall.Kill(pid, 0); errors.Is(err, syscall.ESRCH) {
+			return
+		}
+		time.Sleep(20 * time.Millisecond)
+	}
+	t.Fatalf("pid %d still alive after %s", pid, timeout)
 }
 
 func mustTouch(t *testing.T, path string) {
