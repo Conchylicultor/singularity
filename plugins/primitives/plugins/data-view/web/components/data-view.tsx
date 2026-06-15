@@ -39,9 +39,24 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     viewOptions,
     hierarchy,
     selection,
+    itemActions,
   } = props;
 
   const contributions = DataViewSlots.View.useContributions();
+
+  // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
+  // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use
+  // it for a correct per-row `hasChildren`; the tree uses its own node count.
+  const hasChildren = useMemo(() => {
+    const parents = new Set<string>();
+    if (hierarchy) {
+      for (const row of rows) {
+        const pid = hierarchy.getParentId(row);
+        if (pid != null) parents.add(pid);
+      }
+    }
+    return (rowId: string) => parents.has(rowId);
+  }, [rows, hierarchy]);
 
   // Resolve available views: `views` prop is authoritative for inclusion+order
   // (resolve each id, drop misses); otherwise all contributions by order/title.
@@ -122,6 +137,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     emptyState,
     loading,
     loadingState,
+    itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
+    hasChildren,
   };
 
   return (

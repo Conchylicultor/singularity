@@ -1,5 +1,7 @@
 import type { ComponentType } from "react";
 import { defineRenderSlot } from "@plugins/primitives/plugins/slot-render/web";
+import { defineItemActions } from "@plugins/primitives/plugins/data-view/web";
+import type { Block } from "@plugins/page/plugins/editor/core";
 
 /**
  * Extensible host for sections rendered below a page's editor in the
@@ -16,10 +18,8 @@ export const PageDetail = {
  * Extensible host for trailing actions on a page-tree row (e.g. delete).
  * Mirrors the task-list `Tasks.TaskActions` pattern so other plugins can add
  * row actions without editing the row component. Contributors receive the
- * page's id and title.
+ * full page `row` (derive id/title from it) via `ItemActionProps<Block>`.
  */
 export const PageTree = {
-  RowActions: defineRenderSlot<{
-    component: ComponentType<{ pageId: string; title: string }>;
-  }>("pages.tree.row-actions"),
+  RowActions: defineItemActions<Block>("pages.tree.row-actions"),
 };

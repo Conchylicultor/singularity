@@ -31,6 +31,30 @@ except the two accessors, so a read-only nav tree supplies just those two. The
 `FieldDef.primary` flag selects the tree row label field (shared
 `pickPrimaryField` heuristic).
 
+## Per-item actions
+
+Per-row actions (delete, expand-all, …) are a **cross-view** concern: contribute
+an action once, every view renders it in its natural trailing affordance (tree-row
+hover-trailing, table-row hover-trailing column, gallery-card top-right hover).
+
+The mechanism is the **`defineItemActions<TRow>(id)` factory** (web barrel),
+mirroring the `detail-sections` / `tabbed-view` factory precedent — **not** a
+global slot like `View`. `View` is global because views are a *fixed shared
+vocabulary* with one render-props contract; item actions are the factory case
+because each consumer's row type is disjoint (`Block`, `TaskListItem`, `Agent`)
+and its contributor set differs. A global slot would force
+`ComponentType<ItemActionProps<unknown>>` and a runtime `kind` discriminator to
+keep one app's Delete off another app's rows; per-consumer slots are isolated by
+construction and keep full `TRow` typing.
+
+Each consumer calls `defineItemActions<Row>("<stable-id>")` once. The result is
+**callable for contributions** (`MyActions({ id, component })`, like any
+`defineRenderSlot`) and carries `.Row` — the `ItemActionsDescriptor`. Pass it to
+`<DataView itemActions={MyActions} />`; the host threads it (plus a derived
+`hasChildren` predicate from `hierarchy.getParentId`) into every view, which
+renders `<itemActions.Row row={…} hasChildren={…} />` in its own affordance. Each
+action component receives `ItemActionProps<Row>` (`{ row, hasChildren }`).
+
 ## Collection-consumer separation
 
 Consumers import **only** `DataView` + the core types from this umbrella and select
@@ -69,13 +93,13 @@ zero consumer changes — exactly the segmented-progress-bar collection model.
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots: `DataViewSlots.View`, `DataViewSlots.Cell`, `DataViewSlots.Filter`
-  - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
-  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
+  - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
+  - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `defineItemActions`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
 - Cross-plugin:
   - Slot contributors: `filter`, `gallery`, `table`, `tree`
-  - Imported by: `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `conversations/agents`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list/tree`
+  - Imported by: `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `conversations/agents`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`
 - Core:
-  - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
+  - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
 - Sub-plugins:
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.

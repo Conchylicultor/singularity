@@ -2,17 +2,16 @@ import { useCallback } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { agentsResource } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
 import { patchAgent } from "./patch-agent";
 
 export function ExpandCollapseAllAction({
-  agentId,
+  row,
   hasChildren,
-}: {
-  agentId: string;
-  hasChildren: boolean;
-}) {
+}: ItemActionProps<Agent>) {
+  const agentId = row.id;
   const result = useResource(agentsResource);
 
   if (!hasChildren || result.pending) return null;

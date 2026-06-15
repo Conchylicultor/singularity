@@ -48,11 +48,6 @@ function TasksListInner({
     rootId: rootTaskId,
     addLabel: rootTaskId ? null : "Add",
     toolbarStart: <TasksSlots.ListActions.Render />,
-    renderItemActions: (t, { hasChildren }) => (
-      <TasksSlots.TaskActions.Render>
-        {(a) => <a.component taskId={t.id} hasChildren={hasChildren} />}
-      </TasksSlots.TaskActions.Render>
-    ),
     rowMenu: ({ addBelow }) => [
       { icon: MdAdd, label: "Add item below", onClick: () => void addBelow() },
     ],
@@ -80,6 +75,7 @@ function TasksListInner({
         onCreate: createTaskRow,
       }}
       viewOptions={{ tree: treeOptions }}
+      itemActions={TasksSlots.TaskActions}
     />
   );
 }

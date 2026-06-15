@@ -22,12 +22,6 @@ export interface TreeViewOptions<TRow> {
   renderRow?: (node: TreeRowNode<TRow>) => ReactNode;
   /** Leading icon rendered immediately before the primary-field label. */
   leadingIcon?: (row: TRow) => ReactNode;
-  /**
-   * Hover-revealed trailing actions for a row → `RowChrome.actions`. The `ctx`
-   * second arg carries `hasChildren` so actions (delete/child-count) can disable
-   * on rows with children. Optional second param keeps 1-arg callers compiling.
-   */
-  renderItemActions?: (row: TRow, ctx: { hasChildren: boolean }) => ReactNode;
   /** Drag-handle dropdown menu items for a row → `RowChrome.menu`. */
   rowMenu?: (helpers: RowChromeMenuHelpers, row: TRow) => RowMenuItem[];
   /** Content shown in the floating chip while a row is being dragged. */

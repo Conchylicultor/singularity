@@ -17,6 +17,7 @@ export function DataTable<TRow>({
   sortState: controlledSort,
   onToggleSort,
   onRowClick,
+  rowActions,
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -41,7 +42,11 @@ export function DataTable<TRow>({
   // One grid owns the column tracks; the header and every row are full-span
   // subgrids that inherit those exact tracks (and the column gap), so columns
   // align structurally — independent of content. Dynamic template → inline style.
-  const template = columns.map((col) => col.width ?? "auto").join(" ");
+  // A trailing `auto` track holds the hover-revealed per-row actions column.
+  const template = [
+    ...columns.map((col) => col.width ?? "auto"),
+    ...(rowActions ? ["auto"] : []),
+  ].join(" ");
 
   return (
     <div className="grid gap-x-sm" style={{ gridTemplateColumns: template }}>
@@ -66,12 +71,13 @@ export function DataTable<TRow>({
             </span>
           );
         })}
+        {rowActions && <span aria-hidden />}
       </div>
       {rows.map((row, i) => (
         <div
           key={rowKey(row, i)}
           className={cn(
-            "col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
+            "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
             onRowClick && "cursor-pointer",
           )}
           onClick={onRowClick ? () => onRowClick(row) : undefined}
@@ -97,6 +103,14 @@ export function DataTable<TRow>({
                   : null}
             </div>
           ))}
+          {rowActions && (
+            <div
+              className="flex items-center justify-end gap-xs opacity-0 transition-opacity group-hover/dt-row:opacity-100 focus-within:opacity-100"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {rowActions(row, i)}
+            </div>
+          )}
         </div>
       ))}
     </div>

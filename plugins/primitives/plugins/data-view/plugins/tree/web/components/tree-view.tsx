@@ -5,6 +5,7 @@ import {
   type DataViewRenderProps,
   type FieldDef,
   type HierarchyConfig,
+  type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
@@ -42,8 +43,9 @@ function DefaultRow<TRow>(props: {
   primaryField: FieldDef<TRow> | undefined;
   hierarchy: HierarchyConfig<TRow>;
   options: TreeViewOptions<TRow>;
+  itemActions: ItemActionsDescriptor<TRow> | undefined;
 }): ReactNode {
-  const { node, depth, primaryField, hierarchy, options } = props;
+  const { node, depth, primaryField, hierarchy, options, itemActions } = props;
   const resolveCell = useResolveCell();
   const row = node.__row;
 
@@ -94,9 +96,11 @@ function DefaultRow<TRow>(props: {
     <RowChrome
       node={node}
       depth={depth}
-      actions={options.renderItemActions?.(row, {
-        hasChildren: node.children.length > 0,
-      })}
+      actions={
+        itemActions ? (
+          <itemActions.Row row={row} hasChildren={node.children.length > 0} />
+        ) : undefined
+      }
       menu={menu}
     >
       {leadingIcon != null ? (
@@ -122,6 +126,9 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   // --- Documented cast boundary ---
   const hierarchy = props.hierarchy as HierarchyConfig<unknown> | undefined;
   const fields = props.fields as FieldDef<unknown>[];
+  const itemActions = props.itemActions as
+    | ItemActionsDescriptor<unknown>
+    | undefined;
   // Memoized: `?? {}` would mint a fresh object every render and churn the
   // hooks below that depend on `options`.
   const options = useMemo(
@@ -164,10 +171,11 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           primaryField={primaryField}
           hierarchy={hierarchy}
           options={options}
+          itemActions={itemActions}
         />
       );
     },
-    [hierarchy, options, primaryField],
+    [hierarchy, options, primaryField, itemActions],
   );
 
   const primaryAccessor = useCallback(

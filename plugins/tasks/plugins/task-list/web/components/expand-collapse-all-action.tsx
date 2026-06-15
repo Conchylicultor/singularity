@@ -2,6 +2,7 @@ import { useCallback } from "react";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
 
@@ -31,12 +32,10 @@ function ExpandCollapseAllActionInner({
 }
 
 export function ExpandCollapseAllAction({
-  taskId,
+  row,
   hasChildren,
-}: {
-  taskId: string;
-  hasChildren: boolean;
-}) {
+}: ItemActionProps<TaskListItem>) {
+  const taskId = row.id;
   const result = useResource(tasksResource);
   // Return null while pending (no flicker of the button with empty rows).
   if (!hasChildren) return null;

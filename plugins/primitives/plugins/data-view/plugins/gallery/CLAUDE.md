@@ -45,7 +45,7 @@ the shared `FieldDef` schema.
 - Description: Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
   - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
 - Core:
   - Exports: Types: `CoverContent`, `GalleryViewOptions`

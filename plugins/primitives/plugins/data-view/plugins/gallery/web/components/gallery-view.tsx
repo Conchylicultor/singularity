@@ -7,6 +7,7 @@ import {
   useResolveFilter,
   type DataViewRenderProps,
   type FieldDef,
+  type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { CoverContent, GalleryViewOptions } from "../../core";
 import { DataCard } from "./data-card";
@@ -102,6 +103,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
   );
   const fields = props.fields;
   const options = (props.options ?? {}) as GalleryViewOptions<unknown>;
+  // Documented cast boundary: itemActions arrives type-erased.
+  const itemActions = props.itemActions as
+    | ItemActionsDescriptor<unknown>
+    | undefined;
 
   // Loading wins over empty: emptyState requires confirmed-empty.
   if (props.loading) {
@@ -148,6 +153,14 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
             key={key}
             onActivate={() => props.onRowActivate?.(row)}
             media={media}
+            actions={
+              itemActions ? (
+                <itemActions.Row
+                  row={row}
+                  hasChildren={props.hasChildren?.(props.rowKey(row, i)) ?? false}
+                />
+              ) : undefined
+            }
           >
             {titleField ? (
               <Text

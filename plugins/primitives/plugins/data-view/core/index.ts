@@ -10,4 +10,6 @@ export type {
   TableCellProps,
   FilterControlProps,
   FilterContribution,
+  ItemActionProps,
+  ItemActionsDescriptor,
 } from "./internal/types";

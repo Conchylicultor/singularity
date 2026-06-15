@@ -33,4 +33,6 @@ export interface DataTableProps<TRow> {
   onToggleSort?: (columnId: string) => void;
   /** When provided, rows become clickable and fire this on click/Enter/Space. */
   onRowClick?: (row: TRow) => void;
+  /** Trailing per-row actions, hover-revealed in their own column. */
+  rowActions?: (row: TRow, index: number) => ReactNode;
 }

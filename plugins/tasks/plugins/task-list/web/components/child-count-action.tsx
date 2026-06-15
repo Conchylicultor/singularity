@@ -1,14 +1,13 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { tasksResource } from "@plugins/tasks/core";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 
 export function ChildCountAction({
-  taskId,
+  row,
   hasChildren,
-}: {
-  taskId: string;
-  hasChildren: boolean;
-}) {
+}: ItemActionProps<TaskListItem>) {
+  const taskId = row.id;
   const result = useResource(tasksResource);
   const count = useMemo(() => {
     if (result.pending || !hasChildren) return 0;

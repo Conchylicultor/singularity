@@ -41,6 +41,21 @@ export interface SelectionConfig {
   bulkActions?: ReactNode;
 }
 
+export interface ItemActionProps<TRow> {
+  row: TRow;
+  /** True when this row has at least one child in the data source's hierarchy. */
+  hasChildren: boolean;
+}
+
+/**
+ * Minimal item-actions surface the views consume. `defineItemActions` (web)
+ * returns a value satisfying this PLUS the callable contribution-registrar.
+ */
+export interface ItemActionsDescriptor<TRow> {
+  /** Renders ALL contributed actions for one row, each error-boundary-isolated. */
+  Row: ComponentType<ItemActionProps<TRow>>;
+}
+
 export interface FieldDef<TRow> {
   id: string;
   label: string;
@@ -122,6 +137,13 @@ export interface DataViewRenderProps<TRow> {
   loading?: boolean;
   /** Override the loading render; default is each view's own skeleton shape. */
   loadingState?: ReactNode;
+  /** Per-item action slot descriptor; views render `<itemActions.Row …/>` in
+   *  their own trailing affordance (type-erased; views re-cast at the boundary). */
+  itemActions?: ItemActionsDescriptor<TRow>;
+  /** True when `rowId` has ≥1 child — derived once by the host from
+   *  `hierarchy.getParentId` over `rows`. Flat views (table/gallery) call this
+   *  for a correct `hasChildren`; the tree uses its own node count. */
+  hasChildren?: (rowId: string) => boolean;
 }
 
 /**
@@ -181,4 +203,7 @@ export interface DataViewProps<TRow> {
   hierarchy?: HierarchyConfig<TRow>;
   /** Present → selectable views (tree) enable checkbox multi-select. */
   selection?: SelectionConfig;
+  /** Per-item action slot descriptor minted by `defineItemActions`; views render
+   *  each contributed action in their natural trailing affordance. */
+  itemActions?: ItemActionsDescriptor<TRow>;
 }

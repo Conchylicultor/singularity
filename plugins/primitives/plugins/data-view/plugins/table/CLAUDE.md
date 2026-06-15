@@ -19,7 +19,7 @@ runs with `filter={undefined}` and only reflects/forwards sort state.
 - Description: Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
 - Web:
   - Contributes: `DataViewSlots.View` "Table" → `TableView`
-  - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldValue`, `primitives/data-view.SortState`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`
+  - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.SortState`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`
   - Exports: Types: `TableViewOptions`
 - Core:
   - Exports: Types: `TableViewOptions`

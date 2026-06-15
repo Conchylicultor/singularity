@@ -1,9 +1,11 @@
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { buildTaskPrompt } from "@plugins/tasks/plugins/tasks-core/core";
-import { getTask } from "@plugins/tasks/core";
+import { getTask, type TaskListItem } from "@plugins/tasks/core";
 
-export function LaunchAgentAction({ taskId }: { taskId: string }) {
+export function LaunchAgentAction({ row }: ItemActionProps<TaskListItem>) {
+  const taskId = row.id;
   const getRequest = async () => {
     try {
       const task = await fetchEndpoint(getTask, { id: taskId });

@@ -3,9 +3,12 @@ import { useState } from "react";
 import { MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import {
   pagesResource,
   deleteBlock,
+  pageData,
+  type Block,
 } from "@plugins/page/plugins/editor/core";
 
 /**
@@ -17,13 +20,9 @@ import {
  * loading: showing "0 sub-pages" when the count is unknown would mislead the
  * user into believing there are no children when there may be many.
  */
-export function DeletePageAction({
-  pageId,
-  title,
-}: {
-  pageId: string;
-  title: string;
-}) {
+export function DeletePageAction({ row }: ItemActionProps<Block>) {
+  const pageId = row.id;
+  const title = pageData(row).title;
   const [open, setOpen] = useState(false);
   const result = useResource(pagesResource);
   const { mutateAsync } = useEndpointMutation(deleteBlock);

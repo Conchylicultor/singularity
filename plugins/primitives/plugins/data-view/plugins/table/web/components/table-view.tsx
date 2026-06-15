@@ -11,6 +11,7 @@ import {
   useResolveFilter,
   type DataViewRenderProps,
   type FieldValue,
+  type ItemActionsDescriptor,
   type SortState,
 } from "@plugins/primitives/plugins/data-view/web";
 
@@ -52,6 +53,11 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     return <>{props.emptyState}</>;
   }
 
+  // Documented cast boundary: itemActions arrives type-erased.
+  const itemActions = props.itemActions as
+    | ItemActionsDescriptor<unknown>
+    | undefined;
+
   const columns: ColumnDef<unknown>[] = props.fields.map((f) => ({
     id: f.id,
     header: f.label,
@@ -81,6 +87,16 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       onRowClick={props.onRowActivate}
       filter={undefined}
       emptyLabel="No results found"
+      rowActions={
+        itemActions
+          ? (row, i) => (
+              <itemActions.Row
+                row={row}
+                hasChildren={props.hasChildren?.(props.rowKey(row, i)) ?? false}
+              />
+            )
+          : undefined
+      }
     />
   );
 }

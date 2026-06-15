@@ -1,15 +1,12 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/conversations/plugins/agents/core";
+import type { Agent } from "../../shared/resources";
 
-export function DeleteAgentAction({
-  agentId,
-  hasChildren,
-}: {
-  agentId: string;
-  hasChildren: boolean;
-}) {
+export function DeleteAgentAction({ row, hasChildren }: ItemActionProps<Agent>) {
+  const agentId = row.id;
   const disabled = hasChildren;
   const title = disabled
     ? "Delete (only leaf agents can be deleted)"

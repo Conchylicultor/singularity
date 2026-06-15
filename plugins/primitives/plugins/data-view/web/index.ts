@@ -7,6 +7,11 @@ export { useResolveCell } from "./cell-slot";
 export { useResolveFilter } from "./filter-slot";
 export { useFlatRows } from "./internal/use-flat-rows";
 export { pickPrimaryField } from "./internal/pick-primary-field";
+export { defineItemActions } from "./internal/define-item-actions";
+export type {
+  ItemActions,
+  ItemActionContribution,
+} from "./internal/define-item-actions";
 export type {
   FieldValue,
   FieldDef,
@@ -19,6 +24,8 @@ export type {
   TableCellProps,
   FilterControlProps,
   FilterContribution,
+  ItemActionProps,
+  ItemActionsDescriptor,
 } from "../core";
 
 export default {

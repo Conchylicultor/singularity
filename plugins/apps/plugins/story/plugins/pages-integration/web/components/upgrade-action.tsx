@@ -1,5 +1,7 @@
 import { MdAutoStories } from "react-icons/md";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
+import type { Block } from "@plugins/page/plugins/editor/core";
 import {
   useIsStory,
   markStory,
@@ -13,10 +15,10 @@ import {
  * needs no confirm dialog: a single tap flips it.
  *
  * Mirrors the button chrome of `DeletePageAction` (same hover/size classes,
- * `stopPropagation` so the row doesn't select). `title` is unused for logic but
- * kept to satisfy the `PageTree.RowActions` contract.
+ * `stopPropagation` so the row doesn't select).
  */
-export function UpgradeAction({ pageId }: { pageId: string; title: string }) {
+export function UpgradeAction({ row }: ItemActionProps<Block>) {
+  const pageId = row.id;
   const isStory = useIsStory(pageId);
 
   const onClick = (e: React.MouseEvent) => {

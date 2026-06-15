@@ -57,11 +57,6 @@ export function PagesSidebar() {
         leadingIcon: (b: Block) => (
           <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
         ),
-        renderItemActions: (b: Block) => (
-          <PageTree.RowActions.Render>
-            {(a) => <a.component pageId={b.id} title={pageData(b).title} />}
-          </PageTree.RowActions.Render>
-        ),
         rowMenu: ({
           addBelow,
           addChild,
@@ -119,6 +114,7 @@ export function PagesSidebar() {
               onCreate: (args) => createPageWithSeed(args),
             }}
             viewOptions={viewOptions}
+            itemActions={PageTree.RowActions}
           />
         )}
       </div>

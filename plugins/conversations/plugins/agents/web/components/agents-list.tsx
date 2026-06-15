@@ -2,7 +2,6 @@ import { MdAdd, MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import type {
-  TreeItem,
   RowChromeMenuHelpers,
   RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
@@ -19,6 +18,7 @@ import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createAgent, deleteAgent } from "@plugins/conversations/plugins/agents/core";
 import { agentsResource } from "../../shared/resources";
+import type { Agent } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
@@ -26,14 +26,6 @@ import { SystemFolder } from "./system-folder";
 import { patchAgent } from "./patch-agent";
 
 export { patchAgent } from "./patch-agent";
-
-type Agent = TreeItem & {
-  name: string;
-  prompt: string | null;
-  icon: string | null;
-  iconColor: string | null;
-  iconSvgNodes: string | null;
-};
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
@@ -118,6 +110,7 @@ export function AgentsList({
           onCreate: createAgentRow,
         }}
         selection={{ bulkActions: <DeleteSelectedAction /> }}
+        itemActions={AgentsSlots.AgentActions}
         viewOptions={{
           tree: {
             leadingIcon: (a: Agent) => (
@@ -131,11 +124,6 @@ export function AgentsList({
                 />
                 <AgentStatus agentId={a.id} />
               </>
-            ),
-            renderItemActions: (a: Agent, { hasChildren }: { hasChildren: boolean }) => (
-              <AgentsSlots.AgentActions.Render>
-                {(act) => <act.component agentId={a.id} hasChildren={hasChildren} />}
-              </AgentsSlots.AgentActions.Render>
             ),
             rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
               {

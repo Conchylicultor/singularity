@@ -1,16 +1,16 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
+import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
+import type { TaskListItem } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
 
 // "Delete" is a soft drop: it marks the task dropped (reversible via the
 // task header's Undrop), never removing the row. Tasks are never hard-deleted.
 export function DeleteTaskAction({
-  taskId,
+  row,
   hasChildren,
-}: {
-  taskId: string;
-  hasChildren: boolean;
-}) {
+}: ItemActionProps<TaskListItem>) {
+  const taskId = row.id;
   const disabled = hasChildren;
   const title = disabled
     ? "Drop (only leaf tasks can be dropped here)"
