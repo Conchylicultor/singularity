@@ -14,7 +14,7 @@ import { BlockTextEditor } from "./block-text-editor";
  * Per-type presentation (the leading marker, the placeholder) is read from the
  * matched block handle, so this renderer never names a specific block type.
  */
-export function BlockTextRenderer({ block, isFocused, editor }: BlockRendererProps) {
+export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRendererProps) {
   const contributions = Editor.Block.useContributions();
   const handle = useMemo(
     () => contributions.find((c) => c.block.type === block.type)?.block,
@@ -42,6 +42,17 @@ export function BlockTextRenderer({ block, isFocused, editor }: BlockRendererPro
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mx-1/mt-2 are one-off offsets aligning the checkbox glyph optically with the first text line; not sibling rhythm a parent gap could own
         className="accent-primary mx-1 mt-2 size-3.5 flex-none cursor-pointer self-start"
       />
+    );
+  } else if (handle?.ordinalMarker) {
+    marker = (
+      <Text
+        as="span"
+        variant="body"
+        aria-hidden
+        className="text-muted-foreground flex-none select-none tabular-nums py-xs pl-md pr-xs"
+      >
+        {handle.ordinalMarker(ordinal)}
+      </Text>
     );
   } else if (handle?.marker) {
     marker = (

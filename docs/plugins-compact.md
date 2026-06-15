@@ -172,7 +172,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`retry`**
     - **`semaphore`**
 
-- **`page`** [13 sub-plugins] — Block-based page editor.
+- **`page`** [14 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:

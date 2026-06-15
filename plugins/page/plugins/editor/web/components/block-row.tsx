@@ -17,6 +17,7 @@ export function BlockRow({
   block,
   depth,
   hasChildren,
+  ordinal,
   isDragging,
   dropZone,
 }: {
@@ -24,6 +25,8 @@ export function BlockRow({
   depth: number;
   /** Whether this block has children (drives the collapse chevron). */
   hasChildren: boolean;
+  /** 1-based position within the consecutive run of same-type siblings (ordinal-marker blocks). */
+  ordinal: number;
   isDragging: boolean;
   /** Where the dragged block would land relative to this row, or null. */
   dropZone: DropZone | null;
@@ -139,7 +142,7 @@ export function BlockRow({
           }
         }}
       >
-        <Editor.Block.Dispatch block={block} isFocused={isFocused} editor={api} />
+        <Editor.Block.Dispatch block={block} isFocused={isFocused} editor={api} ordinal={ordinal} />
       </div>
       {dropZone && (
         <div

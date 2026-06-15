@@ -40,7 +40,7 @@ import {
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow } from "./block-row";
 
-type FlatBlock = { block: Block; depth: number; hasChildren: boolean };
+type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
 type DropTarget = { id: string; zone: DropZone };
 
 /** Custom clipboard MIME carrying a serialized block forest (round-trips full
@@ -52,8 +52,15 @@ const BLOCKS_MIME = "application/x-singularity-blocks+json";
 // DOM) keeps every block in the same React parent, so indent/outdent/move only
 // reorder keyed elements — the Lexical editor instance (and its focus) survives.
 function flattenTree(nodes: TreeNode<Block>[], depth: number, out: FlatBlock[]): void {
+  // `ordinal` is the 1-based position within the maximal run of consecutive
+  // same-type siblings (resets on type change). Each recursive call into a
+  // node's children starts a fresh counter, so numbering resets per level.
+  let ordinal = 0;
+  let prevType: string | null = null;
   for (const node of nodes) {
-    out.push({ block: node, depth, hasChildren: node.children.length > 0 });
+    ordinal = node.type === prevType ? ordinal + 1 : 1;
+    prevType = node.type;
+    out.push({ block: node, depth, hasChildren: node.children.length > 0, ordinal });
     // Skip a collapsed node's subtree so its children stay hidden. `expanded`
     // defaults true for every existing row, so current documents are unchanged.
     if (node.expanded) flattenTree(node.children, depth + 1, out);
@@ -618,6 +625,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
                 block={f.block}
                 depth={f.depth}
                 hasChildren={f.hasChildren}
+                ordinal={f.ordinal}
                 isDragging={
                   activeId === f.block.id ||
                   (bulkDragRef.current?.subtree.has(f.block.id) ?? false)

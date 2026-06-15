@@ -27,6 +27,10 @@ function toggleHandle(handles: Handle[]): Handle | undefined {
   return handles.find((h) => h.toggle);
 }
 
+function orderedHandle(handles: Handle[]): Handle | undefined {
+  return handles.find((h) => h.ordinalMarker);
+}
+
 function defaultTextHandle(handles: Handle[]): Handle | undefined {
   // The plain-text type: editable text, no markdown prefix, marker, toggle, or
   // forced chevron. Falls back to the first labelled type.
@@ -37,6 +41,7 @@ function defaultTextHandle(handles: Handle[]): Handle | undefined {
         !h.toggle &&
         !h.collapsible &&
         !h.marker &&
+        !h.ordinalMarker &&
         h.label !== undefined,
     ) ?? handles.find((h) => h.label !== undefined)
   );
@@ -49,6 +54,10 @@ function prefixRules(
 ): { prefix: string; handle: Handle }[] {
   const out: { prefix: string; handle: Handle }[] = [];
   for (const h of handles) {
+    // The ordinal handle's `1. ` prefix is a live-shortcut-only marker; markdown
+    // paste of ordered lists is covered by the dedicated ORDERED pass, so skip it
+    // here to avoid a duplicate paste rule.
+    if (h.ordinalMarker) continue;
     for (const prefix of h.markdownPrefixes ?? []) {
       if (prefix.startsWith("```") || prefix.startsWith("[")) continue;
       out.push({ prefix, handle: h });
@@ -60,6 +69,7 @@ function prefixRules(
 type FlatToken = { indent: number; type: string; data: unknown };
 
 const CHECKBOX = /^[-*+]?\s*\[([ xX])\]\s+(.*)$/;
+const ORDERED = /^\d+[.)]\s+(.*)$/;
 
 export function markdownToForest(
   text: string,
@@ -67,6 +77,7 @@ export function markdownToForest(
 ): SerializedBlock[] {
   const fence = fenceHandle(handles);
   const toggle = toggleHandle(handles);
+  const ordered = orderedHandle(handles);
   const fallback = defaultTextHandle(handles);
   const rules = prefixRules(handles);
 
@@ -116,6 +127,19 @@ export function markdownToForest(
         indent,
         type: toggle.type,
         data: { ...(toggle.empty?.() ?? {}), text: checkbox[2]!, [field]: checked },
+      });
+      i++;
+      continue;
+    }
+
+    // Ordered-list line (`1.`, `2)`, `10.`, …) → the ordinal-marker type. The
+    // literal number is discarded; numbering is positional, derived at render.
+    const orderedMatch = ordered ? ORDERED.exec(content) : null;
+    if (ordered && orderedMatch) {
+      tokens.push({
+        indent,
+        type: ordered.type,
+        data: { ...(ordered.empty?.() ?? {}), text: orderedMatch[1]! },
       });
       i++;
       continue;
@@ -176,7 +200,7 @@ export function blocksToMarkdown(
 ): string {
   const byType = new Map(handles.map((h) => [h.type, h] as const));
 
-  const lineFor = (node: SerializedBlock): string => {
+  const lineFor = (node: SerializedBlock, ordinal: number): string => {
     const h = byType.get(node.type);
     const d = asRecord(node.data);
     if (h && (h.markdownPrefixes ?? []).some((p) => p.startsWith("```"))) {
@@ -194,6 +218,9 @@ export function blocksToMarkdown(
       const checked = Boolean(d[h.toggle.field]);
       return `- [${checked ? "x" : " "}] ${text}`;
     }
+    // Ordered list: emit the real sequential number for this item's position in
+    // its consecutive same-type run (computed in `walk`).
+    if (h?.ordinalMarker) return `${h.ordinalMarker(ordinal)} ${text}`;
     const prefix = h?.markdownPrefixes?.[0];
     if (prefix && !prefix.startsWith("[")) return prefix + text;
     return text;
@@ -201,10 +228,17 @@ export function blocksToMarkdown(
 
   const out: string[] = [];
   const walk = (nodes: SerializedBlock[], depth: number): void => {
+    // Per-sibling-list ordinal: 1-based position within the consecutive run of
+    // same-type siblings, reset on type change. Each recursive child list starts
+    // its own fresh counter (matches flattenTree's render-time numbering).
+    let ordinal = 0;
+    let prevType: string | null = null;
     for (const n of nodes) {
+      ordinal = n.type === prevType ? ordinal + 1 : 1;
+      prevType = n.type;
       const indent = "  ".repeat(depth);
       out.push(
-        lineFor(n)
+        lineFor(n, ordinal)
           .split("\n")
           .map((l) => indent + l)
           .join("\n"),

@@ -1709,6 +1709,10 @@
       "name": "@singularity/plugin-page-links",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/numbered-list": {
+      "name": "@singularity/plugin-page-numbered-list",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/page-link": {
       "name": "@singularity/plugin-page-page-link",
       "version": "0.0.1",
@@ -3978,6 +3982,8 @@
     "@singularity/plugin-page-inline-page-link": ["@singularity/plugin-page-inline-page-link@workspace:plugins/page/plugins/inline-page-link"],
 
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
+
+    "@singularity/plugin-page-numbered-list": ["@singularity/plugin-page-numbered-list@workspace:plugins/page/plugins/numbered-list"],
 
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
 

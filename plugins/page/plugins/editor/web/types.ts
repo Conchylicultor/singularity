@@ -52,4 +52,6 @@ export interface BlockRendererProps {
   block: Block;
   isFocused: boolean;
   editor: BlockEditorAPI;
+  /** 1-based position within the consecutive run of same-type siblings; only ordinalMarker blocks use it. */
+  ordinal: number;
 }

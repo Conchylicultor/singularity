@@ -35,6 +35,15 @@ export interface BlockHandle<T> {
    * survive) rather than remounting.
    */
   marker?: string;
+  /**
+   * For editable-text list blocks whose marker is its 1-based position among the
+   * consecutive run of same-type siblings (an ordered list). The shared renderer
+   * draws `ordinalMarker(n)` as the leading glyph; markdown paste routes N./N)
+   * lines to this type and copy emits real sequential numbers. The
+   * position-derived analogue of `marker` — generic, the editor core never names
+   * a specific block type.
+   */
+  ordinalMarker?: (ordinal: number) => string;
   /** For editable-text block types: placeholder shown when empty and focused. */
   placeholder?: string;
   /**
@@ -69,6 +78,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   empty?: () => z.infer<S>;
   markdownPrefixes?: string[];
   marker?: string;
+  ordinalMarker?: (ordinal: number) => string;
   placeholder?: string;
   toggle?: { field: string; doneClassName?: string };
   collapsible?: "always";
@@ -84,6 +94,7 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     empty: opts.empty,
     markdownPrefixes: opts.markdownPrefixes,
     marker: opts.marker,
+    ordinalMarker: opts.ordinalMarker,
     placeholder: opts.placeholder,
     toggle: opts.toggle,
     collapsible: opts.collapsible,
