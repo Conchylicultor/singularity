@@ -1,0 +1,10 @@
+{
+  "name": "@singularity/plugin-page-math-inline",
+  "description": "Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \\(latex\\) token, click to edit.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "lexical": "^0.44.0",
+    "@lexical/react": "^0.44.0"
+  }
+}

@@ -1761,6 +1761,32 @@
       "name": "@singularity/plugin-page-links",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/math": {
+      "name": "@singularity/plugin-page-math",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/math/plugins/equation": {
+      "name": "@singularity/plugin-page-math-equation",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/math/plugins/inline": {
+      "name": "@singularity/plugin-page-math-inline",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/page/plugins/math/plugins/render": {
+      "name": "@singularity/plugin-page-math-render",
+      "version": "0.0.1",
+      "dependencies": {
+        "katex": "^0.17.0",
+      },
+      "devDependencies": {
+        "@types/katex": "^0.16.8",
+      },
+    },
     "plugins/page/plugins/numbered-list": {
       "name": "@singularity/plugin-page-numbered-list",
       "version": "0.0.1",
@@ -4073,6 +4099,14 @@
 
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
 
+    "@singularity/plugin-page-math": ["@singularity/plugin-page-math@workspace:plugins/page/plugins/math"],
+
+    "@singularity/plugin-page-math-equation": ["@singularity/plugin-page-math-equation@workspace:plugins/page/plugins/math/plugins/equation"],
+
+    "@singularity/plugin-page-math-inline": ["@singularity/plugin-page-math-inline@workspace:plugins/page/plugins/math/plugins/inline"],
+
+    "@singularity/plugin-page-math-render": ["@singularity/plugin-page-math-render@workspace:plugins/page/plugins/math/plugins/render"],
+
     "@singularity/plugin-page-numbered-list": ["@singularity/plugin-page-numbered-list@workspace:plugins/page/plugins/numbered-list"],
 
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
@@ -4626,6 +4660,8 @@
     "@types/interpret": ["@types/interpret@1.1.4", "", { "dependencies": { "@types/node": "*" } }, "sha512-r+tPKWHYqaxJOYA3Eik0mMi+SEREqOXLmsooRFmc6GHv7nWUDixFtKN+cegvsPlDcEZd9wxsdp041v2imQuvag=="],
 
     "@types/json-schema": ["@types/json-schema@7.0.15", "", {}, "sha512-5+fP8P8MFNC+AyZCDxrB2pkZFPGzqQWUzpSeuuVLvm8VMcorNYavBqoFcxK8bQz4Qsbn4oUEEem4wDLfcysGHA=="],
+
+    "@types/katex": ["@types/katex@0.16.8", "", {}, "sha512-trgaNyfU+Xh2Tc+ABIb44a5AYUpicB3uwirOioeOkNPPbmgRNtcWyDeeFRzjPZENO9Vq8gvVqfhaaXWLlevVwg=="],
 
     "@types/mdast": ["@types/mdast@4.0.4", "", { "dependencies": { "@types/unist": "*" } }, "sha512-kGaNbPh1k7AFzgpud/gMdvIm5xuECykRR+JnWKQno9TAXVa6WIVCGTPvYGekIDL4uwCZQSYbUxNBSb1aUo79oA=="],
 
@@ -5338,6 +5374,8 @@
     "jsonfile": ["jsonfile@6.2.0", "", { "dependencies": { "universalify": "^2.0.0" }, "optionalDependencies": { "graceful-fs": "^4.1.6" } }, "sha512-FGuPw30AdOIUTRMC2OMRtQV+jkVj2cfPqSeWXv1NEAJ1qZ5zb1X6z1mFhbfOB/iy3ssJCD+3KuZ8r8C3uVFlAg=="],
 
     "jsx-ast-utils": ["jsx-ast-utils@3.3.5", "", { "dependencies": { "array-includes": "^3.1.6", "array.prototype.flat": "^1.3.1", "object.assign": "^4.1.4", "object.values": "^1.1.6" } }, "sha512-ZZow9HBI5O6EPgSJLUb8n2NKgmVWTwCvHGwFuJlMjvLFqlGG6pjirPhtdsseaLZjSibD8eegzmYpUZwoIlj2cQ=="],
+
+    "katex": ["katex@0.17.0", "", { "dependencies": { "commander": "^8.3.0" }, "bin": { "katex": "cli.js" } }, "sha512-Vdw0ATsQ9V+LuegM/BTwQqV/6cTl5lbGcIrU+BCgLxyf6bo38ybOr372tuSIxir3CN720flu1meYR6XzNMwQnw=="],
 
     "keyv": ["keyv@4.5.4", "", { "dependencies": { "json-buffer": "3.0.1" } }, "sha512-oxVHkHR/EJf2CNXnWxRLW6mg7JyCCUcG0DtEGmL2ctUo1PNTin1PUil+r/+4r5MpVgC/fn1kjsx7mjSujKqIpw=="],
 
@@ -6120,6 +6158,8 @@
     "graphile-config/@types/node": ["@types/node@22.19.17", "", { "dependencies": { "undici-types": "~6.21.0" } }, "sha512-wGdMcf+vPYM6jikpS/qhg6WiqSV/OhG+jeeHT/KlVqxYfD40iYJf9/AE1uQxVWFvU7MipKRkRv8NSHiCGgPr8Q=="],
 
     "hast-util-raw/parse5": ["parse5@7.3.0", "", { "dependencies": { "entities": "^6.0.0" } }, "sha512-IInvU7fabl34qmi9gY8XOVxhYyMyuH2xUNpb2q8/Y+7552KlejkRvqvD19nMoUW/uQGGbqNpA6Tufu5FL5BZgw=="],
+
+    "katex/commander": ["commander@8.3.0", "", {}, "sha512-OkTL9umf+He2DZkUq8f8J9of7yL6RJKI24dVITBmNfZBmri9zYZQrKkuXiKhyfPSu8tUhnVBB1iKXevvnlR4Ww=="],
 
     "log-symbols/chalk": ["chalk@5.6.2", "", {}, "sha512-7NzBL0rN6fMUW+f7A6Io4h40qQlG+xGmtMxfbnH/K7TAtt8JQWVQK+6g0UXKMeVJoyV5EkkNsErQ8pVD3bLHbA=="],
 
