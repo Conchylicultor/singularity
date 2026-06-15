@@ -14,18 +14,14 @@
   - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
   - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
-<<<<<<< .merge_file_xm4wXk
+  - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
+  - **`file`** — File block type: attach any file as a downloadable card; served via attachments.
   - **`heading`** — Heading block types (H1/H2/H3) for the page editor.
     - Plugins:
       - **`heading-1`** — Heading 1 block type for the page editor.
       - **`heading-2`** — Heading 2 block type for the page editor.
       - **`heading-3`** — Heading 3 block type for the page editor.
-  - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
-=======
-  - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
-  - **`file`** — File block type: attach any file as a downloadable card; served via attachments.
   - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
->>>>>>> .merge_file_P2374S
   - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
   - **`numbered-list`** — Numbered-list block type for the page editor.
