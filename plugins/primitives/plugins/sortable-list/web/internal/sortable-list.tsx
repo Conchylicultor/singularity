@@ -131,7 +131,6 @@ export function SortableList({
 }
 
 import { DragOverlay } from "@dnd-kit/core";
-import { createPortal } from "react-dom";
 
 function DragOverlayWrapper({
   activeId,
@@ -140,15 +139,9 @@ function DragOverlayWrapper({
   activeId: string | null;
   overlay: (activeId: string) => ReactNode;
 }) {
-  // dnd-kit's `<DragOverlay>` renders a `position: fixed` node, which resolves
-  // against the nearest *transformed* ancestor (the app shell's `transform-gpu`
-  // surface), not the viewport — offsetting the overlay so it no longer tracks
-  // the cursor. Portal it to <body> so fixed positioning is viewport-relative.
-  // React context (the parent DndContext) still flows across the portal.
-  return createPortal(
+  return (
     <DragOverlay dropAnimation={null}>
       {activeId ? overlay(activeId) : null}
-    </DragOverlay>,
-    document.body,
+    </DragOverlay>
   );
 }
