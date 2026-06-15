@@ -3,6 +3,7 @@ import { type ReactNode } from "react";
 import { MdAdd, MdDragIndicator } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { Row as RowPrimitive } from "@plugins/primitives/plugins/row/web";
+import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
@@ -97,6 +98,19 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             className,
           )}
           actions={actions}
+          leading={
+            ctx.multiSelect ? (
+              // The checkbox self-hides when inactive via a BARE
+              // `group-hover:opacity-100`, which never fires under the row's
+              // NAMED `group/tree-row`. Pass the named-group reveal variant so
+              // it shows on row hover (and stays visible while selection is
+              // active, where the checkbox carries no opacity-0).
+              <SelectionCheckbox
+                id={node.id}
+                className="group-hover/tree-row:opacity-100"
+              />
+            ) : undefined
+          }
         >
           {children}
         </TreeRowChrome>

@@ -13,6 +13,13 @@ export type TreeRowChromeProps = {
   onSelect?: () => void;
   children: ReactNode;
   actions?: ReactNode;
+  /**
+   * Leading control rendered between the chevron block and the label (e.g. the
+   * multi-select checkbox). Hover-reveal scoping is the leading node's own
+   * concern (RowChrome passes a `group-hover/tree-row` className into it) — this
+   * slot only reserves layout space.
+   */
+  leading?: ReactNode;
   /** Editable wrappers inject DnD state classes (dragging, drop-target ring). */
   className?: string;
   /** Editable wrappers attach the scroll + child-drop ref here. */
@@ -48,6 +55,7 @@ export function TreeRowChrome({
   onSelect,
   children,
   actions,
+  leading,
   className,
   rowRef,
   indentStep = 16,
@@ -88,6 +96,14 @@ export function TreeRowChrome({
         // Read-only leaf: reserve the chevron's width for alignment, but render
         // no expander — this row can never gain children.
         <span className="size-5 shrink-0" aria-hidden />
+      )}
+      {leading != null && (
+        <span
+          onClick={(e) => e.stopPropagation()}
+          className="flex shrink-0 items-center justify-center"
+        >
+          {leading}
+        </span>
       )}
       {children}
       {actions && (

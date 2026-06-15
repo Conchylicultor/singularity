@@ -31,6 +31,8 @@ export type TreeListContextValue<T extends TreeItem> = {
     rank?: Rank;
   }) => Promise<string | null | undefined>;
   Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
+  /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
+  multiSelect: boolean;
 };
 
 // The context is invariant in T at the React level; we cast through `unknown`

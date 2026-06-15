@@ -25,6 +25,10 @@ import {
 } from "../../core";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SearchInput, filterTree } from "@plugins/primitives/plugins/search/web";
+import {
+  MultiSelectProvider,
+  SelectionBar,
+} from "@plugins/primitives/plugins/multi-select/web";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { pendingFocus } from "./pending-focus";
@@ -69,6 +73,13 @@ export type TreeListProps<T extends TreeItem> = {
   };
   /** Root-level "Add" button label. Pass `null` to hide (e.g. subtree mode). */
   addLabel?: string | null;
+  /**
+   * Opt-in checkbox multi-select. Present → each row renders a `SelectionCheckbox`
+   * and a `SelectionBar` (with optional bulk `actions`) sits above the rows. The
+   * select order is derived from the visible tree (DFS, skipping collapsed
+   * subtrees) so shift-range selection matches exactly what is painted.
+   */
+  multiSelect?: { actions?: ReactNode };
 };
 
 export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
@@ -84,6 +95,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     dragOverlay,
     toolbar,
     addLabel = "Add",
+    multiSelect,
   } = props;
 
   const [internalHide, setInternalHide] = useState(true);
@@ -173,6 +185,21 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
         : afterSearch,
     [afterSearch, hideTerminal, isTerminal],
   );
+
+  // Visible selection order: DFS over the painted tree, descending into a node's
+  // children only when it is expanded. Drives MultiSelectProvider so shift-range
+  // selection spans exactly the rows on screen (collapsed subtrees excluded).
+  const orderedIds = useMemo(() => {
+    const ids: string[] = [];
+    const walk = (nodes: TreeNode<T>[]) => {
+      for (const node of nodes) {
+        ids.push(node.id);
+        if (node.expanded) walk(node.children);
+      }
+    };
+    walk(visibleTree);
+    return ids;
+  }, [visibleTree]);
 
   const nodesWithChildren = useMemo(() => {
     const childSet = new Set(
@@ -270,6 +297,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onToggleExpanded: wrappedOnToggleExpanded,
       onCreate,
       Row,
+      multiSelect: !!multiSelect,
     }),
     [
       rows,
@@ -281,6 +309,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       wrappedOnToggleExpanded,
       onCreate,
       Row,
+      multiSelect,
     ],
   );
 
@@ -293,70 +322,73 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onDragCancel={() => setActiveId(null)}
     >
       <TreeListProvider value={ctxValue}>
-        <div className="flex flex-col gap-2xs">
-          {hasToolbar && (
-            <div
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
-              className="sticky top-0 z-raised bg-background mb-1 flex items-center gap-xs"
-            >
-              <div className="flex items-center gap-xs">
-                {showSearchInput && (
-                  <SearchInput
-                    value={searchQuery}
-                    onChange={(e) => setSearchQuery(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Escape") {
-                        setSearchQuery("");
-                        (e.target as HTMLInputElement).blur();
+        <MaybeMultiSelect multiSelect={multiSelect} orderedIds={orderedIds}>
+          <div className="flex flex-col gap-2xs">
+            {hasToolbar && (
+              <div
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb separates the sticky toolbar from the tree rows below (no named margin utility)
+                className="sticky top-0 z-raised bg-background mb-1 flex items-center gap-xs"
+              >
+                <div className="flex items-center gap-xs">
+                  {showSearchInput && (
+                    <SearchInput
+                      value={searchQuery}
+                      onChange={(e) => setSearchQuery(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Escape") {
+                          setSearchQuery("");
+                          (e.target as HTMLInputElement).blur();
+                        }
+                      }}
+                      placeholder="Filter…"
+                      className="w-32"
+                    />
+                  )}
+                  {toolbar.start}
+                </div>
+                <div className="ml-auto flex items-center gap-xs">
+                  {showExpandAll && (
+                    <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
+                  )}
+                  {toolbar.hideTerminal && (
+                    <ToggleChip
+                      active={hideTerminal}
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setHideTerminal(!hideTerminal)}
+                      title={hideTerminal ? "Show completed" : "Hide completed"}
+                      icon={
+                        hideTerminal ? (
+                          <MdFilterAlt className="size-4" />
+                        ) : (
+                          <MdFilterAltOff className="size-4" />
+                        )
                       }
-                    }}
-                    placeholder="Filter…"
-                    className="w-32"
-                  />
-                )}
-                {toolbar.start}
+                    >
+                      {hideTerminal ? "Completed hidden" : "Hide completed"}
+                    </ToggleChip>
+                  )}
+                </div>
               </div>
-              <div className="ml-auto flex items-center gap-xs">
-                {showExpandAll && (
-                  <ExpandAllButton allExpanded={allExpanded} onToggle={expandAll} />
-                )}
-                {toolbar.hideTerminal && (
-                  <ToggleChip
-                    active={hideTerminal}
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setHideTerminal(!hideTerminal)}
-                    title={hideTerminal ? "Show completed" : "Hide completed"}
-                    icon={
-                      hideTerminal ? (
-                        <MdFilterAlt className="size-4" />
-                      ) : (
-                        <MdFilterAltOff className="size-4" />
-                      )
-                    }
-                  >
-                    {hideTerminal ? "Completed hidden" : "Hide completed"}
-                  </ToggleChip>
-                )}
-              </div>
-            </div>
-          )}
-          {visibleTree.map((node) => (
-            <Row key={node.id} node={node} depth={0} />
-          ))}
-          {showRootAdd && (
-            <Button
-              variant="ghost"
-              size="xs"
-              onClick={() => void createAtRoot(null)}
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
-              className="text-muted-foreground mt-1 w-fit"
-            >
-              <MdAdd className="size-4" />
-              {addLabel}
-            </Button>
-          )}
-        </div>
+            )}
+            {multiSelect && <SelectionBar actions={multiSelect.actions} />}
+            {visibleTree.map((node) => (
+              <Row key={node.id} node={node} depth={0} />
+            ))}
+            {showRootAdd && (
+              <Button
+                variant="ghost"
+                size="xs"
+                onClick={() => void createAtRoot(null)}
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the root Add button from the tree rows above (no named margin utility)
+                className="text-muted-foreground mt-1 w-fit"
+              >
+                <MdAdd className="size-4" />
+                {addLabel}
+              </Button>
+            )}
+          </div>
+        </MaybeMultiSelect>
       </TreeListProvider>
       <DragOverlay dropAnimation={null}>
         {activeOverlay !== null ? (
@@ -366,6 +398,25 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
         ) : null}
       </DragOverlay>
     </DndContext>
+  );
+}
+
+/**
+ * Wraps the rows column in a `MultiSelectProvider` only when multi-select is
+ * enabled, so the default tree renders with no provider (and no behavior change).
+ */
+function MaybeMultiSelect({
+  multiSelect,
+  orderedIds,
+  children,
+}: {
+  multiSelect: { actions?: ReactNode } | undefined;
+  orderedIds: readonly string[];
+  children: ReactNode;
+}) {
+  if (!multiSelect) return <>{children}</>;
+  return (
+    <MultiSelectProvider orderedIds={orderedIds}>{children}</MultiSelectProvider>
   );
 }
 

@@ -4,7 +4,7 @@ import { useSubtreeExpandAll } from "@plugins/primitives/plugins/tree/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import { agentsResource } from "../../shared/resources";
 import type { Agent } from "../../shared/resources";
-import { patchAgent } from "./agents-list";
+import { patchAgent } from "./patch-agent";
 
 export function ExpandCollapseAllAction({
   agentId,

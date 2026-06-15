@@ -29,6 +29,18 @@ export interface HierarchyConfig<TRow> {
   }) => Promise<string | null | undefined>;
 }
 
+/**
+ * Declares a data source as multi-selectable. Presence on `DataViewProps`
+ * (mirroring `hierarchy`) enables checkbox multi-select in the views that
+ * support it (currently the tree). Gate on `selection != null`, NOT on
+ * `bulkActions` truthiness — `selection={{}}` still activates selection.
+ */
+export interface SelectionConfig {
+  /** Bulk-action buttons in the SelectionBar (rendered inside the multi-select
+   *  provider, so they may call useMultiSelect()). */
+  bulkActions?: ReactNode;
+}
+
 export interface FieldDef<TRow> {
   id: string;
   label: string;
@@ -94,6 +106,8 @@ export interface DataViewRenderProps<TRow> {
   searchAccessor?: (row: TRow) => string;
   /** Present only when the data source is hierarchical (gates the tree view). */
   hierarchy?: HierarchyConfig<TRow>;
+  /** Present → the view enables checkbox multi-select (currently the tree). */
+  selection?: SelectionConfig;
   /** This view's local expand map — for hierarchical views whose data source has
    * no server-persisted expand state. Persisted in ViewState (localStorage). */
   expanded?: Record<string, boolean>;
@@ -165,4 +179,6 @@ export interface DataViewProps<TRow> {
   viewOptions?: Record<string, unknown>;
   /** Hierarchy accessors + mutations. Present → hierarchical views (tree) appear. */
   hierarchy?: HierarchyConfig<TRow>;
+  /** Present → selectable views (tree) enable checkbox multi-select. */
+  selection?: SelectionConfig;
 }

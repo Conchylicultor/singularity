@@ -15,6 +15,7 @@ import {
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { TreeViewOptions } from "../internal/types";
 
 /**
@@ -48,6 +49,7 @@ function DefaultRow<TRow>(props: {
 
   const primaryValue = primaryField?.value?.(row);
   const primaryString = String(primaryValue ?? "");
+  const labelClass = options.labelClassName?.(row);
 
   let label: ReactNode;
   if (
@@ -60,11 +62,12 @@ function DefaultRow<TRow>(props: {
         nodeId={node.id}
         value={primaryString}
         onCommit={(next) => hierarchy.onRename!(node.id, next)}
+        className={labelClass}
       />
     );
   } else if (primaryField) {
     label = (
-      <span className="min-w-0 flex-1 truncate">
+      <span className={cn("min-w-0 flex-1 truncate", labelClass)}>
         {resolveCell(
           primaryField as FieldDef<unknown>,
           primaryValue ?? null,
@@ -73,7 +76,11 @@ function DefaultRow<TRow>(props: {
       </span>
     );
   } else {
-    label = <span className="min-w-0 flex-1 truncate">{node.id}</span>;
+    label = (
+      <span className={cn("min-w-0 flex-1 truncate", labelClass)}>
+        {node.id}
+      </span>
+    );
   }
 
   const menu: ((helpers: RowChromeMenuHelpers) => RowMenuItem[]) | undefined =
@@ -87,7 +94,9 @@ function DefaultRow<TRow>(props: {
     <RowChrome
       node={node}
       depth={depth}
-      actions={options.renderItemActions?.(row)}
+      actions={options.renderItemActions?.(row, {
+        hasChildren: node.children.length > 0,
+      })}
       menu={menu}
     >
       {leadingIcon != null ? (
@@ -194,6 +203,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
       <TreeList<Projected<unknown>>
         rows={projected}
         selectedId={props.selectedRowId}
+        rootId={options.rootId}
         onSelect={(id) => {
           const original = originalById.get(id);
           if (original !== undefined) props.onRowActivate?.(original);
@@ -204,12 +214,20 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         Row={Row}
         dragOverlay={dragOverlay}
         addLabel={addLabel}
+        multiSelect={
+          props.selection ? { actions: props.selection.bulkActions } : undefined
+        }
         toolbar={{
           search: {
             accessor: primaryAccessor,
             query: props.state.query,
             hideInput: true,
           },
+          expandAll: options.expandAll,
+          hideTerminal: options.hideTerminal && {
+            isTerminal: (r) => options.hideTerminal!.isTerminal(r.__row),
+          },
+          start: options.toolbarStart,
         }}
       />
     </div>

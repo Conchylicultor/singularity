@@ -38,6 +38,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     loadingState,
     viewOptions,
     hierarchy,
+    selection,
   } = props;
 
   const contributions = DataViewSlots.View.useContributions();
@@ -115,6 +116,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     searchAccessor:
       searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
     hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
+    selection,
     expanded: activeState.expanded,
     setExpanded: (id, next) => viewState.setExpanded(activeViewId, id, next),
     emptyState,

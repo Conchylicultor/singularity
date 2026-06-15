@@ -1,13 +1,11 @@
 import { MdAdd, MdDelete } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import {
-  RenameInput,
-  RowChrome,
-  TreeList,
-  type TreeItem,
+import type {
+  TreeItem,
+  RowChromeMenuHelpers,
+  RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
-import { buildTree, type TreeNode } from "@plugins/primitives/plugins/tree/core";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
   Avatar,
@@ -15,24 +13,19 @@ import {
   DEFAULT_AGENT_AVATAR,
 } from "@plugins/primitives/plugins/avatar/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
-import {
-  MultiSelectProvider,
-  SelectionBar,
-  SelectionCheckbox,
-  useMultiSelect,
-} from "@plugins/primitives/plugins/multi-select/web";
+import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import {
-  createAgent,
-  deleteAgent,
-  updateAgent,
-} from "@plugins/conversations/plugins/agents/core";
+import { createAgent, deleteAgent } from "@plugins/conversations/plugins/agents/core";
 import { agentsResource } from "../../shared/resources";
 import { Agents as AgentsSlots } from "../slots";
 import { agentDetailPane } from "../panes";
 import { AgentStatus } from "./agent-status";
 import { SystemFolder } from "./system-folder";
+import { patchAgent } from "./patch-agent";
+
+export { patchAgent } from "./patch-agent";
 
 type Agent = TreeItem & {
   name: string;
@@ -41,17 +34,6 @@ type Agent = TreeItem & {
   iconColor: string | null;
   iconSvgNodes: string | null;
 };
-
-type AgentPatch = {
-  name?: string;
-  expanded?: boolean;
-  parentId?: string | null;
-  rank?: Rank;
-};
-
-export async function patchAgent(id: string, patch: AgentPatch) {
-  await fetchEndpoint(updateAgent, { id }, { body: patch });
-}
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
@@ -66,32 +48,15 @@ async function createAgentRow(args: {
   parentId: string | null;
   rank?: Rank;
 }): Promise<string | null> {
-  try {
-    const agent = await fetchEndpoint(createAgent, {}, {
-      body: {
-        ...args,
-        name: "New agent",
-        prompt: "",
-        iconColor: randomFrom(AVATAR_COLOR_KEYS),
-      },
-    });
-    return agent.id;
-  } catch (err) {
-    throw err;
-  }
-}
-
-function deriveVisibleOrder(rows: readonly Agent[]): string[] {
-  const tree = buildTree(rows);
-  const ids: string[] = [];
-  function walk(nodes: TreeNode<Agent>[]) {
-    for (const n of nodes) {
-      ids.push(n.id);
-      if (n.expanded) walk(n.children);
-    }
-  }
-  walk(tree);
-  return ids;
+  const agent = await fetchEndpoint(createAgent, {}, {
+    body: {
+      ...args,
+      name: "New agent",
+      prompt: "",
+      iconColor: randomFrom(AVATAR_COLOR_KEYS),
+    },
+  });
+  return agent.id;
 }
 
 function DeleteSelectedAction() {
@@ -114,43 +79,6 @@ function DeleteSelectedAction() {
   );
 }
 
-function AgentRow({ node, depth }: { node: TreeNode<Agent>; depth: number }) {
-  const hasChildren = node.children.length > 0;
-  return (
-    <RowChrome
-      node={node}
-      depth={depth}
-      menu={({ addBelow }) => [
-        {
-          icon: MdAdd,
-          label: "Add agent below",
-          onClick: () => void addBelow(),
-        },
-      ]}
-      actions={
-        <AgentsSlots.AgentActions.Render>
-          {(act) => <act.component agentId={node.id} hasChildren={hasChildren} />}
-        </AgentsSlots.AgentActions.Render>
-      }
-    >
-      <SelectionCheckbox id={node.id} />
-      <Avatar
-        icon={node.icon ?? DEFAULT_AGENT_AVATAR.icon}
-        color={node.iconColor ?? DEFAULT_AGENT_AVATAR.color}
-        svgNodes={parseSvgNodes(node.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
-        size="xs"
-        fallbackKey={node.id}
-      />
-      <AgentStatus agentId={node.id} />
-      <RenameInput
-        nodeId={node.id}
-        value={node.name}
-        onCommit={(next) => patchAgent(node.id, { name: next })}
-      />
-    </RowChrome>
-  );
-}
-
 export function AgentsList({
   selectedId,
   selectedSystemId,
@@ -166,32 +94,63 @@ export function AgentsList({
   if (result.pending) return <Loading variant="rows" />;
 
   const rows = result.data;
-  const orderedIds = deriveVisibleOrder(rows);
 
   return (
-    <MultiSelectProvider orderedIds={orderedIds}>
-      <div className="flex flex-col gap-xs">
-        <SelectionBar actions={<DeleteSelectedAction />} />
-        <SystemFolder selectedSystemId={selectedSystemId} />
-        <TreeList<Agent>
-          rows={rows}
-          selectedId={selectedId}
-          onSelect={(id) =>
-            onSelect ? onSelect(id) : openPane(agentDetailPane, { id }, { mode: "push" })
-          }
-          onToggleExpanded={(id, next) => patchAgent(id, { expanded: next })}
-          onMove={(id, dest) => patchAgent(id, dest)}
-          onCreate={createAgentRow}
-          Row={AgentRow}
-          dragOverlay={(a) => a.name || "Untitled"}
-          toolbar={{
+    <div className="flex flex-col gap-xs">
+      <SystemFolder selectedSystemId={selectedSystemId} />
+      <DataView<Agent>
+        rows={rows}
+        fields={[{ id: "name", label: "Name", primary: true, value: (a) => a.name }]}
+        rowKey={(a) => a.id}
+        views={["tree"]}
+        storageKey="agents-list"
+        selectedRowId={selectedId}
+        onRowActivate={(a) =>
+          onSelect ? onSelect(a.id) : openPane(agentDetailPane, { id: a.id }, { mode: "push" })
+        }
+        hierarchy={{
+          getParentId: (a) => a.parentId,
+          getRank: (a) => a.rank,
+          isExpanded: (a) => a.expanded,
+          onToggleExpanded: (id, next) => patchAgent(id, { expanded: next }),
+          onMove: (id, dest) => patchAgent(id, dest),
+          onRename: (id, next) => patchAgent(id, { name: next }),
+          onCreate: createAgentRow,
+        }}
+        selection={{ bulkActions: <DeleteSelectedAction /> }}
+        viewOptions={{
+          tree: {
+            leadingIcon: (a: Agent) => (
+              <>
+                <Avatar
+                  icon={a.icon ?? DEFAULT_AGENT_AVATAR.icon}
+                  color={a.iconColor ?? DEFAULT_AGENT_AVATAR.color}
+                  svgNodes={parseSvgNodes(a.iconSvgNodes) ?? DEFAULT_AGENT_AVATAR.svgNodes}
+                  size="xs"
+                  fallbackKey={a.id}
+                />
+                <AgentStatus agentId={a.id} />
+              </>
+            ),
+            renderItemActions: (a: Agent, { hasChildren }: { hasChildren: boolean }) => (
+              <AgentsSlots.AgentActions.Render>
+                {(act) => <act.component agentId={a.id} hasChildren={hasChildren} />}
+              </AgentsSlots.AgentActions.Render>
+            ),
+            rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
+              {
+                icon: MdAdd,
+                label: "Add agent below",
+                onClick: () => void addBelow(),
+              },
+            ],
             expandAll: true,
-            search: { accessor: (a) => a.name },
-            start: <AgentsSlots.ListActions.Render />,
-          }}
-          addLabel="Agent"
-        />
-      </div>
-    </MultiSelectProvider>
+            addLabel: "Agent",
+            toolbarStart: <AgentsSlots.ListActions.Render />,
+            dragOverlay: (a: Agent) => a.name || "Untitled",
+          },
+        }}
+      />
+    </div>
   );
 }
