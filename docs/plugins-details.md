@@ -2127,6 +2127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`class-token-walk-in-sync`**
+            - **`collected-dir-tsconfig-coverage`**
             - **`composition-closure`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**

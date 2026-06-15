@@ -21,6 +21,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**
   - **`class-token-walk-in-sync`**
+  - **`collected-dir-tsconfig-coverage`**
   - **`composition-closure`**
   - **`config-origins-in-sync`**
   - **`conversation-trailer`**
