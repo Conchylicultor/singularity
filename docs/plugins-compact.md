@@ -176,7 +176,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`retry`**
     - **`semaphore`**
 
-- **`page`** [31 sub-plugins] — Block-based page editor.
+- **`page`** [39 sub-plugins] — Block-based page editor.
 
 - **`plugin-meta`** — Plugins about the plugin system itself — browsing, inspecting, and publishing.
   - Plugins:
@@ -347,7 +347,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
     - **`theme-toggle`** — Toolbar toggle for light/dark mode.
-    - **`tokens`** [11 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
+    - **`tokens`** [12 sub-plugins] — Umbrella for CSS token group plugins. Contributes global theme presets.
     - **`tweakcn`** — Imports tweakcn themes as dynamic presets across all token groups. Imports tweakcn themes and registers them as dynamic presets in all token groups.
       - Plugins:
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.

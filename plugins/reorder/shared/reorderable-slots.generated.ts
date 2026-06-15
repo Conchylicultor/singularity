@@ -38,6 +38,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "file-explorer.sidebar", pluginId: "apps.file-explorer.shell" },
   { slotId: "file-explorer.toolbar", pluginId: "apps.file-explorer.shell" },
   { slotId: "home.section", pluginId: "apps.home.shell" },
+  { slotId: "page.editor.format-action", pluginId: "page.editor" },
   { slotId: "page.editor.turn-into", pluginId: "page.editor" },
   { slotId: "pages.detail.section", pluginId: "apps.pages.page-tree" },
   { slotId: "pages.sidebar", pluginId: "apps.pages.shell" },
