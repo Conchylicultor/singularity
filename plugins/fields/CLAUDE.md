@@ -45,10 +45,9 @@ capability. Leaf plugins under `plugins/` register one type each.
 
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
-  - Slots: `Fields.Identity`
+  - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.text`
   - Exports: Values: `Fields`
 - Cross-plugin:
-  - Slot contributors: `avatar`, `bool`, `color`, `date`, `directory-path`, `dynamic-enum`, `enum`, `float`, `image`, `int`, `list`, `multiline-text`, `number`, `object`, `reorder-tree`, `secret`, `text`
   - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/text`
 - Core:
   - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`

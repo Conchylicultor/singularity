@@ -6,7 +6,7 @@
 
 - Description: Cross-cutting color adjustment transform for all color token groups.
 - Web:
-  - Slots: `ColorAdjust.Preset`
+  - Slots: `ColorAdjust.Preset` ← `ui.tokens.color-adjust`
   - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Color adjust preset", `ColorAdjust.Preset` "Default", `ColorAdjust.Preset` "Grayscale", `ColorAdjust.Preset` "Muted", `ColorAdjust.Preset` "Vibrant", `ColorAdjust.Preset` "Dimmer", `ColorAdjust.Preset` "Brighter", `ColorAdjust.Preset` "Warm Shift", `ColorAdjust.Preset` "Hue +60", `ColorAdjust.Preset` "Hue -60", `ColorAdjust.Preset` "Hue +120", `ColorAdjust.Preset` "Hue -120", `ColorAdjust.Preset` "Invert Hue", `ThemeEngine.ColorTransform` "Color Transform", `ThemeEngine.VariantGroup` "Color Adjust" → `ColorAdjustPicker`, `ThemeCustomizer.Section` "color-adjust" → `ColorAdjustSection`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/spacing.Stack`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
   - Exports: Types: `ColorAdjustPresetContribution`; Values: `ColorAdjust`

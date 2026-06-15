@@ -6,7 +6,7 @@
 
 - Description: Hosts the Conversation.ActionBar slot — action buttons rendered in the JSONL viewer header.
 - Web:
-  - Slots: `Conversation.ActionBar`
+  - Slots: `Conversation.ActionBar` ← `code-explorer`, `conversations.conversation-view.code.docs-button`, `conversations.conversation-view.commits-graph`, `conversations.conversation-view.dependent-count`, `conversations.conversation-view.jsonl-viewer.event-counter`, `conversations.conversation-view.open-app`, `conversations.conversation-view.push-profiling`, `conversations.conversation-view.tasks-panel`, `conversations.conversation-view.terminal-pane`, `conversations.conversation-view.vscode`, `review`, `tasks.attempt-view`
   - Uses: `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`
   - Exports: Values: `ActionBarView`, `Conversation`
 - Cross-plugin:

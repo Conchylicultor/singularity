@@ -6,12 +6,11 @@
 
 - Description: Hosts the file-peek pane and the FilePane.Renderer slot.
 - Web:
-  - Slots: `FilePane.Renderer`, `filePeekPane.Actions`
+  - Slots: `FilePane.Renderer` ← `conversations.conversation-view.code.file-pane.diff`, `conversations.conversation-view.code.file-pane.image`, `conversations.conversation-view.code.file-pane.markdown`, `conversations.conversation-view.code.file-pane.raw`, `filePeekPane.Actions`
   - Contributes: `Pane.Register` "file-peek"
   - Uses: `code-explorer/file-resolve.FileDisambiguation`, `code-explorer/file-resolve.useResolvedFile`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code.useEditedFiles`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/filepath-breadcrumb.FilepathBreadcrumb`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/select-scope.ContentScope`, `primitives/slot-render.renderIsolated`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
   - Exports: Types: `FileContentState`, `FileRendererContribution`, `FileRenderersHandle`, `FileRendererTarget`, `RendererMatch`; Values: `FileContent`, `FilePane`, `FilePaneView`, `filePeekPane`, `FileTabs`, `resolveRenderers`, `useFileContent`, `useFileRenderers`
 - Cross-plugin:
-  - Slot contributors: `diff`, `image`, `markdown`, `raw`
   - Imported by: `code-explorer`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/image`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/jsonl-viewer/file-path`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/markdown-extensions`, `plugin-meta/plugin-view/file-tree`
 - Sub-plugins:
   - **`diff`** — Side-by-side diff of the file vs HEAD in the conversation's worktree.

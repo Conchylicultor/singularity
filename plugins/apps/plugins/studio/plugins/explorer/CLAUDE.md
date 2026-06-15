@@ -18,12 +18,11 @@ served by the plugin-meta/plugin-view plugin.
 
 - Description: Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
 - Web:
-  - Slots: `Explorer.TreeRowBadge`, `explorerPane.Actions`
+  - Slots: `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`, `explorerPane.Actions`
   - Contributes: `Pane.Register` "explorer", `Studio.Sidebar` "Explorer" → `component`
   - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/collapsible.ExpandAllButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`, `primitives/ui-kit.cn`
   - Exports: Types: `TreeRowBadgeContribution`; Values: `Explorer`, `explorerPane`, `usePluginTree`
 - Cross-plugin:
-  - Slot contributors: `child-count`, `collapsed`, `expand-collapse`, `load-bearing`, `membership`
   - Imported by: `apps/studio/compositions`, `apps/studio/explorer/child-count`, `apps/studio/explorer/collapsed`, `apps/studio/explorer/expand-collapse`, `apps/studio/explorer/load-bearing`, `apps/studio/explorer/membership`
 - Sub-plugins:
   - **`child-count`** — Recursive child count badge in the explorer plugin tree row.

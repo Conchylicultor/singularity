@@ -56,7 +56,7 @@ function parseSlotCalls(
     const groupMatch = [...prefix.matchAll(/export\s+const\s+([A-Z]\w*)\s*=\s*\{/g)].pop();
     const groupName = groupMatch ? groupMatch[1]! : memberName;
 
-    out.push({ memberName, slotId, groupName, kind });
+    out.push({ memberName, slotId, groupName, kind, contributors: [] });
   }
   return out;
 }
@@ -117,7 +117,7 @@ function collectRuntimeSlots(importedModules: { mod: Record<string, unknown> }[]
       if (isSlotLike(val)) {
         if (!seen.has(val.id)) {
           seen.add(val.id);
-          out.push({ memberName: key, slotId: val.id, groupName, ...runtimeKindHints(val) });
+          out.push({ memberName: key, slotId: val.id, groupName, contributors: [], ...runtimeKindHints(val) });
         }
       } else if (isWalkableObject(val) && !visited.has(val)) {
         visited.add(val);
@@ -132,7 +132,7 @@ function collectRuntimeSlots(importedModules: { mod: Record<string, unknown> }[]
       if (isSlotLike(val)) {
         if (!seen.has(val.id)) {
           seen.add(val.id);
-          out.push({ memberName: key, slotId: val.id, groupName: key, ...runtimeKindHints(val) });
+          out.push({ memberName: key, slotId: val.id, groupName: key, contributors: [], ...runtimeKindHints(val) });
         }
       } else if (isWalkableObject(val) && !visited.has(val)) {
         visited.add(val);
@@ -177,21 +177,36 @@ export default createFacet<SlotDef[]>({
       slots.push(...parseDefineGroup(
         stripped,
         "defineSlot",
-        (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "slot" }),
+        (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "slot", contributors: [] }),
       ));
       slots.push(...parseDefineGroup(
         stripped,
         "defineDispatchSlot",
-        (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "dispatch" }),
+        (memberName, slotId, groupName): SlotDef => ({ memberName, slotId, groupName, kind: "dispatch", contributors: [] }),
       ));
     }
     return slots;
   },
 
+  // The per-slot reverse index (`SlotDef.contributors`) is populated by the
+  // `contributions` facet's `relate()`: it already joins slots ↔ contributions
+  // (to fill `definerPluginId`) and imports `slotsFacetDef`. The reverse edge —
+  // `slots/facet` importing `contributions/core` — would close a collected-dir
+  // dependency cycle (`contributions` already `dependsOn` `slots`), so the join
+  // lives on the single facet that legally has both in scope.
+
   renderDoc(data) {
     if (data.length === 0) return [];
     return [
-      { folder: "web", key: "Slots", values: data.map((s) => `\`${s.groupName}.${s.memberName}\``) },
+      {
+        folder: "web",
+        key: "Slots",
+        values: data.map((s) => {
+          const head = `\`${s.groupName}.${s.memberName}\``;
+          if (s.contributors.length === 0) return head;
+          return `${head} ← ${s.contributors.map((id) => `\`${id}\``).join(", ")}`;
+        }),
+      },
     ];
   },
 });

@@ -81,13 +81,10 @@ Behavior:
 
 - Description: Meta plugin for inline interactive widgets agents render via XML-like tags in assistant text. Sub-plugins contribute inline (pattern) or block (tag) renderers; hosts use useActiveDataSegments() + useActiveDataLinkify(). Persistent state for inline interactive widgets — table + resource keyed by (conversationId, messageId, tag, occurrenceIndex).
 - Web:
-  - Slots: `ActiveData.Tag`
+  - Slots: `ActiveData.Tag` ← `active-data.attempt`, `active-data.conv`, `active-data.plugin-link`, `active-data.task`, `active-data.task-link`, `improve.element-picker`
   - Contributes: `MarkdownEnhancerSlot`, `InlineTextWalkerSlot`, `TextEditorSlots.NodeExtensions`
   - Uses: `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/inline-text.InlineTextWalker`, `primitives/inline-text.InlineTextWalkerContext`, `primitives/inline-text.InlineTextWalkerSlot`, `primitives/inline-text.useInlineTextWalker`, `primitives/live-state.useResource`, `primitives/markdown.MarkdownEnhancement`, `primitives/markdown.MarkdownEnhancementContext`, `primitives/markdown.MarkdownEnhancerSlot`, `primitives/markdown.useMarkdownEnhancement`, `primitives/text-editor.TextEditorSlots`
   - Exports: Types: `ActiveDataBindingHandle`, `ActiveDataBlockContribution`, `ActiveDataCodeContribution`, `ActiveDataContribution`, `ActiveDataIdentity`, `ActiveDataInlineContribution`, `ActiveDataSegment`, `CodeReplaceContrib`; Values: `ActiveData`, `ActiveDataIdentityProvider`, `useActiveDataBinding`, `useActiveDataCodeReplace`, `useActiveDataIdentity`, `useActiveDataLinkify`, `useActiveDataSegments`
-- Cross-plugin:
-  - Slot contributors: `attempt`, `conv`, `element-picker`, `plugin-link`, `task`, `task-link`
-  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `improve/element-picker`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core._conversations`
   - DB schema: `plugins/active-data/server/internal/tables.ts`
@@ -96,6 +93,8 @@ Behavior:
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `ActiveDataBinding`, `ActiveDataBindingsPayload`, `PutBindingBody`; Values: `ActiveDataBindingSchema`, `ActiveDataBindingsPayloadSchema`, `activeDataBindingsResource`, `deleteBinding`, `inlineBoundary`, `putBinding`, `putBindingBodySchema`
+- Cross-plugin:
+  - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `conversations/conversation-view/jsonl-viewer/assistant-text`, `improve/element-picker`
 - Sub-plugins:
   - **`attempt`** — Renders raw `att-<id>` strings inline as clickable chips that open the attempt pane. Models emit the bare id, no tag wrapping needed.
   - **`conv`** — Renders raw `conv-<id>` strings inline as clickable chips that open the referenced conversation in the right side pane alongside the host conversation. Models emit the bare id, no tag wrapping needed.

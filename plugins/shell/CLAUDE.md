@@ -8,11 +8,10 @@
 - Load-bearing: yes
 - Web:
   - Commands: `Shell.Toast`
-  - Slots: `Shell.Sidebar`, `Shell.Toolbar`
+  - Slots: `Shell.Sidebar` ← `code-explorer`, `conversations.agents`, `conversations.conversations-view`, `stats`, `tasks.task-detail`, `Shell.Toolbar`
   - Uses: `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `ToastArgs`, `ToastVariant`; Values: `Shell`, `ShellCommands`
 - Cross-plugin:
-  - Slot contributors: `agents`, `code-explorer`, `conversations-view`, `stats`, `task-detail`
   - Imported by: `apps/agent-manager/shell`, `code-explorer`, `conversations/agents`, `conversations/conversation-view/push-profiling`, `conversations/conversations-view`, `debug/profiling/push`, `infra/health`, `shell/notifications`, `shell/toaster`, `stats`, `tasks/task-detail`
 - Sub-plugins:
   - **`action-bar`** — Shared cross-app action set. Defines the ActionBar.Item slot that plugins contribute their toolbar actions to; the global-action-bar plugin renders it.

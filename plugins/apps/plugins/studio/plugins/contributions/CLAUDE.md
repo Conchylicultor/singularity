@@ -6,7 +6,7 @@
 
 - Description: Central view of all plugin contributions aggregated by type.
 - Web:
-  - Slots: `Contributions.FacetTable`
+  - Slots: `Contributions.FacetTable` ← `plugin-meta.facets.commands.render-contributions`, `plugin-meta.facets.contributions.render-contributions`, `plugin-meta.facets.cross-refs.render-contributions`, `plugin-meta.facets.db-schema.render-contributions`, `plugin-meta.facets.exports.render-contributions`, `plugin-meta.facets.registrations.render-contributions`, `plugin-meta.facets.resources.render-contributions`, `plugin-meta.facets.routes.render-contributions`, `plugin-meta.facets.slots.render-contributions`, `plugin-meta.facets.structure.render-contributions`
   - Contributes: `Pane.Register` "contributions", `Studio.Sidebar` "Contributions" → `component`
   - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/data-table.DataTable`, `primitives/filter-chips.FilterChip`, `primitives/link-chip.LinkChip`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/search.SearchInput`, `primitives/text.Text`
   - Exports: Types: `ContributionsFacetTable`, `FacetTableEntry`; Values: `Contributions`, `defineFacetTable`, `PluginChip`

@@ -25,12 +25,11 @@ contributions: [
 
 - Description: Toolbar button that opens a side pane exposing agent modifications in a structured, extensible view.
 - Web:
-  - Slots: `ReviewSlots.Section`, `convReviewPane.Actions`
+  - Slots: `ReviewSlots.Section` ← `review.code-review`, `review.plugin-changes`, `review.reorder-defaults`, `convReviewPane.Actions`
   - Contributes: `Pane.Register` "conv-review", `Conversation.ActionBar` → `ReviewButton`
   - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `primitives/detail-sections.defineDetailSections`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/toggle-chip.ToggleChip`, `primitives/ui-kit.Button`
   - Exports: Types: `ReviewProps`, `Source`; Values: `convReviewPane`, `ReviewSlots`
 - Cross-plugin:
-  - Slot contributors: `code-review`, `plugin-changes`, `reorder-defaults`
   - Imported by: `review/code-review`, `review/plugin-changes`, `review/reorder-defaults`
 - Sub-plugins:
   - **`code-review`** — File-by-file code review section for the review pane. File-by-file code review section for the review pane.

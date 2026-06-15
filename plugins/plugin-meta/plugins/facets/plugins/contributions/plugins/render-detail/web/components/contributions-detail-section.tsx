@@ -1,6 +1,5 @@
 import {
   Section,
-  ConsumerList,
   PluginLink,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
@@ -23,8 +22,8 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
     | undefined;
   if (!data) return null;
 
-  const { static: contribs, slotContributors } = data;
-  if (contribs.length === 0 && slotContributors.length === 0) return null;
+  const { static: contribs } = data;
+  if (contribs.length === 0) return null;
 
   return (
     <Section
@@ -60,15 +59,6 @@ export function ContributionsDetailSection({ node }: { node: PluginNode }) {
             );
           })}
         </Stack>
-      )}
-      {slotContributors.length > 0 && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets this conditional sibling from the contributions block above; both render directly inside Section with no shared flex parent to own the gap
-        <Text as="div" variant="caption" className="mt-2 flex items-center gap-sm px-sm py-2xs">
-          <span className="shrink-0 text-muted-foreground/60">
-            Slot contributors
-          </span>
-          <ConsumerList names={slotContributors} />
-        </Text>
       )}
     </Section>
   );

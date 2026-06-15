@@ -6,7 +6,7 @@
 
 - Description: Sidebar palette token group with switchable presets.
 - Web:
-  - Slots: `SidebarPalette.Preset`
+  - Slots: `SidebarPalette.Preset` ← `ui.tokens.sidebar-palette`
   - Contributes: `SidebarPalette.Preset` "Default", `SidebarPalette.Preset` "Warm", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Sidebar Palette preset", `ThemeEngine.TokenGroup` "Sidebar Palette", `ThemeEngine.VariantGroup` "Sidebar Palette" → `SidebarPalettePicker`, `ThemeCustomizer.Section` "sidebar-palette" → `SidebarPaletteSection`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/row.SectionHeaderRow`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ColorAdjustContext`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.transformValues`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine.useTokenGroupPresetOptions`, `ui/theme-engine/theme-customizer.ThemeCustomizer`, `ui/theme-engine/theme-customizer.TokenModeContext`, `ui/theme-engine/theme-customizer.TokenRow`
   - Exports: Types: `SidebarPalettePresetContribution`; Values: `SidebarPalette`

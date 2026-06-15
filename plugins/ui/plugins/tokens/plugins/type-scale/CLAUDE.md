@@ -6,7 +6,7 @@
 
 - Description: Type-scale token group (font sizes, line heights, weights) with switchable presets.
 - Web:
-  - Slots: `TypeScale.Preset`
+  - Slots: `TypeScale.Preset` ← `ui.tokens.type-scale`
   - Contributes: `TypeScale.Preset` "Default", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Type scale preset", `ThemeEngine.TokenGroup` "Type Scale", `ThemeEngine.VariantGroup` "Type Scale" → `TypeScalePicker`, `ThemeCustomizer.Section` "type-scale" → `TypeScaleSection`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/row.SectionHeaderRow`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine.useTokenGroupPresetOptions`, `ui/theme-engine/theme-customizer.ThemeCustomizer`, `ui/theme-engine/theme-customizer.TokenModeContext`, `ui/theme-engine/theme-customizer.TokenRow`
   - Exports: Types: `TypeScalePresetContribution`; Values: `TypeScale`

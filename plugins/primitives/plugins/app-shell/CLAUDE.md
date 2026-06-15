@@ -6,11 +6,10 @@
 
 - Description: Universal app shell: opt-in sidebar + opt-in toolbar chrome wrapping an app-supplied main-area layout renderer (children). With neither slot it collapses to a transparent full-surface host.
 - Web:
-  - Slots: `AppShell.Framing`
+  - Slots: `AppShell.Framing` ← `ui.sidebar-framing`
   - Uses: `primitives/bar.Bar`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/ui-kit.Button`, `primitives/ui-kit.Sidebar`, `primitives/ui-kit.SidebarGroup`, `primitives/ui-kit.SidebarGroupContent`, `primitives/ui-kit.SidebarGroupLabel`, `primitives/ui-kit.SidebarHeader`, `primitives/ui-kit.SidebarInset`, `primitives/ui-kit.SidebarMenu`, `primitives/ui-kit.SidebarMenuButton`, `primitives/ui-kit.SidebarMenuItem`, `primitives/ui-kit.SidebarProvider`, `primitives/ui-kit.SidebarTrigger`
   - Exports: Types: `AppShellSidebarItem`, `AppShellToolbarItem`, `FramingContribution`, `SidebarFramingProps`; Values: `AppShell`, `AppShellLayout`, `sidebarNavItem`, `SidebarNavItem`, `SidebarPaneSection`
 - Cross-plugin:
-  - Slot contributors: `sidebar-framing`
   - Imported by: `apps/agent-manager/shell`, `apps/debug/shell`, `apps/deploy/shell`, `apps/file-explorer/shell`, `apps/pages/page-tree`, `apps/pages/shell`, `apps/settings/accounts`, `apps/settings/appearance`, `apps/settings/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/shell`, `apps/workflows/shell`, `backup`, `code-explorer`, `conversations/agents`, `conversations/conversations-view`, `conversations/recover`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/live-state-health`, `debug/logs`, `debug/memory`, `debug/profiling`, `debug/queue`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `infra/events-test`, `stats`, `tasks/task-detail`, `ui/sidebar-framing`
 - Core:
   - Exports: Types: `SidebarFramingProps`

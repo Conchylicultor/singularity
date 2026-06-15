@@ -6,12 +6,9 @@
 
 - Description: Reports uncaught browser errors to the server. Records server/frontend crashes and files deduped tasks.
 - Web:
-  - Slots: `Reports.KindView`
+  - Slots: `Reports.KindView` ← `reports.crash`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/slot-render.defineDispatchSlot`, `primitives/tab-id.getTabId`
   - Exports: Types: `ReportContext`; Values: `report`, `Reports`
-- Cross-plugin:
-  - Slot contributors: `crash`
-  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/reports`, `debug/slow-ops`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`
 - Server:
   - Uses: `build.getServerBuildId`, `database.db`, `infra/endpoints.implement`, `infra/paths.REPORTS_DIR`, `shell/notifications.recordNotification`, `shell/notifications.setMutedByMetadata`, `tasks/tasks-core.createTask`, `tasks/tasks-core.ensureMetaTask`, `tasks/tasks-core.getTask`
   - DB schema: `plugins/reports/server/internal/tables.ts`
@@ -21,6 +18,8 @@
 - Core:
   - Uses: `primitives/live-state.resourceDescriptor`
   - Exports: Types: `Report`; Values: `ReportSchema`, `reportsResource`
+- Cross-plugin:
+  - Imported by: `conversations`, `conversations/model-provider`, `conversations/runtime-tmux`, `debug/reports`, `debug/slow-ops`, `infra/health`, `reports/crash`, `reports/endpoint-errors`, `reports/noise-rules`
 - Sub-plugins:
   - **`crash`** — Crash report kind: browser crash collector and the Debug → Reports summary view. Crash report kind: validates crash payloads, fingerprints by error + stack, and renders per-crash tasks.
   - **`endpoint-errors`** — Files crash tasks for bug-shaped handled endpoint errors (validation 400s and 5xx).

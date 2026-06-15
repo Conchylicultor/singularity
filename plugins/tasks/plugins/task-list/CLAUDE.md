@@ -6,12 +6,11 @@
 
 - Description: Tree view of all tasks rendered in the Tasks pane. Defines Tasks.List/TaskActions/ListActions slots and ships the row actions (delete, expand-all, launch-agent).
 - Web:
-  - Slots: `Tasks.View`, `Tasks.TaskActions`, `Tasks.ListActions`
+  - Slots: `Tasks.View` ← `tasks.task-list.recent`, `tasks.task-list.tree`, `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`, `Tasks.ListActions`
   - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
   - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/data-view.defineItemActions`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `primitives/ui-kit.cn`, `tasks.patchTask`
   - Exports: Types: `TaskViewProps`; Values: `Tasks`
 - Cross-plugin:
-  - Slot contributors: `auto-start`, `recent`, `tree`
   - Imported by: `tasks/auto-start`, `tasks/task-detail`, `tasks/task-list/recent`, `tasks/task-list/tree`
 - Sub-plugins:
   - **`recent`** — Recency-sorted flat task list tab.

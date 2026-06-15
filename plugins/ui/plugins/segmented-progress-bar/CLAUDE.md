@@ -6,18 +6,17 @@
 
 - Description: Pluggable segmented progress bar with switchable visual variants.
 - Web:
-  - Slots: `SegmentedProgressBarSlots.Variant`
+  - Slots: `SegmentedProgressBarSlots.Variant` ← `ui.segmented-progress-bar.dots`, `ui.segmented-progress-bar.segmented`
   - Contributes: `ConfigV2.WebRegister`, `DynamicEnum.Options` "Progress bar variant", `ThemeEngine.VariantGroup` "Segmented Progress Bar" → `VariantPicker`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`
   - Exports: Types: `SegmentedProgressBarProps`, `SegmentedProgressBarVariantContribution`, `Step`; Values: `SegmentedProgressBar`, `SegmentedProgressBarSlots`
-- Cross-plugin:
-  - Slot contributors: `dots`, `segmented`
-  - Imported by: `conversations/conversation-progress`, `ui/segmented-progress-bar/dots`, `ui/segmented-progress-bar/segmented`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`
   - Exports: Types: `SegmentedProgressBarProps`, `Step`; Values: `segmentedProgressBarConfig`
+- Cross-plugin:
+  - Imported by: `conversations/conversation-progress`, `ui/segmented-progress-bar/dots`, `ui/segmented-progress-bar/segmented`
 - Sub-plugins:
   - **`dots`** — Classic dot indicators with connectors. Compact and non-compact modes.
   - **`segmented`** — Flat 4px-tall pill segments with a single tooltip.

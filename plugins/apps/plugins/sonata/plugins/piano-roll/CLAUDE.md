@@ -6,7 +6,7 @@
 
 - Description: Sonata Display: Synthesia-like pitch × time piano roll. Draws notes via its published Projection (time-axis + pitch-plane capabilities), auto-scrolls the time axis to keep the playback cursor in view, and hosts capability-compatible overlays. Server registration of the piano-roll config (Synthesia-style note-name labels).
 - Web:
-  - Slots: `PianoRollFx.PianoRollFx`
+  - Slots: `PianoRollFx.PianoRollFx` ← `apps.sonata.piano-roll.fx-comets`, `apps.sonata.piano-roll.fx-core`, `apps.sonata.piano-roll.fx-ripples`, `apps.sonata.piano-roll.fx-shatter`
   - Contributes: `Sonata.Display` "Piano Roll" → `PianoRoll`, `SonataToolbar.End` "spread" → `SpreadWheel`, `ConfigV2.WebRegister`
   - Uses: `apps/sonata/primitives/inertial-drag.useInertialDrag`, `apps/sonata/primitives/keyboard.isBlackPitch`, `apps/sonata/primitives/keyboard.keyLayout`, `apps/sonata/shell.Sonata`, `apps/sonata/shell.SonataToolbar`, `apps/sonata/shell.useCursorApi`, `apps/sonata/shell.useSonata`, `apps/sonata/track-mixer.blackKeyColor`, `apps/sonata/track-mixer.useHiddenTrackIds`, `apps/sonata/track-mixer.useTrackColorMap`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/log-channels.clientLog`, `primitives/popover.InlinePopover`, `primitives/section-label.SectionLabel`, `primitives/slot-render.renderIsolated`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.cn`
   - Exports: Types: `EmitterOptions`, `FxContext`, `FxNoteEvent`, `FxToggleConfig`, `ParticleEmitter`, `SpawnSpec`; Values: `createEmitter`, `easeOutCubic`, `PianoRollFx`

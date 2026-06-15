@@ -7,7 +7,7 @@
 - Description: Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
 - Load-bearing: yes
 - Web:
-  - Slots: `Shortcuts.Shortcut`
+  - Slots: `Shortcuts.Shortcut` ← `apps.surface`, `reorder.edit-mode`
   - Contributes: `Core.Root` → `ShortcutManager`
   - Uses: `primitives/surface-id.useSurfaceTabId`
   - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `getFocusedSurfaceId`, `isEditableTarget`, `setFocusedSurfaceId`, `Shortcuts`, `subscribeFocusedSurface`, `useFocusedSurfaceId`, `useSurfaceShortcuts`

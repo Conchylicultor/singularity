@@ -6,7 +6,7 @@
 
 - Description: Density token group (padding intents) with switchable presets.
 - Web:
-  - Slots: `Density.Preset`
+  - Slots: `Density.Preset` ← `ui.tokens.density`
   - Contributes: `Density.Preset` "Comfortable", `Density.Preset` "Cozy", `Density.Preset` "Compact", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Density preset", `ThemeEngine.TokenGroup` "Density", `ThemeEngine.VariantGroup` "Density" → `DensityPicker`, `ThemeCustomizer.Section` "density" → `DensitySection`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/row.SectionHeaderRow`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useTokenGroupPresetOptions`, `ui/theme-engine/theme-customizer.ThemeCustomizer`, `ui/theme-engine/theme-customizer.TokenModeContext`, `ui/theme-engine/theme-customizer.TokenRow`
   - Exports: Types: `DensityPresetContribution`; Values: `Density`

@@ -6,18 +6,17 @@
 
 - Description: Central settings pane for switching visual variants of pluggable UI components.
 - Web:
-  - Slots: `ThemeEngine.VariantGroup`, `ThemeEngine.TokenGroup`, `ThemeEngine.GlobalPreset`, `ThemeEngine.ColorTransform`, `ThemeEngine.PresetSource`
+  - Slots: `ThemeEngine.VariantGroup` ← `apps.app-rail-framing`, `ui.segmented-progress-bar`, `ui.sidebar-framing`, `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-adjust`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ThemeEngine.TokenGroup` ← `ui.tokens.categorical`, `ui.tokens.chart`, `ui.tokens.color-palette`, `ui.tokens.density`, `ui.tokens.font-family`, `ui.tokens.shadow`, `ui.tokens.shape`, `ui.tokens.sidebar-palette`, `ui.tokens.type-scale`, `ThemeEngine.GlobalPreset` ← `ui.tokens`, `ThemeEngine.ColorTransform` ← `ui.tokens.color-adjust`, `ThemeEngine.PresetSource` ← `ui.tweakcn`
   - Contributes: `Core.Root` → `ThemeInjector`, `Core.Root` → `ChromeTheme`, `Core.Boot`, `ConfigV2.WebRegister`, `DynamicEnum.Options` "Theme"
   - Uses: `apps.useActiveApp`, `apps.useCurrentAppId`, `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useScopeForked`, `fields/dynamic-enum/config.DynamicEnum`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.hydrateResource`, `primitives/slot-render.defineRenderSlot`, `primitives/ui-kit.appThemeScope`, `primitives/ui-kit.CHROME_THEME_SCOPE`, `primitives/ui-kit.themeScopeSelectors`
   - Exports: Types: `ColorAdjustment`, `ColorMode`, `ColorTransformContribution`, `GlobalPresetContribution`, `PresetSourceContribution`, `TokenGroupContribution`, `TokenGroupPreset`, `TokenGroupPresets`, `VariantGroupContribution`; Values: `ChromeTheme`, `ColorAdjustContext`, `ScopedAppTheme`, `ThemeEngine`, `ThemeScope`, `ThemeScopeProvider`, `transformValues`, `useColorMode`, `useResolvedColorMode`, `useThemeScopeId`, `useTokenGroupPresetOptions`, `useTokenGroupPresets`
-- Cross-plugin:
-  - Slot contributors: `categorical`, `chart`, `color-adjust`, `color-palette`, `density`, `font-family`, `segmented-progress-bar`, `shadow`, `shape`, `sidebar-palette`, `tokens`, `tweakcn`, `type-scale`
-  - Imported by: `apps/surface`, `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/dynamic-enum/config.dynamicEnumField`, `fields/enum/config.enumField`
   - Exports: Types: `TokenGroupDescriptor`, `TokenGroupField`, `TokenGroupSchema`; Values: `defineTokenGroup`, `themeEngineConfig`
+- Cross-plugin:
+  - Imported by: `apps/surface`, `shell/toaster`, `ui/segmented-progress-bar`, `ui/theme-engine/theme-customizer`, `ui/tokens`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Sub-plugins:
   - **`theme-customizer`** — Extensible theme customization pane with global preset picker, search, and contributed sections.
 

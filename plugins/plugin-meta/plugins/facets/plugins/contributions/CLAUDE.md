@@ -10,7 +10,12 @@ modules — it reads the `importedModules` field of `ExtractContext`, which is p
 
 `extract()` collects `{ slotId, componentName, doc }` without display names.
 `relate()` fills in `slotDisplayName` by reading from the slots facet —
-`${groupName}.${memberName}` from each `SlotDef`.
+`${groupName}.${memberName}` from each `SlotDef` — links each static
+contribution to its slot definer (`definerPluginId`), and populates the **slots
+facet's** per-slot reverse index (`SlotDef.contributors`, the full plugin ids
+that contribute to each slot). That last write lives here, not on the slots
+facet, because the join needs both facets in scope and the reverse import edge
+would close a collected-dir dependency cycle.
 
 Browser rendering lives in the `render-diff` / `render-detail` / `render-catalog`
 sub-plugins, each reading `node.facets["contributions"]` and contributing to an

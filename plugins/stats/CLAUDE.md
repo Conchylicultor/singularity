@@ -6,12 +6,11 @@
 
 - Description: Root plugin hosting stacked chart contributions from child plugins.
 - Web:
-  - Slots: `Stats.Chart`, `statsPane.Actions`
+  - Slots: `Stats.Chart` ← `stats.commits`, `stats.cost`, `stats.pushes`, `stats.tasks`, `statsPane.Actions`
   - Contributes: `Pane.Register` "stats", `Shell.Sidebar` "Stats" → `component`
   - Uses: `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`, `shell.Shell`
   - Exports: Values: `Stats`, `statsPane`, `useShowEmptyDays`
 - Cross-plugin:
-  - Slot contributors: `commits`, `cost`, `pushes`, `tasks`
   - Imported by: `stats/commits`, `stats/cost`, `stats/pushes`, `stats/tasks`
 - Sub-plugins:
   - **`commits`** — Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.

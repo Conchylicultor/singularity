@@ -1,8 +1,16 @@
 # slots
 
-Extracts `defineSlot()` definitions from each plugin's `web/slots.ts`.
-No `relate()` yet — slot contributors will be wired once the `contributions`
-facet exists.
+Extracts `defineSlot()` definitions from each plugin's `web/slots.ts`. Each
+`SlotDef` carries a **per-slot reverse index** `contributors: string[]` — the
+full plugin ids of every plugin that contributes to that specific slot. This
+facet has no `relate()` of its own: the join needs both the slots and
+contributions data in scope, and `slots/facet` importing `contributions/core`
+would close a collected-dir dependency cycle (`contributions` already
+`dependsOn` `slots`). So the `contributions` facet's `relate()` — which already
+imports `slotsFacetDef` to fill `slotDisplayName`/`definerPluginId` — populates
+`contributors` too (runtime contributions match by exact `slotId`; static
+contributions by group head + last segment; contributor is always the iterating
+node's `id`, deduped and sorted).
 
 Browser rendering lives in the `render-diff` / `render-detail` / `render-catalog`
 sub-plugins, each reading `node.facets["slots"]` and contributing to an existing

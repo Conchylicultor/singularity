@@ -6,7 +6,7 @@ import {
   type DocFact,
   type ExtractContext,
 } from "@plugins/plugin-meta/plugins/facets/core";
-import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
+import { type SlotDef, slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
 import { readIfExists, stripTypes, maskSource } from "@plugins/plugin-meta/plugins/parse-utils/core";
 import {
   type Contribution,
@@ -103,7 +103,7 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    return { static: staticContributions, runtime: runtimeContributions, slotContributors: [] };
+    return { static: staticContributions, runtime: runtimeContributions };
   },
 
   relate(rawCtx) {
@@ -133,10 +133,10 @@ export default createFacet<ContributionsFacetData>({
       }
     }
 
-    // Compute slotContributors across tree (from slots + static contributions).
-    // The slots facet's runtime walk now discovers every slot (including
-    // factory-produced ones at any nesting depth), so all slot groups resolve
-    // their contribution owners here.
+    // Link each static contribution back to the plugin that defines its slot
+    // (used by the detail PluginLink). The slots facet's runtime walk now
+    // discovers every slot (including factory-produced ones at any nesting
+    // depth), so all slot groups resolve their contribution owners here.
     const slotGroupToOwner = new Map<string, PluginNode>();
     for (const info of tree.byDir.values()) {
       const nodeSlots = getFacet(info, slotsFacetDef) ?? [];
@@ -154,18 +154,59 @@ export default createFacet<ContributionsFacetData>({
         if (!head) continue;
         const owner = slotGroupToOwner.get(head);
         if (!owner || owner === contributor) continue;
-        // Link each contribution back to the plugin that defines its slot.
         c.definerPluginId = owner.id;
-        // Reverse index: record this contributor on the slot owner.
-        const ownerData = getFacet(owner, contributionsFacetDef);
-        if (ownerData && !ownerData.slotContributors.includes(contributor.name)) {
-          ownerData.slotContributors.push(contributor.name);
-        }
       }
     }
-    for (const info of tree.byDir.values()) {
-      const data = getFacet(info, contributionsFacetDef);
-      if (data) data.slotContributors.sort();
+
+    // Per-slot reverse index: fill each `SlotDef.contributors` (full plugin ids)
+    // with every node that contributes to that specific slot. This lives here —
+    // not on the slots facet — because the join needs both facets in scope and
+    // `slots/facet` importing `contributions/core` would close a collected-dir
+    // dependency cycle (`contributions` already `dependsOn` `slots`). Read only
+    // the contributions *extract* output (`data.static` / `data.runtime`); the
+    // contributor is always the iterating node's `id`.
+    //  - Runtime contributions: exact `slotId` match (authoritative, precise).
+    //  - Static contributions: group head + last segment, robust for flat
+    //    (`PluginView.Section`), nested (`Sonata.Toolbar.Start` → `Sonata.Start`),
+    //    and single-member (`group === member`) symbols.
+    const slotById = new Map<string, SlotDef[]>();
+    const slotByGroupMember = new Map<string, SlotDef[]>();
+    for (const node of tree.byDir.values()) {
+      const nodeSlots = getFacet(node, slotsFacetDef) ?? [];
+      for (const slot of nodeSlots) {
+        slot.contributors = [];
+        let byId = slotById.get(slot.slotId);
+        if (!byId) slotById.set(slot.slotId, (byId = []));
+        byId.push(slot);
+        const key = `${slot.groupName}.${slot.memberName}`;
+        let byGm = slotByGroupMember.get(key);
+        if (!byGm) slotByGroupMember.set(key, (byGm = []));
+        byGm.push(slot);
+      }
+    }
+
+    const contributorsBySlot = new Map<SlotDef, Set<string>>();
+    const record = (slot: SlotDef, id: string): void => {
+      let set = contributorsBySlot.get(slot);
+      if (!set) contributorsBySlot.set(slot, (set = new Set()));
+      set.add(id);
+    };
+    for (const node of tree.byDir.values()) {
+      const data = getFacet(node, contributionsFacetDef);
+      if (!data) continue;
+      for (const c of data.runtime) {
+        for (const slot of slotById.get(c.slotId) ?? []) record(slot, node.id);
+      }
+      for (const c of data.static) {
+        const parts = c.slot.split(".");
+        const head = parts[0];
+        const last = parts[parts.length - 1];
+        if (!head || !last) continue;
+        for (const slot of slotByGroupMember.get(`${head}.${last}`) ?? []) record(slot, node.id);
+      }
+    }
+    for (const [slot, set] of contributorsBySlot) {
+      slot.contributors = [...set].sort();
     }
   },
 
@@ -180,9 +221,6 @@ export default createFacet<ContributionsFacetData>({
         return parts.join(" ");
       });
       facts.push({ folder: "web", key: "Contributes", values });
-    }
-    if (data.slotContributors.length > 0) {
-      facts.push({ folder: "cross-plugin", key: "Slot contributors", values: data.slotContributors.map((n) => `\`${n}\``) });
     }
     return facts;
   },

@@ -6,12 +6,11 @@
 
 - Description: Renders attachment JSONL events with subtype dispatch to per-attachment renderer plugins.
 - Web:
-  - Slots: `JsonlViewerAttachment.Renderer`
+  - Slots: `JsonlViewerAttachment.Renderer` ← `conversations.conversation-view.jsonl-viewer.attachment.agent-listing-delta`, `conversations.conversation-view.jsonl-viewer.attachment.command-permissions`, `conversations.conversation-view.jsonl-viewer.attachment.date-change`, `conversations.conversation-view.jsonl-viewer.attachment.deferred-tools-delta`, `conversations.conversation-view.jsonl-viewer.attachment.edited-text-file`, `conversations.conversation-view.jsonl-viewer.attachment.hook-additional-context`, `conversations.conversation-view.jsonl-viewer.attachment.hook-success`, `conversations.conversation-view.jsonl-viewer.attachment.nested-memory`, `conversations.conversation-view.jsonl-viewer.attachment.queued-command`, `conversations.conversation-view.jsonl-viewer.attachment.skill-listing`, `conversations.conversation-view.jsonl-viewer.attachment.task-reminder`
   - Contributes: `JsonlViewer.EventRenderer` "attachment" → `AttachmentRow`
   - Uses: `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer.useJsonlConversationId`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `conversations/conversation-view/jsonl-viewer/investigate-event.InvestigateEventButton`, `primitives/slot-render.defineDispatchSlot`, `primitives/text.Text`
   - Exports: Values: `JsonlViewerAttachment`
 - Cross-plugin:
-  - Slot contributors: `agent-listing-delta`, `command-permissions`, `date-change`, `deferred-tools-delta`, `edited-text-file`, `hook-additional-context`, `hook-success`, `nested-memory`, `queued-command`, `skill-listing`, `task-reminder`
   - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/date-change`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`
 - Core:
   - Exports: Types: `AttachmentEvent`, `AttachmentRendererProps`

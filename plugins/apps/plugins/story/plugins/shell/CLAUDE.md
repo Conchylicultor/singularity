@@ -6,7 +6,7 @@
 
 - Description: App shell for Story Builder. Registers the /story app entry and the gallery + editor panes (browse story-marked pages, author a story, switch between Author and renderer lenses).
 - Web:
-  - Slots: `StoryToolbar.Start`, `StoryToolbar.End`
+  - Slots: `StoryToolbar.Start` ← `apps.story.shell`, `StoryToolbar.End` ← `apps.story.shell`
   - Contributes: `Apps.App` "Story" → `StoryLayout`, `StoryToolbar.Start` "back" → `BackToStories`, `StoryToolbar.Start` "title" → `StoryTitleItem`, `StoryToolbar.End` "view-switcher" → `ViewSwitcherItem`, `Pane.Register` "story-gallery", `Pane.Register` "story-detail"
   - Uses: `apps.Apps`, `apps/story/marker.markStory`, `apps/story/marker.storiesResource`, `apps/story/marker.useStories`, `apps/story/render.Story`, `apps/story/render.StoryRender`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `layouts/full-pane.FullPane`, `page/editor.BlockEditor`, `page/editor.PageIcon`, `primitives/data-view.DataView`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/live-state.ResourceView`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane-toolbar.definePaneToolbar`, `primitives/pane.Pane`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/relative-time.formatRelativeTime`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.Button`
   - Exports: Values: `StoryToolbar`

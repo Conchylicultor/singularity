@@ -6,12 +6,11 @@
 
 - Description: Gantt chart of build steps and server startup phases.
 - Web:
-  - Slots: `Profiling.Section`, `profilingPane.Actions`
+  - Slots: `Profiling.Section` ← `debug.profiling.boot`, `debug.profiling.build`, `debug.profiling.push`, `debug.profiling.runtime`, `debug.profiling.stats`, `profilingPane.Actions`
   - Contributes: `Pane.Register` "debug-profiling", `DebugApp.Sidebar` "Profiling" → `component`
   - Uses: `apps/debug/shell.DebugApp`, `primitives/app-shell.sidebarNavItem`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/section-label.SectionLabel`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
   - Exports: Types: `DragState`, `GanttContainerContextValue`, `PhaseConfig`, `ProfilingContextValue`, `Span`, `ZoomWindow`; Values: `DragSelection`, `formatDuration`, `GanttContainer`, `GanttSection`, `groupByPhase`, `PhaseGroup`, `Profiling`, `ProfilingContext`, `profilingPane`, `SpanDetail`, `SpanRow`, `TimeAxis`, `useGanttContainerContext`, `useGanttZoom`, `useProfilingContext`
 - Cross-plugin:
-  - Slot contributors: `boot`, `build`, `push`, `runtime`, `stats`
   - Imported by: `build/build-profiling`, `debug/profiling/boot`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/push/push-gantt`, `debug/profiling/runtime`, `debug/profiling/stats`
 - Sub-plugins:
   - **`boot`** — Server boot profiling for the Gantt debug pane. Server boot profiling data endpoint.

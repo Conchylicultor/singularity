@@ -13,6 +13,13 @@ export interface SlotDef {
    * every other kind (including `"wrap"`) never is.
    */
   kind?: "render" | "mount" | "dispatch" | "wrap" | "slot";
+  /**
+   * Full plugin ids (e.g. `apps/story/pages-integration`) of every plugin that
+   * contributes to this specific slot — a per-slot reverse index populated by
+   * this facet's `relate()` from the contributions facet's extract data. Empty
+   * until `relate()` runs; deduped and sorted.
+   */
+  contributors: string[];
 }
 
 export const slotsFacetDef = defineFacet<SlotDef[]>("slots");

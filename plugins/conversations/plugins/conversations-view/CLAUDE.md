@@ -6,12 +6,11 @@
 
 - Description: Sidebar list of all conversations.
 - Web:
-  - Slots: `ConversationsView.View`
+  - Slots: `ConversationsView.View` ← `conversations.conversations-view.grouped`, `conversations.conversations-view.history`, `conversations.conversations-view.queue`
   - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
   - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/pane-restore.loadRouteForConversation`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/cursor-pagination.useCursorPagination`, `primitives/launch.LaunchControl`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/tabbed-view.defineTabbedView`, `primitives/text.Text`, `shell.Shell`
   - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
 - Cross-plugin:
-  - Slot contributors: `grouped`, `history`, `queue`
   - Imported by: `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`
 - Sub-plugins:
   - **`grouped`** — User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join. User-defined groups in the conversation sidebar list — drag a conversation onto another to create a group; drag onto a group to join.

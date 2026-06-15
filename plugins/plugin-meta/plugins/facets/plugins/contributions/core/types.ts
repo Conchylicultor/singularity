@@ -38,7 +38,6 @@ export interface DocMetaContribution {
 export interface ContributionsFacetData {
   static: Contribution[];
   runtime: DocMetaContribution[];
-  slotContributors: string[];
 }
 
 export const contributionsFacetDef = defineFacet<ContributionsFacetData>("contributions");

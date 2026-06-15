@@ -25,7 +25,7 @@ Design rationale lives in:
 
 - Description: Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
 - Web:
-  - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot`
+  - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`
   - Uses: `primitives/syntax-highlight.HighlightedCode`, `primitives/text.Text`
   - Exports: Types: `MarkdownEnhancement`; Values: `langFromClassName`, `Markdown`, `MarkdownEnhancementContext`, `MarkdownEnhancerSlot`, `nodeToText`, `useMarkdownEnhancement`
 - Cross-plugin:

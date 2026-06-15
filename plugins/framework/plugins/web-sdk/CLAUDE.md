@@ -332,9 +332,7 @@ No `web/index.ts` or `server/index.ts` required unless the umbrella itself has c
 
 - Description: Web plugin runtime: slots, commands, contributions, loader
 - Web:
-  - Slots: `Core.Root`, `Core.Boot`
-- Cross-plugin:
-  - Slot contributors: `apps`, `command-palette`, `crash`, `endpoint-errors`, `global-action-bar`, `google-fonts`, `health`, `model-provider`, `mutation-errors`, `shortcuts`, `slow-ops`, `theme-engine`, `toaster`
+  - Slots: `Core.Root` ← `apps`, `conversations.model-provider`, `debug.slow-ops`, `infra.health`, `primitives.command-palette`, `primitives.shortcuts`, `reports.crash`, `reports.endpoint-errors`, `reports.mutation-errors`, `shell.global-action-bar`, `shell.toaster`, `ui.theme-engine`, `ui.tokens.font-family.google-fonts`, `Core.Boot` ← `config_v2`, `infra.boot-snapshot`, `ui.theme-engine`, `ui.tweakcn`
 - Core:
   - Uses: `framework/plugin-id.asPluginId`, `framework/tooling/collected-dir.defineCollectedDir`
   - Exports: Types: `Contribution`, `DocMeta`, `LoadedPlugin`, `PluginDefinition`, `PluginEntry`, `PluginLoadError`, `SealContributions`, `SealedComponent`, `Slot`; Values: `Core`, `defineCommand`, `defineSlot`, `loadPlugins`, `PluginProvider`, `PluginRuntimeContext`, `topoSortPlugins`, `UNSAFE_unsealSlotComponent`, `webCollectedDir`

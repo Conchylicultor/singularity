@@ -13,6 +13,7 @@ type SlotRow = {
   groupName: string;
   memberName: string;
   slotId: string;
+  contributors: string[];
 };
 
 const columns: ColumnDef<SlotRow>[] = [
@@ -44,6 +45,19 @@ const columns: ColumnDef<SlotRow>[] = [
     value: (row) => row.plugin.id,
     cell: (row) => <PluginChip pluginId={row.plugin.id} />,
   },
+  {
+    id: "contributors",
+    header: "Contributors",
+    width: "minmax(0,1fr)",
+    value: (row) => row.contributors.join(" "),
+    cell: (row) => (
+      <div className="flex flex-wrap items-center gap-x-xs gap-y-2xs">
+        {row.contributors.map((id) => (
+          <PluginChip key={id} pluginId={id} />
+        ))}
+      </div>
+    ),
+  },
 ];
 
 function rows(entries: FacetTableEntry[]): SlotRow[] {
@@ -56,6 +70,7 @@ function rows(entries: FacetTableEntry[]): SlotRow[] {
         groupName: s.groupName,
         memberName: s.memberName,
         slotId: s.slotId,
+        contributors: s.contributors,
       });
     }
   }

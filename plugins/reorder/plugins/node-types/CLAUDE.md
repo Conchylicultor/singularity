@@ -38,10 +38,9 @@ fields.
 
 - Description: Reorder node-type registry: owns the reorder.node-type slot and the useReorderNodeTypes() read hook. Slot owner only — contributes no node types itself.
 - Web:
-  - Slots: `ReorderNodes.NodeType`
+  - Slots: `ReorderNodes.NodeType` ← `reorder.node-types.header`, `reorder.node-types.spacer`
   - Exports: Values: `ReorderNodes`, `useReorderNodeTypes`
 - Cross-plugin:
-  - Slot contributors: `header`, `spacer`
   - Imported by: `fields/reorder-tree/config`, `reorder`, `reorder/node-types/header`, `reorder/node-types/spacer`
 - Core:
   - Exports: Types: `ReorderNodeRenderProps`, `ReorderNodeType`

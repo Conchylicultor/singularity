@@ -81,13 +81,9 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Description: Shared authentication infrastructure (OAuth 2.0, API keys). Exposes the accounts pane + Auth.Provider slot; the Settings app surfaces the Account entry. Worktree-side auth helpers. Provides getTokenFromCentral() for worktree plugins that need OAuth tokens. Centralized OAuth/API-key infrastructure for third-party services. Tokens persist via the central secrets store; auth runs on the central runtime so all worktrees share one connected state.
 - Load-bearing: yes
 - Web:
-  - Slots: `Auth.Provider`, `accountsPane.Actions`
+  - Slots: `Auth.Provider` ← `auth.google`, `auth.notion`, `accountsPane.Actions`
   - Uses: `config_v2/settings.configNavPane`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/badge.Badge`, `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`, `primitives/pane.Pane`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/ui-kit.Button`, `shell/notifications.toast`
   - Exports: Types: `AuthProviderContribution`, `AuthProviderRowProps`, `ConnectArgs`, `ConnectButtonProps`, `ConnectResult`; Values: `accountsPane`, `Auth`, `ConnectButton`, `currentWorktreeName`, `disconnect`, `startConnectFlow`, `useAccountStatus`, `useAuthState`
-- Cross-plugin:
-  - Slot contributors: `google`, `notion`
-  - Imported by: `apps/settings/accounts`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup/google-drive`
-  - Endpoint callers: `setup-wizard`
 - Central:
   - Uses: `infra/secrets.getSecret`, `infra/secrets.ready`, `infra/secrets.SecretsKeychainLockedError`, `infra/secrets.setSecret`
   - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `GetAccessTokenArgs`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `getAccessToken`, `getAccountIdentity`, `listProviders`, `registerAuthProvider`
@@ -95,6 +91,9 @@ See the Phase 3 plan in [research/2026-04-28-global-phase-3-auth-to-central.md](
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.centralResourceDescriptor`
   - Exports: Types: `ApiKeyConfig`, `AuthAccountState`, `AuthEnvAccessor`, `AuthIdentity`, `AuthProviderDescriptor`, `AuthProviderKind`, `AuthStateValue`, `DisconnectBody`, `GetAccessTokenArgs`, `GetTokenBody`, `OAuth2Config`, `ParsedTokenResponse`, `ResolvedCredentials`, `SetApiKeyBody`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCredentialsMissingError`, `AuthError`, `AuthKeychainLockedError`, `AuthNeedsConsentError`, `AuthProviderUnknownError`, `authStateResource`, `defineAuthProvider`, `disconnect`, `DisconnectBodySchema`, `getAuthState`, `getToken`, `GetTokenBodySchema`, `oauthCallback`, `oauthStart`, `setApiKey`, `SetApiKeyBodySchema`
+- Cross-plugin:
+  - Imported by: `apps/settings/accounts`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup/google-drive`
+  - Endpoint callers: `setup-wizard`
 - Server:
   - Exports: Types: `GetAccessTokenArgs`, `TokenFailure`, `TokenNeedsConsent`, `TokenResponse`, `TokenSuccess`; Values: `AuthCentralOfflineError`, `getTokenFromCentral`
 - Sub-plugins:
