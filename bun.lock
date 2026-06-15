@@ -1343,6 +1343,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-class-token-walk-in-sync",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/composition-closure": {
+      "name": "@singularity/plugin-framework-tooling-checks-composition-closure",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync": {
       "name": "@singularity/plugin-framework-tooling-checks-config-origins-in-sync",
       "version": "0.0.1",
@@ -1683,6 +1687,10 @@
     },
     "plugins/plugin-meta/plugins/closure": {
       "name": "@singularity/plugin-plugin-meta-closure",
+      "version": "0.0.1",
+    },
+    "plugins/plugin-meta/plugins/composition": {
+      "name": "@singularity/plugin-plugin-meta-composition",
       "version": "0.0.1",
     },
     "plugins/plugin-meta/plugins/facets": {
@@ -3727,6 +3735,8 @@
 
     "@singularity/plugin-framework-tooling-checks-class-token-walk-in-sync": ["@singularity/plugin-framework-tooling-checks-class-token-walk-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/class-token-walk-in-sync"],
 
+    "@singularity/plugin-framework-tooling-checks-composition-closure": ["@singularity/plugin-framework-tooling-checks-composition-closure@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/composition-closure"],
+
     "@singularity/plugin-framework-tooling-checks-config-origins-in-sync": ["@singularity/plugin-framework-tooling-checks-config-origins-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/config-origins-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-conversation-trailer": ["@singularity/plugin-framework-tooling-checks-conversation-trailer@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/conversation-trailer"],
@@ -3882,6 +3892,8 @@
     "@singularity/plugin-plugin-meta-barrel-import": ["@singularity/plugin-plugin-meta-barrel-import@workspace:plugins/plugin-meta/plugins/barrel-import"],
 
     "@singularity/plugin-plugin-meta-closure": ["@singularity/plugin-plugin-meta-closure@workspace:plugins/plugin-meta/plugins/closure"],
+
+    "@singularity/plugin-plugin-meta-composition": ["@singularity/plugin-plugin-meta-composition@workspace:plugins/plugin-meta/plugins/composition"],
 
     "@singularity/plugin-plugin-meta-facets": ["@singularity/plugin-plugin-meta-facets@workspace:plugins/plugin-meta/plugins/facets"],
 

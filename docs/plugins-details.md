@@ -2127,6 +2127,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`class-token-walk-in-sync`**
+            - **`composition-closure`**
             - **`config-origins-in-sync`**
             - **`conversation-trailer`**
             - **`css-vars-single-owner`**
@@ -2159,7 +2160,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `DiscoveredCollectedDir`, `GenerateDocsOptions`, `OriginAnnotationsPreparer`, `OriginAnnotationsProvider`, `OriginDefaultsPreparer`, `OriginDefaultsProvider`, `PluginNode`, `PluginTree`, `ReorderableSlotEntry`; Values: `barrelStubsPath`, `buildEnrichedTree`, `buildPluginTree`, `collectAllPlugins`, `collectedDirRegistryPath`, `collectTokenGroupVars`, `discoverCollectedDirs`, `generateBarrelStubs`, `generateConfigOrigins`, `generatePluginDocs`, `generatePluginRegistry`, `generateReorderableSlots`, `generateTokenGroupVars`, `loadConfigDescriptorsByOriginPath`, `pluginClaudeMdPath`, `pluginCompactDocPath`, `pluginDetailsDocPath`, `propagateConfigToUser`, `renderBarrelStubs`, `renderCollectedDirRegistry`, `renderCompactDoc`, `renderConfigOriginContent`, `renderDetailsDoc`, `renderPluginClaudeMd`, `renderReorderableSlotsManifest`, `renderTokenGroupVarsManifest`, `reorderableSlotsManifestPath`, `resolveOriginAnnotations`, `resolveOriginDefaults`, `setDefaultOriginAnnotations`, `setDefaultOriginAnnotationsPreparer`, `setDefaultOriginDefaults`, `setDefaultOriginDefaultsPreparer`, `standardPluginDirs`, `tokenGroupVarsManifestPath`
         - **`collected-dir`** — Generic loader for build-time collected-dir registries (loadCollectedDir).
           - Cross-plugin:
-            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/facets`
+            - Imported by: `framework/central-core`, `framework/server-core`, `framework/tooling/checks`, `framework/web-sdk`, `improve/element-picker`, `plugin-meta/composition`, `plugin-meta/facets`
           - Core:
             - Exports: Types: `CollectedDirDef`, `CollectedEntry`, `LoadCollectedDirOptions`; Values: `defineCollectedDir`, `isCollectedDirDef`, `loadCollectedDir`
         - **`guards`** — Claude Code PreToolUse guards: safety checks that intercept tool calls before execution
@@ -2540,6 +2541,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginTree`
         - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`; Values: `classifyEdges`, `explainInclusion`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`
+      - Cross-plugin:
+        - Imported by: `plugin-meta/composition`
+    - **`composition`**
+      - Core:
+        - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `plugin-meta/closure.classifyEdges`, `plugin-meta/closure.CompositionManifest`, `plugin-meta/closure.EdgeGraph`, `plugin-meta/closure.resolveComposition`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginTree`
+        - Exports: Values: `compositionCollectedDir`, `isCompositionManifest`, `loadCompositions`
     - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
       - Core:
         - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`
@@ -2748,7 +2755,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `framework/plugin-id.asPluginId`, `framework/plugin-id.PluginId`, `plugin-meta/barrel-import.importBarrel`, `plugin-meta/barrel-import.registerBarrelStubs`, `plugin-meta/facets.Facet`, `plugin-meta/facets.loadFacets`, `plugin-meta/facets.setFacet`, `plugin-meta/parse-utils.parseBoolField`, `plugin-meta/parse-utils.parseStringField`, `plugin-meta/parse-utils.readIfExists`, `plugin-meta/parse-utils.stripTypes`
         - Exports: Types: `PluginNode`, `PluginTree`, `Runtime`; Values: `buildPluginTree`, `matchBracket`, `parseBarrelExports`, `parseBoolField`, `parseDefineGroup`, `parseStringField`, `readIfExists`, `resolvePluginSpecifier`, `stripTypes`, `walkFiles`
       - Cross-plugin:
-        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`
+        - Imported by: `framework/tooling/boundaries`, `framework/tooling/checks`, `framework/tooling/codegen`, `plugin-meta/closure`, `plugin-meta/composition`
     - **`plugin-view`** — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
       - Web:
         - Slots: `PluginViewSlots.Section`, `pluginViewPane.Actions`

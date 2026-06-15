@@ -18,6 +18,7 @@
     "../../../../**/plugins/*/core",
     "../../../../**/plugins/*/shared",
     "../../../../**/plugins/*/check",
-    "../../../../**/plugins/*/facet"
+    "../../../../**/plugins/*/facet",
+    "../../../../**/plugins/*/composition"
   ]
 }
