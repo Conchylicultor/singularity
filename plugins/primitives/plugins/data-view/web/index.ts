@@ -15,6 +15,7 @@ export type {
 export type {
   FieldValue,
   FilterFieldValue,
+  FilterPredicate,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

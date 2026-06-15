@@ -1,4 +1,7 @@
-import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type {
+  FilterFieldValue,
+  FilterPredicate,
+} from "@plugins/primitives/plugins/data-view/web";
 
 export interface DateFilterValue {
   /** ISO yyyy-mm-dd (inclusive lower bound). */
@@ -27,10 +30,7 @@ export function isActive(filterValue: unknown): boolean {
 }
 
 /** Keep rows whose date falls within [from 00:00, to 23:59:59.999]. */
-export function predicate(
-  filterValue: unknown,
-  fieldValue: FilterFieldValue,
-): boolean {
+export const predicate: FilterPredicate = (filterValue, fieldValue) => {
   const { from, to } = asValue(filterValue);
   const t = toMs(fieldValue);
   if (t === null) return false;
@@ -43,4 +43,4 @@ export function predicate(
     if (!Number.isNaN(hi) && t > hi) return false;
   }
   return true;
-}
+};

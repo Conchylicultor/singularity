@@ -1,4 +1,4 @@
-import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterPredicate } from "@plugins/primitives/plugins/data-view/web";
 
 export interface BoolFilterValue {
   want?: boolean;
@@ -14,11 +14,8 @@ export function isActive(filterValue: unknown): boolean {
 }
 
 /** Keep rows whose boolean projection matches the requested value. */
-export function predicate(
-  filterValue: unknown,
-  fieldValue: FilterFieldValue,
-): boolean {
+export const predicate: FilterPredicate = (filterValue, fieldValue) => {
   const { want } = asValue(filterValue);
   if (typeof want !== "boolean") return true;
   return Boolean(fieldValue) === want;
-}
+};

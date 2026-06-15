@@ -1,4 +1,4 @@
-import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterPredicate } from "@plugins/primitives/plugins/data-view/web";
 
 export interface NumberFilterValue {
   min?: number;
@@ -16,13 +16,10 @@ export function isActive(filterValue: unknown): boolean {
 }
 
 /** Keep rows whose numeric value falls within the [min, max] bounds. */
-export function predicate(
-  filterValue: unknown,
-  fieldValue: FilterFieldValue,
-): boolean {
+export const predicate: FilterPredicate = (filterValue, fieldValue) => {
   const { min, max } = asRange(filterValue);
   if (typeof fieldValue !== "number") return false;
   if (typeof min === "number" && fieldValue < min) return false;
   if (typeof max === "number" && fieldValue > max) return false;
   return true;
-}
+};

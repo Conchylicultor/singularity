@@ -12,6 +12,19 @@ export type FieldValue = string | number | boolean | Date | null | undefined;
 export type FilterFieldValue = FieldValue | readonly string[];
 
 /**
+ * The pure filter predicate applied in the data-view row pipeline. This alias
+ * OWNS the parameter types — implementors derive them by contextual typing
+ * (`const predicate: FilterPredicate = (filterValue, fieldValue) => …`) instead
+ * of restating them. Widening `FilterFieldValue` therefore flows to every
+ * implementor with zero edits, and annotating a narrower `fieldValue` becomes a
+ * compile error (parameter contravariance).
+ */
+export type FilterPredicate = (
+  filterValue: unknown,
+  fieldValue: FilterFieldValue,
+) => boolean;
+
+/**
  * Describes the data source as a hierarchy. Supplied on `DataViewProps` (not the
  * per-view `options` channel) because it gates which views are available and
  * carries write capabilities. Present → the hierarchical views (tree) become
@@ -186,7 +199,7 @@ export interface FilterControlProps {
 export interface FilterContribution {
   match: string;
   Control: ComponentType<FilterControlProps>;
-  predicate: (filterValue: unknown, fieldValue: FilterFieldValue) => boolean;
+  predicate: FilterPredicate;
   isActive: (filterValue: unknown) => boolean;
 }
 

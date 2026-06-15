@@ -1,4 +1,4 @@
-import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterPredicate } from "@plugins/primitives/plugins/data-view/web";
 
 export interface TagsFilterValue {
   selected?: string[];
@@ -17,14 +17,11 @@ export function isActive(filterValue: unknown): boolean {
  * Keep rows whose tag set intersects the selected set (match-any). With no
  * selection the filter is inactive and keeps every row.
  */
-export function predicate(
-  filterValue: unknown,
-  fieldValue: FilterFieldValue,
-): boolean {
+export const predicate: FilterPredicate = (filterValue, fieldValue) => {
   const { selected } = asValue(filterValue);
   if (!selected || selected.length === 0) return true;
   const rowValues: readonly string[] = Array.isArray(fieldValue)
     ? fieldValue
     : [];
   return selected.some((s) => rowValues.includes(s));
-}
+};
