@@ -105,6 +105,18 @@ export function SortableReorderItem({
               // Skip when empty — an empty `w-full` div would steal the whole row
               // from the placeholder sibling, wrapping its label onto two lines.
               editMode && !isHorizontal && !isEmpty && "w-full",
+              // A vertical contribution whose body fills its host via an inner
+              // `flex-1 min-h-0` scroll region (e.g. the conversations sidebar
+              // section) needs this wrapper to stay bounded too — otherwise the
+              // scroll region resolves against unbounded height, expands to its
+              // full natural size, and overflows onto the rows below. Mirroring
+              // the contribution's opt-in fill (`reorderWrapperClassName: "flex
+              // flex-col flex-1 min-h-0"`) here as a flex column re-establishes
+              // the bound: the body becomes a `flex-1 min-h-0` child of a bounded
+              // box, so its scroll region clamps and scrolls instead of growing.
+              // For a normal row the outer wrapper is a row flex, so `flex-1`
+              // just spans the width and the column has a single child — inert.
+              editMode && !isHorizontal && !isEmpty && "flex flex-col min-h-0 flex-1 overflow-hidden",
             )}
           >
             {children}
