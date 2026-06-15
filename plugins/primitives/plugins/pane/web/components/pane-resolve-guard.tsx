@@ -1,4 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Bar } from "@plugins/primitives/plugins/bar/web";
 import type { ComponentType, ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -81,7 +82,7 @@ function FallbackChrome({
   const doPromote = paneObject.usePromote();
   return (
     <div className="flex h-full flex-col">
-      <div className="flex h-chrome-pane items-center gap-sm border-b px-chrome">
+      <Bar tier="pane">
         <Text as="span" variant="label" tone="muted" className="truncate">
           {title}
         </Text>
@@ -96,7 +97,7 @@ function FallbackChrome({
             <MdClose className="size-4" />
           </Button>
         )}
-      </div>
+      </Bar>
       <div className="flex flex-1 items-center justify-center">{children}</div>
     </div>
   );

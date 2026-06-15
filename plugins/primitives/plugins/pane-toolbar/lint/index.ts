@@ -8,10 +8,11 @@ import noAdhocPaneToolbar from "./no-adhoc-pane-toolbar";
  * (this plugin) for a full-surface pane, or `AppShellLayout`'s `toolbarSlot` for
  * an app-level bar — never a hand-rolled `border-b` + `pr-floating-bar` header.
  *
- * `ignores` exempts the sanctioned hosts (which legitimately wear that
- * signature) by path:
- *  - `app-shell-layout.tsx` — the app-level toolbar host.
- *  - `define-pane-toolbar.tsx` — this plugin's own `Host`.
+ * `ignores` exempts the sanctioned home of the chrome-bar signature. Both toolbar
+ * hosts (`AppShellLayout`, this plugin's `Host`) now compose the `Bar` primitive
+ * rather than wearing the raw `border-b` + `pr-floating-bar` classes, so the only
+ * file carrying that signature is `Bar` itself:
+ *  - `bar/web/internal/bar.tsx` — the chrome-strip primitive.
  *
  * A genuinely-irreducible one-off escapes per-site, travelling with the code:
  *   // eslint-disable-next-line pane-toolbar/no-adhoc-pane-toolbar -- <reason>
@@ -23,8 +24,7 @@ export default {
   },
   ignores: {
     "no-adhoc-pane-toolbar": [
-      "plugins/primitives/plugins/app-shell/web/components/app-shell-layout.tsx",
-      "plugins/primitives/plugins/pane-toolbar/web/internal/define-pane-toolbar.tsx",
+      "plugins/primitives/plugins/bar/web/internal/bar.tsx",
     ],
   },
 };

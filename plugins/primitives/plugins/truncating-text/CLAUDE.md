@@ -9,10 +9,13 @@ A horizontal chrome region — a toolbar, a card/pane header, a list row, a chip
 single-line *by contract*. CSS wrapping is the default, so the durable fix is to set
 `whitespace-nowrap` once on the **region primitive's root** (it inherits to every
 descendant text node; a `truncate`/`TruncatingText` leaf still ellipsizes because it
-re-declares nowrap). The region primitives bake this in: `Row`, `PaneChrome`,
-`pane-toolbar`/app-shell toolbars, `ToggleChip`, `SegmentedControl`, `tabbed-view`
-tabs, `section-label`, `CollapsibleTrigger`, `breadcrumb`, `Badge`, `Button`. Don't
-re-solve wrapping per text leaf — put `whitespace-nowrap` on the row.
+re-declares nowrap). The shared single-line invariant lives in the `region-line`
+`@utility` (`items-center` + `whitespace-nowrap`, in `ui-kit`'s `app.css`); the
+region primitives bake it in: the `Bar` chrome strip (app/pane toolbars + pane
+headers) and `Row` apply `region-line` directly, and `PaneChrome`, `ToggleChip`,
+`SegmentedControl`, `tabbed-view` tabs, `section-label`, `CollapsibleTrigger`,
+`breadcrumb`, `Badge`, `Button` carry the same guarantee. Don't re-solve wrapping
+per text leaf — put `whitespace-nowrap` (or `region-line`) on the row.
 
 ## Enforcement: `no-clip-without-nowrap`
 

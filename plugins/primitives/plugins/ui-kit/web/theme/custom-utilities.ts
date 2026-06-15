@@ -39,6 +39,7 @@ export const CHROME_PADX_UTILITIES = ["px-chrome"] as const;
 export const CHROME_PADL_UTILITIES = ["pl-chrome"] as const;
 export const CHROME_PADR_UTILITIES = ["pr-floating-bar"] as const;
 export const ICON_AUTO_UTILITIES = ["icon-auto"] as const;
+export const REGION_LINE_UTILITIES = ["region-line"] as const;
 export const FOCUS_RING_UTILITIES = ["focus-ring", "focus-ring-within"] as const;
 // Checkbox corner for checkbox-class indicators — caps --radius at 3px so it
 // stays square under every Shape preset (honors a sharp theme, never rounds into
@@ -100,6 +101,10 @@ export const CUSTOM_UTILITY_REGISTRY = [
   { classes: ICON_AUTO_UTILITIES, group: "sg-icon-auto", conflictsWith: ["size", "h", "w"] },
   // No twMerge handling: additive box-shadow/outline, no single-value collision.
   { classes: FOCUS_RING_UTILITIES, standalone: true, reason: "Additive box-shadow/outline; no single-value built-in group to conflict with." },
+  // No twMerge handling: a composite single-line base (align-items + whitespace)
+  // whose name doesn't collide with any built-in group, applied as a base layer
+  // that callers don't selectively override.
+  { classes: REGION_LINE_UTILITIES, standalone: true, reason: "Composite single-line invariant (align-items + whitespace); name doesn't misfile into a built-in group and it's a base layer, not a selectively-overridden single property." },
 ] as const satisfies readonly RegistryEntry[];
 
 // Synthetic group ids (for extendTailwindMerge's generic type parameter).

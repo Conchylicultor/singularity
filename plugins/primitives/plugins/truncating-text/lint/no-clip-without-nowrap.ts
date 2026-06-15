@@ -47,8 +47,10 @@ const CLIP = new Set([
   "overflow-x-hidden",
   "overflow-x-clip",
 ]);
-// Single-line guarantees that make the row safe.
-const NOWRAP = new Set(["whitespace-nowrap", "truncate"]);
+// Single-line guarantees that make the row safe. `region-line` is the shared
+// single-line region utility (Bar / Row / chips) — it bakes in `whitespace-nowrap`,
+// so a row carrying it is just as defended as one with the raw class.
+const NOWRAP = new Set(["whitespace-nowrap", "truncate", "region-line"]);
 // Wrap-intended / 2D-region escapes — vertical stack, explicit multi-line wrap,
 // a self-sizing-height layout region, or cross-axis non-center alignment (all of
 // which mean "not a single-line text row", so nowrap would be wrong).

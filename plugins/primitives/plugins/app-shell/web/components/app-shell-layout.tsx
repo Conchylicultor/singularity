@@ -1,4 +1,5 @@
 import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/ui-kit/web";
+import { Bar } from "@plugins/primitives/plugins/bar/web";
 import type { ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -97,12 +98,12 @@ export function AppShellLayout({
   children: ReactNode;
 }) {
   const toolbar = toolbarSlot && (
-    <header className="flex items-center whitespace-nowrap border-b pl-chrome pr-floating-bar h-chrome-bar gap-sm bg-background overflow-hidden">
+    <Bar tier="chrome">
       {sidebarSlot && <SidebarTrigger />}
       <toolbarSlot.Render>
         {(item) => <ToolbarItem {...item} />}
       </toolbarSlot.Render>
-    </header>
+    </Bar>
   );
 
   const body = (

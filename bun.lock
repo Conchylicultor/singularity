@@ -1913,6 +1913,10 @@
       "name": "@singularity/plugin-primitives-badge",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/bar": {
+      "name": "@singularity/plugin-primitives-bar",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/breadcrumb": {
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
@@ -4008,6 +4012,8 @@
     "@singularity/plugin-primitives-avatar": ["@singularity/plugin-primitives-avatar@workspace:plugins/primitives/plugins/avatar"],
 
     "@singularity/plugin-primitives-badge": ["@singularity/plugin-primitives-badge@workspace:plugins/primitives/plugins/badge"],
+
+    "@singularity/plugin-primitives-bar": ["@singularity/plugin-primitives-bar@workspace:plugins/primitives/plugins/bar"],
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 

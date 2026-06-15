@@ -1,4 +1,5 @@
 import { Button, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
+import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Fragment, useContext, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
@@ -62,8 +63,10 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
   const resolvedTitle = title ?? fallbackTitle;
   return (
     <div className="flex h-full flex-col">
-      <div
-        className={`flex h-chrome-pane min-w-0 items-center gap-sm whitespace-nowrap ${headerSpill ? "overflow-visible" : "overflow-hidden"} border-b px-chrome${layoutCtx?.dragHandleProps ? " cursor-grab active:cursor-grabbing" : ""}`}
+      <Bar
+        tier="pane"
+        overflow={headerSpill ? "visible" : "hidden"}
+        className={layoutCtx?.dragHandleProps ? "cursor-grab active:cursor-grabbing" : undefined}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >
@@ -110,7 +113,7 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
             <MdClose className="size-4" />
           </Button>
         )}
-      </div>
+      </Bar>
       <div className="min-h-0 flex-1 overflow-y-auto">
         <ContentScope>{children}</ContentScope>
       </div>

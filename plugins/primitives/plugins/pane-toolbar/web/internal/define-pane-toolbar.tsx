@@ -1,4 +1,5 @@
-import { Button, cn, type ControlSize } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, type ControlSize } from "@plugins/primitives/plugins/ui-kit/web";
+import { Bar } from "@plugins/primitives/plugins/bar/web";
 import type { ComponentType, ReactNode } from "react";
 import {
   defineRenderSlot,
@@ -82,17 +83,12 @@ export function definePaneToolbar(
 
   function Host({ className }: { className?: string }): ReactNode {
     return (
-      <header
-        className={cn(
-          "flex items-center whitespace-nowrap border-b pl-chrome pr-floating-bar h-chrome-bar gap-sm bg-background overflow-hidden",
-          className,
-        )}
-      >
+      <Bar tier="chrome" className={className}>
         <Start.Render>{(item) => <ToolbarItem {...item} />}</Start.Render>
         <div className="ml-auto flex items-center gap-sm">
           <End.Render>{(item) => <ToolbarItem {...item} />}</End.Render>
         </div>
-      </header>
+      </Bar>
     );
   }
 
