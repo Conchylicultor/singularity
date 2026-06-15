@@ -2493,7 +2493,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/story/story-core`
     - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
       - Web:
-        - Slots: `Editor.Block` ← `page.bulleted-list`, `page.code-block`, `page.divider`, `page.image`, `page.page-link`, `page.text`, `page.to-do`, `page.toggle`, `Editor.TurnInto` ← `page.turn-into-page`
+        - Slots: `Editor.Block` ← `page.bulleted-list`, `page.code-block`, `page.divider`, `page.image`, `page.page-link`, `page.quote`, `page.text`, `page.to-do`, `page.toggle`, `Editor.TurnInto` ← `page.turn-into-page`
         - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/editable-field.useEditableField`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
         - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BlockEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useInsertableBlocks`, `usePageOptions`
       - Server:
@@ -2506,7 +2506,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.subtreeIds`
         - Exports: Types: `Block`, `BlockHandle`, `BlockNode`, `BlockOp`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `CreateBlockBody`, `MoveBlockBody`, `PageData`, `PasteBlocksBody`, `SerializedBlock`, `TextData`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `childrenOf`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `listBlocks`, `listPages`, `moveBlock`, `MoveBlockBodySchema`, `PAGE_BLOCK_TYPE`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `SerializedBlockSchema`, `SvgNodeSchema`, `textDataSchema`, `textOf`, `updateBlock`, `UpdateBlockBodySchema`
       - Cross-plugin:
-        - Imported by: `apps/pages/page-tree`, `apps/story/marker`, `apps/story/shell`, `page/bulleted-list`, `page/code-block`, `page/divider`, `page/image`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`
+        - Imported by: `apps/pages/page-tree`, `apps/story/marker`, `apps/story/shell`, `page/bulleted-list`, `page/code-block`, `page/divider`, `page/image`, `page/inline-page-link`, `page/links`, `page/page-link`, `page/quote`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`
         - Extended by: `apps/story/marker` (table `page_blocks_ext_story`)
     - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
       - Web:
@@ -2551,6 +2551,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `page/editor.defineBlock`
         - Exports: Values: `pageLinkBlock`
+    - **`quote`** — Quote / blockquote block type for the page editor.
+      - Web:
+        - Contributes: `Editor.Block` "quote" → `QuoteBlock`
+        - Uses: `page/editor.BlockRendererProps`, `page/editor.BlockTextRenderer`, `page/editor.Editor`
+        - Exports: Values: `quoteBlock`
+      - Core:
+        - Uses: `page/editor.defineBlock`, `page/editor.textDataSchema`
+        - Exports: Values: `quoteBlock`
     - **`text`** — Plain-text block type for the page editor.
       - Web:
         - Contributes: `Editor.Block` "text" → `BlockTextRenderer`

@@ -14,6 +14,7 @@
   - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
+  - **`quote`** — Quote / blockquote block type for the page editor.
   - **`text`** — Plain-text block type for the page editor.
   - **`to-do`** — To-do / checkbox block type for the page editor.
   - **`toggle`** — Toggle (collapsible) block type for the page editor.

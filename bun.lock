@@ -1713,6 +1713,10 @@
       "name": "@singularity/plugin-page-page-link",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/quote": {
+      "name": "@singularity/plugin-page-quote",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/text": {
       "name": "@singularity/plugin-page-text",
       "version": "0.0.1",
@@ -3976,6 +3980,8 @@
     "@singularity/plugin-page-links": ["@singularity/plugin-page-links@workspace:plugins/page/plugins/links"],
 
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
+
+    "@singularity/plugin-page-quote": ["@singularity/plugin-page-quote@workspace:plugins/page/plugins/quote"],
 
     "@singularity/plugin-page-text": ["@singularity/plugin-page-text@workspace:plugins/page/plugins/text"],
 
