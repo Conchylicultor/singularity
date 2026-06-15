@@ -9,7 +9,7 @@
   - Contributes: `Profiling.Section` → `RuntimeSection`
   - Uses: `debug/profiling.Profiling`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/mcp.Mcp`
+  - Uses: `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`
   - Register: `mcpTool('get_runtime_profile')`
   - Routes: `GET /api/debug/profiling/runtime`, `POST /api/debug/profiling/runtime/reset`
 

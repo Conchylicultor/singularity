@@ -1,16 +1,17 @@
 import { z } from "zod";
+import { basename } from "path";
 import { Mcp } from "@plugins/infra/plugins/mcp/server";
-import {
-  getRuntimeProfile,
-  type SpanKind,
-} from "@plugins/infra/plugins/runtime-profiler/core";
+import { getConversation } from "@plugins/tasks/plugins/tasks-core/server";
+import { type SpanKind } from "@plugins/infra/plugins/runtime-profiler/core";
+import { runtimeProfileSchema } from "../../shared/endpoints";
 
 const KINDS: readonly SpanKind[] = ["http", "db", "loader"];
 
 export const runtimeProfileTool = Mcp.tool({
   name: "get_runtime_profile",
-  description:
-    "Slowest HTTP routes, DB queries, and live-state loaders in THIS worktree's server (in-memory window since last reset). Use to debug app/page slowness and N+1 patterns. Returns top-N by max and average latency per kind; each db/loader aggregate includes a `byParent` breakdown attributing it to the enclosing request/loader that issued it, and each `slowest` span carries its immediate `parent`.",
+  description: `Slowest HTTP routes, DB queries, and live-state loaders in a worktree's server (in-memory window since last reset). Use to debug app/page slowness and N+1 patterns. Returns top-N by max and average latency per kind; each db/loader aggregate includes a \`byParent\` breakdown attributing it to the enclosing request/loader that issued it, and each \`slowest\` span carries its immediate \`parent\`.
+
+Default: profiles the current conversation's worktree server. Pass \`worktree\` to target a different worktree (e.g. "att-1778089188-7uvf" or "singularity" for main).`,
   inputSchema: {
     kind: z
       .enum(["http", "db", "loader", "all"])
@@ -22,9 +23,39 @@ export const runtimeProfileTool = Mcp.tool({
       .positive()
       .optional()
       .describe("Max rows per kind. Defaults to 15."),
+    worktree: z
+      .string()
+      .optional()
+      .describe(
+        "Target worktree name. Defaults to the conversation's own worktree.",
+      ),
   },
-  async handler({ kind = "all", limit = 15 }) {
-    const profile = getRuntimeProfile();
+  async handler({ kind = "all", limit = 15, worktree }, { conversationId }) {
+    let worktreeName: string;
+    if (worktree) {
+      worktreeName = worktree;
+    } else {
+      const conv = await getConversation(conversationId);
+      if (!conv) throw new Error(`Unknown conversation "${conversationId}"`);
+      worktreeName = basename(conv.worktreePath);
+    }
+
+    if (!/^[a-zA-Z0-9_-]+$/.test(worktreeName)) {
+      throw new Error(`Unsafe worktree name: "${worktreeName}"`);
+    }
+
+    // Always read the profile through the gateway, which only ever proxies to
+    // the worktree's live backend (`w.active`). Reading this process's own
+    // in-memory recorder would silently report a stale/orphaned process
+    // generation after a hot-swap restart.
+    const url = `http://${worktreeName}.localhost:9000/api/debug/profiling/runtime`;
+    const res = await fetch(url);
+    if (!res.ok) {
+      throw new Error(
+        `runtime profile fetch failed (${res.status}) for worktree "${worktreeName}"`,
+      );
+    }
+    const profile = runtimeProfileSchema.parse(await res.json());
     const targetKinds: readonly SpanKind[] =
       kind === "all" ? KINDS : [kind as SpanKind];
 
