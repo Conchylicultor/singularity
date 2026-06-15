@@ -1637,6 +1637,10 @@
       "name": "@singularity/plugin-packages-retry",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/semaphore": {
+      "name": "@singularity/plugin-packages-semaphore",
+      "version": "0.0.1",
+    },
     "plugins/page": {
       "name": "@singularity/plugin-page",
       "version": "0.0.1",
@@ -3906,6 +3910,8 @@
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
 
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
+
+    "@singularity/plugin-packages-semaphore": ["@singularity/plugin-packages-semaphore@workspace:plugins/packages/plugins/semaphore"],
 
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
 

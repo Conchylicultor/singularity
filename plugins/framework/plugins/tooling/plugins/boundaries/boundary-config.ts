@@ -23,6 +23,7 @@ export default defineBoundaries({
     // packages/ umbrella children are utility code, globally accessible
     allow("** -> plugin.plugin-meta.plugin-tree"),
     allow("** -> plugin.packages.retry"),
+    allow("** -> plugin.packages.semaphore"),
 
     // Config origin codegen and check import config_v2 core (hash, types) and barrel-import
     allow("tooling -> plugin.config_v2"),

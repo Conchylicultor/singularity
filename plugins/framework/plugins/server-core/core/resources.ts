@@ -6,7 +6,8 @@ import type {
   ResourceParams as RtParams,
   DependsOnEntry as RtDep,
 } from "@plugins/framework/plugins/resource-runtime/core";
-import { recordEntrySpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { recordEntrySpan, recordSpan } from "@plugins/infra/plugins/runtime-profiler/core";
+import { createSemaphore } from "@plugins/packages/plugins/semaphore/core";
 import { defineServerContribution } from "./contributions";
 import { reportServerError, type ServerErrorReport } from "./error-reporter";
 
@@ -76,8 +77,33 @@ function errorReport(context: string, err: unknown): ServerErrorReport {
   };
 }
 
+// Bound concurrent loader execution per worktree. A single live-state cascade
+// flush can fire ~10 dependent loaders in one microtask; with many worktrees
+// sharing one embedded Postgres on a few cores, that herd all hits
+// `pool.connect()` at once → acquire-wait stalls (see
+// research/2026-06-15-global-live-state-cascade-contention.md, Change 4). Cap
+// concurrent loader bodies below the per-worktree pool `max` (16) so the herd
+// queues at the semaphore instead of the pool, leaving headroom for
+// mutation/HTTP queries.
+//
+// The semaphore wraps OUTSIDE recordEntrySpan, so queue-wait is excluded from
+// the `loader` span — loader attribution stays about real work, not queueing.
+// To keep the gate observable (otherwise this would just move backpressure from
+// the visible `db [acquire]` stall to an unmeasured place), the wait is recorded
+// as its own `db [loader-acquire]` span via `onWait`. It sits right next to the
+// pool's own `[acquire]` in `get_runtime_profile kind:"db"` — the two stack as
+// the outer (semaphore) and inner (pool) layers of acquisition cost, so a
+// saturated cap stays loud instead of silent. `recordSpan` attributes it to the
+// enclosing http/loader entry, exactly like `[acquire]`.
+const LOADER_CONCURRENCY = 10;
+const loaderSemaphore = createSemaphore(LOADER_CONCURRENCY);
+
 const runtime = createResourceRuntime({
-  wrapLoad: (key, fn) => recordEntrySpan("loader", key, fn),
+  wrapLoad: (key, fn) =>
+    loaderSemaphore.run(
+      () => recordEntrySpan("loader", key, fn),
+      (waitMs) => recordSpan("db", "[loader-acquire]", waitMs),
+    ),
   reportError: (ctx, err) => reportServerError(errorReport(ctx, err)),
   debugOwners: () =>
     Resource.Declare.getContributions().map((c) => ({

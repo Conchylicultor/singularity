@@ -166,6 +166,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
     - **`retry`**
+    - **`semaphore`**
 
 - **`page`** [12 sub-plugins] — Block-based page editor.
 

@@ -2101,7 +2101,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `DependsOnEntry`, `KeyedDiff`, `KeyedSnapshot`, `Resource`, `ResourceDefinition`, `ResourceMode`, `ResourceParams`, `ResourceRuntime`, `ResourceRuntimeOptions`; Values: `buildSnapshot`, `createResourceRuntime`, `diffKeyedFull`, `diffKeyedScoped`
     - **`server-core`**
       - Core:
-        - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.recordEntrySpan`
+        - Uses: `framework/resource-runtime.createResourceRuntime`, `framework/tooling/collected-dir.defineCollectedDir`, `infra/runtime-profiler.recordEntrySpan`, `infra/runtime-profiler.recordSpan`, `packages/semaphore.createSemaphore`
         - Exports: Types: `DependsOnEntry`, `HttpHandler`, `LoadedServerPlugin`, `PhaseId`, `Registration`, `ResourceDefinition`, `ResourceLike`, `ResourceMode`, `ResourceParams`, `ServerContribution`, `ServerContributionToken`, `ServerErrorReport`, `ServerPluginDefinition`, `Span`, `WsData`, `WsHandler`; Values: `collectContributions`, `defineResource`, `defineServerContribution`, `getProfilingData`, `handleResourceHttp`, `isServerReady`, `loadResourceByKey`, `markServerReady`, `notificationsWsHandler`, `profilerStart`, `reportServerError`, `Resource`, `serverCollectedDir`, `setErrorReporter`, `withNotifyBatch`
     - **`tooling`** — Umbrella for build-time tooling: boundary checker, lint rules, checks, guards, codegen
       - Core:
@@ -2403,6 +2403,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`retry`**
       - Core:
         - Exports: Types: `DelayStrategy`; Values: `exponential`, `fixed`, `RetryDeadlineError`, `retryUntil`, `withJitter`
+    - **`semaphore`**
+      - Cross-plugin:
+        - Imported by: `framework/server-core`
+      - Core:
+        - Exports: Types: `Semaphore`; Values: `createSemaphore`
 
 - **`page`** — Block-based page editor.
   - Plugins:
