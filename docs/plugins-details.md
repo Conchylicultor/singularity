@@ -3004,12 +3004,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `browseHostDir`
       - Cross-plugin:
         - Imported by: `fields/directory-path/config`
-    - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: read-only pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API.
+    - **`graph-canvas`** — Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
       - Web:
         - Uses: `primitives/ui-kit.cn`
-        - Exports: Types: `GraphCanvasEdge`, `GraphCanvasNode`, `GraphCanvasProps`; Values: `GraphCanvas`
+        - Exports: Types: `GraphCanvasEdge`, `GraphCanvasEdgeTone`, `GraphCanvasGroup`, `GraphCanvasNode`, `GraphCanvasProps`; Values: `GraphCanvas`
       - Cross-plugin:
-        - Imported by: `apps/studio/graph`
+        - Imported by: `apps/studio/graph`, `tasks/task-graph`
     - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
@@ -3672,7 +3672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`task-graph`** — Renders the dependency-DAG band above a task's detail when the task has dependents or dependencies.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "graph" → `TaskGraph`
-        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/ui-kit.cn`, `tasks.patchTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useTaskNavigate`, `tasks/task-status.STATUS_META`
+        - Uses: `infra/endpoints.fetchEndpoint`, `primitives/graph-canvas.GraphCanvas`, `primitives/graph-canvas.GraphCanvasEdge`, `primitives/graph-canvas.GraphCanvasGroup`, `primitives/graph-canvas.GraphCanvasNode`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/text.Text`, `primitives/ui-kit.cn`, `tasks.patchTask`, `tasks/task-detail.taskDetailPane`, `tasks/task-detail.TaskDetailSlots`, `tasks/task-detail.useTaskNavigate`, `tasks/task-status.STATUS_META`
     - **`task-header`** — Top section of the task detail pane: editable title, status chip, hold/drop buttons, author, auto-start, and Launch buttons.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "header" → `TaskHeader`
