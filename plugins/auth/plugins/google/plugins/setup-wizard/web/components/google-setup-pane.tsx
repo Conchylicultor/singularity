@@ -190,10 +190,11 @@ export function GoogleSetupPane() {
                 <Button
                   variant="default"
                   size="sm"
-                  disabled={(!clientId && !clientSecret) || saving}
+                  loading={saving}
+                  disabled={!clientId && !clientSecret}
                   onClick={handleSaveCredentials}
                 >
-                  {saving ? "Saving…" : "Save"}
+                  Save
                 </Button>
               </>
             )}

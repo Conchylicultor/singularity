@@ -8,7 +8,7 @@
 - Web:
   - Slots: `recoveryPane.Actions`
   - Contributes: `Pane.Register` "conversations-recover", `DebugApp.Sidebar` "Recovery" → `component`
-  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
+  - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`
   - Exports: Values: `recoveryPane`
 - Server:
   - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`, `tasks/tasks-core.notifyConversationsChanged`

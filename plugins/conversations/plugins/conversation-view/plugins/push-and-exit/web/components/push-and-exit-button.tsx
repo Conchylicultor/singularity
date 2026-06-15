@@ -131,12 +131,13 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   if (!conversation || !live) return null;
 
   const hasSession = !!live.claudeSessionId;
-  // `busy` (any in-flight POST) gives uniform double-click protection across
-  // every action — the same guard `send` always relied on, now shared by all.
   // `provisional` (data still loading) keeps the neutral mode un-clickable.
+  // `busy` (any in-flight POST) is handled via the button's `loading` prop,
+  // which both disables the clicked button and shows its spinner — uniform
+  // double-click protection across every action.
   const disabled = mode === "restore"
-    ? busy || !hasSession
-    : busy || live.status === "starting" || provisional;
+    ? !hasSession
+    : live.status === "starting" || provisional;
 
   function specFor(m: Mode): ActionSpec | null {
     switch (m) {
@@ -196,7 +197,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
   }
 
   async function onClick() {
-    if (disabled) return;
+    if (busy || disabled) return;
     const spec = specFor(mode);
     if (!spec) return;
     setBusy(true);
@@ -217,14 +218,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
     }
   }
 
-  const label =
-    busy && mode === "send"
-      ? "Sending…"
-      : busy && mode === "queue"
-        ? "Queuing…"
-        : busy && mode === "stop"
-          ? "Stopping…"
-          : LABELS[mode];
+  const label = LABELS[mode];
   const Icon = ICONS[mode];
 
   return (
@@ -233,6 +227,7 @@ export function PushAndExitButton(_: PromptEditorActionProps) {
       size="sm"
       title={label}
       aria-label={label}
+      loading={busy}
       disabled={disabled}
       onClick={onClick}
       className={BUTTON_CLASS[mode]}

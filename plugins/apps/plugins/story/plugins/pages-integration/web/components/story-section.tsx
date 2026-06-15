@@ -38,7 +38,7 @@ export function StorySection({ pageId }: { pageId: string }) {
         variant="ghost"
         size="xs"
         className="text-muted-foreground self-start"
-        onClick={() => void markStory(pageId)}
+        onClick={() => markStory(pageId)}
       >
         <MdAutoStories className="size-4" />
         Make this a story

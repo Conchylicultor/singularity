@@ -105,14 +105,12 @@ function SummaryPaneInner({
         size="sm"
         variant="outline"
         onClick={onSummarize}
-        disabled={isPending}
+        loading={isPending}
         className="gap-xs self-start text-caption"
-        aria-label={isPending ? "Summarising" : latest ? "Re-summarise" : "Summarise"}
+        aria-label={latest ? "Re-summarise" : "Summarise"}
       >
-        <MdAutoAwesome
-          className={`size-3.5 ${isPending ? "animate-pulse" : ""}`}
-        />
-        {isPending ? "Summarising…" : latest ? "Re-summarise" : "Summarise"}
+        <MdAutoAwesome className="size-3.5" />
+        {latest ? "Re-summarise" : "Summarise"}
       </Button>
 
       {latest ? (

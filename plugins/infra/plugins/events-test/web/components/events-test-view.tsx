@@ -279,9 +279,9 @@ export function EventsTestView() {
               />
               oneShot (delete row after fire)
             </Text>
-            <Button onClick={onSubscribe} disabled={subBusy}>
+            <Button onClick={onSubscribe} loading={subBusy}>
               <MdBolt className="size-4" />
-              {subBusy ? "Subscribing…" : "Subscribe"}
+              Subscribe
             </Button>
           </Section>
 
@@ -303,11 +303,11 @@ export function EventsTestView() {
             <Button
               variant="secondary"
               onClick={onEmit}
-              disabled={emitBusy}
+              loading={emitBusy}
               className="mt-auto"
             >
               <MdSend className="size-4" />
-              {emitBusy ? "Emitting…" : "Emit pinged"}
+              Emit pinged
             </Button>
           </Section>
         </div>
@@ -347,11 +347,11 @@ export function EventsTestView() {
           <Button
             variant="secondary"
             onClick={onDirectEnqueue}
-            disabled={deBusy}
+            loading={deBusy}
             className="self-start"
           >
             <MdSend className="size-4" />
-            {deBusy ? "Enqueueing…" : "Enqueue job"}
+            Enqueue job
           </Button>
         </Section>
 
@@ -422,7 +422,7 @@ export function EventsTestView() {
             <Button
               variant="outline"
               onClick={onDeleteTargeting}
-              disabled={dtBusy}
+              loading={dtBusy}
             >
               <MdDelete className="size-4" />
               Sweep

@@ -20,7 +20,7 @@ export function ConnectButton({
   return (
     <Button
       size="sm"
-      disabled={busy}
+      loading={busy}
       onClick={async () => {
         setBusy(true);
         try {

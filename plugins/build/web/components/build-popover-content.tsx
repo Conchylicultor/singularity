@@ -69,12 +69,12 @@ function MainAheadSection() {
   );
 }
 
-function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void }) {
+function BuildControls({ building, onBuild }: { building: boolean; onBuild: () => void | Promise<void> }) {
   return (
     <div className="flex items-center gap-sm border-b px-md py-sm">
-      <Button variant="default" size="sm" disabled={building} onClick={onBuild}>
+      <Button variant="default" size="sm" loading={building} onClick={() => onBuild()}>
         <MdPlayArrow className="size-4" />
-        {building ? "Building…" : "Build"}
+        Build
       </Button>
     </div>
   );

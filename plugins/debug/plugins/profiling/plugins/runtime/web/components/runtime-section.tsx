@@ -162,7 +162,7 @@ export function RuntimeSection(): ReactElement | null {
         <Button
           variant="ghost"
           size="xs"
-          disabled={resetMutation.isPending}
+          loading={resetMutation.isPending}
           onClick={() => resetMutation.mutate({})}
         >
           Reset window

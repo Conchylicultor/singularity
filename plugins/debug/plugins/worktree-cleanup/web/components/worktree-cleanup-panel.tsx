@@ -1,6 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { MdDelete, MdFolderDelete, MdWarning } from "react-icons/md";
+import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -218,14 +218,15 @@ export function WorktreeCleanupPanel() {
             size="sm"
             variant="destructive"
             onClick={deleteSafe}
-            disabled={loading || safeCount === 0 || deletingSteps.size > 0}
+            loading={loading || deletingSteps.size > 0}
+            disabled={safeCount === 0}
           >
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- icon-to-label inset inside a Button; parent is a 3rd-party Button, no gap to own it */}
             <MdFolderDelete className="size-4 mr-1.5" />
             Delete {safeCount} safe
           </Button>
-          <Button size="sm" variant="outline" onClick={load} disabled={loading}>
-            <Spinner spinning={loading} className="size-4" />
+          <Button size="icon-sm" variant="outline" onClick={() => load()} loading={loading}>
+            <MdRefresh className="size-4" />
           </Button>
         </div>
       </div>

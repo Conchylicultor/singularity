@@ -1,7 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
@@ -191,22 +190,12 @@ function ClusterGroup({
             size="sm"
             variant="outline"
             onClick={() => onRestore(groupIds)}
-            disabled={anyPending}
+            loading={anyPending}
             className="h-7 text-caption"
           >
-            {anyPending ? (
-              <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-                <Spinner className="size-3.5 mr-1" />
-                Restoring…
-              </>
-            ) : (
-              <>
-                {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-                <MdRestore className="size-3.5 mr-1" />
-                Restore all ({group.length})
-              </>
-            )}
+            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
+            <MdRestore className="size-3.5 mr-1" />
+            Restore all ({group.length})
           </Button>
         </div>
       )}
@@ -250,22 +239,12 @@ function ConversationRow({
           size="sm"
           variant="outline"
           onClick={onRestore}
-          disabled={pending}
+          loading={pending}
           className="h-7 text-caption"
         >
-          {pending ? (
-            <>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-              <Spinner className="size-3.5 mr-1" />
-              Restoring…
-            </>
-          ) : (
-            <>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
-              <MdRestore className="size-3.5 mr-1" />
-              Restore
-            </>
-          )}
+          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
+          <MdRestore className="size-3.5 mr-1" />
+          Restore
         </Button>
       </div>
       {error && (

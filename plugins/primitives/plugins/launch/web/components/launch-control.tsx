@@ -166,8 +166,7 @@ export function LaunchControl({
           disabled={busy}
           aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
           title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
-          onClick={() => void launch(defaultModel)}
-          className={cn(launching === defaultModel && "opacity-50")}
+          onClick={() => launch(defaultModel)}
         >
           <MdPlayArrow className={MODEL_REGISTRY[defaultModel].iconSize} />
         </Button>
@@ -217,14 +216,14 @@ export function LaunchControl({
         disabled={busy}
         aria-label={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
         title={`Launch ${MODEL_REGISTRY[defaultModel].label}`}
-        onClick={() => void launch(defaultModel)}
+        onClick={() => launch(defaultModel)}
         className={cn(
           "px-sm",
           blue,
           variant === "default" && "border-l border-white/20",
         )}
       >
-        <MdPlayArrow className={cn("size-4", launching === defaultModel && "opacity-50")} />
+        <MdPlayArrow className="size-4" />
       </Button>
     </ButtonGroup>
   );

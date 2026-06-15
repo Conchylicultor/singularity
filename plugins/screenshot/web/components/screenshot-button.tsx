@@ -63,7 +63,7 @@ export function ScreenshotButton() {
     <IconButton
       icon={MdPhotoCamera}
       label="Screenshot"
-      disabled={busy}
+      loading={busy}
       onClick={handleClick}
     />
   );

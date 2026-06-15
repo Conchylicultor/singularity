@@ -106,10 +106,11 @@ export function ImportByUrl({
             variant="ghost"
             size="sm"
             onClick={handleImport}
-            disabled={!input.trim() || importMutation.isPending}
+            loading={importMutation.isPending}
+            disabled={!input.trim()}
             className="border border-border"
           >
-            {importMutation.isPending ? "Importing..." : "Import"}
+            Import
           </Button>
         </div>
 
@@ -142,7 +143,7 @@ export function ImportByUrl({
                     variant="ghost"
                     size="xs"
                     onClick={() => deleteMutation.mutate({ params: { id: theme.id } })}
-                    disabled={deleteMutation.isPending}
+                    loading={deleteMutation.isPending}
                     className="text-muted-foreground hover:bg-destructive/10 hover:text-destructive"
                   >
                     Delete

@@ -180,11 +180,12 @@ function AgentDetailInner({ agentId, agent }: { agentId: string; agent: Agent })
       <div className="flex justify-end">
         <Button
           onClick={launch}
-          disabled={launching || !promptField.value.trim()}
+          loading={launching}
+          disabled={!promptField.value.trim()}
           className="gap-xs"
         >
           <MdPlayArrow className="size-4" />
-          {launching ? "Launching…" : "Launch"}
+          Launch
         </Button>
       </div>
       <AgentLaunches agentId={agentId} />

@@ -134,7 +134,7 @@ function JobsTabInner({ data, refetch }: { data: JobsPayload; refetch: () => Pro
           Dead <span className="opacity-60">{counts.dead}</span>
         </FilterChip>
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => void refetch()}>
+        <Button size="sm" variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </div>
@@ -267,7 +267,7 @@ function EventsTab() {
           Capped ring-buffer of last ~1000 emit() calls.
         </Text>
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => void refetch()}>
+        <Button size="sm" variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </div>
@@ -417,7 +417,7 @@ function TriggersTabInner({ data, refetch }: { data: TriggersPayload; refetch: (
           Active subscriptions across all registered events.
         </Text>
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={() => void refetch()}>
+        <Button size="sm" variant="ghost" onClick={() => refetch()}>
           <MdRefresh className="size-4" /> Refresh
         </Button>
       </div>

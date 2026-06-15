@@ -40,10 +40,10 @@ export function AnswerHereButton({
       <span>Content pending in terminal — waiting for your input</span>
       <Button
         size="sm"
-        disabled={m.isPending}
+        loading={m.isPending}
         onClick={() => m.mutate({ params: { id: conversationId } })}
       >
-        {m.isPending ? "Opening…" : "Answer here"}
+        Answer here
       </Button>
     </Text>
   );

@@ -58,11 +58,11 @@ export function ChordGridAddAction() {
     <Button
       variant="outline"
       size="sm"
-      disabled={creating}
-      onClick={() => void create()}
+      loading={creating}
+      onClick={() => create()}
     >
       <MdGridView className="size-4" />
-      {creating ? "Adding…" : "New Chord Grid"}
+      New Chord Grid
     </Button>
   );
 }

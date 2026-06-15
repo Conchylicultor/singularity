@@ -145,8 +145,8 @@ export function AnswerForm({
       }),
   });
 
-  const canSubmit =
-    answers.every((a, qi) => isAnswered(a, questions[qi]!)) && !m.isPending;
+  const allAnswered = answers.every((a, qi) => isAnswered(a, questions[qi]!));
+  const canSubmit = allAnswered && !m.isPending;
 
   const handleSubmit = () => {
     const text = serializeAnswers(questions, answers);
@@ -245,10 +245,11 @@ export function AnswerForm({
       <div className="flex justify-end">
         <Button
           size="sm"
-          disabled={!canSubmit}
+          loading={m.isPending}
+          disabled={!allAnswered}
           onClick={handleSubmit}
         >
-          {m.isPending ? "Submitting…" : "Submit"}
+          Submit
         </Button>
       </div>
     </Stack>

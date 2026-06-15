@@ -32,7 +32,6 @@ export function ResumeButton({
   const isNotRunning = live.status === "gone" || live.status === "done";
   const hasSession = !!live.claudeSessionId;
   const canResume = isNotRunning && hasSession;
-  const disabled = resume.isPending || !canResume;
 
   const tooltip = !isNotRunning
     ? "Resume is available once the session has exited"
@@ -41,7 +40,7 @@ export function ResumeButton({
       : "Resume conversation (claude --resume)";
 
   function onClick() {
-    if (disabled) return;
+    if (resume.isPending || !canResume) return;
     resume.mutate({ params: { id: conversation.id } });
   }
 
@@ -51,7 +50,8 @@ export function ResumeButton({
       size="icon-sm"
       title={resume.isPending ? "Resuming…" : tooltip}
       aria-label="Resume"
-      disabled={disabled}
+      loading={resume.isPending}
+      disabled={!canResume}
       onClick={onClick}
     >
       <MdReplay className="size-3.5" />

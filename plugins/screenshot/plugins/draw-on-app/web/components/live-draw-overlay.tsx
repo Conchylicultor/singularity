@@ -122,15 +122,16 @@ export function LiveDrawOverlay({
             data-draw-chrome="true"
             className="absolute bottom-4 right-4 flex items-center gap-sm"
           >
-            <Button variant="outline" size="sm" onClick={onCancel} disabled={busy}>
+            <Button variant="outline" size="sm" onClick={onCancel} loading={busy}>
               Cancel
             </Button>
             <Button
               size="sm"
               onClick={onDone}
-              disabled={busy || strokes.length === 0}
+              loading={busy}
+              disabled={strokes.length === 0}
             >
-              {busy ? "Capturing…" : "Done"}
+              Done
             </Button>
           </div>
         </>

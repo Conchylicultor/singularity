@@ -115,7 +115,7 @@ export function BroadcastsPanel() {
             variant="ghost"
             size="icon"
             className="size-7"
-            onClick={() => void refetch()}
+            onClick={() => refetch()}
             title="Refresh"
           >
             <MdRefresh className="size-4" />
@@ -229,8 +229,9 @@ export function BroadcastsPanel() {
             <Button
               size="sm"
               className="h-7"
-              disabled={!form.message.trim() || saving}
-              onClick={() => void handleAdd()}
+              loading={saving}
+              disabled={!form.message.trim()}
+              onClick={() => handleAdd()}
             >
               Add
             </Button>
@@ -275,8 +276,8 @@ export function BroadcastsPanel() {
                   variant="ghost"
                   size="icon"
                   className="size-6 shrink-0 text-muted-foreground hover:text-destructive"
-                  disabled={saving}
-                  onClick={() => void handleDelete(i)}
+                  loading={saving}
+                  onClick={() => handleDelete(i)}
                   title="Delete"
                 >
                   <MdDelete className="size-4" />

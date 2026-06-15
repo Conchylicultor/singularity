@@ -120,10 +120,10 @@ export function BackupPanel() {
           </Text>
         </Stack>
 
-        <Button onClick={() => triggerBackup({})} disabled={isPending}>
+        <Button onClick={() => triggerBackup({})} loading={isPending}>
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- leading-icon offset inside button label */}
           <MdBackup className="size-4 mr-2" />
-          {isPending ? "Starting backup…" : "Run Backup Now"}
+          Run Backup Now
         </Button>
 
         <Stack gap="md">

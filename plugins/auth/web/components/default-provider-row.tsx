@@ -144,7 +144,7 @@ export function DefaultProviderRow({ providerId }: Props) {
               <Button
                 variant="default"
                 size="sm"
-                disabled={busy}
+                loading={busy}
                 onClick={handleConnect}
               >
                 Reconnect
@@ -153,7 +153,7 @@ export function DefaultProviderRow({ providerId }: Props) {
             <Button
               variant="outline"
               size="sm"
-              disabled={busy}
+              loading={busy}
               onClick={handleDisconnect}
             >
               Disconnect
@@ -163,7 +163,7 @@ export function DefaultProviderRow({ providerId }: Props) {
           <Button
             variant="default"
             size="sm"
-            disabled={busy}
+            loading={busy}
             onClick={handleConnect}
           >
             Connect

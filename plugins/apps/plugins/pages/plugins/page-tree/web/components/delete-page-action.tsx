@@ -71,7 +71,7 @@ export function DeletePageAction({ row }: ItemActionProps<Block>) {
             <Button variant="ghost" onClick={() => setOpen(false)}>
               Cancel
             </Button>
-            <Button variant="destructive" onClick={() => void onConfirm()}>
+            <Button variant="destructive" onClick={() => onConfirm()}>
               Delete
             </Button>
           </div>

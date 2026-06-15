@@ -279,7 +279,7 @@ export function TaskDraftForm({
         size="sm"
         variant="ghost"
         onClick={appendChainCard}
-        disabled={submitting}
+        loading={submitting}
         className="text-muted-foreground self-start"
       >
         <MdAdd className="size-3.5" />
@@ -289,17 +289,11 @@ export function TaskDraftForm({
       <div className="border-border flex items-center gap-sm border-t pt-sm">
         {footerStart}
         <div className="flex-1" />
-        <Button size="sm" variant="ghost" onClick={onCancel} disabled={submitting}>
+        <Button size="sm" variant="ghost" onClick={onCancel} loading={submitting}>
           Cancel
         </Button>
-        <Button size="sm" onClick={onSubmit} disabled={disabled}>
-          {submitting
-            ? isMulti
-              ? "Submitting chain…"
-              : "Submitting…"
-            : isMulti
-              ? "Submit chain"
-              : "Submit"}
+        <Button size="sm" onClick={onSubmit} loading={submitting} disabled={hasEmpty}>
+          {isMulti ? "Submit chain" : "Submit"}
         </Button>
       </div>
     </div>

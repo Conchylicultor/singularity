@@ -89,7 +89,7 @@ export function MemoryPanel() {
             variant="ghost"
             size="icon"
             className="size-6"
-            onClick={() => void loadList()}
+            onClick={() => loadList()}
             title="Refresh"
           >
             <MdRefresh className="size-4" />

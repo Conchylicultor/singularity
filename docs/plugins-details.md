@@ -1514,7 +1514,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `recoveryPane.Actions`
         - Contributes: `Pane.Register` "conversations-recover", `DebugApp.Sidebar` "Recovery" → `component`
-        - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
+        - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`
         - Exports: Values: `recoveryPane`
       - Server:
         - Uses: `conversations.resumeConversation`, `infra/endpoints.implement`, `tasks/tasks-core.notifyConversationsChanged`
@@ -3223,7 +3223,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/ui-kit.cn`
         - Exports: Types: `SpinnerProps`; Values: `Spinner`
       - Cross-plugin:
-        - Imported by: `build`, `conversations/conversation-view/op-status`, `conversations/recover`, `debug/worktree-cleanup`, `primitives/folder-picker`, `primitives/loading`
+        - Imported by: `build`, `conversations/conversation-view/op-status`, `debug/worktree-cleanup`, `primitives/folder-picker`, `primitives/loading`
     - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
       - Web:
         - Uses: `primitives/ui-kit.cn`
