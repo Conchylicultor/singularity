@@ -10,6 +10,7 @@ import {
   applyReorderDefault,
   applyAllReorderDefaults,
   discardReorderDefault,
+  discardAllReorderDefaults,
 } from "../../core/endpoints";
 import { _reorderStagedDefault } from "./tables";
 import { stagedReorderDefaultsResource } from "./resource";
@@ -87,6 +88,15 @@ export const handleDiscardReorderDefault = implement(
     await db
       .delete(_reorderStagedDefault)
       .where(eq(_reorderStagedDefault.slotId, params.slotId));
+    stagedReorderDefaultsResource.notify();
+    // return undefined → 204
+  },
+);
+
+export const handleDiscardAllReorderDefaults = implement(
+  discardAllReorderDefaults,
+  async () => {
+    await db.delete(_reorderStagedDefault);
     stagedReorderDefaultsResource.notify();
     // return undefined → 204
   },

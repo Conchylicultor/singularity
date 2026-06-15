@@ -4,6 +4,7 @@ import {
   applyReorderDefault,
   applyAllReorderDefaults,
   discardReorderDefault,
+  discardAllReorderDefaults,
 } from "../core/endpoints";
 
 // Stage a reorder layout as a "default for everyone" (worktree-local holding
@@ -28,4 +29,9 @@ export function useApplyAllReorderDefaults() {
 // Discard a staged reorder default without writing anything.
 export function useDiscardReorderDefault() {
   return useEndpointMutation(discardReorderDefault);
+}
+
+// Discard the entire staged reorder default set in one shot (cancel-all).
+export function useDiscardAllStagedDefaults() {
+  return useEndpointMutation(discardAllReorderDefaults);
 }

@@ -24,7 +24,10 @@ import {
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
-import { useStageReorderDefault } from "@plugins/reorder/plugins/staging/web";
+import {
+  useStagedTree,
+  useStageDefault,
+} from "@plugins/reorder/plugins/staging/web";
 import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
 import { useEditMode } from "./edit-mode-store";
 import { useReorderScope } from "./scope-store";
@@ -246,9 +249,18 @@ function ReorderInner({
 }) {
   const editMode = useEditMode();
   const scope = useReorderScope();
-  const stage = useStageReorderDefault();
+  const stageDefault = useStageDefault();
   const injected = useContext(ReorderLayoutContext);
   const nodeTypes = useReorderNodeTypes();
+
+  // While an everyone-default is staged for this slot, the staged tree is the
+  // displayed order (an inline preview of the proposed default). Otherwise the
+  // user's config_v2 effective order drives the slot. Every materialization
+  // (drag/hide/insert/remove/patch) reads from `effectiveItems` (via
+  // state/entriesRef and itemsRef below), so sequential everyone edits compose
+  // from the previously-staged order rather than the raw config.
+  const stagedTree = useStagedTree(slotId);
+  const effectiveItems = stagedTree ?? items;
 
   const [popoverOpen, setPopoverOpen] = useState(false);
 
@@ -290,8 +302,8 @@ function ReorderInner({
   }, []);
 
   const state = useMemo(
-    () => applyTree(contributions, items),
-    [contributions, items],
+    () => applyTree(contributions, effectiveItems),
+    [contributions, effectiveItems],
   );
 
   const hiddenItems = useMemo(
@@ -307,8 +319,12 @@ function ReorderInner({
 
   const entriesRef = useRef(state.entries);
   entriesRef.current = state.entries;
-  const itemsRef = useRef(items);
-  itemsRef.current = items;
+  // `itemsRef` feeds the verbatim raw-tree maps (remove/patch by id). It must
+  // mirror the DISPLAYED tree so an everyone-scope edit composes from the
+  // currently-staged order, matching `entriesRef` (also derived from
+  // `effectiveItems`).
+  const itemsRef = useRef(effectiveItems);
+  itemsRef.current = effectiveItems;
   const hiddenKeysRef = useRef<string[]>([]);
   hiddenKeysRef.current = useMemo(
     () => state.hidden.map((c) => contributionKey(c)!),
@@ -319,24 +335,21 @@ function ReorderInner({
 
   // --- Write sink: personal (user config) vs. everyone (staged git default) --
   // Every in-app edit funnels its freshly-materialized tree through this single
-  // choke-point. The two paths are STRICTLY DISJOINT: "everyone" stages the tree
-  // for review and NEVER touches the user config layer (no double-write), so the
-  // author's live layout keeps showing the current effective order.
+  // choke-point. The two paths are STRICTLY DISJOINT and never double-write the
+  // user config: "personal" writes the user layer; "everyone" optimistically
+  // stages the tree for review (shown inline via `effectiveItems` until
+  // committed or discarded) and NEVER touches the user config layer.
   const commitTree = useCallback(
     (tree: ReorderTree) => {
       if (scope === "everyone") {
-        stage.mutate({
-          body: {
-            slotId,
-            pluginId: reorderPluginIdForSlot(slotId),
-            items: tree,
-          },
-        });
+        // Optimistic dispatch: the staged tree shows inline immediately and
+        // becomes `effectiveItems` for this slot (display + ref source above).
+        stageDefault(slotId, reorderPluginIdForSlot(slotId), tree);
         return;
       }
       setConfig("items", tree);
     },
-    [scope, slotId, setConfig, stage],
+    [scope, slotId, setConfig, stageDefault],
   );
   const commitTreeRef = useRef(commitTree);
   commitTreeRef.current = commitTree;

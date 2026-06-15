@@ -5,6 +5,7 @@ import {
   applyReorderDefault,
   applyAllReorderDefaults,
   discardReorderDefault,
+  discardAllReorderDefaults,
 } from "../core/endpoints";
 import { stagedReorderDefaultsResource } from "./internal/resource";
 import {
@@ -12,6 +13,7 @@ import {
   handleApplyReorderDefault,
   handleApplyAllReorderDefaults,
   handleDiscardReorderDefault,
+  handleDiscardAllReorderDefaults,
 } from "./internal/handlers";
 import { landDefaultsJob } from "./internal/land-job";
 
@@ -26,6 +28,7 @@ export default {
     [applyReorderDefault.route]: handleApplyReorderDefault,
     [applyAllReorderDefaults.route]: handleApplyAllReorderDefaults,
     [discardReorderDefault.route]: handleDiscardReorderDefault,
+    [discardAllReorderDefaults.route]: handleDiscardAllReorderDefaults,
   },
   register: [landDefaultsJob],
   contributions: [Resource.Declare(stagedReorderDefaultsResource)],
