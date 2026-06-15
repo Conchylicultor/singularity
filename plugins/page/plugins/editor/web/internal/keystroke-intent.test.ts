@@ -90,13 +90,20 @@ describe("Enter", () => {
       position: 2,
       asChild: false,
       childType: undefined,
+      siblingType: undefined,
     });
   });
 
   test("asChild when splitting at the end of a block with expanded children", () => {
     // "hello".length === 5; A is expanded with child A1.
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 5 }), ctx("A"));
-    expect(intent).toEqual({ type: "split", position: 5, asChild: true, childType: undefined });
+    expect(intent).toEqual({
+      type: "split",
+      position: 5,
+      asChild: true,
+      childType: undefined,
+      siblingType: undefined,
+    });
   });
 
   test("not asChild when splitting mid-text even with children", () => {
@@ -108,7 +115,29 @@ describe("Enter", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 0 }), ctx("B", {
       splitOptions: { asChild: true, childType: "to-do" },
     }));
-    expect(intent).toEqual({ type: "split", position: 0, asChild: true, childType: "to-do" });
+    expect(intent).toEqual({
+      type: "split",
+      position: 0,
+      asChild: true,
+      childType: "to-do",
+      siblingType: undefined,
+    });
+  });
+
+  test("splitInto: Enter at the END yields a sibling of that type", () => {
+    // Gated on the live caret edge (caret.atEnd), not the reducer node length.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), ctx("B", {
+      splitOptions: { splitInto: "text" },
+    }));
+    expect(intent).toMatchObject({ type: "split", asChild: false, siblingType: "text" });
+  });
+
+  test("splitInto: Enter MID-text keeps the type (siblingType undefined)", () => {
+    // Caret not at the end → no type swap, the after-text stays the same type.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: false }), ctx("A", {
+      splitOptions: { splitInto: "text" },
+    }));
+    expect(intent).toMatchObject({ type: "split", asChild: false, siblingType: undefined });
   });
 });
 

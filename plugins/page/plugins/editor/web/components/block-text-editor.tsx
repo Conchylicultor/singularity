@@ -8,7 +8,7 @@ import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { LexicalEditor } from "lexical";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { textDataSchema, type Block } from "../../core";
+import { textDataSchema, type Block, type BlockTextVariant } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import { ValueSyncPlugin } from "./value-sync-plugin";
@@ -17,6 +17,16 @@ import { SlashMenuPlugin } from "./slash-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { placeCaretAtBoundary, placeCaretAtColumn } from "../internal/caret-geometry";
+
+/** Maps a semantic typography variant to its sanctioned `text-*` utility. */
+const VARIANT_CLASS: Record<BlockTextVariant, string> = {
+  title: "text-title",
+  heading: "text-heading",
+  subheading: "text-subheading",
+  body: "text-body",
+  label: "text-label",
+  caption: "text-caption",
+};
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditor | null> }) {
   const [editor] = useLexicalComposerContext();
@@ -43,6 +53,7 @@ export function BlockTextEditor({
   marker,
   placeholder,
   contentClassName,
+  textVariant,
   splitOptions,
 }: {
   block: Block;
@@ -54,8 +65,10 @@ export function BlockTextEditor({
   placeholder?: ReactNode;
   /** Extra classes for the editable content (e.g. strikethrough when done). */
   contentClassName?: string;
-  /** Enter-split options (e.g. nest the split-off content as a child). */
-  splitOptions?: { asChild?: boolean; childType?: string };
+  /** Semantic typography variant for the editable text and placeholder. */
+  textVariant: BlockTextVariant;
+  /** Enter-split options (e.g. nest the split-off content as a child, or change the sibling type). */
+  splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
 }) {
   const data = textDataSchema.parse(block.data);
   const isEmpty = data.text.length === 0;
@@ -109,7 +122,7 @@ export function BlockTextEditor({
           <PlainTextPlugin
             contentEditable={
               <ContentEditable
-                className={cn("outline-none px-md py-xs text-body", contentClassName)}
+                className={cn("outline-none px-md py-xs", VARIANT_CLASS[textVariant], contentClassName)}
                 onFocus={() => {
                   field.onFocus();
                   editor.onFocus();
@@ -119,7 +132,7 @@ export function BlockTextEditor({
             }
             placeholder={
               isEmpty && isFocused && placeholder ? (
-                <div className="text-muted-foreground pointer-events-none absolute left-0 top-0 px-md py-xs text-body">
+                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 px-md py-xs", VARIANT_CLASS[textVariant])}>
                   {placeholder}
                 </div>
               ) : null

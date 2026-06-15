@@ -251,6 +251,27 @@ describe("split", () => {
     const newNode = out.find((x) => x.id === "NEW")!;
     expect(textOf(newNode)).toBe("def");
   });
+
+  test("siblingType overrides the new sibling's type (heading → text)", () => {
+    const blocks = [mk("H", null, a, { text: "Title", type: "heading-1" })];
+    const out = run(blocks, {
+      kind: "split",
+      blockId: "H",
+      position: 5,
+      newId: "NEW",
+      siblingType: "text",
+    });
+    const newNode = out.find((x) => x.id === "NEW")!;
+    // The origin keeps its heading type; the new sibling becomes a body paragraph.
+    expect(out.find((x) => x.id === "H")!.type).toBe("heading-1");
+    expect(newNode.type).toBe("text");
+  });
+
+  test("without siblingType the new sibling keeps the original type", () => {
+    const blocks = [mk("H", null, a, { text: "Title", type: "heading-1" })];
+    const out = run(blocks, { kind: "split", blockId: "H", position: 5, newId: "NEW" });
+    expect(out.find((x) => x.id === "NEW")!.type).toBe("heading-1");
+  });
 });
 
 // ---------------------------------------------------------------------------

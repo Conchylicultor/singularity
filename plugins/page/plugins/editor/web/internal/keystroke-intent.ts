@@ -28,7 +28,7 @@ export type KeystrokeKey =
  *   sibling must not move focus or insert a tab).
  */
 export type KeyIntent =
-  | { type: "split"; position: number; asChild: boolean; childType?: string }
+  | { type: "split"; position: number; asChild: boolean; childType?: string; siblingType?: string }
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
   | { type: "outdent" } // backspace at start when indented, or shift+tab
   | { type: "indent" } // tab
@@ -45,7 +45,7 @@ export interface IntentContext {
   /** The page block id — its direct children are "top level" (not indented). */
   pageId: string;
   /** Contributor split overrides (e.g. nest the split-off content as a child). */
-  splitOptions?: { asChild?: boolean; childType?: string };
+  splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
 }
 
 /** A block is "indented" when its parent is a normal content block, not the page. */
@@ -87,7 +87,20 @@ export function resolveKeystroke(
       const asChild =
         ctx.splitOptions?.asChild ??
         (hasExpandedChildren(ctx.nodes, node) && position === textLengthOf(node));
-      return { type: "split", position, asChild, childType: ctx.splitOptions?.childType };
+      // Enter at the END of a block can produce a sibling of a different type
+      // (e.g. a heading yields a body paragraph). Mid-block splits keep the type.
+      // Gate on the live caret edge, not the reducer node length: the latter lags
+      // a just-applied markdown conversion (`### ` → heading), which would make the
+      // very next Enter miss the type swap.
+      const siblingType =
+        !asChild && caret.atEnd ? ctx.splitOptions?.splitInto : undefined;
+      return {
+        type: "split",
+        position,
+        asChild,
+        childType: ctx.splitOptions?.childType,
+        siblingType,
+      };
     }
     case "Backspace": {
       // Only a collapsed caret at the very start triggers structural intent;

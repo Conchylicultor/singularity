@@ -39,7 +39,7 @@ export function KeyboardPlugin({
 }: {
   blockId: string;
   editor: BlockEditorAPI;
-  splitOptions?: { asChild?: boolean; childType?: string };
+  splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
   const { rowsRef, pageId } = useBlockEditor();
@@ -78,6 +78,7 @@ export function KeyboardPlugin({
           api.split(intent.position, {
             asChild: intent.asChild,
             childType: intent.childType,
+            siblingType: intent.siblingType,
             text,
           });
           return true;

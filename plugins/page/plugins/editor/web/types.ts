@@ -23,7 +23,7 @@ export interface BlockEditorAPI {
    */
   split(
     position: number,
-    opts?: { asChild?: boolean; childType?: string; text?: string },
+    opts?: { asChild?: boolean; childType?: string; siblingType?: string; text?: string },
   ): void;
   /**
    * Backspace-at-start intent. If this block is indented (its parent is a normal

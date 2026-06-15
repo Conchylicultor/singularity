@@ -284,7 +284,7 @@ export function BlockEditorProvider({
       },
       split(
         position: number,
-        opts?: { asChild?: boolean; childType?: string; text?: string },
+        opts?: { asChild?: boolean; childType?: string; siblingType?: string; text?: string },
       ) {
         // Thin executor: the asChild decision is owned by `resolveKeystroke`
         // (the single intent step) and passed in explicitly. The new block's id
@@ -298,6 +298,7 @@ export function BlockEditorProvider({
           newId,
           asChild: opts?.asChild ?? false,
           childType: opts?.childType,
+          siblingType: opts?.siblingType,
           text: opts?.text,
         });
       },

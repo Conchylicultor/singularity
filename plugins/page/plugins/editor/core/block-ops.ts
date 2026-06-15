@@ -33,6 +33,12 @@ export type BlockOp =
       asChild?: boolean;
       childType?: string;
       /**
+       * Sibling block type produced by a non-asChild split at the end of the
+       * block's text (e.g. a heading yields a `text` paragraph). Defaults to the
+       * original block's type.
+       */
+      siblingType?: string;
+      /**
        * Authoritative current text from the editor; falls back to the stored
        * block text when absent. Lets the reducer split the live (possibly
        * not-yet-autosaved) string rather than stale stored text.
@@ -75,6 +81,7 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     newId: z.string(),
     asChild: z.boolean().optional(),
     childType: z.string().optional(),
+    siblingType: z.string().optional(),
     text: z.string().optional(),
   }),
   z.object({ kind: z.literal("merge"), blockId: z.string(), text: z.string().optional() }),
@@ -226,7 +233,7 @@ function applySplit(
   } else {
     const next0 = nextSibling(blocks, block);
     newParentId = block.parentId;
-    newType = block.type;
+    newType = op.siblingType ?? block.type;
     newRank = Rank.between(Rank.from(block.rank), next0 ? Rank.from(next0.rank) : null);
   }
 

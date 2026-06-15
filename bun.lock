@@ -1705,6 +1705,22 @@
         "lexical": "^0.44.0",
       },
     },
+    "plugins/page/plugins/heading": {
+      "name": "@singularity/plugin-page-heading",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/heading/plugins/heading-1": {
+      "name": "@singularity/plugin-page-heading-heading-1",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/heading/plugins/heading-2": {
+      "name": "@singularity/plugin-page-heading-heading-2",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/heading/plugins/heading-3": {
+      "name": "@singularity/plugin-page-heading-heading-3",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/image": {
       "name": "@singularity/plugin-page-image",
       "version": "0.0.1",
@@ -3994,6 +4010,14 @@
     "@singularity/plugin-page-divider": ["@singularity/plugin-page-divider@workspace:plugins/page/plugins/divider"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
+
+    "@singularity/plugin-page-heading": ["@singularity/plugin-page-heading@workspace:plugins/page/plugins/heading"],
+
+    "@singularity/plugin-page-heading-heading-1": ["@singularity/plugin-page-heading-heading-1@workspace:plugins/page/plugins/heading/plugins/heading-1"],
+
+    "@singularity/plugin-page-heading-heading-2": ["@singularity/plugin-page-heading-heading-2@workspace:plugins/page/plugins/heading/plugins/heading-2"],
+
+    "@singularity/plugin-page-heading-heading-3": ["@singularity/plugin-page-heading-heading-3@workspace:plugins/page/plugins/heading/plugins/heading-3"],
 
     "@singularity/plugin-page-image": ["@singularity/plugin-page-image@workspace:plugins/page/plugins/image"],
 

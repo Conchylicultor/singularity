@@ -1,6 +1,20 @@
 import type { ComponentType } from "react";
 import type { ZodTypeAny, z } from "zod";
 
+/**
+ * The semantic typography roles an editable-text block can render at. Mirrors the
+ * `TextVariant` set from `primitives/text`, redeclared here because core cannot
+ * import from a web barrel — the web renderer maps each role to its `text-<role>`
+ * utility. `body` is the default for ordinary text blocks.
+ */
+export type BlockTextVariant =
+  | "title"
+  | "heading"
+  | "subheading"
+  | "body"
+  | "label"
+  | "caption";
+
 export interface BlockHandle<T> {
   type: string;
   schema: ZodTypeAny;
@@ -46,6 +60,10 @@ export interface BlockHandle<T> {
   ordinalMarker?: (ordinal: number) => string;
   /** For editable-text block types: placeholder shown when empty and focused. */
   placeholder?: string;
+  /** Semantic typography variant for the editable text (default "body"). */
+  textVariant?: BlockTextVariant;
+  /** Sibling block type produced when Enter splits this block at the END of its text (defaults to same type). */
+  splitInto?: string;
   /**
    * For text block types with a boolean state: the shared text renderer renders
    * an interactive checkbox marker bound to `data[field]`, and applies
@@ -80,6 +98,8 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   marker?: string;
   ordinalMarker?: (ordinal: number) => string;
   placeholder?: string;
+  textVariant?: BlockTextVariant;
+  splitInto?: string;
   toggle?: { field: string; doneClassName?: string };
   collapsible?: "always";
   splitChildWhenExpanded?: { childType: string };
@@ -96,6 +116,8 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     marker: opts.marker,
     ordinalMarker: opts.ordinalMarker,
     placeholder: opts.placeholder,
+    textVariant: opts.textVariant,
+    splitInto: opts.splitInto,
     toggle: opts.toggle,
     collapsible: opts.collapsible,
     splitChildWhenExpanded: opts.splitChildWhenExpanded,
