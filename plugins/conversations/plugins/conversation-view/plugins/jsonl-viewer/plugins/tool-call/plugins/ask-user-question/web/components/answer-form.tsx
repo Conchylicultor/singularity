@@ -5,7 +5,8 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
-import { Indicator, type Question } from "./ask-user-question-tool-view";
+import { Indicator } from "./ask-user-question-tool-view";
+import { type Question } from "./answer-model";
 
 // Persisted shape: `selected` is a string[] (not a Set) so the draft survives a
 // JSON round-trip through localStorage via useDraft. `otherText` is a buffer
