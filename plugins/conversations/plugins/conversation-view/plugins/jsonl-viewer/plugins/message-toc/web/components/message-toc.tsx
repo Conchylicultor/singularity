@@ -73,14 +73,14 @@ export function MessageToc() {
     <FloatingAction
       className="absolute top-2 right-3 z-nav"
       anchor="top-right"
-      panelClassName="flex-col w-[3.25rem] group-data-hovered/fa:w-56 max-h-[1.625rem] group-data-hovered/fa:max-h-80"
+      panelClassName="flex-col w-[3.25rem] group-data-open/fa:w-56 max-h-[1.625rem] group-data-open/fa:max-h-80"
     >
-      <div className="flex shrink-0 items-center gap-xs px-sm py-xs group-data-hovered/fa:border-b group-data-hovered/fa:border-border/40">
+      <div className="flex shrink-0 items-center gap-xs px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40">
         <MdFormatListNumbered className="size-3.5 shrink-0 text-muted-foreground" />
         <Text as="span" variant="caption" className="shrink-0 tabular-nums text-muted-foreground">
           {entries.length}
         </Text>
-        <span className="ml-auto text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-hovered/fa:opacity-100">
+        <span className="ml-auto text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
           messages
         </span>
       </div>

@@ -130,9 +130,9 @@ export function FloatingTemplateChips({
       <FloatingAction
         className="relative size-7 z-popover"
         variant="ghost"
-        panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-hovered/fa:px-xs max-w-7 group-data-hovered/fa:max-w-sm max-h-7 group-data-hovered/fa:max-h-56"
+        panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-open/fa:px-xs max-w-7 group-data-open/fa:max-w-sm max-h-7 group-data-open/fa:max-h-56"
       >
-        <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-hovered/fa:text-muted-foreground transition-colors" />
+        <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
         <FloatingActionFadeIn className="flex flex-col items-start gap-xs">
           <div className="self-end">
             <ConfigGearButton

@@ -4,7 +4,7 @@
 
 ## Plugin reference
 
-- Description: Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
+- Description: Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
 - Web:
   - Uses: `primitives/ui-kit.cn`
   - Exports: Types: `FloatingActionFadeInProps`, `FloatingActionProps`, `FloatingAnchor`; Values: `FloatingAction`, `FloatingActionFadeIn`

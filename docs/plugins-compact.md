@@ -206,7 +206,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`file-links`** — Parses inline file paths (e.g. `research/foo.md`) in plain text and renders them as clickable buttons that fire onFileOpen. Exposes <FileLinkText/>, parseFileLinks(), and linkifyChildren() for use inside ReactMarkdown component overrides.
     - **`filepath-breadcrumb`** — File-path breadcrumb with copy-to-clipboard and directory navigation. Wraps the generic Breadcrumb with filepath-specific behavior.
     - **`filter-chips`** — Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
-    - **`floating-action`** — Hover-intent floating action: single morphing panel with JS hover intent (close delay) and pointer-events-none on close to prevent flicker.
+    - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
     - **`folder-picker`** — Folder-picker primitive: browse the host filesystem and pick a directory. FolderPickerPopover pairs a typeable path input with a breadcrumb browser; useHostDir lists/validates a host directory. Host filesystem directory-browsing endpoint backing the folder-picker UI: lists a directory's subdirectories and validates a typed path.
     - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
