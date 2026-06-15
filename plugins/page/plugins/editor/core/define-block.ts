@@ -42,6 +42,19 @@ export interface BlockHandle<T> {
    */
   markdownPrefixes?: string[];
   /**
+   * Backspace at the very start of this block first converts it to this type
+   * (keeping text + children) instead of merging — Notion's "reset block type".
+   * A second Backspace then merges. Generic: the editor core never names a
+   * specific block type (the target is supplied here, e.g. `"text"`).
+   */
+  resetToOnBackspaceAtStart?: string;
+  /**
+   * Enter on an EMPTY block of this type converts it to this type instead of
+   * splitting — exits a list / breaks a quote out to a paragraph. Generic: the
+   * editor core never names a specific block type.
+   */
+  breakOutOnEmptyEnter?: string;
+  /**
    * For editable-text block types: a static glyph rendered to the left of the
    * text (e.g. `"•"` for a bullet). Text-like block types that share the editor
    * plugin's `BlockTextRenderer` all resolve to the *same* renderer function, so
@@ -95,6 +108,8 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
   aliases?: string[];
   empty?: () => z.infer<S>;
   markdownPrefixes?: string[];
+  resetToOnBackspaceAtStart?: string;
+  breakOutOnEmptyEnter?: string;
   marker?: string;
   ordinalMarker?: (ordinal: number) => string;
   placeholder?: string;
@@ -113,6 +128,8 @@ export function defineBlock<S extends ZodTypeAny>(opts: {
     aliases: opts.aliases,
     empty: opts.empty,
     markdownPrefixes: opts.markdownPrefixes,
+    resetToOnBackspaceAtStart: opts.resetToOnBackspaceAtStart,
+    breakOutOnEmptyEnter: opts.breakOutOnEmptyEnter,
     marker: opts.marker,
     ordinalMarker: opts.ordinalMarker,
     placeholder: opts.placeholder,

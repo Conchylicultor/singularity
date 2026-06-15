@@ -18,4 +18,8 @@ export const toDoBlock = defineBlock({
   // Render an interactive checkbox marker bound to `checked`; strike through the
   // text when done. Driven generically by the editor's shared text renderer.
   toggle: { field: "checked" },
+  // Backspace at the very start resets to a plain paragraph (a second one then
+  // merges); Enter on an empty to-do exits the list to a paragraph.
+  resetToOnBackspaceAtStart: "text",
+  breakOutOnEmptyEnter: "text",
 });

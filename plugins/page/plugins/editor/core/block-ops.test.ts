@@ -16,6 +16,7 @@ import { PAGE_BLOCK_TYPE } from "./schemas";
 import {
   applyBlockOp,
   childrenOf,
+  prevVisibleLeaf,
   runsOfNode,
   textOf,
   type BlockNode,
@@ -277,6 +278,48 @@ describe("split", () => {
 });
 
 // ---------------------------------------------------------------------------
+// prevVisibleLeaf
+// ---------------------------------------------------------------------------
+
+describe("prevVisibleLeaf", () => {
+  test("descends to the deepest last expanded child of the prev sibling", () => {
+    // xx (expanded) ├ yy0 └ yy1 ; zz follows xx. zz's prev visible leaf is yy1.
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const k2 = after(k1);
+    const blocks = [
+      mk("xx", null, r1, { expanded: true }),
+      mk("zz", null, r2),
+      mk("yy0", "xx", k1),
+      mk("yy1", "xx", k2),
+    ];
+    const leaf = prevVisibleLeaf(blocks, blocks.find((b) => b.id === "zz")!);
+    expect(leaf?.id).toBe("yy1");
+  });
+
+  test("stops at a collapsed parent (its children aren't visible)", () => {
+    // xx is COLLAPSED → its children are hidden, so the leaf is xx itself.
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const blocks = [
+      mk("xx", null, r1, { expanded: false }),
+      mk("zz", null, r2),
+      mk("yy0", "xx", k1),
+    ];
+    const leaf = prevVisibleLeaf(blocks, blocks.find((b) => b.id === "zz")!);
+    expect(leaf?.id).toBe("xx");
+  });
+
+  test("no previous sibling → null", () => {
+    const r1 = a;
+    const blocks = [mk("first", null, r1)];
+    expect(prevVisibleLeaf(blocks, blocks[0]!)).toBe(null);
+  });
+});
+
+// ---------------------------------------------------------------------------
 // merge
 // ---------------------------------------------------------------------------
 
@@ -302,6 +345,33 @@ describe("merge", () => {
     expect(out.find((b) => b.id === "CUR")).toBeUndefined();
     // Adopted children appended after prev's existing child, in order.
     expect(ids(out, "PREV")).toEqual(["PK", "CK1", "CK2"]);
+  });
+
+  test("merges into the previous VISIBLE leaf, not the immediate sibling", () => {
+    // xx (expanded) ├ yy0 └ yy1 ; zz (with its own child zk) follows xx.
+    // Backspace at zz must merge into yy1 (the last visible block), adopting
+    // zz's child under yy1 — NOT into xx.
+    const r1 = a;
+    const r2 = after(r1);
+    const k1 = a;
+    const k2 = after(k1);
+    const zk = a;
+    const blocks = [
+      mk("xx", null, r1, { text: "xx", expanded: true }),
+      mk("zz", null, r2, { text: "zz", expanded: true }),
+      mk("yy0", "xx", k1, { text: "yy0" }),
+      mk("yy1", "xx", k2, { text: "yy1" }),
+      mk("zk", "zz", zk, { text: "zk" }),
+    ];
+    const out = run(blocks, { kind: "merge", blockId: "zz" });
+    // Text joined into yy1; xx untouched.
+    expect(textOf(out.find((b) => b.id === "yy1")!)).toBe("yy1zz");
+    expect(textOf(out.find((b) => b.id === "xx")!)).toBe("xx");
+    // zz removed; its child zk adopted under yy1.
+    expect(out.find((b) => b.id === "zz")).toBeUndefined();
+    expect(ids(out, "yy1")).toEqual(["zk"]);
+    // yy1 forced open because it gained a child.
+    expect(out.find((b) => b.id === "yy1")!.expanded).toBe(true);
   });
 
   test("no prev sibling → no-op", () => {

@@ -13,6 +13,7 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import type { BlockEditorAPI } from "../types";
+import { Editor } from "../slots";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
 import { serializeBlockRuns } from "../internal/block-text-extensions";
@@ -35,18 +36,19 @@ import {
 export function KeyboardPlugin({
   blockId,
   editor,
-  splitOptions,
 }: {
   blockId: string;
   editor: BlockEditorAPI;
-  splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
   const { rowsRef, pageId } = useBlockEditor();
+  // The block-type registry: every block's static handle config (incl. the edit
+  // policy and split-into-child flag). Resolved here, not prop-drilled.
+  const contributions = Editor.Block.useContributions();
+  const contributionsRef = useRef(contributions);
+  contributionsRef.current = contributions;
   const editorRef = useRef(editor);
   editorRef.current = editor;
-  const splitOptionsRef = useRef(splitOptions);
-  splitOptionsRef.current = splitOptions;
   const selection = useSelectionControl();
   const selectionRef = useRef(selection);
   selectionRef.current = selection;
@@ -83,6 +85,19 @@ export function KeyboardPlugin({
           });
           return true;
         }
+        case "convertTo": {
+          event.preventDefault();
+          // Reset this block to a plain type, preserving its live rich-text runs
+          // (and any children, untouched). Mirrors the markdown-shortcut
+          // conversion: seed the target type's empty payload, then overlay the
+          // preserved runs.
+          const runs = serializeBlockRuns(lexicalEditor);
+          const target = contributionsRef.current.find(
+            (c) => c.block.type === intent.to,
+          )?.block;
+          api.convertTo(intent.to, { ...(target?.empty?.() ?? {}), text: runs });
+          return true;
+        }
         case "merge": {
           event.preventDefault();
           const runs = serializeBlockRuns(lexicalEditor);
@@ -113,11 +128,24 @@ export function KeyboardPlugin({
       if (!event || event.isComposing) return false;
       const caret = readCaretContext(lexicalEditor);
       if (!caret) return false;
+      const nodes = toNodes(rowsRef.current);
+      // Resolve the current block's declarative edit policy from the registry.
+      // `splitChildWhenExpanded` is render-state-dependent (the live `expanded`
+      // flag), so it folds into the same policy here rather than being drilled.
+      const node = nodes.find((b) => b.id === blockIdRef.current);
+      const handle = contributionsRef.current.find((c) => c.block.type === node?.type)?.block;
+      const editPolicy = {
+        asChild: handle?.splitChildWhenExpanded && node?.expanded ? true : undefined,
+        childType: handle?.splitChildWhenExpanded?.childType,
+        splitInto: handle?.splitInto,
+        resetToOnBackspaceAtStart: handle?.resetToOnBackspaceAtStart,
+        breakOutOnEmptyEnter: handle?.breakOutOnEmptyEnter,
+      };
       const intent = resolveKeystroke(key, { shift: event.shiftKey }, caret, {
-        nodes: toNodes(rowsRef.current),
+        nodes,
         blockId: blockIdRef.current,
         pageId: pageIdRef.current,
-        splitOptions: splitOptionsRef.current,
+        editPolicy,
       });
       return execute(intent, event, caret);
     }

@@ -16,7 +16,8 @@ import {
   moveBlock,
   applyBlockOpEndpoint,
   blocksResource,
-  childrenOf,
+  prevVisibleLeaf,
+  textOf,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
@@ -48,6 +49,8 @@ export interface BlockFocusHandle {
   focusAtColumn?: (x: number, edge: "top" | "bottom") => void;
   /** Collapse the caret to the block's very start/end. */
   focusBoundary?: (edge: "start" | "end") => void;
+  /** Place the caret at a linear character offset (the merge join point). */
+  focusOffset?: (offset: number) => void;
 }
 
 interface BlockEditorContextValue {
@@ -305,21 +308,26 @@ export function BlockEditorProvider({
       },
       merge(opts?: { runs?: RichText }) {
         // Thin executor: `resolveKeystroke` already decided this is a merge (not
-        // an outdent) and that a previous sibling exists. We re-find it only to
-        // move the caret there once the keydown settles.
+        // an outdent). The reducer merges into the previous VISIBLE leaf, so we
+        // resolve the same target here to land the caret at the JOIN offset (the
+        // leaf's text length BEFORE the merge appends `block`'s text).
         const nodes = toNodes(rowsRef.current);
         const block = nodes.find((b) => b.id === blockId);
         if (!block) return;
-        const siblings = childrenOf(nodes, block.parentId);
-        const idx = siblings.findIndex((s) => s.id === blockId);
-        const prev = idx > 0 ? siblings[idx - 1] : null;
-        if (!prev) return; // defensive: nothing to merge into
+        const target = prevVisibleLeaf(nodes, block);
+        if (!target) return; // defensive: nothing to merge into
+        const joinOffset = textOf(target).length;
         dispatchOp({ kind: "merge", blockId, runs: opts?.runs });
-        // Defer focusing the prev sibling to after the current keydown: moving
-        // DOM focus synchronously mid-event lets the native backspace land on the
-        // newly-focused block. The prev sibling already exists client-side.
-        const prevId = prev.id;
-        queueMicrotask(() => focusHandlesRef.current.get(prevId)?.focus());
+        // Defer focusing the target to after the current keydown: moving DOM
+        // focus synchronously mid-event lets the native backspace land on the
+        // newly-focused block. An absolute offset is timing-robust — whether or
+        // not the merged text has synced in yet, `joinOffset` is correct. The
+        // target already exists client-side.
+        const targetId = target.id;
+        queueMicrotask(() => {
+          const fh = focusHandlesRef.current.get(targetId);
+          fh?.focusOffset?.(joinOffset) ?? fh?.focus();
+        });
       },
       remove() {
         dispatchOp({ kind: "delete", blockId });

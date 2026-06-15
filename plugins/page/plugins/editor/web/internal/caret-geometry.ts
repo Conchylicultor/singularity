@@ -22,6 +22,7 @@ import {
   $getNearestNodeFromDOMNode,
   $getRoot,
   $getSelection,
+  $isElementNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
@@ -200,6 +201,57 @@ function caretFromPoint(x: number, y: number): DomCaret | null {
     if (p) return { node: p.offsetNode, offset: p.offset };
   }
   return null;
+}
+
+/**
+ * Focus `editor` and place a collapsed caret at the linear `offset` (the same
+ * model `$absoluteOffset` reads). For a single-paragraph block this is the text
+ * node offset, clamped into the block's text — used to land the caret at the
+ * JOIN point after a Backspace-merge. Falls back to start/end when the offset is
+ * outside the block's text or the block has no text node yet.
+ */
+export function placeCaretAtOffset(editor: LexicalEditor, offset: number): void {
+  editor.focus();
+  editor.update(() => $placeCaretAtOffset(offset));
+}
+
+/**
+ * Inside an editor update: collapse the caret to the linear `offset` within the
+ * first paragraph's first text node (the body of `placeCaretAtOffset`). Exposed
+ * so a caller already inside an `editor.update()` (e.g. value-sync's rebuild)
+ * can restore the caret without nesting another update.
+ */
+export function $placeCaretAtOffset(offset: number): void {
+  const root = $getRoot();
+  const paragraph = root.getFirstChild();
+  if (!paragraph || !$isElementNode(paragraph)) {
+    root.selectStart();
+    return;
+  }
+  const textNode = paragraph.getFirstChild();
+  if (!textNode || !$isTextNode(textNode)) {
+    // Empty paragraph (no text node): the only caret position is its start.
+    if (offset <= 0) paragraph.selectStart();
+    else paragraph.selectEnd();
+    return;
+  }
+  const off = Math.min(Math.max(offset, 0), textNode.getTextContentSize());
+  const sel = $createRangeSelection();
+  sel.anchor.set(textNode.getKey(), off, "text");
+  sel.focus.set(textNode.getKey(), off, "text");
+  $setSelection(sel);
+}
+
+/**
+ * Inside an editor read/update: the collapsed caret's offset within its
+ * paragraph, or null when this editor has no collapsed caret (unfocused, or a
+ * non-empty range). Lets value-sync capture the caret before a rebuild so an
+ * external text change doesn't yank a focused user back to offset 0.
+ */
+export function $caretOffsetWithinParagraph(): number | null {
+  const selection = $getSelection();
+  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
+  return selection.anchor.offset;
 }
 
 /** Focus `editor` and collapse the caret to the very start or end of its content. */

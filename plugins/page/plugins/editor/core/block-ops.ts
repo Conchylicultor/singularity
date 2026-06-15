@@ -131,6 +131,23 @@ export function prevSibling(blocks: BlockNode[], node: BlockNode): BlockNode | n
   return siblings[idx - 1] ?? null;
 }
 
+/**
+ * The previous block in VISIBLE document order: the deepest last expanded
+ * descendant of `node`'s previous sibling. Null if there is no previous sibling.
+ * Stops descending at a collapsed block (its children aren't visible), so the
+ * leaf is exactly the block whose end the caret would land at when crossing up.
+ */
+export function prevVisibleLeaf(blocks: BlockNode[], node: BlockNode): BlockNode | null {
+  let cur = prevSibling(blocks, node);
+  if (!cur) return null;
+  while (cur.expanded) {
+    const kids = childrenOf(blocks, cur.id);
+    if (kids.length === 0) break;
+    cur = kids[kids.length - 1]!;
+  }
+  return cur;
+}
+
 /** The rank-immediate next sibling of `node` (null if it is last). */
 export function nextSibling(blocks: BlockNode[], node: BlockNode): BlockNode | null {
   const siblings = childrenOf(blocks, node.parentId);
@@ -273,7 +290,10 @@ function applyMerge(
 ): BlockNode[] {
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
-  const prev = prevSibling(blocks, block);
+  // Merge into the previous VISIBLE block (the deepest last expanded descendant
+  // of the prev sibling), not the immediate sibling — so the caret lands where
+  // the text visually joins, matching document order.
+  const prev = prevVisibleLeaf(blocks, block);
   if (!prev) return blocks; // no-op
 
   // Concatenate runs into prev (coalescing the seam).

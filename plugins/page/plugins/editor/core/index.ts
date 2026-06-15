@@ -33,7 +33,7 @@ export type {
   PasteBlocksBody,
 } from "./endpoints";
 
-export { BlockOpSchema, applyBlockOp, childrenOf, textOf, runsOfNode, withRuns } from "./block-ops";
+export { BlockOpSchema, applyBlockOp, childrenOf, prevVisibleLeaf, textOf, runsOfNode, withRuns } from "./block-ops";
 export type { BlockOp, BlockNode } from "./block-ops";
 
 export {

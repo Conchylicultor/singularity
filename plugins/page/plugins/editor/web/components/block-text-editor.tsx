@@ -22,7 +22,11 @@ import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
-import { placeCaretAtBoundary, placeCaretAtColumn } from "../internal/caret-geometry";
+import {
+  placeCaretAtBoundary,
+  placeCaretAtColumn,
+  placeCaretAtOffset,
+} from "../internal/caret-geometry";
 
 /** Maps a semantic typography variant to its sanctioned `text-*` utility. */
 const VARIANT_CLASS: Record<BlockTextVariant, string> = {
@@ -60,7 +64,6 @@ export function BlockTextEditor({
   placeholder,
   contentClassName,
   textVariant,
-  splitOptions,
 }: {
   block: Block;
   isFocused: boolean;
@@ -73,8 +76,6 @@ export function BlockTextEditor({
   contentClassName?: string;
   /** Semantic typography variant for the editable text and placeholder. */
   textVariant: BlockTextVariant;
-  /** Enter-split options (e.g. nest the split-off content as a child, or change the sibling type). */
-  splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
 }) {
   const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
   const isEmpty = runs.length === 0;
@@ -139,6 +140,10 @@ export function BlockTextEditor({
         const ed = lexicalEditorRef.current;
         if (ed) placeCaretAtBoundary(ed, edge);
       },
+      focusOffset: (n) => {
+        const ed = lexicalEditorRef.current;
+        if (ed) placeCaretAtOffset(ed, n);
+      },
     });
   }, [block.id, registerFocusHandle]);
 
@@ -175,7 +180,7 @@ export function BlockTextEditor({
           <LinkPlugin validateUrl={isValidLinkUrl} />
           <ClickableLinkPlugin newTab />
           <ValueSyncPlugin value={field.value} onChange={field.onChange} />
-          <KeyboardPlugin blockId={block.id} editor={editor} splitOptions={splitOptions} />
+          <KeyboardPlugin blockId={block.id} editor={editor} />
           <SlashMenuPlugin editor={editor} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
           <FormatShortcutsPlugin />

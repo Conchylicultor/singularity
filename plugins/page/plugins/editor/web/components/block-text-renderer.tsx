@@ -72,18 +72,6 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
       ? (handle.toggle.doneClassName ?? "line-through text-muted-foreground")
       : undefined;
 
-  // Enter-split overrides, read generically from the handle (never naming a block
-  // type): an expanded block that opts into split-into-child (e.g. the toggle)
-  // nests the split-off text as its first child; `splitInto` makes Enter at the
-  // END of this block produce a sibling of another type (e.g. a heading yields a
-  // body paragraph).
-  const splitOptions = {
-    ...(handle?.splitChildWhenExpanded && block.expanded
-      ? { asChild: true as const, childType: handle.splitChildWhenExpanded.childType }
-      : {}),
-    splitInto: handle?.splitInto,
-  };
-
   return (
     <BlockTextEditor
       block={block}
@@ -93,7 +81,6 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
       placeholder={handle?.placeholder}
       contentClassName={contentClassName}
       textVariant={handle?.textVariant ?? "body"}
-      splitOptions={splitOptions}
     />
   );
 }

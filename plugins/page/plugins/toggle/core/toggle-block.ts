@@ -20,4 +20,8 @@ export const toggleBlock = defineBlock({
   // When expanded, Enter nests the split-off content as a `text` first child;
   // collapsed, it splits into a sibling. Driven generically by the editor.
   splitChildWhenExpanded: { childType: "text" },
+  // Backspace at the very start resets to a plain paragraph (a second one then
+  // merges); Enter on an empty toggle breaks out to a paragraph.
+  resetToOnBackspaceAtStart: "text",
+  breakOutOnEmptyEnter: "text",
 });

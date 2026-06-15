@@ -2,6 +2,7 @@ import { useEffect, useRef } from "react";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { runsOf, type RichText } from "../../core";
 import { runsToLexical, serializeBlockRuns } from "../internal/block-text-extensions";
+import { $caretOffsetWithinParagraph, $placeCaretAtOffset } from "../internal/caret-geometry";
 
 /**
  * Two-way sync between the block's stored rich-text and the Lexical tree.
@@ -31,7 +32,12 @@ export function ValueSyncPlugin({
     selfWriteRef.current = true;
     const runs: RichText = runsOf(JSON.parse(value));
     editor.update(() => {
+      // Capture the caret before the rebuild so an external text change (e.g. a
+      // Backspace-merge appending into this block) keeps a focused caret put
+      // instead of snapping it to offset 0. Null when this editor isn't focused.
+      const caret = $caretOffsetWithinParagraph();
       runsToLexical(runs);
+      if (caret !== null) $placeCaretAtOffset(caret);
     });
     lastSerializedRef.current = value;
     queueMicrotask(() => {

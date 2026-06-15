@@ -12,4 +12,8 @@ export const quoteBlock = defineBlock({
   // NOTE: the canonical Markdown quote prefix `> ` is already claimed by the
   // `toggle` block, so this block intentionally declares no `markdownPrefixes`.
   // It is reachable via the slash menu, the insert menu, and "Turn into".
+  // Backspace at the very start resets to a plain paragraph (a second one then
+  // merges); Enter on an empty quote breaks out to a paragraph.
+  resetToOnBackspaceAtStart: "text",
+  breakOutOnEmptyEnter: "text",
 });

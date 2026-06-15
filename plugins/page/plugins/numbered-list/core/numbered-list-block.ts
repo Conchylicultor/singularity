@@ -15,4 +15,8 @@ export const numberedListBlock = defineBlock({
   // Drives ONLY the live `1. ` markdown shortcut. Paste/copy of arbitrary
   // numbers is handled by the dedicated ordinal passes in markdown-blocks.ts.
   markdownPrefixes: ["1. "],
+  // Backspace at the very start resets to a plain paragraph (a second one then
+  // merges); Enter on an empty item exits the list to a paragraph.
+  resetToOnBackspaceAtStart: "text",
+  breakOutOnEmptyEnter: "text",
 });

@@ -120,9 +120,9 @@ describe("Enter", () => {
     expect(intent).toMatchObject({ type: "split", asChild: true });
   });
 
-  test("explicit splitOptions.asChild is honored", () => {
+  test("explicit editPolicy.asChild is honored", () => {
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 0 }), ctx("B", {
-      splitOptions: { asChild: true, childType: "to-do" },
+      editPolicy: { asChild: true, childType: "to-do" },
     }));
     expect(intent).toEqual({
       type: "split",
@@ -136,7 +136,7 @@ describe("Enter", () => {
   test("splitInto: Enter at the END yields a sibling of that type", () => {
     // Gated on the live caret edge (caret.atEnd), not the reducer node length.
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atEnd: true }), ctx("B", {
-      splitOptions: { splitInto: "text" },
+      editPolicy: { splitInto: "text" },
     }));
     expect(intent).toMatchObject({ type: "split", asChild: false, siblingType: "text" });
   });
@@ -144,9 +144,33 @@ describe("Enter", () => {
   test("splitInto: Enter MID-text keeps the type (siblingType undefined)", () => {
     // Caret not at the end → no type swap, the after-text stays the same type.
     const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2, atEnd: false }), ctx("A", {
-      splitOptions: { splitInto: "text" },
+      editPolicy: { splitInto: "text" },
     }));
     expect(intent).toMatchObject({ type: "split", asChild: false, siblingType: undefined });
+  });
+
+  test("empty block with breakOutOnEmptyEnter → convertTo (exits the list)", () => {
+    // An empty bullet (type "bulleted-list") breaks out to "text" instead of
+    // spawning another empty bullet.
+    const nodes: BlockNode[] = [
+      { ...mk("B", PAGE, rankB, { text: "" }), type: "bulleted-list" },
+    ];
+    // Empty == the live caret sits at both the start and the end of the block.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ atStart: true, atEnd: true }), {
+      nodes,
+      blockId: "B",
+      pageId: PAGE,
+      editPolicy: { breakOutOnEmptyEnter: "text" },
+    });
+    expect(intent).toEqual({ type: "convertTo", to: "text" });
+  });
+
+  test("non-empty block with breakOutOnEmptyEnter → split (no break-out)", () => {
+    // A has text "hello" — Enter still splits despite the break-out policy.
+    const intent = resolveKeystroke("Enter", NO_SHIFT, caret({ offset: 2 }), ctx("A", {
+      editPolicy: { breakOutOnEmptyEnter: "text" },
+    }));
+    expect(intent).toMatchObject({ type: "split", position: 2, asChild: false });
   });
 });
 
@@ -173,6 +197,49 @@ describe("Backspace", () => {
     expect(
       resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("B")),
     ).toEqual({ type: "merge" });
+  });
+
+  test("at start, formatted block (type !== reset target) → convertTo (reset before merge)", () => {
+    // A bulleted item B (type "bulleted-list") at top level resets to "text"
+    // first; a SECOND Backspace would then merge.
+    const nodes: BlockNode[] = [
+      mk("A", PAGE, rankA, { text: "hello" }),
+      { ...mk("B", PAGE, rankB), type: "bulleted-list" },
+    ];
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes,
+        blockId: "B",
+        pageId: PAGE,
+        editPolicy: { resetToOnBackspaceAtStart: "text" },
+      }),
+    ).toEqual({ type: "convertTo", to: "text" });
+  });
+
+  test("at start, already the reset target type → merge (no reset)", () => {
+    // B is already "text"; the reset policy is a no-op, so Backspace merges.
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), ctx("B", {
+        editPolicy: { resetToOnBackspaceAtStart: "text" },
+      })),
+    ).toEqual({ type: "merge" });
+  });
+
+  test("at start, indented formatted block → still outdent first (before reset)", () => {
+    // A1 is indented under A and formatted; outdent takes precedence over reset.
+    const nodes: BlockNode[] = [
+      mk("A", PAGE, rankA, { text: "hello", expanded: true }),
+      { ...mk("A1", "A", rankChild), type: "bulleted-list" },
+      mk("B", PAGE, rankB),
+    ];
+    expect(
+      resolveKeystroke("Backspace", NO_SHIFT, caret({ atStart: true }), {
+        nodes,
+        blockId: "A1",
+        pageId: PAGE,
+        editPolicy: { resetToOnBackspaceAtStart: "text" },
+      }),
+    ).toEqual({ type: "outdent" });
   });
 
   test("at start, first top-level block → noop (consume, nothing before)", () => {

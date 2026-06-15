@@ -29,6 +29,7 @@ export type KeystrokeKey =
  */
 export type KeyIntent =
   | { type: "split"; position: number; asChild: boolean; childType?: string; siblingType?: string }
+  | { type: "convertTo"; to: string } // reset block type (Backspace-at-start / empty-Enter)
   | { type: "merge" } // backspace at start, top-level → merge into prev sibling
   | { type: "outdent" } // backspace at start when indented, or shift+tab
   | { type: "indent" } // tab
@@ -44,8 +45,21 @@ export interface IntentContext {
   blockId: string;
   /** The page block id — its direct children are "top level" (not indented). */
   pageId: string;
-  /** Contributor split overrides (e.g. nest the split-off content as a child). */
-  splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
+  /**
+   * The current block's declarative edit policy, resolved once at the consumer
+   * from the block's handle (no prop drilling). `asChild`/`childType`/`splitInto`
+   * cover the Enter-split shape (nest as a child, or split into a different
+   * sibling type — e.g. a heading yields a body paragraph), while
+   * `resetToOnBackspaceAtStart`/`breakOutOnEmptyEnter` drive the type-reset
+   * branches below — all generic, the resolver never names a block type.
+   */
+  editPolicy?: {
+    asChild?: boolean;
+    childType?: string;
+    splitInto?: string;
+    resetToOnBackspaceAtStart?: string;
+    breakOutOnEmptyEnter?: string;
+  };
 }
 
 /** A block is "indented" when its parent is a normal content block, not the page. */
@@ -75,35 +89,44 @@ export function resolveKeystroke(
     case "Enter": {
       // Shift+Enter inserts a soft newline (native).
       if (mods.shift) return { type: "passthrough" };
+      const p = ctx.editPolicy;
       const position = caret.offset;
+      // Enter on an EMPTY formatted block exits to its break-out type (e.g. an
+      // empty bullet/quote becomes a paragraph) instead of spawning another empty
+      // formatted block. Empty == the caret is at both the start and the end.
+      // Already-the-target blocks fall through to split.
+      if (
+        caret.atStart &&
+        caret.atEnd &&
+        p?.breakOutOnEmptyEnter &&
+        node.type !== p.breakOutOnEmptyEnter
+      )
+        return { type: "convertTo", to: p.breakOutOnEmptyEnter };
       // Every "is the caret at the end of the block?" decision gates on the live
       // caret edge (`caret.atEnd`), never the reducer node length: the latter lags
       // a just-applied markdown conversion (`### ` → heading) by one keystroke,
       // which would make the very next Enter miss the type swap or the nest.
       //
-      // Honor an explicit contributor `asChild`; otherwise nest the split-off
-      // content as the first child only when splitting at the very end of a block
-      // that has visible children (Notion's Enter-at-end behavior).
+      // Honor an explicit policy `asChild`; otherwise nest the split-off content
+      // as the first child only when splitting at the very end of a block that
+      // has visible children (Notion's Enter-at-end behavior).
       const asChild =
-        ctx.splitOptions?.asChild ??
-        (hasExpandedChildren(ctx.nodes, node) && caret.atEnd);
+        p?.asChild ?? (hasExpandedChildren(ctx.nodes, node) && caret.atEnd);
       // Enter at the END of a block can produce a sibling of a different type
       // (e.g. a heading yields a body paragraph). Mid-block splits keep the type.
-      const siblingType =
-        !asChild && caret.atEnd ? ctx.splitOptions?.splitInto : undefined;
-      return {
-        type: "split",
-        position,
-        asChild,
-        childType: ctx.splitOptions?.childType,
-        siblingType,
-      };
+      const siblingType = !asChild && caret.atEnd ? p?.splitInto : undefined;
+      return { type: "split", position, asChild, childType: p?.childType, siblingType };
     }
     case "Backspace": {
       // Only a collapsed caret at the very start triggers structural intent;
       // anything else is ordinary text deletion (native).
       if (!caret.atStart || !caret.collapsed) return { type: "passthrough" };
+      // Order matches Notion: an indented formatted block outdents first; at top
+      // level it resets to plain text; only then does Backspace merge.
       if (isIndented(node, ctx.pageId)) return { type: "outdent" };
+      const p = ctx.editPolicy;
+      if (p?.resetToOnBackspaceAtStart && node.type !== p.resetToOnBackspaceAtStart)
+        return { type: "convertTo", to: p.resetToOnBackspaceAtStart };
       if (hasPrevSibling(ctx.nodes, node)) return { type: "merge" };
       // First block at top level: nothing before the caret — consume.
       return { type: "noop" };
