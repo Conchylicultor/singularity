@@ -11,9 +11,10 @@
 - Server:
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.blocksChanged`
   - DB schema: `plugins/page/plugins/attachment-block/server/internal/tables.ts`
+  - Exports: Types: `BlockAttachmentCollector`; Values: `AttachmentBlock`
   - Register: `defineJob('page.attachment-block.reconcile')`
 - Cross-plugin:
-  - Imported by: `page/audio`, `page/file`, `page/image`, `page/video`
+  - Imported by: `page/audio`, `page/cover`, `page/file`, `page/image`, `page/video`
 - Core:
   - Exports: Values: `collectBlockAttachmentIds`
 

@@ -35,14 +35,30 @@ export type Block = z.infer<typeof BlockSchema>;
 // The reserved block type for a page node.
 export const PAGE_BLOCK_TYPE = "page";
 
+// A page cover: either an uploaded image (stored as an attachment id + a
+// vertical reposition offset, applied as object-position Y%) or a preset
+// gradient (stored as a frozen preset id, resolved to CSS client-side). The
+// discriminated `type` keeps the two variants exclusive.
+export const PageCoverSchema = z.discriminatedUnion("type", [
+  z.object({
+    type: z.literal("image"),
+    attachmentId: z.string(),
+    positionY: z.number().min(0).max(100).default(50),
+  }),
+  z.object({ type: z.literal("gradient"), preset: z.string() }),
+]);
+export type PageCover = z.infer<typeof PageCoverSchema>;
+
 // The `data` payload of a `type="page"` block. `icon` is the Material Design
 // icon key (e.g. "rocket"); `iconSvgNodes` is its extracted SVG tree, rendered
 // directly so display surfaces don't ship the icon registry. Both null = no
-// icon (a default glyph is shown instead).
+// icon (a default glyph is shown instead). `cover` is the optional page cover
+// (absent on legacy rows — decodes to `undefined`, no data migration).
 export const PageDataSchema = z.object({
   title: z.string(),
   icon: z.string().nullable(),
   iconSvgNodes: z.array(SvgNodeSchema).nullable().optional(),
+  cover: PageCoverSchema.nullable().optional(),
 });
 export type PageData = z.infer<typeof PageDataSchema>;
 

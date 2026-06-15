@@ -12,6 +12,7 @@
   - **`bulleted-list`** — Bulleted-list block type for the page editor.
   - **`callout`** — Callout block type: a tinted highlight box with a changeable leading icon and semantic color, for notes/tips/warnings.
   - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
+  - **`cover`** — Links a page's cover image: registers the cover attachment-id collector with the shared block↔attachment reconcile so the cover isn't orphan-swept.
   - **`divider`** — Divider block type: a thin horizontal rule marking a section break; insert via `/divider` or the `---` markdown shortcut.
   - **`editor`** — Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
   - **`embed`** — Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.

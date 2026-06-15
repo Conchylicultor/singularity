@@ -124,6 +124,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/worktree", id: "infra.worktree", loader: () => import("@plugins/infra/plugins/worktree/server"), dependsOn: ["infra/plugins/paths"] },
   { pluginPath: "page/plugins/attachment-block", id: "page.attachment-block", loader: () => import("@plugins/page/plugins/attachment-block/server"), dependsOn: ["database", "infra/plugins/attachments", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor"] },
   { pluginPath: "page/plugins/bookmark", id: "page.bookmark", loader: () => import("@plugins/page/plugins/bookmark/server"), dependsOn: ["infra/plugins/attachments", "infra/plugins/endpoints"] },
+  { pluginPath: "page/plugins/cover", id: "page.cover", loader: () => import("@plugins/page/plugins/cover/server"), dependsOn: ["page/plugins/attachment-block", "page/plugins/editor"] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/events", "primitives/plugins/rank"] },
   { pluginPath: "page/plugins/inline-page-link", id: "page.inline-page-link", loader: () => import("@plugins/page/plugins/inline-page-link/server"), dependsOn: ["page/plugins/links"] },
   { pluginPath: "page/plugins/links", id: "page.links", loader: () => import("@plugins/page/plugins/links/server"), dependsOn: ["database", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor"] },

@@ -5,6 +5,7 @@ import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
 import { PageBreadcrumb } from "./components/page-breadcrumb";
+import { PageCover } from "./components/page-cover";
 import { PageDetail } from "./slots";
 
 // Panes are declared first so their types are known before the component
@@ -49,20 +50,26 @@ function PageDetailBody(): ReactElement {
 
   return (
     <PaneChrome pane={pageDetailPane} title={title}>
-      {/* Centered reading column: on wide panes the content stays in a
-          comfortable ~768px measure instead of stretching edge-to-edge and
-          hugging the left. mx-auto centers it; the generous py keeps the title
-          off the top chrome the way Notion's page surface does. */}
-      <div className="mx-auto flex w-full max-w-3xl flex-col gap-lg px-lg py-2xl">
-        <PageBreadcrumb pageId={pageId} />
-        <PageHeader pageId={pageId} />
-        <BlockEditor
-          pageId={pageId}
-          onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
-        />
-        <PageDetail.Section.Render>
-          {(s) => <s.component pageId={pageId} />}
-        </PageDetail.Section.Render>
+      {/* Full-bleed cover scrolls away with the page (Notion-style). The
+          breadcrumb sits in a centered strip above it; below, a centered reading
+          column keeps a comfortable ~768px measure on wide panes. The header and
+          block editor inset their own content by BLOCK_GUTTER so title and block
+          text share one left edge. */}
+      <div className="flex flex-col">
+        <div className="mx-auto w-full max-w-3xl px-lg">
+          <PageBreadcrumb pageId={pageId} />
+        </div>
+        <PageCover pageId={pageId} />
+        <div className="mx-auto flex w-full max-w-3xl flex-col gap-lg px-lg pb-2xl">
+          <PageHeader pageId={pageId} />
+          <BlockEditor
+            pageId={pageId}
+            onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
+          />
+          <PageDetail.Section.Render>
+            {(s) => <s.component pageId={pageId} />}
+          </PageDetail.Section.Render>
+        </div>
       </div>
     </PaneChrome>
   );

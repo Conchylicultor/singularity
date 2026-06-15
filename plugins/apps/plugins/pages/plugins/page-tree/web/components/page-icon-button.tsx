@@ -1,5 +1,5 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
-import { useState } from "react";
+import { Popover, PopoverContent, PopoverTrigger, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { useState, type ReactElement } from "react";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
@@ -11,29 +11,27 @@ export interface PageIconValue {
 }
 
 /**
- * The page header's icon: a glyph that opens an icon picker on click. Unlike
- * `AvatarPicker` there is no color disc — a Notion page icon is a bare icon.
- * Picking commits immediately and closes the popover; "Remove" clears it back
- * to the default glyph.
+ * The icon-picker popover, decoupled from its trigger. Picking commits
+ * immediately and closes; "Remove" clears the icon back to the default glyph
+ * (only offered when an icon is set). The `trigger` is any element — a large
+ * page icon or a small "Add icon" affordance — so both entry points share one
+ * picker.
  */
-export function PageIconButton({
+export function PageIconPicker({
   value,
   onChange,
+  trigger,
 }: {
   value: PageIconValue;
   onChange: (next: PageIconValue) => void | Promise<void>;
+  trigger: ReactElement;
 }) {
   const [open, setOpen] = useState(false);
   const hasIcon = value.iconSvgNodes != null && value.iconSvgNodes.length > 0;
 
   return (
     <Popover open={open} onOpenChange={setOpen}>
-      <PopoverTrigger
-        className="text-muted-foreground hover:bg-accent flex size-7 shrink-0 items-center justify-center rounded-md outline-none focus-visible:ring-2 focus-visible:ring-ring"
-        aria-label="Pick page icon"
-      >
-        <PageIcon nodes={value.iconSvgNodes} className="size-6" />
-      </PopoverTrigger>
+      <PopoverTrigger render={trigger} />
       <PopoverContent className="w-80 p-sm" align="start">
         <IconPicker
           value={value.icon}
@@ -61,5 +59,41 @@ export function PageIconButton({
         )}
       </PopoverContent>
     </Popover>
+  );
+}
+
+/**
+ * The large page header icon: a glyph that opens the icon picker on click.
+ * Sized for the header's stacked-over-title treatment.
+ */
+export function PageIconButton({
+  value,
+  onChange,
+  className,
+  style,
+}: {
+  value: PageIconValue;
+  onChange: (next: PageIconValue) => void | Promise<void>;
+  className?: string;
+  style?: React.CSSProperties;
+}) {
+  return (
+    <PageIconPicker
+      value={value}
+      onChange={onChange}
+      trigger={
+        <button
+          type="button"
+          aria-label="Change page icon"
+          style={style}
+          className={cn(
+            "hover:bg-accent flex size-16 shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            className,
+          )}
+        >
+          <PageIcon nodes={value.iconSvgNodes} className="size-14" />
+        </button>
+      }
+    />
   );
 }

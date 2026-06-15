@@ -1,10 +1,20 @@
+import { MdImage, MdEmojiEmotions } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { pagesResource, updateBlock, pageData, type Block } from "@plugins/page/plugins/editor/core";
+import {
+  pagesResource,
+  updateBlock,
+  pageData,
+  type Block,
+  type PageCover,
+} from "@plugins/page/plugins/editor/core";
 import { BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
-import { PageIconButton, type PageIconValue } from "./page-icon-button";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-button";
+import { ChangeCoverPopover } from "./change-cover-popover";
 
 export function PageHeader({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);
@@ -20,6 +30,8 @@ export function PageHeader({ pageId }: { pageId: string }) {
 
 function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undefined }) {
   const data = page ? pageData(page) : undefined;
+  const hasIcon = data?.iconSvgNodes != null && data.iconSvgNodes.length > 0;
+  const hasCover = data?.cover != null;
 
   const { mutateAsync } = useEndpointMutation(updateBlock);
 
@@ -34,36 +46,85 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
     },
   });
 
+  const iconValue: PageIconValue = {
+    icon: data?.icon ?? null,
+    iconSvgNodes: data?.iconSvgNodes ?? null,
+  };
+
   const saveIcon = async (next: PageIconValue) => {
     if (!page) return;
     await mutateAsync({
       params: { id: pageId },
-      body: {
-        data: { ...pageData(page), icon: next.icon, iconSvgNodes: next.iconSvgNodes },
-      },
+      body: { data: { ...pageData(page), icon: next.icon, iconSvgNodes: next.iconSvgNodes } },
+    });
+  };
+
+  const saveCover = async (next: PageCover) => {
+    if (!page) return;
+    await mutateAsync({
+      params: { id: pageId },
+      body: { data: { ...pageData(page), cover: next } },
     });
   };
 
   return (
-    <div className="flex items-center pb-sm">
-      {/* Fixed-width rail matching the block editor's BLOCK_GUTTER: it holds the
-          page icon (right-aligned, adjacent to the title) so the title text
-          starts at the same content edge as block text, regardless of icon size
-          or density. */}
-      <div className="flex shrink-0 items-center justify-end pr-sm" style={{ width: BLOCK_GUTTER }}>
+    // `group/header` drives the hover-revealed affordance row. Content is inset
+    // by BLOCK_GUTTER so the title and affordances line up with the block
+    // editor's text column. When a cover is present the large icon rises to
+    // overlap its bottom edge (a one-off visual overlap the spacing ramp doesn't
+    // model — applied via inline negative margin, never a margin utility).
+    <Stack gap="xs" className="group/header pt-lg" style={{ paddingLeft: BLOCK_GUTTER }}>
+      {hasIcon && (
         <PageIconButton
-          value={{ icon: data?.icon ?? null, iconSvgNodes: data?.iconSvgNodes ?? null }}
+          value={iconValue}
           onChange={saveIcon}
+          className="relative z-raised"
+          style={hasCover ? { marginTop: "-3.5rem" } : undefined}
         />
-      </div>
+      )}
+
+      {/* Hover affordance row — only rendered when there's something to add. */}
+      {(!hasIcon || !hasCover) && (
+        <Stack
+          direction="row"
+          gap="2xs"
+          className="opacity-0 transition-opacity group-hover/header:opacity-100"
+        >
+          {!hasIcon && (
+            <PageIconPicker
+              value={iconValue}
+              onChange={saveIcon}
+              trigger={
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <MdEmojiEmotions />
+                  Add icon
+                </Button>
+              }
+            />
+          )}
+          {!hasCover && (
+            <ChangeCoverPopover
+              current={null}
+              onPick={saveCover}
+              trigger={
+                <Button variant="ghost" size="sm" className="text-muted-foreground">
+                  <MdImage />
+                  Add cover
+                </Button>
+              }
+            />
+          )}
+        </Stack>
+      )}
+
       <input
         value={title.value}
         onChange={(e) => title.onChange(e.target.value)}
         onFocus={title.onFocus}
         onBlur={title.onBlur}
         placeholder="Untitled"
-        className="text-title flex-1 truncate bg-transparent outline-none"
+        className="text-title w-full truncate bg-transparent outline-none"
       />
-    </div>
+    </Stack>
   );
 }

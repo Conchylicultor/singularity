@@ -3,6 +3,12 @@ import { Trigger } from "@plugins/infra/plugins/events/server";
 import { blocksChanged } from "@plugins/page/plugins/editor/server";
 import { reconcileBlockAttachmentsJob } from "./internal/reconcile-job";
 
+// Extension point for block plugins whose attachment refs fall outside the flat
+// `data.attachmentId` / `data.attachmentIds` convention (e.g. a page's nested
+// cover image). The reconcile unions every contributed collector.
+export { AttachmentBlock } from "./internal/collectors";
+export type { BlockAttachmentCollector } from "./internal/collectors";
+
 export default {
   description:
     "Owns the single block↔attachment link (page_blocks_attachments) and one generic reconcile bound to blocksChanged; FK cascade reclaims on delete.",

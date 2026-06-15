@@ -1,5 +1,5 @@
-export { BlockSchema, PageDataSchema, SvgNodeSchema, PAGE_BLOCK_TYPE, pageData } from "./schemas";
-export type { Block, PageData } from "./schemas";
+export { BlockSchema, PageDataSchema, PageCoverSchema, SvgNodeSchema, PAGE_BLOCK_TYPE, pageData } from "./schemas";
+export type { Block, PageData, PageCover } from "./schemas";
 
 export { pagesResource, blocksResource } from "./resources";
 

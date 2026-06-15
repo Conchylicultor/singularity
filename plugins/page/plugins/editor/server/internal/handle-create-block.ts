@@ -61,7 +61,7 @@ export const handleCreateBlock = implement(createBlock, async ({ body }) => {
       .set({ expanded: true, updatedAt: new Date() })
       .where(eq(_blocks.id, parentId));
   }
-  await notifyBlockChange({ pageId, type: body.type });
+  await notifyBlockChange({ pageId, type: body.type, blockId: id });
   const [row] = await db
     .select()
     .from(_blocks)
