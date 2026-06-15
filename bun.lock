@@ -1685,6 +1685,18 @@
       "name": "@singularity/plugin-page",
       "version": "0.0.1",
     },
+    "plugins/page/plugins/attachment-block": {
+      "name": "@singularity/plugin-page-attachment-block",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/audio": {
+      "name": "@singularity/plugin-page-audio",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/bookmark": {
+      "name": "@singularity/plugin-page-bookmark",
+      "version": "0.0.1",
+    },
     "plugins/page/plugins/bulleted-list": {
       "name": "@singularity/plugin-page-bulleted-list",
       "version": "0.0.1",
@@ -1708,6 +1720,14 @@
         "@lexical/react": "^0.44.0",
         "lexical": "^0.44.0",
       },
+    },
+    "plugins/page/plugins/embed": {
+      "name": "@singularity/plugin-page-embed",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/file": {
+      "name": "@singularity/plugin-page-file",
+      "version": "0.0.1",
     },
     "plugins/page/plugins/heading": {
       "name": "@singularity/plugin-page-heading",
@@ -1767,6 +1787,18 @@
     },
     "plugins/page/plugins/turn-into-page": {
       "name": "@singularity/plugin-page-turn-into-page",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/url-paste": {
+      "name": "@singularity/plugin-page-url-paste",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/react": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/page/plugins/video": {
+      "name": "@singularity/plugin-page-video",
       "version": "0.0.1",
     },
     "plugins/plugin-meta": {
@@ -4007,6 +4039,12 @@
 
     "@singularity/plugin-page": ["@singularity/plugin-page@workspace:plugins/page"],
 
+    "@singularity/plugin-page-attachment-block": ["@singularity/plugin-page-attachment-block@workspace:plugins/page/plugins/attachment-block"],
+
+    "@singularity/plugin-page-audio": ["@singularity/plugin-page-audio@workspace:plugins/page/plugins/audio"],
+
+    "@singularity/plugin-page-bookmark": ["@singularity/plugin-page-bookmark@workspace:plugins/page/plugins/bookmark"],
+
     "@singularity/plugin-page-bulleted-list": ["@singularity/plugin-page-bulleted-list@workspace:plugins/page/plugins/bulleted-list"],
 
     "@singularity/plugin-page-callout": ["@singularity/plugin-page-callout@workspace:plugins/page/plugins/callout"],
@@ -4016,6 +4054,10 @@
     "@singularity/plugin-page-divider": ["@singularity/plugin-page-divider@workspace:plugins/page/plugins/divider"],
 
     "@singularity/plugin-page-editor": ["@singularity/plugin-page-editor@workspace:plugins/page/plugins/editor"],
+
+    "@singularity/plugin-page-embed": ["@singularity/plugin-page-embed@workspace:plugins/page/plugins/embed"],
+
+    "@singularity/plugin-page-file": ["@singularity/plugin-page-file@workspace:plugins/page/plugins/file"],
 
     "@singularity/plugin-page-heading": ["@singularity/plugin-page-heading@workspace:plugins/page/plugins/heading"],
 
@@ -4044,6 +4086,10 @@
     "@singularity/plugin-page-toggle": ["@singularity/plugin-page-toggle@workspace:plugins/page/plugins/toggle"],
 
     "@singularity/plugin-page-turn-into-page": ["@singularity/plugin-page-turn-into-page@workspace:plugins/page/plugins/turn-into-page"],
+
+    "@singularity/plugin-page-url-paste": ["@singularity/plugin-page-url-paste@workspace:plugins/page/plugins/url-paste"],
+
+    "@singularity/plugin-page-video": ["@singularity/plugin-page-video@workspace:plugins/page/plugins/video"],
 
     "@singularity/plugin-plugin-meta": ["@singularity/plugin-plugin-meta@workspace:plugins/plugin-meta"],
 

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-audio",
+  "description": "Audio block type: upload an audio file and play it inline.",
+  "private": true,
+  "version": "0.0.1"
+}

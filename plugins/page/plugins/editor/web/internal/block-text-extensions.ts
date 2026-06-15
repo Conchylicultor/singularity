@@ -20,26 +20,32 @@ export interface BlockTextPluginProps {
 }
 
 /**
- * A custom inline node for the block text editor, plus the (de)serialization
- * rules that round-trip it through the block's plain-text `data.text` string.
+ * An optional custom inline node for the block text editor, plus the
+ * (de)serialization rules that round-trip it through the block's plain-text
+ * `data.text` string, and/or an invisible Lexical `Plugin` contributing behavior.
  *
- * Mirrors the text-editor primitive's `NodeExtension` (see
- * `plugins/primitives/plugins/text-editor/web/internal/node-extensions.ts`) so
- * the two editors share one mental model. The block editor stores plain text, so
- * inline nodes survive as text tokens (e.g. `[[<pageId>]]`) — `serializeNode`
- * writes the token, `deserializePattern` + `createNodeFromMatch` parse it back.
+ * Two flavors share this interface:
+ *  - **Node extensions** set `node` + `deserializePattern` + `createNodeFromMatch`
+ *    + `serializeNode` (and usually a typeahead `Plugin`). They mirror the
+ *    text-editor primitive's `NodeExtension` (see
+ *    `plugins/primitives/plugins/text-editor/web/internal/node-extensions.ts`):
+ *    the block editor stores plain text, so inline nodes survive as text tokens
+ *    (e.g. `[[<pageId>]]`) — `serializeNode` writes the token,
+ *    `deserializePattern` + `createNodeFromMatch` parse it back.
+ *  - **Plugin-only extensions** set just `Plugin` and contribute pure behavior
+ *    (e.g. a paste handler) with no inline node. They omit every node field.
  */
 export interface BlockTextExtension {
   /** Stable id (used as a React key when rendering `Plugin`). */
   id: string;
   /** Lexical node class registered in every block editor's config. */
-  node: Klass<LexicalNode>;
+  node?: Klass<LexicalNode>;
   /** Non-global regex matching this extension's token within a single line. */
-  deserializePattern: RegExp;
+  deserializePattern?: RegExp;
   /** Build the inline node for a regex match (return null to skip). */
-  createNodeFromMatch: (match: RegExpExecArray) => LexicalNode | null;
+  createNodeFromMatch?: (match: RegExpExecArray) => LexicalNode | null;
   /** Serialize a custom node to its token (return null if not this node). */
-  serializeNode: (node: LexicalNode) => string | null;
+  serializeNode?: (node: LexicalNode) => string | null;
   /** Optional invisible Lexical plugin rendered inside every block composer. */
   Plugin?: ComponentType<BlockTextPluginProps>;
 }
@@ -60,7 +66,9 @@ export function getBlockTextExtensions(): readonly BlockTextExtension[] {
 
 /** Node classes to feed into a block editor's `LexicalComposer` config. */
 export function blockTextNodes(): Klass<LexicalNode>[] {
-  return extensions.map((e) => e.node);
+  return extensions
+    .map((e) => e.node)
+    .filter((node): node is Klass<LexicalNode> => node !== undefined);
 }
 
 /**
@@ -77,6 +85,7 @@ export function appendLineNodes(para: ElementNode, line: string): void {
   type Match = { start: number; end: number; node: LexicalNode };
   const matches: Match[] = [];
   for (const ext of extensions) {
+    if (!ext.deserializePattern || !ext.createNodeFromMatch) continue;
     const re = new RegExp(ext.deserializePattern.source, "g");
     let m: RegExpExecArray | null;
     while ((m = re.exec(line)) !== null) {
@@ -119,6 +128,7 @@ export function serializeBlockText(editor: LexicalEditor): string {
         } else {
           let handled = false;
           for (const ext of extensions) {
+            if (!ext.serializeNode) continue;
             const result = ext.serializeNode(child);
             if (result !== null) {
               buf += result;

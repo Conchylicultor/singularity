@@ -4,15 +4,11 @@
 
 ## Plugin reference
 
-- Description: Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments. Links image-block attachments to their page_blocks rows on every blocksChanged emit; FK cascade reclaims on delete.
+- Description: Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
 - Web:
   - Contributes: `Editor.Block` "image" → `ImageBlock`
-  - Uses: `infra/attachments.uploadAttachment`, `page/editor.Editor`, `primitives/placeholder.Placeholder`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`, `primitives/ui-kit.cn`
+  - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
   - Exports: Values: `imageBlock`
-- Server:
-  - Uses: `database.db`, `infra/attachments.Attachments`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.blocksChanged`
-  - DB schema: `plugins/page/plugins/image/server/internal/tables.ts`
-  - Register: `defineJob('page.image.reconcile')`
 - Core:
   - Uses: `page/editor.defineBlock`
   - Exports: Values: `imageBlock`

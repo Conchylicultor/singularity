@@ -1,0 +1,10 @@
+{
+  "name": "@singularity/plugin-page-url-paste",
+  "description": "Paste a URL into an empty text block to turn it into a bookmark or embed.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "lexical": "^0.44.0",
+    "@lexical/react": "^0.44.0"
+  }
+}
