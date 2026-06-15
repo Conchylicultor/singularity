@@ -26,10 +26,8 @@ export function FullPane({ match: provided }: { match?: PaneMatch }) {
   const basePath = useContext(PaneBasePathContext);
   const selfMatch = usePaneRoute(basePath);
   const match = provided ?? selfMatch;
-  // Active pane = last entry. Index access (not Array.at) — the web-core
-  // tsconfig lib predates ES2022.
-  const panes = match?.panes;
-  const active = panes && panes.length > 0 ? panes[panes.length - 1] : undefined;
+  // Active pane = last entry.
+  const active = match?.panes?.at(-1);
   if (!active) return null;
   const body = (
     <PaneInstanceContext.Provider value={active.instanceId}>

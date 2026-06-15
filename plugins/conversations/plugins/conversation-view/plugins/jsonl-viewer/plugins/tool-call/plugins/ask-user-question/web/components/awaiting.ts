@@ -46,15 +46,7 @@ export function findAwaitingAuqEvent(
   events: JsonlEvent[] | undefined,
 ): JsonlEvent | null {
   if (!events) return null;
-  // Last tool-call (backwards loop; the repo's tsconfig target predates
-  // Array.prototype.findLast — mirror the jsonl-pane precedent).
-  let lastToolCall: JsonlEvent | undefined;
-  for (let i = events.length - 1; i >= 0; i--) {
-    if (events[i]?.kind === "tool-call") {
-      lastToolCall = events[i];
-      break;
-    }
-  }
+  const lastToolCall = events.findLast((e) => e.kind === "tool-call");
   if (lastToolCall?.kind !== "tool-call") return null;
   if (lastToolCall.name !== "AskUserQuestion") return null;
   if (

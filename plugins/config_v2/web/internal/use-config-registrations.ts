@@ -37,7 +37,7 @@ export function useConfigRegistrations(): ConfigRegistration[] {
           return {
             descriptor: c.descriptor as ConfigDescriptor,
             pluginId: id,
-            pluginName: segs[segs.length - 1] ?? id,
+            pluginName: segs.at(-1) ?? id,
             storePath: storePathOf(c)!,
           };
         }),
