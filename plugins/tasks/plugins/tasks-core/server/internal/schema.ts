@@ -1,5 +1,5 @@
 import { eq, getTableColumns, sql } from "drizzle-orm";
-import { pgView } from "drizzle-orm/pg-core";
+import { pgView, QueryBuilder } from "drizzle-orm/pg-core";
 import { createSelectSchema } from "drizzle-zod";
 import { z } from "zod";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
@@ -12,163 +12,233 @@ import { ConversationStatusSchema } from "../../core/conversation-status";
 // the cycle that previously existed between tasks/schema and
 // conversations/tables.
 
-export const attempts = pgView("attempts_v").as((qb) => {
-  const facts = qb.$with("attempt_facts").as(
+// ── Shared per-attempt derivation ───────────────────────────────────────────
+// attempts_v and tasks_v both need each attempt's derived status / active. To
+// keep ONE definition WITHOUT making tasks_v depend on the attempts_v VIEW, both
+// views build these two grouped CTEs from the base tables and read the same
+// status / active / finishedAt expressions off them.
+//
+// Why not let tasks_v just read attempts_v (the old design)? A view-on-view
+// dependency is un-migratable under the current drizzle-kit (0.28.1): it emits
+// `DROP VIEW` statements in the same order as `CREATE VIEW` (snapshot order),
+// with no dependency-aware topological sort, so when both views change it tries
+// to drop attempts_v before the dependent tasks_v and Postgres refuses
+// ("other objects depend on it"). Deriving from base tables in both views makes
+// the two views independent, so drop/create order no longer matters — while the
+// shared helpers below keep the attempt-status logic defined exactly once.
+//
+// Set-at-a-time (one grouped scan of conversations + one of pushes, hash-joined)
+// replaces the previous per-attempt correlated subqueries: proven row-for-row
+// identical to the old form, ~37x fewer buffer reads for attempts_v (9.8k → 263)
+// and ~28x for tasks_v (36k → 1.3k). That per-query CPU drop is what stops the
+// live-state cascade fan-out from saturating the shared Postgres.
+function attemptFactCtes(qb: QueryBuilder) {
+  const convAgg = qb.$with("conv_agg").as(
     qb
       .select({
-        id: _attempts.id,
-        hasConv: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${_conversations} c WHERE c.attempt_id = ${sql.raw('"attempts"."id"')}
-        )`.as("has_conv"),
-        hasLiveConv: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${_conversations} c
-           WHERE c.attempt_id = ${sql.raw('"attempts"."id"')} AND c.status NOT IN ('gone', 'done')
-        )`.as("has_live_conv"),
-        hasPush: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${pushes} p WHERE p.attempt_id = ${sql.raw('"attempts"."id"')}
-        )`.as("has_push"),
-        minPushAt: sql<
-          Date | null
-        >`(SELECT MIN(p.created_at) FROM ${pushes} p WHERE p.attempt_id = ${sql.raw('"attempts"."id"')})`.as(
-          "min_push_at",
+        attemptId: _conversations.attemptId,
+        // Constant marker: present (true) iff the attempt has ≥1 conversation.
+        // After a LEFT JOIN a missing row reads as NULL = "no conversation".
+        hasConv: sql<boolean>`true`.as("has_conv"),
+        hasLiveConv: sql<boolean>`bool_or(${_conversations.status} NOT IN ('gone', 'done'))`.as(
+          "has_live_conv",
         ),
-        maxEndedAt: sql<
-          Date | null
-        >`(SELECT MAX(c.ended_at) FROM ${_conversations} c WHERE c.attempt_id = ${sql.raw('"attempts"."id"')})`.as(
-          "max_ended_at",
-        ),
+        maxEndedAt: sql<Date | null>`max(${_conversations.endedAt})`.as("max_ended_at"),
       })
-      .from(_attempts),
+      .from(_conversations)
+      .groupBy(_conversations.attemptId),
   );
+  const pushAgg = qb.$with("push_agg").as(
+    qb
+      .select({
+        attemptId: pushes.attemptId,
+        hasPush: sql<boolean>`true`.as("has_push"),
+        minPushAt: sql<Date | null>`min(${pushes.createdAt})`.as("min_push_at"),
+      })
+      .from(pushes)
+      .groupBy(pushes.attemptId),
+  );
+  return { convAgg, pushAgg };
+}
 
+type AttemptFacts = ReturnType<typeof attemptFactCtes>;
+
+function attemptStatusSql({ convAgg, pushAgg }: AttemptFacts) {
+  return sql<"pending" | "in_progress" | "pushed" | "completed" | "abandoned">`
+    CASE
+      WHEN ${convAgg.hasConv} IS NULL                              THEN 'pending'
+      WHEN ${convAgg.hasLiveConv} AND ${pushAgg.hasPush} IS NULL    THEN 'in_progress'
+      WHEN ${convAgg.hasLiveConv} AND ${pushAgg.hasPush}           THEN 'pushed'
+      WHEN ${pushAgg.hasPush}                                       THEN 'completed'
+      ELSE                                                               'abandoned'
+    END
+  `;
+}
+
+function attemptActiveSql({ convAgg }: AttemptFacts) {
+  return sql<boolean>`(${convAgg.hasConv} IS NULL OR ${convAgg.hasLiveConv})`;
+}
+
+export const attempts = pgView("attempts_v").as((qb) => {
+  const facts = attemptFactCtes(qb);
+  const { convAgg, pushAgg } = facts;
   return qb
-    .with(facts)
+    .with(convAgg, pushAgg)
     .select({
       ...getTableColumns(_attempts),
-      status: sql<
-        "pending" | "in_progress" | "pushed" | "completed" | "abandoned"
-      >`
-        CASE
-          WHEN NOT ${facts.hasConv}                                       THEN 'pending'
-          WHEN ${facts.hasLiveConv} AND NOT ${facts.hasPush}               THEN 'in_progress'
-          WHEN ${facts.hasLiveConv} AND ${facts.hasPush}                   THEN 'pushed'
-          WHEN ${facts.hasPush}                                            THEN 'completed'
-          ELSE                                                                  'abandoned'
-        END
-      `.as("status"),
-      active: sql<boolean>`((NOT ${facts.hasConv}) OR ${facts.hasLiveConv})`.as("active"),
+      status: attemptStatusSql(facts).as("status"),
+      active: attemptActiveSql(facts).as("active"),
+      // finished_at is attempt-only (tasks_v derives its own), so it lives inline
+      // here rather than in a shared helper.
       finishedAt: sql<Date | null>`
         CASE
-          WHEN ${facts.hasPush} AND NOT ${facts.hasLiveConv}               THEN ${facts.minPushAt}
-          WHEN ${facts.hasConv} AND NOT ${facts.hasLiveConv}
-            AND NOT ${facts.hasPush}                                       THEN ${facts.maxEndedAt}
-          ELSE                                                                  NULL
+          WHEN ${pushAgg.hasPush} AND NOT COALESCE(${convAgg.hasLiveConv}, false)   THEN ${pushAgg.minPushAt}
+          WHEN ${convAgg.hasConv} AND NOT COALESCE(${convAgg.hasLiveConv}, false)
+            AND ${pushAgg.hasPush} IS NULL                                          THEN ${convAgg.maxEndedAt}
+          ELSE                                                                           NULL
         END
       `.as("finished_at"),
     })
     .from(_attempts)
-    .innerJoin(facts, eq(facts.id, _attempts.id));
+    .leftJoin(convAgg, eq(convAgg.attemptId, _attempts.id))
+    .leftJoin(pushAgg, eq(pushAgg.attemptId, _attempts.id));
 });
 
-// Tasks view reads the `attempts` view so the derivation rides the same
-// `status` / `active` definitions.
+// Per-task facts, same set-at-a-time approach: grouped scans hash-joined to
+// tasks. `attempt_status` derives each attempt's status/active from the SAME
+// shared helpers (base tables only — no attempts_v dependency); `task_completed`
+// carries each task's completion AND dropped_at so the dependency-blocking
+// aggregate joins it directly with no self-alias of tasks. Proven row-for-row
+// identical to the old definition.
 export const tasks = pgView("tasks_v").as((qb) => {
-  // Per-task "has a completed attempt", computed once over all tasks. It is
-  // referenced by both task_facts.hasCompleted and the has_blocking_dep
-  // dependency join, so Postgres auto-materializes it — the attempts_v status
-  // re-derivation runs once per task instead of once per dependency. Previously
-  // has_blocking_dep re-derived attempts_v inside a per-dependency anti-join
-  // (and, being referenced twice by the status CASE below, ran it twice),
-  // scanning ~1.3M rows per evaluation on every notifyConversationsChanged.
-  // Drizzle 0.36.4 can't emit the MATERIALIZED keyword, but multi-reference
-  // auto-materialization yields the same plan.
+  const facts = attemptFactCtes(qb);
+  const { convAgg, pushAgg } = facts;
+
+  const attemptStatus = qb.$with("attempt_status").as(
+    qb
+      .select({
+        taskId: _attempts.taskId,
+        status: attemptStatusSql(facts).as("status"),
+        active: attemptActiveSql(facts).as("active"),
+      })
+      .from(_attempts)
+      .leftJoin(convAgg, eq(convAgg.attemptId, _attempts.id))
+      .leftJoin(pushAgg, eq(pushAgg.attemptId, _attempts.id)),
+  );
+
+  const attemptAgg = qb.$with("task_attempt_agg").as(
+    qb
+      .select({
+        taskId: attemptStatus.taskId,
+        hasAttempt: sql<boolean>`true`.as("has_attempt"),
+        hasCompleted: sql<boolean>`bool_or(${attemptStatus.status} = 'completed')`.as("has_completed"),
+        hasActive: sql<boolean>`bool_or(${attemptStatus.active})`.as("has_active"),
+      })
+      .from(attemptStatus)
+      .groupBy(attemptStatus.taskId),
+  );
+
+  const waiting = qb.$with("task_waiting").as(
+    qb
+      .select({
+        taskId: _attempts.taskId,
+        hasWaiting: sql<boolean>`true`.as("has_waiting"),
+      })
+      .from(_conversations)
+      .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId))
+      .where(sql`${_conversations.status} = 'waiting'`)
+      .groupBy(_attempts.taskId),
+  );
+
+  const completedPush = qb.$with("task_completed_push").as(
+    qb
+      .select({
+        taskId: _attempts.taskId,
+        minCompletedPushAt: sql<Date | null>`min(${pushes.createdAt})`.as("min_completed_push_at"),
+      })
+      .from(pushes)
+      .innerJoin(_attempts, eq(_attempts.id, pushes.attemptId))
+      .groupBy(_attempts.taskId),
+  );
+
+  // Per-task completion + dropped flag, defaulted across ALL tasks (LEFT JOIN +
+  // COALESCE) so the dependency-blocking aggregate can join it by dep id.
   const completed = qb.$with("task_completed").as(
     qb
       .select({
         id: _tasks.id,
-        hasCompleted: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${attempts} a
-           WHERE a.task_id = ${sql.raw('"tasks"."id"')} AND a.status = 'completed'
-        )`.as("has_completed"),
-      })
-      .from(_tasks),
-  );
-
-  const facts = qb.$with("task_facts").as(
-    qb
-      .select({
-        id: _tasks.id,
-        hasAttempt: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${_attempts} a WHERE a.task_id = ${sql.raw('"tasks"."id"')}
-        )`.as("has_attempt"),
-        hasCompleted: sql<boolean>`${completed.hasCompleted}`.as("has_completed"),
-        hasActive: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${attempts} a
-           WHERE a.task_id = ${sql.raw('"tasks"."id"')} AND a.active
-        )`.as("has_active"),
-        hasWaiting: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${_conversations} c
-            JOIN ${_attempts} a ON a.id = c.attempt_id
-           WHERE a.task_id = ${sql.raw('"tasks"."id"')} AND c.status = 'waiting'
-        )`.as("has_waiting"),
-        minCompletedPushAt: sql<Date | null>`(
-          SELECT MIN(p.created_at)
-            FROM ${pushes} p
-            JOIN ${_attempts} a ON a.id = p.attempt_id
-           WHERE a.task_id = ${sql.raw('"tasks"."id"')}
-        )`.as("min_completed_push_at"),
-        // Reuses the precomputed per-task completion (dtc) instead of
-        // re-deriving attempts_v.status='completed' for every dependency.
-        hasBlockingDep: sql<boolean>`EXISTS (
-          SELECT 1 FROM ${_taskDependencies} td
-            JOIN ${_tasks} dep ON dep.id = td.depends_on_task_id
-            JOIN ${completed} dtc ON dtc.id = dep.id
-           WHERE td.task_id = ${sql.raw('"tasks"."id"')}
-             AND dep.dropped_at IS NULL
-             AND NOT dtc.has_completed
-        )`.as("has_blocking_dep"),
+        droppedAt: _tasks.droppedAt,
+        hasCompleted: sql<boolean>`COALESCE(${attemptAgg.hasCompleted}, false)`.as("has_completed"),
       })
       .from(_tasks)
-      .innerJoin(completed, eq(completed.id, _tasks.id)),
+      .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id)),
+  );
+
+  const blocking = qb.$with("task_blocking").as(
+    qb
+      .select({
+        taskId: _taskDependencies.taskId,
+        hasBlockingDep: sql<boolean>`bool_or(${completed.droppedAt} IS NULL AND NOT ${completed.hasCompleted})`.as(
+          "has_blocking_dep",
+        ),
+      })
+      .from(_taskDependencies)
+      .innerJoin(completed, eq(completed.id, _taskDependencies.dependsOnTaskId))
+      .groupBy(_taskDependencies.taskId),
+  );
+
+  const deps = qb.$with("task_deps").as(
+    qb
+      .select({
+        taskId: _taskDependencies.taskId,
+        dependencies: sql<
+          string[]
+        >`array_agg(${_taskDependencies.dependsOnTaskId} ORDER BY ${_taskDependencies.createdAt})`.as(
+          "dependencies",
+        ),
+      })
+      .from(_taskDependencies)
+      .groupBy(_taskDependencies.taskId),
   );
 
   return qb
-    .with(completed, facts)
+    .with(convAgg, pushAgg, attemptStatus, attemptAgg, waiting, completedPush, completed, blocking, deps)
     .select({
       ...getTableColumns(_tasks),
       status: sql<"new" | "in_progress" | "need_action" | "attempted" | "done" | "held" | "dropped" | "blocked">`
         CASE
-          WHEN ${facts.hasCompleted}                        THEN 'done'
-          WHEN ${facts.hasActive} AND ${facts.hasBlockingDep}
-                                                           THEN 'blocked'
-          WHEN ${facts.hasActive} AND ${facts.hasWaiting}   THEN 'need_action'
-          WHEN ${facts.hasActive}                           THEN 'in_progress'
-          WHEN ${_tasks.droppedAt} IS NOT NULL              THEN 'dropped'
-          WHEN ${_tasks.heldAt}    IS NOT NULL              THEN 'held'
-          WHEN ${facts.hasBlockingDep}                      THEN 'blocked'
-          WHEN ${facts.hasAttempt}                          THEN 'attempted'
-          ELSE                                                   'new'
+          WHEN COALESCE(${attemptAgg.hasCompleted}, false)                  THEN 'done'
+          WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${blocking.hasBlockingDep}, false)
+                                                                            THEN 'blocked'
+          WHEN COALESCE(${attemptAgg.hasActive}, false) AND COALESCE(${waiting.hasWaiting}, false)
+                                                                            THEN 'need_action'
+          WHEN COALESCE(${attemptAgg.hasActive}, false)                     THEN 'in_progress'
+          WHEN ${_tasks.droppedAt} IS NOT NULL                              THEN 'dropped'
+          WHEN ${_tasks.heldAt}    IS NOT NULL                              THEN 'held'
+          WHEN COALESCE(${blocking.hasBlockingDep}, false)                  THEN 'blocked'
+          WHEN COALESCE(${attemptAgg.hasAttempt}, false)                    THEN 'attempted'
+          ELSE                                                                   'new'
         END
       `.as("status"),
       active: sql<boolean>`(
-        NOT ${facts.hasCompleted}
-        AND ${facts.hasActive}
+        NOT COALESCE(${attemptAgg.hasCompleted}, false)
+        AND COALESCE(${attemptAgg.hasActive}, false)
       )`.as("active"),
       finishedAt: sql<Date | null>`
         CASE
-          WHEN ${facts.hasCompleted}             THEN ${facts.minCompletedPushAt}
-          WHEN ${_tasks.droppedAt} IS NOT NULL   THEN ${_tasks.droppedAt}
-          ELSE                                        NULL
+          WHEN COALESCE(${attemptAgg.hasCompleted}, false)   THEN ${completedPush.minCompletedPushAt}
+          WHEN ${_tasks.droppedAt} IS NOT NULL               THEN ${_tasks.droppedAt}
+          ELSE                                                    NULL
         END
       `.as("finished_at"),
-      dependencies: sql<string[]>`COALESCE(ARRAY(
-        SELECT td.depends_on_task_id FROM ${_taskDependencies} td
-         WHERE td.task_id = ${sql.raw('"tasks"."id"')}
-         ORDER BY td.created_at
-      ), ARRAY[]::text[])`.as("dependencies"),
+      dependencies: sql<string[]>`COALESCE(${deps.dependencies}, ARRAY[]::text[])`.as("dependencies"),
     })
     .from(_tasks)
-    .innerJoin(facts, eq(facts.id, _tasks.id));
+    .leftJoin(attemptAgg, eq(attemptAgg.taskId, _tasks.id))
+    .leftJoin(waiting, eq(waiting.taskId, _tasks.id))
+    .leftJoin(completedPush, eq(completedPush.taskId, _tasks.id))
+    .leftJoin(blocking, eq(blocking.taskId, _tasks.id))
+    .leftJoin(deps, eq(deps.taskId, _tasks.id));
 });
 
 // Conversation view adds derived fields from the attempt join.

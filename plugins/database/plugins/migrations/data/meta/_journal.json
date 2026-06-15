@@ -1051,6 +1051,20 @@
       "tag": "20260614_183701_f46180f2__add_reorder_staged_default",
       "hash": "f46180f2",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781476928000,
+      "tag": "20260614_224208_473ab33b__decouple_tasks_view",
+      "hash": "473ab33b",
+      "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781477040000,
+      "tag": "20260614_224400_add96e61__optimize_attempts_view",
+      "hash": "add96e61",
+      "breakpoints": true
     }
   ]
 }
