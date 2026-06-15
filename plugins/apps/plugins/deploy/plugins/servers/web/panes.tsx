@@ -43,7 +43,7 @@ export const serverDetailPane = Pane.define({
 
 function ServersRoot() {
   return (
-    <div className="h-full overflow-auto">
+    <div className="flex h-full flex-col">
       <ServersList />
     </div>
   );

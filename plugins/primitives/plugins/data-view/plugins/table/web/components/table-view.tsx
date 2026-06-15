@@ -85,6 +85,7 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       sortState={mapSort(props.state.sort)}
       onToggleSort={(columnId) => props.setSort(columnId)}
       onRowClick={props.onRowActivate}
+      selectedRowId={props.selectedRowId}
       filter={undefined}
       emptyLabel="No results found"
       rowActions={

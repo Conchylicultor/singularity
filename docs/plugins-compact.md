@@ -207,6 +207,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
+        - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
         - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.

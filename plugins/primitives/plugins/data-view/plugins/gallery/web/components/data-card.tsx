@@ -13,6 +13,8 @@ export interface DataCardProps {
   footer?: ReactNode;
   /** Body: title + property rows. */
   children: ReactNode;
+  /** Persistent active/selected highlight (ring around the card). */
+  selected?: boolean;
   className?: string;
 }
 
@@ -22,7 +24,8 @@ export interface DataCardProps {
  * click→`onActivate` behavior baked in so consumers don't re-implement it.
  */
 export function DataCard(props: DataCardProps) {
-  const { onActivate, media, actions, footer, children, className } = props;
+  const { onActivate, media, actions, footer, children, selected, className } =
+    props;
 
   return (
     <Card
@@ -36,7 +39,11 @@ export function DataCard(props: DataCardProps) {
           onActivate?.();
         }
       }}
-      className={cn("group relative flex flex-col gap-md rounded-lg p-lg", className)}
+      className={cn(
+        "group relative flex flex-col gap-md rounded-lg p-lg",
+        selected && "ring-2 ring-primary",
+        className,
+      )}
     >
       {media}
       <div className="min-w-0 flex-1">{children}</div>

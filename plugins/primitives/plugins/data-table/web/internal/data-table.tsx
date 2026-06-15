@@ -18,6 +18,7 @@ export function DataTable<TRow>({
   onToggleSort,
   onRowClick,
   rowActions,
+  selectedRowId,
 }: DataTableProps<TRow>) {
   const { rows, sortState, toggleSort } = useDataTable(
     data,
@@ -73,46 +74,50 @@ export function DataTable<TRow>({
         })}
         {rowActions && <span aria-hidden />}
       </div>
-      {rows.map((row, i) => (
-        <div
-          key={rowKey(row, i)}
-          className={cn(
-            "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
-            onRowClick && "cursor-pointer",
-          )}
-          onClick={onRowClick ? () => onRowClick(row) : undefined}
-          role={onRowClick ? "button" : undefined}
-          tabIndex={onRowClick ? 0 : undefined}
-          onKeyDown={
-            onRowClick
-              ? (e) => {
-                  if (e.key === "Enter" || e.key === " ") {
-                    e.preventDefault();
-                    onRowClick(row);
+      {rows.map((row, i) => {
+        const key = rowKey(row, i);
+        return (
+          <div
+            key={key}
+            className={cn(
+              "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
+              key === selectedRowId && "bg-accent",
+              onRowClick && "cursor-pointer",
+            )}
+            onClick={onRowClick ? () => onRowClick(row) : undefined}
+            role={onRowClick ? "button" : undefined}
+            tabIndex={onRowClick ? 0 : undefined}
+            onKeyDown={
+              onRowClick
+                ? (e) => {
+                    if (e.key === "Enter" || e.key === " ") {
+                      e.preventDefault();
+                      onRowClick(row);
+                    }
                   }
-                }
-              : undefined
-          }
-        >
-          {columns.map((col) => (
-            <div key={col.id} className={cn("min-w-0 truncate", alignClass(col.align))}>
-              {col.cell
-                ? col.cell(row)
-                : col.value
-                  ? String(col.value(row) ?? "")
-                  : null}
-            </div>
-          ))}
-          {rowActions && (
-            <div
-              className="flex items-center justify-end gap-xs opacity-0 transition-opacity group-hover/dt-row:opacity-100 focus-within:opacity-100"
-              onClick={(e) => e.stopPropagation()}
-            >
-              {rowActions(row, i)}
-            </div>
-          )}
-        </div>
-      ))}
+                : undefined
+            }
+          >
+            {columns.map((col) => (
+              <div key={col.id} className={cn("min-w-0 truncate", alignClass(col.align))}>
+                {col.cell
+                  ? col.cell(row)
+                  : col.value
+                    ? String(col.value(row) ?? "")
+                    : null}
+              </div>
+            ))}
+            {rowActions && (
+              <div
+                className="flex items-center justify-end gap-xs opacity-0 transition-opacity group-hover/dt-row:opacity-100 focus-within:opacity-100"
+                onClick={(e) => e.stopPropagation()}
+              >
+                {rowActions(row, i)}
+              </div>
+            )}
+          </div>
+        );
+      })}
     </div>
   );
 }

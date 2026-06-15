@@ -33,6 +33,11 @@ export interface DataTableProps<TRow> {
   onToggleSort?: (columnId: string) => void;
   /** When provided, rows become clickable and fire this on click/Enter/Space. */
   onRowClick?: (row: TRow) => void;
+  /**
+   * Row key of the active/selected row. The matching row gets a persistent
+   * `bg-accent` highlight. Compared against `rowKey(row, index)`.
+   */
+  selectedRowId?: string;
   /** Trailing per-row actions, hover-revealed in their own column. */
   rowActions?: (row: TRow, index: number) => ReactNode;
 }

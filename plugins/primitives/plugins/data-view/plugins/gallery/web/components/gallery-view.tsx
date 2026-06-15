@@ -155,6 +155,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
         return (
           <DataCard
             key={key}
+            selected={key === props.selectedRowId}
             onActivate={() => props.onRowActivate?.(row)}
             media={media}
             actions={
