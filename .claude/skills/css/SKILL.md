@@ -35,13 +35,14 @@ Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugi
 
 ## Planned primitives
 
-Not built yet — see [the vision doc](../../../research/2026-06-15-global-css-layout-primitives-vision.md). Until they land, the cases below need raw layout CSS.
+**APIs designed, not yet built** — prop surfaces are frozen in [the API spec](../../../research/2026-06-15-global-css-layout-primitive-apis.md) (rationale + track mechanics); roadmap in [the vision doc](../../../research/2026-06-15-global-css-layout-primitives-vision.md). Until they land, the cases below still need raw layout CSS (with an `eslint-disable … -- <reason>` once the rule exists). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last.
 
-- **`Frame`** — named-slot row (`leading` · `content` · `meta` · `trailing`) that owns the shrink hierarchy in one place. The structural fix for overlapping/overflowing header rows.
-- **`Grid`** — explicit tracks (`auto minmax(0,1fr) auto`, responsive card grids).
-- **`Cluster`** — wrap-friendly group of chips/tags.
-- **`Center`** — centering.
-- **`Overlay`** — sanctioned in-flow positioning (`absolute inset-0`, z-layer-aware).
+- **`Frame`** — named-slot row, **slots-as-props** (no children): `leading` (rigid) · `content` (truncates last) · `meta` (truncates first) · `trailing` (rigid-right). CSS Grid `auto minmax(0,1fr) minmax(0,auto) auto` owns the shrink hierarchy in one place — the structural fix for overlapping/overflowing header rows. String `content`/`meta` auto-wrap in the truncation leaf.
+- **`Grid`** — responsive/uniform card grid via closed `minCellWidth` + `mode: fill|fit` (or fixed `cols`). **Not** a raw `grid-template` passthrough; the rigid|flex|rigid structural case is `Frame`'s job.
+- **`Cluster`** — wrap-friendly group of rigid chips/tags. Thin `Stack` row+wrap specialization.
+- **`Center`** — centering box (`grid place-items-center`), `axis: both|horizontal|vertical`.
+- **`Overlay`** — in-flow positioning: `behind`/`above` full-bleed layers (`absolute inset-0`, z-layer-aware) + `clickThrough` with `Overlay.Interactive` opt-in (the sanctioned home for the click-through-toggle idiom). Pairs with `viewport-overlay` (which portals to body for true `fixed inset-0`).
+- **`Truncate`** — the existing `TruncatingText`, promoted to **the** mandatory truncation leaf; gains a `lines?: number` line-clamp prop.
 
 ## Enforcement
 
