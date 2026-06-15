@@ -201,8 +201,12 @@ function containerClass(placement: Tab["placement"]): string {
     // above it. The reserved `z-max` band stays for the dev frame / critical banners.
     return "fixed inset-0 z-overlay bg-background";
   }
-  // docked → full-area backdrop (visibility gated inline).
-  return "absolute inset-0";
+  // docked → full-area backdrop (visibility gated inline). `bg-background` (like
+  // floating/solo) so the app frame paints its OWN app-scoped background — the
+  // container carries `data-theme-scope="app:<id>"`, so any transparent region of
+  // the app inside (e.g. the floating sidebar-framing gap) falls back to the app
+  // theme, never the chrome/global SurfaceBody backdrop behind it.
+  return "absolute inset-0 bg-background";
 }
 
 /**
