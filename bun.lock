@@ -1287,6 +1287,14 @@
       "name": "@singularity/plugin-fields-secret-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/tags": {
+      "name": "@singularity/plugin-fields-tags",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/tags/plugins/filter": {
+      "name": "@singularity/plugin-fields-tags-filter",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/text": {
       "name": "@singularity/plugin-fields-text",
       "version": "0.0.1",
@@ -3768,6 +3776,10 @@
     "@singularity/plugin-fields-secret": ["@singularity/plugin-fields-secret@workspace:plugins/fields/plugins/secret"],
 
     "@singularity/plugin-fields-secret-config": ["@singularity/plugin-fields-secret-config@workspace:plugins/fields/plugins/secret/plugins/config"],
+
+    "@singularity/plugin-fields-tags": ["@singularity/plugin-fields-tags@workspace:plugins/fields/plugins/tags"],
+
+    "@singularity/plugin-fields-tags-filter": ["@singularity/plugin-fields-tags-filter@workspace:plugins/fields/plugins/tags/plugins/filter"],
 
     "@singularity/plugin-fields-text": ["@singularity/plugin-fields-text@workspace:plugins/fields/plugins/text"],
 

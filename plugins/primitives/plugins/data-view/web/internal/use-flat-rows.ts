@@ -10,7 +10,7 @@ function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
   if (field.filterable === true) return true;
   if (field.filterable === false) return false;
   const type = field.type ?? "text";
-  return type === "text" || type === "enum";
+  return type === "text" || type === "enum" || type === "tags";
 }
 
 /** Coerce a FieldValue to a comparable number/string for sorting. */
@@ -39,8 +39,10 @@ export function useFlatRows<TRow>(
         searchAccessor ??
         ((row: TRow) =>
           fields
-            .filter((f) => isSearchable(f) && f.value)
-            .map((f) => String(f.value!(row) ?? ""))
+            .filter((f) => isSearchable(f))
+            .map((f) =>
+              f.values ? f.values(row).join(" ") : String(f.value?.(row) ?? ""),
+            )
             .join(" "));
       result = result.filter((row) => accessor(row).toLowerCase().includes(lc));
     }
@@ -53,10 +55,14 @@ export function useFlatRows<TRow>(
       if (!field) continue;
       const contribution = resolveFilter(field.type ?? "text");
       if (!contribution || !contribution.isActive(filterValue)) continue;
-      const valueFn = field.value;
-      result = result.filter((row) =>
-        contribution.predicate(filterValue, valueFn ? valueFn(row) : undefined),
-      );
+      result = result.filter((row) => {
+        const rowValue = field.values
+          ? field.values(row)
+          : field.value
+            ? field.value(row)
+            : undefined;
+        return contribution.predicate(filterValue, rowValue);
+      });
     }
 
     // --- Sort ---

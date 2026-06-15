@@ -1,5 +1,6 @@
 export type {
   FieldValue,
+  FilterFieldValue,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

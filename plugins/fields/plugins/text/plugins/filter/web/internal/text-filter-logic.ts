@@ -1,4 +1,4 @@
-import type { FieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
 
 export interface TextFilterValue {
   contains?: string;
@@ -15,7 +15,10 @@ export function isActive(filterValue: unknown): boolean {
 }
 
 /** Keep rows whose text value contains the query (case-insensitive). */
-export function predicate(filterValue: unknown, fieldValue: FieldValue): boolean {
+export function predicate(
+  filterValue: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
   const { contains } = asValue(filterValue);
   if (!contains) return true;
   return String(fieldValue ?? "")

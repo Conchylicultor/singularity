@@ -1766,10 +1766,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
   - Web:
-    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.text`
+    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.tags`, `fields.text`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/text`
+    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/tags`, `fields/text`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
@@ -2075,6 +2075,18 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `ConfigV2SecretMeta`, `SecretFieldDef`; Values: `configV2SecretMetaResource`, `configV2SecretMetaSchema`, `secretField`
           - Cross-plugin:
             - Imported by: `auth/google`, `auth/notion`
+    - **`tags`** — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
+      - Web:
+        - Contributes: `Fields.Identity` "tags"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Exports: Values: `tagsFieldType`, `tagsIdentity`
+      - Plugins:
+        - **`filter`** — Tags (multi-value) field type: data-view filter (multi-select tag chips, array-aware match-any).
+          - Web:
+            - Contributes: `DataViewSlots.Filter` "tags"
+            - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.ToggleChip`
     - **`text`** — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
         - Contributes: `Fields.Identity` "text"
@@ -2925,13 +2937,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/profiling/runtime`, `debug/slow-ops/pane`, `primitives/data-view/table`
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
-        - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.text.table`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.text.filter`
+        - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.text.table`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
         - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
-        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `defineItemActions`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
+        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `FilterFieldValue`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `defineItemActions`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
       - Cross-plugin:
-        - Imported by: `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `conversations/agents`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`
+        - Imported by: `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `conversations/agents`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/tags/filter`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
       - Core:
-        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
+        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `FilterFieldValue`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
@@ -2987,7 +2999,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
         - Exports: Types: `ChipFilterHandle`, `FilterChipProps`, `FilterGroupProps`; Values: `FilterChip`, `FilterGroup`, `useChipFilter`
       - Cross-plugin:
-        - Imported by: `apps/studio/contributions`, `config_v2/settings`, `debug/claude-cli-calls`, `debug/queue`, `ui/tweakcn/community-browser`
+        - Imported by: `apps/studio/contributions`, `config_v2/settings`, `debug/claude-cli-calls`, `debug/queue`
     - **`floating-action`** — Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
       - Web:
         - Uses: `primitives/ui-kit.cn`
@@ -3060,7 +3072,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/ui-kit.cn`
         - Exports: Types: `LoadingProps`, `LoadingVariant`; Values: `Loading`
       - Cross-plugin:
-        - Imported by: `active-data/plugin-link`, `active-data/task`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/story/render`, `apps/story/renderers/blog`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/studio/graph`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-info`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `conversations/recover`, `conversations/summary`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/memory`, `debug/queue`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `page/editor`, `page/inline-page-link`, `page/page-link`, `plugin-meta/plugin-view`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/folder-picker`, `primitives/icon-picker`, `primitives/live-state`, `primitives/pane`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `review/reorder-defaults`, `screenshot`, `stats/commits`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
+        - Imported by: `active-data/plugin-link`, `active-data/task`, `apps/deploy/servers`, `apps/pages/page-tree`, `apps/story/render`, `apps/story/renderers/blog`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `apps/studio/explorer`, `apps/studio/graph`, `auth/google/setup-wizard`, `backup`, `build`, `build/build-commits`, `build/build-info`, `code-explorer`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-view`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`, `conversations/recover`, `conversations/summary`, `debug/broadcasts`, `debug/claude-cli-calls`, `debug/memory`, `debug/queue`, `debug/reports`, `debug/slow-ops/pane`, `debug/worktree-cleanup`, `page/editor`, `page/inline-page-link`, `page/page-link`, `plugin-meta/plugin-view`, `primitives/data-view/gallery`, `primitives/data-view/table`, `primitives/folder-picker`, `primitives/icon-picker`, `primitives/live-state`, `primitives/pane`, `review/code-review`, `review/plugin-changes`, `review/plugin-changes/file-changes`, `review/reorder-defaults`, `screenshot`, `stats/commits`, `tasks/attempt-view`, `tasks/task-dependencies`, `tasks/task-draft-form`, `tasks/task-events`, `tasks/task-list/recent`, `tasks/task-list/tree`
     - **`log-channels`** — Persistent log-channel substrate: clientLog browser emitter that buffers and flushes log lines over plain HTTP to the per-worktree JSONL files. Server barrel owns Log/persist/registry and the /api/logs/* + /ws/logs routes; debug/logs is the viewer.
       - Web:
         - Uses: `infra/endpoints.fetchEndpoint`, `primitives/networking.subscribeWsStatus`
@@ -3178,7 +3190,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.Input`
         - Exports: Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`; Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`
       - Cross-plugin:
-        - Imported by: `apps/sonata/track-mixer`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/graph`, `code-explorer`, `config_v2/settings`, `conversations/conversation-view/dependencies`, `page/editor`, `page/page-link`, `primitives/data-view`, `primitives/tree`, `ui/theme-engine/theme-customizer`, `ui/tweakcn/community-browser`
+        - Imported by: `apps/sonata/track-mixer`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/graph`, `code-explorer`, `config_v2/settings`, `conversations/conversation-view/dependencies`, `page/editor`, `page/page-link`, `primitives/data-view`, `primitives/tree`, `ui/theme-engine/theme-customizer`
     - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
       - Web:
         - Uses: `primitives/ui-kit.cn`
@@ -3298,7 +3310,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/badge.Badge`, `primitives/ui-kit.cn`, `primitives/ui-kit.ControlSize`, `primitives/ui-kit.useControlSize`
         - Exports: Types: `SegmentedControlProps`, `SegmentedOption`, `ToggleChipProps`, `ToggleChipSize`, `ToggleChipVariant`; Values: `SegmentedControl`, `ToggleChip`
       - Cross-plugin:
-        - Imported by: `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/story/render`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/graph`, `apps/surface`, `config_v2/settings`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `reorder/edit-mode`, `review`, `shell/notifications`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/library`, `apps/sonata/piano-roll`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/story/render`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/graph`, `apps/surface`, `config_v2/settings`, `conversations/conversation-view/code/file-pane`, `debug/broadcasts`, `debug/queue`, `fields/bool/filter`, `fields/enum/filter`, `fields/tags/filter`, `primitives/data-view`, `primitives/filter-chips`, `primitives/tree`, `reorder/edit-mode`, `review`, `shell/notifications`, `stats`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks/task-draft-form`
     - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
       - Web:
         - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.Tooltip`, `primitives/ui-kit.TooltipContent`, `primitives/ui-kit.TooltipTrigger`
@@ -3947,7 +3959,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`community-browser`** — Browse and apply themes from the tweakcn community catalog. Community theme catalog and apply endpoints for tweakcn.
           - Web:
             - Contributes: `ThemeCustomizer.Section` "community-browser" → `CommunityBrowserSection`
-            - Uses: `config_v2.useConfigRegistrations`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/filter-chips.FilterChip`, `primitives/loading.Loading`, `primitives/search.SearchInput`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
+            - Uses: `config_v2.useConfigRegistrations`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/data-view.DataView`, `primitives/data-view.FieldDef`, `primitives/syntax-highlight.useDarkMode`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine/theme-customizer.ThemeCustomizer`
           - Server:
             - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `ui/tweakcn._tweakcnThemes`
             - Routes: `GET /api/tweakcn/community/catalog`, `POST /api/tweakcn/community/apply`

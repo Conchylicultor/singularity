@@ -14,6 +14,7 @@ export type {
 } from "./internal/define-item-actions";
 export type {
   FieldValue,
+  FilterFieldValue,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,

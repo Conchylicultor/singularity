@@ -40,7 +40,10 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     hierarchy,
     selection,
     itemActions,
+    mode = "surface",
   } = props;
+
+  const embedded = mode === "embedded";
 
   const contributions = DataViewSlots.View.useContributions();
 
@@ -102,7 +105,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
 
   if (!activeView) {
     return (
-      <div className="flex min-h-0 flex-1 flex-col">
+      <div className={cn("flex flex-col", !embedded && "min-h-0 flex-1")}>
         <div className="flex items-center gap-sm px-sm pb-sm">
           {title ? (
             <Text as="div" variant="label">
@@ -139,15 +142,21 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     loadingState,
     itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
     hasChildren,
+    embedded,
   };
 
   return (
-    <div className="flex min-h-0 flex-1 flex-col">
+    <div className={cn("flex flex-col", !embedded && "min-h-0 flex-1")}>
       {/* pr-14 reserves the top-right gutter for the global floating action bar
           (fixed top-2 right-3, ~44px footprint) so right-aligned controls stay
           visible and clickable rather than sitting under it. */}
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- pr-14 reserves the fixed ~44px floating-action-bar gutter, a layout dimension the ramp can't express */}
-      <div className="flex shrink-0 items-center gap-sm pb-sm pl-sm pr-14">
+      <div
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- pr-14 reserves the fixed ~44px floating-action-bar gutter, a layout dimension the ramp can't express
+        className={cn(
+          "flex shrink-0 items-center gap-sm pb-sm pl-sm",
+          !embedded && "pr-14",
+        )}
+      >
         {title ? (
           <Text as="div" variant="label">
             {title}
@@ -185,7 +194,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           />
         </div>
       ) : null}
-      <div className={cn("min-h-0 flex-1 overflow-y-auto")}>
+      <div className={cn(!embedded && "min-h-0 flex-1 overflow-y-auto")}>
         {renderIsolated(
           DataViewSlots.View.id,
           activeView as unknown as Contribution,

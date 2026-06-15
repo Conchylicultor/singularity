@@ -4,6 +4,14 @@ import type { Rank } from "@plugins/primitives/plugins/rank/core";
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
 /**
+ * The value a filter predicate receives: a scalar `FieldValue` for normal
+ * fields, or a `readonly string[]` for multi-value `tags`-style fields (which
+ * project via `FieldDef.values`). Scalar predicates accept this union and narrow
+ * internally; only the `tags` predicate inspects the array branch.
+ */
+export type FilterFieldValue = FieldValue | readonly string[];
+
+/**
  * Describes the data source as a hierarchy. Supplied on `DataViewProps` (not the
  * per-view `options` channel) because it gates which views are available and
  * carries write capabilities. Present → the hierarchical views (tree) become
@@ -63,6 +71,11 @@ export interface FieldDef<TRow> {
   type?: string;
   /** Comparable projection used for sort/search/filter. */
   value?: (row: TRow) => FieldValue;
+  /**
+   * Multi-value projection for tags-style fields. Folded into search and passed
+   * to the array-aware filter predicate. Mutually exclusive with `value`.
+   */
+  values?: (row: TRow) => string[];
   /** Custom renderer; falls back to String(value ?? ""). */
   cell?: (row: TRow) => ReactNode;
   /** Default: true when `value` is present. */
@@ -144,6 +157,9 @@ export interface DataViewRenderProps<TRow> {
    *  `hierarchy.getParentId` over `rows`. Flat views (table/gallery) call this
    *  for a correct `hasChildren`; the tree uses its own node count. */
   hasChildren?: (rowId: string) => boolean;
+  /** True when the host is embedded (auto-height); views drop full-surface
+   *  outer padding / forced heights. */
+  embedded?: boolean;
 }
 
 /**
@@ -170,7 +186,7 @@ export interface FilterControlProps {
 export interface FilterContribution {
   match: string;
   Control: ComponentType<FilterControlProps>;
-  predicate: (filterValue: unknown, fieldValue: FieldValue) => boolean;
+  predicate: (filterValue: unknown, fieldValue: FilterFieldValue) => boolean;
   isActive: (filterValue: unknown) => boolean;
 }
 
@@ -206,4 +222,11 @@ export interface DataViewProps<TRow> {
   /** Per-item action slot descriptor minted by `defineItemActions`; views render
    *  each contributed action in their natural trailing affordance. */
   itemActions?: ItemActionsDescriptor<TRow>;
+  /**
+   * Placement / height. `"surface"` (default): fills a bounded-height flex
+   * ancestor, owns its internal scroll, reserves the floating-action-bar gutter.
+   * `"embedded"`: grows to natural content height, no internal scroll, no gutter —
+   * the host pane scrolls. Use when stacked among siblings in a scrolling page.
+   */
+  mode?: "surface" | "embedded";
 }

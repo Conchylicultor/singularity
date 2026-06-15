@@ -1,4 +1,4 @@
-import type { FieldValue } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
 
 export interface EnumFilterValue {
   selected?: string[];
@@ -14,7 +14,10 @@ export function isActive(filterValue: unknown): boolean {
 }
 
 /** Keep rows whose value is among the selected options. */
-export function predicate(filterValue: unknown, fieldValue: FieldValue): boolean {
+export function predicate(
+  filterValue: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
   const { selected } = asValue(filterValue);
   if (!selected || selected.length === 0) return true;
   return selected.includes(String(fieldValue ?? ""));

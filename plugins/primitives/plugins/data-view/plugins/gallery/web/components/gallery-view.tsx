@@ -1,4 +1,5 @@
 import { type ReactNode } from "react";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
@@ -118,7 +119,10 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
       <Text
         as="div"
         variant="body"
-        className="flex h-full items-center justify-center p-xl text-muted-foreground"
+        className={cn(
+          "flex items-center justify-center text-muted-foreground",
+          props.embedded ? "py-xl" : "h-full p-xl",
+        )}
       >
         {props.emptyState}
       </Text>
@@ -130,7 +134,7 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
   return (
     <div
-      className="grid gap-lg p-xl"
+      className={cn("grid gap-lg", !props.embedded && "p-xl")}
       style={{
         gridTemplateColumns: `repeat(auto-fill, minmax(${options.minCardWidth ?? 200}px, 1fr))`,
       }}
