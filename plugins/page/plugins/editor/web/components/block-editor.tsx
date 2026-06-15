@@ -28,11 +28,15 @@ import {
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { type Block, type SerializedBlock } from "../../core";
+import { textOf, type Block, type SerializedBlock } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
 import { serializeForest } from "../serialize-blocks";
-import { blocksToMarkdown, markdownToForest } from "../markdown-blocks";
+import {
+  blocksToMarkdown,
+  defaultTextHandle,
+  markdownToForest,
+} from "../markdown-blocks";
 import {
   SelectionControlProvider,
   type SelectionControl,
@@ -153,6 +157,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
     bulkDelete,
     bulkDuplicate,
     paste,
+    insert,
     focusBlock,
     focusedBlockId,
   } = useBlockEditor();
@@ -406,6 +411,42 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
   const marqueeStartRef = useRef<{ id: string | null; y: number } | null>(null);
   const marqueeMovedRef = useRef(false);
 
+  // Notion-style click-to-edit on the empty editor background: a plain click
+  // (no drag) routes the caret to a block instead of doing nothing. Above the
+  // first block focuses it; the trailing zone below the last block focuses it
+  // when it's an empty default-text block, otherwise appends a fresh paragraph;
+  // an empty page gets its first block. A click in a gap *between* blocks keeps
+  // the original behavior of clearing any selection.
+  const onEmptyClick = useCallback(
+    (y: number) => {
+      const fallback = defaultTextHandle(handles);
+      const firstId = flat[0]?.block.id;
+      const lastBlock = flat[flat.length - 1]?.block;
+      const els = document.querySelectorAll<HTMLElement>("[data-block-id]");
+      const firstEl = els[0];
+      const lastEl = els[els.length - 1];
+
+      if (!firstEl || !lastEl || !firstId || !lastBlock) {
+        if (fallback) insert(fallback.type, fallback.empty?.() ?? {});
+        return;
+      }
+      if (y < firstEl.getBoundingClientRect().top) {
+        focusBlock(firstId);
+        return;
+      }
+      if (y > lastEl.getBoundingClientRect().bottom) {
+        if (fallback && lastBlock.type === fallback.type && textOf(lastBlock) === "") {
+          focusBlock(lastBlock.id);
+        } else if (fallback) {
+          insert(fallback.type, fallback.empty?.() ?? {});
+        }
+        return;
+      }
+      clearSelection();
+    },
+    [flat, handles, focusBlock, insert, clearSelection],
+  );
+
   const onPointerDown = useCallback(
     (e: React.PointerEvent) => {
       if (e.button !== 0) return;
@@ -441,7 +482,12 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
         if (cur && startInfo.id) applyRange(startInfo.id, cur.id);
       };
       const onUp = () => {
-        if (!marqueeMovedRef.current) clearSelection();
+        // A plain click (no drag) on the empty background routes the caret to a
+        // block; a drag was a marquee selection and is left alone.
+        if (!marqueeMovedRef.current) {
+          const startY = marqueeStartRef.current?.y;
+          if (startY != null) onEmptyClick(startY);
+        }
         marqueeStartRef.current = null;
         setMarquee(null);
         window.removeEventListener("pointermove", onMove);
@@ -450,7 +496,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
     },
-    [applyRange, clearSelection, focusContainer],
+    [applyRange, focusContainer, onEmptyClick],
   );
 
   // ---- Drag-and-drop (single block, or the whole selection) ----------------
@@ -619,7 +665,7 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
               if (e.target !== containerRef.current && isActive) clearSelection();
             }}
             style={{ paddingLeft: BLOCK_GUTTER }}
-            className="relative min-h-40 py-sm pr-sm outline-none"
+            className="relative min-h-40 cursor-text pb-sm pr-sm pt-md outline-none"
           >
             {flat.map((f) => (
               <BlockRow

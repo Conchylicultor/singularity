@@ -31,7 +31,7 @@ function orderedHandle(handles: Handle[]): Handle | undefined {
   return handles.find((h) => h.ordinalMarker);
 }
 
-function defaultTextHandle(handles: Handle[]): Handle | undefined {
+export function defaultTextHandle(handles: Handle[]): Handle | undefined {
   // The plain-text type: editable text, no markdown prefix, marker, toggle, or
   // forced chevron. Falls back to the first labelled type.
   return (

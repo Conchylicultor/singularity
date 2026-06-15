@@ -65,11 +65,17 @@ function PageDetailBody(): ReactElement {
           className="mx-auto flex w-full max-w-4xl flex-col gap-lg px-lg pb-2xl"
           style={{ paddingRight: BLOCK_GUTTER }}
         >
-          <PageHeader pageId={pageId} />
-          <BlockEditor
-            pageId={pageId}
-            onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
-          />
+          {/* Title + body form one tight unit (no flex gap between them): the
+              only space under the title is the editor's own top padding, which
+              is click-to-edit — so there's no dead strip between title and
+              content. */}
+          <div className="flex flex-col">
+            <PageHeader pageId={pageId} />
+            <BlockEditor
+              pageId={pageId}
+              onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
+            />
+          </div>
           <PageDetail.Section.Render>
             {(s) => <s.component pageId={pageId} />}
           </PageDetail.Section.Render>
