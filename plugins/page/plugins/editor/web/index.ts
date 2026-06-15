@@ -4,6 +4,7 @@ export { Editor } from "./slots";
 export type { BlockContribution } from "./slots";
 export type { BlockEditorAPI, BlockRendererProps } from "./types";
 export { BlockEditor } from "./components/block-editor";
+export { BLOCK_GUTTER } from "./components/block-row";
 export { BlockTextRenderer } from "./components/block-text-renderer";
 export { useBlockEditor } from "./block-editor-context";
 export {

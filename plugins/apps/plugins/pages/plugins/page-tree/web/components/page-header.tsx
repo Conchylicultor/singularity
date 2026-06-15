@@ -3,6 +3,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { pagesResource, updateBlock, pageData, type Block } from "@plugins/page/plugins/editor/core";
+import { BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { PageIconButton, type PageIconValue } from "./page-icon-button";
 
 export function PageHeader({ pageId }: { pageId: string }) {
@@ -44,12 +45,17 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
   };
 
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- pl-16 (4rem) mirrors the block editor's fixed gutter so the title shares the body blocks' content-left (hover handles live in the gutter to its left); same fixed dimension, beyond the ramp's 2xl max
-    <div className="flex items-center gap-sm pb-sm pl-16 pr-xs">
-      <PageIconButton
-        value={{ icon: data?.icon ?? null, iconSvgNodes: data?.iconSvgNodes ?? null }}
-        onChange={saveIcon}
-      />
+    <div className="flex items-center pb-sm">
+      {/* Fixed-width rail matching the block editor's BLOCK_GUTTER: it holds the
+          page icon (right-aligned, adjacent to the title) so the title text
+          starts at the same content edge as block text, regardless of icon size
+          or density. */}
+      <div className="flex shrink-0 items-center justify-end pr-sm" style={{ width: BLOCK_GUTTER }}>
+        <PageIconButton
+          value={{ icon: data?.icon ?? null, iconSvgNodes: data?.iconSvgNodes ?? null }}
+          onChange={saveIcon}
+        />
+      </div>
       <input
         value={title.value}
         onChange={(e) => title.onChange(e.target.value)}

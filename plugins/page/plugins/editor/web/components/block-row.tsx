@@ -13,6 +13,15 @@ import { BlockActionsMenu } from "./block-actions-menu";
 
 export const INDENT = 24;
 
+/**
+ * Width (px) of the left gutter rail reserved by the block list. The hover
+ * controls (+ / drag / chevron) hang into it at -60/-40/-20 from the content
+ * edge, so it must stay wider than the leftmost button's offset. The page
+ * header reserves the same rail for its page icon so the title text and block
+ * text share one content-left edge — keep both in sync via this constant.
+ */
+export const BLOCK_GUTTER = 64;
+
 export function BlockRow({
   block,
   depth,

@@ -38,7 +38,7 @@ import {
   type SelectionControl,
 } from "../selection-control";
 import { AddBlockMenu } from "./add-block-menu";
-import { BlockRow } from "./block-row";
+import { BlockRow, BLOCK_GUTTER } from "./block-row";
 
 type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
 type DropTarget = { id: string; zone: DropZone };
@@ -597,9 +597,11 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
           }
         />
         <ContentScope>
-          {/* pl-16 leaves room for the three-button gutter cluster (chevron, drag
-              handle, and +, at -20/-40/-60 left of the content). min-h gives an
-              empty area below the content to start a marquee from. */}
+          {/* paddingLeft reserves the BLOCK_GUTTER rail the three hover controls
+              (chevron, drag handle, +) hang into at -20/-40/-60 left of the
+              content edge; block content thus aligns with the page title, which
+              reserves the same rail for its icon. min-h gives an empty area
+              below the content to start a marquee from. */}
           <div
             ref={containerRef}
             tabIndex={-1}
@@ -616,8 +618,8 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
               // selection. Focusing the container itself (selection mode) doesn't.
               if (e.target !== containerRef.current && isActive) clearSelection();
             }}
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- pl-16 (4rem) is a fixed gutter dimension reserving room for the three-button cluster at -20/-40/-60; beyond the ramp's 2xl (2rem) max, so it can't be a named step
-            className="relative min-h-40 py-sm pl-16 pr-sm outline-none"
+            style={{ paddingLeft: BLOCK_GUTTER }}
+            className="relative min-h-40 py-sm pr-sm outline-none"
           >
             {flat.map((f) => (
               <BlockRow
