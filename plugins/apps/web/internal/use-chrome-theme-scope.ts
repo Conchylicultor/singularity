@@ -2,28 +2,32 @@ import {
   CHROME_THEME_SCOPE,
   appThemeScope,
 } from "@plugins/primitives/plugins/ui-kit/web";
-import { useTabs } from "./use-tabs";
+import { useActiveApp } from "./use-active-app";
+import { useFocusedPlacement } from "./use-tabs";
 
 /**
- * The `data-theme-scope` token the chrome surfaces (app rail + tab bar) should
- * wear.
+ * The `data-theme-scope` token the cross-app chrome surfaces (app rail, tab bar,
+ * toaster) should wear.
  *
- * By default the chrome wears the global base theme ({@link CHROME_THEME_SCOPE})
- * so it stays a neutral frame. But when the focused tab is **docked**, exactly
- * one app fills the surface full-bleed and the chrome frames that single app —
- * so the rail + tab bar adopt that app's own theme (`app:<id>`), reading as one
- * continuous surface with the app rather than a separate chrome shell.
+ * When a **single app fills the surface** — the focused tab is `docked`
+ * (full-area) or `solo` (fullscreen) — the chrome adopts that app's own theme
+ * (`app:<id>`), so it reads as one continuous surface with the app rather than
+ * a separate shell. In **desktop** mode (the focused tab is `floating`, so
+ * windows of different apps share one backdrop) no single app owns the chrome,
+ * so it falls back to the neutral global theme ({@link CHROME_THEME_SCOPE}).
  *
- * In desktop (a tab is floating) or solo placement the chrome stays neutral:
- * floating windows of different apps share one backdrop, so no single app owns
- * the chrome; solo hides the chrome entirely. The focused app's
- * `ScopedAppTheme` block is always present (its tab is open), so the scope
- * switch never references a missing style block.
+ * Provider-free, so it works both inside `<TabsProvider>` (rail, tab bar) and
+ * outside it (the `Core.Root` toaster): `useActiveApp` resolves the focused
+ * app from the URL when called outside a surface — reactive across focus
+ * switches, which mirror the focused tab's route into the URL — and
+ * `useFocusedPlacement` reads the module-level focused-placement store. The
+ * focused app's `ScopedAppTheme` block is always present (its tab is open), so
+ * the scope switch never references a missing style block.
  */
 export function useChromeThemeScope(): string {
-  const { tabs, focusedTabId } = useTabs();
-  const focused = tabs.find((t) => t.tabId === focusedTabId);
-  return focused?.placement === "docked"
-    ? appThemeScope(focused.appId)
+  const activeApp = useActiveApp();
+  const placement = useFocusedPlacement();
+  return placement !== "floating" && activeApp
+    ? appThemeScope(activeApp.id)
     : CHROME_THEME_SCOPE;
 }

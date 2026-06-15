@@ -10,6 +10,7 @@ export { AppRail } from "./components/app-rail";
 export { TabSurface } from "./components/tab-surface";
 export { AppTabsBody } from "./components/apps-layout";
 export { useActiveApp, type ActiveApp } from "./internal/use-active-app";
+export { useChromeThemeScope } from "./internal/use-chrome-theme-scope";
 export { useCurrentAppId } from "./use-current-app-id";
 export { type Tab } from "./internal/tabs-store";
 export {
