@@ -6,7 +6,7 @@
 
 - Description: Generic breadcrumb with arbitrary segments, configurable separator, and trailing actions slot.
 - Cross-plugin:
-  - Imported by: `plugin-meta/plugin-view`, `primitives/filepath-breadcrumb`
+  - Imported by: `apps/pages/page-tree`, `plugin-meta/plugin-view`, `primitives/filepath-breadcrumb`
 - Web:
   - Exports: Types: `BreadcrumbProps`, `BreadcrumbSegment`; Values: `Breadcrumb`
 

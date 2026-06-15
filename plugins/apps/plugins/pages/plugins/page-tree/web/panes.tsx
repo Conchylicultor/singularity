@@ -4,6 +4,7 @@ import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { BlockEditor } from "@plugins/page/plugins/editor/web";
 import { PageHeader } from "./components/page-header";
+import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageDetail } from "./slots";
 
 // Panes are declared first so their types are known before the component
@@ -53,6 +54,7 @@ function PageDetailBody(): ReactElement {
           hugging the left. mx-auto centers it; the generous py keeps the title
           off the top chrome the way Notion's page surface does. */}
       <div className="mx-auto flex w-full max-w-3xl flex-col gap-lg px-lg py-2xl">
+        <PageBreadcrumb pageId={pageId} />
         <PageHeader pageId={pageId} />
         <BlockEditor
           pageId={pageId}
