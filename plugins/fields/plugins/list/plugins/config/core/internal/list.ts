@@ -29,7 +29,10 @@ function pickMeta(opts?: FieldMeta): FieldMeta {
 export function listField<const F extends FieldsRecord>(
   opts: FieldMeta & {
     itemFields: F;
-    default?: Array<InferFieldsObject<F>>;
+    // Seeded defaults may carry the list item's stable `id` / `rank` identity
+    // (both optional, exactly as the stored schema permits) so a code-authored
+    // default row is editable + ordered without waiting for a UI "Add".
+    default?: Array<InferFieldsObject<F> & { id?: string; rank?: string }>;
   },
 ): ListFieldDef<F> {
   const subShape: z.ZodRawShape = {};

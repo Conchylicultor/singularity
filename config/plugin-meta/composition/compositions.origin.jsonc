@@ -1,0 +1,36 @@
+// @hash 087b0fef4dc1
+{
+  "manifests": [
+    {
+      "id": "agent-manager",
+      "rank": "a0",
+      "name": "agent-manager",
+      "entryPoints": [
+        "apps.agent-manager"
+      ],
+      "selectedContributors": [
+        "tasks.attempt-view",
+        "tasks.task-list.recent",
+        "ui.theme-toggle",
+        "improve.element-picker",
+        "review",
+        "reports.crash",
+        "reports.launch-fix",
+        "screenshot.draw-on-app"
+      ]
+    },
+    {
+      "id": "agent-manager-lean",
+      "rank": "a1",
+      "name": "agent-manager-lean",
+      "entryPoints": [
+        "apps.agent-manager"
+      ],
+      "selectedContributors": [
+        "tasks.attempt-view",
+        "tasks.task-list.recent",
+        "ui.theme-toggle"
+      ]
+    }
+  ]
+}

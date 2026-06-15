@@ -9,10 +9,15 @@ import {
   type EdgeGraph,
   type InclusionPath,
 } from "@plugins/plugin-meta/plugins/closure/core";
-import { getCompositionData, type CompositionData } from "@plugins/plugin-meta/plugins/composition/core";
+import {
+  getCompositionData,
+  manifestItemToManifest,
+  type CompositionData,
+} from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { setGraph, useActiveComposition, useGraph } from "./store";
+import { useManifestItems } from "./manifests";
 
 export interface CompositionDataResult {
   graph: EdgeGraph | null;
@@ -40,12 +45,16 @@ function graphFor(data: CompositionData | undefined): EdgeGraph | null {
  * Fetch the closure data and rehydrate it. The serialized graph is deserialized
  * exactly once per response (module-cached, see {@link graphFor}) and published into
  * the active-composition store so the membership recompute can read it. Manifests
- * pass through verbatim. Safe to call from many components — `useEndpoint` (TanStack
- * Query) dedupes the network request and the deserialize is shared.
+ * are sourced from the `compositions` config_v2 config (not the endpoint) and
+ * mapped to the engine's `CompositionManifest[]` (dropping `id` / `rank`). Safe to
+ * call from many components — `useEndpoint` (TanStack Query) dedupes the network
+ * request and the deserialize is shared.
  */
 export function useCompositionData(): CompositionDataResult {
   const { data, isLoading } = useEndpoint(getCompositionData, {});
   const graph = graphFor(data);
+  const items = useManifestItems();
+  const manifests = useMemo(() => items.map(manifestItemToManifest), [items]);
 
   // Publish the deserialized graph into the store so the band / detail sections
   // resolve membership against it. `graph` is module-cache-stable per response, so
@@ -56,7 +65,7 @@ export function useCompositionData(): CompositionDataResult {
 
   return {
     graph,
-    manifests: data?.manifests ?? [],
+    manifests,
     allIds: data?.allIds ?? [],
     isLoading,
   };

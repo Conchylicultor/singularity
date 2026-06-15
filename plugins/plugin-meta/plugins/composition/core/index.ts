@@ -1,5 +1,5 @@
-export { compositionCollectedDir } from "./collected-dir";
-export { isCompositionManifest } from "./is-composition";
-export { loadCompositions } from "./load-compositions";
+export { compositionsConfig } from "./config";
+export { manifestItemToManifest } from "./manifest-map";
+export type { CompositionManifestItem } from "./manifest-map";
 export { getCompositionData, compositionDataSchema } from "./endpoints";
 export type { CompositionData } from "./endpoints";

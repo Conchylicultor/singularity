@@ -15,6 +15,9 @@ import type { JsonValue } from "../../core";
 
 const HASH_RE = /^\/\/ @hash ([a-f0-9]+)\n/;
 
+// This is the full read/write proxy used by the running server. Build-time
+// checks that need a read-only variant without a server runtime define their
+// own fs-backed proxy inline — core can't host fs code (it is browser-bundled).
 export function jsoncConfigProxy(filePath: string): ConfigProxy {
   return {
     read() {

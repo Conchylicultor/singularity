@@ -2,7 +2,6 @@ import { z } from "zod";
 import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import type {
-  CompositionManifest,
   Edge,
   SerializedEdgeGraph,
 } from "@plugins/plugin-meta/plugins/closure/core";
@@ -28,30 +27,23 @@ const serializedEdgeGraphSchema: z.ZodType<SerializedEdgeGraph> = z.object({
   edges: z.array(edgeSchema),
 });
 
-const manifestSchema: z.ZodType<CompositionManifest> = z.object({
-  name: z.string(),
-  entryPoints: idList,
-  selectedContributors: idList,
-});
-
 export interface CompositionData {
   graph: SerializedEdgeGraph;
-  manifests: CompositionManifest[];
   allIds: PluginId[];
 }
 
 export const compositionDataSchema: z.ZodType<CompositionData> = z.object({
   graph: serializedEdgeGraphSchema,
-  manifests: z.array(manifestSchema),
   allIds: idList,
 });
 
 /**
- * Ships everything Studio needs to run the closure engine client-side: the
- * classified {@link SerializedEdgeGraph}, every declared {@link CompositionManifest},
- * and the full set of plugin ids. The graph is built + classified once per server
- * process (it is an expensive tree build), so this is a read-only introspection
- * endpoint, not a live resource.
+ * Ships the code-derived structure Studio needs to run the closure engine
+ * client-side: the classified {@link SerializedEdgeGraph} and the full set of
+ * plugin ids. The graph is built + classified once per server process (it is an
+ * expensive tree build), so this is a read-only introspection endpoint, not a
+ * live resource. Composition **manifests** are user data and live in the
+ * `compositions` config_v2 config — read client-side, not on this endpoint.
  */
 export const getCompositionData = defineEndpoint({
   route: "GET /api/composition/data",

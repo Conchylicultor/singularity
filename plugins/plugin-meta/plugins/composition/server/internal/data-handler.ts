@@ -1,6 +1,6 @@
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { classifyEdges, serializeEdgeGraph } from "@plugins/plugin-meta/plugins/closure/core";
-import { getCompositionData, loadCompositions } from "@plugins/plugin-meta/plugins/composition/core";
+import { getCompositionData } from "@plugins/plugin-meta/plugins/composition/core";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import type { SerializedEdgeGraph } from "@plugins/plugin-meta/plugins/closure/core";
@@ -23,7 +23,10 @@ async function getGraph(): Promise<{ graph: SerializedEdgeGraph; allIds: PluginI
   return cached;
 }
 
+// Manifests are no longer served here — they are user data stored in the
+// `compositions` config_v2 config and read client-side. This endpoint returns
+// only the code-derived graph structure.
 export const handleCompositionData = implement(getCompositionData, async () => {
-  const [{ graph, allIds }, manifests] = await Promise.all([getGraph(), loadCompositions()]);
-  return { graph, manifests, allIds };
+  const { graph, allIds } = await getGraph();
+  return { graph, allIds };
 });

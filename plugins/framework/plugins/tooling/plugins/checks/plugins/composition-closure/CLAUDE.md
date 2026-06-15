@@ -1,7 +1,11 @@
 # composition-closure
 
 Validity gate for every declared composition (`./singularity check
-composition-closure`). Loads all manifests via `loadCompositions()`, builds the
+composition-closure`). Reads the committed git-layer `compositions` config_v2
+manifests straight off disk (`readTypedConfig(compositionsConfig,
+fileConfigProxy(config/plugin-meta/composition/compositions.origin.jsonc),
+fileConfigProxy(…/compositions.jsonc))` — no server runtime, falls back to the
+seeded defaults on a fresh checkout), builds the
 plugin tree + edge graph once, and for each composition enforces: unique `name`,
 non-empty entry points, every entry/contributor id resolves to a real plugin, no
 redundant selections (already locked by the entries' hard closure), and every

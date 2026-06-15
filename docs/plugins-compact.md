@@ -110,7 +110,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`slow-ops`** [1 sub-plugin] — Records slow client operations (page load, element appearance) into the durable slow-op store via the slow-ops client endpoint. Durable slow-op store: deduped per-operation aggregates with caller attribution, plus the slow-op report kind. Subscribes to runtime-profiler slow spans and client signals; files one rollup task.
     - **`worktree-cleanup`** — Audit and remove stale git worktrees and their Postgres DB forks. Audit and remove stale git worktrees and their Postgres DB forks.
 
-- **`fields`** [45 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** [47 sub-plugins] — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
   - Plugins:
@@ -178,7 +178,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
     - **`closure`**
-    - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Serves the classified edge graph + declared composition manifests for the Studio closure visualization.
+    - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
     - **`facets`** [40 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.

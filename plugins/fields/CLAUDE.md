@@ -45,10 +45,10 @@ capability. Leaf plugins under `plugins/` register one type each.
 
 - Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
 - Web:
-  - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.tags`, `fields.text`
+  - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`
   - Exports: Values: `Fields`
 - Cross-plugin:
-  - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/tags`, `fields/text`
+  - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`
 - Core:
   - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
 - Sub-plugins:
@@ -68,6 +68,7 @@ capability. Leaf plugins under `plugins/` register one type each.
   - **`object`** [1 sub-plugin] — Object field type: identity only. The config-render capability and the objectField factory live in the plugins/config sub-plugin.
   - **`reorder-tree`** [1 sub-plugin] — Reorder-tree field type: identity only. The config-render capability and the reorderTreeField factory live in the plugins/config sub-plugin.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
+  - **`string-list`** [1 sub-plugin] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
   - **`tags`** [1 sub-plugin] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
   - **`text`** [3 sub-plugins] — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
 
