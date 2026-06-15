@@ -16,7 +16,7 @@ Sub-plugins:
 - Sub-plugins:
   - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
   - **`closure`**
-  - **`composition`**
+  - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Serves the classified edge graph + declared composition manifests for the Studio closure visualization.
   - **`facets`** — Facet-based plugin metadata extraction and docgen pipeline
   - **`parse-utils`**
   - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.

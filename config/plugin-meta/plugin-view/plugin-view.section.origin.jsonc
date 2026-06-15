@@ -1,4 +1,4 @@
-// @hash a36b006e44f1
+// @hash da3a962a14d5
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
@@ -15,6 +15,7 @@
     "plugin-meta.facets.slots.render-detail:slots",
     "plugin-meta.facets.routes.render-detail:routes",
     "plugin-meta.facets.registrations.render-detail:registrations",
+    "plugin-meta.plugin-view.inclusion:inclusion",
     "plugin-meta.plugin-view.sub-plugins:sub-plugins",
     "plugin-meta.plugin-view.runtimes:runtimes",
     "plugin-meta.plugin-view.file-tree:file-tree",

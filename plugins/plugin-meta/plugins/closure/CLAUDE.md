@@ -124,7 +124,7 @@ empty. Run with
 
 - Core:
   - Uses: `framework/plugin-id.asPluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginTree`
-  - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`; Values: `classifyEdges`, `explainInclusion`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`
+  - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `explainInclusion`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`, `serializeEdgeGraph`
 - Cross-plugin:
   - Imported by: `plugin-meta/composition`
 

@@ -1,10 +1,11 @@
-// @hash 2a0e5d1247dc
+// @hash efd26eea2d0a
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
     "apps.studio.contributions:contributions",
+    "apps.studio.compositions:compositions",
     "apps.studio.explorer:explorer"
   ]
 }

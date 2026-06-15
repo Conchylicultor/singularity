@@ -1,0 +1,219 @@
+import { useSyncExternalStore } from "react";
+import {
+  resolveComposition,
+  type CompositionManifest,
+  type EdgeGraph,
+  type MembershipState,
+} from "@plugins/plugin-meta/plugins/closure/core";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+
+/**
+ * Per-plugin diff state between two resolved bundles (A = active, B = compareWith):
+ * in both bundles, only A, only B, or in neither. Drives the membership band's
+ * compare color mode and the pane's feature-delta list.
+ */
+export type DiffState = "only-a" | "only-b" | "both" | "neither";
+
+/**
+ * The active-composition store: the working DRAFT manifest the UI is currently
+ * visualizing plus, derived from it + the latest deserialized graph, a membership
+ * map computed ONCE per (active, graph) change.
+ *
+ * This is a **genuinely page-global signal** — there is one composition the user is
+ * inspecting, shared across every Studio surface (the explorer tree-row bands and
+ * the plugin-detail sections live in different panes of the same app). Like the
+ * pane route store, the value lives in a single module-level instance whose state
+ * is held in closure variables and read back through instance methods (NOT a
+ * module-level `let` read directly by the `useSyncExternalStore` snapshot), so the
+ * `scoped-store/no-module-mutable-store` shape does not apply.
+ *
+ * The graph is supplied by `useCompositionData()` (which deserializes it once); the
+ * membership recompute keys on both the active manifest reference and the graph
+ * reference, so swapping either re-resolves exactly once.
+ */
+function createCompositionStore() {
+  let activeManifest: CompositionManifest | null = null;
+  let compareManifest: CompositionManifest | null = null;
+  let graph: EdgeGraph | null = null;
+
+  // Cached derived membership + the (active, graph) refs it was computed for.
+  let membershipCache: Map<PluginId, MembershipState> | null = null;
+  let membershipForActive: CompositionManifest | null = null;
+  let membershipForGraph: EdgeGraph | null = null;
+
+  // Cached derived diff map + the (active, compareWith, graph) refs it was computed for.
+  let diffCache: Map<PluginId, DiffState> | null = null;
+  let diffForActive: CompositionManifest | null = null;
+  let diffForCompare: CompositionManifest | null = null;
+  let diffForGraph: EdgeGraph | null = null;
+
+  const listeners = new Set<() => void>();
+  const emit = (): void => {
+    for (const l of listeners) l();
+  };
+
+  return {
+    subscribe(listener: () => void): () => void {
+      listeners.add(listener);
+      return () => listeners.delete(listener);
+    },
+    getActive(): CompositionManifest | null {
+      return activeManifest;
+    },
+    getCompare(): CompositionManifest | null {
+      return compareManifest;
+    },
+    getIsCompareMode(): boolean {
+      return activeManifest !== null && compareManifest !== null;
+    },
+    getGraph(): EdgeGraph | null {
+      return graph;
+    },
+    /** Recompute (and cache) membership when the active manifest or graph changed. */
+    getMembership(): Map<PluginId, MembershipState> | null {
+      if (!activeManifest || !graph) {
+        membershipCache = null;
+        membershipForActive = null;
+        membershipForGraph = null;
+        return null;
+      }
+      if (
+        membershipCache &&
+        membershipForActive === activeManifest &&
+        membershipForGraph === graph
+      ) {
+        return membershipCache;
+      }
+      membershipCache = resolveComposition(graph, activeManifest).membership;
+      membershipForActive = activeManifest;
+      membershipForGraph = graph;
+      return membershipCache;
+    },
+    /** Recompute (and cache) the per-plugin A↔B diff map when active, compareWith,
+     *  or the graph changed. `null` unless BOTH manifests are set (compare mode). */
+    getDiffMap(): Map<PluginId, DiffState> | null {
+      if (!activeManifest || !compareManifest || !graph) {
+        diffCache = null;
+        diffForActive = null;
+        diffForCompare = null;
+        diffForGraph = null;
+        return null;
+      }
+      if (
+        diffCache &&
+        diffForActive === activeManifest &&
+        diffForCompare === compareManifest &&
+        diffForGraph === graph
+      ) {
+        return diffCache;
+      }
+      const bundleA = resolveComposition(graph, activeManifest).bundle;
+      const bundleB = resolveComposition(graph, compareManifest).bundle;
+      const map = new Map<PluginId, DiffState>();
+      // Every node defaults to "neither"; mark bundle members from each side.
+      for (const id of graph.hardForward.keys()) map.set(id, "neither");
+      for (const id of bundleA) {
+        map.set(id, bundleB.has(id) ? "both" : "only-a");
+      }
+      for (const id of bundleB) {
+        if (!bundleA.has(id)) map.set(id, "only-b");
+      }
+      diffCache = map;
+      diffForActive = activeManifest;
+      diffForCompare = compareManifest;
+      diffForGraph = graph;
+      return diffCache;
+    },
+    setGraph(next: EdgeGraph): void {
+      if (graph === next) return;
+      graph = next;
+      emit();
+    },
+    setActive(manifest: CompositionManifest | null): void {
+      activeManifest = manifest;
+      emit();
+    },
+    setCompare(manifest: CompositionManifest | null): void {
+      compareManifest = manifest;
+      emit();
+    },
+  };
+}
+
+const store = createCompositionStore();
+
+/** Populated by `useCompositionData()` with the once-deserialized graph. */
+export function setGraph(next: EdgeGraph): void {
+  store.setGraph(next);
+}
+
+export function getGraph(): EdgeGraph | null {
+  return store.getGraph();
+}
+
+export function getActiveComposition(): CompositionManifest | null {
+  return store.getActive();
+}
+
+export function getActiveMembership(): Map<PluginId, MembershipState> | null {
+  return store.getMembership();
+}
+
+export function setActiveComposition(manifest: CompositionManifest | null): void {
+  store.setActive(manifest);
+}
+
+/** Set (or clear) the composition to compare the active one against. Setting both
+ *  active and compareWith enters compare mode (`useIsCompareMode()` → true). */
+export function setCompareComposition(manifest: CompositionManifest | null): void {
+  store.setCompare(manifest);
+}
+
+/** Pin a single plugin as the composition root — visualize the closure from here.
+ *  Sets an ad-hoc draft with `id` as the sole entry and no selected contributors. */
+export function pinAsRoot(id: PluginId): void {
+  store.setActive({ name: "(pinned)", entryPoints: [id], selectedContributors: [] });
+}
+
+export function clearActive(): void {
+  store.setActive(null);
+  store.setCompare(null);
+}
+
+/** Patch the active draft (e.g. toggle a selectedContributor). No-op if no active
+ *  composition. Replaces the manifest reference so membership re-resolves once. */
+export function updateActiveDraft(patch: Partial<CompositionManifest>): void {
+  const active = store.getActive();
+  if (!active) return;
+  store.setActive({ ...active, ...patch });
+}
+
+// ── React hooks ───────────────────────────────────────────────────────────
+
+export function useActiveComposition(): CompositionManifest | null {
+  return useSyncExternalStore(store.subscribe, store.getActive, store.getActive);
+}
+
+export function useActiveMembership(): Map<PluginId, MembershipState> | null {
+  return useSyncExternalStore(store.subscribe, store.getMembership, store.getMembership);
+}
+
+export function useGraph(): EdgeGraph | null {
+  return useSyncExternalStore(store.subscribe, store.getGraph, store.getGraph);
+}
+
+export function useCompareComposition(): CompositionManifest | null {
+  return useSyncExternalStore(store.subscribe, store.getCompare, store.getCompare);
+}
+
+export function useIsCompareMode(): boolean {
+  return useSyncExternalStore(
+    store.subscribe,
+    store.getIsCompareMode,
+    store.getIsCompareMode,
+  );
+}
+
+export function useDiffMap(): Map<PluginId, DiffState> | null {
+  return useSyncExternalStore(store.subscribe, store.getDiffMap, store.getDiffMap);
+}

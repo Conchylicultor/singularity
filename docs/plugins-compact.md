@@ -38,6 +38,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`story`** [11 sub-plugins] — Story Builder — author a page as a block tree and render it through pluggable lenses.
     - **`studio`** — Plugin inspection and visualization; home for the plugin graph and contribution tables.
       - Plugins:
+        - **`compositions`** — Compositions pane: list named compositions and live-edit the working draft (contributor + entry-point selection) that drives the Explorer closure tint.
         - **`contributions`** — Central view of all plugin contributions aggregated by type.
           - Plugins:
             - **`tables`** — Per-table detail pane (with an extensible section slot) opened from the Contributions Tables tab.
@@ -53,6 +54,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
             - **`collapsed`** — Collapsed badge in the explorer plugin tree row.
             - **`expand-collapse`** — Expand/collapse all descendants button in the explorer plugin tree row.
             - **`load-bearing`** — Load-bearing badge in the explorer plugin tree row.
+            - **`membership`** — Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
         - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.
     - **`surface`** — Per-tab surface: renders every open tab at once positioned by its own placement (docked / floating / solo). Owns the multi-placement body, floating window chrome, geometry store, and the 3-way placement control + Esc-to-exit-solo.
     - **`workflows`** [4 sub-plugins] — Workflows app.
@@ -169,12 +171,12 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`barrel-import`** — Bun runtime stubs for importing web/server barrels outside the browser (docgen, introspection).
     - **`closure`**
-    - **`composition`**
+    - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Serves the classified edge graph + declared composition manifests for the Studio closure visualization.
     - **`facets`** [40 sub-plugins] — Facet-based plugin metadata extraction and docgen pipeline
     - **`parse-utils`**
     - **`plugin-health`** — Displays health review status and staleness in the plugin detail pane. Per-plugin health review tracking.
     - **`plugin-tree`**
-    - **`plugin-view`** [4 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
+    - **`plugin-view`** [5 sub-plugins] — Reusable detail pane for inspecting a single plugin. Defines PluginView.Section slot for extensible sections. Serves the plugin tree data for the plugin-view pane.
 
 - **`primitives`** — Umbrella for cross-cutting client-side primitives used by feature plugins: pane router, tree, live state, networking, editable fields, syntax highlighting, launch buttons.
   - Plugins:

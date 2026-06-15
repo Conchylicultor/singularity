@@ -10,6 +10,7 @@ future home of the plugin marketplace.
 
 - Description: Plugin inspection and visualization; home for the plugin graph and contribution tables.
 - Sub-plugins:
+  - **`compositions`** — Compositions pane: list named compositions and live-edit the working draft (contributor + entry-point selection) that drives the Explorer closure tint.
   - **`contributions`** — Central view of all plugin contributions aggregated by type.
   - **`explorer`** — Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
   - **`shell`** — App shell for Studio. Registers the /studio app entry and defines Studio.Sidebar/Toolbar slots.

@@ -1,0 +1,126 @@
+import { useMemo } from "react";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Text } from "@plugins/primitives/plugins/text/web";
+import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import type { DiffState } from "@plugins/plugin-meta/plugins/composition/web";
+import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
+import { DIFF_LEGEND } from "@plugins/apps/plugins/studio/plugins/explorer/plugins/membership/web";
+
+/**
+ * Feature-level delta between bundle A (active) and bundle B (compareWith): the
+ * symmetric difference, grouped into "only in A" and "only in B". Reads the same
+ * store-derived diff map the Explorer band tints by, so the list and the tree
+ * never disagree. Counts surface the magnitude of the difference.
+ */
+export function DiffDelta({
+  diff,
+  nameA,
+  nameB,
+}: {
+  diff: Map<PluginId, DiffState>;
+  nameA: string;
+  nameB: string;
+}) {
+  const { onlyA, onlyB } = useMemo(() => {
+    const a: PluginId[] = [];
+    const b: PluginId[] = [];
+    for (const [id, state] of diff) {
+      if (state === "only-a") a.push(id);
+      else if (state === "only-b") b.push(id);
+    }
+    a.sort();
+    b.sort();
+    return { onlyA: a, onlyB: b };
+  }, [diff]);
+
+  return (
+    <Stack gap="md">
+      <DiffLegend />
+      <DeltaGroup
+        label={`Only in A · ${nameA}`}
+        ids={onlyA}
+        tint={DIFF_LEGEND.find((l) => l.state === "only-a")?.tint ?? null}
+      />
+      <DeltaGroup
+        label={`Only in B · ${nameB}`}
+        ids={onlyB}
+        tint={DIFF_LEGEND.find((l) => l.state === "only-b")?.tint ?? null}
+      />
+    </Stack>
+  );
+}
+
+function DiffLegend() {
+  return (
+    <Stack gap="2xs">
+      <SectionLabel>Legend</SectionLabel>
+      <div className="flex flex-wrap gap-sm">
+        {DIFF_LEGEND.map(({ state, label, tint }) => (
+          <span key={state} className="flex items-center gap-xs">
+            <span
+              aria-hidden
+              className={cn(
+                "inline-block size-3 rounded-sm border border-border",
+                tint,
+              )}
+            />
+            <Text variant="caption" tone="muted">
+              {label}
+            </Text>
+          </span>
+        ))}
+      </div>
+    </Stack>
+  );
+}
+
+function shortName(id: PluginId): string {
+  const s = String(id);
+  const dot = s.lastIndexOf(".");
+  return dot === -1 ? s : s.slice(dot + 1);
+}
+
+function DeltaGroup({
+  label,
+  ids,
+  tint,
+}: {
+  label: string;
+  ids: PluginId[];
+  tint: string | null;
+}) {
+  return (
+    <Stack gap="sm">
+      <div className="flex items-center justify-between gap-sm">
+        <SectionLabel>{label}</SectionLabel>
+        <Badge size="sm" variant="muted">
+          {ids.length}
+        </Badge>
+      </div>
+      {ids.length === 0 ? (
+        <Text variant="caption" tone="muted">
+          No plugins unique to this side.
+        </Text>
+      ) : (
+        <div className="flex flex-wrap gap-xs">
+          {ids.map((id) => (
+            <span
+              key={id}
+              title={String(id)}
+              className={cn(
+                "max-w-full truncate rounded-sm border border-border px-xs py-2xs font-mono",
+                tint,
+              )}
+            >
+              <Text variant="caption" tone="default" as="span">
+                {shortName(id)}
+              </Text>
+            </span>
+          ))}
+        </div>
+      )}
+    </Stack>
+  );
+}

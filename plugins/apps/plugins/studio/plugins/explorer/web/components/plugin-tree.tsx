@@ -171,7 +171,7 @@ function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
           }
         }}
         className={cn(
-          "group/row flex h-7 w-full cursor-pointer select-none items-center gap-xs pr-sm text-left transition-colors",
+          "group/row relative flex h-7 w-full cursor-pointer select-none items-center gap-xs pr-sm text-left transition-colors",
           isSelected
             ? "bg-accent"
             : "hover:bg-accent/40 focus-visible:bg-accent/40",

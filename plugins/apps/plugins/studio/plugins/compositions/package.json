@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-studio-compositions",
+  "description": "Compositions pane: list named compositions and live-edit the working draft (contributor + entry-point selection) that drives the Explorer closure tint.",
+  "private": true,
+  "version": "0.0.1"
+}

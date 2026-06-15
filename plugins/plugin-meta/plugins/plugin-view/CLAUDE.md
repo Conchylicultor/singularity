@@ -19,8 +19,8 @@ sibling plugins (e.g. publish's tree component).
   - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/section-label.SectionLabel`, `primitives/spacing.Stack`, `primitives/text.Text`
   - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
 - Cross-plugin:
-  - Slot contributors: `file-tree`, `plugin-health`, `render-detail`, `runtimes`, `source-path`, `sub-plugins`
-  - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
+  - Slot contributors: `file-tree`, `inclusion`, `plugin-health`, `render-detail`, `runtimes`, `source-path`, `sub-plugins`
+  - Imported by: `active-data/plugin-link`, `apps/studio/contributions`, `apps/studio/explorer`, `plugin-meta/facets/commands/render-detail`, `plugin-meta/facets/contributions/render-detail`, `plugin-meta/facets/cross-refs/render-detail`, `plugin-meta/facets/db-schema/render-detail`, `plugin-meta/facets/exports/render-detail`, `plugin-meta/facets/registrations/render-detail`, `plugin-meta/facets/resources/render-detail`, `plugin-meta/facets/routes/render-detail`, `plugin-meta/facets/slots/render-detail`, `plugin-meta/facets/structure/render-contributions`, `plugin-meta/facets/structure/render-detail`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view/file-tree`, `plugin-meta/plugin-view/inclusion`, `plugin-meta/plugin-view/runtimes`, `plugin-meta/plugin-view/source-path`, `plugin-meta/plugin-view/sub-plugins`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
   - Routes: `GET /api/plugin-view/tree`
@@ -29,6 +29,7 @@ sibling plugins (e.g. publish's tree component).
   - Exports: Types: `PluginNode`, `PluginTreePayload`; Values: `getPluginTree`
 - Sub-plugins:
   - **`file-tree`** — File tree explorer for the plugin's own files in the plugin detail pane.
+  - **`inclusion`** — Composition-membership section in the plugin detail pane: state badge, why-included edge path, select/prune impact, and a pin-as-root affordance.
   - **`runtimes`** — Displays runtime pills (web/server/central) in the plugin detail pane.
   - **`source-path`** — Displays the plugin's source path in the plugin detail pane.
   - **`sub-plugins`** — Lists direct child plugins with load-bearing indicators in the plugin detail pane.

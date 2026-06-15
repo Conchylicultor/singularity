@@ -412,6 +412,10 @@
       "name": "@singularity/plugin-apps-studio",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/studio/plugins/compositions": {
+      "name": "@singularity/plugin-apps-studio-compositions",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/studio/plugins/contributions": {
       "name": "@singularity/plugin-apps-studio-contributions",
       "version": "0.0.1",
@@ -458,6 +462,10 @@
     },
     "plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing": {
       "name": "@singularity/plugin-apps-studio-explorer-load-bearing",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/studio/plugins/explorer/plugins/membership": {
+      "name": "@singularity/plugin-apps-studio-explorer-membership",
       "version": "0.0.1",
     },
     "plugins/apps/plugins/studio/plugins/shell": {
@@ -1881,6 +1889,10 @@
       "name": "@singularity/plugin-plugin-meta-plugin-view-file-tree",
       "version": "0.0.1",
     },
+    "plugins/plugin-meta/plugins/plugin-view/plugins/inclusion": {
+      "name": "@singularity/plugin-plugin-meta-plugin-view-inclusion",
+      "version": "0.0.1",
+    },
     "plugins/plugin-meta/plugins/plugin-view/plugins/runtimes": {
       "name": "@singularity/plugin-plugin-meta-plugin-view-runtimes",
       "version": "0.0.1",
@@ -3293,6 +3305,8 @@
 
     "@singularity/plugin-apps-studio": ["@singularity/plugin-apps-studio@workspace:plugins/apps/plugins/studio"],
 
+    "@singularity/plugin-apps-studio-compositions": ["@singularity/plugin-apps-studio-compositions@workspace:plugins/apps/plugins/studio/plugins/compositions"],
+
     "@singularity/plugin-apps-studio-contributions": ["@singularity/plugin-apps-studio-contributions@workspace:plugins/apps/plugins/studio/plugins/contributions"],
 
     "@singularity/plugin-apps-studio-contributions-tables": ["@singularity/plugin-apps-studio-contributions-tables@workspace:plugins/apps/plugins/studio/plugins/contributions/plugins/tables"],
@@ -3316,6 +3330,8 @@
     "@singularity/plugin-apps-studio-explorer-expand-collapse": ["@singularity/plugin-apps-studio-explorer-expand-collapse@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/expand-collapse"],
 
     "@singularity/plugin-apps-studio-explorer-load-bearing": ["@singularity/plugin-apps-studio-explorer-load-bearing@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/load-bearing"],
+
+    "@singularity/plugin-apps-studio-explorer-membership": ["@singularity/plugin-apps-studio-explorer-membership@workspace:plugins/apps/plugins/studio/plugins/explorer/plugins/membership"],
 
     "@singularity/plugin-apps-studio-shell": ["@singularity/plugin-apps-studio-shell@workspace:plugins/apps/plugins/studio/plugins/shell"],
 
@@ -3996,6 +4012,8 @@
     "@singularity/plugin-plugin-meta-plugin-view": ["@singularity/plugin-plugin-meta-plugin-view@workspace:plugins/plugin-meta/plugins/plugin-view"],
 
     "@singularity/plugin-plugin-meta-plugin-view-file-tree": ["@singularity/plugin-plugin-meta-plugin-view-file-tree@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/file-tree"],
+
+    "@singularity/plugin-plugin-meta-plugin-view-inclusion": ["@singularity/plugin-plugin-meta-plugin-view-inclusion@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/inclusion"],
 
     "@singularity/plugin-plugin-meta-plugin-view-runtimes": ["@singularity/plugin-plugin-meta-plugin-view-runtimes@workspace:plugins/plugin-meta/plugins/plugin-view/plugins/runtimes"],
 

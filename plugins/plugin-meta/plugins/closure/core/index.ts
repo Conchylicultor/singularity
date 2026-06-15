@@ -2,6 +2,8 @@ export { classifyEdges } from "./classify-edges";
 export { resolveComposition, hardClosure } from "./resolve-composition";
 export { explainInclusion } from "./explain";
 export { impactOfPruning, impactOfSelecting } from "./impact";
+export { serializeEdgeGraph, deserializeEdgeGraph } from "./serialize";
+export type { SerializedEdgeGraph } from "./serialize";
 export type {
   EdgeKind,
   Edge,
