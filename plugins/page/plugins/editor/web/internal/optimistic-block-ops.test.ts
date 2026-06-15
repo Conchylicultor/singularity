@@ -100,10 +100,10 @@ describe("applyOverlayOp", () => {
     const newNode = created[0]!;
     expect(newNode.rank).toBeInstanceOf(Rank);
     expect(newNode.createdAt).toBeInstanceOf(Date);
-    // Origin text truncated; new node carries the trailing text.
+    // Origin text truncated; new node carries the trailing text (runs model).
     const aNode = out.find((b) => b.id === "A")!;
-    expect((aNode.data as { text: string }).text).toBe("hello");
-    expect((newNode.data as { text: string }).text).toBe("world");
+    expect((aNode.data as { text: unknown }).text).toEqual([{ text: "hello" }]);
+    expect((newNode.data as { text: unknown }).text).toEqual([{ text: "world" }]);
   });
 
   test("preserves timestamps from the matching prev row by id", () => {

@@ -15,7 +15,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import { useSelectionControl } from "../selection-control";
-import { serializeBlockText } from "../internal/block-text-extensions";
+import { serializeBlockRuns } from "../internal/block-text-extensions";
 import { readCaretContext, type CaretContext } from "../internal/caret-geometry";
 import { toNodes } from "../internal/optimistic-block-ops";
 import {
@@ -72,21 +72,21 @@ export function KeyboardPlugin({
           return true;
         case "split": {
           event.preventDefault();
-          // Serialize the live text so the reducer splits the authoritative
-          // (possibly not-yet-autosaved) string.
-          const text = serializeBlockText(lexicalEditor);
+          // Serialize the live runs so the reducer splits the authoritative
+          // (possibly not-yet-autosaved) content.
+          const runs = serializeBlockRuns(lexicalEditor);
           api.split(intent.position, {
             asChild: intent.asChild,
             childType: intent.childType,
             siblingType: intent.siblingType,
-            text,
+            runs,
           });
           return true;
         }
         case "merge": {
           event.preventDefault();
-          const text = serializeBlockText(lexicalEditor);
-          api.merge({ text });
+          const runs = serializeBlockRuns(lexicalEditor);
+          api.merge({ runs });
           return true;
         }
         case "outdent":

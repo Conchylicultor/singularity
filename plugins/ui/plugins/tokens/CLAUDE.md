@@ -17,6 +17,7 @@
   - **`font-family`** — Font-family token group (sans/serif/mono families, letter-spacing) with switchable presets.
     - Plugins:
       - **`google-fonts`** — Loads Google Fonts dynamically for font-family presets referencing custom web fonts.
+  - **`rich-text-palette`** — Rich-text color palette token group: the closed --rt-color-<token> vars backing inline text color in the page block editor.
   - **`shadow`** — Shadow token group with switchable presets.
   - **`shape`** — Shape token group (border-radius) with switchable presets.
   - **`sidebar-palette`** — Sidebar palette token group with switchable presets.

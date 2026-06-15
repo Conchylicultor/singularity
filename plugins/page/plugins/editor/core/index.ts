@@ -33,8 +33,23 @@ export type {
   PasteBlocksBody,
 } from "./endpoints";
 
-export { BlockOpSchema, applyBlockOp, childrenOf, textOf } from "./block-ops";
+export { BlockOpSchema, applyBlockOp, childrenOf, textOf, runsOfNode, withRuns } from "./block-ops";
 export type { BlockOp, BlockNode } from "./block-ops";
+
+export {
+  MARK_ORDER,
+  COLOR_TOKENS,
+  sortMarks,
+  runsOf,
+  plainOf,
+  runsLength,
+  splitRuns,
+  mergeRuns,
+  coalesce,
+  TextRunSchema,
+  RichTextSchema,
+} from "./rich-text";
+export type { Mark, ColorToken, TextRun, RichText } from "./rich-text";
 
 export { SerializedBlockSchema } from "./serialized-block";
 export type { SerializedBlock } from "./serialized-block";

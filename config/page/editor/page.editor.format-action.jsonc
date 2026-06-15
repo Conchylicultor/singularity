@@ -1,0 +1,15 @@
+// @hash 5ea53219996b
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "page.formatting.bold:bold",
+    "page.formatting.italic:italic",
+    "page.formatting.underline:underline",
+    "page.formatting.strikethrough:strikethrough",
+    "page.formatting.code:code",
+    "page.formatting.link:link",
+    "page.formatting.color:color"
+  ]
+}

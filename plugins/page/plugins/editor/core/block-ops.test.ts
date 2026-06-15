@@ -16,10 +16,12 @@ import { PAGE_BLOCK_TYPE } from "./schemas";
 import {
   applyBlockOp,
   childrenOf,
+  runsOfNode,
   textOf,
   type BlockNode,
   type BlockOp,
 } from "./block-ops";
+import type { RichText } from "./rich-text";
 
 // ---------------------------------------------------------------------------
 // Test factory + invariant helpers
@@ -306,6 +308,53 @@ describe("merge", () => {
     const blocks = [mk("ONLY", null, a, { text: "x" })];
     const out = run(blocks, { kind: "merge", blockId: "ONLY" });
     expect(out).toEqual(blocks);
+  });
+});
+
+// ---------------------------------------------------------------------------
+// rich-text runs round-trip through split / merge
+// ---------------------------------------------------------------------------
+
+describe("rich-text runs", () => {
+  test("split preserves marks/color on both sides, dividing the straddling run", () => {
+    const runs: RichText = [
+      { text: "foo", marks: ["bold"] },
+      { text: "barbaz", color: "red" },
+    ];
+    const blocks: BlockNode[] = [
+      { id: "A", pageId: "page-1", parentId: null, type: "text", data: { text: runs }, rank: a, expanded: false },
+    ];
+    const out = run(blocks, { kind: "split", blockId: "A", position: 5, newId: "NEW" });
+    // "foo"(bold) + "ba"(red) | "rbaz"(red)
+    expect(runsOfNode(out.find((b) => b.id === "A")!)).toEqual([
+      { text: "foo", marks: ["bold"] },
+      { text: "ba", color: "red" },
+    ]);
+    expect(runsOfNode(out.find((b) => b.id === "NEW")!)).toEqual([
+      { text: "rbaz", color: "red" },
+    ]);
+  });
+
+  test("op.runs authoritative payload overrides stored data", () => {
+    const blocks = [mk("A", null, a, { text: "stale" })];
+    const liveRuns: RichText = [{ text: "live", marks: ["italic"] }];
+    const out = run(blocks, { kind: "split", blockId: "A", position: 2, newId: "NEW", runs: liveRuns });
+    expect(runsOfNode(out.find((b) => b.id === "A")!)).toEqual([{ text: "li", marks: ["italic"] }]);
+    expect(runsOfNode(out.find((b) => b.id === "NEW")!)).toEqual([{ text: "ve", marks: ["italic"] }]);
+  });
+
+  test("merge concatenates runs and coalesces the seam", () => {
+    const prevRuns: RichText = [{ text: "foo", marks: ["bold"] }];
+    const curRuns: RichText = [{ text: "bar", marks: ["bold"] }];
+    const r1 = a;
+    const r2 = after(r1);
+    const blocks: BlockNode[] = [
+      { id: "PREV", pageId: "page-1", parentId: null, type: "text", data: { text: prevRuns }, rank: r1, expanded: false },
+      { id: "CUR", pageId: "page-1", parentId: null, type: "text", data: { text: curRuns }, rank: r2, expanded: false },
+    ];
+    const out = run(blocks, { kind: "merge", blockId: "CUR" });
+    // Same marks ⇒ one coalesced run.
+    expect(runsOfNode(out.find((b) => b.id === "PREV")!)).toEqual([{ text: "foobar", marks: ["bold"] }]);
   });
 });
 

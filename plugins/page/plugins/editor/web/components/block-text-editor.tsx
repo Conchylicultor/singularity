@@ -1,21 +1,27 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef, type ReactNode } from "react";
 import { LexicalComposer } from "@lexical/react/LexicalComposer";
-import { PlainTextPlugin } from "@lexical/react/LexicalPlainTextPlugin";
+import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
 import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
+import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
+import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
+import { LinkNode } from "@lexical/link";
 import type { LexicalEditor } from "lexical";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
-import { textDataSchema, type Block, type BlockTextVariant } from "../../core";
+import { runsOf, type Block, type BlockTextVariant, type RichText } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import { useBlockEditor } from "../block-editor-context";
 import { ValueSyncPlugin } from "./value-sync-plugin";
 import { KeyboardPlugin } from "./keyboard-plugin";
 import { SlashMenuPlugin } from "./slash-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
+import { FormatToolbarPlugin } from "./format-toolbar-plugin";
+import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
+import { isValidLinkUrl } from "../internal/link-url";
 import { placeCaretAtBoundary, placeCaretAtColumn } from "../internal/caret-geometry";
 
 /** Maps a semantic typography variant to its sanctioned `text-*` utility. */
@@ -70,17 +76,26 @@ export function BlockTextEditor({
   /** Enter-split options (e.g. nest the split-off content as a child, or change the sibling type). */
   splitOptions?: { asChild?: boolean; childType?: string; splitInto?: string };
 }) {
-  const data = textDataSchema.parse(block.data);
-  const isEmpty = data.text.length === 0;
+  const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
+  const isEmpty = runs.length === 0;
   const { registerFocusHandle, frozenIds } = useBlockEditor();
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
 
-  const field = useEditableField({
-    value: data.text,
+  // `useEditableField` is a string-keyed debounced-autosave hook (self-echo
+  // suppression via `Object.is`). Rich text is structured, so we carry its
+  // canonical JSON form through the field — a stable string key that `Object.is`
+  // compares correctly — and parse/serialize at the boundary (ValueSyncPlugin
+  // does the JSON↔Lexical translation).
+  const serialized = useMemo(() => JSON.stringify(runs), [runs]);
+
+  const field = useEditableField<string>({
+    value: serialized,
     // This editor owns only the `text` field; preserve any sibling data (e.g. a
     // to-do's `checked`) so saving text never clobbers it.
-    onSave: (next) =>
-      editor.update({ ...(block.data as Record<string, unknown>), text: next }),
+    onSave: (nextJson) => {
+      const next = JSON.parse(nextJson) as RichText;
+      editor.update({ ...(block.data as Record<string, unknown>), text: next });
+    },
     // While a structural op owns this block's text (split/merge in flight), the
     // server owns the field: mirror incoming `value`, never autosave — so a stale
     // blur-flush can't clobber the reducer's text edit.
@@ -90,11 +105,24 @@ export function BlockTextEditor({
   const initialConfig = useMemo(
     () => ({
       namespace: `block-text-${block.id}`,
-      theme: { paragraph: "m-0" },
+      theme: {
+        paragraph: "m-0",
+        // Inline mark classes — applied by Lexical to formatted TextNodes. These
+        // are plain class strings passed to the framework (not JSX className), so
+        // they map marks → utilities directly.
+        text: {
+          bold: "font-bold",
+          italic: "italic",
+          underline: "underline",
+          strikethrough: "line-through",
+          code: "rounded-md bg-muted px-1 font-mono text-[0.9em]",
+        },
+        link: "text-primary underline",
+      },
       // Custom inline nodes (e.g. inline page links) contributed via
-      // registerBlockTextExtension. Registered at app bootstrap, so present
-      // before any block editor mounts.
-      nodes: blockTextNodes(),
+      // registerBlockTextExtension, plus LinkNode for inline links. Registered
+      // at app bootstrap, so present before any block editor mounts.
+      nodes: [LinkNode, ...blockTextNodes()],
       onError: console.error,
     }),
     [block.id],
@@ -119,7 +147,7 @@ export function BlockTextEditor({
       <div className="relative flex">
         {marker}
         <div className="relative flex-1">
-          <PlainTextPlugin
+          <RichTextPlugin
             contentEditable={
               <ContentEditable
                 className={cn("outline-none px-md py-xs", VARIANT_CLASS[textVariant], contentClassName)}
@@ -140,10 +168,18 @@ export function BlockTextEditor({
             ErrorBoundary={LexicalErrorBoundary}
           />
           <HistoryPlugin />
+          {/* Wires TOGGLE_LINK_COMMAND → LinkNode; validateUrl gates the href to
+              the allowed protocols. ClickableLinkPlugin makes links open in a new
+              tab on cmd/ctrl-click (plain click still places the caret), the
+              Notion-like editable-link UX. */}
+          <LinkPlugin validateUrl={isValidLinkUrl} />
+          <ClickableLinkPlugin newTab />
           <ValueSyncPlugin value={field.value} onChange={field.onChange} />
           <KeyboardPlugin blockId={block.id} editor={editor} splitOptions={splitOptions} />
           <SlashMenuPlugin editor={editor} />
           <MarkdownShortcutPlugin block={block} editor={editor} />
+          <FormatShortcutsPlugin />
+          <FormatToolbarPlugin />
           {getBlockTextExtensions().map((ext) =>
             ext.Plugin ? (
               <ext.Plugin key={ext.id} block={block} editor={editor} />

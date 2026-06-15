@@ -1,4 +1,6 @@
 import {
+  $createLineBreakNode,
+  $createParagraphNode,
   $createTextNode,
   $getRoot,
   $isElementNode,
@@ -8,8 +10,18 @@ import {
   type Klass,
   type LexicalEditor,
   type LexicalNode,
+  type TextNode,
 } from "lexical";
+import { $createLinkNode, $isLinkNode } from "@lexical/link";
 import type { ComponentType } from "react";
+import {
+  coalesce,
+  MARK_ORDER,
+  type ColorToken,
+  type Mark,
+  type RichText,
+  type TextRun,
+} from "../../core";
 import type { Block } from "../../core";
 import type { BlockEditorAPI } from "../types";
 
@@ -21,17 +33,19 @@ export interface BlockTextPluginProps {
 
 /**
  * An optional custom inline node for the block text editor, plus the
- * (de)serialization rules that round-trip it through the block's plain-text
- * `data.text` string, and/or an invisible Lexical `Plugin` contributing behavior.
+ * (de)serialization rules that round-trip it through the block's `data.text`,
+ * and/or an invisible Lexical `Plugin` contributing behavior.
  *
  * Two flavors share this interface:
  *  - **Node extensions** set `node` + `deserializePattern` + `createNodeFromMatch`
  *    + `serializeNode` (and usually a typeahead `Plugin`). They mirror the
  *    text-editor primitive's `NodeExtension` (see
  *    `plugins/primitives/plugins/text-editor/web/internal/node-extensions.ts`):
- *    the block editor stores plain text, so inline nodes survive as text tokens
- *    (e.g. `[[<pageId>]]`) — `serializeNode` writes the token,
- *    `deserializePattern` + `createNodeFromMatch` parse it back.
+ *    inline nodes survive as text tokens (e.g. `[[<pageId>]]`) embedded in run
+ *    text — `serializeNode` writes the token, `deserializePattern` +
+ *    `createNodeFromMatch` parse it back. Marks/color/link are a parallel concern
+ *    layered on the surrounding `TextNode`s; decorator nodes are always emitted
+ *    as unmarked runs.
  *  - **Plugin-only extensions** set just `Plugin` and contribute pure behavior
  *    (e.g. a paste handler) with no inline node. They omit every node field.
  */
@@ -71,19 +85,58 @@ export function blockTextNodes(): Klass<LexicalNode>[] {
     .filter((node): node is Klass<LexicalNode> => node !== undefined);
 }
 
+// ---------------------------------------------------------------------------
+// runs → Lexical
+// ---------------------------------------------------------------------------
+
+const CSS_VAR_PREFIX = "--rt-color-";
+
 /**
- * Append the parsed content of one text line into a paragraph, materializing any
- * extension tokens as their inline nodes. Mirrors the text-editor primitive's
- * `applyMarkdownToEditor` line loop (overlap guard + sort by start). Must be
- * called inside an `editor.update()`.
+ * The CSS value for a color token's text color — `var(--rt-color-<token>)` — or
+ * `null` for `default`/absent (no color). The single source of the `--rt-color-*`
+ * contract shared by the converter (writes `style`) and the color toolbar button
+ * (calls `$patchStyleText`). Lockstep with the `rich-text-palette` token group
+ * that defines these vars.
  */
-export function appendLineNodes(para: ElementNode, line: string): void {
+export function colorCssValue(color: ColorToken | undefined): string | null {
+  return color && color !== "default" ? `var(${CSS_VAR_PREFIX}${color})` : null;
+}
+
+/** Inline `style` string for a color token (empty for default/absent). */
+function colorStyle(color: ColorToken | undefined): string {
+  const value = colorCssValue(color);
+  return value ? `color: ${value}` : "";
+}
+
+/** Apply a run's marks + color onto a fresh `TextNode`. */
+function styleTextNode(node: TextNode, run: TextRun): void {
+  for (const mark of run.marks ?? []) node.toggleFormat(mark);
+  const style = colorStyle(run.color);
+  if (style) node.setStyle(style);
+}
+
+/**
+ * Build the inline leaf nodes for one line segment of a run's text (no `\n`),
+ * materializing extension tokens as their decorator nodes and styling the
+ * remaining text spans with the run's marks/color. Mirrors the old
+ * `appendLineNodes` token loop (overlap guard + sort by start).
+ */
+function lineNodes(line: string, run: TextRun): LexicalNode[] {
+  const out: LexicalNode[] = [];
+  const pushText = (text: string) => {
+    if (!text) return;
+    const node = $createTextNode(text);
+    styleTextNode(node, run);
+    out.push(node);
+  };
+
   if (extensions.length === 0) {
-    if (line) para.append($createTextNode(line));
-    return;
+    pushText(line);
+    return out;
   }
-  type Match = { start: number; end: number; node: LexicalNode };
-  const matches: Match[] = [];
+
+  type TokenMatch = { start: number; end: number; node: LexicalNode };
+  const matches: TokenMatch[] = [];
   for (const ext of extensions) {
     if (!ext.deserializePattern || !ext.createNodeFromMatch) continue;
     const re = new RegExp(ext.deserializePattern.source, "g");
@@ -97,50 +150,127 @@ export function appendLineNodes(para: ElementNode, line: string): void {
   let lastIdx = 0;
   for (const match of matches) {
     if (match.start < lastIdx) continue;
-    const before = line.slice(lastIdx, match.start);
-    if (before) para.append($createTextNode(before));
-    para.append(match.node);
+    pushText(line.slice(lastIdx, match.start));
+    // Decorator nodes are always unmarked.
+    out.push(match.node);
     lastIdx = match.end;
   }
-  const tail = line.slice(lastIdx);
-  if (tail) para.append($createTextNode(tail));
+  pushText(line.slice(lastIdx));
+  return out;
+}
+
+/** Append a run's content (token-parsed, `\n`→LineBreak, styled) into `parent`. */
+function appendRun(parent: ElementNode, run: TextRun): void {
+  const lines = run.text.split("\n");
+  const built: LexicalNode[] = [];
+  lines.forEach((line, i) => {
+    if (i > 0) built.push($createLineBreakNode());
+    built.push(...lineNodes(line, run));
+  });
+  if (run.link) {
+    // Wrap the run's produced nodes in a LinkNode (url = link). Line breaks are
+    // rare inside a link; keeping them in the same wrapper is acceptable.
+    const linkNode = $createLinkNode(run.link);
+    for (const n of built) linkNode.append(n);
+    parent.append(linkNode);
+  } else {
+    for (const n of built) parent.append(n);
+  }
 }
 
 /**
- * Serialize the editor's content back to the stored plain-text string. Walks each
- * paragraph's children: line breaks → `\n`, text nodes → their text, custom nodes
- * → the first extension `serializeNode` that claims them (fallback
- * `getTextContent`). Keeping inline nodes' own `getTextContent()` empty ensures
- * tokens never leak into live root-text reads (slash menu, `[[` query scan).
+ * Render runs into the editor root. Clears the root and builds a single
+ * paragraph; soft `\n` breaks within run text become `LineBreakNode`s in that
+ * paragraph. Must be called inside an `editor.update()`.
  */
-export function serializeBlockText(editor: LexicalEditor): string {
-  const lines: string[] = [];
+export function runsToLexical(runs: RichText): void {
+  const root = $getRoot();
+  root.clear();
+  const para = $createParagraphNode();
+  for (const run of runs) appendRun(para, run);
+  root.append(para);
+}
+
+// ---------------------------------------------------------------------------
+// Lexical → runs
+// ---------------------------------------------------------------------------
+
+/** Derive a run's canonical marks from a `TextNode`'s format flags. */
+function marksOf(node: TextNode): Mark[] {
+  const marks: Mark[] = [];
+  for (const mark of MARK_ORDER) {
+    if (node.hasFormat(mark)) marks.push(mark);
+  }
+  return marks;
+}
+
+/** Parse a `TextNode`'s inline `style` back to a `ColorToken` (undefined if none). */
+function colorOf(node: TextNode): ColorToken | undefined {
+  const style = node.getStyle();
+  const match = /color:\s*var\(--rt-color-([a-z]+)\)/.exec(style);
+  return match ? (match[1] as ColorToken) : undefined;
+}
+
+/** Build a styled run from a `TextNode`, carrying an enclosing link url if any. */
+function runFromTextNode(node: TextNode, link: string | undefined): TextRun {
+  const run: TextRun = { text: node.getTextContent() };
+  const marks = marksOf(node);
+  if (marks.length > 0) run.marks = marks;
+  const color = colorOf(node);
+  if (color && color !== "default") run.color = color;
+  if (link) run.link = link;
+  return run;
+}
+
+/** Serialize a decorator (non-text, non-element) node to its token text. */
+function tokenOf(node: LexicalNode): string {
+  for (const ext of extensions) {
+    if (!ext.serializeNode) continue;
+    const result = ext.serializeNode(node);
+    if (result !== null) return result;
+  }
+  return node.getTextContent();
+}
+
+/** Walk one node, appending its runs to `out` (recurses into LinkNodes). */
+function walkNode(node: LexicalNode, link: string | undefined, out: RichText): void {
+  if ($isLineBreakNode(node)) {
+    out.push({ text: "\n", ...(link ? { link } : {}) });
+    return;
+  }
+  if ($isTextNode(node)) {
+    out.push(runFromTextNode(node, link));
+    return;
+  }
+  if ($isLinkNode(node)) {
+    const url = node.getURL();
+    for (const child of node.getChildren()) walkNode(child, url, out);
+    return;
+  }
+  // Decorator (e.g. inline page link) → unmarked token run.
+  out.push({ text: tokenOf(node), ...(link ? { link } : {}) });
+}
+
+/**
+ * Serialize the editor's content to structured runs. Walks each paragraph's
+ * children; paragraphs are joined by `\n`. Replaces the old string-returning
+ * `serializeBlockText`. The plain-text offset basis (token text counted as part
+ * of the offset) matches the caret offset and `splitRuns`.
+ */
+export function serializeBlockRuns(editor: LexicalEditor): RichText {
+  const runs: RichText = [];
   editor.getEditorState().read(() => {
     const root = $getRoot();
-    for (const para of root.getChildren()) {
-      if (!$isElementNode(para)) continue;
-      let buf = "";
-      for (const child of para.getChildren()) {
-        if ($isLineBreakNode(child)) {
-          buf += "\n";
-        } else if ($isTextNode(child)) {
-          buf += child.getTextContent();
-        } else {
-          let handled = false;
-          for (const ext of extensions) {
-            if (!ext.serializeNode) continue;
-            const result = ext.serializeNode(child);
-            if (result !== null) {
-              buf += result;
-              handled = true;
-              break;
-            }
-          }
-          if (!handled) buf += child.getTextContent();
-        }
-      }
-      lines.push(buf);
-    }
+    const paras = root.getChildren().filter($isElementNode);
+    paras.forEach((para, i) => {
+      if (i > 0) runs.push({ text: "\n" });
+      for (const child of para.getChildren()) walkNode(child, undefined, runs);
+    });
   });
-  return lines.join("\n");
+  return coalesce(runs);
+}
+
+/** Read the editor's content into runs (headless-friendly wrapper). */
+export function lexicalToRuns(editor: LexicalEditor): RichText {
+  return serializeBlockRuns(editor);
 }

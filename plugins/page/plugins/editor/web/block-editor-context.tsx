@@ -23,6 +23,7 @@ import {
   pasteBlocks,
   type Block,
   type BlockOp,
+  type RichText,
   type SerializedBlock,
 } from "../core";
 import {
@@ -284,7 +285,7 @@ export function BlockEditorProvider({
       },
       split(
         position: number,
-        opts?: { asChild?: boolean; childType?: string; siblingType?: string; text?: string },
+        opts?: { asChild?: boolean; childType?: string; siblingType?: string; runs?: RichText },
       ) {
         // Thin executor: the asChild decision is owned by `resolveKeystroke`
         // (the single intent step) and passed in explicitly. The new block's id
@@ -299,10 +300,10 @@ export function BlockEditorProvider({
           asChild: opts?.asChild ?? false,
           childType: opts?.childType,
           siblingType: opts?.siblingType,
-          text: opts?.text,
+          runs: opts?.runs,
         });
       },
-      merge(opts?: { text?: string }) {
+      merge(opts?: { runs?: RichText }) {
         // Thin executor: `resolveKeystroke` already decided this is a merge (not
         // an outdent) and that a previous sibling exists. We re-find it only to
         // move the caret there once the keydown settles.
@@ -313,7 +314,7 @@ export function BlockEditorProvider({
         const idx = siblings.findIndex((s) => s.id === blockId);
         const prev = idx > 0 ? siblings[idx - 1] : null;
         if (!prev) return; // defensive: nothing to merge into
-        dispatchOp({ kind: "merge", blockId, text: opts?.text });
+        dispatchOp({ kind: "merge", blockId, runs: opts?.runs });
         // Defer focusing the prev sibling to after the current keydown: moving
         // DOM focus synchronously mid-event lets the native backspace land on the
         // newly-focused block. The prev sibling already exists client-side.

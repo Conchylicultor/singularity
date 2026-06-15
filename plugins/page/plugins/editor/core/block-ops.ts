@@ -2,6 +2,14 @@ import { z } from "zod";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { isDescendant, subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import { PAGE_BLOCK_TYPE } from "./schemas";
+import {
+  mergeRuns,
+  plainOf,
+  runsOf as coerceRuns,
+  splitRuns,
+  TextRunSchema,
+  type RichText,
+} from "./rich-text";
 
 /**
  * JSON-pure subset of a block row used by the reducer. `createdAt`/`updatedAt`
@@ -39,20 +47,20 @@ export type BlockOp =
        */
       siblingType?: string;
       /**
-       * Authoritative current text from the editor; falls back to the stored
-       * block text when absent. Lets the reducer split the live (possibly
-       * not-yet-autosaved) string rather than stale stored text.
+       * Authoritative current rich-text runs from the editor; falls back to the
+       * stored block runs when absent. Lets the reducer split the live (possibly
+       * not-yet-autosaved) content rather than stale stored content.
        */
-      text?: string;
+      runs?: RichText;
     }
   | {
       kind: "merge";
       blockId: string;
       /**
-       * Authoritative current text of the merging block from the editor; falls
-       * back to the stored block text when absent.
+       * Authoritative current rich-text runs of the merging block from the
+       * editor; falls back to the stored block runs when absent.
        */
-      text?: string;
+      runs?: RichText;
     } // merge into prev sibling
   | { kind: "indent"; blockId: string }
   | { kind: "outdent"; blockId: string }
@@ -82,9 +90,9 @@ export const BlockOpSchema: z.ZodType<BlockOp> = z.discriminatedUnion("kind", [
     asChild: z.boolean().optional(),
     childType: z.string().optional(),
     siblingType: z.string().optional(),
-    text: z.string().optional(),
+    runs: z.array(TextRunSchema).optional(),
   }),
-  z.object({ kind: z.literal("merge"), blockId: z.string(), text: z.string().optional() }),
+  z.object({ kind: z.literal("merge"), blockId: z.string(), runs: z.array(TextRunSchema).optional() }),
   z.object({ kind: z.literal("indent"), blockId: z.string() }),
   z.object({ kind: z.literal("outdent"), blockId: z.string() }),
   z.object({
@@ -148,15 +156,24 @@ function asObject(value: unknown): Record<string, unknown> {
     : {};
 }
 
-/** The block's text payload, or "" when it has none. */
+/**
+ * The block's text payload flattened to a plain string, or "" when it has none.
+ * Reads `data.text` (which may be a legacy string or structured runs) through the
+ * rich-text normalizer. Used where a plain title/preview is needed (e.g.
+ * turn-into-page) — structural ops use `runsOfNode`/`withRuns`.
+ */
 export function textOf(node: { data?: unknown }): string {
-  const obj = asObject(node.data);
-  return typeof obj.text === "string" ? obj.text : "";
+  return plainOf(asObject(node.data).text);
 }
 
-/** A copy of `node` with `data.text` set to `text` (spreads existing data). */
-export function withText(node: BlockNode, text: string): BlockNode {
-  return { ...node, data: { ...asObject(node.data), text } };
+/** The block's text payload as structured rich-text runs (coerced; `[]` when none). */
+export function runsOfNode(node: { data?: unknown }): RichText {
+  return coerceRuns(asObject(node.data).text);
+}
+
+/** A copy of `node` with `data.text` set to `runs` (spreads existing data). */
+export function withRuns(node: BlockNode, runs: RichText): BlockNode {
+  return { ...node, data: { ...asObject(node.data), text: runs } };
 }
 
 /** Immutable replace: return a new array with the node of `next.id` swapped. */
@@ -210,13 +227,11 @@ function applySplit(
   const block = byId(blocks, op.blockId);
   if (!block) return blocks;
 
-  const text = op.text ?? textOf(block);
-  const position = Math.min(op.position, text.length);
-  const beforeText = text.slice(0, position);
-  const afterText = text.slice(position);
+  const runs = op.runs ?? runsOfNode(block);
+  const [beforeRuns, afterRuns] = splitRuns(runs, op.position);
 
   let next = blocks;
-  let updatedBlock = withText(block, beforeText);
+  let updatedBlock = withRuns(block, beforeRuns);
 
   let newParentId: string | null;
   let newType: string;
@@ -239,7 +254,7 @@ function applySplit(
 
   next = replace(next, updatedBlock);
 
-  const newData = { ...asObject(block.data), text: afterText };
+  const newData = { ...asObject(block.data), text: afterRuns };
   const newNode: BlockNode = {
     id: op.newId,
     pageId: block.pageId,
@@ -261,8 +276,8 @@ function applyMerge(
   const prev = prevSibling(blocks, block);
   if (!prev) return blocks; // no-op
 
-  // Concatenate text into prev.
-  let mergedPrev = withText(prev, textOf(prev) + (op.text ?? textOf(block)));
+  // Concatenate runs into prev (coalescing the seam).
+  let mergedPrev = withRuns(prev, mergeRuns(runsOfNode(prev), op.runs ?? runsOfNode(block)));
 
   // Adopt the block's children under prev, appended after prev's existing
   // children, order-preserving.

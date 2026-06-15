@@ -1,8 +1,8 @@
 import { MdChevronRight } from "react-icons/md";
 import { z } from "zod";
-import { defineBlock } from "@plugins/page/plugins/editor/core";
+import { defineBlock, RichTextSchema } from "@plugins/page/plugins/editor/core";
 
-export const toggleDataSchema = z.object({ text: z.string() });
+export const toggleDataSchema = z.object({ text: RichTextSchema });
 
 export const toggleBlock = defineBlock({
   type: "toggle",

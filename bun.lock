@@ -1721,7 +1721,9 @@
       "name": "@singularity/plugin-page-editor",
       "version": "0.0.1",
       "dependencies": {
+        "@lexical/link": "^0.44.0",
         "@lexical/react": "^0.44.0",
+        "@lexical/selection": "^0.44.0",
         "lexical": "^0.44.0",
       },
     },
@@ -1731,6 +1733,46 @@
     },
     "plugins/page/plugins/file": {
       "name": "@singularity/plugin-page-file",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/formatting": {
+      "name": "@singularity/plugin-page-formatting",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/formatting/plugins/bold": {
+      "name": "@singularity/plugin-page-formatting-bold",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/formatting/plugins/code": {
+      "name": "@singularity/plugin-page-formatting-code",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/formatting/plugins/color": {
+      "name": "@singularity/plugin-page-formatting-color",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/selection": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/page/plugins/formatting/plugins/italic": {
+      "name": "@singularity/plugin-page-formatting-italic",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/formatting/plugins/link": {
+      "name": "@singularity/plugin-page-formatting-link",
+      "version": "0.0.1",
+      "dependencies": {
+        "@lexical/link": "^0.44.0",
+        "lexical": "^0.44.0",
+      },
+    },
+    "plugins/page/plugins/formatting/plugins/strikethrough": {
+      "name": "@singularity/plugin-page-formatting-strikethrough",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/formatting/plugins/underline": {
+      "name": "@singularity/plugin-page-formatting-underline",
       "version": "0.0.1",
     },
     "plugins/page/plugins/heading": {
@@ -2709,6 +2751,10 @@
     },
     "plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts": {
       "name": "@singularity/plugin-ui-tokens-font-family-google-fonts",
+      "version": "0.0.1",
+    },
+    "plugins/ui/plugins/tokens/plugins/rich-text-palette": {
+      "name": "@singularity/plugin-ui-tokens-rich-text-palette",
       "version": "0.0.1",
     },
     "plugins/ui/plugins/tokens/plugins/shadow": {
@@ -4091,6 +4137,22 @@
 
     "@singularity/plugin-page-file": ["@singularity/plugin-page-file@workspace:plugins/page/plugins/file"],
 
+    "@singularity/plugin-page-formatting": ["@singularity/plugin-page-formatting@workspace:plugins/page/plugins/formatting"],
+
+    "@singularity/plugin-page-formatting-bold": ["@singularity/plugin-page-formatting-bold@workspace:plugins/page/plugins/formatting/plugins/bold"],
+
+    "@singularity/plugin-page-formatting-code": ["@singularity/plugin-page-formatting-code@workspace:plugins/page/plugins/formatting/plugins/code"],
+
+    "@singularity/plugin-page-formatting-color": ["@singularity/plugin-page-formatting-color@workspace:plugins/page/plugins/formatting/plugins/color"],
+
+    "@singularity/plugin-page-formatting-italic": ["@singularity/plugin-page-formatting-italic@workspace:plugins/page/plugins/formatting/plugins/italic"],
+
+    "@singularity/plugin-page-formatting-link": ["@singularity/plugin-page-formatting-link@workspace:plugins/page/plugins/formatting/plugins/link"],
+
+    "@singularity/plugin-page-formatting-strikethrough": ["@singularity/plugin-page-formatting-strikethrough@workspace:plugins/page/plugins/formatting/plugins/strikethrough"],
+
+    "@singularity/plugin-page-formatting-underline": ["@singularity/plugin-page-formatting-underline@workspace:plugins/page/plugins/formatting/plugins/underline"],
+
     "@singularity/plugin-page-heading": ["@singularity/plugin-page-heading@workspace:plugins/page/plugins/heading"],
 
     "@singularity/plugin-page-heading-heading-1": ["@singularity/plugin-page-heading-heading-1@workspace:plugins/page/plugins/heading/plugins/heading-1"],
@@ -4546,6 +4608,8 @@
     "@singularity/plugin-ui-tokens-font-family": ["@singularity/plugin-ui-tokens-font-family@workspace:plugins/ui/plugins/tokens/plugins/font-family"],
 
     "@singularity/plugin-ui-tokens-font-family-google-fonts": ["@singularity/plugin-ui-tokens-font-family-google-fonts@workspace:plugins/ui/plugins/tokens/plugins/font-family/plugins/google-fonts"],
+
+    "@singularity/plugin-ui-tokens-rich-text-palette": ["@singularity/plugin-ui-tokens-rich-text-palette@workspace:plugins/ui/plugins/tokens/plugins/rich-text-palette"],
 
     "@singularity/plugin-ui-tokens-shadow": ["@singularity/plugin-ui-tokens-shadow@workspace:plugins/ui/plugins/tokens/plugins/shadow"],
 

@@ -2,6 +2,10 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { Editor } from "./slots";
 export type { BlockContribution } from "./slots";
+export { MarkButton } from "./components/mark-button";
+export type { MarkButtonProps } from "./components/mark-button";
+export { useFormatToolbar } from "./internal/format-toolbar-context";
+export type { FormatToolbarValue } from "./internal/format-toolbar-context";
 export type { BlockEditorAPI, BlockRendererProps } from "./types";
 export { BlockEditor } from "./components/block-editor";
 export { BLOCK_GUTTER } from "./components/block-row";
@@ -17,7 +21,10 @@ export { BlockTypeMenu } from "./components/block-type-menu";
 export {
   registerBlockTextExtension,
   getBlockTextExtensions,
+  colorCssValue,
 } from "./internal/block-text-extensions";
+export { OPEN_LINK_POPOVER_COMMAND } from "./internal/link-command";
+export { isValidLinkUrl, normalizeLinkUrl } from "./internal/link-url";
 export type {
   BlockTextExtension,
   BlockTextPluginProps,

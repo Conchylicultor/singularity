@@ -35,4 +35,15 @@ export const Editor = {
   TurnInto: defineRenderSlot<{
     component: ComponentType<{ block: Block; api: BlockEditorAPI; close: () => void }>;
   }>("page.editor.turn-into"),
+  /**
+   * Toolbar controls for the floating selection format bar. Each contribution
+   * renders one control (typically a `<MarkButton/>` reading `useFormatToolbar()`
+   * for live active state). The bar is rendered by `FormatToolbarPlugin` only when
+   * a non-collapsed range selection exists; contributions never see the editor
+   * directly — they dispatch Lexical commands through the context. Reorder
+   * middleware applies automatically (the bar is reorderable, by design).
+   */
+  FormatAction: defineRenderSlot<{ component: ComponentType }>(
+    "page.editor.format-action",
+  ),
 };

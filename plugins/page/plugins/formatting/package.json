@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-formatting",
+  "description": "Inline rich-text formatting marks for the page editor's selection toolbar.",
+  "private": true,
+  "version": "0.0.1"
+}

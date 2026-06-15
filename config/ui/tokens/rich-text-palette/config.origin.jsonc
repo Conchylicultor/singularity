@@ -1,0 +1,29 @@
+// @hash 9e6ead24f7d6
+{
+  // Allowed values: "default"
+  "preset": "default",
+  "overrides": {
+    "light": {
+      "rtColorGray": "",
+      "rtColorBrown": "",
+      "rtColorOrange": "",
+      "rtColorYellow": "",
+      "rtColorGreen": "",
+      "rtColorBlue": "",
+      "rtColorPurple": "",
+      "rtColorPink": "",
+      "rtColorRed": ""
+    },
+    "dark": {
+      "rtColorGray": "",
+      "rtColorBrown": "",
+      "rtColorOrange": "",
+      "rtColorYellow": "",
+      "rtColorGreen": "",
+      "rtColorBlue": "",
+      "rtColorPurple": "",
+      "rtColorPink": "",
+      "rtColorRed": ""
+    }
+  }
+}
