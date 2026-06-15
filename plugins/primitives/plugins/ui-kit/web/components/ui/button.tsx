@@ -1,5 +1,7 @@
 import { Button as ButtonPrimitive } from "@base-ui/react/button"
 import { cva, type VariantProps } from "class-variance-authority"
+import { useEffect, useRef, useState } from "react"
+import { MdRefresh } from "react-icons/md"
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
 import {
@@ -53,24 +55,77 @@ const buttonVariants = cva(
   }
 )
 
+/**
+ * `loading` shows a spinner and disables the button. It is also driven
+ * automatically: if `onClick` returns a promise, the button enters the pending
+ * state until it settles — so any async action is double-click-proof and
+ * self-indicating with zero per-call-site wiring. The public `onClick` type is
+ * left as base-ui's standard handler so consumers and value-returning handlers
+ * keep type-checking; the promise is detected at runtime.
+ */
+type ButtonOwnProps = ButtonPrimitive.Props &
+  VariantProps<typeof buttonVariants> & { loading?: boolean }
+
 function Button({
   className,
   variant = "default",
   size,
   shape = "default",
+  loading = false,
+  disabled = false,
+  onClick,
+  children,
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonOwnProps) {
   // No explicit `size` → inherit the ambient density (set by a toolbar/slot) as
   // the TEXT shape. Icon shape is the wrapper's job (IconButton/PaneIconAction);
   // a bare Button can't know its own shape. Explicit `size` always wins.
   const density = useControlSize()
   const resolvedSize = size ?? textSizeFor(density)
+
+  // Auto-pending: if the handler returns a promise, reflect in-flight state
+  // until it settles. Guard setState against unmount mid-flight.
+  const [autoPending, setAutoPending] = useState(false)
+  const mounted = useRef(true)
+  useEffect(() => () => void (mounted.current = false), [])
+
+  const handleClick: NonNullable<ButtonPrimitive.Props["onClick"]> = (event) => {
+    const result = onClick?.(event) as unknown
+    if (result && typeof (result as { then?: unknown }).then === "function") {
+      setAutoPending(true)
+      void Promise.resolve(result).finally(() => {
+        if (mounted.current) setAutoPending(false)
+      })
+    }
+  }
+
+  const isLoading = loading || autoPending
+  // Icon-shaped buttons have no label, so the spinner replaces the glyph;
+  // text buttons keep their label with the spinner as a leading indicator.
+  const iconOnly = (resolvedSize ?? "").startsWith("icon")
+
   return (
     <ButtonPrimitive
       data-slot="button"
       className={cn(buttonVariants({ variant, size: resolvedSize, shape, className }))}
+      disabled={disabled || isLoading}
+      data-loading={isLoading || undefined}
+      onClick={onClick ? handleClick : undefined}
       {...props}
-    />
+    >
+      {isLoading ? (
+        iconOnly ? (
+          <MdRefresh className="animate-spin" />
+        ) : (
+          <>
+            <MdRefresh className="animate-spin" />
+            {children}
+          </>
+        )
+      ) : (
+        children
+      )}
+    </ButtonPrimitive>
   )
 }
 
