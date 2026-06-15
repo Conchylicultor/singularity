@@ -44,7 +44,8 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
   };
 
   return (
-    <div className="flex items-center gap-sm px-xs pb-sm">
+    // eslint-disable-next-line spacing/no-adhoc-spacing -- pl-16 (4rem) mirrors the block editor's fixed gutter so the title shares the body blocks' content-left (hover handles live in the gutter to its left); same fixed dimension, beyond the ramp's 2xl max
+    <div className="flex items-center gap-sm pb-sm pl-16 pr-xs">
       <PageIconButton
         value={{ icon: data?.icon ?? null, iconSvgNodes: data?.iconSvgNodes ?? null }}
         onChange={saveIcon}

@@ -76,7 +76,11 @@ function PageDetailBody(): ReactElement {
 
   return (
     <PaneChrome pane={pageDetailPane} title={title}>
-      <div className="flex flex-col gap-lg p-lg">
+      {/* Centered reading column: on wide panes the content stays in a
+          comfortable ~768px measure instead of stretching edge-to-edge and
+          hugging the left. mx-auto centers it; the generous py keeps the title
+          off the top chrome the way Notion's page surface does. */}
+      <div className="mx-auto flex w-full max-w-3xl flex-col gap-lg px-lg py-2xl">
         <PageHeader pageId={pageId} />
         <BlockEditor
           pageId={pageId}
