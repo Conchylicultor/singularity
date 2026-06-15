@@ -204,6 +204,7 @@ Independent projects that live in `sidequests/`, not directly related to Singula
 - When creating a new top-level app, use the `create-app` SKILL ([`.claude/skills/create-app/SKILL.md`](.claude/skills/create-app/SKILL.md)).
 - Before debugging, read the `debug` SKILL ([`.claude/skills/debug/SKILL.md`](.claude/skills/debug/SKILL.md)) — map of logs, profiling, crashes, DB, and queue surfaces.
 - Before any theming / token / design-standard work, read the `theme` SKILL ([`.claude/skills/theme/SKILL.md`](.claude/skills/theme/SKILL.md)) — design tokens, tweakcn, per-app config, and typography/radius/z-index enforcement.
+- Before any layout / structure / CSS-composition work, read the `css` SKILL ([`.claude/skills/css/SKILL.md`](.claude/skills/css/SKILL.md)) — the layout mental model (containers share space, leaves truncate) and the composable layout-primitive index; pairs with `theme` (tokens/color/preset).
 - Always edit files in your worktree, not the main branch.
 - **Avoid `find` for file searches.** Unbounded `find` in this repo has crashed macOS (65k DIR FDs via the bfs shim). Use `rg --files -g '<glob>'` or `fd '<regex>'` instead. Only use `find` with `-maxdepth` or `-prune`.
 - **STOP on unexpected failures; never improvise around them.** If something fails in a way you don't fully understand, surface it and ask — do NOT route around it (e.g. falling back to curl after an MCP call fails). A loud failure is debuggable; a workaround built on a broken assumption is not.
