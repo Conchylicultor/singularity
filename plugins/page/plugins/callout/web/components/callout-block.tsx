@@ -35,6 +35,7 @@ export function CalloutBlock({ block, isFocused, editor }: BlockRendererProps) {
           block={block}
           isFocused={isFocused}
           editor={editor}
+          textVariant="body"
           marker={
             <CalloutIcon
               color={data.color}
