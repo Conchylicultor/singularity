@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-page-read-only-view",
+  "description": "Faithful read-only block-forest renderer with optional per-block diff highlighting.",
+  "private": true,
+  "version": "0.0.1"
+}

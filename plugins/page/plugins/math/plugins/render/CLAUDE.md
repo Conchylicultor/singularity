@@ -6,7 +6,7 @@
 
 - Description: Shared KaTeX renderer leaf for the page math plugins: <KatexMath/> plus the single home for KaTeX config and CSS.
 - Cross-plugin:
-  - Imported by: `page/math/equation`, `page/math/inline`
+  - Imported by: `page/math/equation`, `page/math/inline`, `page/read-only-view`
 - Web:
   - Exports: Values: `KatexMath`
 

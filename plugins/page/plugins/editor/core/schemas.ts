@@ -63,7 +63,8 @@ export const PageDataSchema = z.object({
 export type PageData = z.infer<typeof PageDataSchema>;
 
 // Parse a page block's `data` into its typed `{ title, icon }`. Use on rows
-// known to be `type="page"`.
-export function pageData(block: Block): PageData {
+// known to be `type="page"`. Only the `data` field is read, so any row-like
+// value carrying `data` is accepted (raw DB selects, full Blocks, etc.).
+export function pageData(block: Pick<Block, "data">): PageData {
   return PageDataSchema.parse(block.data);
 }

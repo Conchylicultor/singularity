@@ -20,7 +20,7 @@
   - Uses: `infra/attachments.uploadAttachment`, `primitives/text-editor.registerNodeExtension`, `primitives/text-editor.TextEditorSlots`, `primitives/viewport-overlay.ViewportOverlay`
   - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `AttachmentThumbnail`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `Lightbox`, `rewriteAttachmentMarkdown`
 - Cross-plugin:
-  - Imported by: `apps/pages/page-tree`, `conversations/conversation-view`, `page/audio`, `page/bookmark`, `page/file`, `page/image`, `page/video`, `screenshot/draw-on-app`, `tasks/task-description`, `tasks/task-draft-form`
+  - Imported by: `apps/pages/page-tree`, `conversations/conversation-view`, `page/audio`, `page/bookmark`, `page/file`, `page/image`, `page/read-only-view`, `page/video`, `screenshot/draw-on-app`, `tasks/task-description`, `tasks/task-draft-form`
 - Core:
   - Exports: Values: `ATTACHMENT_MARKDOWN_RE`, `attachmentMarkdown`, `attachmentUrl`, `extractAttachmentIds`, `isAttachmentUrl`, `rewriteAttachmentMarkdown`
 

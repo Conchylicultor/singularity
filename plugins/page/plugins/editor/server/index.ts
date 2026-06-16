@@ -35,6 +35,8 @@ export { BlockLifecycle } from "./internal/document-hooks";
 export type { BlockDeleteHook } from "./internal/document-hooks";
 export { BlockSchema, PageDataSchema, PAGE_BLOCK_TYPE, pageData } from "../core/schemas";
 export type { Block, PageData } from "../core/schemas";
+export { serializePageContent, replacePageContent } from "./internal/page-content";
+export type { PageContentSnapshot, StoredBlock } from "./internal/page-content";
 
 export default {
   description: "Block-based document editor — tables, routes, and live state.",

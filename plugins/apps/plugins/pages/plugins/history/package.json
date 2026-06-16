@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-apps-pages-history",
+  "description": "Pages version history: time-bucketed snapshots, a Version history header button, and a faithful diffed preview with restore.",
+  "private": true,
+  "version": "0.0.1"
+}

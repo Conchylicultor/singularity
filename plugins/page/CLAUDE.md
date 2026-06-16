@@ -43,6 +43,7 @@
   - **`numbered-list`** — Numbered-list block type for the page editor.
   - **`page-link`** — Link-to-page block type: references another page as a clickable block; feeds the backlinks index. Link-to-page block type: references another page as a clickable block; feeds the backlinks index.
   - **`quote`** — Quote / blockquote block type for the page editor.
+  - **`read-only-view`** — Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
   - **`text`** — Plain-text block type for the page editor.
   - **`to-do`** — To-do / checkbox block type for the page editor.
   - **`toggle`** — Toggle (collapsible) block type for the page editor.

@@ -160,6 +160,10 @@
       "name": "@singularity/plugin-apps-pages-content-search",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/history": {
+      "name": "@singularity/plugin-apps-pages-history",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/page-tree": {
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
@@ -1622,6 +1626,18 @@
       "name": "@singularity/plugin-fullscreen",
       "version": "0.0.1",
     },
+    "plugins/history": {
+      "name": "@singularity/plugin-history",
+      "version": "0.0.1",
+    },
+    "plugins/history/plugins/dialog": {
+      "name": "@singularity/plugin-history-dialog",
+      "version": "0.0.1",
+    },
+    "plugins/history/plugins/engine": {
+      "name": "@singularity/plugin-history-engine",
+      "version": "0.0.1",
+    },
     "plugins/improve": {
       "name": "@singularity/plugin-improve",
       "version": "0.0.1",
@@ -1924,6 +1940,10 @@
     },
     "plugins/page/plugins/quote": {
       "name": "@singularity/plugin-page-quote",
+      "version": "0.0.1",
+    },
+    "plugins/page/plugins/read-only-view": {
+      "name": "@singularity/plugin-page-read-only-view",
       "version": "0.0.1",
     },
     "plugins/page/plugins/text": {
@@ -3484,6 +3504,8 @@
 
     "@singularity/plugin-apps-pages-content-search": ["@singularity/plugin-apps-pages-content-search@workspace:plugins/apps/plugins/pages/plugins/content-search"],
 
+    "@singularity/plugin-apps-pages-history": ["@singularity/plugin-apps-pages-history@workspace:plugins/apps/plugins/pages/plugins/history"],
+
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-shell": ["@singularity/plugin-apps-pages-shell@workspace:plugins/apps/plugins/pages/plugins/shell"],
@@ -4180,6 +4202,12 @@
 
     "@singularity/plugin-fullscreen": ["@singularity/plugin-fullscreen@workspace:plugins/fullscreen"],
 
+    "@singularity/plugin-history": ["@singularity/plugin-history@workspace:plugins/history"],
+
+    "@singularity/plugin-history-dialog": ["@singularity/plugin-history-dialog@workspace:plugins/history/plugins/dialog"],
+
+    "@singularity/plugin-history-engine": ["@singularity/plugin-history-engine@workspace:plugins/history/plugins/engine"],
+
     "@singularity/plugin-improve": ["@singularity/plugin-improve@workspace:plugins/improve"],
 
     "@singularity/plugin-improve-element-picker": ["@singularity/plugin-improve-element-picker@workspace:plugins/improve/plugins/element-picker"],
@@ -4311,6 +4339,8 @@
     "@singularity/plugin-page-page-link": ["@singularity/plugin-page-page-link@workspace:plugins/page/plugins/page-link"],
 
     "@singularity/plugin-page-quote": ["@singularity/plugin-page-quote@workspace:plugins/page/plugins/quote"],
+
+    "@singularity/plugin-page-read-only-view": ["@singularity/plugin-page-read-only-view@workspace:plugins/page/plugins/read-only-view"],
 
     "@singularity/plugin-page-text": ["@singularity/plugin-page-text@workspace:plugins/page/plugins/text"],
 
