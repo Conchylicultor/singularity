@@ -202,7 +202,15 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const onMove = hierarchy.onMove ?? (() => {});
   const onCreate =
     hierarchy.onCreate ?? (async () => undefined as string | undefined);
-  const addLabel = options.addLabel ?? (hierarchy.onCreate ? "Add" : null);
+  // Respect an *explicit* `addLabel: null` (hide the root footer) — `??` would
+  // swallow it and fall back to "Add". Only an absent (undefined) option falls
+  // through to the onCreate-derived default.
+  const addLabel =
+    options.addLabel !== undefined
+      ? options.addLabel
+      : hierarchy.onCreate
+        ? "Add"
+        : null;
 
   return (
     <div className="px-sm">
@@ -220,6 +228,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         Row={Row}
         dragOverlay={dragOverlay}
         addLabel={addLabel}
+        canCreate={!!hierarchy.onCreate}
         multiSelect={
           props.selection ? { actions: props.selection.bulkActions } : undefined
         }

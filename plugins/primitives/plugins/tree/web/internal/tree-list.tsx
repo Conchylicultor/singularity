@@ -74,6 +74,12 @@ export type TreeListProps<T extends TreeItem> = {
   /** Root-level "Add" button label. Pass `null` to hide (e.g. subtree mode). */
   addLabel?: string | null;
   /**
+   * Whether the data source supports creation. Defaults to true (matching the
+   * historical always-on add affordance). Drives the per-row hover "+" so a
+   * read-only tree shows no non-functional add button.
+   */
+  canCreate?: boolean;
+  /**
    * Opt-in checkbox multi-select. Present → each row renders a `SelectionCheckbox`
    * and a `SelectionBar` (with optional bulk `actions`) sits above the rows. The
    * select order is derived from the visible tree (DFS, skipping collapsed
@@ -95,6 +101,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     dragOverlay,
     toolbar,
     addLabel = "Add",
+    canCreate = true,
     multiSelect,
   } = props;
 
@@ -298,6 +305,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onCreate,
       Row,
       multiSelect: !!multiSelect,
+      canCreate,
     }),
     [
       rows,
@@ -310,6 +318,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onCreate,
       Row,
       multiSelect,
+      canCreate,
     ],
   );
 

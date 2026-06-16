@@ -33,6 +33,12 @@ export type TreeListContextValue<T extends TreeItem> = {
   Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
   /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
   multiSelect: boolean;
+  /**
+   * Whether the data source actually supports creation. Drives the per-row
+   * hover "+" (Notion-style add-child affordance). Read-only trees pass false
+   * so no non-functional add button is shown.
+   */
+  canCreate: boolean;
 };
 
 // The context is invariant in T at the React level; we cast through `unknown`

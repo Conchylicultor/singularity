@@ -2,7 +2,6 @@ import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTr
 import { useCallback, type ReactNode } from "react";
 import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
-import { Row as RowPrimitive } from "@plugins/primitives/plugins/row/web";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
@@ -75,11 +74,27 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       </DropdownMenu>
     ) : null;
 
+  // Notion-style per-row "+" — hover-revealed add-child affordance that replaces
+  // the old persistent "Add" line under expanded nodes (more compact tree). The
+  // surrounding actions cluster already stops row-click/drag propagation and
+  // owns the hover-reveal, so this button only handles the create.
+  const addChild = ctx.canCreate ? (
+    <button
+      type="button"
+      aria-label="Add child"
+      onClick={() => void r.addChild()}
+      className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background/60"
+    >
+      <MdAdd className="size-4" />
+    </button>
+  ) : null;
+
   const trailing =
-    actions || moreMenu ? (
+    actions || moreMenu || addChild ? (
       <>
         {actions}
         {moreMenu}
+        {addChild}
       </>
     ) : undefined;
 
@@ -145,17 +160,6 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
               depth={depth + 1}
             />
           ))}
-          <RowPrimitive
-            as="button"
-            hover="accent"
-            indent={(depth + 1) * 16 + 4}
-            icon={<span className="size-5 shrink-0" />}
-            onClick={() => void r.addChild()}
-            className="text-muted-foreground"
-          >
-            <MdAdd className="size-4 shrink-0" />
-            Add
-          </RowPrimitive>
         </div>
       )}
     </div>

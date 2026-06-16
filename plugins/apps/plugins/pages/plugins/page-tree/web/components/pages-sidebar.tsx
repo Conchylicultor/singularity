@@ -57,18 +57,17 @@ export function PagesSidebar() {
         leadingIcon: (b: Block) => (
           <PageIcon nodes={pageData(b).iconSvgNodes} className="size-4" />
         ),
-        rowMenu: ({
-          addBelow,
-          addChild,
-        }: RowChromeMenuHelpers): RowMenuItem[] => [
+        rowMenu: ({ addBelow }: RowChromeMenuHelpers): RowMenuItem[] => [
           {
             icon: MdAdd,
             label: "Add page below",
             onClick: () => void addBelow(),
           },
-          { icon: MdAdd, label: "Add sub-page", onClick: () => void addChild() },
         ],
-        addLabel: "New Page",
+        // Root creation lives on the section header "+" (Notion-style), and
+        // per-row sub-page creation on each row's hover "+", so the persistent
+        // footer "New Page" line is dropped for a more compact tree.
+        addLabel: null,
         dragOverlay: (b: Block) => pageData(b).title || "Untitled",
       },
     }),
@@ -76,7 +75,11 @@ export function PagesSidebar() {
   );
 
   return (
-    <SidebarPaneSection title="Pages" icon={MdDescription}>
+    <SidebarPaneSection
+      title="Pages"
+      icon={MdDescription}
+      labelExtra={PagesHeaderAdd}
+    >
       <div className="min-h-0 flex-1 overflow-y-auto py-xs">
         {result.pending ? (
           <Loading variant="rows" />
@@ -119,5 +122,33 @@ export function PagesSidebar() {
         )}
       </div>
     </SidebarPaneSection>
+  );
+}
+
+/**
+ * Notion-style header "+" for the Pages section: a hover-revealed action in the
+ * section label that creates a new top-level page and opens it. Replaces the
+ * old persistent footer "New Page" line. Rendered via `SidebarPaneSection`'s
+ * `labelExtra` slot, so it lives inside the collapsible header — `stopPropagation`
+ * keeps a click from toggling the section.
+ */
+function PagesHeaderAdd() {
+  const openPane = useOpenPane();
+  const createRootPage = async () => {
+    const id = await createPageWithSeed({ parentId: null });
+    openPane(pageDetailPane, { pageId: id }, { mode: "push" });
+  };
+  return (
+    <button
+      type="button"
+      aria-label="New page"
+      onClick={(e) => {
+        e.stopPropagation();
+        void createRootPage();
+      }}
+      className="ml-auto flex size-5 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent group-hover/label:opacity-100 focus-visible:opacity-100"
+    >
+      <MdAdd className="size-4" />
+    </button>
   );
 }
