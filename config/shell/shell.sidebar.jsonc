@@ -4,8 +4,8 @@
   "items": [
     "tasks.task-detail:tasks",
     "conversations.agents:agents",
-    "conversations.conversations-view:conversations",
     "code-explorer:code-explorer",
-    "stats:stats"
+    "stats:stats",
+    "conversations.conversations-view:conversations"
   ]
 }
