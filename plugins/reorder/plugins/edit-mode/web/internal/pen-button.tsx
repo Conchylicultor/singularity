@@ -2,7 +2,7 @@ import { MdEdit, MdDone } from "react-icons/md";
 import { setEditMode, useEditMode } from "@plugins/reorder/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
-import { useHasStagedDefaults } from "@plugins/reorder/plugins/staging/web";
+import { useHasStagedDefaults } from "@plugins/config_v2/plugins/staging/web";
 import { ExitCommitPopover } from "./exit-commit-popover";
 
 export function PenButton() {

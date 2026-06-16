@@ -612,6 +612,10 @@
     "plugins/config_v2/plugins/settings": {
       "name": "@singularity/plugin-config_v2-settings",
     },
+    "plugins/config_v2/plugins/staging": {
+      "name": "@singularity/plugin-config_v2-staging",
+      "version": "0.0.1",
+    },
     "plugins/conversations": {
       "name": "@singularity/plugin-conversations",
       "version": "0.0.1",
@@ -2536,10 +2540,6 @@
       "name": "@singularity/plugin-reorder-node-types-spacer",
       "version": "0.0.1",
     },
-    "plugins/reorder/plugins/staging": {
-      "name": "@singularity/plugin-reorder-staging",
-      "version": "0.0.1",
-    },
     "plugins/reports": {
       "name": "@singularity/plugin-reports",
       "version": "0.0.1",
@@ -2572,6 +2572,10 @@
       "name": "@singularity/plugin-review-code-review",
       "version": "0.0.1",
     },
+    "plugins/review/plugins/config-defaults": {
+      "name": "@singularity/plugin-review-config-defaults",
+      "version": "0.0.1",
+    },
     "plugins/review/plugins/plugin-changes": {
       "name": "@singularity/plugin-review-plugin-changes",
       "version": "0.0.1",
@@ -2582,10 +2586,6 @@
     },
     "plugins/review/plugins/plugin-changes/plugins/file-changes": {
       "name": "@singularity/plugin-review-plugin-changes-file-changes",
-      "version": "0.0.1",
-    },
-    "plugins/review/plugins/reorder-defaults": {
-      "name": "@singularity/plugin-review-reorder-defaults",
       "version": "0.0.1",
     },
     "plugins/screenshot": {
@@ -3676,6 +3676,8 @@
 
     "@singularity/plugin-config_v2-settings": ["@singularity/plugin-config_v2-settings@workspace:plugins/config_v2/plugins/settings"],
 
+    "@singularity/plugin-config_v2-staging": ["@singularity/plugin-config_v2-staging@workspace:plugins/config_v2/plugins/staging"],
+
     "@singularity/plugin-conversations": ["@singularity/plugin-conversations@workspace:plugins/conversations"],
 
     "@singularity/plugin-conversations-agents": ["@singularity/plugin-conversations-agents@workspace:plugins/conversations/plugins/agents"],
@@ -4576,8 +4578,6 @@
 
     "@singularity/plugin-reorder-node-types-spacer": ["@singularity/plugin-reorder-node-types-spacer@workspace:plugins/reorder/plugins/node-types/plugins/spacer"],
 
-    "@singularity/plugin-reorder-staging": ["@singularity/plugin-reorder-staging@workspace:plugins/reorder/plugins/staging"],
-
     "@singularity/plugin-reports": ["@singularity/plugin-reports@workspace:plugins/reports"],
 
     "@singularity/plugin-reports-crash": ["@singularity/plugin-reports-crash@workspace:plugins/reports/plugins/crash"],
@@ -4594,13 +4594,13 @@
 
     "@singularity/plugin-review-code-review": ["@singularity/plugin-review-code-review@workspace:plugins/review/plugins/code-review"],
 
+    "@singularity/plugin-review-config-defaults": ["@singularity/plugin-review-config-defaults@workspace:plugins/review/plugins/config-defaults"],
+
     "@singularity/plugin-review-plugin-changes": ["@singularity/plugin-review-plugin-changes@workspace:plugins/review/plugins/plugin-changes"],
 
     "@singularity/plugin-review-plugin-changes-api-changes": ["@singularity/plugin-review-plugin-changes-api-changes@workspace:plugins/review/plugins/plugin-changes/plugins/api-changes"],
 
     "@singularity/plugin-review-plugin-changes-file-changes": ["@singularity/plugin-review-plugin-changes-file-changes@workspace:plugins/review/plugins/plugin-changes/plugins/file-changes"],
-
-    "@singularity/plugin-review-reorder-defaults": ["@singularity/plugin-review-reorder-defaults@workspace:plugins/review/plugins/reorder-defaults"],
 
     "@singularity/plugin-screenshot": ["@singularity/plugin-screenshot@workspace:plugins/screenshot"],
 

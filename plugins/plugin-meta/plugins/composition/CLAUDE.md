@@ -108,8 +108,8 @@ self-improvement set. Run with
 - Description: Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
 - Web:
   - Contributes: `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `infra/endpoints.useEndpoint`
-  - Exports: Types: `CompositionDataResult`, `DiffState`, `ImpactResult`, `ManifestActions`; Values: `clearActive`, `pinAsRoot`, `setActiveComposition`, `setCompareComposition`, `updateActiveDraft`, `useActiveComposition`, `useActiveMembership`, `useCompareComposition`, `useCompositionData`, `useDiffMap`, `useEnsureCompositionData`, `useGraph`, `useImpact`, `useInclusion`, `useIsCompareMode`, `useManifestActions`, `useManifestItems`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useSetConfig`, `config_v2/staging.useStageConfigDefault`, `infra/endpoints.useEndpoint`
+  - Exports: Types: `CompositionDataResult`, `DiffState`, `ImpactResult`, `ManifestActions`, `PromoteManifestsToGit`; Values: `clearActive`, `pinAsRoot`, `setActiveComposition`, `setCompareComposition`, `updateActiveDraft`, `useActiveComposition`, `useActiveMembership`, `useCompareComposition`, `useCompositionData`, `useDiffMap`, `useEnsureCompositionData`, `useGraph`, `useImpact`, `useInclusion`, `useIsCompareMode`, `useManifestActions`, `useManifestItems`, `usePromoteManifestsToGit`
 - Server:
   - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
   - Routes: `GET /api/composition/data`

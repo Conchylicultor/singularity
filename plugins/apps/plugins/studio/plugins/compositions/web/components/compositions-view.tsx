@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { MdAdd, MdDeleteOutline, MdSave } from "react-icons/md";
+import { MdAdd, MdDeleteOutline, MdPublic, MdSave } from "react-icons/md";
 import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -8,6 +8,7 @@ import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { explorerPane } from "@plugins/apps/plugins/studio/plugins/explorer/web";
 import {
@@ -19,6 +20,7 @@ import {
   useCompareComposition,
   useDiffMap,
   useGraph,
+  usePromoteManifestsToGit,
   setActiveComposition,
   setCompareComposition,
   updateActiveDraft,
@@ -90,6 +92,31 @@ function DraftActions({
         </Button>
       </div>
     </Stack>
+  );
+}
+
+/**
+ * Stages the current compositions set as a committed git-layer "default for
+ * everyone" via the composition plugin's promote API (which wraps the generic
+ * config_v2 staging primitive — this pane never touches config_v2/staging
+ * directly). The staged default surfaces in the review pane's "Default for
+ * everyone" section, where it can be reviewed, applied (landed on `main`), or
+ * discarded.
+ */
+function PromoteDefaultButton() {
+  const { promote, ready } = usePromoteManifestsToGit();
+  return (
+    <WithTooltip content="Stage the current compositions as a committed default for everyone, reviewable in the review pane.">
+      <Button
+        variant="outline"
+        size="sm"
+        disabled={!ready}
+        onClick={() => promote()}
+      >
+        <MdPublic />
+        Set as default for everyone
+      </Button>
+    </WithTooltip>
   );
 }
 
@@ -278,10 +305,13 @@ function DraftSection({
       <Stack gap="sm">
         <div className="flex items-center justify-between gap-sm">
           <SectionLabel>Compositions</SectionLabel>
-          <Button variant="outline" size="sm" onClick={onNew}>
-            <MdAdd />
-            New
-          </Button>
+          <div className="flex items-center gap-xs">
+            <PromoteDefaultButton />
+            <Button variant="outline" size="sm" onClick={onNew}>
+              <MdAdd />
+              New
+            </Button>
+          </div>
         </div>
         {items.length === 0 ? (
           <Text variant="caption" tone="muted">

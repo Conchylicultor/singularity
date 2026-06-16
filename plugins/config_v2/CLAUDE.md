@@ -84,6 +84,44 @@ This is the base-override workflow (Layer 1) one path segment deeper. Any regist
 
 **Per-app scopes in settings:** the config detail pane is scope-aware. A scope tab bar at the top offers a **Base** tab plus one tab per app the descriptor is customized for (read live from `configV2ScopesResource`), each resolving its label + icon from `Apps.App.useContributions()` and carrying a warning **conflict dot** when that scope has a stale override. Selecting a tab re-keys every read (values, tiers, conflicts) and every write (`set-field`, `reset-field`, `acknowledge`/`merge`/`delete-override`, raw file) to that `scopeId`, so fields, tiers, the conflict banner, and "Reset all" all act on the selected scope. The **`+` App** button forks a brand-new per-descriptor customization (`fork-descriptor-scope`) for any app not yet customized, then selects it. On a non-Base tab a **Stop customizing** action (`remove-descriptor-scope`) drops the descriptor's whole per-app customization — distinct from "Reset all", which only reverts edits to the scoped origin — and falls back to Base via the live scopes resource.
 
+### Promoting a runtime edit to a git default (`promotableToGit`)
+
+Layers 1–2 flow code → git → user. The **staging** sub-plugin
+([`plugins/staging`](plugins/staging/CLAUDE.md)) adds the reverse arrow for
+opted-in descriptors: a runtime (user-layer) edit can be **promoted back into the
+committed git layer** as a "default for everyone". Mark a descriptor with
+`defineConfig({ promotableToGit: true, ... })` to enable it — the flag is the
+single generic contract; the staging primitive keys entirely off it (any
+registered descriptor with the flag is promotable, with zero staging-code
+changes).
+
+The flow is generic over `(pluginId, configName)` and the **full config
+document** (not a single field):
+
+1. A consumer stages a candidate value via the staging web API
+   (`useStageConfigDefault` → `POST /api/config-v2/staged-defaults`, body
+   `{ pluginId, configName, value }`). The stage handler refuses anything whose
+   descriptor isn't registered with `promotableToGit: true` (`findPromotableDescriptor`
+   over `getAllDescriptors()` — the config_v2 registry *is* the allow-list).
+2. Staged rows live in `staged_config_default` (composite PK
+   `(plugin_id, config_name)`, last-write-wins) and stream to the UI via the
+   `config-v2-staged-defaults` live resource + an optimistic overlay. The review
+   pane's generic "Default for everyone" section lists them with a pluggable
+   before→after diff (`Staging.DiffRenderer` slot, `GenericConfigDiff` fallback)
+   and Apply / Discard / Apply-all controls.
+3. Apply enqueues the `config-v2.land-defaults` job (`dedup: "singleton"`): it
+   `safeParse`s the value against the descriptor schema, writes
+   `config/<plugin-tree>/<configName>.jsonc` with `// @hash` restamped against the
+   live origin (so the override is born in-sync), and `./singularity push`es it to
+   `main` from a throwaway worktree. Malformed rows are skipped + logged; only
+   landed keys are drained.
+
+Consumers own the value shape behind their own barrel (collection-consumer
+separation): **reorder** stages `{ items: tree }` per slot (and contributes the
+rich tree diff renderer); **composition** stages `{ manifests: [...] }` via its
+`usePromoteManifestsToGit()` hook. Neither the review section nor the staging
+primitive knows anything domain-specific.
+
 ### Hash chain
 
 Each layer's override records the hash of its origin (`// @hash` on line 1). Two independent hashes at the user layer:
@@ -151,10 +189,11 @@ Adding a field to an existing config (including a `listField` item or `objectFie
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
   - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ModifiedCounts`, `ConfigV2ScopeForked`, `ConfigV2Scopes`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2ModifiedCountsResource`, `configV2ModifiedCountsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkDescriptorScope`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
 - Cross-plugin:
-  - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/json/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/string-list/config`, `fields/text/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
+  - Imported by: `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/json/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/string-list/config`, `fields/text/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Sub-plugins:
   - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
   - **`fields`** — Field type registry. Sub-plugins contribute field types with core factories and web renderers.
   - **`settings`** — Settings UI for config_v2: two-pane nav + detail surface for viewing and editing typed config fields. Surfaced inside the Settings app. HTTP endpoints for setting and resetting config_v2 field values.
+  - **`staging`** — Generic config_v2 git-promotion staging (web): the optimistic staged-defaults overlay host, mutation + store hooks, the pluggable diff-renderer slot, and the generic structural diff fallback. Any promotableToGit descriptor's runtime edit can be promoted to a committed git-layer default. Generic config_v2 git-promotion staging: stage/apply/apply-all/discard endpoints for any promotableToGit descriptor, a live staged-defaults resource, the atomic git-layer writer, and a non-blocking job that lands the full config document directly on main via a throwaway worktree.
 
 <!-- AUTOGENERATED:END -->

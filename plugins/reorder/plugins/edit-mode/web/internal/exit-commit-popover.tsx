@@ -8,9 +8,9 @@ import {
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
-  useApplyAllReorderDefaults,
-  useDiscardAllStagedDefaults,
-} from "@plugins/reorder/plugins/staging/web";
+  useApplyAllConfigDefaults,
+  useDiscardAllConfigDefaults,
+} from "@plugins/config_v2/plugins/staging/web";
 import { useExitPromptOpen, setExitPromptOpen } from "./exit-prompt-store";
 
 /**
@@ -29,8 +29,8 @@ import { useExitPromptOpen, setExitPromptOpen } from "./exit-prompt-store";
  */
 export function ExitCommitPopover({ children }: { children: ReactNode }) {
   const open = useExitPromptOpen();
-  const applyAll = useApplyAllReorderDefaults();
-  const discardAll = useDiscardAllStagedDefaults();
+  const applyAll = useApplyAllConfigDefaults();
+  const discardAll = useDiscardAllConfigDefaults();
 
   const commit = () => {
     // `.mutate` returns void (no floating promise); the land job runs in the

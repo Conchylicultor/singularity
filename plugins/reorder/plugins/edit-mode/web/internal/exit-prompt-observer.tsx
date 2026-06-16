@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useEditMode } from "@plugins/reorder/web";
-import { useHasStagedDefaults } from "@plugins/reorder/plugins/staging/web";
+import { useHasStagedDefaults } from "@plugins/config_v2/plugins/staging/web";
 import { setExitPromptOpen } from "./exit-prompt-store";
 
 /**

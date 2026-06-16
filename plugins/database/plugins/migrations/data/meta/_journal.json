@@ -1093,6 +1093,13 @@
       "tag": "20260616_131537_c078cfaf__add_search_documents",
       "hash": "c078cfaf",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781617221000,
+      "tag": "20260616_134021_9964966e__generalize_git_promotion_staging",
+      "hash": "9964966e",
+      "breakpoints": true
     }
   ]
 }

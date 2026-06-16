@@ -24,11 +24,9 @@ import {
   type ReorderEntry,
 } from "@plugins/reorder/plugins/editor/web";
 import { useReorderNodeTypes } from "@plugins/reorder/plugins/node-types/web";
-import {
-  useStagedTree,
-  useStageDefault,
-} from "@plugins/reorder/plugins/staging/web";
+import { useStageDefault } from "@plugins/config_v2/plugins/staging/web";
 import { reorderDescriptors, reorderPluginIdForSlot } from "./descriptors";
+import { useStagedTree } from "./staged-tree";
 import { useEditMode } from "./edit-mode-store";
 import { useReorderScope } from "./scope-store";
 import { ReorderEffectiveEditModeContext } from "./effective-edit-mode";
@@ -344,7 +342,9 @@ function ReorderInner({
       if (scope === "everyone") {
         // Optimistic dispatch: the staged tree shows inline immediately and
         // becomes `effectiveItems` for this slot (display + ref source above).
-        stageDefault(slotId, reorderPluginIdForSlot(slotId), tree);
+        // The generic staging value is the full config document — reorder's is
+        // a single `items` field, so wrap the tree in `{ items }`.
+        stageDefault(reorderPluginIdForSlot(slotId), slotId, { items: tree });
         return;
       }
       setConfig("items", tree);
