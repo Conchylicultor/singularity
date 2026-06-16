@@ -10,7 +10,7 @@
   - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.ResizableHandle`, `primitives/ui-kit.ResizablePanel`, `primitives/ui-kit.ResizablePanelGroup`, `shell.Shell`
   - Exports: Values: `FileTree`
 - Server:
-  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesByPushId`
+  - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesByPushId`
   - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
 - Cross-plugin:
   - Imported by: `code-explorer/file-resolve`, `plugin-meta/plugin-view/file-tree`, `review/plugin-changes`

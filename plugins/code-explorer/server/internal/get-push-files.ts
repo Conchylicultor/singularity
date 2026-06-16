@@ -1,7 +1,7 @@
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
-
-import { GIT } from "@plugins/infra/plugins/paths/server";
+import { runGit } from "@plugins/primitives/plugins/commit-list/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 
 interface FileEntry {
   status: EditedFileStatus;
@@ -10,24 +10,11 @@ interface FileEntry {
   from?: string;
 }
 
-async function run(args: string[], cwd: string): Promise<string | null> {
-  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", cwd, ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [out, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    proc.exited,
-  ]);
-  if (code !== 0) return null;
-  return out;
-}
-
 export async function resolveParentSha(
   worktreePath: string,
   sha: string,
 ): Promise<string | null> {
-  const out = await run(["rev-parse", `${sha}^`], worktreePath);
+  const out = await runGit(["rev-parse", `${sha}^`], worktreePath);
   if (out === null) return null;
   const trimmed = out.trim();
   return trimmed.length > 0 ? trimmed : null;
@@ -38,43 +25,45 @@ export async function getRangeFiles(
   baseSha: string,
   headSha: string,
 ): Promise<EditedFile[] | null> {
-  const byPath = new Map<string, FileEntry>();
+  return withHeavyReadSlot(async () => {
+    const byPath = new Map<string, FileEntry>();
 
-  const nameStatus = await run(
-    ["diff", "-M", "-C", "-z", "--name-status", baseSha, headSha],
-    worktreePath,
-  );
-  if (nameStatus === null) return null;
+    const nameStatus = await runGit(
+      ["diff", "-M", "-C", "-z", "--name-status", baseSha, headSha],
+      worktreePath,
+    );
+    if (nameStatus === null) return null;
 
-  for (const rec of parseDiffNameStatusZ(nameStatus)) {
-    byPath.set(rec.path, {
-      status: rec.status,
-      additions: 0,
-      deletions: 0,
-      ...(rec.from ? { from: rec.from } : {}),
-    });
-  }
-
-  const numstat = await run(
-    ["diff", "-M", "-C", "-z", "--numstat", baseSha, headSha],
-    worktreePath,
-  );
-  if (numstat) {
-    for (const rec of parseDiffNumstatZ(numstat)) {
-      const entry = byPath.get(rec.path);
-      if (!entry) continue;
-      entry.additions = rec.additions;
-      entry.deletions = rec.deletions;
+    for (const rec of parseDiffNameStatusZ(nameStatus)) {
+      byPath.set(rec.path, {
+        status: rec.status,
+        additions: 0,
+        deletions: 0,
+        ...(rec.from ? { from: rec.from } : {}),
+      });
     }
-  }
 
-  return [...byPath.entries()]
-    .map(([path, entry]) => ({
-      path,
-      status: entry.status,
-      additions: entry.additions,
-      deletions: entry.deletions,
-      ...(entry.from ? { from: entry.from } : {}),
-    }))
-    .sort((a, b) => a.path.localeCompare(b.path));
+    const numstat = await runGit(
+      ["diff", "-M", "-C", "-z", "--numstat", baseSha, headSha],
+      worktreePath,
+    );
+    if (numstat) {
+      for (const rec of parseDiffNumstatZ(numstat)) {
+        const entry = byPath.get(rec.path);
+        if (!entry) continue;
+        entry.additions = rec.additions;
+        entry.deletions = rec.deletions;
+      }
+    }
+
+    return [...byPath.entries()]
+      .map(([path, entry]) => ({
+        path,
+        status: entry.status,
+        additions: entry.additions,
+        deletions: entry.deletions,
+        ...(entry.from ? { from: entry.from } : {}),
+      }))
+      .sort((a, b) => a.path.localeCompare(b.path));
+  });
 }

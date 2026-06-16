@@ -19,7 +19,7 @@ sibling plugins (e.g. publish's tree component).
   - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/section-label.SectionLabel`, `primitives/spacing.Stack`, `primitives/text.Text`
   - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
+  - Uses: `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
   - Routes: `GET /api/plugin-view/tree`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`

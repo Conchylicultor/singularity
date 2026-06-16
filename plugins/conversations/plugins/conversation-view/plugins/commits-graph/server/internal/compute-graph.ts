@@ -1,5 +1,6 @@
 import type { CommitDelta, CommitRow, CommitsGraph } from "../../shared/protocol";
 import { runGit, LOG_FORMAT, parseGitLog } from "@plugins/primitives/plugins/commit-list/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 
 const MAIN = "main";
 const MAX_COMMITS = 200;
@@ -43,7 +44,7 @@ async function readDeltaCounts(
   return { ahead, behind };
 }
 
-export async function computeDelta(worktreePath: string): Promise<CommitDelta> {
+async function computeDeltaCore(worktreePath: string): Promise<CommitDelta> {
   const branch = await readBranch(worktreePath);
   const mergeBase = await readMergeBase(worktreePath);
   if (mergeBase === null) {
@@ -54,6 +55,10 @@ export async function computeDelta(worktreePath: string): Promise<CommitDelta> {
     return { ...ZERO_DELTA, branch, mergeBase };
   }
   return { ahead: counts.ahead, behind: counts.behind, mergeBase, branch };
+}
+
+export async function computeDelta(worktreePath: string): Promise<CommitDelta> {
+  return withHeavyReadSlot(() => computeDeltaCore(worktreePath));
 }
 
 async function computeCommitsFromShas(
@@ -75,20 +80,22 @@ export async function computeGraph(
   worktreePath: string,
   pushedShas: string[] = [],
 ): Promise<CommitsGraph> {
-  const delta = await computeDelta(worktreePath);
-  if (delta.mergeBase === null) {
-    return { ...delta, commits: [], landedCommits: [], behindCommits: [] };
-  }
-  const pendingRange = `${delta.mergeBase}..HEAD`;
-  const behindRange = `HEAD..${MAIN}`;
-  const [pendingOut, behindOut, landedAll] = await Promise.all([
-    runGit(["log", `--max-count=${MAX_COMMITS}`, `--format=${LOG_FORMAT}`, pendingRange], worktreePath),
-    runGit(["log", `--max-count=${MAX_BEHIND}`, `--format=${LOG_FORMAT}`, behindRange], worktreePath),
-    computeCommitsFromShas(pushedShas, worktreePath),
-  ]);
-  const pendingCommits = pendingOut === null ? [] : parseGitLog(pendingOut);
-  const behindCommits = behindOut === null ? [] : parseGitLog(behindOut);
-  const pendingShas = new Set(pendingCommits.map((c) => c.sha));
-  const landedCommits = landedAll.filter((c) => !pendingShas.has(c.sha));
-  return { ...delta, commits: pendingCommits, landedCommits, behindCommits };
+  return withHeavyReadSlot(async () => {
+    const delta = await computeDeltaCore(worktreePath);
+    if (delta.mergeBase === null) {
+      return { ...delta, commits: [], landedCommits: [], behindCommits: [] };
+    }
+    const pendingRange = `${delta.mergeBase}..HEAD`;
+    const behindRange = `HEAD..${MAIN}`;
+    const [pendingOut, behindOut, landedAll] = await Promise.all([
+      runGit(["log", `--max-count=${MAX_COMMITS}`, `--format=${LOG_FORMAT}`, pendingRange], worktreePath),
+      runGit(["log", `--max-count=${MAX_BEHIND}`, `--format=${LOG_FORMAT}`, behindRange], worktreePath),
+      computeCommitsFromShas(pushedShas, worktreePath),
+    ]);
+    const pendingCommits = pendingOut === null ? [] : parseGitLog(pendingOut);
+    const behindCommits = behindOut === null ? [] : parseGitLog(behindOut);
+    const pendingShas = new Set(pendingCommits.map((c) => c.sha));
+    const landedCommits = landedAll.filter((c) => !pendingShas.has(c.sha));
+    return { ...delta, commits: pendingCommits, landedCommits, behindCommits };
+  });
 }

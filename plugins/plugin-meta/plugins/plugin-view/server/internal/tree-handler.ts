@@ -4,6 +4,7 @@ import {
 } from "@plugins/plugin-meta/plugins/plugin-tree/core";
 import { PLUGINS_DIR } from "@plugins/infra/plugins/paths/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 import { getPluginTree } from "../../core/endpoints";
 import type { PluginNode, PluginTreePayload } from "../../core/types";
 
@@ -18,7 +19,9 @@ function tally(
 }
 
 export const handleTree = implement(getPluginTree, async () => {
-  const tree = await buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true });
+  const tree = await withHeavyReadSlot(() =>
+    buildPluginTree(PLUGINS_DIR, { skipBarrelImport: true }),
+  );
 
   function toApiNode(node: TreePluginNode): PluginNode {
     return {

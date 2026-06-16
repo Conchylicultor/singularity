@@ -1682,6 +1682,10 @@
       "name": "@singularity/plugin-infra-health",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/host-read-pool": {
+      "name": "@singularity/plugin-infra-host-read-pool",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/jobs": {
       "name": "@singularity/plugin-infra-jobs",
       "version": "0.0.1",
@@ -1731,6 +1735,10 @@
     },
     "plugins/packages": {
       "name": "@singularity/plugin-packages",
+      "version": "0.0.1",
+    },
+    "plugins/packages/plugins/host-semaphore": {
+      "name": "@singularity/plugin-packages-host-semaphore",
       "version": "0.0.1",
     },
     "plugins/packages/plugins/inflight": {
@@ -4202,6 +4210,8 @@
 
     "@singularity/plugin-infra-health": ["@singularity/plugin-infra-health@workspace:plugins/infra/plugins/health"],
 
+    "@singularity/plugin-infra-host-read-pool": ["@singularity/plugin-infra-host-read-pool@workspace:plugins/infra/plugins/host-read-pool"],
+
     "@singularity/plugin-infra-jobs": ["@singularity/plugin-infra-jobs@workspace:plugins/infra/plugins/jobs"],
 
     "@singularity/plugin-infra-mcp": ["@singularity/plugin-infra-mcp@workspace:plugins/infra/plugins/mcp"],
@@ -4223,6 +4233,8 @@
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
+
+    "@singularity/plugin-packages-host-semaphore": ["@singularity/plugin-packages-host-semaphore@workspace:plugins/packages/plugins/host-semaphore"],
 
     "@singularity/plugin-packages-inflight": ["@singularity/plugin-packages-inflight@workspace:plugins/packages/plugins/inflight"],
 

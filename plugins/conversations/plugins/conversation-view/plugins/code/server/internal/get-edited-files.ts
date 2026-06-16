@@ -2,8 +2,9 @@ import { resolve, sep } from "node:path";
 import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { EditedFile, EditedFileStatus } from "../../core/protocol";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
+import { runGit } from "@plugins/primitives/plugins/commit-list/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 
-import { GIT } from "@plugins/infra/plugins/paths/server";
 const UNTRACKED_MAX_BYTES = 2 * 1024 * 1024;
 
 interface FileEntry {
@@ -11,19 +12,6 @@ interface FileEntry {
   additions: number;
   deletions: number;
   from?: string;
-}
-
-async function run(args: string[], cwd: string): Promise<string | null> {
-  const proc = Bun.spawn([GIT, "--no-optional-locks", "-C", cwd, ...args], {
-    stdout: "pipe",
-    stderr: "pipe",
-  });
-  const [out, code] = await Promise.all([
-    new Response(proc.stdout).text(),
-    proc.exited,
-  ]);
-  if (code !== 0) return null;
-  return out;
 }
 
 function isPathInside(root: string, target: string): boolean {
@@ -72,6 +60,11 @@ function ensureEntry(
 // for the same worktree, often at the same instant during a review. Deduping at
 // the source (not at one caller) means every caller shares the work. See
 // research/2026-06-15-global-live-state-cascade-contention.md (Change 5).
+//
+// The dedupe is outermost (N callers → one compute); that single survivor then
+// takes a host-wide heavy-read slot so concurrent *distinct* worktrees stay
+// bounded across the box. See
+// research/2026-06-16-global-host-wide-cpu-admission-flock-broker.md.
 const inflight = createInflight();
 
 export function getEditedFiles(worktreePath: string): Promise<EditedFile[]> {
@@ -79,78 +72,80 @@ export function getEditedFiles(worktreePath: string): Promise<EditedFile[]> {
 }
 
 async function computeEditedFiles(worktreePath: string): Promise<EditedFile[]> {
-  const byPath = new Map<string, FileEntry>();
+  return withHeavyReadSlot(async () => {
+    const byPath = new Map<string, FileEntry>();
 
-  const mergeBase =
-    (await run(["merge-base", "main", "HEAD"], worktreePath))?.trim() ?? "main";
+    const mergeBase =
+      (await runGit(["merge-base", "main", "HEAD"], worktreePath))?.trim() ?? "main";
 
-  // -M / -C enable rename/copy detection; -z disambiguates the from/to pair.
-  const diff = await run(
-    ["diff", "-M", "-C", "-z", "--name-status", mergeBase],
-    worktreePath,
-  );
-  if (diff) {
-    for (const rec of parseDiffNameStatusZ(diff)) {
-      const entry = ensureEntry(byPath, rec.path, rec.status);
-      if (rec.from) entry.from = rec.from;
-    }
-  }
-
-  // Working-tree changes are layered on top of the branch diff. We pass
-  // --no-renames here because porcelain-v1 rename output is awkward to parse
-  // and uncommitted renames are rare; they degrade to add+delete.
-  const status = await run(
-    ["status", "--porcelain", "--no-renames", "--untracked-files=all"],
-    worktreePath,
-  );
-  if (status) {
-    for (const line of status.split("\n")) {
-      if (!line) continue;
-      const code = line.slice(0, 2);
-      const path = line.slice(3);
-      if (code === "??") {
-        ensureEntry(byPath, path, "untracked");
-      } else if (code.includes("D")) {
-        const entry = ensureEntry(byPath, path, "deleted");
-        entry.status = "deleted";
-      } else if (code.includes("A")) {
-        ensureEntry(byPath, path, "added");
-      } else {
-        ensureEntry(byPath, path, "modified");
+    // -M / -C enable rename/copy detection; -z disambiguates the from/to pair.
+    const diff = await runGit(
+      ["diff", "-M", "-C", "-z", "--name-status", mergeBase],
+      worktreePath,
+    );
+    if (diff) {
+      for (const rec of parseDiffNameStatusZ(diff)) {
+        const entry = ensureEntry(byPath, rec.path, rec.status);
+        if (rec.from) entry.from = rec.from;
       }
     }
-  }
 
-  // Per-file +/- counts: tracked files via numstat against the merge-base (covers
-  // both committed branch changes and uncommitted working-tree edits).
-  const numstat = await run(
-    ["diff", "-M", "-C", "-z", "--numstat", mergeBase],
-    worktreePath,
-  );
-  if (numstat) {
-    for (const rec of parseDiffNumstatZ(numstat)) {
-      const entry = byPath.get(rec.path);
-      if (!entry) continue;
-      entry.additions = rec.additions;
-      entry.deletions = rec.deletions;
+    // Working-tree changes are layered on top of the branch diff. We pass
+    // --no-renames here because porcelain-v1 rename output is awkward to parse
+    // and uncommitted renames are rare; they degrade to add+delete.
+    const status = await runGit(
+      ["status", "--porcelain", "--no-renames", "--untracked-files=all"],
+      worktreePath,
+    );
+    if (status) {
+      for (const line of status.split("\n")) {
+        if (!line) continue;
+        const code = line.slice(0, 2);
+        const path = line.slice(3);
+        if (code === "??") {
+          ensureEntry(byPath, path, "untracked");
+        } else if (code.includes("D")) {
+          const entry = ensureEntry(byPath, path, "deleted");
+          entry.status = "deleted";
+        } else if (code.includes("A")) {
+          ensureEntry(byPath, path, "added");
+        } else {
+          ensureEntry(byPath, path, "modified");
+        }
+      }
     }
-  }
 
-  // Untracked files don't appear in numstat — count their lines as additions.
-  await Promise.all(
-    [...byPath.entries()].map(async ([path, entry]) => {
-      if (entry.status !== "untracked") return;
-      entry.additions = await countUntrackedLines(worktreePath, path);
-    }),
-  );
+    // Per-file +/- counts: tracked files via numstat against the merge-base (covers
+    // both committed branch changes and uncommitted working-tree edits).
+    const numstat = await runGit(
+      ["diff", "-M", "-C", "-z", "--numstat", mergeBase],
+      worktreePath,
+    );
+    if (numstat) {
+      for (const rec of parseDiffNumstatZ(numstat)) {
+        const entry = byPath.get(rec.path);
+        if (!entry) continue;
+        entry.additions = rec.additions;
+        entry.deletions = rec.deletions;
+      }
+    }
 
-  return [...byPath.entries()]
-    .map(([path, entry]) => ({
-      path,
-      status: entry.status,
-      additions: entry.additions,
-      deletions: entry.deletions,
-      ...(entry.from ? { from: entry.from } : {}),
-    }))
-    .sort((a, b) => a.path.localeCompare(b.path));
+    // Untracked files don't appear in numstat — count their lines as additions.
+    await Promise.all(
+      [...byPath.entries()].map(async ([path, entry]) => {
+        if (entry.status !== "untracked") return;
+        entry.additions = await countUntrackedLines(worktreePath, path);
+      }),
+    );
+
+    return [...byPath.entries()]
+      .map(([path, entry]) => ({
+        path,
+        status: entry.status,
+        additions: entry.additions,
+        deletions: entry.deletions,
+        ...(entry.from ? { from: entry.from } : {}),
+      }))
+      .sort((a, b) => a.path.localeCompare(b.path));
+  });
 }

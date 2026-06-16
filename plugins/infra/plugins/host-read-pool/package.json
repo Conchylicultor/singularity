@@ -1,0 +1,5 @@
+{
+  "name": "@singularity/plugin-infra-host-read-pool",
+  "private": true,
+  "version": "0.0.1"
+}

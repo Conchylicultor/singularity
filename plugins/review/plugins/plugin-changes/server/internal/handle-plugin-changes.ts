@@ -6,6 +6,7 @@ import { getEditedFiles } from "@plugins/conversations/plugins/conversation-view
 import { resolveParentSha, getRangeFiles } from "@plugins/code-explorer/server";
 import { REPO_ROOT, GIT } from "@plugins/infra/plugins/paths/server";
 import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
+import { withHeavyReadSlot } from "@plugins/infra/plugins/host-read-pool/server";
 import { getPluginChanges } from "../../core/endpoints";
 import { computePluginChanges } from "./compute-plugin-diff";
 import type { PluginChangesResponse } from "../../core/protocol";
@@ -97,24 +98,26 @@ async function handlePush(pushId: string): Promise<PluginChangesResponse> {
     throw new HttpError(500, "failed to compute diff for push range");
   }
 
-  const [baseDir, headDir] = await Promise.all([
-    extractPluginsAtSha(baseSha),
-    extractPluginsAtSha(headSha),
-  ]);
-
-  try {
-    const plugins = await computePluginChanges(
-      join(headDir, "plugins"),
-      join(baseDir, "plugins"),
-      editedFiles,
-    );
-    return { plugins };
-  } finally {
-    await Promise.all([
-      rm(baseDir, { recursive: true, force: true }),
-      rm(headDir, { recursive: true, force: true }),
+  return withHeavyReadSlot(async () => {
+    const [baseDir, headDir] = await Promise.all([
+      extractPluginsAtSha(baseSha),
+      extractPluginsAtSha(headSha),
     ]);
-  }
+
+    try {
+      const plugins = await computePluginChanges(
+        join(headDir, "plugins"),
+        join(baseDir, "plugins"),
+        editedFiles,
+      );
+      return { plugins };
+    } finally {
+      await Promise.all([
+        rm(baseDir, { recursive: true, force: true }),
+        rm(headDir, { recursive: true, force: true }),
+      ]);
+    }
+  });
 }
 
 export const handlePluginChanges = implement(getPluginChanges, async ({ query }) => {
