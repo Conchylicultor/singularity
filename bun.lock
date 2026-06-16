@@ -2374,6 +2374,10 @@
       "name": "@singularity/plugin-primitives-optimistic-mutation",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/overscroll-hint": {
+      "name": "@singularity/plugin-primitives-overscroll-hint",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/pane": {
       "name": "@singularity/plugin-primitives-pane",
       "version": "0.0.1",
@@ -4551,6 +4555,8 @@
     "@singularity/plugin-primitives-networking": ["@singularity/plugin-primitives-networking@workspace:plugins/primitives/plugins/networking"],
 
     "@singularity/plugin-primitives-optimistic-mutation": ["@singularity/plugin-primitives-optimistic-mutation@workspace:plugins/primitives/plugins/optimistic-mutation"],
+
+    "@singularity/plugin-primitives-overscroll-hint": ["@singularity/plugin-primitives-overscroll-hint@workspace:plugins/primitives/plugins/overscroll-hint"],
 
     "@singularity/plugin-primitives-pane": ["@singularity/plugin-primitives-pane@workspace:plugins/primitives/plugins/pane"],
 

@@ -248,6 +248,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`multi-select`** — Checkbox multi-select primitive: provider, hooks, and SelectionBar for list plugins.
     - **`networking`** [load-bearing] — WebSocket / EventSource / fetch primitives with reconnection, status-bus, and retry. Used by live-state internally and by terminal/logs/health/stats directly.
     - **`optimistic-mutation`** — Optimistic-mutation primitive over live-state: useOptimisticResource replays pending ops on server truth (overlay/replay), with coarse and content-based confirmation and automatic rollback on reject.
+    - **`overscroll-hint`** — Wasted-scroll hint: a single invisible global controller (mounted via Core.Root) that plays a small native-feeling rubber-band bounce on a surface when a wheel/trackpad/touch gesture scrolls nothing (not scrollable, or already at the edge). Detects 'wasted' gestures by checking whether a real scroll event fired within one animation frame of the gesture.
     - **`pane`** [load-bearing] — Unified pane primitive: Pane.define and chrome components.
     - **`pane-toolbar`** — Factory for full-surface pane toolbars: a sanctioned render-slot header host with reorderable start/end zones. Use instead of hand-rolling a header bar.
     - **`persistent-draft`** — Generic localStorage-backed useState drop-in with optional entity scope and TTL auto-expiry. All useDraft calls sharing the same key stay in sync within and across tabs.
