@@ -28,6 +28,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
+        - **`starred`** — Favorites/starred pages for the Pages app: a Favorites sidebar section plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred), live resource, and toggle/reorder endpoints for the Pages Favorites section.
         - **`welcome`** — Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
           - Plugins:
             - **`quick-create`** — Quick-create section for the Pages landing surface: template tiles (blank, to-do, bulleted list) that create and open a new page.
