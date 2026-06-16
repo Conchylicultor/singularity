@@ -6,6 +6,7 @@ import {
 } from "@plugins/primitives/plugins/data-table/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  FieldCell,
   useFlatRows,
   useResolveCell,
   useResolveCellEditor,
@@ -15,7 +16,6 @@ import {
   type ItemActionsDescriptor,
   type SortState,
 } from "@plugins/primitives/plugins/data-view/web";
-import { EditableCell } from "./editable-cell";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
 function coerce(value: FieldValue): string | number | undefined {
@@ -71,38 +71,17 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // already-host-sorted column by the same key is idempotent. (For v1, a field
     // with `sortable === false` still exposes `value`; documented in CLAUDE.md.)
     value: f.value ? (row: unknown) => coerce(f.value!(row)) : undefined,
-    // 3-tier cell precedence: ① consumer `cell` override → ② contributed
-    // per-type `data-view.cell` (honoring `extends`) → ③ `String(value)`.
-    cell: f.cell
-      ? f.cell
-      : (row: unknown) => {
-          const value = f.value ? f.value(row) : undefined;
-          const values = f.values ? f.values(row) : undefined;
-          const read =
-            resolveCell(f, value, row, values) ?? String(f.value?.(row) ?? "");
-          return f.onEdit || f.onEditValues ? (
-            <EditableCell
-              field={f}
-              row={row}
-              value={value}
-              values={values}
-              read={read}
-              resolveEditor={resolveEditor}
-              onEdit={
-                f.onEdit as
-                  | ((row: unknown, next: FieldValue) => void | Promise<void>)
-                  | undefined
-              }
-              onEditValues={
-                f.onEditValues as
-                  | ((row: unknown, next: string[]) => void | Promise<void>)
-                  | undefined
-              }
-            />
-          ) : (
-            read
-          );
-        },
+    // Shared FieldCell owns the uniform read precedence (consumer `cell` →
+    // contributed `data-view.cell` slot → `String(value)`) and the click-to-edit
+    // wrapper when the field declares `onEdit`/`onEditValues`.
+    cell: (row: unknown) => (
+      <FieldCell
+        field={f}
+        row={row}
+        resolveCell={resolveCell}
+        resolveEditor={resolveEditor}
+      />
+    ),
   }));
 
   return (

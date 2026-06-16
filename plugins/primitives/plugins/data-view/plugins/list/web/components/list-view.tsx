@@ -4,22 +4,16 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import {
+  FieldCell,
   pickPrimaryField,
   useFlatRows,
+  useResolveCell,
+  useResolveCellEditor,
   useResolveOperatorSet,
   type DataViewRenderProps,
-  type FieldDef,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
 import type { ListViewOptions } from "../../core";
-
-function renderFieldContent<TRow>(
-  field: FieldDef<TRow>,
-  row: TRow,
-): ReactNode {
-  if (field.cell) return field.cell(row);
-  return String(field.value?.(row) ?? "");
-}
 
 /**
  * List view: a compact, single-row-per-item dense list. Composes the `Row`
@@ -39,6 +33,8 @@ function renderFieldContent<TRow>(
  * this is the documented re-cast boundary for the view child.
  */
 export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
+  const resolveCell = useResolveCell();
+  const resolveEditor = useResolveCellEditor();
   const resolveOperatorSet = useResolveOperatorSet();
   const rows = useFlatRows(
     props.rows,
@@ -112,7 +108,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                       variant="label"
                       className="truncate text-foreground"
                     >
-                      {renderFieldContent(titleField, row)}
+                      <FieldCell
+                        field={titleField}
+                        row={row}
+                        resolveCell={resolveCell}
+                        resolveEditor={resolveEditor}
+                        display="block"
+                      />
                     </Text>
                   ) : null}
                   {subtitleFields.length > 0 ? (
@@ -124,7 +126,13 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                       {subtitleFields.map((field, fi) => (
                         <span key={field.id}>
                           {fi > 0 ? " · " : null}
-                          {renderFieldContent(field, row)}
+                          <FieldCell
+                            field={field}
+                            row={row}
+                            resolveCell={resolveCell}
+                            resolveEditor={resolveEditor}
+                            display="inline"
+                          />
                         </span>
                       ))}
                     </Text>
@@ -133,7 +141,15 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
                 {trailingFields.length > 0 ? (
                   <div className="ml-auto flex shrink-0 items-center gap-xs">
                     {trailingFields.map((field) => (
-                      <span key={field.id}>{renderFieldContent(field, row)}</span>
+                      <span key={field.id}>
+                        <FieldCell
+                          field={field}
+                          row={row}
+                          resolveCell={resolveCell}
+                          resolveEditor={resolveEditor}
+                          display="block"
+                        />
+                      </span>
                     ))}
                   </div>
                 ) : null}

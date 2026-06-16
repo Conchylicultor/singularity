@@ -5,8 +5,11 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
+  FieldCell,
   pickPrimaryField,
   useFlatRows,
+  useResolveCell,
+  useResolveCellEditor,
   useResolveOperatorSet,
   type CreateOption,
   type DataViewRenderProps,
@@ -31,14 +34,6 @@ function pickCoverField<TRow>(
     fields.find((f) => f.cover === true) ??
     fields.find((f) => f.type === "media")
   );
-}
-
-function renderFieldContent<TRow>(
-  field: FieldDef<TRow>,
-  row: TRow,
-): ReactNode {
-  if (field.cell) return field.cell(row);
-  return String(field.value?.(row) ?? "");
 }
 
 /** Paint a structured cover descriptor into a uniform `aspect-video` frame. */
@@ -97,6 +92,8 @@ function renderMedia<TRow>(
  * this is the documented re-cast boundary for the view child.
  */
 export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
+  const resolveCell = useResolveCell();
+  const resolveEditor = useResolveCellEditor();
   const resolveOperatorSet = useResolveOperatorSet();
   const rows = useFlatRows(
     props.rows,
@@ -189,7 +186,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
                 variant="label"
                 className="truncate font-semibold text-foreground"
               >
-                {renderFieldContent(titleField, row)}
+                <FieldCell
+                  field={titleField}
+                  row={row}
+                  resolveCell={resolveCell}
+                  resolveEditor={resolveEditor}
+                />
               </Text>
             ) : null}
             {bodyFields.length > 0 ? (
@@ -202,7 +204,12 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
                     variant="caption"
                     className="truncate text-muted-foreground"
                   >
-                    {renderFieldContent(field, row)}
+                    <FieldCell
+                      field={field}
+                      row={row}
+                      resolveCell={resolveCell}
+                      resolveEditor={resolveEditor}
+                    />
                   </Text>
                 ))}
               </div>

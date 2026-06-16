@@ -57,7 +57,16 @@ function TasksListInner({
   return (
     <DataView<TaskListItem>
       rows={rows}
-      fields={[{ id: "title", label: "Title", primary: true, value: (t) => t.title }]}
+      fields={[
+        {
+          id: "title",
+          label: "Title",
+          primary: true,
+          value: (t) => t.title,
+          onEdit: (t, next) =>
+            patchTask(t.id, { title: String(next ?? "").trim() || "Untitled" }),
+        },
+      ]}
       rowKey={(t) => t.id}
       views={["tree"]}
       storageKey="tasks-list"
@@ -71,7 +80,6 @@ function TasksListInner({
         onToggleExpanded: (id, next) => patchTask(id, { expanded: next }),
         onMove: (id, dest) =>
           patchTask(id, { folderId: dest.parentId, rank: dest.rank }),
-        onRename: (id, next) => patchTask(id, { title: next }),
         onCreate: createTaskRow,
       }}
       viewOptions={{ tree: treeOptions }}

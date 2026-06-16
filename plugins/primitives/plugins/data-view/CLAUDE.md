@@ -38,10 +38,12 @@ A data source can declare itself hierarchical by passing `hierarchy` (a
 `HierarchyConfig<TRow>`) to `<DataView>`. Present → hierarchical views (the
 tree) become selectable; absent → the host drops them from the switcher. The
 `HierarchyConfig` carries accessors (`getParentId`, `getRank`, `isExpanded`) and
-mutations (`onToggleExpanded`, `onMove`, `onRename`, `onCreate`) — all optional
+mutations (`onToggleExpanded`, `onMove`, `onCreate`) — all optional
 except the two accessors, so a read-only nav tree supplies just those two. The
 `FieldDef.primary` flag selects the tree row label field (shared
-`pickPrimaryField` heuristic).
+`pickPrimaryField` heuristic). Inline rename of the primary label is no longer a
+hierarchy concern — declare `FieldDef.onEdit` on the primary field and the tree
+renders an inline editor (the same `onEdit` contract the table/gallery/list use).
 
 ## Create affordances (`creators`)
 
@@ -168,7 +170,7 @@ gating convention.
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.DropdownMenu`, `primitives/ui-kit.DropdownMenuContent`, `primitives/ui-kit.DropdownMenuItem`, `primitives/ui-kit.DropdownMenuSeparator`, `primitives/ui-kit.DropdownMenuTrigger`, `primitives/ui-kit.Input`, `primitives/view-switcher.ViewSwitcher`
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `evaluateNode`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:

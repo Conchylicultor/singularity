@@ -1,6 +1,7 @@
 import { useState, type MouseEvent, type ReactNode } from "react";
-import type { FieldDef, FieldValue } from "@plugins/primitives/plugins/data-view/web";
-import type { useResolveCellEditor } from "@plugins/primitives/plugins/data-view/web";
+import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import type { FieldDef, FieldValue } from "../index";
+import type { useResolveCellEditor } from "../index";
 
 /**
  * A scalar FieldValue is "empty" when null/undefined or the empty string.
@@ -11,19 +12,26 @@ function isEmptyScalar(value: FieldValue): boolean {
 }
 
 /**
- * Shared read affordance. Fills the grid cell (`w-full`) so the WHOLE column
- * width is a click target — not just the rendered glyphs — and shows a muted
- * "Empty" hint when the value is empty, so nullable/blank cells stay
- * discoverable and clickable instead of collapsing to a zero-size, unclickable
- * region.
+ * Shared read affordance. In `"block"` mode it fills the cell (`w-full`) so the
+ * WHOLE column width is a click target — not just the rendered glyphs; in
+ * `"inline"` mode it flows inline inside text. Shows a muted "Empty" hint when
+ * the value is empty, so nullable/blank cells stay discoverable and clickable
+ * instead of collapsing to a zero-size, unclickable region.
  */
 function ReadAffordance(props: {
   empty: boolean;
   read: ReactNode;
+  display: "block" | "inline";
   onClick: (e: MouseEvent) => void;
 }): ReactNode {
   return (
-    <div className="w-full min-w-0 cursor-text truncate" onClick={props.onClick}>
+    <div
+      className={cn(
+        "min-w-0 cursor-text truncate",
+        props.display === "inline" ? "inline" : "w-full",
+      )}
+      onClick={props.onClick}
+    >
       {props.empty ? (
         <span className="italic text-muted-foreground/50">Empty</span>
       ) : (
@@ -34,12 +42,18 @@ function ReadAffordance(props: {
 }
 
 /**
- * Presentational click-to-edit wrapper for one table cell. Holds ONLY an
+ * Presentational click-to-edit wrapper for one field cell. Holds ONLY an
  * `editing` boolean — the parent owns `resolveEditor` (hooks must run
- * unconditionally at the table-view top level) and the write-back. A field is
+ * unconditionally at the view top level) and the write-back. A field is
  * scalar (`value` + `onEdit`) or multi-value (`values` + `onEditValues`); the
  * empty-check and the commit channel follow whichever the field declares.
  * `stopPropagation` keeps a cell edit from triggering row activation.
+ *
+ * `autoEdit` starts the cell in edit mode on mount (the contributed slot editors
+ * `autoFocus`, so mounting the editor focuses it) — used by the tree's
+ * auto-focus-on-create. `display` controls layout of both the read affordance
+ * and the editor wrapper: `"block"` (default) fills the cell; `"inline"` flows
+ * inline inside text.
  */
 export function EditableCell(props: {
   field: FieldDef<unknown>;
@@ -48,10 +62,13 @@ export function EditableCell(props: {
   values?: readonly string[];
   read: ReactNode;
   resolveEditor: ReturnType<typeof useResolveCellEditor>;
+  autoEdit?: boolean;
+  display?: "block" | "inline";
   onEdit?: (row: unknown, next: FieldValue) => void | Promise<void>;
   onEditValues?: (row: unknown, next: string[]) => void | Promise<void>;
 }): ReactNode {
-  const [editing, setEditing] = useState(false);
+  const [editing, setEditing] = useState(props.autoEdit ?? false);
+  const display = props.display ?? "block";
   const isMulti = props.field.values != null;
   const empty = isMulti
     ? !(props.values && props.values.length > 0)
@@ -73,17 +90,26 @@ export function EditableCell(props: {
       },
       onCancel: () => setEditing(false),
     });
-    if (editor)
+    if (editor) {
+      const Wrapper = display === "inline" ? "span" : "div";
       return (
-        <div className="w-full min-w-0" onClick={(e) => e.stopPropagation()}>
+        <Wrapper
+          className={cn(
+            "min-w-0",
+            display === "inline" ? "inline-flex" : "w-full",
+          )}
+          onClick={(e) => e.stopPropagation()}
+        >
           {editor}
-        </div>
+        </Wrapper>
       );
+    }
     // No contributed editor for this type → never trap the user.
     return (
       <ReadAffordance
         empty={empty}
         read={props.read}
+        display={display}
         onClick={(e) => e.stopPropagation()}
       />
     );
@@ -92,6 +118,7 @@ export function EditableCell(props: {
     <ReadAffordance
       empty={empty}
       read={props.read}
+      display={display}
       onClick={(e) => {
         e.stopPropagation();
         setEditing(true);

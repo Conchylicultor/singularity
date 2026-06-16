@@ -28,8 +28,6 @@ export interface HierarchyConfig<TRow> {
     id: string,
     dest: { parentId: string | null; rank: Rank },
   ) => void | Promise<void>;
-  /** Inline rename of the primary field. Omit → read-only label. */
-  onRename?: (id: string, next: string) => void | Promise<void>;
   /** Create child/sibling. Omit → no add buttons. */
   onCreate?: (args: {
     parentId: string | null;

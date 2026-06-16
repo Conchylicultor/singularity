@@ -92,7 +92,16 @@ export function AgentsList({
       <SystemFolder selectedSystemId={selectedSystemId} />
       <DataView<Agent>
         rows={rows}
-        fields={[{ id: "name", label: "Name", primary: true, value: (a) => a.name }]}
+        fields={[
+          {
+            id: "name",
+            label: "Name",
+            primary: true,
+            value: (a) => a.name,
+            onEdit: (a, next) =>
+              patchAgent(a.id, { name: String(next ?? "").trim() || "Untitled" }),
+          },
+        ]}
         rowKey={(a) => a.id}
         views={["tree"]}
         storageKey="agents-list"
@@ -106,7 +115,6 @@ export function AgentsList({
           isExpanded: (a) => a.expanded,
           onToggleExpanded: (id, next) => patchAgent(id, { expanded: next }),
           onMove: (id, dest) => patchAgent(id, dest),
-          onRename: (id, next) => patchAgent(id, { name: next }),
           onCreate: createAgentRow,
         }}
         selection={{ bulkActions: <DeleteSelectedAction /> }}

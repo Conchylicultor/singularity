@@ -35,19 +35,6 @@ export function PagesSidebar() {
     rows = result.data;
   }
 
-  // Plain function (not useCallback): the `hierarchy` object below is built
-  // inline every render anyway, so memoizing this buys nothing — and closing
-  // over the per-render `rows` is fine without a dependency array.
-  const onRename = async (id: string, next: string) => {
-    const block = rows.find((b) => b.id === id);
-    if (!block) return;
-    await fetchEndpoint(
-      updateBlock,
-      { id },
-      { body: { data: { ...pageData(block), title: next } } },
-    );
-  };
-
   // Plain literal (not the tree child's options helper) to respect data-view's
   // collection-consumer separation — consumers never import a view child. The
   // row-menu callback is typed via the tree *primitive's* helper types.
@@ -92,6 +79,20 @@ export function PagesSidebar() {
                 label: "Title",
                 primary: true,
                 value: (b) => pageData(b).title,
+                onEdit: async (b, next) => {
+                  await fetchEndpoint(
+                    updateBlock,
+                    { id: b.id },
+                    {
+                      body: {
+                        data: {
+                          ...pageData(b),
+                          title: String(next ?? "").trim() || "Untitled",
+                        },
+                      },
+                    },
+                  );
+                },
               },
             ]}
             rowKey={(b) => b.id}
@@ -113,7 +114,6 @@ export function PagesSidebar() {
                   { id },
                   { body: { parentId: dest.parentId, rank: dest.rank } },
                 ),
-              onRename,
               onCreate: (args) => createPageWithSeed(args),
             }}
             viewOptions={viewOptions}

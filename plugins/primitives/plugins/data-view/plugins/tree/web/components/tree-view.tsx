@@ -11,7 +11,6 @@ import {
 } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeNode } from "@plugins/primitives/plugins/tree/core";
 import {
-  RenameInput,
   RowChrome,
   TreeList,
   type RowChromeMenuHelpers,
@@ -20,6 +19,7 @@ import {
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { TreeViewOptions } from "../internal/types";
+import { EditableTreeLabel } from "./editable-tree-label";
 
 /**
  * The projected tree row: the original `TRow` plus the `TreeItem` fields the
@@ -36,18 +36,18 @@ type Projected<TRow> = {
 
 /**
  * Default row: render the primary field through the same `data-view.cell`
- * resolution the table uses, swapping in a `RenameInput` when the data source
- * supports inline rename and the primary field is text.
+ * resolution the table uses, swapping in an `EditableTreeLabel` (select-then-edit
+ * over the shared `useResolveCellEditor` capability) when the primary field
+ * declares `onEdit`/`onEditValues`.
  */
 function DefaultRow<TRow>(props: {
   node: TreeNode<Projected<TRow>>;
   depth: number;
   primaryField: FieldDef<TRow> | undefined;
-  hierarchy: HierarchyConfig<TRow>;
   options: TreeViewOptions<TRow>;
   itemActions: ItemActionsDescriptor<TRow> | undefined;
 }): ReactNode {
-  const { node, depth, primaryField, hierarchy, options, itemActions } = props;
+  const { node, depth, primaryField, options, itemActions } = props;
   const resolveCell = useResolveCell();
   const row = node.__row;
 
@@ -56,16 +56,19 @@ function DefaultRow<TRow>(props: {
   const labelClass = options.labelClassName?.(row);
 
   let label: ReactNode;
-  if (
-    hierarchy.onRename &&
-    primaryField &&
-    (primaryField.type ?? "text") === "text"
-  ) {
+  if (primaryField && (primaryField.onEdit || primaryField.onEditValues)) {
+    const readNode =
+      resolveCell(
+        primaryField as FieldDef<unknown>,
+        primaryValue ?? null,
+        row,
+      ) ?? primaryString;
     label = (
-      <RenameInput
-        nodeId={node.id}
-        value={primaryString}
-        onCommit={(next) => hierarchy.onRename!(node.id, next)}
+      <EditableTreeLabel
+        node={node}
+        row={row}
+        field={primaryField as FieldDef<unknown>}
+        read={readNode}
         className={labelClass}
       />
     );
@@ -122,8 +125,9 @@ function DefaultRow<TRow>(props: {
 /**
  * Tree view: a thin adapter that projects the data-view rows + `HierarchyConfig`
  * onto the `tree` primitive's `TreeList`. No reimplementation — `buildTree`,
- * `filterTree` search, DnD `computeDrop`, and `RowChrome`/`RenameInput` all come
- * from the tree primitive.
+ * `filterTree` search, DnD `computeDrop`, and `RowChrome` all come from the tree
+ * primitive; the primary label's inline edit reuses the shared cell-editor
+ * capability via `EditableTreeLabel`.
  *
  * `rows`/`fields`/`options`/`hierarchy` arrive type-erased as `unknown`; this is
  * the documented re-cast boundary for the view child.
@@ -204,7 +208,6 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           node={rowProps.node}
           depth={rowProps.depth}
           primaryField={primaryField}
-          hierarchy={hierarchy}
           options={options}
           itemActions={itemActions}
         />
