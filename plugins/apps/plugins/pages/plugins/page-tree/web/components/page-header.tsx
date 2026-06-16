@@ -15,6 +15,7 @@ import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-button";
 import { ChangeCoverPopover } from "./change-cover-popover";
+import "./page-header.css";
 
 export function PageHeader({ pageId }: { pageId: string }) {
   const result = useResource(pagesResource);
@@ -123,7 +124,7 @@ function PageHeaderInner({ pageId, page }: { pageId: string; page: Block | undef
         onFocus={title.onFocus}
         onBlur={title.onBlur}
         placeholder="Untitled"
-        className="text-title w-full truncate bg-transparent outline-none"
+        className="page-doc-title w-full truncate bg-transparent outline-none"
       />
     </Stack>
   );

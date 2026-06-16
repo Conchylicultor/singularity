@@ -87,11 +87,11 @@ export function PageIconButton({
           aria-label="Change page icon"
           style={style}
           className={cn(
-            "hover:bg-accent flex size-16 shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
+            "hover:bg-accent flex size-20 shrink-0 items-center justify-center rounded-lg outline-none transition-colors focus-visible:ring-2 focus-visible:ring-ring",
             className,
           )}
         >
-          <PageIcon nodes={value.iconSvgNodes} className="size-14" />
+          <PageIcon nodes={value.iconSvgNodes} className="size-[4.5rem]" />
         </button>
       }
     />

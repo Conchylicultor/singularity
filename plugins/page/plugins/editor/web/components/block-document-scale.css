@@ -1,0 +1,48 @@
+/*
+ * Document type scale for the block editor's editable text.
+ *
+ * This is a deliberately SEPARATE, fixed "reading" scale (Notion parity) from
+ * the app's UI-chrome type-scale tokens (`text-title`/`text-body`/… backed by
+ * the `type-scale` token group). A document surface wants larger, airier type
+ * than dense app chrome — 16px body, 30/24/20px headings — so the block editor
+ * maps each `BlockTextVariant` to one of these `doc-text-*` roles instead of the
+ * UI `text-*` utilities.
+ *
+ * It lives here (plugin-local CSS, imported from block-text-editor) rather than
+ * in the global app.css or as new type-scale tokens, because it is editor-
+ * specific presentation and the shared token group is load-bearing. Font weights
+ * still reference the token vars so they track the active typography preset.
+ */
+.doc-text-title {
+  font-size: 1.875rem; /* 30px — in-document H1 block */
+  line-height: 2.375rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.013em;
+}
+.doc-text-heading {
+  font-size: 1.5rem; /* 24px — H2 */
+  line-height: 2rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.011em;
+}
+.doc-text-subheading {
+  font-size: 1.25rem; /* 20px — H3 */
+  line-height: 1.75rem;
+  font-weight: var(--font-weight-semibold);
+  letter-spacing: -0.006em;
+}
+.doc-text-body {
+  font-size: 1rem; /* 16px — body */
+  line-height: 1.6rem;
+  font-weight: var(--font-weight-normal);
+}
+.doc-text-label {
+  font-size: 1rem;
+  line-height: 1.6rem;
+  font-weight: var(--font-weight-medium);
+}
+.doc-text-caption {
+  font-size: 0.875rem; /* 14px */
+  line-height: 1.375rem;
+  font-weight: var(--font-weight-normal);
+}

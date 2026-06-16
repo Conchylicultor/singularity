@@ -27,6 +27,7 @@ import {
   placeCaretAtColumn,
   placeCaretAtOffset,
 } from "../internal/caret-geometry";
+import "./block-document-scale.css";
 
 /**
  * Width of the leading-marker gutter — the fixed column that holds a block's
@@ -38,14 +39,17 @@ import {
  */
 const MARKER_GUTTER = "1.5rem";
 
-/** Maps a semantic typography variant to its sanctioned `text-*` utility. */
+// Maps a semantic typography variant to its document-scale role. The block
+// editor is a *document* surface, so its editable text uses the larger, airier
+// `doc-text-*` reading scale (Notion parity) rather than the dense UI-chrome
+// `text-*` utilities. See block-document-scale.css for the rationale.
 const VARIANT_CLASS: Record<BlockTextVariant, string> = {
-  title: "text-title",
-  heading: "text-heading",
-  subheading: "text-subheading",
-  body: "text-body",
-  label: "text-label",
-  caption: "text-caption",
+  title: "doc-text-title",
+  heading: "doc-text-heading",
+  subheading: "doc-text-subheading",
+  body: "doc-text-body",
+  label: "doc-text-label",
+  caption: "doc-text-caption",
 };
 
 function EditorRefPlugin({ editorRef }: { editorRef: React.MutableRefObject<LexicalEditor | null> }) {
