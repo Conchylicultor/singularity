@@ -1673,6 +1673,10 @@
       "name": "@singularity/plugin-packages",
       "version": "0.0.1",
     },
+    "plugins/packages/plugins/inflight": {
+      "name": "@singularity/plugin-packages-inflight",
+      "version": "0.0.1",
+    },
     "plugins/packages/plugins/retry": {
       "name": "@singularity/plugin-packages-retry",
       "version": "0.0.1",
@@ -4108,6 +4112,8 @@
     "@singularity/plugin-layouts-miller": ["@singularity/plugin-layouts-miller@workspace:plugins/layouts/plugins/miller"],
 
     "@singularity/plugin-packages": ["@singularity/plugin-packages@workspace:plugins/packages"],
+
+    "@singularity/plugin-packages-inflight": ["@singularity/plugin-packages-inflight@workspace:plugins/packages/plugins/inflight"],
 
     "@singularity/plugin-packages-retry": ["@singularity/plugin-packages-retry@workspace:plugins/packages/plugins/retry"],
 

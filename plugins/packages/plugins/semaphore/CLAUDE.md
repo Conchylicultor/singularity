@@ -22,7 +22,7 @@ queue-wait. See `research/2026-06-15-global-live-state-cascade-contention.md`
 ## Plugin reference
 
 - Cross-plugin:
-  - Imported by: `framework/server-core`
+  - Imported by: `framework/server-core`, `infra/endpoints`
 - Core:
   - Exports: Types: `Semaphore`; Values: `createSemaphore`
 

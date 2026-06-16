@@ -16,6 +16,20 @@ export interface EndpointDef<
   readonly bodyCodec?: Codec<TBody>;
   readonly responseCodec?: Codec<TResponse>;
   readonly querySchema?: ZodType<TQuery>;
+  /**
+   * Bound how many handler bodies run concurrently for this route (a per-route
+   * semaphore in `implement`). Use for CPU/IO-heavy handlers — e.g. ones that
+   * spawn `git archive | tar` — so a burst can't saturate the box. Omit = no cap.
+   */
+  readonly concurrency?: number;
+  /**
+   * Collapse concurrent identical GETs onto one in-flight handler invocation
+   * (keyed by method + path + query). A burst of N duplicate requests does one
+   * unit of work; each caller still gets its own encoded Response. GET-only —
+   * `implement` throws for any other method, since deduping a mutation would
+   * drop a caller's distinct side effect.
+   */
+  readonly dedupe?: boolean;
   /** Phantom field to carry the params type. Never set at runtime. */
   readonly __params?: TParams;
 }
@@ -45,6 +59,8 @@ export function defineEndpoint<
   body?: B;
   response?: R;
   query?: ZodType<TQuery>;
+  concurrency?: number;
+  dedupe?: boolean;
 }): EndpointDef<Route, ExtractParams<Route>, SpecType<B>, SpecType<R>, TQuery> {
   const bodyCodec = opts.body
     ? isCodec(opts.body)
@@ -63,5 +79,7 @@ export function defineEndpoint<
     bodyCodec: bodyCodec as Codec<SpecType<B>> | undefined,
     responseCodec: responseCodec as Codec<SpecType<R>> | undefined,
     querySchema: opts.query,
+    concurrency: opts.concurrency,
+    dedupe: opts.dedupe,
   };
 }

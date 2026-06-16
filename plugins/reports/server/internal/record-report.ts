@@ -18,6 +18,13 @@ export interface RecordReportResult {
   rateLimited: boolean;
 }
 
+// Appended to every report-filed task (crash, slow-op, endpoint-error, …). The
+// agent that picks one up is about to debug, so point them at the debugging map
+// first — it routes them to the right surface (durable slow-op store, runtime
+// profiler, pg_stat_activity) instead of guessing.
+const DEBUG_SKILL_HINT =
+  "> Before debugging, read the `debug` skill (`.claude/skills/debug/SKILL.md`) — the map of logs, profiling, slow-ops, crashes, and DB surfaces.";
+
 // The generic one-line summary is unbounded (an aggregated error can be hundreds
 // of KB). Clamp it at the ingestion boundary so nothing downstream — the row,
 // the notification, the task title — can ever exceed this. Kind-specific payload
@@ -236,7 +243,7 @@ async function ensureTaskForReport(
       const task = await createTask({
         folderId: REPORTS_META_TASK_ID,
         title,
-        description,
+        description: `${description}\n\n${DEBUG_SKILL_HINT}`,
         author: "reports-plugin",
       });
       await db

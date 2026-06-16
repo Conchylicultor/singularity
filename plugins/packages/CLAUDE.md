@@ -6,6 +6,7 @@
 
 - Description: Umbrella for package management utilities.
 - Sub-plugins:
+  - **`inflight`**
   - **`retry`**
   - **`semaphore`**
 

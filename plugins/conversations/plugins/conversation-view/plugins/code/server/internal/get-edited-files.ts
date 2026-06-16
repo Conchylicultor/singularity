@@ -1,4 +1,5 @@
 import { resolve, sep } from "node:path";
+import { createInflight } from "@plugins/packages/plugins/inflight/core";
 import type { EditedFile, EditedFileStatus } from "../../core/protocol";
 import { parseDiffNameStatusZ, parseDiffNumstatZ } from "./parse-diff-z";
 
@@ -66,7 +67,18 @@ function ensureEntry(
   return entry;
 }
 
-export async function getEditedFiles(worktreePath: string): Promise<EditedFile[]> {
+// Concurrent identical reads collapse onto one git-status batch: the
+// edited-files live-state loader and the plugin-changes endpoint both call this
+// for the same worktree, often at the same instant during a review. Deduping at
+// the source (not at one caller) means every caller shares the work. See
+// research/2026-06-15-global-live-state-cascade-contention.md (Change 5).
+const inflight = createInflight();
+
+export function getEditedFiles(worktreePath: string): Promise<EditedFile[]> {
+  return inflight.run(worktreePath, () => computeEditedFiles(worktreePath));
+}
+
+async function computeEditedFiles(worktreePath: string): Promise<EditedFile[]> {
   const byPath = new Map<string, FileEntry>();
 
   const mergeBase =
