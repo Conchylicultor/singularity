@@ -38,6 +38,26 @@ export interface HierarchyConfig<TRow> {
 }
 
 /**
+ * A typed create affordance — a single "make a new row" action. Non-generic
+ * (a creator produces a *new* row, so there is nothing to parametrize on
+ * `TRow`), deliberately unlike `HierarchyConfig<TRow>`. The host renders a list
+ * of these in the toolbar (1 → `Button`, N → `+` menu) and threads them to
+ * views for opt-in surfaces (gallery trailing card + empty-state CTA).
+ */
+export interface CreateOption {
+  /** Stable id (used as the React key in the menu / button list). */
+  id: string;
+  /** Action label, e.g. "New story", "Import MIDI". */
+  label: string;
+  /** Already-sized icon element (matches the `CoverContent` icon convention). */
+  icon?: ReactNode;
+  /** Longer description shown as a muted sub-line in the N-creator menu only. */
+  description?: string;
+  /** Run the create action. May be async — the host tracks in-flight busy state. */
+  onSelect: () => void | Promise<unknown>;
+}
+
+/**
  * Declares a data source as multi-selectable. Presence on `DataViewProps`
  * (mirroring `hierarchy`) enables checkbox multi-select in the views that
  * support it (currently the tree). Gate on `selection != null`, NOT on
@@ -168,6 +188,13 @@ export interface DataViewRenderProps<TRow> {
   /** True when the host is embedded (auto-height); views drop full-surface
    *  outer padding / forced heights. */
   embedded?: boolean;
+  /**
+   * Typed create affordances, threaded from `DataViewProps.creators`. Views may
+   * opt into them (the gallery renders a trailing "+" card for a single creator
+   * and an empty-state CTA). The host already renders the toolbar affordance —
+   * views only render their own surface-specific create UI.
+   */
+  creators?: CreateOption[];
 }
 
 /**
@@ -296,6 +323,13 @@ export interface DataViewProps<TRow> {
   /** Per-item action slot descriptor minted by `defineItemActions`; views render
    *  each contributed action in their natural trailing affordance. */
   itemActions?: ItemActionsDescriptor<TRow>;
+  /**
+   * Typed create affordances. The host renders them in the toolbar (1 → a
+   * `Button`, N → a "+" dropdown menu, with host-owned in-flight busy state) and
+   * threads them to views (gallery trailing card + empty-state CTA). Domain-pure
+   * — a `CreateOption` carries only `id`/`label`/`icon`/`description`/`onSelect`.
+   */
+  creators?: CreateOption[];
   /**
    * Placement / height. `"surface"` (default): fills a bounded-height flex
    * ancestor, owns its internal scroll, reserves the floating-action-bar gutter.

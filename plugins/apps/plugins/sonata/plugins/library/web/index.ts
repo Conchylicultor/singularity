@@ -12,6 +12,7 @@ import { sonataLibraryPane, sonataPlayerPane } from "./panes";
 export { Library } from "./slots";
 export type { SortOrderProps } from "./slots";
 export { useOpenSong } from "./hooks";
+export { openSongImperative } from "./open-song";
 
 export default {
   description:

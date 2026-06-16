@@ -17,6 +17,7 @@ import { useViewState } from "../internal/use-view-state";
 import { useFilterController } from "../internal/use-filter-controller";
 import { ViewSwitcher } from "./view-switcher";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
+import { CreatorsControl } from "./creators-control";
 
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const {
@@ -38,6 +39,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     hierarchy,
     selection,
     itemActions,
+    creators,
     mode = "surface",
   } = props;
 
@@ -117,6 +119,9 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
             </Text>
           ) : null}
           {actions ? <div className="ml-auto">{actions}</div> : null}
+          <div className={actions ? undefined : "ml-auto"}>
+            <CreatorsControl creators={creators} />
+          </div>
         </div>
       </div>
     );
@@ -146,6 +151,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     itemActions: itemActions as DataViewRenderProps<unknown>["itemActions"],
     hasChildren,
     embedded,
+    creators,
   };
 
   return (
@@ -178,6 +184,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           <FilterBuilderTrigger controller={filterController} />
         ) : null}
         {actions}
+        <CreatorsControl creators={creators} />
         <ViewSwitcher
           views={available}
           activeId={activeViewId}

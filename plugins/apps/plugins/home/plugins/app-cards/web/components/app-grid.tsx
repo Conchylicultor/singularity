@@ -1,6 +1,5 @@
 import { Apps, type ActiveApp, useCurrentAppId, useTabs } from "@plugins/apps/web";
-import { DataView } from "@plugins/primitives/plugins/data-view/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
+import { DataView, type CreateOption } from "@plugins/primitives/plugins/data-view/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
 import { MdAdd } from "react-icons/md";
 
@@ -13,6 +12,17 @@ export function AppGrid() {
   // the focused tab when rendered outside a surface.
   const ownTabId = useSurfaceTabId();
   const launchable = apps.filter((a) => a.id !== currentId);
+
+  const creators: CreateOption[] = [
+    {
+      id: "new-app",
+      label: "New app",
+      icon: <MdAdd className="size-4" />,
+      onSelect: () => {
+        /* TODO: no create-app flow exists yet — stub until one is designed */
+      },
+    },
+  ];
 
   return (
     <DataView<ActiveApp>
@@ -29,14 +39,7 @@ export function AppGrid() {
       onRowActivate={(a) =>
         a.onClick ? a.onClick() : replaceTabApp(ownTabId ?? focusedTabId, a.id)
       }
-      actions={
-        <IconButton
-          icon={MdAdd}
-          label="New app"
-          variant="ghost"
-          onClick={() => {}}
-        />
-      }
+      creators={creators}
       emptyState="No apps installed."
       viewOptions={{
         // Plain literal (the gallery view child is never imported) to respect
@@ -47,6 +50,7 @@ export function AppGrid() {
             kind: "icon",
             icon: <a.icon className="size-7" />,
           }),
+          showCreateCard: true,
         },
       }}
     />

@@ -6,7 +6,7 @@ import { MidiLoader } from "./loader";
 import { parseMidi } from "../shared/parse";
 import { MIDI_SOURCE_ID } from "./constants";
 import { hydrate } from "./hydrate";
-import { MidiAddAction } from "./components/midi-add-action";
+import { midiCreateOption } from "./components/midi-create-option";
 import { MidiCardMeta } from "./components/midi-card-meta";
 
 // Re-export the source id so consumers can identify this source without
@@ -25,7 +25,7 @@ export default {
       LoaderComponent: MidiLoader,
       compile: parseMidi,
     }),
-    Library.Source({ sourceId: MIDI_SOURCE_ID, hydrate, AddAction: MidiAddAction }),
+    Library.Source({ sourceId: MIDI_SOURCE_ID, hydrate, createOption: midiCreateOption }),
     Library.CardMeta({ id: "midi-track-count", component: MidiCardMeta }),
   ],
 } satisfies PluginDefinition;

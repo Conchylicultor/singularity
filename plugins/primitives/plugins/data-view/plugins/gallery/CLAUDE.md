@@ -29,6 +29,14 @@ the shared `FieldDef` schema.
 - `coverField?` — override which field id is the image cover (else the
   `FieldDef` with `cover: true`, else the first `media` field).
 - `minCardWidth?` — grid min card width in px (default 200).
+- `showCreateCard?` — when `true` **and** exactly ONE creator is present on
+  `DataViewProps.creators`, render a trailing dashed "+" card (after the row map)
+  firing that creator's `onSelect`. With zero or multiple creators the card is
+  omitted — a single dashed card can't express an N-way choice, so multi-creator
+  surfaces rely on the toolbar `+` menu. Outer grid padding is gated on
+  `!embedded` like the rest of the grid. The gallery also renders a minimal
+  creators CTA (one `Button` per creator) below `emptyState` when the data source
+  is confirmed-empty (after the loading guard).
 
 ## Exports
 
@@ -45,7 +53,7 @@ the shared `FieldDef` schema.
 - Description: Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `primitives/card.Card`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
   - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
 - Core:
   - Exports: Types: `CoverContent`, `GalleryViewOptions`

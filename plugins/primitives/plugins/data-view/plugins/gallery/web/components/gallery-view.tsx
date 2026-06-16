@@ -1,11 +1,14 @@
 import { type ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { MdAdd } from "react-icons/md";
+import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   pickPrimaryField,
   useFlatRows,
   useResolveOperatorSet,
+  type CreateOption,
   type DataViewRenderProps,
   type FieldDef,
   type ItemActionsDescriptor,
@@ -114,18 +117,31 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
     return <>{props.loadingState ?? <Loading variant="cards" count={8} />}</>;
   }
 
+  // Documented cast boundary: creators arrives type-erased via render props.
+  const creators = props.creators as CreateOption[] | undefined;
+
   if (rows.length === 0) {
     return (
-      <Text
-        as="div"
-        variant="body"
-        className={cn(
-          "flex items-center justify-center text-muted-foreground",
-          props.embedded ? "py-xl" : "h-full p-xl",
-        )}
+      <Stack
+        align="center"
+        justify="center"
+        gap="md"
+        className={cn(props.embedded ? "py-xl" : "h-full p-xl")}
       >
-        {props.emptyState}
-      </Text>
+        <Text as="div" variant="body" className="text-muted-foreground">
+          {props.emptyState}
+        </Text>
+        {creators?.length ? (
+          <Stack align="center" gap="sm">
+            {creators.map((c) => (
+              <Button key={c.id} size="sm" onClick={() => void c.onSelect()}>
+                {c.icon}
+                {c.label}
+              </Button>
+            ))}
+          </Stack>
+        ) : null}
+      </Stack>
     );
   }
 
@@ -194,6 +210,19 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           </DataCard>
         );
       })}
+      {/* Trailing "+" card: single-creator only. Multiple creators → omitted (a
+          single dashed card can't express an N-way choice; they get the toolbar
+          menu instead). */}
+      {options.showCreateCard && creators?.length === 1 ? (
+        <button
+          type="button"
+          onClick={() => void creators[0]!.onSelect()}
+          className="focus-ring flex aspect-video flex-col items-center justify-center gap-xs rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:bg-muted/40 hover:text-foreground"
+        >
+          <MdAdd className="size-5" />
+          <Text variant="label">{creators[0]!.label}</Text>
+        </button>
+      ) : null}
     </div>
   );
 }

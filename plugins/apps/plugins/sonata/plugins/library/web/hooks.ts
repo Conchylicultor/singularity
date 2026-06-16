@@ -10,8 +10,9 @@ import { sonataPlayerPane } from "./panes";
  * (`useSonataPlayerResolve`) — including on direct navigation / reload — so this
  * hook just opens the pane.
  *
- * Used by both the gallery cards and each source's `AddAction`
- * (open-immediately-after-create).
+ * Used by the gallery cards (a component, so the caller-aware context store is
+ * correct). Sources' `createOption.onSelect` paths are plain data with no
+ * component to host a hook — they call `openSongImperative` instead.
  */
 export function useOpenSong(): (song: { id: string; title: string }) => void {
   const openPane = useOpenPane();

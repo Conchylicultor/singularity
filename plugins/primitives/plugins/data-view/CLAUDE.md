@@ -32,6 +32,30 @@ except the two accessors, so a read-only nav tree supplies just those two. The
 `FieldDef.primary` flag selects the tree row label field (shared
 `pickPrimaryField` heuristic).
 
+## Create affordances (`creators`)
+
+Pass `creators?: CreateOption[]` to `<DataView>` to declare typed "make a new
+row" actions — the first-class create affordance for flat views (gallery/table/
+list), the counterpart to the tree-only parent-scoped `HierarchyConfig.onCreate`.
+A `CreateOption` is domain-pure: `{ id, label, icon?, description?, onSelect }`
+(`onSelect` may be async). `CreateOption` is exported from both the core and web
+barrels.
+
+The host renders them in the toolbar (a private `CreatorsControl`, **not**
+barrel-exported), immediately before the view switcher:
+
+- **0** creators → nothing.
+- **1** → a labelled `Button`.
+- **N** → a `+` `IconButton` opening a dropdown menu of icon + label (+ muted
+  `description` sub-line) items.
+
+`CreatorsControl` owns a single shared **busy** flag: each click `await`s
+`onSelect` in a `try/finally`, disabling the control while pending — one
+consistent in-flight affordance for every consumer (no per-call-site `useState`).
+The creators are also threaded into `DataViewRenderProps.creators` so views can
+opt into their own surface-specific create UI (the gallery's trailing "+" card +
+empty-state CTA — see the gallery child).
+
 ## Per-item actions
 
 Per-row actions (delete, expand-all, …) are a **cross-view** concern: contribute
@@ -129,13 +153,13 @@ gating convention.
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.DropdownMenu`, `primitives/ui-kit.DropdownMenuContent`, `primitives/ui-kit.DropdownMenuItem`, `primitives/ui-kit.DropdownMenuSeparator`, `primitives/ui-kit.DropdownMenuTrigger`, `primitives/view-switcher.ViewSwitcher`
-  - Exports: Types: `CellEditorProps`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `evaluateNode`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `evaluateNode`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `config_v2/settings`, `conversations/agents`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
 - Core:
-  - Exports: Types: `CellEditorProps`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
 - Sub-plugins:
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.

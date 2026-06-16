@@ -41,4 +41,12 @@ export interface GalleryViewOptions<TRow> {
   coverField?: string;
   /** Grid sizing: the min card width in px. Default 200. */
   minCardWidth?: number;
+  /**
+   * When `true` AND exactly ONE creator is present on `DataViewProps.creators`,
+   * the gallery renders a trailing dashed "+" card (after the row map) firing
+   * that creator's `onSelect`. With zero or multiple creators the card is
+   * omitted — a single dashed card can't express an N-way choice, so multi-
+   * creator surfaces rely on the toolbar menu instead.
+   */
+  showCreateCard?: boolean;
 }

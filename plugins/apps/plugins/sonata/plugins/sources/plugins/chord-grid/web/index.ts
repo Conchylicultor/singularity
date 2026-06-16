@@ -6,7 +6,7 @@ import { compile } from "./compile";
 import { ChordGridLoader } from "./loader";
 import { CHORD_GRID_SOURCE_ID } from "./constants";
 import { hydrate } from "./hydrate";
-import { ChordGridAddAction } from "./components/chord-grid-add-action";
+import { chordGridCreateOption } from "./components/chord-grid-create-option";
 import { ChordGridEditorSection } from "./components/chord-grid-editor-section";
 
 export default {
@@ -23,7 +23,7 @@ export default {
     Library.Source({
       sourceId: CHORD_GRID_SOURCE_ID,
       hydrate,
-      AddAction: ChordGridAddAction,
+      createOption: chordGridCreateOption,
     }),
     Sonata.Section({
       id: "chord-grid-editor",

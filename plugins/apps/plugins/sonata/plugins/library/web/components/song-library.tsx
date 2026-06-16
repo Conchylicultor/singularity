@@ -2,7 +2,7 @@ import { useMemo, useState } from "react";
 import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
-import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
+import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
@@ -17,9 +17,10 @@ import { SongCard, formatDuration } from "./song-card";
  * `data-view` primitive (gallery of cards + sortable/searchable table). Opening
  * a song hydrates every source that has data for it via the generic
  * `Library.Source` registry (see `useOpenSong`) and switches to the player —
- * the library never names MIDI (or any source). The toolbar renders each
- * source's "add a song" affordance (`Library.Source.AddAction`). The song list
- * is reactive via the live `songsResource`; the gallery view keeps the custom
+ * the library never names MIDI (or any source). Each source's create affordance
+ * (`Library.Source.createOption`, a data-view `CreateOption`) is mapped into the
+ * DataView's `creators` — rendered as a toolbar "+" menu (N sources). The song
+ * list is reactive via the live `songsResource`; the gallery view keeps the custom
  * `SongCard` (play affordance + hover-delete) via `viewOptions.gallery.renderCard`.
  *
  * Gallery orderings contributed via `Library.Sort` (e.g. play-based orderings
@@ -127,22 +128,23 @@ export function SongLibrary() {
           title="Library"
           loading={loading}
           actions={
-            <>
-              {rows.length > 0 ? (
-                <SegmentedControl
-                  options={sortOptions}
-                  value={sort}
-                  onChange={setSort}
-                  variant="ghost"
-                  size="sm"
-                />
-              ) : null}
-              {/* Per-source "add a song" affordances (e.g. MIDI Import). */}
-              {sources.map((s) =>
-                s.AddAction ? <s.AddAction key={s.sourceId} /> : null,
-              )}
-            </>
+            rows.length > 0 ? (
+              <SegmentedControl
+                options={sortOptions}
+                value={sort}
+                onChange={setSort}
+                variant="ghost"
+                size="sm"
+              />
+            ) : null
           }
+          // Per-source create affordances (e.g. MIDI Import, New Chord Grid),
+          // mapped from the `Library.Source` registry into the data-view "+"
+          // menu. The library stays source-agnostic — it threads an opaque
+          // `createOption` and never names MIDI.
+          creators={sources
+            .map((s) => s.createOption)
+            .filter((c): c is CreateOption => Boolean(c))}
           onRowActivate={(s) => void openSong(s)}
           emptyState={<>No songs yet — add one to get started.</>}
           viewOptions={{

@@ -25,6 +25,7 @@ export type {
   FieldDef,
   HierarchyConfig,
   SelectionConfig,
+  CreateOption,
   SortState,
   ViewState,
   DataViewRenderProps,
