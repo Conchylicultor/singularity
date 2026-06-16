@@ -1,4 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   Fragment,
   useCallback,
@@ -604,6 +605,25 @@ function ReorderInner({
         (x) => !isNodeData(x) && entryKey(x) === activeId,
       );
       if (!entry || isNodeData(entry)) return null;
+
+      // Fill contributions render a height-filling, internally-scrolling body
+      // (e.g. the Conversations sidebar section). Re-rendering that live as the
+      // drag overlay produces a tall floating panel — wrong for a "pick up this
+      // section" gesture. Show a compact label chip instead, using the human
+      // label the slot already exposes via `docLabel` (id fallback). Gated on the
+      // same first-class `reorderFill` flag that bounds the edit-mode wrapper, so
+      // the primitive stays generic (never reads app-shell's title/icon).
+      if ((entry as Record<string, unknown>).reorderFill) {
+        const label = entry._doc?.label ?? contributionLabel(entry);
+        return (
+          <div className="cursor-grabbing rounded-md border border-primary/50 bg-background/95 px-sm py-2xs shadow-lg ring-1 ring-primary/50">
+            <Badge variant="primary" size="md">
+              {label}
+            </Badge>
+          </div>
+        );
+      }
+
       return (
         <div className="rounded-md border border-border bg-background/90 shadow-lg">
           {renderItem(entry)}
