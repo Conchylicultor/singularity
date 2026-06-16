@@ -5,7 +5,8 @@ import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import type { FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { songsResource } from "../../core";
+import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";
 import { useOpenSong } from "../hooks";
@@ -28,6 +29,11 @@ import { SongCard, formatDuration } from "./song-card";
 export function SongLibrary() {
   const songs = useResource(songsResource);
   const openSong = useOpenSong();
+  // Write-back for inline cell editing (title / composer) in the table view.
+  // Fire-and-forget: the server's `updateSongMeta` pushes the live
+  // `songsResource`, so the edited cell settles from server truth; a failed
+  // write surfaces via the global mutation toast (no local onError).
+  const { mutate: saveSong } = useEndpointMutation(updateSong);
   const sources = Library.Source.useContributions();
   // Active gallery ordering. "newest" is the built-in default (the list already
   // arrives newest-first); extra orderings (e.g. play-based) are contributed to
@@ -46,6 +52,13 @@ export function SongLibrary() {
         label: "Title",
         type: "text",
         value: (s) => s.title,
+        // Title is NOT NULL — ignore a cleared cell so it reverts to the
+        // current value rather than persisting an empty string.
+        onEdit: (s, next) => {
+          const title = String(next ?? "").trim();
+          if (!title) return;
+          saveSong({ params: { id: s.id }, body: { title } });
+        },
         sortable: true,
         filterable: true,
         width: "minmax(0,2fr)",
@@ -54,7 +67,15 @@ export function SongLibrary() {
         id: "composer",
         label: "Composer",
         type: "text",
-        value: (s) => s.composer ?? "Unknown",
+        // Project the raw nullable value (not the "Unknown" placeholder) so the
+        // inline editor opens from the true value and an empty cell reads as
+        // empty; clearing it stores `null`. The gallery card keeps its own
+        // "Unknown" fallback.
+        value: (s) => s.composer,
+        onEdit: (s, next) => {
+          const composer = String(next ?? "").trim();
+          saveSong({ params: { id: s.id }, body: { composer: composer || null } });
+        },
         sortable: true,
         filterable: true,
         width: "minmax(0,1fr)",
@@ -85,7 +106,7 @@ export function SongLibrary() {
         width: "7rem",
       },
     ],
-    [],
+    [saveSong],
   );
 
   // One render path for both states: while loading, DataView renders its

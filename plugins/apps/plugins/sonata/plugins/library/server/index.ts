@@ -1,7 +1,8 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
-import { deleteSong } from "../core/endpoints";
+import { deleteSong, updateSong } from "../core/endpoints";
 import { handleDeleteSong } from "./internal/handle-delete-song";
+import { handleUpdateSong } from "./internal/handle-update-song";
 import { songsLiveResource } from "./internal/resources";
 
 export { _songs } from "./internal/tables";
@@ -21,6 +22,7 @@ export default {
     "Persists source-agnostic Sonata song rows (generic metadata) and serves the reactive song list. Per-source raw lives in each source's own entity-extension; sources create songs via the exported `createSongRow` helper.",
   httpRoutes: {
     [deleteSong.route]: handleDeleteSong,
+    [updateSong.route]: handleUpdateSong,
   },
   contributions: [Resource.Declare(songsLiveResource)],
 } satisfies ServerPluginDefinition;

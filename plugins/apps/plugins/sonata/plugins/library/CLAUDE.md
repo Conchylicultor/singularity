@@ -37,10 +37,10 @@ shell mounts `<FullPane/>`, which paints the active pane full-surface.
   - Uses: `database.db`, `infra/attachments.Attachments`, `infra/endpoints.implement`
   - DB schema: `plugins/apps/plugins/sonata/plugins/library/server/internal/schema-attachments.ts`, `plugins/apps/plugins/sonata/plugins/library/server/internal/tables.ts`
   - Exports: Types: `CreateSongRowInput`, `UpdateSongMetaInput`; Values: `_songs`, `createSongRow`, `songAttachments`, `songsLiveResource`, `updateSongMeta`
-  - Routes: `DELETE /api/sonata/songs/:id`
+  - Routes: `DELETE /api/sonata/songs/:id`, `PATCH /api/sonata/songs/:id`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `Song`; Values: `deleteSong`, `SongSchema`, `songsResource`
+  - Exports: Types: `Song`, `UpdateSongBody`; Values: `deleteSong`, `SongSchema`, `songsResource`, `updateSong`
 - Cross-plugin:
   - Imported by: `apps/sonata/playback-history`, `apps/sonata/rich/key-mode`, `apps/sonata/sources/chord-grid`, `apps/sonata/sources/midi`, `apps/sonata/sources/midi/folders`, `apps/sonata/track-mixer`
   - Extended by: `apps/sonata/sources/chord-grid` (table `sonata_songs_ext_chord_grid`), `apps/sonata/rich/key-mode` (table `sonata_songs_ext_key_auto_detect`), `apps/sonata/sources/midi` (table `sonata_songs_ext_midi`), `apps/sonata/playback-history` (table `sonata_songs_ext_playback`)

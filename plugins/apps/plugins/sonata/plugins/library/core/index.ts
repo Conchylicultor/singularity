@@ -3,4 +3,5 @@ export type { Song } from "./schemas";
 
 export { songsResource } from "./resources";
 
-export { deleteSong } from "./endpoints";
+export { deleteSong, updateSong } from "./endpoints";
+export type { UpdateSongBody } from "./endpoints";
