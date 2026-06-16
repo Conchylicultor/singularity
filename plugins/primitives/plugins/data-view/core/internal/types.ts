@@ -106,6 +106,13 @@ export interface FieldDef<TRow> {
    * persistence — data-view stays presentational.
    */
   onEdit?: (row: TRow, next: FieldValue) => void | Promise<void>;
+  /**
+   * Multi-value inline-edit write-back. Pairs with `values` exactly as `onEdit`
+   * pairs with `value`: present → the table cell becomes editable and the host
+   * calls this with the full new array on commit. Mutually exclusive with `onEdit`
+   * in practice (a field is scalar or multi). Consumer owns persistence.
+   */
+  onEditValues?: (row: TRow, next: string[]) => void | Promise<void>;
   /** Default: true when `value` is present. */
   sortable?: boolean;
   /** Include in default search accessor; default true for text/enum. */
@@ -221,6 +228,8 @@ export interface DataViewRenderProps<TRow> {
  */
 export interface TableCellProps {
   value: FieldValue;
+  /** Multi-value projection (`field.values(raw)`) for tags-style read cells. */
+  values?: readonly string[];
   field: FieldDef<unknown>;
   raw?: unknown;
 }
@@ -234,10 +243,14 @@ export interface TableCellProps {
  */
 export interface CellEditorProps {
   value: FieldValue;
+  /** Current multi-value (`field.values(raw)`) for tags-style editors. */
+  values?: readonly string[];
   field: FieldDef<unknown>;
   raw?: unknown;
-  /** Commit a new value. The host closes the editor and forwards to FieldDef.onEdit. */
+  /** Commit a new scalar value. The host closes the editor and forwards to FieldDef.onEdit. */
   onCommit: (next: FieldValue) => void;
+  /** Commit a new multi-value array. The host closes the editor and forwards to FieldDef.onEditValues. */
+  onCommitValues: (next: string[]) => void;
   /** Abandon editing with no change. The host closes the editor. */
   onCancel: () => void;
 }

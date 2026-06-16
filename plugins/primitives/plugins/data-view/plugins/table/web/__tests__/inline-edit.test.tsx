@@ -10,6 +10,7 @@ import {
   type CellEditorProps,
   type DataViewRenderProps,
   type FieldDef,
+  type TableCellProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { TableView } from "../components/table-view";
 
@@ -33,15 +34,34 @@ function LocalTextEditor(props: CellEditorProps): ReactNode {
   );
 }
 
+// A minimal multi-value (tags-style) fixture for `type:"multi"`: the read cell
+// reads the threaded `TableCellProps.values`; the editor commits a new array via
+// the multi-value commit channel (`onCommitValues`).
+function LocalMultiCell(props: TableCellProps): ReactNode {
+  return <span>{(props.values ?? []).join(",")}</span>;
+}
+function LocalMultiEditor(props: CellEditorProps): ReactNode {
+  return (
+    <button
+      aria-label="multi-cell-editor"
+      onClick={() => props.onCommitValues([...(props.values ?? []), "added"])}
+    >
+      commit
+    </button>
+  );
+}
+
 const plugin = {
   id: "data-view-table-inline-edit-test",
   description: "inline-edit fixture",
   contributions: [
     DataViewSlots.CellEditor({ match: "text", component: LocalTextEditor }),
+    DataViewSlots.Cell({ match: "multi", component: LocalMultiCell }),
+    DataViewSlots.CellEditor({ match: "multi", component: LocalMultiEditor }),
   ],
 } as unknown as LoadedPlugin;
 
-type Row = { id: string; name: string };
+type Row = { id: string; name?: string; tags?: string[] };
 
 function renderProps(
   fields: FieldDef<Row>[],
@@ -126,5 +146,86 @@ describe("data-view table inline cell editing", () => {
 
     fireEvent.click(getByText("alpha"));
     expect(queryByLabelText("cell-editor")).toBeNull();
+  });
+
+  it("edits a multi-value cell via the onCommitValues → onEditValues channel", () => {
+    const onEditValues = vi.fn();
+    const { getByText, getByLabelText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <TableView
+          {...(renderProps(
+            [
+              {
+                id: "tags",
+                label: "Tags",
+                type: "multi",
+                values: (r) => r.tags ?? [],
+                onEditValues,
+              },
+            ],
+            [{ id: "1", tags: ["a"] }],
+          ) as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+
+    // The read cell renders the threaded `TableCellProps.values`.
+    fireEvent.click(getByText("a"));
+    fireEvent.click(getByLabelText("multi-cell-editor"));
+
+    expect(onEditValues).toHaveBeenCalledTimes(1);
+    expect(onEditValues).toHaveBeenCalledWith({ id: "1", tags: ["a"] }, ["a", "added"]);
+  });
+
+  it("edits an EMPTY multi-value cell via its 'Empty' hint affordance", () => {
+    const onEditValues = vi.fn();
+    const { getByText, getByLabelText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <TableView
+          {...(renderProps(
+            [
+              {
+                id: "tags",
+                label: "Tags",
+                type: "multi",
+                values: (r) => r.tags ?? [],
+                onEditValues,
+              },
+            ],
+            [{ id: "1", tags: [] }],
+          ) as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+
+    // An empty multi-value cell shows the clickable hint (not a zero-size void).
+    fireEvent.click(getByText("Empty"));
+    fireEvent.click(getByLabelText("multi-cell-editor"));
+
+    expect(onEditValues).toHaveBeenCalledTimes(1);
+    expect(onEditValues).toHaveBeenCalledWith({ id: "1", tags: [] }, ["added"]);
+  });
+
+  it("never enters edit mode for a multi-value field without onEditValues", () => {
+    const { getByText, queryByLabelText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <TableView
+          {...(renderProps(
+            [
+              {
+                id: "tags",
+                label: "Tags",
+                type: "multi",
+                values: (r) => r.tags ?? [],
+              },
+            ],
+            [{ id: "1", tags: ["a"] }],
+          ) as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+
+    fireEvent.click(getByText("a"));
+    expect(queryByLabelText("multi-cell-editor")).toBeNull();
   });
 });

@@ -3,10 +3,10 @@ import type { FieldDef, FieldValue } from "@plugins/primitives/plugins/data-view
 import type { useResolveCellEditor } from "@plugins/primitives/plugins/data-view/web";
 
 /**
- * A FieldValue is "empty" (→ shows the muted hint) when it is null/undefined or
- * the empty string. Numeric `0` and boolean `false` are real values, not empty.
+ * A scalar FieldValue is "empty" when null/undefined or the empty string.
+ * Numeric `0` and boolean `false` are real values, not empty.
  */
-function isEmptyValue(value: FieldValue): boolean {
+function isEmptyScalar(value: FieldValue): boolean {
   return value == null || value === "";
 }
 
@@ -18,13 +18,13 @@ function isEmptyValue(value: FieldValue): boolean {
  * region.
  */
 function ReadAffordance(props: {
-  value: FieldValue;
+  empty: boolean;
   read: ReactNode;
   onClick: (e: MouseEvent) => void;
 }): ReactNode {
   return (
     <div className="w-full min-w-0 cursor-text truncate" onClick={props.onClick}>
-      {isEmptyValue(props.value) ? (
+      {props.empty ? (
         <span className="italic text-muted-foreground/50">Empty</span>
       ) : (
         props.read
@@ -36,29 +36,43 @@ function ReadAffordance(props: {
 /**
  * Presentational click-to-edit wrapper for one table cell. Holds ONLY an
  * `editing` boolean — the parent owns `resolveEditor` (hooks must run
- * unconditionally at the table-view top level) and the `onEdit` write-back.
+ * unconditionally at the table-view top level) and the write-back. A field is
+ * scalar (`value` + `onEdit`) or multi-value (`values` + `onEditValues`); the
+ * empty-check and the commit channel follow whichever the field declares.
  * `stopPropagation` keeps a cell edit from triggering row activation.
  */
 export function EditableCell(props: {
   field: FieldDef<unknown>;
   row: unknown;
   value: FieldValue;
+  values?: readonly string[];
   read: ReactNode;
   resolveEditor: ReturnType<typeof useResolveCellEditor>;
-  onEdit: (row: unknown, next: FieldValue) => void | Promise<void>;
+  onEdit?: (row: unknown, next: FieldValue) => void | Promise<void>;
+  onEditValues?: (row: unknown, next: string[]) => void | Promise<void>;
 }): ReactNode {
   const [editing, setEditing] = useState(false);
+  const isMulti = props.field.values != null;
+  const empty = isMulti
+    ? !(props.values && props.values.length > 0)
+    : isEmptyScalar(props.value);
+
   if (editing) {
-    const editor = props.resolveEditor(
-      props.field,
-      props.value,
-      props.row,
-      (next) => {
+    const editor = props.resolveEditor({
+      field: props.field,
+      value: props.value,
+      values: props.values,
+      raw: props.row,
+      onCommit: (next) => {
         setEditing(false);
-        void props.onEdit(props.row, next);
+        void props.onEdit?.(props.row, next);
       },
-      () => setEditing(false),
-    );
+      onCommitValues: (next) => {
+        setEditing(false);
+        void props.onEditValues?.(props.row, next);
+      },
+      onCancel: () => setEditing(false),
+    });
     if (editor)
       return (
         <div className="w-full min-w-0" onClick={(e) => e.stopPropagation()}>
@@ -68,7 +82,7 @@ export function EditableCell(props: {
     // No contributed editor for this type → never trap the user.
     return (
       <ReadAffordance
-        value={props.value}
+        empty={empty}
         read={props.read}
         onClick={(e) => e.stopPropagation()}
       />
@@ -76,7 +90,7 @@ export function EditableCell(props: {
   }
   return (
     <ReadAffordance
-      value={props.value}
+      empty={empty}
       read={props.read}
       onClick={(e) => {
         e.stopPropagation();

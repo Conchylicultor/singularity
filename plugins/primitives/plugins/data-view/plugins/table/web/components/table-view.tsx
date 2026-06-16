@@ -77,15 +77,27 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
       ? f.cell
       : (row: unknown) => {
           const value = f.value ? f.value(row) : undefined;
-          const read = resolveCell(f, value, row) ?? String(f.value?.(row) ?? "");
-          return f.onEdit ? (
+          const values = f.values ? f.values(row) : undefined;
+          const read =
+            resolveCell(f, value, row, values) ?? String(f.value?.(row) ?? "");
+          return f.onEdit || f.onEditValues ? (
             <EditableCell
               field={f}
               row={row}
               value={value}
+              values={values}
               read={read}
               resolveEditor={resolveEditor}
-              onEdit={f.onEdit as (row: unknown, next: FieldValue) => void | Promise<void>}
+              onEdit={
+                f.onEdit as
+                  | ((row: unknown, next: FieldValue) => void | Promise<void>)
+                  | undefined
+              }
+              onEditValues={
+                f.onEditValues as
+                  | ((row: unknown, next: string[]) => void | Promise<void>)
+                  | undefined
+              }
             />
           ) : (
             read

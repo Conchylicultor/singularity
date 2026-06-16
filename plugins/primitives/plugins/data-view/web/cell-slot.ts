@@ -26,12 +26,13 @@ export function useResolveCell(): (
   field: FieldDef<unknown>,
   value: FieldValue,
   raw: unknown,
+  values?: readonly string[],
 ) => ReactNode | undefined {
   const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
   const raw0 = ctx?.bySlot.get("data-view.cell");
   return useCallback(
-    (field, value, row) => {
+    (field, value, row, values) => {
       const chain = resolveTypeChain(field.type ?? "text", identities);
       for (const typeId of chain) {
         const contribution = (raw0 ?? []).find(
@@ -40,6 +41,7 @@ export function useResolveCell(): (
         if (contribution) {
           return renderIsolated("data-view.cell", contribution, {
             value,
+            values,
             field,
             raw: row,
           } satisfies TableCellProps);

@@ -1355,6 +1355,14 @@
       "name": "@singularity/plugin-fields-tags-filter",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/tags/plugins/inline": {
+      "name": "@singularity/plugin-fields-tags-inline",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/tags/plugins/table": {
+      "name": "@singularity/plugin-fields-tags-table",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/text": {
       "name": "@singularity/plugin-fields-text",
       "version": "0.0.1",
@@ -4047,6 +4055,10 @@
     "@singularity/plugin-fields-tags": ["@singularity/plugin-fields-tags@workspace:plugins/fields/plugins/tags"],
 
     "@singularity/plugin-fields-tags-filter": ["@singularity/plugin-fields-tags-filter@workspace:plugins/fields/plugins/tags/plugins/filter"],
+
+    "@singularity/plugin-fields-tags-inline": ["@singularity/plugin-fields-tags-inline@workspace:plugins/fields/plugins/tags/plugins/inline"],
+
+    "@singularity/plugin-fields-tags-table": ["@singularity/plugin-fields-tags-table@workspace:plugins/fields/plugins/tags/plugins/table"],
 
     "@singularity/plugin-fields-text": ["@singularity/plugin-fields-text@workspace:plugins/fields/plugins/text"],
 

@@ -21,19 +21,25 @@ const CellEditor = defineDispatchSlot<CellEditorProps>("data-view.cell-editor", 
   docLabel: (c) => (typeof c.match === "string" ? c.match : undefined),
 });
 
+interface ResolveCellEditorArgs {
+  field: FieldDef<unknown>;
+  value: FieldValue;
+  values?: readonly string[];
+  raw: unknown;
+  onCommit: (next: FieldValue) => void;
+  onCommitValues: (next: string[]) => void;
+  onCancel: () => void;
+}
+
 /** Returns a renderer that resolves a field's type editor honoring `extends`, or undefined. */
 export function useResolveCellEditor(): (
-  field: FieldDef<unknown>,
-  value: FieldValue,
-  raw: unknown,
-  onCommit: (next: FieldValue) => void,
-  onCancel: () => void,
+  args: ResolveCellEditorArgs,
 ) => ReactNode | undefined {
   const ctx = useContext(PluginRuntimeContext);
   const identities = useFieldIdentities();
   const raw0 = ctx?.bySlot.get("data-view.cell-editor");
   return useCallback(
-    (field, value, row, onCommit, onCancel) => {
+    ({ field, value, values, raw, onCommit, onCommitValues, onCancel }) => {
       const chain = resolveTypeChain(field.type ?? "text", identities);
       for (const typeId of chain) {
         const contribution = (raw0 ?? []).find(
@@ -42,9 +48,11 @@ export function useResolveCellEditor(): (
         if (contribution) {
           return renderIsolated("data-view.cell-editor", contribution, {
             value,
+            values,
             field,
-            raw: row,
+            raw,
             onCommit,
+            onCommitValues,
             onCancel,
           } satisfies CellEditorProps);
         }
