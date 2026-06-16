@@ -2217,6 +2217,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`plugins-registry-in-sync`**
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
+            - **`table-defs-in-schema-glob`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
             - **`type-check`**

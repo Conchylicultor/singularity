@@ -46,6 +46,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`plugins-registry-in-sync`**
   - **`reorderable-slots-in-sync`**
   - **`snapshot-chain-intact`**
+  - **`table-defs-in-schema-glob`**
   - **`token-group-vars-in-sync`**
   - **`tsconfig-alias-single-owner`**
   - **`type-check`**
