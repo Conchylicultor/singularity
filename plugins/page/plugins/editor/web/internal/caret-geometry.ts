@@ -22,12 +22,16 @@ import {
   $getNearestNodeFromDOMNode,
   $getRoot,
   $getSelection,
-  $isElementNode,
   $isRangeSelection,
   $isTextNode,
   $setSelection,
   type LexicalEditor,
 } from "lexical";
+import {
+  $linearCaretOffset,
+  $paragraphsPlainLength,
+  $placeCaretAtLinearOffset,
+} from "./block-text-extensions";
 
 /** A snapshot of the caret in one block editor, consumed by the intent resolver. */
 export interface CaretContext {
@@ -47,53 +51,12 @@ export interface CaretContext {
   caretX: number;
 }
 
-// --- structural reads (run inside a Lexical read) --------------------------
-
-function $absoluteOffset(): number | null {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection)) return null;
-  const anchor = selection.anchor;
-  const children = $getRoot().getChildren();
-  let offset = 0;
-  for (const child of children) {
-    if (
-      child.getKey() === anchor.getNode().getKey() ||
-      child.getKey() === anchor.getNode().getParent()?.getKey()
-    ) {
-      return offset + anchor.offset;
-    }
-    offset += child.getTextContent().length + 1;
-  }
-  return null;
-}
-
-function $atStart(): boolean {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false;
-  const anchor = selection.anchor;
-  if (anchor.offset !== 0) return false;
-  const firstChild = $getRoot().getFirstChild();
-  if (!firstChild) return true;
-  const anchorNode = anchor.getNode();
-  return (
-    anchorNode.getKey() === firstChild.getKey() ||
-    anchorNode.getParent()?.getKey() === firstChild.getKey()
-  );
-}
-
-function $atEnd(): boolean {
-  const selection = $getSelection();
-  if (!$isRangeSelection(selection) || !selection.isCollapsed()) return false;
-  const lastChild = $getRoot().getLastChild();
-  if (!lastChild) return true;
-  const anchor = selection.anchor;
-  const anchorNode = anchor.getNode();
-  const inLast =
-    anchorNode.getKey() === lastChild.getKey() ||
-    anchorNode.getParent()?.getKey() === lastChild.getKey();
-  if (!inLast) return false;
-  return anchor.offset === lastChild.getTextContent().length;
-}
+// --- structural reads -------------------------------------------------------
+//
+// The linear-offset model lives in `block-text-extensions` (the single source
+// matching `splitRuns`/`textOf`/`serializeBlockRuns`). `readCaretContext`'s
+// structural read derives offset / atStart / atEnd from `$linearCaretOffset()`
+// and `$paragraphsPlainLength()` directly — no bespoke per-helper walk.
 
 // --- visual geometry (DOM measurement) -------------------------------------
 
@@ -160,11 +123,15 @@ export function readCaretContext(editor: LexicalEditor): CaretContext | null {
     | null => {
     const selection = $getSelection();
     if (!$isRangeSelection(selection)) return null;
+    // One walk each for the offset and the total; derive start/end from them.
+    const off = $linearCaretOffset();
+    const total = $paragraphsPlainLength();
+    const collapsed = selection.isCollapsed();
     return {
-      offset: $absoluteOffset() ?? 0,
-      collapsed: selection.isCollapsed(),
-      atStart: $atStart(),
-      atEnd: $atEnd(),
+      offset: off ?? 0,
+      collapsed,
+      atStart: collapsed && off === 0,
+      atEnd: collapsed && off === total,
     };
   });
   if (!structural) return null;
@@ -204,11 +171,11 @@ function caretFromPoint(x: number, y: number): DomCaret | null {
 }
 
 /**
- * Focus `editor` and place a collapsed caret at the linear `offset` (the same
- * model `$absoluteOffset` reads). For a single-paragraph block this is the text
- * node offset, clamped into the block's text — used to land the caret at the
- * JOIN point after a Backspace-merge. Falls back to start/end when the offset is
- * outside the block's text or the block has no text node yet.
+ * Focus `editor` and place a collapsed caret at the linear `offset` (the stored-
+ * runs plain-text basis read by `$linearCaretOffset`). The walk is leaf-aware, so
+ * a mixed-format paragraph lands the caret at the right run/decorator boundary —
+ * used to land the caret at the JOIN point after a Backspace-merge. The offset is
+ * clamped to the block's total plain length.
  */
 export function placeCaretAtOffset(editor: LexicalEditor, offset: number): void {
   editor.focus();
@@ -216,42 +183,27 @@ export function placeCaretAtOffset(editor: LexicalEditor, offset: number): void 
 }
 
 /**
- * Inside an editor update: collapse the caret to the linear `offset` within the
- * first paragraph's first text node (the body of `placeCaretAtOffset`). Exposed
- * so a caller already inside an `editor.update()` (e.g. value-sync's rebuild)
- * can restore the caret without nesting another update.
+ * Inside an editor update: collapse the caret to the linear `offset` across the
+ * block's paragraphs (the body of `placeCaretAtOffset`, delegating to the shared
+ * leaf-walking primitive). Exposed so a caller already inside an `editor.update()`
+ * (e.g. value-sync's rebuild) can restore the caret without nesting an update.
  */
 export function $placeCaretAtOffset(offset: number): void {
-  const root = $getRoot();
-  const paragraph = root.getFirstChild();
-  if (!paragraph || !$isElementNode(paragraph)) {
-    root.selectStart();
-    return;
-  }
-  const textNode = paragraph.getFirstChild();
-  if (!textNode || !$isTextNode(textNode)) {
-    // Empty paragraph (no text node): the only caret position is its start.
-    if (offset <= 0) paragraph.selectStart();
-    else paragraph.selectEnd();
-    return;
-  }
-  const off = Math.min(Math.max(offset, 0), textNode.getTextContentSize());
-  const sel = $createRangeSelection();
-  sel.anchor.set(textNode.getKey(), off, "text");
-  sel.focus.set(textNode.getKey(), off, "text");
-  $setSelection(sel);
+  $placeCaretAtLinearOffset(offset);
 }
 
 /**
- * Inside an editor read/update: the collapsed caret's offset within its
- * paragraph, or null when this editor has no collapsed caret (unfocused, or a
- * non-empty range). Lets value-sync capture the caret before a rebuild so an
- * external text change doesn't yank a focused user back to offset 0.
+ * Inside an editor read/update: the collapsed caret's linear offset across the
+ * block's paragraphs (stored-runs basis), or null when this editor has no
+ * collapsed caret (unfocused, or a non-empty range). Lets value-sync capture the
+ * caret before a rebuild so an external text change doesn't yank a focused user
+ * back to offset 0; the leaf-aware walk keeps the offset correct in formatted
+ * paragraphs (previously it returned the anchor-text-node-relative offset).
  */
 export function $caretOffsetWithinParagraph(): number | null {
   const selection = $getSelection();
   if (!$isRangeSelection(selection) || !selection.isCollapsed()) return null;
-  return selection.anchor.offset;
+  return $linearCaretOffset();
 }
 
 /** Focus `editor` and collapse the caret to the very start or end of its content. */
