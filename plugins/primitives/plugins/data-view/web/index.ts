@@ -8,6 +8,7 @@ export type { DataViewContribution } from "./slots";
 export { useResolveCell } from "./cell-slot";
 export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
+export { FilterValueInput } from "./components/filter/filter-value-input";
 export { useFlatRows } from "./internal/use-flat-rows";
 export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
 export { isFilterGroup } from "./internal/filter-shape";

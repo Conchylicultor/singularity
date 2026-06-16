@@ -50,7 +50,7 @@ export function FilterGroupEditor<TRow>(props: {
               direction="row"
               gap="xs"
               align="start"
-              className="group/group flex-wrap"
+              className="group/group"
             >
               <ConjunctionCell
                 index={index}

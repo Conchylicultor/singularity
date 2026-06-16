@@ -1,5 +1,6 @@
 import type { ReactNode } from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 
 /** Single-tag select chips (operand is one tag) for contains / does-not-contain. */
@@ -7,7 +8,7 @@ export function TagSingleInput(props: FilterValueInputProps): ReactNode {
   const selected = typeof props.value === "string" ? props.value : "";
   const options = props.field.options ?? [];
   return (
-    <div className="flex flex-wrap gap-xs">
+    <Stack direction="row" gap="xs" align="center" wrap>
       {options.map((o) => (
         <ToggleChip
           key={o.value}
@@ -21,7 +22,7 @@ export function TagSingleInput(props: FilterValueInputProps): ReactNode {
           {o.label}
         </ToggleChip>
       ))}
-    </div>
+    </Stack>
   );
 }
 
@@ -40,7 +41,7 @@ export function TagMultiInput(props: FilterValueInputProps): ReactNode {
   }
 
   return (
-    <div className="flex flex-wrap gap-xs">
+    <Stack direction="row" gap="xs" align="center" wrap>
       {options.map((o) => (
         <ToggleChip
           key={o.value}
@@ -52,6 +53,6 @@ export function TagMultiInput(props: FilterValueInputProps): ReactNode {
           {o.label}
         </ToggleChip>
       ))}
-    </div>
+    </Stack>
   );
 }

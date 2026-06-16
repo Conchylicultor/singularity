@@ -30,7 +30,12 @@ export function ConjunctionCell(props: {
     // eslint-disable-next-line spacing/no-adhoc-spacing -- w-16 is a fixed alignment rail for the conjunction column, a layout dimension the spacing ramp can't express
     <div className="w-16 shrink-0">
       {props.index === 0 ? (
-        <Text as="div" variant="body" tone="muted" className="px-2xs">
+        <Text
+          as="div"
+          variant="body"
+          tone="muted"
+          className="flex control-sm items-center px-2xs"
+        >
           Where
         </Text>
       ) : props.index === 1 ? (
@@ -58,7 +63,12 @@ export function ConjunctionCell(props: {
           </DropdownMenuContent>
         </DropdownMenu>
       ) : (
-        <Text as="div" variant="body" tone="muted" className="px-2xs">
+        <Text
+          as="div"
+          variant="body"
+          tone="muted"
+          className="flex control-sm items-center px-2xs"
+        >
           {LABEL[props.conjunction]}
         </Text>
       )}
