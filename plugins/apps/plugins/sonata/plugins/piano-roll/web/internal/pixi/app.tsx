@@ -48,6 +48,62 @@ export interface PianoRollCanvasProps {
    * renderer (texture generation) — see fx-context.ts.
    */
   onSceneReady: (pixi: { scene: PianoRollScene; app: Application } | null) => void;
+  /**
+   * Fired when the GPU context/device is lost AFTER a successful init (a sleep/
+   * wake, GPU-process reset, or driver hiccup on a long-lived tab). Pixi v8 does
+   * not recover from a spontaneous loss on its own — the WebGPU device system
+   * never subscribes to `device.lost`, and the WebGL system only auto-restores a
+   * loss it forced — so the canvas would go permanently blank (the DOM overlays
+   * keep rendering, hence "notes don't show"). The parent responds by remounting
+   * this component (a fresh `key`), which tears the dead app down and rebuilds a
+   * working one from the current props.
+   */
+  onContextLost: () => void;
+}
+
+/**
+ * Watch a live Pixi app for a spontaneous GPU context/device loss and invoke
+ * `onLost` exactly once. Both backends are covered:
+ *  - WebGL — the canvas fires `webglcontextlost`; we `preventDefault()` (so the
+ *    browser keeps the canvas around) and rebuild rather than hoping for an
+ *    auto-restore Pixi only performs for losses it forced itself.
+ *  - WebGPU — the device exposes a `lost` promise Pixi never listens to; a
+ *    `reason` of `"destroyed"` is our own teardown (`app.destroy`) and is
+ *    ignored, anything else is a real loss.
+ * Returns a detach function for the WebGL listener (the WebGPU promise can't be
+ * un-awaited, so the guard below de-dupes and the disposed flag drops late ones).
+ */
+function watchContextLoss(app: Application, onLost: () => void): () => void {
+  let fired = false;
+  const fire = (): void => {
+    if (fired) return;
+    fired = true;
+    // Stop the ticker before anything else: rendering a frame against the dead
+    // context throws inside Pixi's render loop (it would keep firing until React
+    // unmounts us). Halting it makes the rebuild clean.
+    app.stop();
+    onLost();
+  };
+
+  const canvas = app.canvas;
+  const onGlLost = (e: Event): void => {
+    e.preventDefault();
+    fire();
+  };
+  canvas.addEventListener("webglcontextlost", onGlLost);
+
+  // WebGPU device-loss: `renderer.gpu` holds `{ adapter, device }` on the WebGPU
+  // backend and is undefined on WebGL — the optional chain guards both.
+  const device = (
+    app.renderer as { gpu?: { device?: { lost?: Promise<{ reason: string }> } } }
+  ).gpu?.device;
+  if (device?.lost) {
+    void device.lost.then((info) => {
+      if (info.reason !== "destroyed") fire();
+    });
+  }
+
+  return () => canvas.removeEventListener("webglcontextlost", onGlLost);
 }
 
 export function PianoRollCanvas(props: PianoRollCanvasProps) {
@@ -67,13 +123,16 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
   // The scene lives in STATE (not just a ref) so the prop-forwarding effects
   // below re-fire once init settles and push the then-current props.
   const [scene, setScene] = useState<PianoRollScene | null>(null);
-  // Latest callback without retriggering the init effect.
+  // Latest callbacks without retriggering the init effect.
   const onSceneReadyRef = useRef(props.onSceneReady);
   onSceneReadyRef.current = props.onSceneReady;
+  const onContextLostRef = useRef(props.onContextLost);
+  onContextLostRef.current = props.onContextLost;
 
   useEffect(() => {
     let disposed = false;
     let liveScene: PianoRollScene | null = null;
+    let detachLoss = (): void => {};
     const app = new Application();
     const ready = app
       .init({
@@ -82,6 +141,12 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         antialias: true,
         autoDensity: true,
         resolution: window.devicePixelRatio,
+        // Accept a software WebGL context as a last resort: on a machine with no
+        // WebGPU and no hardware WebGL, a slow canvas WITH notes beats Pixi's
+        // default of bailing out (failIfMajorPerformanceCaveat = true) and
+        // leaving the lane blank. Auto-detect still prefers WebGPU → hardware
+        // WebGL first; this only relaxes the final fallback.
+        failIfMajorPerformanceCaveat: false,
         eventFeatures: {
           move: false,
           globalMove: false,
@@ -104,9 +169,16 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
         liveScene = createPianoRollScene(app);
         setScene(liveScene);
         onSceneReadyRef.current({ scene: liveScene, app });
+        // Self-heal a spontaneous GPU loss: Pixi won't, so we ask the parent to
+        // remount us and rebuild the app from the current props.
+        detachLoss = watchContextLoss(app, () => {
+          clientLog("piano-roll", "gpu context lost — reinitializing canvas");
+          onContextLostRef.current();
+        });
       });
     return () => {
       disposed = true;
+      detachLoss();
       // Destroy only after init settles — tearing down mid-init crashes Pixi.
       void ready.then(() => {
         // Signal null only if WE published a scene: a StrictMode-killed first

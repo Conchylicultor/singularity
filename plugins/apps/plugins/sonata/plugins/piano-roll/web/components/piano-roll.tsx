@@ -280,6 +280,15 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
     app: Application;
   } | null>(null);
 
+  // Bumped when the canvas reports a spontaneous GPU context/device loss; used
+  // as the canvas's React `key` so a loss fully remounts it — a clean teardown
+  // of the dead Pixi app and a rebuild from the current props. Pixi v8 does not
+  // recover from a spontaneous loss itself (see app.tsx watchContextLoss), so on
+  // a long-lived tab a sleep/wake would otherwise blank the notes forever while
+  // the DOM chords/keyboard kept rendering.
+  const [canvasNonce, setCanvasNonce] = useState(0);
+  const handleContextLost = useCallback(() => setCanvasNonce((n) => n + 1), []);
+
   // Latest-geometry refs for the FX context. The context is identity-stable
   // (memoized on the pixi pair only) so effects never remount on resize —
   // instead its accessors read these refs, which mirror the freshest
@@ -473,6 +482,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         {/* The GPU note lane: grid, falling notes, and labels — under every
             DOM layer (transparent canvas; the lane bg shows through). */}
         <PianoRollCanvas
+          key={canvasNonce}
           width={lane.width}
           height={lane.height}
           visuals={visuals}
@@ -483,6 +493,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
           tempoScale={tempoScale}
           spread={spread}
           onSceneReady={setPixi}
+          onContextLost={handleContextLost}
         />
 
         {/* Headless FX wiring — every PianoRollFx contribution, config-gated
