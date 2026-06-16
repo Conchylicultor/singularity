@@ -2,17 +2,17 @@
 {
   "items": [
     "tasks.attempt-view:attempt-switch",
-    "conversations.conversation-view.jsonl-viewer.event-counter:event-counter",
-    "conversations.conversation-view.commits-graph:commits-graph",
     "conversations.conversation-view.dependent-count:dependent-count",
     { "type": "spacer", "id": "spacer-1" },
     "conversations.conversation-view.tasks-panel:tasks",
     "conversations.conversation-view.terminal-pane:terminal",
     "conversations.conversation-view.open-app:open-app",
-    "conversations.conversation-view.vscode:vscode",
     "code-explorer:explorer",
     "conversations.conversation-view.code.docs-button:docs",
     "conversations.conversation-view.push-profiling:push-profiling",
-    "review:review"
+    "conversations.conversation-view.commits-graph:commits-graph",
+    "review:review",
+    { "item": "conversations.conversation-view.jsonl-viewer.event-counter:event-counter", "hidden": true },
+    { "item": "conversations.conversation-view.vscode:vscode", "hidden": true }
   ]
 }
