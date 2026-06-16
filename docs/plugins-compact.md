@@ -26,6 +26,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`shell`** — App shell for Home. Registers the /home app entry and defines the Home.Section slot.
     - **`pages`** — Notion-like pages app.
       - Plugins:
+        - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
         - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
         - **`starred`** — Favorites/starred pages for the Pages app: a Favorites sidebar section plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred), live resource, and toggle/reorder endpoints for the Pages Favorites section.
@@ -302,6 +303,11 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
   - Plugins:
     - **`draw-canvas`** — Reusable freehand draw canvas (color/width strokes). Used by the screenshot editor and draw-on-app.
     - **`draw-on-app`** — Toolbar button to draw freehand on the live app, capture as a screenshot with strokes baked in, and pre-attach to +improve.
+
+- **`search`** — Umbrella for the reusable full-text search primitive: the indexed search engine substrate and the reusable quick-find UI.
+  - Plugins:
+    - **`engine`** — Domain-agnostic indexed full-text search substrate: search_documents table (tsvector GIN), generic index API, and the GET /api/search endpoint.
+    - **`quick-find`** — Reusable quick-find search UI: the debounced useSearch hook and the <QuickFindDialog> dialog (navigation injected via onSelect).
 
 - **`shell`** [load-bearing] — Foundational app layout; defines the slots and commands most other plugins extend.
   - Plugins:

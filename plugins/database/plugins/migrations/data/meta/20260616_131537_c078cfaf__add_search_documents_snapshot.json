@@ -1,6 +1,6 @@
 {
-  "id": "c3633bd6-8b67-4180-970b-fce984252c78",
-  "prevId": "c993dffc-5ba4-48ae-a0fb-6da120432e93",
+  "id": "42b1575f-f621-439f-81bf-0d74a07e076d",
+  "prevId": "320bf00d-f8cf-480d-8d4c-c3ab3f260461",
   "version": "7",
   "dialect": "postgresql",
   "tables": {
@@ -145,6 +145,59 @@
       },
       "indexes": {},
       "foreignKeys": {},
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.page_blocks_ext_starred": {
+      "name": "page_blocks_ext_starred",
+      "schema": "",
+      "columns": {
+        "parent_id": {
+          "name": "parent_id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "rank": {
+          "name": "rank",
+          "type": "rank_text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {},
+      "foreignKeys": {
+        "page_blocks_ext_starred_parent_id_page_blocks_id_fk": {
+          "name": "page_blocks_ext_starred_parent_id_page_blocks_id_fk",
+          "tableFrom": "page_blocks_ext_starred",
+          "tableTo": "page_blocks",
+          "columnsFrom": [
+            "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
       "compositePrimaryKeys": {},
       "uniqueConstraints": {},
       "policies": {},
@@ -2752,6 +2805,100 @@
           "tableTo": "page_blocks",
           "columnsFrom": [
             "parent_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        }
+      },
+      "compositePrimaryKeys": {},
+      "uniqueConstraints": {},
+      "policies": {},
+      "checkConstraints": {},
+      "isRLSEnabled": false
+    },
+    "public.page_reminders": {
+      "name": "page_reminders",
+      "schema": "",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "text",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "page_id": {
+          "name": "page_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "block_id": {
+          "name": "block_id",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "fire_at": {
+          "name": "fire_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true
+        },
+        "status": {
+          "name": "status",
+          "type": "text",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "'pending'"
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp with time zone",
+          "primaryKey": false,
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "page_reminders_page_idx": {
+          "name": "page_reminders_page_idx",
+          "columns": [
+            {
+              "expression": "page_id",
+              "isExpression": false,
+              "asc": true,
+              "nulls": "last"
+            }
+          ],
+          "isUnique": false,
+          "concurrently": false,
+          "method": "btree",
+          "with": {}
+        }
+      },
+      "foreignKeys": {
+        "page_reminders_page_id_page_blocks_id_fk": {
+          "name": "page_reminders_page_id_page_blocks_id_fk",
+          "tableFrom": "page_reminders",
+          "tableTo": "page_blocks",
+          "columnsFrom": [
+            "page_id"
+          ],
+          "columnsTo": [
+            "id"
+          ],
+          "onDelete": "cascade",
+          "onUpdate": "no action"
+        },
+        "page_reminders_block_id_page_blocks_id_fk": {
+          "name": "page_reminders_block_id_page_blocks_id_fk",
+          "tableFrom": "page_reminders",
+          "tableTo": "page_blocks",
+          "columnsFrom": [
+            "block_id"
           ],
           "columnsTo": [
             "id"
