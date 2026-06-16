@@ -4,7 +4,12 @@ import {
   afterTurn,
   deleteConversation,
 } from "@plugins/conversations/server";
-import { markConversationClosed, notifyConversationsChanged } from "@plugins/tasks/plugins/tasks-core/server";
+import {
+  getConversation,
+  markConversationClosed,
+  maybeDropTaskOnExit,
+  notifyConversationsChanged,
+} from "@plugins/tasks/plugins/tasks-core/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 
 const FINALIZE_TIMEOUT_MS = 60_000;
@@ -25,17 +30,29 @@ export const exitCleanFinalizeJob = defineJob({
   run: async ({ input: { conversationId }, ctx }) => {
     await afterTurn(ctx, conversationId, { timeoutMs: FINALIZE_TIMEOUT_MS });
     await ctx.step("close-conversation", async () => {
+      // An agent that exits without landing any work should return its task to
+      // `dropped` rather than leaving it stranded as `attempted` — same policy
+      // as the manual "Drop & Close" action. Guarded against pushed work and
+      // active sibling conversations inside maybeDropTaskOnExit.
+      const conversation = await getConversation(conversationId);
+      const dropped = conversation
+        ? await maybeDropTaskOnExit(conversation)
+        : false;
+
       await markConversationClosed(conversationId);
       await deleteConversation(conversationId);
       notifyConversationsChanged();
       // Server-side terminus of the clean push-and-exit flow: persist the
-      // "pushed and closed" notification exactly once (the client used to fire
-      // this toast from a per-tab effect, duplicating the row per open tab).
+      // close notification exactly once (the client used to fire this toast
+      // from a per-tab effect, duplicating the row per open tab). The copy
+      // reflects whether work actually landed.
       await recordNotification({
         type: "conversation",
-        title: "Pushed and closed",
-        description: "Branch pushed and conversation closed",
-        variant: "success",
+        title: dropped ? "Closed without pushing" : "Pushed and closed",
+        description: dropped
+          ? "No changes were pushed — task marked as dropped"
+          : "Branch pushed and conversation closed",
+        variant: dropped ? "info" : "success",
         linkTo: `/c/${conversationId}`,
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });

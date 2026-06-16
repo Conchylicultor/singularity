@@ -161,7 +161,7 @@ export type { ConversationStatusChangedPayload } from "./internal/tables-events"
 // for plugins that perform writes outside the core mutation surface.
 export { readTaskStatus, emitStatusChangeIfChanged } from "./internal/status-emit";
 
-export { adoptOrphanConversation } from "./internal/mutations/cross-table";
+export { adoptOrphanConversation, maybeDropTaskOnExit } from "./internal/mutations/cross-table";
 export type { AdoptOrphanInput } from "./internal/mutations/cross-table";
 
 export default {

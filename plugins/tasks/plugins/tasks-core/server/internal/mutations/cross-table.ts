@@ -2,11 +2,42 @@ import { db } from "@plugins/database/server";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { _attempts, _conversations, _tasks } from "../tables";
 import { conversations } from "../schema";
+import type { Conversation } from "../schema";
 import { eq } from "drizzle-orm";
 import { findNextRankInFolder } from "../queries/tasks";
-import { CONVERSATIONS_META_TASK_ID } from "./tasks";
+import { listActiveConversations } from "../queries/conversations";
+import { listPushesForAttempt } from "../queries/pushes";
+import { CONVERSATIONS_META_TASK_ID, updateTask } from "./tasks";
 import { tasksResource, attemptsResource, conversationsLiveResource } from "../resources";
 import path from "path";
+
+// Exit policy shared by every conversation-close path (the manual "Drop &
+// Close" exit-menu action and the agent-driven `exit_clean` flow): a
+// conversation that closes without landing any work should return its task to
+// `dropped` rather than leaving it stranded as `attempted`. We only drop when
+// BOTH are true: the attempt never pushed, AND no sibling conversation on the
+// same task is still active (another attempt/conversation may still land the
+// work). The closing conversation is excluded by id, so callers may invoke
+// this either before or after marking it closed.
+//
+// Returns whether the task was dropped.
+export async function maybeDropTaskOnExit(
+  conversation: Conversation,
+): Promise<boolean> {
+  const pushes = conversation.attemptId
+    ? await listPushesForAttempt(conversation.attemptId)
+    : [];
+  const hasPush = pushes.length > 0;
+
+  const activeConversations = await listActiveConversations();
+  const hasOtherActive = activeConversations.some(
+    (c) => c.taskId === conversation.taskId && c.id !== conversation.id,
+  );
+
+  if (hasPush || hasOtherActive) return false;
+  await updateTask(conversation.taskId, { drop: true });
+  return true;
+}
 
 export interface AdoptOrphanInput {
   id: string;
