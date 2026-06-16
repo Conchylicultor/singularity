@@ -58,6 +58,10 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
   // trigger is removed from the text before the caret.
   const dismissedRef = useRef(false);
 
+  // The portaled menu element, so a click-outside test can exclude clicks that
+  // land on the menu itself (row clicks go through onMouseDown+preventDefault).
+  const menuRef = useRef<HTMLElement | null>(null);
+
   const filtered = filterBlockTypes(insertable, query);
 
   // The menu is only interactive when it has a position and at least one match;
@@ -111,9 +115,10 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
           return;
         }
         const q = upToCaret.slice(idx + TRIGGER.length);
-        // A newline ends the query; a leading space means a literal `/ ` (not a
-        // command). Either way reset the latch and close.
-        if (/\n/.test(q) || q.startsWith(" ")) {
+        // A newline ends the query; any space in the query means the user typed
+        // a literal `/ …` (not a command) — Notion dismisses the menu the moment
+        // a space follows the slash. Either way reset the latch and close.
+        if (/\n/.test(q) || q.includes(" ")) {
           dismissedRef.current = false;
           close();
           return;
@@ -132,6 +137,22 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
   useEffect(() => {
     setActiveIndex(0);
   }, [query, insertable.length]);
+
+  // Dismiss on a genuine click anywhere outside the menu. The editor's own
+  // BLUR_COMMAND only fires when focus actually leaves the contenteditable, so a
+  // click on a non-focusable region (sidebar, padding, another block) wouldn't
+  // close the menu. Latch dismissed so it stays closed until the `/` is removed.
+  // Row clicks land on the menu element and are excluded.
+  useEffect(() => {
+    if (!visible) return;
+    function onPointerDown(e: PointerEvent) {
+      if (menuRef.current?.contains(e.target as Node)) return;
+      dismissedRef.current = true;
+      setOpen(false);
+    }
+    document.addEventListener("pointerdown", onPointerDown, true);
+    return () => document.removeEventListener("pointerdown", onPointerDown, true);
+  }, [visible]);
 
   function handleSelect(handle: BlockHandle<unknown>) {
     // Convert the current block to the chosen type, dropping the `/query`
@@ -258,6 +279,7 @@ export function SlashMenuPlugin({ editor }: { editor: BlockEditorAPI }) {
 
   return createPortal(
     <Surface
+      ref={menuRef}
       level="overlay"
       className="z-popover fixed max-h-80 w-56 overflow-y-auto p-xs"
       style={{ left: caret.left, top: caret.top + 4 }}
