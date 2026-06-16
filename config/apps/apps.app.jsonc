@@ -2,8 +2,8 @@
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
-    "apps.agent-manager.shell:agent-manager",
     "apps.home.shell:home",
+    "apps.agent-manager.shell:agent-manager",
     "apps.pages.shell:pages",
     "apps.story.shell:story",
     "apps.workflows.shell:workflows",
