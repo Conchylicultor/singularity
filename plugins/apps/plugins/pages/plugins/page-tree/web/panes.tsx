@@ -51,7 +51,15 @@ function PageDetailBody(): ReactElement {
     // The breadcrumb trail is the page's single home for its title — it lives in
     // the pane-chrome bar (passed as `title`), so the big in-body title below
     // appears exactly once.
-    <PaneChrome pane={pageDetailPane} title={<PageBreadcrumb pageId={pageId} />}>
+    <PaneChrome
+      pane={pageDetailPane}
+      title={<PageBreadcrumb pageId={pageId} />}
+      actions={
+        <PageDetail.HeaderActions.Render>
+          {(s) => <s.component pageId={pageId} />}
+        </PageDetail.HeaderActions.Render>
+      }
+    >
       {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
           one centered reading column hosts the header and blocks. The header and
           block editor each self-inset their content by BLOCK_GUTTER (reserving

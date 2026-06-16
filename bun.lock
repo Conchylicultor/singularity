@@ -164,6 +164,10 @@
       "name": "@singularity/plugin-apps-pages-shell",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/starred": {
+      "name": "@singularity/plugin-apps-pages-starred",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/welcome": {
       "name": "@singularity/plugin-apps-pages-welcome",
       "version": "0.0.1",
@@ -3400,6 +3404,8 @@
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
     "@singularity/plugin-apps-pages-shell": ["@singularity/plugin-apps-pages-shell@workspace:plugins/apps/plugins/pages/plugins/shell"],
+
+    "@singularity/plugin-apps-pages-starred": ["@singularity/plugin-apps-pages-starred@workspace:plugins/apps/plugins/pages/plugins/starred"],
 
     "@singularity/plugin-apps-pages-welcome": ["@singularity/plugin-apps-pages-welcome@workspace:plugins/apps/plugins/pages/plugins/welcome"],
 

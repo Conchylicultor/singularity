@@ -1,0 +1,7 @@
+// @hash df56845ca431
+{
+  // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  "items": [
+    "apps.pages.starred:star"
+  ]
+}

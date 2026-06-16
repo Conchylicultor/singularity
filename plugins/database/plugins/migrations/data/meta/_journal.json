@@ -1072,6 +1072,13 @@
       "tag": "20260615_211427_331e34de__conversation_status_changed_event",
       "hash": "331e34de",
       "breakpoints": true
+    },
+    {
+      "version": "7",
+      "when": 1781570697000,
+      "tag": "20260616_004457_0939f1ad__add_page_starred",
+      "hash": "0939f1ad",
+      "breakpoints": true
     }
   ]
 }

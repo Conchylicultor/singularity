@@ -12,6 +12,14 @@ export const PageDetail = {
   Section: defineRenderSlot<{
     component: ComponentType<{ pageId: string }>;
   }>("pages.detail.section"),
+  /**
+   * Trailing actions in the page-detail header strip (next to the breadcrumb),
+   * e.g. a favorite/star toggle. Generic by design — contributors receive the
+   * open page's `pageId` and own their own behavior.
+   */
+  HeaderActions: defineRenderSlot<{
+    component: ComponentType<{ pageId: string }>;
+  }>("pages.detail.header-actions"),
 };
 
 /**

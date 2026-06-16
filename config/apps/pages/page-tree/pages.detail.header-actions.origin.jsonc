@@ -1,10 +1,9 @@
-// @hash ae0174af2c07
+// @hash df56845ca431
 {
   // Hide: { "item": "<key>", "hidden": true }
   // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
   // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
   "items": [
-    "apps.pages.page-tree:pages",
-    "apps.pages.starred:favorites"
+    "apps.pages.starred:star"
   ]
 }

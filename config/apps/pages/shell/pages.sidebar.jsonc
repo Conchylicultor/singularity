@@ -1,7 +1,9 @@
-// @hash d0bc804a545b
+// @hash ae0174af2c07
 {
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
+  // Favorites pinned above the page tree for quick access.
   "items": [
+    "apps.pages.starred:favorites",
     "apps.pages.page-tree:pages"
   ]
 }
