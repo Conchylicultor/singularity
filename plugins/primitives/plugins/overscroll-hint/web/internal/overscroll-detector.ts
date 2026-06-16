@@ -29,8 +29,13 @@ interface PendingGesture {
 const MIN_DELTA = 2;
 /** Max nudge offset of the bounce. */
 const BUMP_OFFSET = 8;
-/** Per-surface + global cooldown so a dead-end burst bounces once, not every frame. */
-const COOLDOWN_MS = 500;
+/**
+ * Quiet gap (ms) that marks the end of a scroll gesture. A continuous
+ * dead-end wheel / trackpad-momentum / touch burst keeps firing events well
+ * within this window, so it bounces exactly ONCE; only after the stream goes
+ * quiet for this long does the next deliberate scroll attempt re-arm the bounce.
+ */
+const GESTURE_END_GAP_MS = 200;
 /** Safety net to clear the animation class if `animationend` never fires. */
 const BUMP_FALLBACK_MS = 600;
 const BUMP_CLASS = "overscroll-bump";
@@ -43,8 +48,10 @@ const SCROLLABLE_OVERFLOW = new Set(["auto", "scroll", "overlay"]);
 export function installOverscrollHint(): () => void {
   let pending: PendingGesture | null = null;
   let rafId: number | null = null;
-  let globalLastBump = 0;
-  const lastBumpByEl = new WeakMap<Element, number>();
+  // One bounce per continuous gesture: `armed` flips false on bounce and only
+  // re-arms once the gesture stream goes quiet for GESTURE_END_GAP_MS.
+  let armed = true;
+  let rearmTimer: number | null = null;
 
   let touchStartX = 0;
   let touchStartY = 0;
@@ -56,6 +63,13 @@ export function installOverscrollHint(): () => void {
     target: EventTarget | null,
   ): void {
     if (Math.abs(deltaY) < MIN_DELTA && Math.abs(deltaX) < MIN_DELTA) return;
+    // Every gesture event pushes back the re-arm: the bounce only becomes
+    // available again after the user stops scrolling for the quiet gap.
+    if (rearmTimer !== null) window.clearTimeout(rearmTimer);
+    rearmTimer = window.setTimeout(() => {
+      armed = true;
+      rearmTimer = null;
+    }, GESTURE_END_GAP_MS);
     pending = { event, deltaX, deltaY, target, scrolledSince: false };
     if (rafId === null) {
       rafId = requestAnimationFrame(runDetection);
@@ -74,13 +88,13 @@ export function installOverscrollHint(): () => void {
     // The gesture was intentionally consumed (e.g. graph zoom / canvas pan).
     if (gesture.event?.defaultPrevented) return;
 
+    // Already bounced for this gesture — wait for the stream to go quiet.
+    if (!armed) return;
+
     const axis: Axis =
       Math.abs(gesture.deltaX) > Math.abs(gesture.deltaY) ? "x" : "y";
     const delta = axis === "x" ? gesture.deltaX : gesture.deltaY;
     if (delta === 0) return;
-
-    const now = performance.now();
-    if (now - globalLastBump < COOLDOWN_MS) return;
 
     const surface = pickScrollSurface(
       gesture.target instanceof Element ? gesture.target : null,
@@ -88,11 +102,7 @@ export function installOverscrollHint(): () => void {
     );
     if (!surface) return;
 
-    const elLast = lastBumpByEl.get(surface) ?? 0;
-    if (now - elLast < COOLDOWN_MS) return;
-
-    globalLastBump = now;
-    lastBumpByEl.set(surface, now);
+    armed = false;
     playBounce(surface, axis, delta > 0 ? 1 : -1);
   }
 
@@ -178,5 +188,6 @@ export function installOverscrollHint(): () => void {
     window.removeEventListener("touchstart", onTouchStart);
     window.removeEventListener("touchmove", onTouchMove);
     if (rafId !== null) cancelAnimationFrame(rafId);
+    if (rearmTimer !== null) window.clearTimeout(rearmTimer);
   };
 }

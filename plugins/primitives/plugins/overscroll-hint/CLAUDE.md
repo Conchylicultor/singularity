@@ -25,9 +25,12 @@ the only expensive read (`getComputedStyle` to find the scroll viewport) runs
 exclusively on the rare wasted case.
 
 Gestures that were intentionally consumed (`event.defaultPrevented`, e.g. graph
-zoom / canvas pan) and pinch-zoom (`ctrlKey`) are ignored. A per-surface +
-global cooldown (~500ms) makes a continuous dead-end wheel burst bounce once,
-not every frame.
+zoom / canvas pan) and pinch-zoom (`ctrlKey`) are ignored. The bounce fires
+**once per continuous gesture**: a single `armed` flag flips false on the bounce
+and only re-arms after the wheel/trackpad-momentum/touch stream goes quiet for
+~200ms (the gesture truly ending), so one dead-end scroll — however long its
+momentum tail — bounces exactly once, and the next deliberate scroll attempt
+bounces again.
 
 ## The bounce
 
