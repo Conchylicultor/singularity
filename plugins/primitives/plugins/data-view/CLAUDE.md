@@ -8,10 +8,21 @@ view independently sorted / searched / filtered.
 
 - A single **global `DataViewSlots.View` slot** (a plain `defineSlot`, rendered via
   `renderIsolated`). Each view type is a child plugin that contributes one
-  `DataViewContribution`. This mirrors the `segmented-progress-bar` precedent (one
+  `DataViewContribution` keyed by its **`type`** id (`"table"`, `"gallery"`, …).
+  This mirrors the `segmented-progress-bar` precedent (one
   global `Variant` slot, children contribute variants) — the inverse of the
   `defineTabbedView` factory, which exists because each tab host has a *different* set
   of tabs. Our views are a *fixed shared vocabulary*.
+- **view-type vs view-instance.** A `DataViewContribution` is a registered
+  view-*type* (the renderer: `type`, `title`, `icon`, `component`). The host
+  actually renders **view-instances** — a named, individually-configured *use* of
+  a view-type, carrying `{ id, name, type, options }`. Today the
+  `useResolvedInstances` resolver synthesizes exactly **one default instance per
+  resolved view-type** (`id === type`, `name === title`), so behavior is identical
+  to "one instance per type". ST3+ will replace that synthesis with a
+  config-authored instance list (N named instances per type, Notion-style). The
+  public `views={[…]}` whitelist is still a list of **type** ids; instances
+  reference a type via their `type` field.
 - `<DataView>` is the host: it resolves available views, owns per-view state
   (`useViewState`) and the shared chrome (search input → `state.query`, view
   switcher), and renders the active view via `renderIsolated`. It passes **raw
@@ -83,15 +94,19 @@ action component receives `ItemActionProps<Row>` (`{ row, hasChildren }`).
 ## Collection-consumer separation
 
 Consumers import **only** `DataView` + the core types from this umbrella and select
-views by id (`views={["gallery", "table"]}`). They **never** import a view child
-(`data-view/plugins/gallery`, …). Adding a new view type is a new child plugin with
-zero consumer changes — exactly the segmented-progress-bar collection model.
+views by **type** id (`views={["gallery", "table"]}` — these are
+`DataViewContribution.type` ids, not instance ids). They **never** import a view
+child (`data-view/plugins/gallery`, …). Adding a new view type is a new child
+plugin with zero consumer changes — exactly the segmented-progress-bar collection
+model.
 
 ## Adding a new view child
 
 1. Create `plugins/primitives/plugins/data-view/plugins/<view>/`.
 2. In its `web/index.ts`, contribute one entry to the slot:
-   `DataViewSlots.View({ id: "<view>", title, icon, order?, hierarchical?, component })`.
+   `DataViewSlots.View({ type: "<view>", title, icon, order?, hierarchical?, component })`.
+   The `type` is the view-type's registry id (what consumers list in
+   `views={[…]}`); the host synthesizes a default instance with `id === type`.
    The `component` is a `ComponentType<DataViewRenderProps<unknown>>` — it receives the
    **raw** `rows`, the `fields`, `rowKey`, the view's `ViewState`, `setSort` /
    `setFilter` bound to this view, `onRowActivate`, `searchAccessor`, `hierarchy`
@@ -153,13 +168,13 @@ gating convention.
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.DropdownMenu`, `primitives/ui-kit.DropdownMenuContent`, `primitives/ui-kit.DropdownMenuItem`, `primitives/ui-kit.DropdownMenuSeparator`, `primitives/ui-kit.DropdownMenuTrigger`, `primitives/view-switcher.ViewSwitcher`
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `evaluateNode`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `evaluateNode`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`
 - Server:
   - Uses: `config_v2.ConfigV2`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `config_v2/settings`, `conversations/agents`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
 - Core:
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`
 - Sub-plugins:
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.

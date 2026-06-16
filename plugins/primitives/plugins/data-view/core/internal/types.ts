@@ -125,6 +125,24 @@ export interface FieldDef<TRow> {
   primary?: boolean;
 }
 
+/**
+ * A named instance of a registered view-type. ST2 synthesizes one default
+ * instance per resolved view-type (id === type, name === title); ST3+ replaces
+ * the synthesis with a config-authored instance list.
+ */
+export interface ViewInstance {
+  /** Instance identity — the localStorage active-id + switcher selection key.
+   *  Default-instances set this equal to the view-type `type`. */
+  id: string;
+  /** Switcher display label. Default-instances use the view-type `title`. */
+  name: string;
+  /** Registry id (`DataViewContribution.type`) this instance renders. */
+  type: string;
+  /** Opaque per-instance options forwarded to the view-type component
+   *  (= today's `viewOptions[type]`). */
+  options?: unknown;
+}
+
 export interface SortState {
   fieldId: string;
   direction: "asc" | "desc";

@@ -28,6 +28,7 @@ export type {
   CreateOption,
   SortState,
   ViewState,
+  ViewInstance,
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,

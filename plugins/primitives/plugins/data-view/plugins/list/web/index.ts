@@ -10,7 +10,7 @@ export default {
     "List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.",
   contributions: [
     DataViewSlots.View({
-      id: "list",
+      type: "list",
       title: "List",
       icon: MdViewList,
       order: 3,

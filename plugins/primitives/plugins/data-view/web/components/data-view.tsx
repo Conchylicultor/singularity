@@ -1,9 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactNode, useCallback, useMemo } from "react";
-import type {
-  Contribution,
-  SealContributions,
-} from "@plugins/framework/plugins/web-sdk/core";
+import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
@@ -12,8 +9,9 @@ import type {
   DataViewRenderProps,
   FilterGroup,
 } from "../../core";
-import { DataViewSlots, type DataViewContribution } from "../slots";
+import { DataViewSlots } from "../slots";
 import { useViewState } from "../internal/use-view-state";
+import { useResolvedInstances } from "../internal/resolve-instances";
 import { useFilterController } from "../internal/use-filter-controller";
 import { ViewSwitcher } from "./view-switcher";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
@@ -61,38 +59,32 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     return (rowId: string) => parents.has(rowId);
   }, [rows, hierarchy]);
 
-  // Resolve available views: `views` prop is authoritative for inclusion+order
-  // (resolve each id, drop misses); otherwise all contributions by order/title.
-  // Hierarchical views (the tree) require `hierarchy` — drop them when absent so
-  // a `views={["tree"]}` with no hierarchy can never render a broken view.
-  const available = useMemo<SealContributions<DataViewContribution>[]>(() => {
-    const usable = hierarchy
-      ? contributions
-      : contributions.filter((c) => !c.hierarchical);
-    if (views) {
-      return views
-        .map((id) => usable.find((c) => c.id === id))
-        .filter(
-          (c): c is SealContributions<DataViewContribution> => c !== undefined,
-        );
-    }
-    return [...usable].sort(
-      (a, b) =>
-        (a.order ?? 0) - (b.order ?? 0) || a.title.localeCompare(b.title),
-    );
-  }, [views, contributions, hierarchy]);
+  // Resolve view instances: synthesizes one default instance per resolved
+  // view-type (id === type, name === title), absorbing today's `available`
+  // resolution — `views` prop is authoritative for inclusion+order (resolve
+  // each type id, drop misses); otherwise all contributions by order/title;
+  // hierarchical views (the tree) dropped when no `hierarchy`.
+  const resolved = useResolvedInstances(
+    contributions,
+    views,
+    !!hierarchy,
+    viewOptions,
+  );
 
-  const viewIds = useMemo(() => available.map((v) => v.id), [available]);
+  const instanceIds = useMemo(
+    () => resolved.map((r) => r.instance.id),
+    [resolved],
+  );
 
-  const viewState = useViewState(storageKey, viewIds, defaultView);
+  const viewState = useViewState(storageKey, instanceIds, defaultView);
 
-  const activeView =
-    available.find((v) => v.id === viewState.activeViewId) ??
-    available.find((v) => v.id === defaultView) ??
-    available[0] ??
+  const activeInstance =
+    resolved.find((r) => r.instance.id === viewState.activeViewId) ??
+    resolved.find((r) => r.instance.id === defaultView) ??
+    resolved[0] ??
     null;
 
-  const activeViewId = activeView?.id ?? "";
+  const activeViewId = activeInstance?.instance.id ?? "";
   const activeState = viewState.stateFor(activeViewId);
 
   // Filter controller — Phase 2's popover builder consumes the full surface
@@ -109,7 +101,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   );
   const hasFilters = filterController.filterableFields.length > 0;
 
-  if (!activeView) {
+  if (!activeInstance) {
     return (
       <div className={cn("flex flex-col", !embedded && "min-h-0 flex-1")}>
         <div className="flex items-center gap-sm px-sm pb-sm">
@@ -138,7 +130,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     setFilter: (filter) => viewState.setFilter(activeViewId, filter),
     onRowActivate: onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
     selectedRowId,
-    options: viewOptions?.[activeViewId],
+    options: activeInstance.instance.options,
     searchAccessor:
       searchAccessor as DataViewRenderProps<unknown>["searchAccessor"],
     hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
@@ -186,7 +178,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
         {actions}
         <CreatorsControl creators={creators} />
         <ViewSwitcher
-          views={available}
+          instances={resolved}
           activeId={activeViewId}
           onSelect={viewState.setActiveView}
         />
@@ -194,7 +186,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
       <div className={cn(!embedded && "min-h-0 flex-1 overflow-y-auto")}>
         {renderIsolated(
           DataViewSlots.View.id,
-          activeView as unknown as Contribution,
+          activeInstance.viewType as unknown as Contribution,
           renderProps,
         )}
       </div>

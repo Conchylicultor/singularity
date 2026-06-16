@@ -10,7 +10,7 @@ export default {
     "Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.",
   contributions: [
     DataViewSlots.View({
-      id: "table",
+      type: "table",
       title: "Table",
       icon: MdTableRows,
       order: 1,

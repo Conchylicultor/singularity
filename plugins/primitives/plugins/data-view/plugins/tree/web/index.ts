@@ -10,7 +10,7 @@ export default {
     "Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).",
   contributions: [
     DataViewSlots.View({
-      id: "tree",
+      type: "tree",
       title: "Tree",
       icon: MdAccountTree,
       order: 2,

@@ -12,7 +12,7 @@ export default {
     "Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.",
   contributions: [
     DataViewSlots.View({
-      id: "gallery",
+      type: "gallery",
       title: "Gallery",
       icon: MdGridView,
       order: 0,

@@ -1,22 +1,25 @@
 import type { ReactNode } from "react";
-import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
 import { ViewSwitcher as ViewSwitcherChrome } from "@plugins/primitives/plugins/view-switcher/web";
-import type { DataViewContribution } from "../slots";
+import type { ResolvedViewInstance } from "../internal/resolve-instances";
 
 export interface ViewSwitcherProps {
-  views: SealContributions<DataViewContribution>[];
+  instances: ResolvedViewInstance[];
   activeId: string;
   onSelect: (id: string) => void;
 }
 
 export function ViewSwitcher({
-  views,
+  instances,
   activeId,
   onSelect,
 }: ViewSwitcherProps): ReactNode {
   return (
     <ViewSwitcherChrome
-      options={views.map((v) => ({ id: v.id, title: v.title, icon: v.icon }))}
+      options={instances.map((r) => ({
+        id: r.instance.id,
+        title: r.instance.name,
+        icon: r.viewType.icon,
+      }))}
       activeId={activeId}
       onSelect={onSelect}
     />
