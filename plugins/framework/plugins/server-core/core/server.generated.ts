@@ -135,6 +135,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "plugin-meta/plugins/plugin-view", id: "plugin-meta.plugin-view", loader: () => import("@plugins/plugin-meta/plugins/plugin-view/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/avatar", id: "primitives.avatar", loader: () => import("@plugins/primitives/plugins/avatar/server"), dependsOn: ["config_v2", "primitives/plugins/icon-picker"] },
   { pluginPath: "primitives/plugins/commit-list", id: "primitives.commit-list", loader: () => import("@plugins/primitives/plugins/commit-list/server"), dependsOn: ["infra/plugins/paths"] },
+  { pluginPath: "primitives/plugins/data-view", id: "primitives.data-view", loader: () => import("@plugins/primitives/plugins/data-view/server"), dependsOn: ["config_v2"] },
   { pluginPath: "primitives/plugins/folder-picker", id: "primitives.folder-picker", loader: () => import("@plugins/primitives/plugins/folder-picker/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },
   { pluginPath: "primitives/plugins/icon-picker", id: "primitives.icon-picker", loader: () => import("@plugins/primitives/plugins/icon-picker/server"), dependsOn: [] },
   { pluginPath: "primitives/plugins/log-channels", id: "primitives.log-channels", loader: () => import("@plugins/primitives/plugins/log-channels/server"), dependsOn: ["infra/plugins/endpoints", "infra/plugins/paths"] },

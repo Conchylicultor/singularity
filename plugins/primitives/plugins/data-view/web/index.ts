@@ -1,4 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { viewStateDescriptor } from "../shared/view-state-config";
 
 export { DataView } from "./components/data-view";
 export { DataViewSlots } from "./slots";
@@ -41,5 +43,5 @@ export type {
 export default {
   description:
     "Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.",
-  contributions: [],
+  contributions: [ConfigV2.WebRegister({ descriptor: viewStateDescriptor })],
 } satisfies PluginDefinition;

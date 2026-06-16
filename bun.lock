@@ -1251,6 +1251,14 @@
       "name": "@singularity/plugin-fields-int-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/json": {
+      "name": "@singularity/plugin-fields-json",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/json/plugins/config": {
+      "name": "@singularity/plugin-fields-json-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/list": {
       "name": "@singularity/plugin-fields-list",
       "version": "0.0.1",
@@ -3930,6 +3938,10 @@
     "@singularity/plugin-fields-int": ["@singularity/plugin-fields-int@workspace:plugins/fields/plugins/int"],
 
     "@singularity/plugin-fields-int-config": ["@singularity/plugin-fields-int-config@workspace:plugins/fields/plugins/int/plugins/config"],
+
+    "@singularity/plugin-fields-json": ["@singularity/plugin-fields-json@workspace:plugins/fields/plugins/json"],
+
+    "@singularity/plugin-fields-json-config": ["@singularity/plugin-fields-json-config@workspace:plugins/fields/plugins/json/plugins/config"],
 
     "@singularity/plugin-fields-list": ["@singularity/plugin-fields-list@workspace:plugins/fields/plugins/list"],
 
