@@ -156,6 +156,10 @@
       "name": "@singularity/plugin-apps-pages",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/pages/plugins/content-search": {
+      "name": "@singularity/plugin-apps-pages-content-search",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/pages/plugins/page-tree": {
       "name": "@singularity/plugin-apps-pages-page-tree",
       "version": "0.0.1",
@@ -2578,6 +2582,18 @@
         "modern-screenshot": "^4.6.0",
       },
     },
+    "plugins/search": {
+      "name": "@singularity/plugin-search",
+      "version": "0.0.1",
+    },
+    "plugins/search/plugins/engine": {
+      "name": "@singularity/plugin-search-engine",
+      "version": "0.0.1",
+    },
+    "plugins/search/plugins/quick-find": {
+      "name": "@singularity/plugin-search-quick-find",
+      "version": "0.0.1",
+    },
     "plugins/shell": {
       "name": "@singularity/plugin-shell",
       "version": "0.0.1",
@@ -3417,6 +3433,8 @@
     "@singularity/plugin-apps-home-shell": ["@singularity/plugin-apps-home-shell@workspace:plugins/apps/plugins/home/plugins/shell"],
 
     "@singularity/plugin-apps-pages": ["@singularity/plugin-apps-pages@workspace:plugins/apps/plugins/pages"],
+
+    "@singularity/plugin-apps-pages-content-search": ["@singularity/plugin-apps-pages-content-search@workspace:plugins/apps/plugins/pages/plugins/content-search"],
 
     "@singularity/plugin-apps-pages-page-tree": ["@singularity/plugin-apps-pages-page-tree@workspace:plugins/apps/plugins/pages/plugins/page-tree"],
 
@@ -4553,6 +4571,12 @@
     "@singularity/plugin-screenshot-draw-canvas": ["@singularity/plugin-screenshot-draw-canvas@workspace:plugins/screenshot/plugins/draw-canvas"],
 
     "@singularity/plugin-screenshot-draw-on-app": ["@singularity/plugin-screenshot-draw-on-app@workspace:plugins/screenshot/plugins/draw-on-app"],
+
+    "@singularity/plugin-search": ["@singularity/plugin-search@workspace:plugins/search"],
+
+    "@singularity/plugin-search-engine": ["@singularity/plugin-search-engine@workspace:plugins/search/plugins/engine"],
+
+    "@singularity/plugin-search-quick-find": ["@singularity/plugin-search-quick-find@workspace:plugins/search/plugins/quick-find"],
 
     "@singularity/plugin-shell": ["@singularity/plugin-shell@workspace:plugins/shell"],
 

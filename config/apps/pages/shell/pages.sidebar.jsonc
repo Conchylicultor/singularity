@@ -3,6 +3,7 @@
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   // Favorites pinned above the page tree for quick access.
   "items": [
+    "apps.pages.content-search:search",
     "apps.pages.starred:favorites",
     "apps.pages.page-tree:pages"
   ]
