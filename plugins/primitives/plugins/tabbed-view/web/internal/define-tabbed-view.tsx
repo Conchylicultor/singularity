@@ -3,6 +3,7 @@ import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
+import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
 
 export interface TabContribution<ViewProps> {
   id: string;
@@ -61,32 +62,16 @@ export function defineTabbedView<ViewProps extends object>(
         {(header || ordered.length > 1) && (
           <div className="flex shrink-0 flex-col gap-xs px-sm pb-xs">
             {header}
-            {ordered.length > 1 && (
-              <div className="flex items-center gap-2xs rounded-md border bg-background p-2xs">
-                {ordered.map((v) => {
-                  const Icon = v.icon;
-                  const selected = activeView?.id === v.id;
-                  return (
-                    <button
-                      key={v.id}
-                      type="button"
-                      onClick={() => selectView(v.id)}
-                      aria-pressed={selected}
-                      title={v.title}
-                      // eslint-disable-next-line row/no-adhoc-row -- tabbed-view's own tab control (flex-1 justify-center layout differs from SegmentedControl)
-                      className={cn(
-                        "flex flex-1 items-center justify-center gap-xs whitespace-nowrap rounded-sm px-sm py-xs text-caption",
-                        selected
-                          ? "bg-accent text-foreground"
-                          : "text-muted-foreground hover:bg-accent/50",
-                      )}
-                    >
-                      <Icon className="size-3.5" />
-                      <span>{v.title}</span>
-                    </button>
-                  );
-                })}
-              </div>
+            {ordered.length > 1 && activeView && (
+              <ViewSwitcher
+                options={ordered.map((v) => ({
+                  id: v.id,
+                  title: v.title,
+                  icon: v.icon,
+                }))}
+                activeId={activeView.id}
+                onSelect={selectView}
+              />
             )}
           </div>
         )}

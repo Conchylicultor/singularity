@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ViewSwitcher as ViewSwitcherChrome } from "@plugins/primitives/plugins/view-switcher/web";
 import type { DataViewContribution } from "../slots";
 
 export interface ViewSwitcherProps {
@@ -14,23 +14,11 @@ export function ViewSwitcher({
   activeId,
   onSelect,
 }: ViewSwitcherProps): ReactNode {
-  if (views.length <= 1) return null;
-
   return (
-    <SegmentedControl
-      options={views.map((v) => {
-        const Icon = v.icon;
-        return {
-          id: v.id,
-          label: v.title,
-          icon: <Icon className="size-3.5" />,
-          title: v.title,
-        };
-      })}
-      value={activeId}
-      onChange={onSelect}
-      variant="ghost"
-      size="sm"
+    <ViewSwitcherChrome
+      options={views.map((v) => ({ id: v.id, title: v.title, icon: v.icon }))}
+      activeId={activeId}
+      onSelect={onSelect}
     />
   );
 }
