@@ -20,3 +20,4 @@ config/**/*.origin.jsonc                      merge=regen-generated
 plugins/database/plugins/migrations/data/*.sql                merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/_journal.json   merge=regen-migrations
 plugins/database/plugins/migrations/data/meta/*_snapshot.json merge=regen-migrations
+plugins/database/plugins/migrations/data/meta/*_answers.json  merge=regen-migrations

@@ -32,11 +32,111 @@ export type MigrationAnswer =
   | { action: "create" }
   | { action: "rename"; from: string };
 
+/**
+ * Stable identity key for a prompt, used to persist + replay the create-vs-rename
+ * decision across regens (where positional order is unstable). For a column
+ * prompt the table context disambiguates same-named columns across tables.
+ */
+export function promptKey(p: DetectedPrompt): string {
+  if (p.entityType === "column") return `column:${p.context}.${p.entityName}`;
+  return `${p.entityType}:${p.entityName}`;
+}
+
+/**
+ * One persisted answer in a `meta/<tag>_answers.json` sidecar. Carries the
+ * entity identity (so it survives reordering on regen) plus the resolved action.
+ */
+export type KeyedAnswerEntry =
+  | { key: string; entityType: string; entityName: string; action: "create" }
+  | {
+      key: string;
+      entityType: string;
+      entityName: string;
+      action: "rename";
+      from: string;
+    };
+
+interface AnswersSidecar {
+  version: 1;
+  answers: KeyedAnswerEntry[];
+}
+
 export interface DrizzlePromptResult {
   exitCode: number;
   stdoutBuf: string;
   stderrBuf: string;
   detectedPrompts: DetectedPrompt[];
+  /** Prompt keys (promptKey) drizzle showed that had no persisted answer, or
+   * whose rename source was missing. Empty unless keyedAnswers was supplied. */
+  unanswered: string[];
+}
+
+/**
+ * Read every branch-local `meta/*_answers.json` sidecar (those whose migration
+ * `.sql` is NOT tracked on origin/main) and merge their entries into one keyed
+ * map. Main's accumulated sidecars are ignored, so a re-emitted prompt is only
+ * ever resolved from this branch's own authored answers. Fails loud on malformed
+ * JSON (lets JSON.parse throw).
+ */
+export async function readBranchLocalAnswers(
+  root: string,
+  migrationsDir: string,
+): Promise<Map<string, MigrationAnswer>> {
+  const map = new Map<string, MigrationAnswer>();
+  const ref = await resolveMainRef(root);
+  const metaDir = join(migrationsDir, "meta");
+  if (!existsSync(metaDir)) return map;
+  const tracked = ref
+    ? await listTrackedMigrationBasenames(root, ref)
+    : new Set<string>();
+
+  for (const f of readdirSync(metaDir)) {
+    if (!f.endsWith("_answers.json")) continue;
+    // A sidecar <tag>_answers.json maps to migration <tag>.sql; skip sidecars
+    // whose migration is already on main (their answers are immutable history).
+    const sqlBasename = `${f.slice(0, -"_answers.json".length)}.sql`;
+    if (tracked.has(sqlBasename)) continue;
+    const raw = readFileSync(join(metaDir, f), "utf8");
+    const parsed = JSON.parse(raw) as AnswersSidecar;
+    for (const entry of parsed.answers) {
+      map.set(
+        entry.key,
+        entry.action === "rename"
+          ? { action: "rename", from: entry.from }
+          : { action: "create" },
+      );
+    }
+  }
+  return map;
+}
+
+/**
+ * Write a `meta/<schemaTag>_answers.json` sidecar capturing the resolved
+ * create-vs-rename decision for each prompt, keyed by entity identity so a later
+ * regen can replay it. `resolve` yields the answer chosen for a given prompt.
+ */
+export function writeAnswersSidecar(
+  metaDir: string,
+  schemaTag: string,
+  prompts: DetectedPrompt[],
+  resolve: (p: DetectedPrompt) => MigrationAnswer,
+): void {
+  const answers: KeyedAnswerEntry[] = prompts.map((p) => {
+    const a = resolve(p);
+    const base = {
+      key: promptKey(p),
+      entityType: p.entityType,
+      entityName: p.entityName,
+    };
+    return a.action === "rename"
+      ? { ...base, action: "rename" as const, from: a.from }
+      : { ...base, action: "create" as const };
+  });
+  const sidecar: AnswersSidecar = { version: 1, answers };
+  writeFileSync(
+    join(metaDir, `${schemaTag}_answers.json`),
+    JSON.stringify(sidecar, null, 2) + "\n",
+  );
 }
 
 // ─── ANSI / prompt parsing utilities ─────────────────────────────────────────
@@ -112,18 +212,35 @@ function keystrokesForOptionIndex(optionIndex: number): Uint8Array {
   return new Uint8Array(parts);
 }
 
-function resolveAnswer(
+/**
+ * Resolve an answer to an option index, or `null` if it can't be satisfied
+ * (a rename whose source isn't among the prompt's options — e.g. consumed by a
+ * prior rename, or no longer present after a rebase). The non-throwing core so
+ * the keyed (regen) path can record a gap instead of using exceptions for flow.
+ */
+function tryResolveAnswer(
   prompt: DetectedPrompt,
   answer: MigrationAnswer,
-): number {
+): number | null {
   if (answer.action === "create") return 0;
   const idx = prompt.options.findIndex(
     (o) => o.action === "rename" && o.fromName === answer.from,
   );
-  if (idx === -1) {
+  return idx === -1 ? null : idx;
+}
+
+export function resolveAnswer(
+  prompt: DetectedPrompt,
+  answer: MigrationAnswer,
+): number {
+  const idx = tryResolveAnswer(prompt, answer);
+  if (idx === null) {
+    // tryResolveAnswer only returns null for a rename whose source is missing —
+    // "create" always resolves to option 0. Narrow for the diagnostic.
+    const from = answer.action === "rename" ? answer.from : "";
     const available = prompt.options.map((o) => o.label).join(", ");
     throw new Error(
-      `Answer specifies rename from "${answer.from}" but prompt for ` +
+      `Answer specifies rename from "${from}" but prompt for ` +
         `"${prompt.entityName}" only has options: [${available}].\n` +
         `The source may have been consumed by a prior rename answer.\n\n` +
         `AGENT: Stop here and report this error to the user. Do not retry ` +
@@ -148,10 +265,18 @@ export async function runDrizzleKitWithPrompts(opts: {
   cwd: string;
   env: Record<string, string>;
   answers: MigrationAnswer[] | null;
+  /**
+   * Identity-keyed answers (used by regen, where positional order is unstable).
+   * Takes precedence over `answers`: when set, positional `answers` is ignored
+   * and each prompt is resolved by its promptKey. Missing keys (or a stale
+   * rename source) are pushed onto the returned `unanswered` and advanced with
+   * option 0 so discovery continues rather than killing the process.
+   */
+  keyedAnswers?: Map<string, MigrationAnswer>;
   /** If true, echo stdout/stderr to the parent process streams. */
   echo?: boolean;
 }): Promise<DrizzlePromptResult> {
-  const { cmd, cwd, env, answers, echo = false } = opts;
+  const { cmd, cwd, env, answers, keyedAnswers, echo = false } = opts;
 
   const proc = Bun.spawn(cmd, {
     cwd,
@@ -162,6 +287,7 @@ export async function runDrizzleKitWithPrompts(opts: {
   });
 
   const detectedPrompts: DetectedPrompt[] = [];
+  const unanswered: string[] = [];
   let promptIndex = 0;
   let awaitingConfirmation = false;
   let currentQuestion: ParsedQuestion | null = null;
@@ -180,7 +306,20 @@ export async function runDrizzleKitWithPrompts(opts: {
     detectedPrompts.push(prompt);
 
     let optIdx = 0;
-    if (answers) {
+    if (keyedAnswers) {
+      // Keyed (regen) mode: resolve by entity identity, not position. Missing or
+      // unresolvable answers don't kill the process — we record them and keep
+      // discovering with option 0 so the caller can report every gap at once and
+      // discard the generated files.
+      const a = keyedAnswers.get(promptKey(prompt));
+      const idx = a === undefined ? null : tryResolveAnswer(prompt, a);
+      if (idx === null) {
+        unanswered.push(promptKey(prompt));
+        optIdx = 0;
+      } else {
+        optIdx = idx;
+      }
+    } else if (answers) {
       if (promptIndex >= answers.length) {
         console.error(
           `\nError: drizzle-kit showed prompt ${promptIndex + 1} but only ` +
@@ -296,7 +435,7 @@ export async function runDrizzleKitWithPrompts(opts: {
   const exitCode = await proc.exited;
   await Promise.all([stdoutDone, stderrDone]);
 
-  return { exitCode, stdoutBuf, stderrBuf, detectedPrompts };
+  return { exitCode, stdoutBuf, stderrBuf, detectedPrompts, unanswered };
 }
 
 const NEW_FORMAT = /^(\d{8})_(\d{6})_([0-9a-f]{8})__(.+)\.sql$/;
@@ -347,6 +486,14 @@ export async function generateMigration(opts: {
 
   const migrationsDir = resolve(root, "plugins/database/plugins/migrations/data");
 
+  // Regen mode (resetMigration with no positional answers) replays the persisted
+  // create-vs-rename decisions. Read the branch-local sidecars NOW — before the
+  // reset below deletes them — so a re-emitted prompt resolves by entity identity.
+  const keyedAnswers =
+    resetMigration && !migrationAnswers
+      ? await readBranchLocalAnswers(root, migrationsDir)
+      : undefined;
+
   if (resetMigration) {
     await resetBranchLocalMigrations(root, migrationsDir);
   }
@@ -381,6 +528,7 @@ export async function generateMigration(opts: {
       SINGULARITY_WORKTREE: worktreeName,
     },
     answers: migrationAnswers ?? null,
+    keyedAnswers,
     echo: true,
   });
 
@@ -395,9 +543,11 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
-  // INVARIANT: never keep a migration generated with prompts unless agent
-  // explicitly provided answers.
-  if (result.detectedPrompts.length > 0 && !migrationAnswers) {
+  // INVARIANT: never keep a migration generated with prompts unless answers were
+  // provided. In keyed (regen) mode `migrationAnswers` is undefined but answers
+  // come from the sidecar map — so exclude keyed mode here; its own unanswered
+  // check below handles the abort.
+  if (result.detectedPrompts.length > 0 && !migrationAnswers && !keyedAnswers) {
     const added = readdirSync(migrationsDir).filter(
       (f: string) => f.endsWith(".sql") && !before.has(f),
     );
@@ -412,6 +562,27 @@ export async function generateMigration(opts: {
         "above and ask which action to take for each. Do not auto-select or retry\n" +
         "without explicit user input. If this feature does not work as expected or\n" +
         "has limitations, report that clearly rather than working around it.\n",
+    );
+    process.exit(2);
+  }
+
+  // Keyed (regen) mode: a re-emitted prompt had no persisted answer (or its
+  // rename source was missing). Discard the generated files and stop loudly —
+  // the sidecar must be (re-)authored before push can normalize this branch.
+  if (keyedAnswers && result.unanswered.length > 0) {
+    const added = readdirSync(migrationsDir).filter(
+      (f: string) => f.endsWith(".sql") && !before.has(f),
+    );
+    removeGeneratedFiles(migrationsDir, added);
+    console.error(
+      "\ndrizzle-kit showed an ambiguous create-vs-rename prompt with no persisted answer:\n" +
+        result.unanswered.map((k) => `  ${k}`).join("\n") +
+        "\n\nThe regen replays answers from meta/<tag>_answers.json, but these keys are\n" +
+        "absent (a new ambiguity introduced after the original authoring). Author the\n" +
+        "decision first on the original migration via:\n" +
+        "  ./singularity build --migration-name <slug> --migration-answers '[...]'\n\n" +
+        "AGENT: Stop here and report this to the user. Do not retry or hand-edit the\n" +
+        "generated SQL — the create-vs-rename choice must be made explicitly.\n",
     );
     process.exit(2);
   }
@@ -468,6 +639,30 @@ export async function generateMigration(opts: {
         rmSync(snap, { force: true });
         console.log(`  dropped snapshot for data migration ${r.to}`);
       }
+    }
+  }
+
+  // Persist the create-vs-rename decision alongside the migration so a later
+  // regen (which re-emits a consolidated migration) replays it instead of
+  // re-prompting and aborting the push. Only schema migrations that actually
+  // showed prompts get a sidecar — find the single renamed entry whose snapshot
+  // exists (the schema migration; data/custom ones have their snapshot dropped
+  // above and never prompt).
+  if (result.detectedPrompts.length > 0) {
+    const metaDir = join(migrationsDir, "meta");
+    const schemaRename = renameResult.renamed.find((r) =>
+      existsSync(join(metaDir, `${r.to.slice(0, -4)}_snapshot.json`)),
+    );
+    if (schemaRename) {
+      const schemaTag = schemaRename.to.slice(0, -4);
+      // Keyed mode resolves by entity identity; authoring mode pairs prompt i
+      // with the positional answer i (detect-mode order matches answer order).
+      const resolver = keyedAnswers
+        ? (p: DetectedPrompt) => keyedAnswers.get(promptKey(p))!
+        : (p: DetectedPrompt) =>
+            migrationAnswers![result.detectedPrompts.indexOf(p)]!;
+      writeAnswersSidecar(metaDir, schemaTag, result.detectedPrompts, resolver);
+      console.log(`  wrote answers sidecar ${schemaTag}_answers.json`);
     }
   }
 }
@@ -546,6 +741,10 @@ async function resetBranchLocalMigrations(
     if (!existsSync(join(metaDir, `${f.slice(0, -4)}_snapshot.json`))) continue;
     rmSync(join(migrationsDir, f), { force: true });
     removed.push(f);
+    // Drop the answers sidecar too — regen reads it before this reset runs, so
+    // the in-memory keyed map already captured it; the on-disk copy is rewritten
+    // for the consolidated migration after generate.
+    rmSync(join(metaDir, `${f.slice(0, -4)}_answers.json`), { force: true });
   }
   for (const f of readdirSync(metaDir)) {
     if (!f.endsWith("_snapshot.json")) continue;
@@ -672,6 +871,8 @@ export function removeGeneratedFiles(
     if (idxMatch) {
       rmSync(join(metaDir, `${idxMatch[1]}_snapshot.json`), { force: true });
     }
+    // Drop any answers sidecar keyed to this migration's tag (the .sql basename).
+    rmSync(join(metaDir, `${f.slice(0, -4)}_answers.json`), { force: true });
   }
 }
 
