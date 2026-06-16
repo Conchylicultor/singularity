@@ -17,8 +17,9 @@ view independently sorted / searched / filtered.
   switcher), and renders the active view via `renderIsolated`. It passes **raw
   rows** — each view applies the processing matching its own semantics. Flat
   views call the exported `useFlatRows` hook (search → filter → sort); the tree
-  view feeds raw rows straight to the tree primitive's subtree-preserving search
-  + rank ordering.
+  view applies the shared `evaluateNode` filter (subtree-preserving, mirroring
+  search) then feeds the result to the tree primitive's subtree-preserving search
+  + rank ordering — so filter/search/sort behave identically across every view.
 
 ## Hierarchy
 
@@ -79,12 +80,14 @@ zero consumer changes — exactly the segmented-progress-bar collection model.
    from the filesystem, so the new `web/index.ts` is discovered automatically (no manual
    registration). Done — every existing `<DataView>` consumer can now opt in by id.
 
-## Phase status
+## Filtering
 
-- Phase 1 (now): gallery + table + search. `ViewState.filters` and `setFilter` are
-  carried but unused.
-- Phase 3: per-field filter bar driven by `FieldDef.type`, writing `state.filters`,
-  applied in `useFlatRows` (marked no-op hook point) before sort.
+Per-field filtering is driven by `FieldDef.type`: the host's `FilterBuilderTrigger`
+writes a `FilterGroup` tree to `state.filter`, and every view evaluates it through
+the shared `evaluateNode` / `applyFilter` evaluator (resolved per field type via
+`useResolveOperatorSet`). Flat views apply it inside `useFlatRows` (search → filter
+→ sort); the tree view applies it subtree-preserving before handing rows to the tree
+primitive. Filter semantics are therefore identical across all views.
 
 ## Placement mode
 

@@ -3205,7 +3205,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`tree`** — Tree view child for the data-view primitive: adapts the shared field schema + hierarchy config onto the tree primitive (buildTree, TreeList, RowChrome, RenameInput).
           - Web:
             - Contributes: `DataViewSlots.View` "Tree" → `TreeView`
-            - Uses: `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useResolveCell`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.RowChromeMenuHelpers`, `primitives/tree.RowMenuItem`, `primitives/tree.TreeList`, `primitives/ui-kit.cn`
+            - Uses: `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.evaluateNode`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveOperatorSet`, `primitives/tree.RenameInput`, `primitives/tree.RowChrome`, `primitives/tree.RowChromeMenuHelpers`, `primitives/tree.RowMenuItem`, `primitives/tree.TreeList`, `primitives/ui-kit.cn`
             - Exports: Types: `TreeRowNode`, `TreeViewOptions`
     - **`detail-sections`** — Factory for extensible detail-view section slots with built-in Reorder DnD.
       - Web:

@@ -1,7 +1,9 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import {
+  evaluateNode,
   pickPrimaryField,
   useResolveCell,
+  useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldDef,
   type HierarchyConfig,
@@ -137,6 +139,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const { rows, rowKey, expanded, setExpanded } = props;
 
   const primaryField = useMemo(() => pickPrimaryField(fields), [fields]);
+  const resolveOperatorSet = useResolveOperatorSet();
 
   // Project each raw row → a TreeItem-shaped row, keeping a map back to the
   // original so TreeList callbacks recover the concrete `TRow`.
@@ -157,6 +160,34 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     });
     return { projected: out, originalById: byId };
   }, [rows, rowKey, hierarchy, expanded]);
+
+  // Apply the view's filter through the same `evaluateNode` evaluator the flat
+  // views use, so filter semantics are identical across all views. Filtering is
+  // *subtree-preserving* (mirrors the tree's search): a node survives if it
+  // matches the filter or has a matching descendant — i.e. matches plus the
+  // ancestor chain of every match — so filtered rows keep their hierarchical
+  // context instead of being orphaned to the root.
+  const visibleProjected = useMemo(() => {
+    const filter = props.state.filter;
+    if (!filter) return projected;
+    const matched = new Set<string>();
+    for (const p of projected) {
+      if (evaluateNode(filter, p.__row, fields, resolveOperatorSet)) {
+        matched.add(p.id);
+      }
+    }
+    if (matched.size === projected.length) return projected;
+    const parentById = new Map(projected.map((p) => [p.id, p.parentId]));
+    const keep = new Set<string>(matched);
+    for (const id of matched) {
+      let cur = parentById.get(id) ?? null;
+      while (cur && !keep.has(cur)) {
+        keep.add(cur);
+        cur = parentById.get(cur) ?? null;
+      }
+    }
+    return projected.filter((p) => keep.has(p.id));
+  }, [projected, props.state.filter, fields, resolveOperatorSet]);
 
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {
@@ -190,7 +221,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   }, [options, primaryAccessor]);
 
   if (!hierarchy) return null;
-  if (projected.length === 0) return <>{props.emptyState}</>;
+  if (visibleProjected.length === 0) return <>{props.emptyState}</>;
 
   // Expand fallback: when the data source has no server-persisted expand state,
   // persist it in this view's ViewState (localStorage) via the host.
@@ -215,7 +246,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   return (
     <div className="px-sm">
       <TreeList<Projected<unknown>>
-        rows={projected}
+        rows={visibleProjected}
         selectedId={props.selectedRowId}
         rootId={options.rootId}
         onSelect={(id) => {
