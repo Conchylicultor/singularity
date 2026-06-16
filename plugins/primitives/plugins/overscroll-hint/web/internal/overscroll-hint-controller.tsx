@@ -1,6 +1,5 @@
 import { useEffect } from "react";
 import { installOverscrollHint } from "./overscroll-detector";
-import "./overscroll-hint.css";
 
 /**
  * Invisible global controller. Mounted once via `Core.Root`, it installs the
