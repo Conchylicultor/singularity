@@ -2,6 +2,7 @@ import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
 import type { DataViewRenderProps } from "../core";
 import { Cell } from "./cell-slot";
+import { CellEditor } from "./cell-editor-slot";
 import { Filter } from "./filter-slot";
 
 export interface DataViewContribution {
@@ -20,6 +21,8 @@ export const DataViewSlots = {
   }),
   /** Per-type table cell. Contribute `{ match, component }`. */
   Cell,
+  /** Per-type inline cell editor. Contribute `{ match, component }`. */
+  CellEditor,
   /** Per-type filter. Contribute one `FilterOperatorSet` ({ match, operators, defaultOperator? }). */
   Filter,
 };

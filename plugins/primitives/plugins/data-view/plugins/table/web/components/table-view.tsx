@@ -8,12 +8,14 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useFlatRows,
   useResolveCell,
+  useResolveCellEditor,
   useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldValue,
   type ItemActionsDescriptor,
   type SortState,
 } from "@plugins/primitives/plugins/data-view/web";
+import { EditableCell } from "./editable-cell";
 
 /** FieldValue → data-table's `string | number | undefined` comparable projection. */
 function coerce(value: FieldValue): string | number | undefined {
@@ -32,6 +34,7 @@ function mapSort(sort: SortState | null): TableSortState | null {
 export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
   const resolveCell = useResolveCell();
+  const resolveEditor = useResolveCellEditor();
   // Rows arrive RAW; the table applies flat search/filter/sort itself.
   const resolveOperatorSet = useResolveOperatorSet();
   const rows = useFlatRows(
@@ -72,9 +75,22 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
     // per-type `data-view.cell` (honoring `extends`) → ③ `String(value)`.
     cell: f.cell
       ? f.cell
-      : (row: unknown) =>
-          resolveCell(f, f.value ? f.value(row) : undefined, row) ??
-          String(f.value?.(row) ?? ""),
+      : (row: unknown) => {
+          const value = f.value ? f.value(row) : undefined;
+          const read = resolveCell(f, value, row) ?? String(f.value?.(row) ?? "");
+          return f.onEdit ? (
+            <EditableCell
+              field={f}
+              row={row}
+              value={value}
+              read={read}
+              resolveEditor={resolveEditor}
+              onEdit={f.onEdit as (row: unknown, next: FieldValue) => void | Promise<void>}
+            />
+          ) : (
+            read
+          );
+        },
   }));
 
   return (

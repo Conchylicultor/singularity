@@ -78,6 +78,14 @@ export interface FieldDef<TRow> {
   values?: (row: TRow) => string[];
   /** Custom renderer; falls back to String(value ?? ""). */
   cell?: (row: TRow) => ReactNode;
+  /**
+   * Inline-edit write-back. Present → the table cell for this field becomes
+   * editable (click-to-edit); absent → the cell stays read-only (the default for
+   * every existing consumer). The host resolves a per-type editor via the
+   * `data-view.cell-editor` slot and calls this on commit. Consumer owns
+   * persistence — data-view stays presentational.
+   */
+  onEdit?: (row: TRow, next: FieldValue) => void | Promise<void>;
   /** Default: true when `value` is present. */
   sortable?: boolean;
   /** Include in default search accessor; default true for text/enum. */
@@ -170,6 +178,23 @@ export interface TableCellProps {
   value: FieldValue;
   field: FieldDef<unknown>;
   raw?: unknown;
+}
+
+/**
+ * Props passed to a `data-view.cell-editor` contribution — the inline editor for
+ * one editable cell. Mirror of `TableCellProps` plus the commit/cancel channel.
+ * `value` is the already-projected `field.value(row)`; `raw` is the row (escape
+ * hatch). The editor is COMPACT (no label/header), fills the cell, autofocuses on
+ * mount, and calls `onCommit(next)` on Enter/blur or `onCancel()` on Esc.
+ */
+export interface CellEditorProps {
+  value: FieldValue;
+  field: FieldDef<unknown>;
+  raw?: unknown;
+  /** Commit a new value. The host closes the editor and forwards to FieldDef.onEdit. */
+  onCommit: (next: FieldValue) => void;
+  /** Abandon editing with no change. The host closes the editor. */
+  onCancel: () => void;
 }
 
 /**

@@ -1,0 +1,52 @@
+import { useRef, useState, type ReactNode } from "react";
+import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
+import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
+
+/**
+ * Compact inline enum editor: an open-by-default popover whose content is a
+ * single-select vertical list of option chips. Choosing an option commits it
+ * and closes; dismissing the popover cancels.
+ */
+export function EnumEditor(props: CellEditorProps): ReactNode {
+  const [open, setOpen] = useState(true);
+  const chosen = useRef(false);
+  const options = props.field.options ?? [];
+  const selected = props.value == null ? "" : String(props.value);
+  const current = options.find((o) => o.value === selected);
+
+  function choose(value: string) {
+    chosen.current = true;
+    setOpen(false);
+    props.onCommit(value);
+  }
+
+  return (
+    <InlinePopover
+      open={open}
+      onOpenChange={(next) => {
+        setOpen(next);
+        // Dismissed without choosing an option ⇒ cancel.
+        if (!next && !chosen.current) props.onCancel();
+      }}
+      contentClassName="w-48"
+      trigger={
+        <span className="truncate text-body">{current?.label ?? selected}</span>
+      }
+    >
+      <div className="flex flex-col gap-xs">
+        {options.map((o) => (
+          <ToggleChip
+            key={o.value}
+            active={selected === o.value}
+            variant="ghost"
+            size="sm"
+            onClick={() => choose(o.value)}
+          >
+            {o.label}
+          </ToggleChip>
+        ))}
+      </div>
+    </InlinePopover>
+  );
+}

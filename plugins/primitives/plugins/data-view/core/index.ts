@@ -9,6 +9,7 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,
+  CellEditorProps,
   FilterValueInputProps,
   FilterOperator,
   FilterOperatorSet,

@@ -1,0 +1,43 @@
+import { useRef, useState, type ReactNode } from "react";
+import { Input } from "@plugins/primitives/plugins/ui-kit/web";
+import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
+
+/** Compact inline numeric editor: commits on Enter/blur, cancels on Esc. */
+export function NumberEditor(props: CellEditorProps): ReactNode {
+  const [local, setLocal] = useState(props.value == null ? "" : String(props.value));
+  const committed = useRef(false);
+
+  function commit() {
+    if (committed.current) return;
+    committed.current = true;
+    const t = local.trim();
+    if (t === "") {
+      props.onCommit(null);
+    } else {
+      const n = Number(t);
+      if (Number.isNaN(n)) props.onCancel();
+      else props.onCommit(n);
+    }
+  }
+
+  return (
+    <Input
+      type="number"
+      autoFocus
+      className="h-6 px-xs py-none tabular-nums"
+      value={local}
+      onChange={(e) => setLocal(e.target.value)}
+      onBlur={commit}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          commit();
+        } else if (e.key === "Escape") {
+          e.preventDefault();
+          committed.current = true;
+          props.onCancel();
+        }
+      }}
+    />
+  );
+}

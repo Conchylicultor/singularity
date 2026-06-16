@@ -6,6 +6,7 @@ export { DataView } from "./components/data-view";
 export { DataViewSlots } from "./slots";
 export type { DataViewContribution } from "./slots";
 export { useResolveCell } from "./cell-slot";
+export { useResolveCellEditor } from "./cell-editor-slot";
 export { useResolveOperatorSet } from "./filter-slot";
 export { useFlatRows } from "./internal/use-flat-rows";
 export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
@@ -29,6 +30,7 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,
+  CellEditorProps,
   FilterValueInputProps,
   FilterOperator,
   FilterOperatorSet,

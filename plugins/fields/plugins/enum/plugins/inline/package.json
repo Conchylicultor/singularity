@@ -1,0 +1,9 @@
+{
+  "name": "@singularity/plugin-fields-enum-inline",
+  "version": "0.0.1",
+  "private": true,
+  "description": "Enum (select) field type: data-view inline cell editor (single-select chip popover).",
+  "singularity": {
+    "collapsed": true
+  }
+}
