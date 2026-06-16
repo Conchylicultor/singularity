@@ -1,12 +1,6 @@
 import type { ReactNode } from "react";
-import { MdMoreHoriz, MdDelete, MdAccountTree } from "react-icons/md";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@plugins/primitives/plugins/ui-kit/web";
+import { MdClose, MdAccountTree } from "react-icons/md";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
@@ -20,9 +14,10 @@ import { OperatorPicker } from "./operator-picker";
 import type { FilterEditorContext } from "./editor-context";
 
 /**
- * One rule row: `[conjunction] [field ▾] [operator ▾] [value] [⋯]`. The value
- * editor is the resolved operator's `ValueInput` (rendered only when
- * `hasValue`). The `⋯` menu deletes the rule or turns it into a group.
+ * One rule row: `[conjunction] [field ▾] [operator ▾] [value] [⤳ ✕]`. The value
+ * editor is the resolved operator's `ValueInput` (rendered only when `hasValue`).
+ * Remove is a direct, single-click affordance (no buried menu); "turn into group"
+ * sits beside it as the advanced/grouping path — both hover-revealed.
  */
 export function FilterRuleRow<TRow>(props: {
   rule: FilterRule;
@@ -74,43 +69,25 @@ export function FilterRuleRow<TRow>(props: {
           field={field as FieldDef<unknown>}
         />
       ) : null}
-      <RuleMenu
-        onDelete={() => ctx.deleteNode(rule.id)}
-        onWrap={() => ctx.wrapRuleInGroup(rule.id)}
-      />
-    </Stack>
-  );
-}
-
-function RuleMenu(props: {
-  onDelete: () => void;
-  onWrap: () => void;
-}): ReactNode {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Rule options"
-            title="Rule options"
-            className="ml-auto opacity-0 transition-opacity group-hover/rule:opacity-100 aria-expanded:opacity-100"
-          />
-        }
+      <Stack
+        direction="row"
+        gap="2xs"
+        align="center"
+        className="ml-auto opacity-0 transition-opacity group-hover/rule:opacity-100 focus-within:opacity-100"
       >
-        <MdMoreHoriz />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem onClick={props.onWrap}>
-          <MdAccountTree />
-          Turn into group
-        </DropdownMenuItem>
-        <DropdownMenuItem variant="destructive" onClick={props.onDelete}>
-          <MdDelete />
-          Delete rule
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
+        <IconButton
+          icon={MdAccountTree}
+          label="Turn into group"
+          size="icon-sm"
+          onClick={() => ctx.wrapRuleInGroup(rule.id)}
+        />
+        <IconButton
+          icon={MdClose}
+          label="Remove filter"
+          size="icon-sm"
+          onClick={() => ctx.deleteNode(rule.id)}
+        />
+      </Stack>
+    </Stack>
   );
 }

@@ -1,26 +1,21 @@
 import type { ReactNode } from "react";
-import { MdAdd, MdMoreHoriz, MdDelete } from "react-icons/md";
-import {
-  Button,
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@plugins/primitives/plugins/ui-kit/web";
+import { MdClose } from "react-icons/md";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { ConjunctionCell } from "./conjunction-cell";
 import { FilterRuleRow } from "./filter-rule-row";
+import { AddFilterAffordance } from "./add-filter-affordance";
 import type { FilterEditorContext } from "./editor-context";
 
 /**
  * Recursive editor for one group's children. Each child renders with its
  * conjunction column (Where / And-Or dropdown / static). Nested groups render
  * indented inside a sunken Surface with their own conjunction column, add
- * affordance, and a `⋯` delete (root has no delete — clearing is the footer's
- * job). Empty groups show a muted placeholder.
+ * affordance, and a direct remove button (root has no delete — clearing is the
+ * footer's job). Empty groups show a muted placeholder.
  */
 export function FilterGroupEditor<TRow>(props: {
   group: FilterGroup;
@@ -77,11 +72,18 @@ export function FilterGroupEditor<TRow>(props: {
                       >
                         Filter group
                       </Text>
-                      <GroupMenu onDelete={() => ctx.deleteNode(child.id)} />
+                      <IconButton
+                        icon={MdClose}
+                        label="Remove group"
+                        size="icon-sm"
+                        className="opacity-0 transition-opacity group-hover/group:opacity-100 focus-visible:opacity-100"
+                        onClick={() => ctx.deleteNode(child.id)}
+                      />
                     </Stack>
                     <FilterGroupEditor group={child} ctx={ctx} />
-                    <AddAffordance
-                      onAddRule={() => ctx.addRule(child.id)}
+                    <AddFilterAffordance
+                      fields={ctx.fields}
+                      onPick={(fieldId) => ctx.addRuleForField(child.id, fieldId)}
                       onAddGroup={() => ctx.addGroup(child.id)}
                     />
                   </Stack>
@@ -92,61 +94,5 @@ export function FilterGroupEditor<TRow>(props: {
         )
       )}
     </Stack>
-  );
-}
-
-function GroupMenu(props: { onDelete: () => void }): ReactNode {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="icon-sm"
-            aria-label="Group options"
-            title="Group options"
-            className="opacity-0 transition-opacity group-hover/group:opacity-100 aria-expanded:opacity-100"
-          />
-        }
-      >
-        <MdMoreHoriz />
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="end">
-        <DropdownMenuItem variant="destructive" onClick={props.onDelete}>
-          <MdDelete />
-          Delete group
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
-  );
-}
-
-/** `+ Add filter rule ▾` menu (Add rule / Add filter group). */
-export function AddAffordance(props: {
-  onAddRule: () => void;
-  onAddGroup: () => void;
-}): ReactNode {
-  return (
-    <DropdownMenu>
-      <DropdownMenuTrigger
-        render={
-          <Button
-            variant="ghost"
-            size="sm"
-            aria-label="Add filter"
-            className="self-start"
-          />
-        }
-      >
-        <MdAdd />
-        Add filter rule
-      </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
-        <DropdownMenuItem onClick={props.onAddRule}>Add rule</DropdownMenuItem>
-        <DropdownMenuItem onClick={props.onAddGroup}>
-          Add filter group
-        </DropdownMenuItem>
-      </DropdownMenuContent>
-    </DropdownMenu>
   );
 }

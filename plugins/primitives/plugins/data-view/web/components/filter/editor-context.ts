@@ -15,7 +15,8 @@ export interface FilterEditorContext<TRow> {
   resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined;
 
   // --- tree edits (all by node id, immutable, commit through setFilter) ---
-  addRule: (groupId: string) => void;
+  /** Add a rule on a specific field (operator defaulted from the field type). */
+  addRuleForField: (groupId: string, fieldId: string) => void;
   addGroup: (groupId: string) => void;
   setConjunction: (groupId: string, conjunction: FilterConjunction) => void;
   deleteNode: (id: string) => void;

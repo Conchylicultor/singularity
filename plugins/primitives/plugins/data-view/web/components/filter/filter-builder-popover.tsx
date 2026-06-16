@@ -16,15 +16,22 @@ import {
   updateRule,
   wrapRuleInGroup,
 } from "../../internal/filter-tree-ops";
-import { FilterGroupEditor, AddAffordance } from "./filter-group-editor";
+import { FilterGroupEditor } from "./filter-group-editor";
+import {
+  AddFilterAffordance,
+  AddGroupButton,
+} from "./add-filter-affordance";
+import { FieldSearchList } from "./field-search-list";
 import type { FilterEditorContext } from "./editor-context";
 
 /**
- * Popover body. Hosts the root `FilterGroupEditor` over the controller's tree,
- * lazily materializing an empty root group on the first edit (so opening the
- * popover with no filter shows the empty state, and the tree is only committed
- * once the user actually adds something). Footer: `+ Add filter rule ▾` and
- * `Delete filter` (clears the whole tree → null).
+ * Popover body. With no rules yet it IS the search-first `FieldSearchList`
+ * ("Filter by…" typeahead over the schema fields) — picking a field adds a rule
+ * in one click. Once populated it hosts the recursive `FilterGroupEditor` plus an
+ * `Add filter` affordance and a `Delete filter` footer (clears the whole tree).
+ * The tree lazily materializes from a transient empty root on the first edit, so
+ * opening with no filter shows the picker and nothing is committed until the user
+ * actually adds something.
  */
 export function FilterBuilderPopover<TRow>(props: {
   controller: FilterController<TRow>;
@@ -32,10 +39,10 @@ export function FilterBuilderPopover<TRow>(props: {
 }): ReactNode {
   const { controller } = props;
 
-  // The working root: the committed tree, or a transient empty root used to
-  // host the empty state + add affordances before the first edit lands. This
-  // is the SINGLE source of truth for the root id — both rendering and `commit`
-  // operate on this exact object, so the footer's `addRule(root.id, …)` always
+  // The working root: the committed tree, or a transient empty root used to host
+  // the empty state + add affordances before the first edit lands. This is the
+  // SINGLE source of truth for the root id — both rendering and `commit` operate
+  // on this exact object, so the footer's `addRuleForField(root.id, …)` always
   // targets a group that exists in the tree the edit is applied to (otherwise a
   // first edit before any committed filter would target a phantom id → no-op).
   const root: FilterGroup = useMemo(
@@ -52,21 +59,15 @@ export function FilterBuilderPopover<TRow>(props: {
     [controller, root],
   );
 
-  const defaultRuleSeed = useCallback(() => {
-    const field = controller.filterableFields[0];
-    if (!field) return null;
-    const opSet = resolveDefaultOpSet(controller, field.type ?? "text");
-    return { fieldId: field.id, operatorId: opSet };
-  }, [controller]);
-
   const ctx = useMemo<FilterEditorContext<TRow>>(() => {
     return {
       fields: controller.filterableFields,
       resolveOperatorSet: controller.resolveOperatorSet,
-      addRule: (groupId) => {
-        const seed = defaultRuleSeed();
-        if (!seed) return;
-        commit((r) => addRule(r, groupId, seed.fieldId, seed.operatorId));
+      addRuleForField: (groupId, fieldId) => {
+        const field = controller.filterableFields.find((f) => f.id === fieldId);
+        if (!field) return;
+        const operatorId = resolveDefaultOpSet(controller, field.type ?? "text");
+        commit((r) => addRule(r, groupId, fieldId, operatorId));
       },
       addGroup: (groupId) => commit((r) => addGroup(r, groupId, "and")),
       setConjunction: (groupId, conjunction) =>
@@ -87,28 +88,41 @@ export function FilterBuilderPopover<TRow>(props: {
       setRuleValue: (ruleId, value) =>
         commit((r) => updateRule(r, ruleId, { value })),
     };
-  }, [controller, commit, defaultRuleSeed]);
+  }, [controller, commit]);
+
+  const hasContent = root.children.length > 0;
 
   return (
     <Stack gap="sm">
-      <FilterGroupEditor group={root} ctx={ctx} isRoot />
-      <AddAffordance
-        onAddRule={() => ctx.addRule(root.id)}
-        onAddGroup={() => ctx.addGroup(root.id)}
-      />
-      <DropdownMenuSeparator />
-      <Button
-        variant="ghost"
-        size="sm"
-        className="self-start"
-        onClick={() => {
-          controller.setFilter(null);
-          props.onClose();
-        }}
-      >
-        <MdDelete />
-        Delete filter
-      </Button>
+      {hasContent ? (
+        <>
+          <FilterGroupEditor group={root} ctx={ctx} isRoot />
+          <AddFilterAffordance
+            fields={ctx.fields}
+            onPick={(fieldId) => ctx.addRuleForField(root.id, fieldId)}
+            onAddGroup={() => ctx.addGroup(root.id)}
+          />
+          <DropdownMenuSeparator />
+          <Button
+            variant="ghost"
+            size="sm"
+            className="self-start"
+            onClick={() => {
+              controller.setFilter(null);
+              props.onClose();
+            }}
+          >
+            <MdDelete />
+            Delete filter
+          </Button>
+        </>
+      ) : (
+        <FieldSearchList
+          fields={ctx.fields}
+          onPick={(fieldId) => ctx.addRuleForField(root.id, fieldId)}
+          footer={<AddGroupButton onClick={() => ctx.addGroup(root.id)} />}
+        />
+      )}
     </Stack>
   );
 }
