@@ -2672,7 +2672,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `page/editor.BlockRendererProps`, `page/editor.BlockTextEditor`, `page/editor.Editor`, `page/editor.PageIcon`, `primitives/icon-picker.IconPicker`, `primitives/row.Row`, `primitives/section-label.SectionLabel`, `primitives/ui-kit.cn`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
         - Exports: Values: `calloutBlock`
       - Core:
-        - Uses: `page/editor.defineBlock`, `page/editor.SvgNodeSchema`
+        - Uses: `page/editor.defineBlock`, `page/editor.SvgNodeSchema`, `page/editor.textBlockSchema`
         - Exports: Types: `CalloutColor`; Values: `CALLOUT_COLORS`, `calloutBlock`, `calloutDataSchema`
     - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
       - Web:
@@ -2708,7 +2708,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/pages`, `GET /api/pages/:pageId/blocks`, `POST /api/blocks`, `PATCH /api/blocks/:id`, `DELETE /api/blocks/:id`, `POST /api/blocks/:id/move`, `POST /api/pages/:pageId/blocks/op`, `POST /api/pages/:pageId/blocks/bulk-delete`, `POST /api/pages/:pageId/blocks/bulk-move`, `POST /api/pages/:pageId/blocks/bulk-duplicate`, `POST /api/pages/:pageId/blocks/paste`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`, `primitives/rank.Rank`, `primitives/rank.RankSchema`, `primitives/tree.isDescendant`, `primitives/tree.subtreeIds`
-        - Exports: Types: `Block`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `SerializedBlock`, `TextData`, `TextRun`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `PAGE_BLOCK_TYPE`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `plainOf`, `prevVisibleLeaf`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `SerializedBlockSchema`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`
+        - Exports: Types: `Block`, `BlockHandle`, `BlockNode`, `BlockOp`, `BlockTextVariant`, `BulkDeleteBlocksBody`, `BulkDuplicateBlocksBody`, `BulkMoveBlocksBody`, `ColorToken`, `CreateBlockBody`, `Mark`, `MoveBlockBody`, `PageCover`, `PageData`, `PasteBlocksBody`, `RichText`, `SerializedBlock`, `TextData`, `TextRun`, `UpdateBlockBody`; Values: `applyBlockOp`, `applyBlockOpEndpoint`, `BlockOpSchema`, `BlockSchema`, `blocksResource`, `bulkDeleteBlocks`, `BulkDeleteBlocksBodySchema`, `bulkDuplicateBlocks`, `BulkDuplicateBlocksBodySchema`, `bulkMoveBlocks`, `BulkMoveBlocksBodySchema`, `childrenOf`, `coalesce`, `COLOR_TOKENS`, `createBlock`, `CreateBlockBodySchema`, `defineBlock`, `deleteBlock`, `listBlocks`, `listPages`, `MARK_ORDER`, `mergeRuns`, `moveBlock`, `MoveBlockBodySchema`, `PAGE_BLOCK_TYPE`, `PageCoverSchema`, `pageData`, `PageDataSchema`, `pagesResource`, `pasteBlocks`, `PasteBlocksBodySchema`, `plainOf`, `prevVisibleLeaf`, `RichTextSchema`, `runsLength`, `runsOf`, `runsOfNode`, `SerializedBlockSchema`, `sortMarks`, `splitRuns`, `SvgNodeSchema`, `textBlockSchema`, `textDataSchema`, `textOf`, `TextRunSchema`, `updateBlock`, `UpdateBlockBodySchema`, `withRuns`
       - Cross-plugin:
         - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/pages/page-tree`, `apps/pages/starred`, `apps/pages/welcome/recent-pages`, `apps/story/marker`, `apps/story/shell`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/bulleted-list`, `page/callout`, `page/code-block`, `page/divider`, `page/embed`, `page/file`, `page/formatting/bold`, `page/formatting/code`, `page/formatting/color`, `page/formatting/italic`, `page/formatting/link`, `page/formatting/strikethrough`, `page/formatting/underline`, `page/heading/heading-1`, `page/heading/heading-2`, `page/heading/heading-3`, `page/image`, `page/inline-date`, `page/inline-page-link`, `page/links`, `page/math/equation`, `page/math/inline`, `page/numbered-list`, `page/page-link`, `page/quote`, `page/read-only-view`, `page/text`, `page/to-do`, `page/toggle`, `page/turn-into-page`, `page/url-paste`, `page/video`
         - Extended by: `apps/pages/starred` (table `page_blocks_ext_starred`), `apps/story/marker` (table `page_blocks_ext_story`)
@@ -2889,7 +2889,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `toDoBlock`
       - Core:
-        - Uses: `page/editor.defineBlock`, `page/editor.RichTextSchema`
+        - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`
         - Exports: Values: `toDoBlock`, `toDoDataSchema`
     - **`toggle`** — Toggle (collapsible) block type for the page editor.
       - Web:
@@ -2897,7 +2897,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `page/editor.BlockTextRenderer`, `page/editor.Editor`
         - Exports: Values: `toggleBlock`
       - Core:
-        - Uses: `page/editor.defineBlock`, `page/editor.RichTextSchema`
+        - Uses: `page/editor.defineBlock`, `page/editor.textBlockSchema`
         - Exports: Values: `toggleBlock`, `toggleDataSchema`
     - **`turn-into-page`** — Turn into → Page block action: collapse a block and its subtree into a new sub-page, leaving a clickable link in place.
       - Web:

@@ -57,5 +57,5 @@ export type { SerializedBlock } from "./serialized-block";
 export { defineBlock } from "./define-block";
 export type { BlockHandle, BlockTextVariant } from "./define-block";
 
-export { textDataSchema } from "./text-data";
+export { textDataSchema, textBlockSchema } from "./text-data";
 export type { TextData } from "./text-data";

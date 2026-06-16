@@ -4,10 +4,11 @@ import { db } from "@plugins/database/server";
 import { defineJob } from "@plugins/infra/plugins/jobs/server";
 import { recordNotification } from "@plugins/shell/plugins/notifications/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
+import { plainOf } from "@plugins/page/plugins/editor/core";
 import { stripInlineTokens } from "../../core";
 import { _pageReminders } from "./tables";
 
-const TextShape = z.object({ text: z.string() });
+const TextShape = z.object({ text: z.unknown() });
 const PageShape = z.object({ title: z.string() });
 
 /**
@@ -43,7 +44,7 @@ export const reminderFireJob = defineJob({
       const pageParsed = PageShape.safeParse(page?.data);
       const pageTitle = (pageParsed.success && pageParsed.data.title) || "Untitled";
       const blockParsed = block ? TextShape.safeParse(block.data) : undefined;
-      const snippet = blockParsed?.success ? stripInlineTokens(blockParsed.data.text) : "";
+      const snippet = blockParsed?.success ? stripInlineTokens(plainOf(blockParsed.data.text)) : "";
 
       await recordNotification({
         type: "page.reminder",

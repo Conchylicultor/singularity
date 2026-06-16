@@ -12,5 +12,16 @@ import { RichTextSchema } from "./rich-text";
  * DB migration. The same `RichTextSchema` is composed by every text-bearing block
  * type (to-do, toggle, …) so they all gain inline marks uniformly.
  */
-export const textDataSchema = z.object({ text: RichTextSchema });
+/**
+ * Schema factory for text-bearing block types (anything rendered through
+ * `BlockTextEditor`). Guarantees the `text` field is the canonical
+ * `string | RichText` contract, plus caller-supplied extra fields. Composing
+ * this — rather than re-declaring `text` — makes a string-only `text` field
+ * structurally impossible for new blocks.
+ */
+export function textBlockSchema<T extends z.ZodRawShape>(extra: T) {
+  return z.object({ text: RichTextSchema, ...extra });
+}
+
+export const textDataSchema = textBlockSchema({});
 export type TextData = z.infer<typeof textDataSchema>;

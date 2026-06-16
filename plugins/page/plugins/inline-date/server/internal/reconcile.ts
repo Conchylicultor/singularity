@@ -2,15 +2,16 @@ import { and, eq, inArray } from "drizzle-orm";
 import { z } from "zod";
 import { db } from "@plugins/database/server";
 import { _blocks } from "@plugins/page/plugins/editor/server";
+import { plainOf } from "@plugins/page/plugins/editor/core";
 import { scanReminderTokens } from "../../core";
 import { reminderFireJob } from "./fire-job";
 import { _pageReminders } from "./tables";
 
-const TextShape = z.object({ text: z.string() });
+const TextShape = z.object({ text: z.unknown() });
 
 function blockText(data: unknown): string {
   const r = TextShape.safeParse(data);
-  return r.success ? r.data.text : "";
+  return r.success ? plainOf(r.data.text) : "";
 }
 
 /**

@@ -1,8 +1,8 @@
 import { MdCheckBox } from "react-icons/md";
 import { z } from "zod";
-import { defineBlock, RichTextSchema } from "@plugins/page/plugins/editor/core";
+import { defineBlock, textBlockSchema } from "@plugins/page/plugins/editor/core";
 
-export const toDoDataSchema = z.object({ text: RichTextSchema, checked: z.boolean() });
+export const toDoDataSchema = textBlockSchema({ checked: z.boolean().default(false) });
 
 export const toDoBlock = defineBlock({
   type: "to-do",
