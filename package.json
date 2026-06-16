@@ -4,7 +4,8 @@
   "workspaces": ["plugins/**"],
   "scripts": {
     "playwright": "playwright",
-    "test:dom": "vitest run"
+    "test:dom": "vitest run",
+    "postinstall": "bun e2e/ensure-chromium.mjs"
   },
   "dependencies": {
     "@dnd-kit/core": "^6.1.0",
