@@ -32,6 +32,7 @@
       - **`heading-2`** — Heading 2 block type for the page editor.
       - **`heading-3`** — Heading 3 block type for the page editor.
   - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
+  - **`inline-date`** — Inline @ date mentions: type @ in any text block to drop a date chip or schedule a reminder; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token. Schedules and fires reminder notifications for inline `[[reminder:<id>:<iso>]]` tokens; reconciled from block text on every page.blocksChanged.
   - **`inline-page-link`** — Inline page links: type [[ in any text block to drop a clickable page reference; stored as a [[<pageId>]] token and fed into the backlinks index. Backlinks extractor for inline `[[<pageId>]]` page links embedded in any block's text.
   - **`links`** — Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
   - **`math`** — Umbrella for KaTeX math in the page editor: block-level equations, inline math, and the shared renderer.

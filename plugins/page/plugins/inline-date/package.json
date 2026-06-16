@@ -1,0 +1,11 @@
+{
+  "name": "@singularity/plugin-page-inline-date",
+  "description": "Inline @ date mentions and reminders: type @ in any text block to drop a date chip or schedule a reminder notification; stored as a [[date:<iso>]] / [[reminder:<id>:<iso>]] token.",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "chrono-node": "^2.7.7",
+    "lexical": "^0.44.0",
+    "@lexical/react": "^0.44.0"
+  }
+}

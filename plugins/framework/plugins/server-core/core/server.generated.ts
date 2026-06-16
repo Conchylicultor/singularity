@@ -127,6 +127,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "page/plugins/bookmark", id: "page.bookmark", loader: () => import("@plugins/page/plugins/bookmark/server"), dependsOn: ["infra/plugins/attachments", "infra/plugins/endpoints"] },
   { pluginPath: "page/plugins/cover", id: "page.cover", loader: () => import("@plugins/page/plugins/cover/server"), dependsOn: ["page/plugins/attachment-block", "page/plugins/editor"] },
   { pluginPath: "page/plugins/editor", id: "page.editor", loader: () => import("@plugins/page/plugins/editor/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/events", "primitives/plugins/rank"] },
+  { pluginPath: "page/plugins/inline-date", id: "page.inline-date", loader: () => import("@plugins/page/plugins/inline-date/server"), dependsOn: ["database", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor", "shell/plugins/notifications"] },
   { pluginPath: "page/plugins/inline-page-link", id: "page.inline-page-link", loader: () => import("@plugins/page/plugins/inline-page-link/server"), dependsOn: ["page/plugins/editor", "page/plugins/links"] },
   { pluginPath: "page/plugins/links", id: "page.links", loader: () => import("@plugins/page/plugins/links/server"), dependsOn: ["database", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor"] },
   { pluginPath: "page/plugins/page-link", id: "page.page-link", loader: () => import("@plugins/page/plugins/page-link/server"), dependsOn: ["page/plugins/links"] },
