@@ -10,7 +10,10 @@ import { BlockTextRenderer, type BlockRendererProps } from "@plugins/page/plugin
  */
 export function QuoteBlock(props: BlockRendererProps) {
   return (
-    <div className="border-l-2 border-muted-foreground/30 pl-md italic">
+    // Border + emphasis only — the shared block text rail owns the left text
+    // inset, so the quote text aligns with every other block instead of being
+    // double-indented by an extra `pl-md` here.
+    <div className="border-l-2 border-muted-foreground/30 italic">
       <BlockTextRenderer {...props} />
     </div>
   );

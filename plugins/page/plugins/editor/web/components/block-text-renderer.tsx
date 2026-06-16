@@ -39,8 +39,8 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
         // Don't blur the editor before the onChange registers; the editable
         // field flushes on blur anyway, but this keeps the caret put.
         onMouseDown={(e) => e.preventDefault()}
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mx-1/mt-2 are one-off offsets aligning the checkbox glyph optically with the first text line; not sibling rhythm a parent gap could own
-        className="accent-primary mx-1 mt-2 size-3.5 flex-none cursor-pointer self-start"
+        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 is a one-off vertical offset seating the checkbox glyph on the first text line; horizontal placement is owned by the shared marker gutter
+        className="accent-primary mt-2 size-3.5 cursor-pointer self-start"
       />
     );
   } else if (handle?.ordinalMarker) {
@@ -49,7 +49,7 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
         as="span"
         variant="body"
         aria-hidden
-        className="text-muted-foreground flex-none select-none tabular-nums py-xs pl-md pr-xs"
+        className="text-muted-foreground tabular-nums py-xs"
       >
         {handle.ordinalMarker(ordinal)}
       </Text>
@@ -60,7 +60,7 @@ export function BlockTextRenderer({ block, isFocused, editor, ordinal }: BlockRe
         as="span"
         variant="body"
         aria-hidden
-        className="text-muted-foreground flex-none select-none py-xs pl-md pr-xs"
+        className="text-muted-foreground py-xs"
       >
         {handle.marker}
       </Text>

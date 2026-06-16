@@ -28,6 +28,16 @@ import {
   placeCaretAtOffset,
 } from "../internal/caret-geometry";
 
+/**
+ * Width of the leading-marker gutter — the fixed column that holds a block's
+ * bullet / number / checkbox / icon to the LEFT of its text. Every text block
+ * routes its marker through this one column, so the text content edge is
+ * identical across all marker types (bulleted, numbered, to-do, …) — the
+ * Notion `notion-list-item-box-left` model. Wider markers (e.g. the callout
+ * icon) expand the column via `min-width` without shifting narrow ones.
+ */
+const MARKER_GUTTER = "1.5rem";
+
 /** Maps a semantic typography variant to its sanctioned `text-*` utility. */
 const VARIANT_CLASS: Record<BlockTextVariant, string> = {
   title: "text-title",
@@ -64,11 +74,12 @@ export function BlockTextEditor({
   placeholder,
   contentClassName,
   textVariant,
+  inset = true,
 }: {
   block: Block;
   isFocused: boolean;
   editor: BlockEditorAPI;
-  /** Optional non-editable element rendered to the left of the text (e.g. a bullet). */
+  /** Optional non-editable element rendered in the leading-marker gutter (e.g. a bullet). */
   marker?: ReactNode;
   /** Shown when the block is empty and focused. */
   placeholder?: ReactNode;
@@ -76,6 +87,13 @@ export function BlockTextEditor({
   contentClassName?: string;
   /** Semantic typography variant for the editable text and placeholder. */
   textVariant: BlockTextVariant;
+  /**
+   * Whether the editor supplies the page-level left text inset itself. Plain
+   * blocks (the default) sit directly on the page rail and want it; blocks that
+   * already wrap themselves in a padded container (e.g. the callout box) own
+   * that inset and pass `inset={false}` so it isn't applied twice.
+   */
+  inset?: boolean;
 }) {
   const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
   const isEmpty = runs.length === 0;
@@ -149,13 +167,25 @@ export function BlockTextEditor({
 
   return (
     <LexicalComposer initialConfig={initialConfig}>
-      <div className="relative flex">
-        {marker}
-        <div className="relative flex-1">
+      <div className={cn("relative flex gap-xs", inset && "pl-md")}>
+        {/* Leading-marker gutter: a fixed-width column shared by every marker
+            type so the text content edge is identical across block types.
+            `justify-center` + `min-width` centers narrow glyphs (bullet,
+            number, checkbox) and lets wider markers (the callout icon) grow the
+            column without disturbing the others. */}
+        {marker != null ? (
+          <div
+            className="flex flex-none select-none justify-center"
+            style={{ minWidth: MARKER_GUTTER }}
+          >
+            {marker}
+          </div>
+        ) : null}
+        <div className="relative min-w-0 flex-1">
           <RichTextPlugin
             contentEditable={
               <ContentEditable
-                className={cn("outline-none px-md py-xs", VARIANT_CLASS[textVariant], contentClassName)}
+                className={cn("outline-none pr-md py-xs", VARIANT_CLASS[textVariant], contentClassName)}
                 onFocus={() => {
                   field.onFocus();
                   editor.onFocus();
@@ -165,7 +195,7 @@ export function BlockTextEditor({
             }
             placeholder={
               isEmpty && isFocused && placeholder ? (
-                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 px-md py-xs", VARIANT_CLASS[textVariant])}>
+                <div className={cn("text-muted-foreground pointer-events-none absolute left-0 top-0 pr-md py-xs", VARIANT_CLASS[textVariant])}>
                   {placeholder}
                 </div>
               ) : null

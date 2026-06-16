@@ -36,6 +36,9 @@ export function CalloutBlock({ block, isFocused, editor }: BlockRendererProps) {
           isFocused={isFocused}
           editor={editor}
           textVariant="body"
+          // The tinted box already supplies the left inset; don't stack the
+          // page rail inset on top of it.
+          inset={false}
           marker={
             <CalloutIcon
               color={data.color}
