@@ -1,5 +1,9 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactNode, type Ref } from "react";
+import type {
+  DraggableAttributes,
+  DraggableSyntheticListeners,
+} from "@dnd-kit/core";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 
 export type TreeRowChromeProps = {
@@ -32,6 +36,13 @@ export type TreeRowChromeProps = {
   className?: string;
   /** Editable wrappers attach the scroll + child-drop ref here. */
   rowRef?: Ref<HTMLDivElement>;
+  /**
+   * Whole-row drag source props (Notion-style: no grip handle). The editable
+   * RowChrome spreads dnd-kit's draggable `attributes`/`listeners` onto the row
+   * so the entire row is the drag source. Read-only trees omit them.
+   */
+  dragAttributes?: DraggableAttributes;
+  dragListeners?: DraggableSyntheticListeners;
   /** Pixels of indentation per depth level. Defaults to the shared tree value. */
   indentStep?: number;
   /**
@@ -44,9 +55,11 @@ export type TreeRowChromeProps = {
 
 /**
  * Pure presentational tree-row chrome: indentation, a fixed row height, and a
- * reserved chevron slot. No hooks, no context, no dnd-kit — both the editable
- * RowChrome and read-only trees (e.g. config nav) render through it so every
- * tree row in the app shares one height invariant.
+ * reserved chevron slot. No hooks, no context, no dnd-kit *logic* — the
+ * editable RowChrome computes the drag source via dnd-kit and passes the
+ * resulting `dragAttributes`/`dragListeners` in for this component to spread
+ * onto the row (read-only trees, e.g. config nav, omit them). Both render
+ * through it so every tree row in the app shares one height invariant.
  *
  * Deliberately NOT built on the generic `Row` primitive: tree rows need a
  * NAMED group (`group/tree-row`) to scope the chevron/actions hover-reveal to
@@ -67,6 +80,8 @@ export function TreeRowChrome({
   icon,
   className,
   rowRef,
+  dragAttributes,
+  dragListeners,
   indentStep = 16,
   leafChevron = true,
 }: TreeRowChromeProps) {
@@ -75,6 +90,8 @@ export function TreeRowChrome({
     <div
       ref={rowRef}
       onClick={onSelect}
+      {...dragAttributes}
+      {...dragListeners}
       // eslint-disable-next-line row/no-adhoc-row -- bespoke named-group (group/tree-row) hover scoping; Row's bare-group slots leak the reveal under ancestor groups
       className={cn(
         "group/tree-row flex min-h-7 items-center gap-xs rounded-md px-xs py-xs text-body",
@@ -104,6 +121,7 @@ export function TreeRowChrome({
                 e.stopPropagation();
                 onToggle?.();
               }}
+              onPointerDown={(e) => e.stopPropagation()}
               aria-label={isOpen ? "Collapse" : "Expand"}
               className={cn(
                 "absolute inset-0 flex items-center justify-center rounded-md",
@@ -122,6 +140,7 @@ export function TreeRowChrome({
             e.stopPropagation();
             onToggle?.();
           }}
+          onPointerDown={(e) => e.stopPropagation()}
           aria-label={isOpen ? "Collapse" : "Expand"}
           className={cn(
             "flex size-5 shrink-0 items-center justify-center rounded-md",
@@ -141,6 +160,7 @@ export function TreeRowChrome({
       {leading != null && (
         <span
           onClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
           className="flex shrink-0 items-center justify-center"
         >
           {leading}
@@ -150,7 +170,12 @@ export function TreeRowChrome({
       {actions && (
         <div
           onClick={(e) => e.stopPropagation()}
-          className="flex shrink-0 items-center gap-2xs opacity-0 group-hover/tree-row:opacity-100"
+          // Pressing a trailing control must not arm a row drag.
+          onPointerDown={(e) => e.stopPropagation()}
+          // Stay visible while an open dropdown (e.g. the row "more" menu) keeps
+          // a descendant in the `data-state=open` state, even after the pointer
+          // leaves the row.
+          className="flex shrink-0 items-center gap-2xs opacity-0 group-hover/tree-row:opacity-100 has-data-[state=open]:opacity-100"
         >
           {actions}
         </div>

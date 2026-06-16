@@ -77,7 +77,12 @@ export type RowControls = {
   toggleExpanded: () => void;
   addChild: () => Promise<void>;
   addBelow: () => Promise<void>;
-  dragHandleProps: {
+  /**
+   * The whole row is the drag source (Notion-style: no separate grip handle).
+   * RowChrome merges `ref` with `childRef` onto the row element and spreads
+   * `attributes`/`listeners` onto it.
+   */
+  dragSource: {
     ref: (el: HTMLElement | null) => void;
     attributes: DraggableAttributes;
     listeners: DraggableSyntheticListeners;
@@ -169,7 +174,7 @@ export function useTreeRow<T extends TreeItem>(
     ctx.onSelect(id);
   }, [ctx, node.id, node.parentId, node.rank]);
 
-  const dragHandleProps = useMemo(
+  const dragSource = useMemo(
     () => ({ ref: setDragRef, attributes, listeners }),
     [setDragRef, attributes, listeners],
   );
@@ -188,7 +193,7 @@ export function useTreeRow<T extends TreeItem>(
     toggleExpanded,
     addChild,
     addBelow,
-    dragHandleProps,
+    dragSource,
     beforeRef: setBeforeRef,
     afterRef: setAfterRef,
     childRef: wrappedChildRef,

@@ -37,7 +37,9 @@ the lower-level building block.
 `options` (= `viewOptions.tree`) is a `TreeViewOptions<TRow>`:
 
 - `renderRow?(node)` — fully replace a row's rendering.
-- `rowMenu?(helpers, row)` — drag-handle dropdown items → `RowChrome.menu`.
+- `rowMenu?(helpers, row)` — items for the row's hover-revealed "⋯" more-menu
+  → `RowChrome.menu`. (The whole row is the drag source, Notion-style — there is
+  no separate grip handle; this menu lives in the trailing actions cluster.)
 - `dragOverlay?(row)` — content shown in the floating drag chip.
 - `addLabel?` — root "Add" button label (`null` hides; default null when no `onCreate`).
 

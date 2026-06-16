@@ -1,6 +1,6 @@
 import { cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
-import { type ReactNode } from "react";
-import { MdAdd, MdDragIndicator } from "react-icons/md";
+import { useCallback, type ReactNode } from "react";
+import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { Row as RowPrimitive } from "@plugins/primitives/plugins/row/web";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
@@ -42,27 +42,29 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       ? menu({ addBelow: r.addBelow, addChild: r.addChild })
       : menu;
 
-  const dragHandleClass = cn(
-    "absolute top-1/2 z-raised flex size-5 -translate-y-1/2 cursor-grab items-center justify-center rounded-md",
-    "text-muted-foreground hover:bg-background/60 active:cursor-grabbing",
-    "opacity-0 group-hover/row:opacity-60",
+  // The whole row is the drag source (Notion-style: no grip handle). Merge the
+  // draggable ref with the child-drop ref onto the single row element.
+  const { childRef, dragSource } = r;
+  const rowRef = useCallback(
+    (el: HTMLDivElement | null) => {
+      childRef(el);
+      dragSource.ref(el);
+    },
+    [childRef, dragSource],
   );
-  const dragHandleStyle = { left: depth * 16 - 16 };
 
-  const dragHandle =
+  // The "more" menu — formerly opened from the grip handle — now lives as a
+  // hover-revealed trailing affordance, alongside the per-item actions.
+  const moreMenu =
     menuItems && menuItems.length > 0 ? (
       <DropdownMenu>
         <DropdownMenuTrigger
-          ref={r.dragHandleProps.ref}
-          aria-label="Drag to reorder"
-          {...r.dragHandleProps.attributes}
-          {...r.dragHandleProps.listeners}
-          className={dragHandleClass}
-          style={dragHandleStyle}
+          aria-label="More actions"
+          className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background/60 data-[state=open]:bg-background/60"
         >
-          <MdDragIndicator className="size-4" />
+          <MdMoreHoriz className="size-4" />
         </DropdownMenuTrigger>
-        <DropdownMenuContent side="bottom" align="start">
+        <DropdownMenuContent side="bottom" align="end">
           {menuItems.map((item, i) => (
             <DropdownMenuItem key={i} onClick={item.onClick}>
               {item.icon ? <item.icon className="size-4" /> : null}
@@ -71,24 +73,19 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           ))}
         </DropdownMenuContent>
       </DropdownMenu>
-    ) : (
-      <button
-        type="button"
-        ref={r.dragHandleProps.ref}
-        aria-label="Drag to reorder"
-        {...r.dragHandleProps.attributes}
-        {...r.dragHandleProps.listeners}
-        className={dragHandleClass}
-        style={dragHandleStyle}
-      >
-        <MdDragIndicator className="size-4" />
-      </button>
-    );
+    ) : null;
+
+  const trailing =
+    actions || moreMenu ? (
+      <>
+        {actions}
+        {moreMenu}
+      </>
+    ) : undefined;
 
   return (
     <div>
-      <div className="group/row relative">
-        {dragHandle}
+      <div className="relative">
         <TreeRowChrome
           depth={depth}
           hasChildren={r.hasChildren}
@@ -96,13 +93,15 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           selected={r.isSelected}
           onToggle={r.toggleExpanded}
           onSelect={r.select}
-          rowRef={r.childRef}
+          rowRef={rowRef}
+          dragAttributes={dragSource.attributes}
+          dragListeners={dragSource.listeners}
           className={cn(
             r.isDragging && "opacity-40",
             r.isOverChild && "bg-accent ring-primary/40 ring-1",
             className,
           )}
-          actions={actions}
+          actions={trailing}
           icon={icon}
           leading={
             ctx.multiSelect ? (
