@@ -1,14 +1,12 @@
 import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
+import {
+  addUnits,
+  resolveAnchorDay,
+  type DateAnchor,
+  type DateUnit,
+} from "./date-anchor";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
-
-/** Parse an ISO yyyy-mm-dd operand to its start-of-day epoch ms, or null. */
-function operandDay(operand: unknown): number | null {
-  if (typeof operand !== "string" || operand === "") return null;
-  const t = new Date(operand).getTime();
-  if (Number.isNaN(t)) return null;
-  return startOfDay(t);
-}
 
 /** Project the row's date value to its start-of-day epoch ms, or null. */
 function fieldDay(fieldValue: FilterFieldValue): number | null {
@@ -39,7 +37,7 @@ function dayCmp(
   cmp: (a: number, b: number) => boolean,
 ): (operand: unknown, fieldValue: FilterFieldValue) => boolean {
   return (operand, fieldValue) => {
-    const b = operandDay(operand);
+    const b = resolveAnchorDay(operand);
     if (b === null) return true;
     const a = fieldDay(fieldValue);
     if (a === null) return false;
@@ -54,10 +52,10 @@ export const isOnOrBefore = dayCmp((a, b) => a <= b);
 export const isOnOrAfter = dayCmp((a, b) => a >= b);
 
 export interface DateRange {
-  /** ISO yyyy-mm-dd inclusive lower bound. */
-  from?: string;
-  /** ISO yyyy-mm-dd inclusive upper bound. */
-  to?: string;
+  /** Inclusive lower bound — anchor or legacy ISO string. */
+  from?: DateAnchor | string;
+  /** Inclusive upper bound (whole-day) — anchor or legacy ISO string. */
+  to?: DateAnchor | string;
 }
 
 /** Keep rows whose day falls within [from, to] inclusive; open bounds allowed. */
@@ -66,8 +64,8 @@ export function isBetween(
   fieldValue: FilterFieldValue,
 ): boolean {
   const range = (operand ?? {}) as DateRange;
-  const from = operandDay(range.from);
-  const to = operandDay(range.to);
+  const from = resolveAnchorDay(range.from);
+  const to = resolveAnchorDay(range.to);
   if (from === null && to === null) return true;
   const a = fieldDay(fieldValue);
   if (a === null) return false;
@@ -75,6 +73,61 @@ export function isBetween(
   // `to` is inclusive of the whole day.
   if (to !== null && a > to + DAY_MS - 1) return false;
   return true;
+}
+
+/** Operand for the relative-range (within) operators: a magnitude + unit. */
+export interface RelativeRange {
+  unit: DateUnit;
+  amount: number;
+}
+
+const DEFAULT_RELATIVE_RANGE: RelativeRange = { unit: "week", amount: 1 };
+
+/**
+ * Resolve a within-operator operand to an inclusive `[lo, hi]` start-of-day
+ * window around today, or `null` for a missing/invalid operand (incomplete
+ * rule). `past` → [today − N, today]; `next` → [today, today + N].
+ */
+export function withinRange(
+  operand: unknown,
+  direction: "past" | "next",
+  now: number = Date.now(),
+): [number, number] | null {
+  const raw = (operand ?? {}) as Partial<RelativeRange>;
+  const amount = typeof raw.amount === "number" ? raw.amount : NaN;
+  const unit = raw.unit ?? DEFAULT_RELATIVE_RANGE.unit;
+  if (Number.isNaN(amount) || amount <= 0) return null;
+  const today = startOfDay(now);
+  const shifted = addUnits(today, unit, direction === "past" ? -amount : amount);
+  return direction === "past" ? [shifted, today] : [today, shifted];
+}
+
+function within(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+  direction: "past" | "next",
+): boolean {
+  const range = withinRange(operand, direction);
+  if (range === null) return true; // incomplete rule → keep
+  const a = fieldDay(fieldValue);
+  if (a === null) return false;
+  const [lo, hi] = range;
+  // Upper bound inclusive of the whole day, mirroring `isBetween`.
+  return a >= lo && a <= hi + DAY_MS - 1;
+}
+
+export function isWithinPast(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  return within(operand, fieldValue, "past");
+}
+
+export function isWithinNext(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  return within(operand, fieldValue, "next");
 }
 
 export function isEmpty(

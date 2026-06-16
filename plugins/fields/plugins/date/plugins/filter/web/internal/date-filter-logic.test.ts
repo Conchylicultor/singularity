@@ -8,6 +8,9 @@ import {
   isBetween,
   isEmpty,
   isNotEmpty,
+  isWithinPast,
+  isWithinNext,
+  withinRange,
 } from "./date-filter-logic";
 
 // Use noon timestamps so local start-of-day truncation is unambiguous.
@@ -58,5 +61,94 @@ describe("date filter operators", () => {
     expect(isEmpty(undefined, jan15)).toBe(false);
     expect(isNotEmpty(undefined, jan15)).toBe(true);
     expect(isNotEmpty(undefined, undefined)).toBe(false);
+  });
+
+  it("accepts {kind:'date'} and {kind:'relative'} anchors", () => {
+    // Absolute anchor resolves like a bare string.
+    expect(is({ kind: "date", iso: "2026-01-15" }, jan15)).toBe(true);
+    expect(isBefore({ kind: "date", iso: "2026-01-15" }, jan10)).toBe(true);
+    // Relative "Today" resolves against now; comparing a far-past field stays
+    // before today regardless of the exact clock.
+    expect(isBefore({ kind: "relative", unit: "day", amount: 0 }, jan10)).toBe(
+      true,
+    );
+    // is-between accepts mixed absolute + relative bounds.
+    expect(
+      isBetween(
+        { from: "2026-01-10", to: { kind: "date", iso: "2026-01-20" } },
+        jan15,
+      ),
+    ).toBe(true);
+  });
+});
+
+describe("withinRange (pinned now)", () => {
+  // Pin now to 2026-01-15 noon → start-of-day 2026-01-15.
+  const now = new Date("2026-01-15T12:00:00").getTime();
+  const dayMs = (iso: string) => {
+    const d = new Date(`${iso}T12:00:00`);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  };
+
+  it("past window is [today - N, today]", () => {
+    expect(withinRange({ unit: "week", amount: 1 }, "past", now)).toEqual([
+      dayMs("2026-01-08"),
+      dayMs("2026-01-15"),
+    ]);
+    expect(withinRange({ unit: "day", amount: 3 }, "past", now)).toEqual([
+      dayMs("2026-01-12"),
+      dayMs("2026-01-15"),
+    ]);
+  });
+
+  it("next window is [today, today + N]", () => {
+    expect(withinRange({ unit: "week", amount: 2 }, "next", now)).toEqual([
+      dayMs("2026-01-15"),
+      dayMs("2026-01-29"),
+    ]);
+  });
+
+  it("missing / non-positive operand → null (incomplete)", () => {
+    expect(withinRange(undefined, "past", now)).toBe(null);
+    expect(withinRange({}, "past", now)).toBe(null);
+    expect(withinRange({ unit: "week", amount: 0 }, "past", now)).toBe(null);
+  });
+});
+
+describe("is-within-past / is-within-next predicates", () => {
+  // These call withinRange with the live clock; assert against today-relative
+  // field values so the result is clock-independent.
+  const today = new Date();
+  const daysFromNow = (n: number) => {
+    const d = new Date();
+    d.setDate(d.getDate() + n);
+    return d;
+  };
+
+  it("isWithinPast keeps fields within the past window", () => {
+    expect(isWithinPast({ unit: "week", amount: 1 }, today)).toBe(true);
+    expect(isWithinPast({ unit: "week", amount: 1 }, daysFromNow(-3))).toBe(true);
+    expect(isWithinPast({ unit: "week", amount: 1 }, daysFromNow(-30))).toBe(
+      false,
+    );
+    expect(isWithinPast({ unit: "week", amount: 1 }, daysFromNow(3))).toBe(false);
+  });
+
+  it("isWithinNext keeps fields within the next window", () => {
+    expect(isWithinNext({ unit: "week", amount: 1 }, today)).toBe(true);
+    expect(isWithinNext({ unit: "week", amount: 1 }, daysFromNow(3))).toBe(true);
+    expect(isWithinNext({ unit: "week", amount: 1 }, daysFromNow(30))).toBe(
+      false,
+    );
+    expect(isWithinNext({ unit: "week", amount: 1 }, daysFromNow(-3))).toBe(
+      false,
+    );
+  });
+
+  it("incomplete operand → keep; null field → drop", () => {
+    expect(isWithinPast(undefined, today)).toBe(true);
+    expect(isWithinNext({}, today)).toBe(true);
+    expect(isWithinPast({ unit: "week", amount: 1 }, null)).toBe(false);
   });
 });

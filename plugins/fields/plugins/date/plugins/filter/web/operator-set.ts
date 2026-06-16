@@ -1,5 +1,9 @@
 import type { FilterOperatorSet } from "@plugins/primitives/plugins/data-view/web";
-import { DateValueInput, DateRangeInput } from "./components/date-filter";
+import {
+  DateValueInput,
+  DateRangeInput,
+  RelativeRangeInput,
+} from "./components/date-filter";
 import {
   is,
   isBefore,
@@ -7,6 +11,8 @@ import {
   isOnOrBefore,
   isOnOrAfter,
   isBetween,
+  isWithinPast,
+  isWithinNext,
   isEmpty,
   isNotEmpty,
 } from "./internal/date-filter-logic";
@@ -50,6 +56,20 @@ export const dateOperatorSet: FilterOperatorSet = {
       hasValue: true,
       ValueInput: DateRangeInput,
       predicate: isBetween,
+    },
+    {
+      id: "is-within-past",
+      label: "Is within the past",
+      hasValue: true,
+      ValueInput: RelativeRangeInput,
+      predicate: isWithinPast,
+    },
+    {
+      id: "is-within-next",
+      label: "Is within the next",
+      hasValue: true,
+      ValueInput: RelativeRangeInput,
+      predicate: isWithinNext,
     },
     { id: "is-empty", label: "Is empty", hasValue: false, predicate: isEmpty },
     {
