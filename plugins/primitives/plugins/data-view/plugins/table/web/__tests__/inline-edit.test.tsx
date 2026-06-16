@@ -45,9 +45,10 @@ type Row = { id: string; name: string };
 
 function renderProps(
   fields: FieldDef<Row>[],
+  rows: Row[] = [{ id: "1", name: "alpha" }],
 ): DataViewRenderProps<Row> {
   return {
-    rows: [{ id: "1", name: "alpha" }],
+    rows,
     fields,
     rowKey: (r) => r.id,
     state: { sort: null, query: "", filter: null },
@@ -79,6 +80,37 @@ describe("data-view table inline cell editing", () => {
 
     expect(onEdit).toHaveBeenCalledTimes(1);
     expect(onEdit).toHaveBeenCalledWith({ id: "1", name: "alpha" }, "beta");
+  });
+
+  it("edits an EMPTY editable cell via its 'Empty' hint affordance", () => {
+    const onEdit = vi.fn();
+    const { getByText, getByLabelText } = render(
+      <PluginProvider plugins={[plugin]}>
+        <TableView
+          {...(renderProps(
+            [
+              {
+                id: "name",
+                label: "Name",
+                type: "text",
+                value: (r) => r.name || null,
+                onEdit,
+              },
+            ],
+            [{ id: "1", name: "" }],
+          ) as DataViewRenderProps<unknown>)}
+        />
+      </PluginProvider>,
+    );
+
+    // An empty cell still presents a clickable hint instead of a zero-size void.
+    fireEvent.click(getByText("Empty"));
+    const input = getByLabelText("cell-editor");
+    fireEvent.change(input, { target: { value: "filled" } });
+    fireEvent.keyDown(input, { key: "Enter" });
+
+    expect(onEdit).toHaveBeenCalledTimes(1);
+    expect(onEdit).toHaveBeenCalledWith({ id: "1", name: "" }, "filled");
   });
 
   it("never enters edit mode for a field without onEdit", () => {

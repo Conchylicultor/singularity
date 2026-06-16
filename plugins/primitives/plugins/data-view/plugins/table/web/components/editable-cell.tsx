@@ -1,6 +1,37 @@
-import { useState, type ReactNode } from "react";
+import { useState, type MouseEvent, type ReactNode } from "react";
 import type { FieldDef, FieldValue } from "@plugins/primitives/plugins/data-view/web";
 import type { useResolveCellEditor } from "@plugins/primitives/plugins/data-view/web";
+
+/**
+ * A FieldValue is "empty" (→ shows the muted hint) when it is null/undefined or
+ * the empty string. Numeric `0` and boolean `false` are real values, not empty.
+ */
+function isEmptyValue(value: FieldValue): boolean {
+  return value == null || value === "";
+}
+
+/**
+ * Shared read affordance. Fills the grid cell (`w-full`) so the WHOLE column
+ * width is a click target — not just the rendered glyphs — and shows a muted
+ * "Empty" hint when the value is empty, so nullable/blank cells stay
+ * discoverable and clickable instead of collapsing to a zero-size, unclickable
+ * region.
+ */
+function ReadAffordance(props: {
+  value: FieldValue;
+  read: ReactNode;
+  onClick: (e: MouseEvent) => void;
+}): ReactNode {
+  return (
+    <div className="w-full min-w-0 cursor-text truncate" onClick={props.onClick}>
+      {isEmptyValue(props.value) ? (
+        <span className="italic text-muted-foreground/50">Empty</span>
+      ) : (
+        props.read
+      )}
+    </div>
+  );
+}
 
 /**
  * Presentational click-to-edit wrapper for one table cell. Holds ONLY an
@@ -30,31 +61,27 @@ export function EditableCell(props: {
     );
     if (editor)
       return (
-        <div className="min-w-0" onClick={(e) => e.stopPropagation()}>
+        <div className="w-full min-w-0" onClick={(e) => e.stopPropagation()}>
           {editor}
         </div>
       );
     // No contributed editor for this type → never trap the user.
     return (
-      <div
-        className="min-w-0 cursor-text truncate"
-        onClick={(e) => {
-          e.stopPropagation();
-        }}
-      >
-        {props.read}
-      </div>
+      <ReadAffordance
+        value={props.value}
+        read={props.read}
+        onClick={(e) => e.stopPropagation()}
+      />
     );
   }
   return (
-    <div
-      className="min-w-0 cursor-text truncate"
+    <ReadAffordance
+      value={props.value}
+      read={props.read}
       onClick={(e) => {
         e.stopPropagation();
         setEditing(true);
       }}
-    >
-      {props.read}
-    </div>
+    />
   );
 }
