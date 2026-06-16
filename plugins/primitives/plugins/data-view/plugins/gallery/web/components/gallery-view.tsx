@@ -5,7 +5,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   pickPrimaryField,
   useFlatRows,
-  useResolveFilter,
+  useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldDef,
   type ItemActionsDescriptor,
@@ -94,12 +94,12 @@ function renderMedia<TRow>(
  * this is the documented re-cast boundary for the view child.
  */
 export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
-  const resolveFilter = useResolveFilter();
+  const resolveOperatorSet = useResolveOperatorSet();
   const rows = useFlatRows(
     props.rows,
     props.fields,
     props.state,
-    resolveFilter,
+    resolveOperatorSet,
     props.searchAccessor,
   );
   const fields = props.fields;

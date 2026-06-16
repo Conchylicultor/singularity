@@ -1,21 +1,16 @@
-import type { FilterPredicate } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
 
-export interface BoolFilterValue {
-  want?: boolean;
+/** The operand as a boolean (defaults to false when unset, e.g. "Unchecked"). */
+function asBool(operand: unknown): boolean {
+  return operand === true;
 }
 
-function asValue(filterValue: unknown): BoolFilterValue {
-  return (filterValue ?? {}) as BoolFilterValue;
+/** Keep rows whose boolean projection equals the requested value. */
+export function is(operand: unknown, fieldValue: FilterFieldValue): boolean {
+  return Boolean(fieldValue) === asBool(operand);
 }
 
-/** Active when a specific truth value is requested. */
-export function isActive(filterValue: unknown): boolean {
-  return typeof asValue(filterValue).want === "boolean";
+/** Keep rows whose boolean projection differs from the requested value. */
+export function isNot(operand: unknown, fieldValue: FilterFieldValue): boolean {
+  return Boolean(fieldValue) !== asBool(operand);
 }
-
-/** Keep rows whose boolean projection matches the requested value. */
-export const predicate: FilterPredicate = (filterValue, fieldValue) => {
-  const { want } = asValue(filterValue);
-  if (typeof want !== "boolean") return true;
-  return Boolean(fieldValue) === want;
-};

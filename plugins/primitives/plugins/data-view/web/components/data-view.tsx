@@ -1,24 +1,22 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { type ReactNode, useMemo, useState } from "react";
-import { MdFilterList } from "react-icons/md";
+import { type ReactNode, useCallback, useMemo } from "react";
 import type {
   Contribution,
   SealContributions,
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   DataViewProps,
   DataViewRenderProps,
-  FieldDef,
+  FilterGroup,
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import { useViewState } from "../internal/use-view-state";
-import { useResolveFilter } from "../filter-slot";
+import { useFilterController } from "../internal/use-filter-controller";
 import { ViewSwitcher } from "./view-switcher";
-import { FilterBar } from "./filter-bar";
+import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const {
@@ -95,13 +93,19 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const activeViewId = activeView?.id ?? "";
   const activeState = viewState.stateFor(activeViewId);
 
-  const resolveFilter = useResolveFilter();
-
-  const hasFilters = useMemo(
-    () => fields.some((f) => resolveFilter(f.type ?? "text") !== undefined),
-    [fields, resolveFilter],
+  // Filter controller — Phase 2's popover builder consumes the full surface
+  // (filter, setFilter, filterableFields, resolveOperatorSet, ruleCount). Phase 1
+  // wires it and renders only the trigger mount point below.
+  const setActiveFilter = useCallback(
+    (filter: FilterGroup | null) => viewState.setFilter(activeViewId, filter),
+    [viewState, activeViewId],
   );
-  const [showFilters, setShowFilters] = useState(false);
+  const filterController = useFilterController(
+    fields,
+    activeState.filter,
+    setActiveFilter,
+  );
+  const hasFilters = filterController.filterableFields.length > 0;
 
   if (!activeView) {
     return (
@@ -126,8 +130,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
     state: activeState,
     setSort: (fieldId) => viewState.setSort(activeViewId, fieldId),
-    setFilter: (fieldId, value) =>
-      viewState.setFilter(activeViewId, fieldId, value),
+    setFilter: (filter) => viewState.setFilter(activeViewId, filter),
     onRowActivate: onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
     selectedRowId,
     options: viewOptions?.[activeViewId],
@@ -168,14 +171,11 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           placeholder="Search…"
           wrapperClassName="ml-auto w-48"
         />
+        {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
+            the Notion-style nested AND/OR popover builder. Rendered only when
+            the schema has at least one filterable field. */}
         {hasFilters ? (
-          <IconButton
-            icon={MdFilterList}
-            label="Filter"
-            variant={showFilters ? "secondary" : "ghost"}
-            aria-pressed={showFilters}
-            onClick={() => setShowFilters((v) => !v)}
-          />
+          <FilterBuilderTrigger controller={filterController} />
         ) : null}
         {actions}
         <ViewSwitcher
@@ -184,16 +184,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
           onSelect={viewState.setActiveView}
         />
       </div>
-      {showFilters && hasFilters ? (
-        <div className="shrink-0 px-sm pb-sm">
-          <FilterBar
-            fields={fields as FieldDef<unknown>[]}
-            filters={activeState.filters}
-            setFilter={(id, v) => viewState.setFilter(activeViewId, id, v)}
-            resolveFilter={resolveFilter}
-          />
-        </div>
-      ) : null}
       <div className={cn(!embedded && "min-h-0 flex-1 overflow-y-auto")}>
         {renderIsolated(
           DataViewSlots.View.id,

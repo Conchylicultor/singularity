@@ -1,7 +1,6 @@
 export type {
   FieldValue,
   FilterFieldValue,
-  FilterPredicate,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,
@@ -10,8 +9,13 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,
-  FilterControlProps,
-  FilterContribution,
+  FilterValueInputProps,
+  FilterOperator,
+  FilterOperatorSet,
+  FilterConjunction,
+  FilterRule,
+  FilterGroup,
+  FilterNode,
   ItemActionProps,
   ItemActionsDescriptor,
 } from "./internal/types";

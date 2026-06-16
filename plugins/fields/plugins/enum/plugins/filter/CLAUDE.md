@@ -12,7 +12,7 @@ row; otherwise a row matches when its value is among the selected options.
 
 ## Plugin reference
 
-- Description: Enum (select) field type: data-view filter (multi-select option chips).
+- Description: Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
 - Web:
   - Contributes: `DataViewSlots.Filter` "enum"
   - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.ToggleChip`

@@ -1,16 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { EnumFilter } from "./components/enum-filter";
-import { predicate, isActive } from "./internal/enum-filter-logic";
+import { enumOperatorSet } from "./operator-set";
 
 export default {
-  description: "Enum (select) field type: data-view filter (multi-select option chips).",
-  contributions: [
-    DataViewSlots.Filter({
-      match: "enum",
-      Control: EnumFilter,
-      predicate,
-      isActive,
-    }),
-  ],
+  description:
+    "Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).",
+  contributions: [DataViewSlots.Filter(enumOperatorSet)],
 } satisfies PluginDefinition;

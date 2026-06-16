@@ -2,9 +2,10 @@ import { useMemo } from "react";
 import type {
   FieldDef,
   FieldValue,
-  FilterContribution,
+  FilterOperatorSet,
   ViewState,
 } from "../../core";
+import { applyFilter } from "./evaluate-filter";
 
 function isSearchable<TRow>(field: FieldDef<TRow>): boolean {
   if (field.filterable === true) return true;
@@ -25,7 +26,7 @@ export function useFlatRows<TRow>(
   rows: readonly TRow[],
   fields: FieldDef<TRow>[],
   state: ViewState,
-  resolveFilter: (typeId: string) => FilterContribution | undefined,
+  resolveOperatorSet: (typeId: string) => FilterOperatorSet | undefined,
   searchAccessor?: (row: TRow) => string,
 ): readonly TRow[] {
   return useMemo(() => {
@@ -47,23 +48,8 @@ export function useFlatRows<TRow>(
       result = result.filter((row) => accessor(row).toLowerCase().includes(lc));
     }
 
-    // --- Filter (apply per-field predicates via the data-view.filter slot) ---
-    // With no filter Control rendered yet (task 2), `state.filters` stays empty,
-    // so this is a behavior-preserving no-op today; the mechanism is unit-correct.
-    for (const [fieldId, filterValue] of Object.entries(state.filters)) {
-      const field = fields.find((f) => f.id === fieldId);
-      if (!field) continue;
-      const contribution = resolveFilter(field.type ?? "text");
-      if (!contribution || !contribution.isActive(filterValue)) continue;
-      result = result.filter((row) => {
-        const rowValue = field.values
-          ? field.values(row)
-          : field.value
-            ? field.value(row)
-            : undefined;
-        return contribution.predicate(filterValue, rowValue);
-      });
-    }
+    // --- Filter (recursive AND/OR tree via the data-view.filter operator sets) ---
+    result = [...applyFilter(result, state.filter, fields, resolveOperatorSet)];
 
     // --- Sort ---
     if (state.sort) {
@@ -84,5 +70,5 @@ export function useFlatRows<TRow>(
     }
 
     return result;
-  }, [rows, fields, state, resolveFilter, searchAccessor]);
+  }, [rows, fields, state, resolveOperatorSet, searchAccessor]);
 }

@@ -12,7 +12,7 @@ treated as end-of-day, so a row matches when its timestamp falls within
 
 ## Plugin reference
 
-- Description: Date field type: data-view filter (inclusive date-range control).
+- Description: Date field type: data-view filter operator set (is / before / after / between …).
 - Web:
   - Contributes: `DataViewSlots.Filter` "date"
   - Uses: `primitives/data-view.DataViewSlots`

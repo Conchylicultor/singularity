@@ -1,16 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { DateFilter } from "./components/date-filter";
-import { predicate, isActive } from "./internal/date-filter-logic";
+import { dateOperatorSet } from "./operator-set";
 
 export default {
-  description: "Date field type: data-view filter (inclusive date-range control).",
-  contributions: [
-    DataViewSlots.Filter({
-      match: "date",
-      Control: DateFilter,
-      predicate,
-      isActive,
-    }),
-  ],
+  description:
+    "Date field type: data-view filter operator set (is / before / after / between …).",
+  contributions: [DataViewSlots.Filter(dateOperatorSet)],
 } satisfies PluginDefinition;

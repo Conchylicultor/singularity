@@ -1,14 +1,39 @@
 import { useCallback, useMemo, useState } from "react";
-import type { ViewState } from "../../core";
+import type { FilterGroup, ViewState } from "../../core";
+import { isFilterGroup } from "./filter-shape";
 
 const DEFAULT_STATE: ViewState = {
   sort: null,
   query: "",
-  filters: {},
+  filter: null,
   expanded: {},
 };
 
 type StateMap = Record<string, ViewState>;
+
+/**
+ * Tolerant deserialize: validate each view's persisted `filter` against the
+ * FilterGroup shape. Stale shapes (e.g. the old `Record<fieldId, value>` map)
+ * are dropped to null rather than silently coerced.
+ */
+function sanitizeStateMap(parsed: unknown): StateMap {
+  if (typeof parsed !== "object" || parsed === null) return {};
+  const out: StateMap = {};
+  for (const [viewId, raw] of Object.entries(parsed as Record<string, unknown>)) {
+    if (typeof raw !== "object" || raw === null) continue;
+    const v = raw as Partial<ViewState>;
+    out[viewId] = {
+      sort: v.sort ?? null,
+      query: typeof v.query === "string" ? v.query : "",
+      filter: isFilterGroup(v.filter) ? v.filter : null,
+      expanded:
+        typeof v.expanded === "object" && v.expanded !== null
+          ? v.expanded
+          : {},
+    };
+  }
+  return out;
+}
 
 function readString(key: string): string | null {
   try {
@@ -30,7 +55,7 @@ function writeString(key: string, value: string): void {
 function readStateMap(key: string): StateMap {
   const raw = readString(key);
   if (!raw) return {};
-  return JSON.parse(raw) as StateMap;
+  return sanitizeStateMap(JSON.parse(raw));
 }
 
 export interface ViewStateHandle {
@@ -39,7 +64,7 @@ export interface ViewStateHandle {
   stateFor: (viewId: string) => ViewState;
   setSort: (viewId: string, fieldId: string) => void;
   setQuery: (viewId: string, query: string) => void;
-  setFilter: (viewId: string, fieldId: string, value: unknown) => void;
+  setFilter: (viewId: string, filter: FilterGroup | null) => void;
   setExpanded: (viewId: string, id: string, next: boolean) => void;
 }
 
@@ -114,11 +139,8 @@ export function useViewState(
   );
 
   const setFilter = useCallback(
-    (viewId: string, fieldId: string, value: unknown) => {
-      update(viewId, (prev) => ({
-        ...prev,
-        filters: { ...prev.filters, [fieldId]: value },
-      }));
+    (viewId: string, filter: FilterGroup | null) => {
+      update(viewId, (prev) => ({ ...prev, filter }));
     },
     [update],
   );

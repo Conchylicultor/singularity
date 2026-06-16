@@ -6,7 +6,7 @@ import { Row } from "@plugins/primitives/plugins/row/web";
 import {
   pickPrimaryField,
   useFlatRows,
-  useResolveFilter,
+  useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldDef,
   type ItemActionsDescriptor,
@@ -39,12 +39,12 @@ function renderFieldContent<TRow>(
  * this is the documented re-cast boundary for the view child.
  */
 export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
-  const resolveFilter = useResolveFilter();
+  const resolveOperatorSet = useResolveOperatorSet();
   const rows = useFlatRows(
     props.rows,
     props.fields,
     props.state,
-    resolveFilter,
+    resolveOperatorSet,
     props.searchAccessor,
   );
   const fields = props.fields;

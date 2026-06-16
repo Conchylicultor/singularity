@@ -1824,7 +1824,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/bool.boolFieldType`
             - Exports: Types: `BoolFieldDef`; Values: `boolField`
-        - **`filter`** — Boolean field type: data-view filter (yes/no segmented control).
+        - **`filter`** — Boolean field type: data-view filter operator set (is checked/unchecked).
           - Web:
             - Contributes: `DataViewSlots.Filter` "bool"
             - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.SegmentedControl`
@@ -1861,7 +1861,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `dateFieldType`, `dateIdentity`
       - Plugins:
-        - **`filter`** — Date field type: data-view filter (inclusive date-range control).
+        - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
             - Uses: `primitives/data-view.DataViewSlots`
@@ -1926,7 +1926,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`
           - Cross-plugin:
             - Imported by: `ui/theme-engine`
-        - **`filter`** — Enum (select) field type: data-view filter (multi-select option chips).
+        - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "enum"
             - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.ToggleChip`
@@ -2028,7 +2028,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `fields/float`, `fields/int`
       - Plugins:
-        - **`filter`** — Number field type: data-view filter (min/max range control).
+        - **`filter`** — Number field type: data-view filter operator set (= ≠ > < ≥ ≤ between is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "number"
             - Uses: `primitives/data-view.DataViewSlots`
@@ -2121,7 +2121,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `tagsFieldType`, `tagsIdentity`
       - Plugins:
-        - **`filter`** — Tags (multi-value) field type: data-view filter (multi-select tag chips, array-aware match-any).
+        - **`filter`** — Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "tags"
             - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.ToggleChip`
@@ -2144,7 +2144,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `TextFieldDef`; Values: `textField`
           - Cross-plugin:
             - Imported by: `plugin-meta/composition`
-        - **`filter`** — Text field type: data-view filter (substring contains control).
+        - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
             - Uses: `primitives/data-view.DataViewSlots`
@@ -3141,31 +3141,31 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
       - Web:
         - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.text.table`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
-        - Uses: `primitives/icon-button.IconButton`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.cn`
-        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `FilterFieldValue`, `FilterPredicate`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `DataView`, `DataViewSlots`, `defineItemActions`, `pickPrimaryField`, `useFlatRows`, `useResolveCell`, `useResolveFilter`
+        - Uses: `primitives/popover.InlinePopover`, `primitives/search.SearchInput`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.DropdownMenu`, `primitives/ui-kit.DropdownMenuContent`, `primitives/ui-kit.DropdownMenuItem`, `primitives/ui-kit.DropdownMenuSeparator`, `primitives/ui-kit.DropdownMenuTrigger`
+        - Exports: Types: `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`; Values: `applyFilter`, `DataView`, `DataViewSlots`, `defineItemActions`, `evaluateNode`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveOperatorSet`
       - Cross-plugin:
         - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `conversations/agents`, `fields/bool/filter`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/table`, `fields/enum/filter`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/table`, `fields/tags/filter`, `fields/text/filter`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
       - Core:
-        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterContribution`, `FilterControlProps`, `FilterFieldValue`, `FilterPredicate`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
+        - Exports: Types: `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewState`
       - Plugins:
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
+            - Uses: `primitives/card.Card`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
           - Core:
             - Exports: Types: `CoverContent`, `GalleryViewOptions`
         - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.
           - Web:
             - Contributes: `DataViewSlots.View` "List" → `ListView`
-            - Uses: `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`, `primitives/row.Row`, `primitives/text.Text`, `primitives/ui-kit.cn`
+            - Uses: `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`, `primitives/row.Row`, `primitives/text.Text`, `primitives/ui-kit.cn`
             - Exports: Types: `ListViewOptions`
           - Core:
             - Exports: Types: `ListViewOptions`
         - **`table`** — Table view for data-view: maps the typed field schema to data-table columns with host-controlled sort.
           - Web:
             - Contributes: `DataViewSlots.View` "Table" → `TableView`
-            - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.SortState`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveFilter`, `primitives/loading.Loading`
+            - Uses: `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldValue`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.SortState`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`
             - Exports: Types: `TableViewOptions`
           - Core:
             - Exports: Types: `TableViewOptions`
@@ -3240,7 +3240,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Button`, `primitives/ui-kit.iconSizeFor`, `primitives/ui-kit.useControlSize`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps`, `apps/home/app-cards`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `apps/surface/solo`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `review/reorder-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`
+        - Imported by: `apps`, `apps/home/app-cards`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `apps/surface/solo`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `review/reorder-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/loading.Loading`, `primitives/section-label.SectionLabel`, `primitives/text.Text`, `primitives/ui-kit.cn`
@@ -3349,7 +3349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
         - Exports: Types: `InlinePopoverProps`; Values: `InlinePopover`
       - Cross-plugin:
-        - Imported by: `apps/sonata/piano-roll`, `apps/sonata/track-mixer`, `apps/studio/compositions`, `build`, `config_v2/settings`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `page/math/inline`, `page/page-link`, `primitives/folder-picker`, `primitives/launch`, `reorder`, `reorder/editor`, `shell/notifications`, `tasks/task-draft-form`
+        - Imported by: `apps/sonata/piano-roll`, `apps/sonata/track-mixer`, `apps/studio/compositions`, `build`, `config_v2/settings`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `page/math/inline`, `page/page-link`, `primitives/data-view`, `primitives/folder-picker`, `primitives/launch`, `reorder`, `reorder/editor`, `shell/notifications`, `tasks/task-draft-form`
     - **`prompt-editor`** — Conversation-scoped prompt editor. Wraps the generic text-editor primitive and adds a FloatingAction slot for conversation-specific toolbar contributions (e.g. prompt templates).
       - Web:
         - Slots: `PromptEditorSlots.FloatingAction` ← `conversations.conversation-view.exit-menu`, `conversations.conversation-view.prompt-templates`, `conversations.conversation-view.push-and-exit`, `primitives.prompt-editor.voice-input`
@@ -3460,7 +3460,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/select-scope.selectScopeProps`, `primitives/ui-kit.cn`, `primitives/ui-kit.SURFACE_LEVELS`, `primitives/ui-kit.SurfaceLevel`
         - Exports: Types: `SurfaceProps`; Values: `Surface`
       - Cross-plugin:
-        - Imported by: `apps/studio/graph`, `page/editor`, `page/inline-page-link`, `page/math/inline`, `page/url-paste`, `primitives/card`, `primitives/collapsible-wrap`, `primitives/command-palette`
+        - Imported by: `apps/studio/graph`, `page/editor`, `page/inline-page-link`, `page/math/inline`, `page/url-paste`, `primitives/card`, `primitives/collapsible-wrap`, `primitives/command-palette`, `primitives/data-view`
     - **`surface-id`** — Stable per-surface-instance id context (the tab's tabId): SurfaceIdContext + useSurfaceTabId. A leaf so low-level primitives (shortcuts, scoped-store) can read which surface they're rendered in without importing pane.
       - Cross-plugin:
         - Imported by: `apps/home/app-cards`, `apps/sonata/controls`, `conversations/conversation-view`, `layouts/miller`, `primitives/pane`, `primitives/shortcuts`

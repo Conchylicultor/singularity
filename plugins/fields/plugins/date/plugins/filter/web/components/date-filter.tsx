@@ -1,13 +1,26 @@
 import type { ReactNode } from "react";
-import type { FilterControlProps } from "@plugins/primitives/plugins/data-view/web";
-import type { DateFilterValue } from "../internal/date-filter-logic";
+import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
+import type { DateRange } from "../internal/date-filter-logic";
 
-/** Two native date inputs forming an inclusive range. */
-export function DateFilter(props: FilterControlProps): ReactNode {
-  const value = (props.value ?? {}) as DateFilterValue;
+/** Single native date picker for the day-comparison operators (is / before / …). */
+export function DateValueInput(props: FilterValueInputProps): ReactNode {
+  const value = typeof props.value === "string" ? props.value : "";
+  return (
+    <input
+      type="date"
+      className="rounded-md border border-input bg-background px-xs py-2xs text-body"
+      value={value}
+      onChange={(e) => props.onChange(e.target.value || undefined)}
+    />
+  );
+}
 
-  function update(patch: Partial<DateFilterValue>) {
-    props.onChange({ ...value, ...patch });
+/** Two native date pickers forming an inclusive [from, to] range for `is-between`. */
+export function DateRangeInput(props: FilterValueInputProps): ReactNode {
+  const range = (props.value ?? {}) as DateRange;
+
+  function update(patch: Partial<DateRange>) {
+    props.onChange({ ...range, ...patch });
   }
 
   return (
@@ -15,14 +28,14 @@ export function DateFilter(props: FilterControlProps): ReactNode {
       <input
         type="date"
         className="rounded-md border border-input bg-background px-xs py-2xs text-body"
-        value={value.from ?? ""}
+        value={range.from ?? ""}
         onChange={(e) => update({ from: e.target.value || undefined })}
       />
       <span className="text-muted-foreground">–</span>
       <input
         type="date"
         className="rounded-md border border-input bg-background px-xs py-2xs text-body"
-        value={value.to ?? ""}
+        value={range.to ?? ""}
         onChange={(e) => update({ to: e.target.value || undefined })}
       />
     </div>

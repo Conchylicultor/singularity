@@ -13,7 +13,7 @@ intersects the selected set (match-any via `.some`).
 
 ## Plugin reference
 
-- Description: Tags (multi-value) field type: data-view filter (multi-select tag chips, array-aware match-any).
+- Description: Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).
 - Web:
   - Contributes: `DataViewSlots.Filter` "tags"
   - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.ToggleChip`

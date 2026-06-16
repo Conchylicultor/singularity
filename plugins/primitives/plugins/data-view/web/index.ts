@@ -4,8 +4,12 @@ export { DataView } from "./components/data-view";
 export { DataViewSlots } from "./slots";
 export type { DataViewContribution } from "./slots";
 export { useResolveCell } from "./cell-slot";
-export { useResolveFilter } from "./filter-slot";
+export { useResolveOperatorSet } from "./filter-slot";
 export { useFlatRows } from "./internal/use-flat-rows";
+export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
+export { isFilterGroup } from "./internal/filter-shape";
+export { useFilterController } from "./internal/use-filter-controller";
+export type { FilterController } from "./internal/use-filter-controller";
 export { pickPrimaryField } from "./internal/pick-primary-field";
 export { defineItemActions } from "./internal/define-item-actions";
 export type {
@@ -15,7 +19,6 @@ export type {
 export type {
   FieldValue,
   FilterFieldValue,
-  FilterPredicate,
   FieldDef,
   HierarchyConfig,
   SelectionConfig,
@@ -24,8 +27,13 @@ export type {
   DataViewRenderProps,
   DataViewProps,
   TableCellProps,
-  FilterControlProps,
-  FilterContribution,
+  FilterValueInputProps,
+  FilterOperator,
+  FilterOperatorSet,
+  FilterConjunction,
+  FilterRule,
+  FilterGroup,
+  FilterNode,
   ItemActionProps,
   ItemActionsDescriptor,
 } from "../core";

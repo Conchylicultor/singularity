@@ -1,19 +1,16 @@
 import type { ReactNode } from "react";
-import type { FilterControlProps } from "@plugins/primitives/plugins/data-view/web";
-import type { TextFilterValue } from "../internal/text-filter-logic";
+import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 
-/** Single substring input. */
-export function TextFilter(props: FilterControlProps): ReactNode {
-  const value = (props.value ?? {}) as TextFilterValue;
+/** Single text operand input for the text operators (contains / is / …). */
+export function TextValueInput(props: FilterValueInputProps): ReactNode {
+  const value = typeof props.value === "string" ? props.value : "";
   return (
     <input
       type="text"
       className="w-40 rounded-md border border-input bg-background px-xs py-2xs text-body"
-      placeholder="Contains…"
-      value={value.contains ?? ""}
-      onChange={(e) =>
-        props.onChange({ contains: e.target.value || undefined })
-      }
+      placeholder="Value…"
+      value={value}
+      onChange={(e) => props.onChange(e.target.value || undefined)}
     />
   );
 }

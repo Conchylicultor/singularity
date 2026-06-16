@@ -1,24 +1,63 @@
-import type { FilterPredicate } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
 
-export interface TextFilterValue {
-  contains?: string;
+/** The operand as a string, or "" when absent/empty. */
+function asText(operand: unknown): string {
+  return typeof operand === "string" ? operand : "";
 }
 
-function asValue(filterValue: unknown): TextFilterValue {
-  return (filterValue ?? {}) as TextFilterValue;
+/** The row's projected value as a (possibly empty) string. */
+function fieldText(fieldValue: FilterFieldValue): string {
+  if (fieldValue === null || fieldValue === undefined) return "";
+  if (Array.isArray(fieldValue)) return fieldValue.join(" ");
+  if (fieldValue instanceof Date) return fieldValue.toISOString();
+  return String(fieldValue);
 }
 
-/** True when a non-empty substring is set. */
-export function isActive(filterValue: unknown): boolean {
-  const { contains } = asValue(filterValue);
-  return typeof contains === "string" && contains.trim() !== "";
+/** Empty = null/undefined/"" (whitespace-trimmed). */
+function isEmptyValue(fieldValue: FilterFieldValue): boolean {
+  return fieldText(fieldValue).trim() === "";
 }
 
-/** Keep rows whose text value contains the query (case-insensitive). */
-export const predicate: FilterPredicate = (filterValue, fieldValue) => {
-  const { contains } = asValue(filterValue);
-  if (!contains) return true;
-  return String(fieldValue ?? "")
-    .toLowerCase()
-    .includes(contains.toLowerCase());
-};
+export function contains(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  const q = asText(operand);
+  if (q === "") return true;
+  return fieldText(fieldValue).toLowerCase().includes(q.toLowerCase());
+}
+
+export function doesNotContain(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  const q = asText(operand);
+  if (q === "") return true;
+  return !fieldText(fieldValue).toLowerCase().includes(q.toLowerCase());
+}
+
+export function is(operand: unknown, fieldValue: FilterFieldValue): boolean {
+  const q = asText(operand);
+  if (q === "") return true;
+  return fieldText(fieldValue).toLowerCase() === q.toLowerCase();
+}
+
+export function isNot(operand: unknown, fieldValue: FilterFieldValue): boolean {
+  const q = asText(operand);
+  if (q === "") return true;
+  return fieldText(fieldValue).toLowerCase() !== q.toLowerCase();
+}
+
+export function isEmpty(
+  _operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  return isEmptyValue(fieldValue);
+}
+
+export function isNotEmpty(
+  _operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  return !isEmptyValue(fieldValue);
+}

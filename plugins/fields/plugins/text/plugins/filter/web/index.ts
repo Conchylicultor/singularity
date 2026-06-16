@@ -1,16 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { TextFilter } from "./components/text-filter";
-import { predicate, isActive } from "./internal/text-filter-logic";
+import { textOperatorSet } from "./operator-set";
 
 export default {
-  description: "Text field type: data-view filter (substring contains control).",
-  contributions: [
-    DataViewSlots.Filter({
-      match: "text",
-      Control: TextFilter,
-      predicate,
-      isActive,
-    }),
-  ],
+  description:
+    "Text field type: data-view filter operator set (contains / is / is-empty …).",
+  contributions: [DataViewSlots.Filter(textOperatorSet)],
 } satisfies PluginDefinition;

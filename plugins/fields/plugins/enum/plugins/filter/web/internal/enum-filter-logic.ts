@@ -1,21 +1,66 @@
-import type { FilterPredicate } from "@plugins/primitives/plugins/data-view/web";
+import type { FilterFieldValue } from "@plugins/primitives/plugins/data-view/web";
 
-export interface EnumFilterValue {
-  selected?: string[];
+/** The row's enum value as a string, or "" when empty. */
+function fieldString(fieldValue: FilterFieldValue): string {
+  if (fieldValue === null || fieldValue === undefined) return "";
+  if (Array.isArray(fieldValue)) return fieldValue[0] ?? "";
+  return String(fieldValue);
 }
 
-function asValue(filterValue: unknown): EnumFilterValue {
-  return (filterValue ?? {}) as EnumFilterValue;
+function asString(operand: unknown): string {
+  return typeof operand === "string" ? operand : "";
 }
 
-/** Active when at least one option is selected. */
-export function isActive(filterValue: unknown): boolean {
-  return (asValue(filterValue).selected?.length ?? 0) > 0;
+function asList(operand: unknown): string[] {
+  return Array.isArray(operand)
+    ? operand.filter((x): x is string => typeof x === "string")
+    : [];
 }
 
-/** Keep rows whose value is among the selected options. */
-export const predicate: FilterPredicate = (filterValue, fieldValue) => {
-  const { selected } = asValue(filterValue);
-  if (!selected || selected.length === 0) return true;
-  return selected.includes(String(fieldValue ?? ""));
-};
+function isEmptyValue(fieldValue: FilterFieldValue): boolean {
+  return fieldString(fieldValue) === "";
+}
+
+export function is(operand: unknown, fieldValue: FilterFieldValue): boolean {
+  const want = asString(operand);
+  if (want === "") return true;
+  return fieldString(fieldValue) === want;
+}
+
+export function isNot(operand: unknown, fieldValue: FilterFieldValue): boolean {
+  const want = asString(operand);
+  if (want === "") return true;
+  return fieldString(fieldValue) !== want;
+}
+
+export function isAnyOf(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  const list = asList(operand);
+  if (list.length === 0) return true;
+  return list.includes(fieldString(fieldValue));
+}
+
+export function isNoneOf(
+  operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  const list = asList(operand);
+  if (list.length === 0) return true;
+  return !list.includes(fieldString(fieldValue));
+}
+
+export function isEmpty(
+  _operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  return isEmptyValue(fieldValue);
+}
+
+export function isNotEmpty(
+  _operand: unknown,
+  fieldValue: FilterFieldValue,
+): boolean {
+  return !isEmptyValue(fieldValue);
+}

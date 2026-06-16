@@ -8,7 +8,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {
   useFlatRows,
   useResolveCell,
-  useResolveFilter,
+  useResolveOperatorSet,
   type DataViewRenderProps,
   type FieldValue,
   type ItemActionsDescriptor,
@@ -33,12 +33,12 @@ export function TableView(props: DataViewRenderProps<unknown>): ReactNode {
   // Resolved unconditionally (hooks rules) BEFORE the early empty-state return.
   const resolveCell = useResolveCell();
   // Rows arrive RAW; the table applies flat search/filter/sort itself.
-  const resolveFilter = useResolveFilter();
+  const resolveOperatorSet = useResolveOperatorSet();
   const rows = useFlatRows(
     props.rows,
     props.fields,
     props.state,
-    resolveFilter,
+    resolveOperatorSet,
     props.searchAccessor,
   );
 

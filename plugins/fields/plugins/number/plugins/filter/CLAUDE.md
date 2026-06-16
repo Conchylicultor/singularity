@@ -12,7 +12,7 @@ rendered yet. Derived numeric types (e.g. `int`) reuse this filter via the
 
 ## Plugin reference
 
-- Description: Number field type: data-view filter (min/max range control).
+- Description: Number field type: data-view filter operator set (= ≠ > < ≥ ≤ between is-empty …).
 - Web:
   - Contributes: `DataViewSlots.Filter` "number"
   - Uses: `primitives/data-view.DataViewSlots`

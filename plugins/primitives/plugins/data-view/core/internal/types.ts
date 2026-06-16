@@ -12,19 +12,6 @@ export type FieldValue = string | number | boolean | Date | null | undefined;
 export type FilterFieldValue = FieldValue | readonly string[];
 
 /**
- * The pure filter predicate applied in the data-view row pipeline. This alias
- * OWNS the parameter types — implementors derive them by contextual typing
- * (`const predicate: FilterPredicate = (filterValue, fieldValue) => …`) instead
- * of restating them. Widening `FilterFieldValue` therefore flows to every
- * implementor with zero edits, and annotating a narrower `fieldValue` becomes a
- * compile error (parameter contravariance).
- */
-export type FilterPredicate = (
-  filterValue: unknown,
-  fieldValue: FilterFieldValue,
-) => boolean;
-
-/**
  * Describes the data source as a hierarchy. Supplied on `DataViewProps` (not the
  * per-view `options` channel) because it gates which views are available and
  * carries write capabilities. Present → the hierarchical views (tree) become
@@ -119,8 +106,8 @@ export interface ViewState {
   sort: SortState | null;
   /** Per-view quick search. */
   query: string;
-  /** Phase 3: per-field filter values (keyed by field id). Carried now. */
-  filters: Record<string, unknown>;
+  /** The view's filter tree (root is always a group when present), or null. */
+  filter: FilterGroup | null;
   /** Local expand state for hierarchical views lacking server-persisted expansion. */
   expanded?: Record<string, boolean>;
 }
@@ -135,8 +122,8 @@ export interface DataViewRenderProps<TRow> {
   state: ViewState;
   /** null→asc→desc→null cycle; writes THIS view's sort only. */
   setSort: (fieldId: string) => void;
-  /** Phase 3: writes THIS view's filter value for a field. */
-  setFilter: (fieldId: string, value: unknown) => void;
+  /** Writes THIS view's whole filter tree (null clears it). */
+  setFilter: (filter: FilterGroup | null) => void;
   /** Row/card click (default cards & table rows). */
   onRowActivate?: (row: TRow) => void;
   /** Currently-selected row id (tree highlight + auto-expand-to-selected). */
@@ -185,23 +172,72 @@ export interface TableCellProps {
   raw?: unknown;
 }
 
-/** Props passed to a `data-view.filter` Control (the future filter-bar input). */
-export interface FilterControlProps {
+/**
+ * Props passed to an operator's `ValueInput` editor — the operand editor for a
+ * single filter rule. `value` is the rule's stored operand (JSON-safe); the
+ * editor writes new operands through `onChange`.
+ */
+export interface FilterValueInputProps {
   value: unknown;
   onChange: (value: unknown) => void;
   field: FieldDef<unknown>;
 }
 
 /**
- * A `data-view.filter` contribution: the Control (rendered by the future filter
- * bar) plus the pure predicate/isActive functions applied in the row pipeline.
+ * One operator within a field type's operator set. The pure `predicate` is
+ * applied in the row pipeline; `ValueInput` is the (optional) operand editor —
+ * present iff `hasValue` is true. Living on the operator (not the type) lets
+ * `date · is between` (two pickers) and `date · is` (one picker) differ, and
+ * value-less operators (`is empty`) render no input.
  */
-export interface FilterContribution {
-  match: string;
-  Control: ComponentType<FilterControlProps>;
-  predicate: FilterPredicate;
-  isActive: (filterValue: unknown) => boolean;
+export interface FilterOperator {
+  /** Unique within the set, e.g. "contains", "is-empty". */
+  id: string;
+  /** Dropdown label, e.g. "Contains", "Is empty". */
+  label: string;
+  /** false → no value editor (is-empty / is-not-empty). */
+  hasValue: boolean;
+  /** Present iff `hasValue`. The operand editor for a single rule. */
+  ValueInput?: ComponentType<FilterValueInputProps>;
+  /**
+   * Pure predicate. `operand` is the rule's stored value (JSON-safe);
+   * `fieldValue` is the row's projected value (FieldValue | readonly string[]).
+   */
+  predicate: (operand: unknown, fieldValue: FilterFieldValue) => boolean;
 }
+
+/**
+ * A `data-view.filter` contribution — one per field type. The host resolves a
+ * field's set via the `extends` chain (so inherited types reuse a parent's set).
+ */
+export interface FilterOperatorSet {
+  /** Field type id, e.g. "text". */
+  match: string;
+  operators: FilterOperator[];
+  /** Op id used when a rule is first created (default: operators[0]). */
+  defaultOperator?: string;
+}
+
+export type FilterConjunction = "and" | "or";
+
+export interface FilterRule {
+  kind: "rule";
+  /** Local uid (for React keys / edits). */
+  id: string;
+  fieldId: string;
+  operatorId: string;
+  /** Operand, JSON-serializable. */
+  value?: unknown;
+}
+
+export interface FilterGroup {
+  kind: "group";
+  id: string;
+  conjunction: FilterConjunction;
+  children: FilterNode[];
+}
+
+export type FilterNode = FilterRule | FilterGroup;
 
 export interface DataViewProps<TRow> {
   rows: readonly TRow[];

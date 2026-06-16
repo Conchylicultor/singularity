@@ -1,16 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { NumberFilter } from "./components/number-filter";
-import { predicate, isActive } from "./internal/number-filter-logic";
+import { numberOperatorSet } from "./operator-set";
 
 export default {
-  description: "Number field type: data-view filter (min/max range control).",
-  contributions: [
-    DataViewSlots.Filter({
-      match: "number",
-      Control: NumberFilter,
-      predicate,
-      isActive,
-    }),
-  ],
+  description:
+    "Number field type: data-view filter operator set (= ≠ > < ≥ ≤ between is-empty …).",
+  contributions: [DataViewSlots.Filter(numberOperatorSet)],
 } satisfies PluginDefinition;

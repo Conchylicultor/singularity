@@ -11,7 +11,7 @@ boolean projection matches.
 
 ## Plugin reference
 
-- Description: Boolean field type: data-view filter (yes/no segmented control).
+- Description: Boolean field type: data-view filter operator set (is checked/unchecked).
 - Web:
   - Contributes: `DataViewSlots.Filter` "bool"
   - Uses: `primitives/data-view.DataViewSlots`, `primitives/toggle-chip.SegmentedControl`

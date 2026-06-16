@@ -11,7 +11,7 @@ applied in the data-view row pipeline. Derived text types (e.g.
 
 ## Plugin reference
 
-- Description: Text field type: data-view filter (substring contains control).
+- Description: Text field type: data-view filter operator set (contains / is / is-empty …).
 - Web:
   - Contributes: `DataViewSlots.Filter` "text"
   - Uses: `primitives/data-view.DataViewSlots`

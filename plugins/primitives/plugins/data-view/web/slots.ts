@@ -20,6 +20,6 @@ export const DataViewSlots = {
   }),
   /** Per-type table cell. Contribute `{ match, component }`. */
   Cell,
-  /** Per-type filter. Contribute `{ match, Control, predicate, isActive }`. */
+  /** Per-type filter. Contribute one `FilterOperatorSet` ({ match, operators, defaultOperator? }). */
   Filter,
 };

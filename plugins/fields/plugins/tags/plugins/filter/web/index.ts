@@ -1,17 +1,9 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
-import { TagsFilter } from "./components/tags-filter";
-import { predicate, isActive } from "./internal/tags-filter-logic";
+import { tagsOperatorSet } from "./operator-set";
 
 export default {
   description:
-    "Tags (multi-value) field type: data-view filter (multi-select tag chips, array-aware match-any).",
-  contributions: [
-    DataViewSlots.Filter({
-      match: "tags",
-      Control: TagsFilter,
-      predicate,
-      isActive,
-    }),
-  ],
+    "Tags (multi-value) field type: data-view filter operator set (contains / contains-any-of …).",
+  contributions: [DataViewSlots.Filter(tagsOperatorSet)],
 } satisfies PluginDefinition;
