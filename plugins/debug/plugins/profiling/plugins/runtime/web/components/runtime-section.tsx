@@ -4,6 +4,7 @@ import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoin
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
 import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
+import { formatDuration } from "@plugins/debug/plugins/profiling/web";
 import {
   getRuntimeProfile,
   resetRuntimeProfile,
@@ -157,16 +158,26 @@ export function RuntimeSection(): ReactElement | null {
 
   return (
     <div className="flex flex-col gap-xl py-lg">
-      <div className="flex items-center justify-between px-md">
-        <Text as="span" variant="label">Runtime</Text>
-        <Button
-          variant="ghost"
-          size="xs"
-          loading={resetMutation.isPending}
-          onClick={() => resetMutation.mutate({})}
-        >
-          Reset window
-        </Button>
+      <div className="flex flex-col gap-2xs px-md">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-xs">
+            <Text as="span" variant="label">Runtime</Text>
+            <Text as="span" variant="caption" tone="muted">
+              — peaks since boot · {formatDuration(data.windowMs)} window
+            </Text>
+          </div>
+          <Button
+            variant="ghost"
+            size="xs"
+            loading={resetMutation.isPending}
+            onClick={() => resetMutation.mutate({})}
+          >
+            Reset window
+          </Button>
+        </div>
+        <Text as="p" variant="caption" tone="muted">
+          Max/avg figures are sticky peaks that never decay. For live recency ("is this slow now?"), see Debug → Slow Ops (last seen).
+        </Text>
       </div>
 
       <KindTable title="HTTP Routes" rows={httpRows} emptyLabel="No HTTP spans" />

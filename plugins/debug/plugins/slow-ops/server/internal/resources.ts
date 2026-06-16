@@ -26,6 +26,7 @@ export const slowOpsResource = defineResource({
       lastMs: r.lastMs,
       thresholdMs: r.thresholdMs,
       callers: r.callers,
+      recentSamples: r.recentSamples,
       firstSeenAt: r.firstSeenAt,
       lastSeenAt: r.lastSeenAt,
     }));

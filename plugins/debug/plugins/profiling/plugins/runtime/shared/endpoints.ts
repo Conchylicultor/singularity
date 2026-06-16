@@ -41,6 +41,10 @@ export const runtimeProfileSchema = z.object({
   aggregates: byKind(aggregateSchema),
   slowest: byKind(slowSpanSchema),
   sinceMs: z.number(),
+  // Elapsed wall-time of the current profiling window (now − sinceMs), computed
+  // server-side. `sinceMs` is a process-relative performance.now() value, not an
+  // epoch — the client can't derive elapsed from it alone, so the handler does.
+  windowMs: z.number(),
 });
 
 export const getRuntimeProfile = defineEndpoint({

@@ -5,7 +5,11 @@ import {
   type SpanRef,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
-import type { CallerBreakdown } from "../../core";
+import {
+  getContentionSnapshot,
+  type ContentionSnapshot,
+} from "@plugins/infra/plugins/contention/server";
+import type { CallerBreakdown, SlowOpSample } from "../../core";
 
 // The only two report sources a slow-op originates from. Kept as a local literal
 // union rather than imported, since reports' ReportSource lives in its private
@@ -56,6 +60,17 @@ function mergeCaller(
   return next;
 }
 
+// Prepend the new contention sample and cap the ring at the newest 10. Mirrors
+// the `callers` read-modify-write merge, but a plain bounded prepend (no
+// dedupe) — each sample is a distinct point-in-time capture.
+function mergeSample(
+  samples: SlowOpSample[],
+  snapshot: ContentionSnapshot,
+  durationMs: number,
+): SlowOpSample[] {
+  return [{ atTime: new Date(), durationMs, snapshot }, ...samples].slice(0, 10);
+}
+
 // THE single ingest funnel for every slow-op signal — the server span hook and
 // the client endpoint both collapse here. Upserts the deduped aggregate by
 // (operationKind, operation, worktree), merges the caller attribution, notifies
@@ -72,6 +87,12 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   // would otherwise re-feed the slow-op recorder (self-amplifying loop). The
   // suppression ALS propagates through every awaited query inside the callback.
   await runWithoutProfiling(async () => {
+    // Capture the box state at the instant this span tripped. Cached (≤1s) so a
+    // storm of slow ops collapses onto one read; inside runWithoutProfiling so
+    // its own pg query never re-feeds this recorder. The await MUST stay inside
+    // the suppression scope (same reason as the transaction below).
+    const snapshot = await getContentionSnapshot();
+
     // The await MUST run inside the suppression scope. A bare `() => db…`
     // returns the lazy query unexecuted, so its execution (and the acquire +
     // query spans the pool wrapper records) would run after the ALS scope exits
@@ -106,13 +127,22 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
       // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- runtime guard, no noUncheckedIndexedAccess
       if (!row) throw new Error("recordSlowOp: upsert returned no row");
 
-      if (parent) {
-        const callers = mergeCaller(row.callers, parent, durationMs);
-        await tx
-          .update(_slowOps)
-          .set({ callers })
-          .where(eq(_slowOps.id, row.id));
-      }
+      // A second read-modify-write within the same row-locked transaction so
+      // both ring merges stay race-safe. recentSamples is ALWAYS updated (every
+      // slow op gets a contention sample); callers is merged additionally only
+      // when a parent span is known (client signals pass null).
+      const callers = parent
+        ? mergeCaller(row.callers, parent, durationMs)
+        : row.callers;
+      const recentSamples = mergeSample(
+        row.recentSamples,
+        snapshot,
+        durationMs,
+      );
+      await tx
+        .update(_slowOps)
+        .set({ callers, recentSamples })
+        .where(eq(_slowOps.id, row.id));
     });
   });
 

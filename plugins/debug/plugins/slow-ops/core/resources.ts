@@ -1,5 +1,6 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
+import { ContentionSnapshotSchema } from "@plugins/infra/plugins/contention/core";
 
 // Per-operation caller attribution: who issued this operation (the immediate
 // enclosing request/loader span), how often, and how slow. Mirrors the
@@ -12,6 +13,17 @@ export const CallerBreakdownSchema = z.object({
   maxMs: z.number(),
 });
 export type CallerBreakdown = z.infer<typeof CallerBreakdownSchema>;
+
+// One captured contention sample: the box state at the instant a span tripped
+// its threshold, with the span's own duration. Stored as a capped ring on the
+// aggregate row (newest first, last 10) so a storm's shape is visible per op
+// without unbounded growth. Mirrors the `callers` ring pattern.
+export const SlowOpSampleSchema = z.object({
+  atTime: z.coerce.date(),
+  durationMs: z.number(),
+  snapshot: ContentionSnapshotSchema,
+});
+export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 
 // One deduped slow-operation aggregate (the durable, restart-surviving analogue
 // of the profiler's in-memory `Aggregate` + `byParent`, gated to
@@ -27,6 +39,7 @@ export const SlowOpSchema = z.object({
   lastMs: z.number(),
   thresholdMs: z.number(),
   callers: z.array(CallerBreakdownSchema),
+  recentSamples: z.array(SlowOpSampleSchema),
   firstSeenAt: z.coerce.date(),
   lastSeenAt: z.coerce.date(),
 });

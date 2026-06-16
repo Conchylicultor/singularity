@@ -1144,6 +1144,10 @@
       "name": "@singularity/plugin-debug-slow-ops",
       "version": "0.0.1",
     },
+    "plugins/debug/plugins/slow-ops/plugins/cluster": {
+      "name": "@singularity/plugin-debug-slow-ops-cluster",
+      "version": "0.0.1",
+    },
     "plugins/debug/plugins/slow-ops/plugins/pane": {
       "name": "@singularity/plugin-debug-slow-ops-pane",
       "version": "0.0.1",
@@ -1636,6 +1640,10 @@
     },
     "plugins/infra/plugins/claude-cli": {
       "name": "@singularity/plugin-infra-claude-cli",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/contention": {
+      "name": "@singularity/plugin-infra-contention",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/endpoints": {
@@ -3934,6 +3942,8 @@
 
     "@singularity/plugin-debug-slow-ops": ["@singularity/plugin-debug-slow-ops@workspace:plugins/debug/plugins/slow-ops"],
 
+    "@singularity/plugin-debug-slow-ops-cluster": ["@singularity/plugin-debug-slow-ops-cluster@workspace:plugins/debug/plugins/slow-ops/plugins/cluster"],
+
     "@singularity/plugin-debug-slow-ops-pane": ["@singularity/plugin-debug-slow-ops-pane@workspace:plugins/debug/plugins/slow-ops/plugins/pane"],
 
     "@singularity/plugin-debug-worktree-cleanup": ["@singularity/plugin-debug-worktree-cleanup@workspace:plugins/debug/plugins/worktree-cleanup"],
@@ -4163,6 +4173,8 @@
     "@singularity/plugin-infra-boot-snapshot": ["@singularity/plugin-infra-boot-snapshot@workspace:plugins/infra/plugins/boot-snapshot"],
 
     "@singularity/plugin-infra-claude-cli": ["@singularity/plugin-infra-claude-cli@workspace:plugins/infra/plugins/claude-cli"],
+
+    "@singularity/plugin-infra-contention": ["@singularity/plugin-infra-contention@workspace:plugins/infra/plugins/contention"],
 
     "@singularity/plugin-infra-endpoints": ["@singularity/plugin-infra-endpoints@workspace:plugins/infra/plugins/endpoints"],
 

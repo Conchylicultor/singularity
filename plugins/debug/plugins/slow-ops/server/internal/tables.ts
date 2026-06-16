@@ -8,7 +8,7 @@ import {
   uniqueIndex,
   uuid,
 } from "drizzle-orm/pg-core";
-import type { CallerBreakdown } from "../../core";
+import type { CallerBreakdown, SlowOpSample } from "../../core";
 
 // Durable, deduped slow-operation aggregate: the persisted analogue of the
 // runtime-profiler's in-memory `Aggregate` + `byParent`, gated to spans that
@@ -34,6 +34,9 @@ export const _slowOps = pgTable(
     // Caller attribution: which request/loader span issued this operation, how
     // often, how slow. Owned by CallerBreakdownSchema (core).
     callers: jsonb("callers").$type<CallerBreakdown[]>().notNull().default([]),
+    // Capped ring (newest first, last 10) of contention snapshots captured the
+    // instant a span tripped its threshold. Owned by SlowOpSampleSchema (core).
+    recentSamples: jsonb("recent_samples").$type<SlowOpSample[]>().notNull().default([]),
     firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow().notNull(),
     lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
   },

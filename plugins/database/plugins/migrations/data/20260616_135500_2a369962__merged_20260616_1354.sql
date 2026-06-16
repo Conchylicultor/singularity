@@ -1,0 +1,1 @@
+ALTER TABLE "slow_ops" ADD COLUMN "recent_samples" jsonb DEFAULT '[]'::jsonb NOT NULL;

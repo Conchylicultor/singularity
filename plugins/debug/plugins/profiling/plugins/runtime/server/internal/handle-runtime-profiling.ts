@@ -10,7 +10,13 @@ import {
 
 export const handleRuntimeProfiling = implement(
   getRuntimeProfileEndpoint,
-  () => getProfileData(),
+  () => {
+    const profile = getProfileData();
+    // sinceMs is the profiler's performance.now() at window start; the elapsed
+    // window is now − sinceMs on the same monotonic clock. Computed here so the
+    // client renders the true "since boot" duration instead of the raw offset.
+    return { ...profile, windowMs: performance.now() - profile.sinceMs };
+  },
 );
 
 export const handleResetRuntimeProfiling = implement(
