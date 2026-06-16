@@ -6,11 +6,8 @@
 
 - Description: Umbrella for package management utilities.
 - Sub-plugins:
-<<<<<<< .merge_file_qWGmxp
-  - **`inflight`**
-=======
   - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
->>>>>>> .merge_file_FVk62k
+  - **`inflight`**
   - **`retry`**
   - **`semaphore`**
 

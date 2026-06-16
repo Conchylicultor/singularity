@@ -161,6 +161,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`file-watcher`** — Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
     - **`git-watcher`** [load-bearing] — Watches local git refs (refs/heads/main plus the current worktree's own branch) via @parcel/watcher. Emits the git.refAdvanced trigger event (main only) and notifies the refHeadResource live-state resource on every advance.
     - **`health`** — Surfaces server restarts as a toast; exposes /api/health helpers. Liveness endpoint used by clients to detect server restarts.
+    - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
     - **`jobs`** [load-bearing] — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
     - **`paths`**
@@ -176,6 +177,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
+    - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
     - **`inflight`**
     - **`retry`**
     - **`semaphore`**

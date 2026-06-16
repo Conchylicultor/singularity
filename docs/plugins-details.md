@@ -854,7 +854,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane.FilePaneView`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.collectAllIds`, `primitives/search.filterTree`, `primitives/search.SearchInput`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.ResizableHandle`, `primitives/ui-kit.ResizablePanel`, `primitives/ui-kit.ResizablePanelGroup`, `shell.Shell`
     - Exports: Values: `FileTree`
   - Server:
-    - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesByPushId`
+    - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.HOME_DIR`, `infra/paths.REPO_ROOT`, `infra/worktree.ensureMainWorktreeRoot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesByPushId`
     - Exports: Values: `getRangeFiles`, `resolveParentSha`, `resolveWorktreePath`
   - Cross-plugin:
     - Imported by: `code-explorer/file-resolve`, `plugin-meta/plugin-view/file-tree`, `review/plugin-changes`
@@ -1051,7 +1051,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/live-state.ResourceResult`, `primitives/live-state.useResource`
             - Exports: Values: `gitStatusBadge`, `gitStatusDot`, `useEditedFiles`
           - Server:
-            - Uses: `infra/paths.GIT`, `tasks/tasks-core.getConversation`
+            - Uses: `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.runGit`, `tasks/tasks-core.getConversation`
             - Exports: Values: `getEditedFiles`
             - Resources: `edited-files` (invalidate)
           - Core:
@@ -1097,7 +1097,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `Pane.Register` "conv-commits-graph", `Pane.Register` "conv-commit-diff", `Conversation.ActionBar` → `CommitsChip`
             - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/action-bar.Conversation`, `conversations/conversation-view/code/file-pane/diff.DiffOrImageView`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.CollapsibleChevron`, `primitives/commit-list.CommitRowItem`, `primitives/commit-list.MergeBaseMarker`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/placeholder.Placeholder`, `primitives/text.Text`, `primitives/ui-kit.Button`
           - Server:
-            - Uses: `infra/git-watcher.refHeadResource`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
+            - Uses: `infra/git-watcher.refHeadResource`, `infra/host-read-pool.withHeavyReadSlot`, `primitives/commit-list.LOG_FORMAT`, `primitives/commit-list.parseGitLog`, `primitives/commit-list.runGit`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listPushesForAttempt`, `tasks/tasks-core.pushesResource`
             - Resources: `commits-graph.delta` (push), `commits-graph.graph` (push)
         - **`dependencies`** — Unified prompt-bar button showing blocked-by and blocking dependency counts with per-direction edit popovers.
           - Web:
@@ -2499,6 +2499,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Routes: `GET /api/health`, `GET /api/health/ready`
       - Shared:
         - Exports: Types: `HealthResponse`; Values: `getHealth`, `HealthResponseSchema`
+    - **`host-read-pool`** — Shared host-wide budget for CPU/IO-heavy git/filesystem reads: withHeavyReadSlot admits at most a few heavy reads at once across all worktree servers.
+      - Server:
+        - Uses: `packages/host-semaphore.createHostSemaphore`
+        - Exports: Values: `withHeavyReadSlot`
+      - Cross-plugin:
+        - Imported by: `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`, `plugin-meta/plugin-view`, `review/plugin-changes`
     - **`jobs`** — Durable background jobs primitive built on graphile-worker. Plugins declare jobs via defineJob and enqueue via job.enqueue.
       - Server:
         - Uses: `database.db`, `database/admin.connectionString`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
@@ -2522,7 +2528,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `mcpRequest`
     - **`paths`**
       - Cross-plugin:
-        - Imported by: `backup`, `backup/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/conversation-view/code`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database/admin`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
+        - Imported by: `backup`, `backup/local`, `build`, `build/build-commits`, `build/build-logs`, `build/build-profiling`, `code-explorer`, `code-explorer/file-resolve`, `config_v2`, `config_v2/staging`, `conversations`, `conversations/conversation-progress`, `conversations/runtime-tmux`, `conversations/transcript-watcher`, `database/admin`, `debug/memory`, `debug/profiling/build`, `debug/profiling/push`, `debug/worktree-cleanup`, `framework/tooling/checks`, `framework/tooling/guards`, `infra/asset-mirror`, `infra/attachments`, `infra/claude-cli`, `infra/git-watcher`, `infra/worktree`, `packages/host-semaphore`, `plugin-meta/composition`, `plugin-meta/plugin-health`, `plugin-meta/plugin-view`, `primitives/commit-list`, `primitives/log-channels`, `primitives/terminal`, `reports`, `review/plugin-changes`, `stats/commits`, `stats/cost`, `stats/pushes`, `tasks`
       - Server:
         - Exports: Values: `ATTACHMENTS_DIR`, `BACKUPS_DIR`, `CLAUDE`, `CLAUDE_PROJECTS_DIR`, `CLAUDE_SESSIONS_DIR`, `currentWorktreeName`, `GIT`, `HOME_DIR`, `isMain`, `KEY_PATH`, `LEGACY_AUTH_BLOB`, `LEGACY_AUTH_DIR`, `LEGACY_AUTH_KEY`, `MAIN_WORKTREE_NAME`, `PGREP`, `PLUGINS_DIR`, `REPO_ROOT`, `REPORTS_DIR`, `SECRETS_DIR`, `SINGULARITY_DIR`, `STORE_PATH`, `TMUX`, `WEB_CORE_RELATIVE`, `WEB_DIST_DIR`
       - Core:
@@ -2571,6 +2577,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
 
 - **`packages`** — Umbrella for package management utilities.
   - Plugins:
+    - **`host-semaphore`** — Cross-process concurrency primitive: createHostSemaphore bounds work across processes via flock slot files (the host-wide twin of packages/semaphore).
+      - Server:
+        - Uses: `infra/paths.SINGULARITY_DIR`
+        - Exports: Types: `HostSemaphore`; Values: `createHostSemaphore`
+      - Cross-plugin:
+        - Imported by: `infra/host-read-pool`
     - **`inflight`**
       - Cross-plugin:
         - Imported by: `infra/endpoints`
@@ -3110,7 +3122,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/breadcrumb.Breadcrumb`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/detail-sections.defineDetailSections`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/section-label.SectionLabel`, `primitives/spacing.Stack`, `primitives/text.Text`
         - Exports: Types: `ExportRuntime`, `PluginNode`, `PluginTreePayload`; Values: `ConsumerList`, `PluginDetail`, `PluginLink`, `pluginViewPane`, `PluginViewSlots`, `RUNTIME_COLORS`, `Section`, `SubHeading`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
+        - Uses: `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.PLUGINS_DIR`
         - Routes: `GET /api/plugin-view/tree`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -3224,7 +3236,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/paths.GIT`
         - Exports: Values: `LOG_FORMAT`, `parseGitLog`, `runGit`
       - Cross-plugin:
-        - Imported by: `build`, `build/build-commits`, `conversations/conversation-view/commits-graph`
+        - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`
       - Core:
         - Exports: Types: `CommitRow`; Values: `CommitRowSchema`
     - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
@@ -3784,7 +3796,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.useEndpoint`, `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`, `primitives/card.Card`, `primitives/collapsible.ExpandAllButton`, `primitives/collapsible.useExpandAll`, `primitives/loading.Loading`, `primitives/slot-render.defineRenderSlot`, `primitives/spacing.Stack`, `primitives/text.Text`, `review.ReviewSlots`
         - Exports: Types: `FacetDiff`; Values: `PluginChangesSlots`, `usePluginFacetDiffs`
       - Server:
-        - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
+        - Uses: `code-explorer.getRangeFiles`, `code-explorer.resolveParentSha`, `conversations/conversation-view/code.getEditedFiles`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/host-read-pool.withHeavyReadSlot`, `infra/paths.GIT`, `infra/paths.REPO_ROOT`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.listPushesByPushId`
         - Routes: `GET /api/review/plugin-changes`
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
