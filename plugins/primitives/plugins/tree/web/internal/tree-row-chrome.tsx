@@ -172,10 +172,22 @@ export function TreeRowChrome({
           onClick={(e) => e.stopPropagation()}
           // Pressing a trailing control must not arm a row drag.
           onPointerDown={(e) => e.stopPropagation()}
-          // Stay visible while an open dropdown (e.g. the row "more" menu) keeps
-          // a descendant in the `data-state=open` state, even after the pointer
-          // leaves the row.
-          className="flex shrink-0 items-center gap-2xs opacity-0 group-hover/tree-row:opacity-100 has-data-[state=open]:opacity-100"
+          // Reserve NO width at rest: `w-0 overflow-hidden` collapses the cluster
+          // so the label gets the full row width and only truncates once the
+          // actions actually appear on hover. (Plain `opacity-0` keeps the
+          // cluster in layout, prematurely truncating labels behind invisible
+          // buttons.) We collapse width rather than `display:none` so the action
+          // buttons stay in the tab order and focus-within can reveal them for
+          // keyboard users. Stays expanded while an open dropdown (e.g. the row
+          // "more" menu) keeps a descendant in the `data-state=open` state, even
+          // after the pointer leaves the row.
+          className={cn(
+            "flex shrink-0 items-center gap-2xs overflow-hidden whitespace-nowrap",
+            "w-0 opacity-0",
+            "group-hover/tree-row:w-auto group-hover/tree-row:opacity-100",
+            "group-focus-within/tree-row:w-auto group-focus-within/tree-row:opacity-100",
+            "has-data-[state=open]:w-auto has-data-[state=open]:opacity-100",
+          )}
         >
           {actions}
         </div>
