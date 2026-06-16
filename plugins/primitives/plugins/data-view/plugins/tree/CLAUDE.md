@@ -23,9 +23,11 @@ the lower-level building block.
   field-type plugin's cell renders identically as a table column and a tree row.
   When `hierarchy.onRename` is set and the primary field is text, a
   `RenameInput` replaces the read-only cell.
-- **Search** — the host's search box drives the tree via the controlled
-  `toolbar.search.query` + `hideInput` of `TreeList` (tree-aware `filterTree`,
-  ancestors retained).
+- **Search** — the host's `searchAccessor` (when supplied) drives the tree's
+  subtree-preserving `filterTree`; otherwise it falls back to the primary-field
+  label. Threaded through the controlled `toolbar.search.query` + `hideInput` of
+  `TreeList` (ancestors retained). Pass a `searchAccessor` that folds in ancestor
+  names / secondary fields to match on more than the label.
 - **Filter** — the view's `state.filter` is applied through the same
   `evaluateNode` evaluator the flat views use, so filter semantics are identical
   across every view. Filtering is subtree-preserving (mirrors search): a node
@@ -37,14 +39,18 @@ the lower-level building block.
 - **Expand state** — server-persisted when `hierarchy.isExpanded` /
   `onToggleExpanded` are supplied; otherwise managed in local component state
   for the session (`DataViewRenderProps` does not expose `ViewState.setExpanded`).
-- **Read-only sources** — when `onMove` / `onCreate` / `onRename` are omitted,
-  drag is inert and add/rename affordances disappear.
+- **Read-only sources** — when `onMove` / `onCreate` / `onRename` are omitted the
+  view passes no handler to `TreeList`, so the row's drag source, every Add
+  affordance, and inline rename genuinely disappear (no inert placeholders).
 
 ## Options
 
 `options` (= `viewOptions.tree`) is a `TreeViewOptions<TRow>`:
 
 - `renderRow?(node)` — fully replace a row's rendering.
+- `leadingIcon?(row)` — icon rendered before the label.
+- `trailing?(row)` — persistent content rendered after the label (status badge,
+  count, …). Always visible — distinct from `itemActions`, which are hover-revealed.
 - `rowMenu?(helpers, row)` — items for the row's hover-revealed "⋯" more-menu
   → `RowChrome.menu`. (The whole row is the drag source, Notion-style — there is
   no separate grip handle; this menu lives in the trailing actions cluster.)

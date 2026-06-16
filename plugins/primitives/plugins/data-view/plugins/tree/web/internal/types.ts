@@ -22,6 +22,12 @@ export interface TreeViewOptions<TRow> {
   renderRow?: (node: TreeRowNode<TRow>) => ReactNode;
   /** Leading icon rendered immediately before the primary-field label. */
   leadingIcon?: (row: TRow) => ReactNode;
+  /**
+   * Persistent trailing content rendered after the label (a status badge, count,
+   * etc.). Always visible — distinct from `itemActions`, which are interactive
+   * affordances revealed on row hover.
+   */
+  trailing?: (row: TRow) => ReactNode;
   /** Drag-handle dropdown menu items for a row → `RowChrome.menu`. */
   rowMenu?: (helpers: RowChromeMenuHelpers, row: TRow) => RowMenuItem[];
   /** Content shown in the floating chip while a row is being dragged. */

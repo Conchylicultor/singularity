@@ -17,7 +17,7 @@ import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./sco
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
@@ -174,6 +174,11 @@ async function buildEntry(
 // per-scope notify for each known scope without a forked entry. A scoped change
 // targets only that scope.
 function notifyValues(storePath: string, scopeId: string): void {
+  // The modified-counts list is computed off effective BASE values across every
+  // descriptor and keyed by `{}` (the whole map), so any value change can shift
+  // it. Notify it once regardless of scope (a scoped-only change recomputes to
+  // the same map — idempotent — so this never over- or under-fires).
+  configV2ModifiedCountsServerResource.notify({});
   if (scopeId) {
     configV2ServerResource.notify({ path: storePath, scopeId });
     return;

@@ -1,46 +1,42 @@
-import { useCallback, useState, useMemo } from "react";
+import { useCallback, useMemo, useState } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type { ConfigRegistration } from "@plugins/config_v2/web";
+import {
+  configV2ConflictPathsResource,
+  configV2ModifiedCountsResource,
+} from "@plugins/config_v2/core";
+import {
+  DataView,
+  type FieldDef,
+  type HierarchyConfig,
+} from "@plugins/primitives/plugins/data-view/web";
+import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
-import type { ConfigTreeNode as ConfigTreeNodeData } from "../internal/prune-config-tree";
-import { filterConfigTree } from "../internal/filter-config-tree";
-import { ConfigTreeNode } from "./config-tree-node";
-import { ConfigNavRow } from "./config-nav-row";
+import { flattenConfigTree, type ConfigNavRow } from "../internal/flatten-config-tree";
+import { ConfigRowBadge } from "./config-row-badge";
 
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
   const [showModifiedOnly, setShowModifiedOnly] = useState(false);
+  // Collapsed group ids — a row is expanded unless its id is present. Starts
+  // empty (everything expanded), matching the pre-DataView nav.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
 
   const { data: payload, isPending } = useEndpoint(getPluginTree, {});
 
-  const accessor = useCallback(
-    (r: ConfigRegistration) =>
-      `${r.pluginName} ${r.descriptor.name} ${Object.values(r.descriptor.fields)
-        .map((f) => f.meta.label ?? "")
-        .join(" ")}`,
-    [],
-  );
-
-  const { query, setQuery, filtered } = useTextFilter({
-    items: registrations,
-    accessor,
-  });
-
-  const matchReg = useCallback(
-    (r: ConfigRegistration) =>
-      accessor(r).toLowerCase().includes(query.trim().toLowerCase()),
-    [accessor, query],
-  );
+  // Modified/conflict state, read once data-level (no per-row config hooks).
+  // While a resource is still loading we report "not modified / no conflict" —
+  // the badge simply doesn't paint yet, exactly as the per-row hook behaved.
+  const modifiedRes = useResource(configV2ModifiedCountsResource, {});
+  const conflictRes = useResource(configV2ConflictPathsResource, {});
 
   // Keyed by the canonical DOT-form plugin id. `reg.pluginId` is already dot and
   // equals `PluginNode.id`, so no slash→dot bridging is needed.
@@ -54,7 +50,7 @@ export function ConfigNav() {
     return m;
   }, [registrations]);
 
-  const tree = useMemo<ConfigTreeNodeData[]>(() => {
+  const rows = useMemo<ConfigNavRow[]>(() => {
     if (!payload) return [];
     const matched = new Set<string>();
     const pruned = pruneConfigTree(payload.plugins, byPluginId, matched);
@@ -90,82 +86,123 @@ export function ConfigNav() {
         pruned.push({ node, registrations: orphanRegs, children: [] });
       }
     }
-    return pruned;
+    return flattenConfigTree(pruned);
   }, [payload, byPluginId, registrations]);
 
-  const filteredTree = useMemo(
-    () => filterConfigTree(tree, query, matchReg),
-    [tree, query, matchReg],
+  const modifiedCountOf = useCallback(
+    (row: ConfigNavRow) => {
+      if (modifiedRes.pending || !row.registration) return 0;
+      return modifiedRes.data[row.registration.storePath] ?? 0;
+    },
+    [modifiedRes],
+  );
+  const hasConflictOf = useCallback(
+    (row: ConfigNavRow) => {
+      if (conflictRes.pending || !row.registration) return false;
+      return conflictRes.data.includes(row.registration.storePath);
+    },
+    [conflictRes],
   );
 
-  // Search results force every branch open so matches are never hidden behind
-  // a collapsed ancestor. A stable empty set means "nothing collapsed".
-  const expanded = useMemo(() => new Set<string>(), []);
-
-  const handleToggle = useCallback((id: string, open: boolean) => {
-    setCollapsed((prev) => {
-      const next = new Set(prev);
-      if (open) next.delete(id);
-      else next.add(id);
-      return next;
-    });
-  }, []);
+  // "Modified only": keep rows that are modified or in conflict, plus their
+  // ancestors so the surviving rows still form a valid tree (mirrors the old
+  // flat "modified" list, but in-place in the hierarchy).
+  const visibleRows = useMemo(() => {
+    if (!showModifiedOnly) return rows;
+    const byId = new Map(rows.map((r) => [r.id, r]));
+    const keep = new Set<string>();
+    for (const row of rows) {
+      if (modifiedCountOf(row) === 0 && !hasConflictOf(row)) continue;
+      let cur: ConfigNavRow | undefined = row;
+      while (cur && !keep.has(cur.id)) {
+        keep.add(cur.id);
+        cur = cur.parentId ? byId.get(cur.parentId) : undefined;
+      }
+    }
+    return rows.filter((r) => keep.has(r.id));
+  }, [rows, showModifiedOnly, modifiedCountOf, hasConflictOf]);
 
   const selectedPath = configDetailPane.useRouteEntry()?.params.configPath;
+  const selectedRowId = useMemo(() => {
+    if (!selectedPath) return undefined;
+    return rows.find(
+      (r) =>
+        r.registration &&
+        encodeURIComponent(r.registration.storePath) === selectedPath,
+    )?.id;
+  }, [rows, selectedPath]);
 
-  const handleSelect = useCallback(
-    (reg: ConfigRegistration) => {
+  const handleActivate = useCallback(
+    (row: ConfigNavRow) => {
+      // Group / multi-config header rows have no config of their own — the
+      // chevron toggles them; a body click is a no-op.
+      if (!row.registration) return;
       openPane(
         configDetailPane,
-        { configPath: encodeURIComponent(reg.storePath) },
+        { configPath: encodeURIComponent(row.registration.storePath) },
         { mode: "push" },
       );
     },
     [openPane],
   );
 
-  const hasQuery = query.trim().length > 0;
+  const hierarchy = useMemo<HierarchyConfig<ConfigNavRow>>(
+    () => ({
+      getParentId: (r) => r.parentId,
+      getRank: (r) => r.rank,
+      isExpanded: (r) => !collapsed.has(r.id),
+      onToggleExpanded: (id, next) =>
+        setCollapsed((prev) => {
+          const set = new Set(prev);
+          if (next) set.delete(id);
+          else set.add(id);
+          return set;
+        }),
+    }),
+    [collapsed],
+  );
+
+  const fields = useMemo<FieldDef<ConfigNavRow>[]>(
+    () => [{ id: "label", label: "Name", primary: true, value: (r) => r.label }],
+    [],
+  );
+
+  const treeOptions = useMemo<TreeViewOptions<ConfigNavRow>>(
+    () => ({
+      expandAll: true,
+      trailing: (r) => (
+        <ConfigRowBadge
+          modifiedCount={modifiedCountOf(r)}
+          hasConflict={hasConflictOf(r)}
+        />
+      ),
+    }),
+    [modifiedCountOf, hasConflictOf],
+  );
 
   return (
-    <div className="flex h-full flex-col gap-sm p-sm">
-      <div className="flex items-center gap-xs">
-        <SearchInput
-          value={query}
-          onChange={(e) => setQuery(e.target.value)}
-          placeholder="Filter configs..."
-          className="flex-1"
-        />
-        <FilterChip active={showModifiedOnly} onClick={() => setShowModifiedOnly((v) => !v)}>
-          Modified
-        </FilterChip>
-      </div>
-      <div className="flex-1 overflow-y-auto">
-        {showModifiedOnly ? (
-          filtered.map((reg) => (
-            <ConfigNavRow
-              key={reg.storePath}
-              registration={reg}
-              selected={selectedPath === encodeURIComponent(reg.storePath)}
-              onClick={() => handleSelect(reg)}
-              hideIfUnmodified
-            />
-          ))
-        ) : isPending ? (
-          <Loading />
-        ) : (
-          (hasQuery ? filteredTree : tree).map((item) => (
-            <ConfigTreeNode
-              key={item.node.id}
-              item={item}
-              depth={0}
-              collapsed={hasQuery ? expanded : collapsed}
-              onToggle={handleToggle}
-              selectedPath={selectedPath}
-              onSelect={handleSelect}
-            />
-          ))
-        )}
-      </div>
+    <div className="flex h-full min-h-0 flex-col">
+      <DataView<ConfigNavRow>
+        rows={visibleRows}
+        fields={fields}
+        rowKey={(r) => r.id}
+        views={["tree"]}
+        storageKey="config_v2.settings.nav"
+        loading={isPending}
+        hierarchy={hierarchy}
+        selectedRowId={selectedRowId}
+        onRowActivate={handleActivate}
+        searchAccessor={(r) => r.searchText}
+        viewOptions={{ tree: treeOptions }}
+        actions={
+          <FilterChip
+            active={showModifiedOnly}
+            onClick={() => setShowModifiedOnly((v) => !v)}
+          >
+            Modified
+          </FilterChip>
+        }
+      />
     </div>
   );
 }

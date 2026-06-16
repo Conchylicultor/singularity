@@ -25,10 +25,12 @@ export {
   configV2ScopesResource,
   configV2ConflictPathsSchema,
   configV2ConflictPathsResource,
+  configV2ModifiedCountsSchema,
+  configV2ModifiedCountsResource,
   configV2ScopeForkedSchema,
   configV2ScopeForkedResource,
 } from "./internal/resource";
-export type { ConfigV2Values, ConfigV2ValidationIssue, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ScopeForked } from "./internal/resource";
+export type { ConfigV2Values, ConfigV2ValidationIssue, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ModifiedCounts, ConfigV2ScopeForked } from "./internal/resource";
 export type { ConfigProxy } from "./internal/config-proxy";
 export {
   computeHash,

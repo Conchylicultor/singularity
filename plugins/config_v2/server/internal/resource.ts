@@ -1,7 +1,7 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ConflictPathsSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
-import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ScopeForked } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
+import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ModifiedCounts, ConfigV2ScopeForked } from "../../core";
 import type { ConfigDescriptor, ConfigValues, FieldsRecord, JsonValue } from "../../core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { userScopedDir, discoverScopeIdsIn, discoverScopeIds } from "./scope-paths";
@@ -243,6 +243,34 @@ export const configV2ConflictPathsServerResource = defineResource<ConfigV2Confli
   mode: "push",
   schema: configV2ConflictPathsSchema,
   loader: whenRegistryReady(() => computeConflictPaths()),
+});
+
+// Per-descriptor count of BASE fields whose effective value differs from the
+// schema default (paths with zero modified fields are omitted). Compared
+// structurally (JSON) so an object/list field at its default never falsely
+// counts. Secret-backed fields are redacted to their defaults by
+// resolveRedactedConfig before this runs, so they never register as modified —
+// matching what the client resolves. Backs the nav-row modified-count badge and
+// the "Modified only" filter from one data-level read (no per-row config hook).
+function computeModifiedCounts(): ConfigV2ModifiedCounts {
+  const counts: ConfigV2ModifiedCounts = {};
+  for (const [storePath, descriptor] of descriptorByPath) {
+    const values = resolveRedactedConfig(descriptor);
+    const defaults = descriptor.defaults as Record<string, unknown>;
+    let count = 0;
+    for (const key of Object.keys(descriptor.fields)) {
+      if (JSON.stringify(values[key]) !== JSON.stringify(defaults[key])) count++;
+    }
+    if (count > 0) counts[storePath] = count;
+  }
+  return counts;
+}
+
+export const configV2ModifiedCountsServerResource = defineResource<ConfigV2ModifiedCounts, {}>({
+  key: "config-v2.modified-counts",
+  mode: "push",
+  schema: configV2ModifiedCountsSchema,
+  loader: whenRegistryReady(() => computeModifiedCounts()),
 });
 
 export function registerDescriptorPath(path: string, descriptor: ConfigDescriptor, hierarchyPath: string): void {

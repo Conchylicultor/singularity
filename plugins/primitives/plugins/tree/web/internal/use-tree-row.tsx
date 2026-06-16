@@ -26,19 +26,18 @@ export type TreeListContextValue<T extends TreeItem> = {
   clearPendingFocus: () => void;
   onSelect: (id: string) => void;
   onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
-  onCreate: (args: {
+  /** Omitted for a read-only tree — `canCreate` is then false and Add disappears. */
+  onCreate?: (args: {
     parentId: string | null;
     rank?: Rank;
   }) => Promise<string | null | undefined>;
   Row: (props: { node: TreeNode<T>; depth: number }) => ReactNode;
   /** True when the tree is in multi-select mode → RowChrome renders a checkbox. */
   multiSelect: boolean;
-  /**
-   * Whether the data source actually supports creation. Drives the per-row
-   * hover "+" (Notion-style add-child affordance). Read-only trees pass false
-   * so no non-functional add button is shown.
-   */
+  /** True when `onCreate` is wired → RowChrome renders root + per-node Add. */
   canCreate: boolean;
+  /** True when `onMove` is wired → RowChrome renders the drag handle. */
+  canReorder: boolean;
 };
 
 // The context is invariant in T at the React level; we cast through `unknown`
@@ -155,13 +154,17 @@ export function useTreeRow<T extends TreeItem>(
   );
 
   const addChild = useCallback(async () => {
-    const id = await ctx.onCreate({ parentId: node.id });
+    const create = ctx.onCreate;
+    if (!create) return;
+    const id = await create({ parentId: node.id });
     if (!id) return;
     pendingFocus.set(id);
     ctx.onSelect(id);
   }, [ctx, node.id]);
 
   const addBelow = useCallback(async () => {
+    const create = ctx.onCreate;
+    if (!create) return;
     const siblings = ctx.rows
       .filter((r) => r.parentId === node.parentId)
       .sort((a, b) => Rank.compare(a.rank, b.rank));
@@ -174,7 +177,7 @@ export function useTreeRow<T extends TreeItem>(
     } catch {
       rank = Rank.between(node.rank, null);
     }
-    const id = await ctx.onCreate({ parentId: node.parentId, rank });
+    const id = await create({ parentId: node.parentId, rank });
     if (!id) return;
     pendingFocus.set(id);
     ctx.onSelect(id);

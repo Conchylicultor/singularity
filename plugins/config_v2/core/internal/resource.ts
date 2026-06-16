@@ -91,6 +91,21 @@ export const configV2ConflictPathsResource = resourceDescriptor<ConfigV2Conflict
   [],
 );
 
+// storePaths whose effective BASE config differs from the schema defaults,
+// mapped to the count of modified fields (only paths with ≥1 modified field are
+// present). Keyed by `{}` (the whole map). Powers the config nav-row modified
+// count badge AND the "Modified only" filter without any per-row reactive read —
+// computed once server-side, structurally (JSON equality) so an object/list
+// field sitting at its default never falsely counts as modified.
+export const configV2ModifiedCountsSchema = z.record(z.number());
+export type ConfigV2ModifiedCounts = z.infer<typeof configV2ModifiedCountsSchema>;
+
+export const configV2ModifiedCountsResource = resourceDescriptor<ConfigV2ModifiedCounts, {}>(
+  "config-v2.modified-counts",
+  configV2ModifiedCountsSchema,
+  {},
+);
+
 export const configV2ScopeForkedSchema = z.object({ forked: z.boolean() });
 export type ConfigV2ScopeForked = z.infer<typeof configV2ScopeForkedSchema>;
 

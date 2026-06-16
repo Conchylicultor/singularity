@@ -42,14 +42,17 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
       : menu;
 
   // The whole row is the drag source (Notion-style: no grip handle). Merge the
-  // draggable ref with the child-drop ref onto the single row element.
+  // draggable ref with the child-drop ref onto the single row element — but only
+  // when the tree can reorder, so a read-only tree's rows aren't draggable at all
+  // (no inert pickup, matching its missing `onMove`).
   const { childRef, dragSource } = r;
+  const canReorder = ctx.canReorder;
   const rowRef = useCallback(
     (el: HTMLDivElement | null) => {
       childRef(el);
-      dragSource.ref(el);
+      if (canReorder) dragSource.ref(el);
     },
-    [childRef, dragSource],
+    [childRef, dragSource, canReorder],
   );
 
   // The "more" menu — formerly opened from the grip handle — now lives as a
@@ -109,8 +112,8 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           onToggle={r.toggleExpanded}
           onSelect={r.select}
           rowRef={rowRef}
-          dragAttributes={dragSource.attributes}
-          dragListeners={dragSource.listeners}
+          dragAttributes={canReorder ? dragSource.attributes : undefined}
+          dragListeners={canReorder ? dragSource.listeners : undefined}
           className={cn(
             r.isDragging && "opacity-40",
             r.isOverChild && "bg-accent ring-primary/40 ring-1",

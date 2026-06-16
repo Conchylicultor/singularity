@@ -41,11 +41,13 @@ export type TreeListProps<T extends TreeItem> = {
   rootId?: string;
   onSelect: (id: string) => void;
   onToggleExpanded: (id: string, next: boolean) => void | Promise<void>;
-  onMove: (
+  /** DnD reorder/reparent. Omit for a read-only tree — the drag handle disappears. */
+  onMove?: (
     id: string,
     dest: { parentId: string | null; rank: Rank },
   ) => void | Promise<void>;
-  onCreate: (args: {
+  /** Create child/sibling. Omit for a read-only tree — every Add affordance disappears. */
+  onCreate?: (args: {
     parentId: string | null;
     rank?: Rank;
   }) => Promise<string | null | undefined>;
@@ -142,6 +144,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
 
   const createAtRoot = useCallback(
     async (parentId: string | null, rank?: Rank) => {
+      if (!onCreate) return;
       const id = await onCreate({ parentId, rank });
       if (!id) return;
       pendingFocus.set(id);
@@ -245,6 +248,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   const onDragEnd = useCallback(
     (event: DragEndEvent) => {
       setActiveId(null);
+      if (!onMove) return;
       const { active, over } = event;
       if (!over) return;
       const draggedId = active.data.current?.id as string | undefined;
@@ -291,7 +295,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
   const showSearchInput = !!toolbar?.search && !hideSearchInput;
   const hasToolbar =
     showExpandAll || !!toolbar?.hideTerminal || !!toolbar?.start || showSearchInput;
-  const showRootAdd = !rootId && addLabel != null;
+  const showRootAdd = !rootId && addLabel != null && canCreate && !!onCreate;
 
   const ctxValue = useMemo(
     () => ({
@@ -305,7 +309,8 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onCreate,
       Row,
       multiSelect: !!multiSelect,
-      canCreate,
+      canCreate: canCreate && !!onCreate,
+      canReorder: !!onMove,
     }),
     [
       rows,
@@ -316,6 +321,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       onSelect,
       wrappedOnToggleExpanded,
       onCreate,
+      onMove,
       Row,
       multiSelect,
       canCreate,

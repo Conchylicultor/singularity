@@ -93,6 +93,7 @@ function DefaultRow<TRow>(props: {
       : undefined;
 
   const leadingIcon = options.leadingIcon?.(row);
+  const trailing = options.trailing?.(row);
 
   return (
     <RowChrome
@@ -109,6 +110,11 @@ function DefaultRow<TRow>(props: {
       icon={leadingIcon ?? undefined}
     >
       {label}
+      {trailing != null ? (
+        <span className="flex shrink-0 items-center justify-center">
+          {trailing}
+        </span>
+      ) : null}
     </RowChrome>
   );
 }
@@ -213,6 +219,18 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
     [primaryField],
   );
 
+  // The host's `searchAccessor` (when provided) drives the tree's
+  // subtree-preserving filter, so a consumer can match on more than the label
+  // (e.g. ancestor names, secondary fields). Falls back to the primary label.
+  const propsSearchAccessor = props.searchAccessor;
+  const searchAccessor = useCallback(
+    (row: Projected<unknown>) =>
+      propsSearchAccessor
+        ? propsSearchAccessor(row.__row)
+        : primaryAccessor(row),
+    [propsSearchAccessor, primaryAccessor],
+  );
+
   const dragOverlay = useMemo(() => {
     if (options.dragOverlay) {
       return (row: Projected<unknown>) => options.dragOverlay!(row.__row);
@@ -228,11 +246,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const onToggleExpanded =
     hierarchy.onToggleExpanded ??
     ((id: string, next: boolean) => setExpanded?.(id, next));
-  // TreeList requires `onMove`/`onCreate`; when the data source is read-only we
-  // pass inert handlers (drag is naturally inert with a no-op move).
-  const onMove = hierarchy.onMove ?? (() => {});
-  const onCreate =
-    hierarchy.onCreate ?? (async () => undefined as string | undefined);
+  // `onMove`/`onCreate` are optional: omitting them yields a read-only tree —
+  // TreeList drops the drag source and every Add affordance (no inert handlers).
   // Respect an *explicit* `addLabel: null` (hide the root footer) — `??` would
   // swallow it and fall back to "Add". Only an absent (undefined) option falls
   // through to the onCreate-derived default.
@@ -254,8 +269,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
           if (original !== undefined) props.onRowActivate?.(original);
         }}
         onToggleExpanded={onToggleExpanded}
-        onMove={onMove}
-        onCreate={onCreate}
+        onMove={hierarchy.onMove}
+        onCreate={hierarchy.onCreate}
         Row={Row}
         dragOverlay={dragOverlay}
         addLabel={addLabel}
@@ -265,7 +280,7 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
         }
         toolbar={{
           search: {
-            accessor: primaryAccessor,
+            accessor: searchAccessor,
             query: props.state.query,
             hideInput: true,
           },
