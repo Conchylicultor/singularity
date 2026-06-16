@@ -20,6 +20,14 @@ export type TreeRowChromeProps = {
    * slot only reserves layout space.
    */
   leading?: ReactNode;
+  /**
+   * Optional row icon (e.g. a page icon) merged into the chevron slot, Notion
+   * style: the icon shows at rest and the expand/collapse chevron reveals on
+   * row hover in the *same* box. When omitted, the chevron slot renders on its
+   * own as before. The chevron only appears for expandable rows (`hasChildren`
+   * or `leafChevron`); a non-expandable row with an icon shows only the icon.
+   */
+  icon?: ReactNode;
   /** Editable wrappers inject DnD state classes (dragging, drop-target ring). */
   className?: string;
   /** Editable wrappers attach the scroll + child-drop ref here. */
@@ -56,11 +64,13 @@ export function TreeRowChrome({
   children,
   actions,
   leading,
+  icon,
   className,
   rowRef,
   indentStep = 16,
   leafChevron = true,
 }: TreeRowChromeProps) {
+  const expandable = hasChildren || leafChevron;
   return (
     <div
       ref={rowRef}
@@ -74,7 +84,38 @@ export function TreeRowChrome({
       )}
       style={{ paddingLeft: depth * indentStep + 4 }}
     >
-      {hasChildren || leafChevron ? (
+      {icon != null ? (
+        // Notion-style merged slot: icon at rest, chevron on row hover, both
+        // sharing one size-5 box. The icon is purely visual (the row click
+        // navigates); the overlaid chevron button owns the toggle.
+        <span className="relative flex size-5 shrink-0 items-center justify-center">
+          <span
+            className={cn(
+              "flex items-center justify-center",
+              expandable && "group-hover/tree-row:opacity-0",
+            )}
+          >
+            {icon}
+          </span>
+          {expandable && (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggle?.();
+              }}
+              aria-label={isOpen ? "Collapse" : "Expand"}
+              className={cn(
+                "absolute inset-0 flex items-center justify-center rounded-md",
+                "hover:bg-background/60",
+                "opacity-0 group-hover/tree-row:opacity-100 focus-visible:opacity-100",
+              )}
+            >
+              <CollapsibleChevron open={isOpen} className="size-4" />
+            </button>
+          )}
+        </span>
+      ) : expandable ? (
         <button
           type="button"
           onClick={(e) => {

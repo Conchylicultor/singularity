@@ -22,12 +22,17 @@ export type RowChromeProps<T extends TreeItem> = {
   depth: number;
   children: ReactNode;
   actions?: ReactNode;
+  /**
+   * Optional row icon merged into the chevron slot (Notion style: icon at rest,
+   * chevron on hover). Forwarded to `TreeRowChrome.icon`.
+   */
+  icon?: ReactNode;
   menu?: RowMenuItem[] | ((helpers: RowChromeMenuHelpers) => RowMenuItem[]);
   className?: string;
 };
 
 export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
-  const { node, depth, children, actions, menu, className } = props;
+  const { node, depth, children, actions, icon, menu, className } = props;
   const r = useTreeRow(node);
   const ctx = useTreeListContext<T>();
   const Row = ctx.Row;
@@ -98,6 +103,7 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
             className,
           )}
           actions={actions}
+          icon={icon}
           leading={
             ctx.multiSelect ? (
               // The checkbox self-hides when inactive via a BARE

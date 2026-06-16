@@ -102,12 +102,10 @@ function DefaultRow<TRow>(props: {
         ) : undefined
       }
       menu={menu}
+      // Merge the icon into the chevron slot (Notion style: icon at rest,
+      // chevron on hover) rather than a separate leading column.
+      icon={leadingIcon ?? undefined}
     >
-      {leadingIcon != null ? (
-        <span className="flex shrink-0 items-center justify-center">
-          {leadingIcon}
-        </span>
-      ) : null}
       {label}
     </RowChrome>
   );
