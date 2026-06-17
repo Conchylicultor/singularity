@@ -36,6 +36,14 @@ export interface OverlayProps
    *  (`pointer-events-none`) and clicks fall through to `behind`. Interactive
    *  bits inside `children` opt back in with `<Overlay.Interactive>`. Default false. */
   clickThrough?: boolean;
+  /** Make `children` FILL the box (`absolute inset-0`) instead of sizing it.
+   *  Default (`false`) keeps `children` in-flow so they establish the box's
+   *  natural size — correct for content-sized overlays (badges, scrims over a
+   *  card). Set true for a full-surface overlay whose box is sized externally
+   *  (a `h-full w-full` host): the `children` then stretch to the box so a
+   *  filling child (e.g. an `iframe`/canvas with `h-full`) has a definite-height
+   *  parent to resolve against instead of collapsing to its intrinsic size. */
+  fill?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
 }
@@ -84,6 +92,10 @@ export function OverlayInteractive({
  *   header is one big toggle button behind, the header content rides on top
  *   click-through, and the few interactive bits (a file path, row actions) opt
  *   back in with `<Overlay.Interactive>`.
+ * - `fill` switches `children` from in-flow (content-sizes the box) to
+ *   `absolute inset-0` (fills a box sized externally) — the full-surface idiom:
+ *   a `h-full w-full` host whose filling child (iframe/canvas) needs a
+ *   definite-height parent instead of collapsing to its intrinsic size.
  *
  * Caller `className` composes last.
  */
@@ -93,6 +105,7 @@ function OverlayRoot({
   children,
   layer = "base",
   clickThrough = false,
+  fill = false,
   as: As = "div",
   className,
   ...rest
@@ -100,7 +113,12 @@ function OverlayRoot({
   return (
     <As className={cn("relative", LAYER_CLASS[layer], className)} {...rest}>
       {behind != null && <div className="absolute inset-0">{behind}</div>}
-      <div className={cn("relative", clickThrough && "pointer-events-none")}>
+      <div
+        className={cn(
+          fill ? "absolute inset-0" : "relative",
+          clickThrough && "pointer-events-none",
+        )}
+      >
         {children}
       </div>
       {above != null && (

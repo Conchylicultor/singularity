@@ -62,6 +62,7 @@ export function Viewport() {
 
   return (
     <Overlay
+      fill
       className="h-full w-full bg-background"
       above={activeLoading ? <LoadingBar /> : undefined}
     >

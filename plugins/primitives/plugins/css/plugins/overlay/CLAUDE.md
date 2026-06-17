@@ -51,6 +51,10 @@ header content inside is a `<Frame>`.
 - **`children`** (required) — in-flow content; establishes the box's natural size.
 - **`layer`** — `OverlayLayer`. Default `base`.
 - **`clickThrough`** — make `children` click-through. Default `false`.
+- **`fill`** — make `children` fill the box (`absolute inset-0`) instead of
+  sizing it, for a full-surface overlay whose box is sized externally
+  (`h-full w-full`) and whose filling child (iframe/canvas) would otherwise
+  collapse to its intrinsic size. Default `false` (in-flow, content-sized).
 - **`as`** — host element. Default `div`. **`className`** composes last.
 - **`Overlay.Interactive`** — `{ children, className? }`; the pointer-events opt-in.
 
