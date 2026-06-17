@@ -433,26 +433,48 @@ export function reorderMember(windowId: WindowId, tabId: string, atIndex: number
 }
 
 /**
- * Drop members whose tab is no longer open from every window, delete windows that
- * empty out, and repair a dropped `activeTabId` to the first survivor — so a
- * closed tab's window doesn't linger (and re-appear if a new tab reuses its
- * slot). Called from `FloatingChrome` keyed on the current open-tab id set.
+ * Reconcile every window against the surface's exit-presence sets, so a closed
+ * tab's window doesn't linger (and re-appear if a new tab reuses its slot) — yet
+ * a window mid-exit-tween is never pruned out from under its still-animating
+ * chrome. `liveTabIds` are the tabs still in the store; `retainedTabIds` are the
+ * live tabs PLUS those the host is retaining for an exit tween (a superset of
+ * `liveTabIds`). Called from the floating Foreground keyed on the retained id set.
+ *
+ * Per-window, mirroring the surface's exit-presence refinement:
+ *  - **≥1 LIVE member:** prune members down to the live ones immediately and
+ *    repair a dropped `activeTabId` to a surviving LIVE member — so closing the
+ *    active chip of a multi-tab window instantly reveals a sibling (no dead
+ *    frame). The just-closed member's container is still retained by the host but
+ *    is now inactive, so its chrome returns null (invisible) before it unmounts.
+ *  - **0 live but ≥1 RETAINED member:** leave the window fully intact (members +
+ *    geometry + activeTabId) so its active member can play the whole-window exit
+ *    tween. Do NOT delete or empty it.
+ *  - **0 live and 0 retained:** delete it (and persist), as before.
  */
-export function pruneWindows(openTabIds: Set<string>) {
+export function pruneWindows(
+  liveTabIds: Set<string>,
+  retainedTabIds: Set<string>,
+) {
   hydrate();
   let changed = false;
   for (const [id, win] of [...windows]) {
-    const members = win.members.filter((m) => openTabIds.has(m));
-    if (members.length === win.members.length) continue;
-    changed = true;
-    if (members.length === 0) {
-      windows.delete(id);
+    const live = win.members.filter((m) => liveTabIds.has(m));
+    if (live.length > 0) {
+      // ≥1 live member: prune to the live set now (reveals a sibling instantly).
+      if (live.length === win.members.length) continue;
+      changed = true;
+      const activeTabId = live.includes(win.activeTabId)
+        ? win.activeTabId
+        : live[0]!;
+      windows.set(id, { ...win, members: live, activeTabId });
       continue;
     }
-    const activeTabId = members.includes(win.activeTabId)
-      ? win.activeTabId
-      : members[0]!;
-    windows.set(id, { ...win, members, activeTabId });
+    // 0 live members: keep intact while any member is still retained (exiting) so
+    // its active member can animate the whole-window exit; otherwise delete.
+    const stillRetained = win.members.some((m) => retainedTabIds.has(m));
+    if (stillRetained) continue;
+    changed = true;
+    windows.delete(id);
   }
   if (changed) {
     persist();

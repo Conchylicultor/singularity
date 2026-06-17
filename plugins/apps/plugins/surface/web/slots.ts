@@ -19,6 +19,12 @@ export interface PlacementChromeProps {
   appId: string;
   title: string | undefined;
   focused: boolean;
+  /**
+   * True while this tab has left the store but is retained by the host for its
+   * exit tween (see {@link PlacementDef.exitDurationMs}). Placements without an
+   * `exitDurationMs` never see `true` — their tabs unmount instantly on close.
+   */
+  exiting: boolean;
   onClose: () => void;
   /** Switch this tab to the registry default placement (e.g. solo's exit). */
   onExitToDefault: () => void;
@@ -51,6 +57,14 @@ export interface PlacementDef {
   /** Exactly one placement should set this — the registry's default placement. */
   default?: boolean;
 
+  /**
+   * Defer this placement's per-tab teardown by N ms after the tab leaves the
+   * store, so its {@link PlacementDef.Chrome} can play an exit tween before the
+   * host truly unmounts it. Omitted ⇒ instant unmount (docked / solo keep the
+   * current behavior — a closed tab vanishes immediately).
+   */
+  exitDurationMs?: number;
+
   /** Static class applied to the stable per-tab container. */
   containerClassName: string;
   /** Render the container into `document.body` (escapes the backdrop, e.g. solo). */
@@ -68,12 +82,18 @@ export interface PlacementDef {
   /** Rendered once whenever >= 1 tab uses this placement (e.g. desktop wallpaper). */
   Backdrop?: ComponentType;
   /**
-   * Optional overlay rendered ONCE, ABOVE all tab containers, whenever >= 1 open
-   * tab uses this placement. Symmetric with {@link PlacementDef.Backdrop} (which
-   * renders below). Receives the open tabIds resolving to this placement so it
-   * stays decoupled from the host's placement-resolution.
+   * Optional overlay rendered ONCE, ABOVE all tab containers, whenever >= 1
+   * retained tab uses this placement. Symmetric with {@link PlacementDef.Backdrop}
+   * (which renders below). Receives two id sets resolving to this placement so it
+   * stays decoupled from the host's placement-resolution:
+   *  - `tabIds` — the LIVE tabs only (still in the store). Dock / cycle act on
+   *    these, so a closing window's chip disappears immediately and it can't be
+   *    cycled or docked while it plays its exit tween.
+   *  - `retainedTabIds` — the LIVE + EXITING tabs (live plus those retained for
+   *    an exit tween). Store-prune keys on this so a window is not pruned out from
+   *    under its still-animating Chrome.
    */
-  Foreground?: ComponentType<{ tabIds: string[] }>;
+  Foreground?: ComponentType<{ tabIds: string[]; retainedTabIds: string[] }>;
 
   // Capabilities consumed generically by apps-side chrome (no string compares):
   /** Focused tab in this placement => chrome wears the app theme. */

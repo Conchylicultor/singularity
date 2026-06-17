@@ -19,6 +19,7 @@ import {
   type PlacementDef,
   type PlacementStyleApi,
 } from "../slots";
+import { useTabPresence } from "../internal/use-tab-presence";
 
 /**
  * The single surface body that renders EVERY open tab at once and positions each
@@ -97,18 +98,27 @@ export function SurfaceBody() {
   const resolveId = (placement: string) =>
     byId.has(placement) ? placement : defaultId;
 
+  // Exit-presence layer (view-only): the live tabs plus any just-closed tab whose
+  // placement declares an `exitDurationMs`, retained so its Chrome can play an
+  // exit tween before the host truly unmounts it. Placements without the duration
+  // (docked / solo) keep their tabs instant. Drives the backdrop / foreground
+  // gates and the render loop below so wallpaper + window survive the tween.
+  const presence = useTabPresence(tabs, byId, defaultId);
+
   // Backdrops: render each placement's optional `Backdrop` once iff at least one
-  // open tab resolves to it (replaces the old `desktopMode` wallpaper rule).
+  // retained tab resolves to it (replaces the old `desktopMode` wallpaper rule).
+  // Keyed on `presence` (not `tabs`) so the wallpaper survives a closing window's
+  // exit tween rather than blinking out the instant the last window leaves the store.
   const backdrops = sorted.filter(
-    (d) => d.Backdrop && tabs.some((t) => resolveId(t.placement) === d.id),
+    (d) => d.Backdrop && presence.some((p) => resolveId(p.tab.placement) === d.id),
   );
 
   // Foregrounds: the symmetric overlay above all containers — each placement's
-  // optional `Foreground` rendered once iff at least one open tab resolves to it
-  // (e.g. floating's desktop dock). Stays generic: passes the resolved tabIds so
+  // optional `Foreground` rendered once iff at least one retained tab resolves to
+  // it (e.g. floating's desktop dock). Stays generic: passes the resolved tabIds so
   // the foreground never re-derives placement (e.g. floating's window dock).
   const foregrounds = sorted.filter(
-    (d) => d.Foreground && tabs.some((t) => resolveId(t.placement) === d.id),
+    (d) => d.Foreground && presence.some((p) => resolveId(p.tab.placement) === d.id),
   );
 
   return (
@@ -127,16 +137,17 @@ export function SurfaceBody() {
         const Backdrop = d.Backdrop!;
         return <Backdrop key={d.id} />;
       })}
-      {tabs.map((tab) => (
+      {presence.map((p) => (
         <TabContainer
-          key={tab.tabId}
-          def={byId.get(tab.placement) ?? byId.get(defaultId)}
+          key={p.tab.tabId}
+          def={byId.get(p.tab.placement) ?? byId.get(defaultId)}
           defaultId={defaultId}
-          tab={tab}
-          focused={tab.tabId === focusedTabId}
-          title={titles[tab.tabId]}
-          onFocus={() => focusTab(tab.tabId)}
-          onClose={() => closeTab(tab.tabId)}
+          tab={p.tab}
+          focused={p.tab.tabId === focusedTabId}
+          exiting={p.exiting}
+          title={titles[p.tab.tabId]}
+          onFocus={() => focusTab(p.tab.tabId)}
+          onClose={() => closeTab(p.tab.tabId)}
           setPlacement={setPlacement}
         />
       ))}
@@ -146,12 +157,20 @@ export function SurfaceBody() {
           from the host's placement-resolution. */}
       {foregrounds.map((d) => {
         const Foreground = d.Foreground!;
+        const forThis = presence.filter(
+          (p) => resolveId(p.tab.placement) === d.id,
+        );
         return (
           <Foreground
             key={d.id}
-            tabIds={tabs
-              .filter((t) => resolveId(t.placement) === d.id)
-              .map((t) => t.tabId)}
+            // LIVE ids only: the dock chip disappears immediately on close, and a
+            // closing window can't be cycled / docked while it animates out.
+            tabIds={forThis
+              .filter((p) => !p.exiting)
+              .map((p) => p.tab.tabId)}
+            // LIVE + EXITING ids: store-prune keys on this so a window is not
+            // pruned out from under its still-animating Chrome.
+            retainedTabIds={forThis.map((p) => p.tab.tabId)}
           />
         );
       })}
@@ -166,6 +185,8 @@ interface TabContainerProps {
   defaultId: string;
   tab: Tab;
   focused: boolean;
+  /** True while this tab has left the store but is retained for its exit tween. */
+  exiting: boolean;
   title: string | undefined;
   onFocus: () => void;
   onClose: () => void;
@@ -190,6 +211,7 @@ function TabContainer({
   defaultId,
   tab,
   focused,
+  exiting,
   title,
   onFocus,
   onClose,
@@ -279,6 +301,7 @@ function TabContainer({
             appId={tab.appId}
             title={title}
             focused={focused}
+            exiting={exiting}
             onClose={onClose}
             onExitToDefault={() => setPlacement(tab.tabId, defaultId)}
           />

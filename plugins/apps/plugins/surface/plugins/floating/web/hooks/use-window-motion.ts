@@ -44,6 +44,12 @@ const BOX_MS = 200;
 const ENTER_MS = 190;
 /** Minimize-to-dock exit tween. */
 const MINIMIZE_MS = 200;
+/**
+ * Window close (exit) tween — scale-down + fade, the reverse of the intro pop.
+ * Single-sourced so the surface host's exit-presence retention and this tween
+ * read the same duration (the floating placement sets `exitDurationMs = CLOSE_MS`).
+ */
+export const CLOSE_MS = 190;
 
 /** Decelerate curve for box + enter motion (Material "standard decelerate"). */
 const EASE_OUT = "cubic-bezier(0.2, 0, 0, 1)";
@@ -130,8 +136,17 @@ function usePrefersReducedMotion(): boolean {
  *  - `intro`     — opening pop (scale-in + fade), settles to `normal`.
  *  - `minimizing`— exit toward the dock, settles to `minimized` (display:none).
  *  - `restoring` — reverse of minimizing, settles to `normal`.
+ *  - `closing`   — close exit (scale-down + fade, reverse of `intro`); has no
+ *                  settle phase — the host unmounts the chrome after the
+ *                  exit-presence retention elapses.
  */
-type Phase = "intro" | "normal" | "minimizing" | "minimized" | "restoring";
+type Phase =
+  | "intro"
+  | "normal"
+  | "minimizing"
+  | "minimized"
+  | "restoring"
+  | "closing";
 
 export interface WindowStyle {
   /** The animated container box style (pushed onto the keep-alive container). */
@@ -154,6 +169,7 @@ export interface WindowStyle {
 export function useFloatingWindowStyle(
   win: FloatingWindow,
   isActive: boolean,
+  closing: boolean,
 ): WindowStyle {
   const reduced = usePrefersReducedMotion();
   const dragging = useWindowInteracting(win.id);
@@ -193,6 +209,17 @@ export function useFloatingWindowStyle(
     setPhase(geo.minimized ? "minimizing" : "restoring");
   }, [geo.minimized, isActive, reduced]);
 
+  // Enter the close exit tween when the host flags this (whole-)window closing.
+  // Reduced-motion / inactive members get no tween: the host unmounts the chrome
+  // after the retention timer regardless, so the degrade is just an instant
+  // disappearance (acceptable). Only arm once (guard on the resting `normal`
+  // phase) so a re-render can't restart the tween.
+  useEffect(() => {
+    if (!closing || !isActive || reduced) return;
+    setPlay(false);
+    setPhase("closing");
+  }, [closing, isActive, reduced]);
+
   // One-shot phase timers. A single deferred settle per transient phase (not a
   // polling loop): arm the enter "play" frame, then advance to the resting phase
   // once the tween's duration has elapsed.
@@ -209,6 +236,12 @@ export function useFloatingWindowStyle(
       const t = setTimeout(() => setPhase("minimized"), MINIMIZE_MS + 20);
       return () => clearTimeout(t);
     }
+    if (phase === "closing") {
+      // Arm the close tween's "to" frame; NO settle timer — the host unmounts the
+      // chrome once the exit-presence retention (CLOSE_MS) elapses.
+      const raf = requestAnimationFrame(() => setPlay(true));
+      return () => cancelAnimationFrame(raf);
+    }
   }, [phase]);
 
   return useMemo<WindowStyle>(() => {
@@ -217,11 +250,14 @@ export function useFloatingWindowStyle(
       : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
 
     // Fully hidden: an inactive member, a settled-minimized window, or a window
-    // that is flagged minimized while resting (hydrated-minimized / reduced).
+    // that is flagged minimized while resting (hydrated-minimized / reduced). A
+    // `closing` window must keep painting to animate, so it is never hidden by the
+    // resting-minimized rules below (the `closing` arm short-circuits them).
     const hidden =
-      !isActive ||
-      phase === "minimized" ||
-      ((phase === "normal" || phase === "intro") && geo.minimized);
+      phase !== "closing" &&
+      (!isActive ||
+        phase === "minimized" ||
+        ((phase === "normal" || phase === "intro") && geo.minimized));
 
     let transform: string | undefined;
     let opacity: number | undefined;
@@ -238,6 +274,11 @@ export function useFloatingWindowStyle(
       transform = play ? "translateY(0) scale(1)" : MINIMIZED_TRANSFORM;
       opacity = play ? 1 : 0;
       transformOrigin = MINIMIZED_ORIGIN;
+    } else if (phase === "closing") {
+      // Reverse of `intro`: shrink + fade about the center as the window exits.
+      transform = play ? "scale(0.96)" : "scale(1)";
+      opacity = play ? 0 : 1;
+      transformOrigin = "center";
     }
 
     const parts: string[] = [];
@@ -254,6 +295,11 @@ export function useFloatingWindowStyle(
       parts.push(
         `transform ${MINIMIZE_MS}ms ${EASE_IN}`,
         `opacity ${MINIMIZE_MS}ms ${EASE_IN}`,
+      );
+    if (phase === "closing")
+      parts.push(
+        `transform ${CLOSE_MS}ms ${EASE_IN}`,
+        `opacity ${CLOSE_MS}ms ${EASE_IN}`,
       );
 
     const containerStyle: CSSProperties = {

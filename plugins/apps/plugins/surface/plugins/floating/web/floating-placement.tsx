@@ -8,7 +8,6 @@ import {
 } from "@plugins/apps/plugins/surface/web";
 import {
   mergeTabIntoWindow,
-  pruneWindows,
   reorderMember,
   setActiveMember,
   splitTabToNewWindow,
@@ -24,7 +23,7 @@ import {
 import { type MergeTarget } from "./components/window-system-menu";
 import { DesktopWallpaper } from "./components/desktop-wallpaper";
 import { FloatingForeground } from "./components/floating-foreground";
-import { useFloatingWindowStyle } from "./hooks/use-window-motion";
+import { CLOSE_MS, useFloatingWindowStyle } from "./hooks/use-window-motion";
 
 /**
  * The floating placement: a free-floating, draggable/resizable window over the
@@ -40,6 +39,10 @@ export const floatingDef: PlacementDef = {
   visibleWhenUnfocused: true,
   tearOffTarget: true,
   newTabFollows: true,
+  // Defer teardown of a just-closed floating tab by the close tween's duration so
+  // `FloatingChrome` can animate the window out before the host unmounts it.
+  // Single-sourced with the tween (CLOSE_MS) so retention + tween never drift.
+  exitDurationMs: CLOSE_MS,
   containerClassName:
     "absolute overflow-hidden rounded-lg border bg-background shadow-lg",
   Backdrop: DesktopWallpaper,
@@ -64,7 +67,7 @@ export const floatingDef: PlacementDef = {
  * Focus-on-pointerdown is owned by the host; this only ADDS raise-to-front via
  * the registered pointer-down-capture handler.
  */
-function FloatingChrome({ tabId, focused }: PlacementChromeProps) {
+function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
   const { tabs, titles, focusTab, closeTab } = useTabs();
@@ -72,14 +75,10 @@ function FloatingChrome({ tabId, focused }: PlacementChromeProps) {
   const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
     usePlacementStyle();
 
-  // Drop members whose tab is no longer open + delete empty windows, so a closed
-  // window's box doesn't linger in the store. Runs from any mounted floating
-  // window keyed on the open-tab id set — the only context where windows matter.
-  const openIds = useMemo(() => tabs.map((t) => t.tabId).join(","), [tabs]);
-  useEffect(() => {
-    pruneWindows(new Set(tabs.map((t) => t.tabId)));
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the id set, not the tab objects
-  }, [openIds]);
+  // Store reconcile (pruneWindows) lives in the floating Foreground now, keyed on
+  // the host's live + retained id sets — so a window mid-exit-tween isn't pruned
+  // out from under this chrome (which would re-mint a fresh window + play an
+  // intro). This chrome only animates; it never touches the windows map's lifecycle.
 
   // When this tab becomes globally focused but isn't its window's active member
   // (focus arrived from cycle / dock / a fresh tab), make it the shown member so
@@ -94,7 +93,22 @@ function FloatingChrome({ tabId, focused }: PlacementChromeProps) {
   // resolve to `hidden` (display:none) but stay mounted (keep-alive) — the dock
   // chip is then the only restore target. The visible member clears the titlebar
   // via the content inset.
-  const { containerStyle, hidden } = useFloatingWindowStyle(win, isActive);
+  // This (whole-)window is closing only when this tab is exiting AND none of its
+  // window's members are still live in the store — i.e. the entire window is going
+  // away (titlebar X / last member / mod+w on a single-member window), not just a
+  // single chip of a multi-tab window (which the Foreground's prune resolves to an
+  // instant sibling reveal). Only a whole-window close plays the exit tween.
+  const liveIds = useMemo(
+    () => new Set(tabs.map((t) => t.tabId)),
+    [tabs],
+  );
+  const windowClosing = exiting && win.members.every((m) => !liveIds.has(m));
+
+  const { containerStyle, hidden } = useFloatingWindowStyle(
+    win,
+    isActive,
+    windowClosing,
+  );
   const insetStyle = useMemo(
     () => (hidden ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET }),
     [hidden],
