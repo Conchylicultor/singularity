@@ -1,11 +1,9 @@
 import {
   createContext,
-  useCallback,
   useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
-  useRef,
 } from "react";
 import { useConfig, useScopeForked } from "@plugins/config_v2/web";
 import { useActiveApp } from "@plugins/apps/web";
@@ -27,16 +25,17 @@ import type {
 import { transformValues } from "../internal/transform";
 import { mergeGroupValues } from "../internal/merge-group-values";
 import { renderGroupBlock } from "../internal/serialize-vars";
-import { writeCriticalCss, type CachedColorMode } from "../internal/theme-cache";
+import { type CachedColorMode } from "../internal/theme-cache";
+import {
+  claimPaintStyle,
+  releasePaintStyle,
+  reportPaintStyle,
+  setPaintContext,
+} from "../internal/paint-cache-aggregator";
 
 // styleId for a token group's <style>, shared by the runtime injector, the
 // localStorage cache, and the pre-paint replay script (web-core/index.html).
 const styleIdFor = (groupId: string) => `theme-engine-${groupId}`;
-
-// Each GroupStyle reports its rendered CSS text up to ThemeInjector, which
-// consolidates all groups into one localStorage envelope for pre-paint replay.
-type CssReporter = (groupId: string, text: string | null) => void;
-const CssReportContext = createContext<CssReporter>(() => {});
 
 const DEFAULT_ADJUSTMENT: ColorAdjustment = {
   hueShift: 0,
@@ -92,14 +91,13 @@ function GroupStyle({
   // When set, this GroupStyle emits a *scoped* override block targeting
   // `[data-theme-scope="<scopeToken>"]` instead of global `:root`/`.dark` (e.g.
   // `"app:home"` for one desktop window's subtree, or `"chrome"` for the global
-  // app chrome). Scoped blocks use a distinct `theme-scope-` style id (kept out
-  // of the global `theme-engine-` prune sweep) and never report to the pre-paint
-  // cache (overrides paint via useLayoutEffect before the scoped subtree is
-  // shown, so the warm-reload cache is irrelevant).
+  // app chrome). Scoped blocks use a distinct `theme-scope-` style id; both
+  // scoped and unscoped blocks feed the pre-paint cache aggregator so a warm
+  // reload paints every visible surface (global + chrome + each open app) on
+  // frame 0.
   scopeToken?: string;
 }) {
   const adjustment = useContext(ColorAdjustContext);
-  const report = useContext(CssReportContext);
   const state = useTokenGroupPresets(group.id);
   const config = useConfig(group.configDescriptor, { scopeId }) as {
     preset: string;
@@ -152,11 +150,11 @@ function GroupStyle({
 
   useLayoutEffect(() => {
     if (!mergedLight || !mergedDark) return;
-    // Scoped overrides get a distinct `theme-scope-` id so they're excluded from
-    // the global `style[id^="theme-engine-"]` prune (and cleaned up by their own
-    // ScopedAppTheme unmount); the global path keeps the `theme-engine-` id the
-    // pre-paint replay and cache rely on.
+    // Scoped overrides get a distinct `theme-scope-` id; the global path keeps the
+    // `theme-engine-` id the pre-paint replay and cache rely on. Both id families
+    // feed the aggregator and the claim-based prune set.
     const id = scopeToken ? `theme-scope-${scopeToken}-${group.id}` : styleIdFor(group.id);
+    // Adopt the replay-injected element in place (by id) before any prune pass.
     let el = document.getElementById(id) as HTMLStyleElement | null;
     if (!el) {
       el = document.createElement("style");
@@ -170,13 +168,16 @@ function GroupStyle({
       scopeToken ? themeScopeSelectors(scopeToken) : undefined,
     );
     el.textContent = text;
-    // Scoped overrides never feed the pre-paint cache — only the global path does.
-    if (!scopeToken) report(group.id, text);
+    // Claim this id so the prune pass keeps the element, and feed the pre-paint
+    // cache (both scoped and unscoped blocks).
+    claimPaintStyle(id);
+    reportPaintStyle(id, text);
     return () => {
       el.remove();
-      if (!scopeToken) report(group.id, null);
+      releasePaintStyle(id);
+      reportPaintStyle(id, null);
     };
-  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment, report, scopeToken]);
+  }, [mergedLight, mergedDark, group.descriptor, group.id, adjustment, scopeToken]);
 
   return null;
 }
@@ -218,73 +219,16 @@ export function ThemeInjector() {
   };
   const appPath = active?.path;
 
-  // Collect each group's rendered CSS text and write the per-app-path localStorage
-  // envelope, which the pre-paint script in web-core/index.html replays before
-  // first paint so a warm reload is themed on frame 0. This is a pure side effect
-  // (localStorage) — it intentionally uses refs + a microtask flush rather than
-  // React state, so reporting can never schedule a re-render (which from a layout
-  // effect would loop). One atomic write per app (never per-group) avoids a torn
-  // cache; we wait until every live group has reported. The paint context is set
-  // in the render body (not an effect) so it is current before the flush
-  // microtask. See theme-cache.
-  const stylesRef = useRef<Map<string, string>>(new Map());
-  const ctxRef = useRef<{
-    appPath: string | undefined;
-    mode: CachedColorMode;
-    forked: boolean;
-  }>({ appPath, mode: colorMode, forked });
-  ctxRef.current = { appPath, mode: colorMode, forked };
-  const groupCountRef = useRef(0);
-  groupCountRef.current = groups.length;
-  const flushScheduledRef = useRef(false);
-
-  const flush = useCallback(() => {
-    flushScheduledRef.current = false;
-    const map = stylesRef.current;
-    if (map.size < groupCountRef.current) return; // torn cache — wait for all groups
-    const styles: Record<string, string> = {};
-    for (const [groupId, text] of map) styles[styleIdFor(groupId)] = text;
-    const { appPath, mode, forked } = ctxRef.current;
-    writeCriticalCss({ appPath, styles, mode, forked });
-  }, []);
-
-  const scheduleFlush = useCallback(() => {
-    if (flushScheduledRef.current) return;
-    flushScheduledRef.current = true;
-    queueMicrotask(flush);
-  }, [flush]);
-
-  const report = useCallback<CssReporter>(
-    (groupId, text) => {
-      const map = stylesRef.current;
-      if (text === null) {
-        if (!map.delete(groupId)) return;
-      } else if (map.get(groupId) === text) {
-        return;
-      } else {
-        map.set(groupId, text);
-      }
-      scheduleFlush();
-    },
-    [scheduleFlush],
-  );
-
-  // Re-flush when the paint context changes even if no group's CSS text did —
-  // e.g. switching to an app with an identical theme, a fork toggle, or a
-  // configured-mode change. The flush reads the latest context from ctxRef.
-  useEffect(scheduleFlush, [appPath, colorMode, forked, scheduleFlush]);
-
-  // Prune orphaned <style> elements left by the replay script for token groups
-  // that no longer exist (stale cache after a group was removed). No GroupStyle
-  // adopts them, so they would otherwise declare dead vars forever.
-  useLayoutEffect(() => {
-    const live = new Set(groups.map((g) => styleIdFor(g.id)));
-    for (const el of document.querySelectorAll<HTMLStyleElement>(
-      'style[id^="theme-engine-"]',
-    )) {
-      if (!live.has(el.id)) el.remove();
-    }
-  }, [groups]);
+  // Feed the active paint context to the module-level aggregator, which collects
+  // EVERY GroupStyle's CSS text (global `:root`/`.dark`, the chrome scope, and
+  // every open app scope) and writes the per-app-path localStorage envelope the
+  // pre-paint script in web-core/index.html replays before first paint — so a
+  // warm reload paints every visible surface themed on frame 0. The aggregator
+  // owns the debounced microtask flush and the claim-based stale-element prune
+  // (both global and scoped ids). The context is set in the render body (not an
+  // effect) so it is current before the flush microtask. See
+  // paint-cache-aggregator and theme-cache.
+  setPaintContext({ appPath, mode: colorMode, forked });
 
   const groupStyles = groups.map((g) => (
     <GroupStyle key={g.id} group={g} scopeId={scopeId} />
@@ -303,9 +247,7 @@ export function ThemeInjector() {
   return (
     <ThemeScopeProvider scopeId={scopeId}>
       <ColorModeApplier resolved={resolved} />
-      <CssReportContext.Provider value={report}>
-        {content}
-      </CssReportContext.Provider>
+      {content}
     </ThemeScopeProvider>
   );
 }
@@ -319,9 +261,11 @@ export function ThemeInjector() {
 // It reuses the same preset resolution, merge, color-transform adjustment, and
 // completeness backstop as the global path (all live inside GroupStyle /
 // WithAdjustment) — only the selector and style id differ (via `scopeToken`).
-// Deliberately omits ColorModeApplier (light/dark stays global), the
-// CssReportContext provider (the default no-op; `scopeToken` gates reports off
-// regardless), and the cache / active-scope-storage side effects.
+// Its GroupStyle children feed the pre-paint cache aggregator (under their
+// `theme-scope-app:<id>-<group>` ids) just like the global path, so a warm
+// reload paints this app's scope on frame 0. Deliberately omits ColorModeApplier
+// (light/dark stays global) and the active-scope-storage side effect (owned by
+// ThemeInjector).
 export function ScopedAppTheme({ appId }: { appId: string }) {
   const scopeId = appThemeScope(appId);
   const groups = ThemeEngine.TokenGroup.useContributions();
