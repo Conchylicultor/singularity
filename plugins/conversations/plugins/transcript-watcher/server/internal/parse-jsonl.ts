@@ -1,6 +1,7 @@
 import { XMLParser } from "fast-xml-parser";
 import { extractPreprompt } from "../../core";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
+import { activeLineUuids } from "./branch-filter";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 
@@ -192,6 +193,21 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
   if (!(await file.exists())) return [];
   const raw = await file.text();
 
+  // Parse every line once up front. The transcript is a forest (uuid /
+  // parentUuid); a rewind/edit leaves the abandoned branch in the file. Compute
+  // which lines belong to the live conversation and skip the rest, so the view
+  // shows the path the user kept rather than abandoned attempts inline.
+  const parsed: Record<string, unknown>[] = [];
+  for (const line of raw.split("\n")) {
+    if (!line) continue;
+    try {
+      parsed.push(JSON.parse(line) as Record<string, unknown>);
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+    }
+  }
+  const keptUuids = activeLineUuids(parsed);
+
   const events: JsonlEvent[] = [];
   const assistantTextByMsgId = new Map<
     string,
@@ -208,15 +224,12 @@ export async function readJsonlEvents(path: string): Promise<JsonlEvent[]> {
   // ever appears once; set true on a real hit so a later turn can't re-trigger.
   let seenPreprompt = false;
 
-  for (const line of raw.split("\n")) {
-    if (!line) continue;
-    let obj: Record<string, unknown>;
-    try {
-      obj = JSON.parse(line);
-    } catch (err) {
-      if (!(err instanceof SyntaxError)) throw err;
-      continue;
-    }
+  for (const obj of parsed) {
+    // Skip lines on an abandoned rewind branch — they are not part of the
+    // live conversation. Lines without a uuid (metadata markers) are not in
+    // the tree and always pass through.
+    const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
+    if (uuid && !keptUuids.has(uuid)) continue;
     const ts = typeof obj.timestamp === "string" ? obj.timestamp : null;
     if (!ts) continue;
 
