@@ -1261,7 +1261,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/tool-call/read`
             - **`collapsible-card`** — Disclosure-card primitive: chevron trigger, optional sibling file path (never nested), and a collapsible body. One uniform chrome; semantic accents live in the label, the error flag, and the call-site className.
               - Web:
-                - Uses: `conversations/conversation-view/jsonl-viewer.RowActions`, `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `primitives/card.Card`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/ui-kit.cn`
+                - Uses: `conversations/conversation-view/jsonl-viewer.RowActions`, `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `primitives/card.Card`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.useCollapsible`, `primitives/css/frame.Frame`, `primitives/ui-kit.cn`
                 - Exports: Types: `CollapsibleCardProps`; Values: `CardHeaderAction`, `CollapsibleCard`
               - Cross-plugin:
                 - Imported by: `conversations/conversation-view/jsonl-viewer/assistant-thinking`, `conversations/conversation-view/jsonl-viewer/attachment`, `conversations/conversation-view/jsonl-viewer/attachment/agent-listing-delta`, `conversations/conversation-view/jsonl-viewer/attachment/command-permissions`, `conversations/conversation-view/jsonl-viewer/attachment/date-change`, `conversations/conversation-view/jsonl-viewer/attachment/deferred-tools-delta`, `conversations/conversation-view/jsonl-viewer/attachment/edited-text-file`, `conversations/conversation-view/jsonl-viewer/attachment/hook-additional-context`, `conversations/conversation-view/jsonl-viewer/attachment/hook-success`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/attachment/skill-listing`, `conversations/conversation-view/jsonl-viewer/attachment/task-reminder`, `conversations/conversation-view/jsonl-viewer/meta-prompt`, `conversations/conversation-view/jsonl-viewer/preprompt`, `conversations/conversation-view/jsonl-viewer/queued-prompt-card`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/unknown`
@@ -3302,6 +3302,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses: `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.cn`
             - Exports: Types: `FrameAlign`, `FrameProps`; Values: `Frame`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/jsonl-viewer/collapsible-card`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/ui-kit.cn`
