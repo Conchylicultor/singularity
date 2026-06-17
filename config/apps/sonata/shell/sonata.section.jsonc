@@ -3,6 +3,7 @@
   // Hide: { "item": "<key>", "hidden": true }. Gap: { "type": "spacer", "id": "<unique-id>" }.
   "items": [
     "apps.sonata.track-mixer:track-mixer",
+    "apps.sonata.rich.chord-progression:chord-progression",
     "apps.sonata.rich.chord-readout:chord-readout",
     "apps.sonata.rich.key-readout:key-readout",
     "apps.sonata.rich.circle-of-fifths:circle-of-fifths",
