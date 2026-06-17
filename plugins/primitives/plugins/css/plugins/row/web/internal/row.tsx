@@ -1,4 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  useHoverReveal,
+  hoverRevealClass,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type React from "react";
 
 export type RowSize = "sm" | "md";
@@ -49,12 +53,46 @@ export function Row({
   ...rest
 }: RowProps) {
   const isButton = As === "button";
+  // Hover/focus reveal for the trailing actions. Only rows that actually hide
+  // their actions need the JS state, so plain/always-visible rows keep their
+  // zero-cost CSS-only hover. Consumer-supplied pointer/focus handlers compose.
+  const needsReveal = !!actions && !actionsAlwaysVisible;
+  const { revealed, groupProps } = useHoverReveal();
+  const {
+    onPointerEnter,
+    onPointerLeave,
+    onFocus,
+    onBlur,
+    ...restProps
+  } = rest as {
+    onPointerEnter?: React.PointerEventHandler;
+    onPointerLeave?: React.PointerEventHandler;
+    onFocus?: React.FocusEventHandler;
+    onBlur?: React.FocusEventHandler;
+    [key: string]: unknown;
+  };
   return (
     <As
       ref={ref}
       type={isButton ? "button" : undefined}
       disabled={isButton ? disabled : undefined}
       aria-current={isButton && selected ? true : undefined}
+      onPointerEnter={(e: React.PointerEvent) => {
+        if (needsReveal) groupProps.onPointerEnter();
+        onPointerEnter?.(e);
+      }}
+      onPointerLeave={(e: React.PointerEvent) => {
+        if (needsReveal) groupProps.onPointerLeave();
+        onPointerLeave?.(e);
+      }}
+      onFocus={(e: React.FocusEvent) => {
+        if (needsReveal) groupProps.onFocus();
+        onFocus?.(e);
+      }}
+      onBlur={(e: React.FocusEvent) => {
+        if (needsReveal) groupProps.onBlur(e);
+        onBlur?.(e);
+      }}
       className={cn(
         "group flex w-full region-line rounded-md p-row text-left transition-colors [&_svg:not([class*='size-'])]:icon-auto",
         "disabled:pointer-events-none disabled:opacity-50",
@@ -66,7 +104,7 @@ export function Row({
         className,
       )}
       style={indent !== undefined ? { paddingLeft: indent } : undefined}
-      {...rest}
+      {...restProps}
     >
       {icon}
       {children}
@@ -75,7 +113,7 @@ export function Row({
           onClick={(e) => e.stopPropagation()}
           className={cn(
             "ml-auto flex shrink-0 items-center gap-2xs",
-            !actionsAlwaysVisible && "opacity-0 group-hover:opacity-100",
+            hoverRevealClass(revealed, { alwaysVisible: actionsAlwaysVisible }),
           )}
         >
           {actions}

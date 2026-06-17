@@ -3,6 +3,11 @@ import { MdClose, MdAccountTree } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  useHoverReveal,
+  hoverRevealClass,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type {
   FieldDef,
   FilterConjunction,
@@ -36,9 +41,10 @@ export function FilterRuleRow<TRow>(props: {
     : undefined;
   const operator = opSet?.operators.find((o) => o.id === rule.operatorId);
   const ValueInput = operator?.hasValue ? operator.ValueInput : undefined;
+  const { revealed, groupProps } = useHoverReveal();
 
   return (
-    <Stack direction="row" gap="xs" align="center" className="group/rule">
+    <Stack direction="row" gap="xs" align="center" {...groupProps}>
       <ConjunctionCell
         index={props.index}
         conjunction={props.groupConjunction}
@@ -77,7 +83,7 @@ export function FilterRuleRow<TRow>(props: {
         direction="row"
         gap="2xs"
         align="center"
-        className="shrink-0 opacity-0 transition-opacity group-hover/rule:opacity-100 focus-within:opacity-100"
+        className={cn("shrink-0", hoverRevealClass(revealed))}
       >
         <IconButton
           icon={MdAccountTree}

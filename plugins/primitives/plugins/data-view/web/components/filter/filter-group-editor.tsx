@@ -4,6 +4,10 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  useHoverReveal,
+  hoverRevealClass,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { ConjunctionCell } from "./conjunction-cell";
 import { FilterRuleRow } from "./filter-rule-row";
@@ -45,54 +49,69 @@ export function FilterGroupEditor<TRow>(props: {
               ctx={ctx}
             />
           ) : (
-            <Stack
+            <NestedGroupRow
               key={child.id}
-              direction="row"
-              gap="xs"
-              align="start"
-              className="group/group"
-            >
-              <ConjunctionCell
-                index={index}
-                conjunction={group.conjunction}
-                onChange={setConjunction}
-              />
-              <Surface
-                level="sunken"
-                className="min-w-0 flex-1 rounded-md border"
-              >
-                <Inset pad="sm">
-                  <Stack gap="xs">
-                    <Stack direction="row" gap="xs" align="center">
-                      <Text
-                        as="div"
-                        variant="caption"
-                        tone="muted"
-                        className="mr-auto"
-                      >
-                        Filter group
-                      </Text>
-                      <IconButton
-                        icon={MdClose}
-                        label="Remove group"
-                        size="icon-sm"
-                        className="opacity-0 transition-opacity group-hover/group:opacity-100 focus-visible:opacity-100"
-                        onClick={() => ctx.deleteNode(child.id)}
-                      />
-                    </Stack>
-                    <FilterGroupEditor group={child} ctx={ctx} />
-                    <AddFilterAffordance
-                      fields={ctx.fields}
-                      onPick={(fieldId) => ctx.addRuleForField(child.id, fieldId)}
-                      onAddGroup={() => ctx.addGroup(child.id)}
-                    />
-                  </Stack>
-                </Inset>
-              </Surface>
-            </Stack>
+              group={child}
+              index={index}
+              parentConjunction={group.conjunction}
+              onSetConjunction={setConjunction}
+              ctx={ctx}
+            />
           ),
         )
       )}
+    </Stack>
+  );
+}
+
+/**
+ * One nested child group: its conjunction column plus a sunken Surface holding
+ * the group header (label + hover-revealed remove), the recursive editor, and an
+ * add affordance. Split out so it can own its own `useHoverReveal` state — the
+ * remove control is then scoped to this group only and never reveals from a
+ * hover on a sibling rule or the parent group.
+ */
+function NestedGroupRow<TRow>(props: {
+  group: FilterGroup;
+  index: number;
+  parentConjunction: FilterConjunction;
+  onSetConjunction: (conjunction: FilterConjunction) => void;
+  ctx: FilterEditorContext<TRow>;
+}): ReactNode {
+  const { group, ctx } = props;
+  const { revealed, groupProps } = useHoverReveal();
+
+  return (
+    <Stack direction="row" gap="xs" align="start" {...groupProps}>
+      <ConjunctionCell
+        index={props.index}
+        conjunction={props.parentConjunction}
+        onChange={props.onSetConjunction}
+      />
+      <Surface level="sunken" className="min-w-0 flex-1 rounded-md border">
+        <Inset pad="sm">
+          <Stack gap="xs">
+            <Stack direction="row" gap="xs" align="center">
+              <Text as="div" variant="caption" tone="muted" className="mr-auto">
+                Filter group
+              </Text>
+              <IconButton
+                icon={MdClose}
+                label="Remove group"
+                size="icon-sm"
+                className={hoverRevealClass(revealed)}
+                onClick={() => ctx.deleteNode(group.id)}
+              />
+            </Stack>
+            <FilterGroupEditor group={group} ctx={ctx} />
+            <AddFilterAffordance
+              fields={ctx.fields}
+              onPick={(fieldId) => ctx.addRuleForField(group.id, fieldId)}
+              onAddGroup={() => ctx.addGroup(group.id)}
+            />
+          </Stack>
+        </Inset>
+      </Surface>
     </Stack>
   );
 }
