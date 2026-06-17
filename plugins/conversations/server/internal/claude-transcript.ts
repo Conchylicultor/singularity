@@ -1,3 +1,8 @@
+import {
+  activeLineUuids,
+  isInterruptContent,
+} from "@plugins/conversations/plugins/transcript-watcher/core";
+
 export type TurnRole = "user" | "assistant";
 
 export interface Turn {
@@ -12,43 +17,59 @@ export interface Turn {
   messageId?: string;
 }
 
+/**
+ * Pop the most recent *live* user prompt out of the transcript so a stopped
+ * turn can restore it to the prompt editor. Returns the text (and truncates the
+ * file from that turn onward) or null when there is nothing to rewind.
+ *
+ * The prompt is rarely the literal last line: Claude Code appends
+ * non-conversation lines (`file-history-snapshot` / `system` / `ai-title` / …)
+ * and an interrupt sentinel (`[Request interrupted by user]`) after it. So scan
+ * backwards over the live conversation — ignoring abandoned rewind branches via
+ * the active-path set — skipping that trailing noise. Stop without rewinding at
+ * an assistant turn or a tool result: a prompt the agent has already begun
+ * answering must not be popped back.
+ */
 export async function rewindLastUserTurn(path: string): Promise<string | null> {
   const file = Bun.file(path);
   if (!(await file.exists())) return null;
   const raw = await file.text();
   const lines = raw.split("\n");
 
-  // Find the last non-empty line
-  let lastIdx = lines.length - 1;
-  while (lastIdx >= 0 && !lines[lastIdx]!.trim()) lastIdx--;
-  if (lastIdx < 0) return null;
+  // Parse every non-blank line, keeping its file-line index for truncation.
+  const parsed: { index: number; obj: Record<string, unknown> }[] = [];
+  lines.forEach((line, index) => {
+    if (!line.trim()) return;
+    try {
+      parsed.push({ index, obj: JSON.parse(line) as Record<string, unknown> });
+    } catch (err) {
+      if (!(err instanceof SyntaxError)) throw err;
+    }
+  });
 
-  let obj: Record<string, unknown>;
-  try {
-    obj = JSON.parse(lines[lastIdx]!);
-  } catch (err) {
-    if (!(err instanceof SyntaxError)) throw err;
-    return null;
+  const active = activeLineUuids(parsed.map((p) => p.obj));
+
+  for (let i = parsed.length - 1; i >= 0; i--) {
+    const { index, obj } = parsed[i]!;
+    const uuid = typeof obj.uuid === "string" ? obj.uuid : null;
+    if (uuid && !active.has(uuid)) continue; // abandoned rewind branch
+
+    if (obj.type === "assistant") return null; // agent already responding
+    if (obj.type !== "user") continue; // file-history-snapshot / system / ai-title / …
+
+    const msg = obj.message as { role?: string; content?: unknown } | undefined;
+    if (msg?.role !== "user" || typeof msg.content !== "string" || !msg.content) {
+      // Array content = tool result → the agent is mid-turn; nothing to pop.
+      if (Array.isArray(msg?.content)) return null;
+      continue;
+    }
+    if (isInterruptContent(msg.content)) continue; // "[Request interrupted by user]"
+
+    // Drop this user turn and any trailing metadata, then hand the text back.
+    await Bun.write(path, lines.slice(0, index).join("\n") + "\n");
+    return msg.content;
   }
-
-  const msg = obj.message as { role?: string; content?: unknown } | undefined;
-
-  // Only rewind pure-text user turns (string content, no tool_result arrays)
-  if (
-    obj.type !== "user" ||
-    msg?.role !== "user" ||
-    typeof msg.content !== "string" ||
-    !msg.content
-  ) {
-    return null;
-  }
-
-  const text = msg.content;
-
-  // Remove the last non-empty line and write back
-  await Bun.write(path, lines.slice(0, lastIdx).join("\n") + "\n");
-
-  return text;
+  return null;
 }
 
 export async function readTurns(

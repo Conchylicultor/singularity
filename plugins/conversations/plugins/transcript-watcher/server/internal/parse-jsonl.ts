@@ -1,7 +1,6 @@
 import { XMLParser } from "fast-xml-parser";
-import { extractPreprompt } from "../../core";
+import { extractPreprompt, activeLineUuids } from "../../core";
 import type { JsonlEvent, TokenUsage, ToolCallResult } from "../../core";
-import { activeLineUuids } from "./branch-filter";
 
 type ToolCallEvent = Extract<JsonlEvent, { kind: "tool-call" }>;
 

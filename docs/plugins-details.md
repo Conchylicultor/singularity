@@ -1621,7 +1621,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Cross-plugin:
         - Imported by: `conversations`, `conversations/conversation-view/jsonl-viewer`, `conversations/transcript-api`, `conversations/transcript-retention`
       - Core:
-        - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `extractPreprompt`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `TokenUsageSchema`, `wrapPreprompt`
+        - Exports: Types: `JsonlEvent`, `TokenUsage`, `ToolCallResult`, `UserTextSegment`; Values: `activeLineUuids`, `extractPreprompt`, `isInterruptContent`, `JsonlEventSchema`, `PREPROMPT_TAG`, `TokenUsageSchema`, `wrapPreprompt`
 
 - **`database`** — Core database infrastructure. Connection pooling and DB readiness.
   - Server:
