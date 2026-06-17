@@ -10,6 +10,10 @@ import {
  * registration order (reorder primitive handles user reordering automatically).
  */
 export const Browser = {
+  /** In-app tab strip (one entry per navigation stack); rendered above the chrome bar. */
+  TabStrip: defineRenderSlot<{ component: ComponentType }>("browser.tab-strip", {
+    docLabel: () => "Tab strip",
+  }),
   /** Leading navigation buttons (back/forward/reload/home) in the chrome bar. */
   NavControls: defineRenderSlot<{ component: ComponentType }>(
     "browser.nav-controls",

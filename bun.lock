@@ -140,6 +140,10 @@
       "name": "@singularity/plugin-apps-browser-start-page",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/browser/plugins/tabs": {
+      "name": "@singularity/plugin-apps-browser-tabs",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/browser/plugins/webview": {
       "name": "@singularity/plugin-apps-browser-webview",
       "version": "0.0.1",
@@ -3585,6 +3589,8 @@
     "@singularity/plugin-apps-browser-shell": ["@singularity/plugin-apps-browser-shell@workspace:plugins/apps/plugins/browser/plugins/shell"],
 
     "@singularity/plugin-apps-browser-start-page": ["@singularity/plugin-apps-browser-start-page@workspace:plugins/apps/plugins/browser/plugins/start-page"],
+
+    "@singularity/plugin-apps-browser-tabs": ["@singularity/plugin-apps-browser-tabs@workspace:plugins/apps/plugins/browser/plugins/tabs"],
 
     "@singularity/plugin-apps-browser-webview": ["@singularity/plugin-apps-browser-webview@workspace:plugins/apps/plugins/browser/plugins/webview"],
 

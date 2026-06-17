@@ -27,6 +27,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "browser.omnibox", pluginId: "apps.browser.shell" },
   { slotId: "browser.start-page", pluginId: "apps.browser.shell" },
   { slotId: "browser.sub-bar", pluginId: "apps.browser.shell" },
+  { slotId: "browser.tab-strip", pluginId: "apps.browser.shell" },
   { slotId: "browser.viewport", pluginId: "apps.browser.shell" },
   { slotId: "build-detail.section", pluginId: "build" },
   { slotId: "conversation-item.chips", pluginId: "conversations.conversation-ui.item" },

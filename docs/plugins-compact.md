@@ -17,7 +17,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
         - **`rail`** — App-rail framing — the default 2.5rem icon rail.
-    - **`browser`** [7 sub-plugins] — Minimal iframe-based web browser app.
+    - **`browser`** [8 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.

@@ -1,11 +1,12 @@
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { Browser } from "../slots";
-import { BrowserNavStore } from "../nav-store";
+import { BrowserTabsStore } from "../nav-store";
 
 /**
- * Inner layout — sits INSIDE `<BrowserNavStore.Provider>` so its children (the
- * chrome bars, sub-bar, viewport, effects) can read the per-surface nav store.
+ * Inner layout — sits INSIDE `<BrowserTabsStore.Provider>` so its children (the
+ * tab strip, chrome bars, sub-bar, viewport, effects) can read the per-surface
+ * tab store.
  *
  * The chrome bar is a `<Frame>`: leading nav controls, the flexible omnibox in
  * the truncating `content` track, and the trailing actions cluster. The outer
@@ -17,6 +18,7 @@ function BrowserInner() {
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- full-surface app column: a filling, clipping vertical shell that no css primitive expresses.
     <div className="flex h-full flex-col overflow-hidden bg-background">
+      <Browser.TabStrip.Render />
       <Bar tier="chrome">
         <Frame
           className="w-full"
@@ -36,14 +38,14 @@ function BrowserInner() {
 }
 
 /**
- * The browser app layout. Mounts the per-surface navigation store provider;
- * the store is consumed only inside `<BrowserInner/>` (a Provider host cannot
- * read its own store in its body).
+ * The browser app layout. Mounts the per-surface tab store provider; the store
+ * is consumed only inside `<BrowserInner/>` (a Provider host cannot read its own
+ * store in its body).
  */
 export function BrowserLayout() {
   return (
-    <BrowserNavStore.Provider>
+    <BrowserTabsStore.Provider>
       <BrowserInner />
-    </BrowserNavStore.Provider>
+    </BrowserTabsStore.Provider>
   );
 }
