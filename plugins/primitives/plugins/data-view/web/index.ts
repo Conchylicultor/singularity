@@ -13,6 +13,7 @@ export { EditableCell } from "./components/editable-cell";
 export { FieldCell } from "./components/field-cell";
 export type { FieldCellProps } from "./components/field-cell";
 export { FilterValueInput } from "./components/filter/filter-value-input";
+export { ChipSelectFilterInput } from "./components/filter/chip-select-filter-input";
 export { useFlatRows } from "./internal/use-flat-rows";
 export { evaluateNode, applyFilter } from "./internal/evaluate-filter";
 export { isFilterGroup } from "./internal/filter-shape";
