@@ -1,0 +1,9 @@
+// @hash 4a8a357ba5e0
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.browser.navigation:nav-controls"
+  ]
+}

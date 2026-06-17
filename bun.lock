@@ -112,6 +112,38 @@
       "name": "@singularity/plugin-apps-app-rail-framing-rail",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/browser": {
+      "name": "@singularity/plugin-apps-browser",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/bookmarks": {
+      "name": "@singularity/plugin-apps-browser-bookmarks",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/history": {
+      "name": "@singularity/plugin-apps-browser-history",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/navigation": {
+      "name": "@singularity/plugin-apps-browser-navigation",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/omnibox": {
+      "name": "@singularity/plugin-apps-browser-omnibox",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/shell": {
+      "name": "@singularity/plugin-apps-browser-shell",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/start-page": {
+      "name": "@singularity/plugin-apps-browser-start-page",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/browser/plugins/webview": {
+      "name": "@singularity/plugin-apps-browser-webview",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/debug": {
       "name": "@singularity/plugin-apps-debug",
       "version": "0.0.1",
@@ -3539,6 +3571,22 @@
     "@singularity/plugin-apps-app-rail-framing-hidden": ["@singularity/plugin-apps-app-rail-framing-hidden@workspace:plugins/apps/plugins/app-rail-framing/plugins/hidden"],
 
     "@singularity/plugin-apps-app-rail-framing-rail": ["@singularity/plugin-apps-app-rail-framing-rail@workspace:plugins/apps/plugins/app-rail-framing/plugins/rail"],
+
+    "@singularity/plugin-apps-browser": ["@singularity/plugin-apps-browser@workspace:plugins/apps/plugins/browser"],
+
+    "@singularity/plugin-apps-browser-bookmarks": ["@singularity/plugin-apps-browser-bookmarks@workspace:plugins/apps/plugins/browser/plugins/bookmarks"],
+
+    "@singularity/plugin-apps-browser-history": ["@singularity/plugin-apps-browser-history@workspace:plugins/apps/plugins/browser/plugins/history"],
+
+    "@singularity/plugin-apps-browser-navigation": ["@singularity/plugin-apps-browser-navigation@workspace:plugins/apps/plugins/browser/plugins/navigation"],
+
+    "@singularity/plugin-apps-browser-omnibox": ["@singularity/plugin-apps-browser-omnibox@workspace:plugins/apps/plugins/browser/plugins/omnibox"],
+
+    "@singularity/plugin-apps-browser-shell": ["@singularity/plugin-apps-browser-shell@workspace:plugins/apps/plugins/browser/plugins/shell"],
+
+    "@singularity/plugin-apps-browser-start-page": ["@singularity/plugin-apps-browser-start-page@workspace:plugins/apps/plugins/browser/plugins/start-page"],
+
+    "@singularity/plugin-apps-browser-webview": ["@singularity/plugin-apps-browser-webview@workspace:plugins/apps/plugins/browser/plugins/webview"],
 
     "@singularity/plugin-apps-debug": ["@singularity/plugin-apps-debug@workspace:plugins/apps/plugins/debug"],
 

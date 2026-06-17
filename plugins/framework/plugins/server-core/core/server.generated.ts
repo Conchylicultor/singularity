@@ -15,6 +15,8 @@ export interface CollectedEntry {
 export const serverEntries: CollectedEntry[] = [
   { pluginPath: "active-data", id: "active-data", loader: () => import("@plugins/active-data/server"), dependsOn: ["database", "infra/plugins/endpoints", "tasks/plugins/tasks-core"] },
   { pluginPath: "apps/plugins/app-rail-framing", id: "apps.app-rail-framing", loader: () => import("@plugins/apps/plugins/app-rail-framing/server"), dependsOn: ["ui/plugins/variant-region"] },
+  { pluginPath: "apps/plugins/browser/plugins/bookmarks", id: "apps.browser.bookmarks", loader: () => import("@plugins/apps/plugins/browser/plugins/bookmarks/server"), dependsOn: ["database", "infra/plugins/endpoints"] },
+  { pluginPath: "apps/plugins/browser/plugins/history", id: "apps.browser.history", loader: () => import("@plugins/apps/plugins/browser/plugins/history/server"), dependsOn: ["database", "infra/plugins/endpoints"] },
   { pluginPath: "apps/plugins/deploy/plugins/servers", id: "apps.deploy.servers", loader: () => import("@plugins/apps/plugins/deploy/plugins/servers/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/secrets"] },
   { pluginPath: "apps/plugins/pages/plugins/content-search", id: "apps.pages.content-search", loader: () => import("@plugins/apps/plugins/pages/plugins/content-search/server"), dependsOn: ["database", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor", "search/plugins/engine"] },
   { pluginPath: "apps/plugins/pages/plugins/history", id: "apps.pages.history", loader: () => import("@plugins/apps/plugins/pages/plugins/history/server"), dependsOn: ["database", "history/plugins/engine", "infra/plugins/events", "infra/plugins/jobs", "page/plugins/editor"] },

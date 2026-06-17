@@ -71,7 +71,7 @@ Generalizes the three-read-path shape of Sonata's `cursor-store`:
 
 - Description: Per-Provider-instance external store primitive: defineScopedStore. Module-level factory, per-mount isolated state, with imperative reads, reactive whole-state, and selector subscriptions with re-render bailout.
 - Cross-plugin:
-  - Imported by: `apps/sonata/audio/engine`, `apps/sonata/shell`, `primitives/undo-redo`
+  - Imported by: `apps/browser/shell`, `apps/sonata/audio/engine`, `apps/sonata/shell`, `primitives/undo-redo`
 - Web:
   - Exports: Types: `ScopedStore`, `ScopedStoreHandle`; Values: `defineScopedStore`
 

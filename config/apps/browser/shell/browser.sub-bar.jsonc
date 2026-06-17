@@ -1,0 +1,9 @@
+// @hash f742d998c79a
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.browser.bookmarks:bookmarks-bar"
+  ]
+}

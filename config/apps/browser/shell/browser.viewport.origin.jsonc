@@ -1,0 +1,9 @@
+// @hash ab3e0a5e1547
+{
+  // Hide: { "item": "<key>", "hidden": true }
+  // Spacer (gap): { "type": "spacer", "id": "<unique-id>" }
+  // Group: { "type": "header", "label": "<title>", "collapsed": false, "items": [ "<key>", … ] }
+  "items": [
+    "apps.browser.webview:viewport"
+  ]
+}
