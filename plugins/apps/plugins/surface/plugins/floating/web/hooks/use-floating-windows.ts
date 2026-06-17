@@ -99,6 +99,23 @@ function mintWindowId(): WindowId {
   return `w${++nextWindowId}`;
 }
 
+/**
+ * Windows freshly *minted* this session (a new floating tab, a tear-off split) —
+ * NOT hydrated from a prior session or formed by a merge. The chrome consumes the
+ * flag once via {@link consumeWindowIntro} to play the window's open animation
+ * exactly when it first materializes on the desktop, never on a refresh or a
+ * placement round-trip.
+ */
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a one-shot set of just-opened window ids, consumed once by the chrome (mirrors this plugin's module-global geometry store).
+const introIds = new Set<WindowId>();
+
+/** Consume (read-and-clear) a window's pending open-animation flag. */
+export function consumeWindowIntro(id: WindowId): boolean {
+  if (!introIds.has(id)) return false;
+  introIds.delete(id);
+  return true;
+}
+
 // Monotonic z-order counter. New windows / raise-to-front set `z = ++nextZ` to
 // float above their tier-mates, then {@link reorder} compacts the open windows
 // back to dense, tier-ordered ranks — so the counter never grows unbounded and
@@ -273,6 +290,7 @@ function readWindowForTab(tabId: string): FloatingWindow {
   const existing = tabToWindow.get(tabId);
   if (existing) return windows.get(existing)!;
   const id = mintWindowId();
+  introIds.add(id);
   windows.set(id, {
     id,
     members: [tabId],
@@ -377,6 +395,7 @@ export function splitTabToNewWindow(
   if (source && source.members.length === 1) return;
   detachFromCurrent(tabId);
   const id = mintWindowId();
+  introIds.add(id);
   const geo = defaultGeometry();
   windows.set(id, {
     id,

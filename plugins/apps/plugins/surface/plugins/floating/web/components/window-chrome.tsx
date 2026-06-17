@@ -25,6 +25,10 @@ import {
   type WindowId,
 } from "../hooks/use-floating-windows";
 import { detectSnapZone, setSnapPreview, type SnapZone } from "../hooks/use-snap";
+import {
+  beginWindowInteraction,
+  endWindowInteraction,
+} from "../hooks/use-window-motion";
 import { useWindowKeyboardInteraction } from "../hooks/use-window-interaction";
 import { WindowResizeHandles } from "./window-resize-handles";
 import {
@@ -120,6 +124,9 @@ export function WindowChrome({
   const onTitlePointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
+      // Suppress the box transition for the duration of the drag, so the window
+      // tracks the cursor 1:1 instead of easing behind it.
+      beginWindowInteraction(win.id);
       // Titlebar → tab container → surface backdrop: the backdrop is the drag +
       // snap-detection frame. Captured at pointer-down (stable for the drag).
       const backdrop = e.currentTarget.parentElement?.parentElement ?? null;
@@ -181,6 +188,9 @@ export function WindowChrome({
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
         setSnapPreview(null);
+        // End interaction first, so the final snap commit (below) animates: this
+        // and the `setGeo` batch into one render with the transition re-enabled.
+        endWindowInteraction(win.id);
         if (zone) {
           const target = zone;
           setGeo((g) => ({
@@ -195,7 +205,7 @@ export function WindowChrome({
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
     },
-    [geo.snap, setGeo],
+    [geo.snap, setGeo, win.id],
   );
 
   // Maximize toggle, expressed as the `"maximize"` snap zone: stash the current
@@ -320,7 +330,9 @@ export function WindowChrome({
 
       {/* Resize handles only in the normal state — a min/snapped window has no
           free border to drag. */}
-      {!geo.minimized && !geo.snap && <WindowResizeHandles setGeo={setGeo} />}
+      {!geo.minimized && !geo.snap && (
+        <WindowResizeHandles setGeo={setGeo} windowId={win.id} />
+      )}
 
       {/* Modal keyboard move/size affordance: a full-window cursor layer (a click
           drops the window where it is) plus a centred keyboard hint. */}

@@ -1,5 +1,14 @@
 import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
-import { type Geometry, MIN_W, MIN_H } from "../hooks/use-floating-windows";
+import {
+  type Geometry,
+  type WindowId,
+  MIN_W,
+  MIN_H,
+} from "../hooks/use-floating-windows";
+import {
+  beginWindowInteraction,
+  endWindowInteraction,
+} from "../hooks/use-window-motion";
 
 /** Which edges a handle drags; corners set two. */
 interface Edge {
@@ -38,16 +47,20 @@ function Handle({
   cursor,
   className,
   setGeo,
+  windowId,
 }: {
   edge: Edge;
   cursor: string;
   className: string;
   setGeo: (next: (g: Geometry) => Geometry) => void;
+  windowId: WindowId;
 }) {
   const onPointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
       e.preventDefault();
       e.stopPropagation();
+      // Suppress the box transition while resizing, so the edge tracks the cursor.
+      beginWindowInteraction(windowId);
       let lastX = e.clientX;
       let lastY = e.clientY;
       const onMove = (ev: PointerEvent) => {
@@ -61,12 +74,13 @@ function Handle({
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
+        endWindowInteraction(windowId);
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
     },
-    [edge, setGeo],
+    [edge, setGeo, windowId],
   );
 
   return (
@@ -86,21 +100,23 @@ function Handle({
  */
 export function WindowResizeHandles({
   setGeo,
+  windowId,
 }: {
   setGeo: (next: (g: Geometry) => Geometry) => void;
+  windowId: WindowId;
 }) {
   return (
     <>
       {/* Edges */}
-      <Handle edge={{ top: true }} cursor="cursor-n-resize" className="inset-x-0 top-0 h-1" setGeo={setGeo} />
-      <Handle edge={{ bottom: true }} cursor="cursor-s-resize" className="inset-x-0 bottom-0 h-1" setGeo={setGeo} />
-      <Handle edge={{ left: true }} cursor="cursor-w-resize" className="inset-y-0 left-0 w-1" setGeo={setGeo} />
-      <Handle edge={{ right: true }} cursor="cursor-e-resize" className="inset-y-0 right-0 w-1" setGeo={setGeo} />
+      <Handle edge={{ top: true }} cursor="cursor-n-resize" className="inset-x-0 top-0 h-1" setGeo={setGeo} windowId={windowId} />
+      <Handle edge={{ bottom: true }} cursor="cursor-s-resize" className="inset-x-0 bottom-0 h-1" setGeo={setGeo} windowId={windowId} />
+      <Handle edge={{ left: true }} cursor="cursor-w-resize" className="inset-y-0 left-0 w-1" setGeo={setGeo} windowId={windowId} />
+      <Handle edge={{ right: true }} cursor="cursor-e-resize" className="inset-y-0 right-0 w-1" setGeo={setGeo} windowId={windowId} />
       {/* Corners (size-3 hit area, raised over the edge strips). */}
-      <Handle edge={{ top: true, left: true }} cursor="cursor-nw-resize" className="top-0 left-0 z-raised size-3" setGeo={setGeo} />
-      <Handle edge={{ top: true, right: true }} cursor="cursor-ne-resize" className="top-0 right-0 z-raised size-3" setGeo={setGeo} />
-      <Handle edge={{ bottom: true, left: true }} cursor="cursor-sw-resize" className="bottom-0 left-0 z-raised size-3" setGeo={setGeo} />
-      <Handle edge={{ bottom: true, right: true }} cursor="cursor-se-resize" className="bottom-0 right-0 z-raised size-3" setGeo={setGeo} />
+      <Handle edge={{ top: true, left: true }} cursor="cursor-nw-resize" className="top-0 left-0 z-raised size-3" setGeo={setGeo} windowId={windowId} />
+      <Handle edge={{ top: true, right: true }} cursor="cursor-ne-resize" className="top-0 right-0 z-raised size-3" setGeo={setGeo} windowId={windowId} />
+      <Handle edge={{ bottom: true, left: true }} cursor="cursor-sw-resize" className="bottom-0 left-0 z-raised size-3" setGeo={setGeo} windowId={windowId} />
+      <Handle edge={{ bottom: true, right: true }} cursor="cursor-se-resize" className="bottom-0 right-0 z-raised size-3" setGeo={setGeo} windowId={windowId} />
     </>
   );
 }

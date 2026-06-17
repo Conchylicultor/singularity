@@ -1,10 +1,4 @@
-import {
-  useCallback,
-  useEffect,
-  useLayoutEffect,
-  useMemo,
-  type CSSProperties,
-} from "react";
+import { useCallback, useEffect, useLayoutEffect, useMemo } from "react";
 import { MdWebAsset } from "react-icons/md";
 import { Apps, useTabs } from "@plugins/apps/web";
 import {
@@ -30,7 +24,7 @@ import {
 import { type MergeTarget } from "./components/window-system-menu";
 import { DesktopWallpaper } from "./components/desktop-wallpaper";
 import { FloatingForeground } from "./components/floating-foreground";
-import { snapBox } from "./hooks/use-snap";
+import { useFloatingWindowStyle } from "./hooks/use-window-motion";
 
 /**
  * The floating placement: a free-floating, draggable/resizable window over the
@@ -94,27 +88,26 @@ function FloatingChrome({ tabId, focused }: PlacementChromeProps) {
     if (focused && !isActive) setActiveMember(win.id, tabId);
   }, [focused, isActive, win.id, tabId]);
 
-  // The window box → the stable container. Inactive members hide (display:none)
-  // but stay mounted (keep-alive). A minimized window leaves the desktop entirely
-  // (display:none on every member) — the dock chip is then the only restore
-  // target. Snapped windows derive their box from snapBox; maximize fills the
-  // backdrop. The active, non-minimized member clears the titlebar via the inset.
+  // The animated window box → the stable container. The motion layer derives the
+  // box (snap / maximize / free) plus the open / minimize / restore tweens and a
+  // box `transition` (suppressed mid-drag). Inactive members and minimized windows
+  // resolve to `hidden` (display:none) but stay mounted (keep-alive) — the dock
+  // chip is then the only restore target. The visible member clears the titlebar
+  // via the content inset.
+  const { containerStyle, hidden } = useFloatingWindowStyle(win, isActive);
+  const insetStyle = useMemo(
+    () => (hidden ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET }),
+    [hidden],
+  );
   useLayoutEffect(() => {
-    const geo = win.geo;
-    const box: CSSProperties = geo.snap
-      ? { ...snapBox(geo.snap), zIndex: geo.z }
-      : { left: geo.x, top: geo.y, width: geo.w, height: geo.h, zIndex: geo.z };
-    const hidden = geo.minimized || !isActive;
-    setContainerStyle(hidden ? { ...box, display: "none" } : box);
-    setContentInsetStyle(
-      hidden ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET },
-    );
+    setContainerStyle(containerStyle);
+    setContentInsetStyle(insetStyle);
     return () => {
       // Cleanup: clear the pushed style so docked / solo fall back to defaults.
       setContainerStyle(null);
       setContentInsetStyle(null);
     };
-  }, [win.geo, isActive, setContainerStyle, setContentInsetStyle]);
+  }, [containerStyle, insetStyle, setContainerStyle, setContentInsetStyle]);
 
   // Raise this window above others on any pointer-down inside it. The host wires
   // its own focus first; we only add the z-bump.

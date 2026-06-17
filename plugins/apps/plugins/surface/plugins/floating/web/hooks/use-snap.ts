@@ -20,34 +20,44 @@ export type SnapZone =
 export const SNAP_GAP = 8;
 
 /**
- * The absolute CSS box for a snap zone, expressed purely in insets + percentages
- * so it is resolution-independent (reflows on desktop resize) — the single source
- * of truth shared by the placement's container style and the preview overlay.
- * `maximize` fills the whole backdrop edge-to-edge; halves/quarters keep a
- * {@link SNAP_GAP} gutter from the edges and shared centerlines.
+ * The absolute CSS box for a snap zone, expressed purely in `left/top/width/height`
+ * (percentages + calc, never `right`/`bottom`/`auto`) so it is both
+ * resolution-independent (reflows on desktop resize) AND smoothly *transitionable*:
+ * every snap, maximize, and restore is a change of the SAME four numeric
+ * properties, so the placement container can `transition` between a free pixel box
+ * and a snapped percentage box (an `auto` inset would break the interpolation).
+ * The single source of truth shared by the placement's container style and the
+ * preview overlay. `maximize` fills the whole backdrop edge-to-edge;
+ * halves/quarters keep a {@link SNAP_GAP} gutter from the edges and shared
+ * centerlines.
  */
 export function snapBox(zone: SnapZone): CSSProperties {
-  if (zone === "maximize") return { left: 0, top: 0, right: 0, bottom: 0 };
-  const edge = `${SNAP_GAP}px`;
+  if (zone === "maximize")
+    return { left: 0, top: 0, width: "100%", height: "100%" };
+  const edge = SNAP_GAP;
   // Half a tile minus its outer-edge gutter and half the centerline gutter.
   const half = `calc(50% - ${SNAP_GAP * 1.5}px)`;
+  // Origin of the far (right/bottom) tile: past the centerline by half the gutter.
+  const far = `calc(50% + ${SNAP_GAP / 2}px)`;
+  // A full edge-to-edge span minus both outer gutters.
+  const fill = `calc(100% - ${SNAP_GAP * 2}px)`;
   switch (zone) {
     case "left":
-      return { left: edge, top: edge, bottom: edge, width: half };
+      return { left: edge, top: edge, width: half, height: fill };
     case "right":
-      return { right: edge, top: edge, bottom: edge, width: half };
+      return { left: far, top: edge, width: half, height: fill };
     case "top":
-      return { top: edge, left: edge, right: edge, height: half };
+      return { left: edge, top: edge, width: fill, height: half };
     case "bottom":
-      return { bottom: edge, left: edge, right: edge, height: half };
+      return { left: edge, top: far, width: fill, height: half };
     case "top-left":
-      return { top: edge, left: edge, width: half, height: half };
+      return { left: edge, top: edge, width: half, height: half };
     case "top-right":
-      return { top: edge, right: edge, width: half, height: half };
+      return { left: far, top: edge, width: half, height: half };
     case "bottom-left":
-      return { bottom: edge, left: edge, width: half, height: half };
+      return { left: edge, top: far, width: half, height: half };
     case "bottom-right":
-      return { bottom: edge, right: edge, width: half, height: half };
+      return { left: far, top: far, width: half, height: half };
   }
 }
 
