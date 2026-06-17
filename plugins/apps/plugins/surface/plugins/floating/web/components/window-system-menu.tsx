@@ -1,11 +1,13 @@
 import {
   MdAspectRatio,
+  MdCallSplit,
   MdClose,
   MdCropSquare,
   MdFilterNone,
   MdOpenWith,
   MdPushPin,
   MdRemove,
+  MdWebAsset,
 } from "react-icons/md";
 import {
   DropdownMenu,
@@ -14,10 +16,19 @@ import {
   DropdownMenuItem,
   DropdownMenuSeparator,
   DropdownMenuShortcut,
+  DropdownMenuSub,
+  DropdownMenuSubContent,
+  DropdownMenuSubTrigger,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import type { Geometry } from "../hooks/use-window-geometry";
+import type { Geometry, WindowId } from "../hooks/use-floating-windows";
+
+/** A merge target offered in the "Merge into ▸" submenu (another open window). */
+export interface MergeTarget {
+  id: WindowId;
+  title: string;
+}
 
 /** Display label for the always-on-top toggle shortcut, shared by chrome + menu. */
 export const TOGGLE_PIN_SHORTCUT = "ctrl+alt+p";
@@ -40,6 +51,14 @@ interface WindowSystemMenuProps {
   onMaximize: () => void;
   onTogglePin: () => void;
   onCloseWindow: () => void;
+  /** Other open windows this window's active tab can be merged into. */
+  mergeTargets: MergeTarget[];
+  /** Merge this window's active tab into the given target window. */
+  onMergeInto: (targetWindowId: WindowId) => void;
+  /** Whether the window holds >1 member, so its active tab can be torn off. */
+  canSplit: boolean;
+  /** Tear this window's active tab out into a new window. */
+  onSplit: () => void;
 }
 
 /**
@@ -64,6 +83,10 @@ export function WindowSystemMenu({
   onMaximize,
   onTogglePin,
   onCloseWindow,
+  mergeTargets,
+  onMergeInto,
+  canSplit,
+  onSplit,
 }: WindowSystemMenuProps) {
   const maximized = geo.snap === "maximize";
   const snapped = geo.snap !== null;
@@ -124,12 +147,38 @@ export function WindowSystemMenu({
           </DropdownMenuShortcut>
         </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
+        {/* Grouping: fold the active tab into another window, or tear it back
+            out. Mirrors the (Phase 2) drag affordance as an accessible,
+            non-drag path. */}
+        {mergeTargets.length > 0 && (
+          <DropdownMenuSub>
+            <DropdownMenuSubTrigger>
+              <MdWebAsset />
+              Merge into
+            </DropdownMenuSubTrigger>
+            <DropdownMenuSubContent>
+              {mergeTargets.map((target) => (
+                <DropdownMenuItem
+                  key={target.id}
+                  onClick={() => onMergeInto(target.id)}
+                >
+                  <MdWebAsset />
+                  {target.title}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuSubContent>
+          </DropdownMenuSub>
+        )}
+        <DropdownMenuItem disabled={!canSplit} onClick={onSplit}>
+          <MdCallSplit />
+          Move tab to new window
+        </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Closes the WHOLE window (every member); per-tab close is the chip ×
+            and the `mod+w` shortcut, which act on the active member alone. */}
         <DropdownMenuItem variant="destructive" onClick={onCloseWindow}>
           <MdClose />
-          Close
-          <DropdownMenuShortcut>
-            {formatShortcutLabel("mod+w")}
-          </DropdownMenuShortcut>
+          Close window
         </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>

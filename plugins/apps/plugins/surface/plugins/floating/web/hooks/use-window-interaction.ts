@@ -5,7 +5,7 @@ import {
   MIN_W,
   type Bounds,
   type Geometry,
-} from "./use-window-geometry";
+} from "./use-floating-windows";
 
 /** The two keyboard-driven verbs of the system menu (Win32 "Move" / "Size"). */
 export type WindowInteraction = "move" | "size";

@@ -1,5 +1,6 @@
 import { WindowDock } from "./window-dock";
 import { SnapPreviewOverlay } from "./snap-preview-overlay";
+import { TabDragOverlay } from "./tab-drag-overlay";
 import { FloatingTabsBridge } from "./floating-tabs-bridge";
 
 /**
@@ -17,6 +18,7 @@ export function FloatingForeground({ tabIds }: { tabIds: string[] }) {
       <FloatingTabsBridge tabIds={tabIds} />
       <SnapPreviewOverlay />
       <WindowDock tabIds={tabIds} />
+      <TabDragOverlay />
     </>
   );
 }

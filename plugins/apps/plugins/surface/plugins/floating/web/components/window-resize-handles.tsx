@@ -1,5 +1,5 @@
 import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
-import { type Geometry, MIN_W, MIN_H } from "../hooks/use-window-geometry";
+import { type Geometry, MIN_W, MIN_H } from "../hooks/use-floating-windows";
 
 /** Which edges a handle drags; corners set two. */
 interface Edge {

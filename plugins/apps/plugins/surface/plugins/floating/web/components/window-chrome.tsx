@@ -13,33 +13,58 @@ import {
   MdPushPin,
   MdWebAsset,
 } from "react-icons/md";
-import { Apps } from "@plugins/apps/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-geometry";
+import {
+  clampToBounds,
+  type Bounds,
+  type FloatingWindow,
+  type Geometry,
+  type WindowId,
+} from "../hooks/use-floating-windows";
 import { detectSnapZone, setSnapPreview, type SnapZone } from "../hooks/use-snap";
 import { useWindowKeyboardInteraction } from "../hooks/use-window-interaction";
 import { WindowResizeHandles } from "./window-resize-handles";
 import {
+  WindowTabStrip,
+  type TabDragCommit,
+  type WindowMember,
+} from "./window-tab-strip";
+import {
   TOGGLE_PIN_SHORTCUT,
   WindowSystemMenu,
   type MenuAnchor,
+  type MergeTarget,
 } from "./window-system-menu";
 
 /** Fixed titlebar height; mirrored by `WINDOW_TITLEBAR_INSET` so content clears it. */
 export const WINDOW_TITLEBAR_INSET = "2.25rem";
 
 interface WindowChromeProps {
-  appId: string;
-  title: string | undefined;
+  /** The window this chrome paints (one titlebar per window — the active member). */
+  window: FloatingWindow;
   focused: boolean;
-  geo: Geometry;
   setGeo: (next: (g: Geometry) => Geometry) => void;
-  onClose: () => void;
+  /** Members in tab-strip order, resolved to title + app icon for the strip. */
+  members: WindowMember[];
+  /** Show + focus a member (tab-strip chip click). */
+  onSelectMember: (tabId: string) => void;
+  /** Close one member (chip ×). */
+  onCloseMember: (tabId: string) => void;
+  /** Close the WHOLE window (every member) — the right-side titlebar X. */
+  onCloseWindow: () => void;
   /** Toggle this window's always-on-top flag (re-ranks z in the geometry store). */
   onTogglePin: () => void;
+  /** Other open windows the active tab can be merged into ("Merge into ▸"). */
+  mergeTargets: MergeTarget[];
+  /** Merge the active tab into a target window. */
+  onMergeInto: (targetWindowId: WindowId) => void;
+  /** Tear the active tab out into a new window (enabled when grouped). */
+  onSplit: () => void;
+  /** Commit ops for a finished tab-chip drag (reorder / merge / split). */
+  dragCommit: TabDragCommit;
 }
 
 /**
@@ -55,16 +80,21 @@ interface WindowChromeProps {
  * this overlay.
  */
 export function WindowChrome({
-  appId,
-  title,
+  window: win,
   focused,
-  geo,
   setGeo,
-  onClose,
+  members,
+  onSelectMember,
+  onCloseMember,
+  onCloseWindow,
   onTogglePin,
+  mergeTargets,
+  onMergeInto,
+  onSplit,
+  dragCommit,
 }: WindowChromeProps) {
-  const apps = Apps.App.useContributions();
-  const app = apps.find((a) => a.id === appId);
+  const geo = win.geo;
+  const canSplit = win.members.length > 1;
 
   const titlebarRef = useRef<HTMLDivElement>(null);
   const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
@@ -201,8 +231,10 @@ export function WindowChrome({
     }));
   }, [setGeo]);
 
-  const Icon = app?.icon ?? MdWebAsset;
-  const label = title ?? app?.tooltip ?? "Window";
+  // The system-menu button icon = the active member's app icon (the strip shows
+  // every member, so the titlebar icon just stands in for the window menu).
+  const activeMember = members.find((m) => m.tabId === win.activeTabId);
+  const MenuIcon = activeMember?.icon ?? MdWebAsset;
 
   return (
     <>
@@ -224,7 +256,7 @@ export function WindowChrome({
         {/* The window icon doubles as the system-menu button (Win32 icon-click). */}
         <div onPointerDown={(e) => e.stopPropagation()} className="shrink-0">
           <IconButton
-            icon={Icon}
+            icon={MenuIcon}
             label="Window menu"
             size="icon-sm"
             onClick={(e) => {
@@ -233,9 +265,23 @@ export function WindowChrome({
             }}
           />
         </div>
-        <Text variant="label" as="span" className="min-w-0 flex-1 truncate">
-          {label}
-        </Text>
+        {/* In-window tab strip — one chip per member. `data-floating-window-id`
+            marks the drop-zone the tab-chip drag hit-tests against. The
+            flex-1 wrapper soaks up the slack so the strip sits left, the empty
+            remainder is the move-drag region, and the controls pin right. */}
+        <div
+          data-floating-window-id={win.id}
+          className="min-w-0 flex-1"
+        >
+          <WindowTabStrip
+            windowId={win.id}
+            members={members}
+            activeTabId={win.activeTabId}
+            onSelect={onSelectMember}
+            onCloseMember={onCloseMember}
+            commit={dragCommit}
+          />
+        </div>
         {/* Each control stops the pointer so it never starts a window drag. */}
         <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
           <IconButton
@@ -264,9 +310,10 @@ export function WindowChrome({
           />
           <IconButton
             icon={MdClose}
-            label={`Close (${formatShortcutLabel("mod+w")})`}
+            // Closes the whole window; the chip × closes a single member.
+            label="Close window"
             size="icon-sm"
-            onClick={onClose}
+            onClick={onCloseWindow}
           />
         </div>
       </div>
@@ -307,7 +354,11 @@ export function WindowChrome({
         onMinimize={toggleMinimize}
         onMaximize={toggleMaximize}
         onTogglePin={onTogglePin}
-        onCloseWindow={onClose}
+        onCloseWindow={onCloseWindow}
+        mergeTargets={mergeTargets}
+        onMergeInto={onMergeInto}
+        canSplit={canSplit}
+        onSplit={onSplit}
       />
     </>
   );

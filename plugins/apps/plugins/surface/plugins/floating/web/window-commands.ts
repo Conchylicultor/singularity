@@ -1,18 +1,21 @@
 import { getFocusedSurfaceId } from "@plugins/primitives/plugins/shortcuts/web";
 import {
   bringWindowToFront,
+  getFloatingWindow,
   restoreWindow,
   snapWindowDirection,
   toggleWindowPin,
-} from "./hooks/use-window-geometry";
+  windowForTab,
+} from "./hooks/use-floating-windows";
 import type { SnapDirection } from "./hooks/use-snap";
 
 /**
  * Imperative window-management commands driven by the static keyboard shortcuts
- * (registered in this plugin's barrel). The focused window is the focused
- * *surface* — `getFocusedSurfaceId()` returns the focused tabId (the apps tab
- * model feeds it into the shortcut system on every focus change), so snap /
- * minimize need no tab handle and read it directly.
+ * (registered in this plugin's barrel). The focused window is resolved from the
+ * focused *surface* — `getFocusedSurfaceId()` returns the focused tabId (the apps
+ * tab model feeds it into the shortcut system on every focus change), which
+ * {@link windowForTab} maps to the window currently holding it — so snap /
+ * minimize / pin need no window handle and read it directly.
  *
  * Cross-window commands (close, cycle) additionally need the live floating tab
  * order + focus/close callbacks. The load-bearing `apps` plugin exposes those
@@ -37,44 +40,66 @@ export function setFloatingTabsBridge(next: FloatingTabsBridge | null) {
   bridge = next;
 }
 
+/** The window currently holding the focused surface (the active member's tab). */
+function focusedWindowId(): string | undefined {
+  const tabId = getFocusedSurfaceId();
+  return tabId ? windowForTab(tabId) : undefined;
+}
+
 /** Tile the focused window in a direction (maximize/quarter/restore/minimize). */
 export function snapFocusedWindow(dir: SnapDirection) {
-  const tabId = getFocusedSurfaceId();
-  if (tabId) snapWindowDirection(tabId, dir);
+  const wid = focusedWindowId();
+  if (wid) snapWindowDirection(wid, dir);
 }
 
 /** Minimize the focused window to the dock. */
 export function minimizeFocusedWindow() {
-  const tabId = getFocusedSurfaceId();
-  if (tabId) restoreWindow(tabId, /* minimize */ true);
+  const wid = focusedWindowId();
+  if (wid) restoreWindow(wid, /* minimize */ true);
 }
 
 /** Toggle the focused window's always-on-top flag. */
 export function togglePinFocusedWindow() {
-  const tabId = getFocusedSurfaceId();
-  if (tabId) toggleWindowPin(tabId);
+  const wid = focusedWindowId();
+  if (wid) toggleWindowPin(wid);
 }
 
-/** Close the focused window. */
+/**
+ * Close the focused tab (the active member). Browser-like: `mod+w` closes the
+ * shown tab, not the whole window — the right-side titlebar X closes the window.
+ */
 export function closeFocusedWindow() {
   const tabId = getFocusedSurfaceId();
   if (tabId && bridge) bridge.closeTab(tabId);
 }
 
 /**
- * Cycle focus to the next (`+1`) / previous (`-1`) floating window, wrapping
- * around. The target is un-minimized, raised, and focused — mirroring a dock
- * click — so cycling reaches minimized windows too.
+ * Cycle focus to the next (`+1`) / previous (`-1`) floating WINDOW, wrapping
+ * around. Window order is derived from the apps tab order (`bridge.tabIds` mapped
+ * through {@link windowForTab}, deduped, order-preserving) so cycling matches the
+ * tab-strip order. The target window is un-minimized, raised, and its active
+ * member focused — mirroring a dock click — so cycling reaches minimized windows
+ * too.
  */
 export function cycleWindows(step: 1 | -1) {
   if (!bridge || bridge.tabIds.length === 0) return;
   const { tabIds, focusTab } = bridge;
+  // Ordered unique windowIds (apps tab order, deduped).
+  const order: string[] = [];
+  for (const tabId of tabIds) {
+    const wid = windowForTab(tabId);
+    if (wid && !order.includes(wid)) order.push(wid);
+  }
+  if (order.length === 0) return;
   const current = getFocusedSurfaceId();
-  const from = current ? Math.max(0, tabIds.indexOf(current)) : 0;
-  const n = tabIds.length;
-  const next = tabIds[(((from + step) % n) + n) % n];
-  if (!next || next === current) return;
-  restoreWindow(next);
-  bringWindowToFront(next);
-  focusTab(next);
+  const currentWid = current ? windowForTab(current) : undefined;
+  const from = currentWid ? Math.max(0, order.indexOf(currentWid)) : 0;
+  const n = order.length;
+  const nextWid = order[(((from + step) % n) + n) % n]!;
+  if (nextWid === currentWid) return;
+  const target = getFloatingWindow(nextWid);
+  if (!target) return;
+  restoreWindow(nextWid);
+  bringWindowToFront(nextWid);
+  focusTab(target.activeTabId);
 }
