@@ -1,5 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
+import type { SnapZone } from "./use-snap";
 
 /** A window's free-floating box on the desktop, plus its chrome state. */
 export interface Geometry {
@@ -10,8 +11,13 @@ export interface Geometry {
   /** Stacking order; bumped to `++nextZ` on focus so the focused window wins. */
   z: number;
   minimized: boolean;
-  maximized: boolean;
-  /** Pre-maximize box, restored when maximize is toggled off. */
+  /**
+   * The window's snap state: a half/quarter tile, `"maximize"` (full), or null
+   * when free-floating at {@link Geometry.x}/y/w/h. When set, the box is derived
+   * from `snapBox(snap)` (resolution-independent) and resize handles are hidden.
+   */
+  snap: SnapZone | null;
+  /** Pre-snap free box, restored when a snapped/maximized window is dragged out or toggled back. */
   restore?: { x: number; y: number; w: number; h: number };
 }
 
@@ -121,8 +127,16 @@ function hydrate() {
     if (!raw) return;
     const record = JSON.parse(raw) as Record<string, Geometry>;
     for (const [id, geo] of Object.entries(record)) {
-      geoState.set(id, geo);
-      if (geo.z > nextZ) nextZ = geo.z;
+      // Migrate the legacy `maximized` boolean (older persisted sessions) to the
+      // unified `snap` field so a refresh never crashes on a stale shape.
+      const legacy = geo as Geometry & { maximized?: boolean };
+      const normalized: Geometry = {
+        ...geo,
+        snap: geo.snap ?? (legacy.maximized ? "maximize" : null),
+      };
+      delete (normalized as { maximized?: boolean }).maximized;
+      geoState.set(id, normalized);
+      if (normalized.z > nextZ) nextZ = normalized.z;
     }
     rebuildSnapshot();
   } catch (err) {
@@ -144,7 +158,7 @@ function defaultGeometry(): Geometry {
     h: 600,
     z: ++nextZ,
     minimized: false,
-    maximized: false,
+    snap: null,
   };
 }
 

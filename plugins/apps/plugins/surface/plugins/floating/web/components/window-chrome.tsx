@@ -4,6 +4,7 @@ import { Apps } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-geometry";
+import { detectSnapZone, setSnapPreview, type SnapZone } from "../hooks/use-snap";
 import { WindowResizeHandles } from "./window-resize-handles";
 
 /** Fixed titlebar height; mirrored by `WINDOW_TITLEBAR_INSET` so content clears it. */
@@ -41,22 +42,50 @@ export function WindowChrome({
   const apps = Apps.App.useContributions();
   const app = apps.find((a) => a.id === appId);
 
-  // Drag the titlebar: the `resize-handle.tsx` pointer idiom — capture the
-  // pointer, translate window pointermove deltas into geometry moves, and tear
-  // the listeners down on up/cancel. Disabled while maximized (no free move).
+  // Drag the titlebar. A snapped/maximized window pops back to its restored free
+  // box (centered under the cursor) on the first move, then free-drags. During the
+  // drag the cursor's desktop edge/corner arms a snap preview; releasing over an
+  // armed zone snaps the window there (storing the free box as `restore`).
   const onTitlePointerDown = useCallback(
     (e: ReactPointerEvent<HTMLDivElement>) => {
-      if (geo.maximized) return;
       e.preventDefault();
+      // Titlebar → tab container → surface backdrop: the backdrop is the drag +
+      // snap-detection frame. Captured at pointer-down (stable for the drag).
+      const backdrop = e.currentTarget.parentElement?.parentElement ?? null;
+      const rect = backdrop?.getBoundingClientRect() ?? null;
+      const bounds: Bounds | null = rect
+        ? { width: rect.width, height: rect.height }
+        : null;
+
+      // A free window is already "popped"; a snapped one pops on the first move.
+      let popped = geo.snap === null;
       let lastX = e.clientX;
       let lastY = e.clientY;
-      // Titlebar → tab container → surface backdrop: the backdrop is the drag
-      // bound. Captured at pointer-down since it's stable for the drag.
-      const backdrop = e.currentTarget.parentElement?.parentElement ?? null;
-      const bounds: Bounds | null = backdrop
-        ? { width: backdrop.clientWidth, height: backdrop.clientHeight }
-        : null;
+      let zone: SnapZone | null = null;
+
       const onMove = (ev: PointerEvent) => {
+        if (!popped) {
+          // Pop the snapped window out to its restored size under the cursor.
+          popped = true;
+          setGeo((g) => {
+            const r = g.restore ?? { x: g.x, y: g.y, w: g.w, h: g.h };
+            const relX = rect ? ev.clientX - rect.left : ev.clientX;
+            const relY = rect ? ev.clientY - rect.top : ev.clientY;
+            const free: Geometry = {
+              ...g,
+              x: relX - r.w / 2,
+              y: relY - 18, // ~half the titlebar height, so it lands under the cursor
+              w: r.w,
+              h: r.h,
+              snap: null,
+              restore: undefined,
+            };
+            return bounds ? clampToBounds(free, bounds) : free;
+          });
+          lastX = ev.clientX;
+          lastY = ev.clientY;
+          return;
+        }
         const dx = ev.clientX - lastX;
         const dy = ev.clientY - lastY;
         lastX = ev.clientX;
@@ -66,26 +95,50 @@ export function WindowChrome({
             const moved = { ...g, x: g.x + dx, y: g.y + dy };
             return bounds ? clampToBounds(moved, bounds) : moved;
           });
+        if (rect) {
+          zone = detectSnapZone(
+            ev.clientX - rect.left,
+            ev.clientY - rect.top,
+            rect.width,
+            rect.height,
+          );
+          setSnapPreview(zone);
+        }
       };
       const onUp = () => {
         window.removeEventListener("pointermove", onMove);
         window.removeEventListener("pointerup", onUp);
         window.removeEventListener("pointercancel", onUp);
+        setSnapPreview(null);
+        if (zone) {
+          const target = zone;
+          setGeo((g) => ({
+            ...g,
+            snap: target,
+            // Remember the free box so dragging back out / restore returns to it.
+            restore: g.restore ?? { x: g.x, y: g.y, w: g.w, h: g.h },
+          }));
+        }
       };
       window.addEventListener("pointermove", onMove);
       window.addEventListener("pointerup", onUp);
       window.addEventListener("pointercancel", onUp);
     },
-    [geo.maximized, setGeo],
+    [geo.snap, setGeo],
   );
 
-  // Maximize toggle: stash the current box as `restore`, then fill the backdrop;
-  // toggling off restores the stashed box (mirrors use-column-maximize's toggle).
+  // Maximize toggle, expressed as the `"maximize"` snap zone: stash the current
+  // free box as `restore` (keeping an existing one when toggling from a tile),
+  // then fill the backdrop; toggling off restores the stashed box.
   const toggleMaximize = useCallback(() => {
     setGeo((g) =>
-      g.maximized
-        ? { ...g, maximized: false, ...(g.restore ?? {}), restore: undefined }
-        : { ...g, maximized: true, restore: { x: g.x, y: g.y, w: g.w, h: g.h } },
+      g.snap === "maximize"
+        ? { ...g, snap: null, ...(g.restore ?? {}), restore: undefined }
+        : {
+            ...g,
+            snap: "maximize",
+            restore: g.restore ?? { x: g.x, y: g.y, w: g.w, h: g.h },
+          },
     );
   }, [setGeo]);
 
@@ -105,9 +158,9 @@ export function WindowChrome({
       <div
         onPointerDown={onTitlePointerDown}
         onDoubleClick={toggleMaximize}
-        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b px-sm py-xs ${
-          geo.maximized ? "" : "cursor-grab"
-        } ${focused ? "bg-muted" : "bg-muted/40"}`}
+        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b px-sm py-xs cursor-grab ${
+          focused ? "bg-muted" : "bg-muted/40"
+        }`}
         style={{ height: WINDOW_TITLEBAR_INSET, touchAction: "none" }}
       >
         {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
@@ -118,8 +171,8 @@ export function WindowChrome({
         <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
           <IconButton icon={MdRemove} label="Minimize" size="icon-sm" onClick={toggleMinimize} />
           <IconButton
-            icon={geo.maximized ? MdFilterNone : MdCropSquare}
-            label={geo.maximized ? "Restore" : "Maximize"}
+            icon={geo.snap === "maximize" ? MdFilterNone : MdCropSquare}
+            label={geo.snap === "maximize" ? "Restore" : "Maximize"}
             size="icon-sm"
             onClick={toggleMaximize}
           />
@@ -127,9 +180,9 @@ export function WindowChrome({
         </div>
       </div>
 
-      {/* Resize handles only in the normal state — a min/maximized window has no
+      {/* Resize handles only in the normal state — a min/snapped window has no
           free border to drag. */}
-      {!geo.minimized && !geo.maximized && <WindowResizeHandles setGeo={setGeo} />}
+      {!geo.minimized && !geo.snap && <WindowResizeHandles setGeo={setGeo} />}
     </>
   );
 }
