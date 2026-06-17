@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-primitives-collections",
-  "description": "Typed collection primitive: defineCollection for managed user-editable lists.",
-  "private": true,
-  "version": "0.0.1"
-}

@@ -2250,10 +2250,6 @@
       "name": "@singularity/plugin-primitives-collapsible-wrap",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/collections": {
-      "name": "@singularity/plugin-primitives-collections",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/command-palette": {
       "name": "@singularity/plugin-primitives-command-palette",
       "version": "0.0.1",
@@ -4555,8 +4551,6 @@
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
 
     "@singularity/plugin-primitives-collapsible-wrap": ["@singularity/plugin-primitives-collapsible-wrap@workspace:plugins/primitives/plugins/collapsible-wrap"],
-
-    "@singularity/plugin-primitives-collections": ["@singularity/plugin-primitives-collections@workspace:plugins/primitives/plugins/collections"],
 
     "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
 

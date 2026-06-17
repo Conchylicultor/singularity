@@ -67,7 +67,4 @@ test("a __tests__ server file is out of scope", () => {
 
 test("a non-server file is out of scope", () => {
   expect(isCandidatePath("plugins/improve/web/internal/tables.ts", globFiles)).toBe(false);
-  expect(
-    isCandidatePath("plugins/primitives/plugins/collections/core/internal/table-builder.ts", globFiles),
-  ).toBe(false);
 });

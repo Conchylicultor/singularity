@@ -32,10 +32,6 @@ const TABLE_FACTORIES: { name: string; definedIn: string }[] = [
     name: "defineTriggerEvent",
     definedIn: "plugins/infra/plugins/events/server/internal/event.ts",
   },
-  {
-    name: "defineCollection",
-    definedIn: "plugins/primitives/plugins/collections/core/internal/table-builder.ts",
-  },
 ];
 
 const FACTORY_DEFINITION_FILES = new Set(TABLE_FACTORIES.map((f) => f.definedIn));
