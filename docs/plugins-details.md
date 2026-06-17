@@ -738,10 +738,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `Surface.Placement`
             - Uses: `apps/surface.Surface`
-        - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store and window chrome.
+        - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
           - Web:
-            - Contributes: `Surface.Placement`
-            - Uses: `apps.Apps`, `apps.Tab`, `apps.useTabs`, `apps/surface.PlacementChromeProps`, `apps/surface.PlacementDef`, `apps/surface.Surface`, `apps/surface.usePlacementStyle`, `primitives/css/cluster.Cluster`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`
+            - Contributes: `Surface.Placement`, `Shortcuts.Shortcut` "floating.snap-left (ctrl+alt+arrowleft)", `Shortcuts.Shortcut` "floating.snap-right (ctrl+alt+arrowright)", `Shortcuts.Shortcut` "floating.snap-up (ctrl+alt+arrowup)", `Shortcuts.Shortcut` "floating.snap-down (ctrl+alt+arrowdown)", `Shortcuts.Shortcut` "floating.minimize (mod+m)", `Shortcuts.Shortcut` "floating.close (mod+w)", `Shortcuts.Shortcut` "floating.cycle-next (mod+`)", `Shortcuts.Shortcut` "floating.cycle-prev (mod+shift+~)", `Shortcuts.Shortcut` "floating.cycle-prev-backquote (mod+shift+`)"
+            - Uses: `apps.Apps`, `apps.getFocusedPlacement`, `apps.Tab`, `apps.useTabs`, `apps/surface.PlacementChromeProps`, `apps/surface.PlacementDef`, `apps/surface.Surface`, `apps/surface.usePlacementStyle`, `primitives/css/cluster.Cluster`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/shortcuts.defineShortcut`, `primitives/shortcuts.formatShortcutLabel`, `primitives/shortcuts.getFocusedSurfaceId`, `primitives/tab-id.getTabId`, `primitives/tooltip.WithTooltip`
         - **`solo`** — Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.
           - Web:
             - Contributes: `Surface.Placement`, `Shortcuts.Shortcut` "surface.exit-solo (Escape)"
@@ -3766,12 +3766,12 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `ContentScope`, `selectScopeProps`
     - **`shortcuts`** — Central keyboard shortcut registry. Plugins contribute shortcuts via defineShortcut(); a single keydown listener dispatches to the active handler.
       - Web:
-        - Slots: `Shortcuts.Shortcut` ← `apps.surface.solo`, `reorder.edit-mode`
+        - Slots: `Shortcuts.Shortcut` ← `apps.surface.floating`, `apps.surface.solo`, `reorder.edit-mode`
         - Contributes: `Core.Root` → `ShortcutManager`
         - Uses: `primitives/surface-id.useSurfaceTabId`
         - Exports: Types: `ShortcutDescriptor`; Values: `defineShortcut`, `formatShortcutLabel`, `getFocusedSurfaceId`, `isEditableTarget`, `setFocusedSurfaceId`, `Shortcuts`, `subscribeFocusedSurface`, `useFocusedSurfaceId`, `useSurfaceShortcuts`
       - Cross-plugin:
-        - Imported by: `apps`, `apps/sonata/controls`, `apps/surface/solo`, `primitives/icon-button`, `primitives/launch`, `primitives/undo-redo`, `reorder/edit-mode`, `tasks/task-draft-form`
+        - Imported by: `apps`, `apps/sonata/controls`, `apps/surface/floating`, `apps/surface/solo`, `primitives/icon-button`, `primitives/launch`, `primitives/undo-redo`, `reorder/edit-mode`, `tasks/task-draft-form`
     - **`slot-render`** — Typed rendering primitive for visual slots with auto-applied middleware (error boundaries, reorder).
       - Web:
         - Uses: `primitives/css/ui-kit.ControlSize`, `primitives/css/ui-kit.ControlSizeProvider`

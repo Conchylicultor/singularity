@@ -51,6 +51,130 @@ export function snapBox(zone: SnapZone): CSSProperties {
   }
 }
 
+/** A keyboard tiling nudge along one axis (the four arrow directions). */
+export type SnapDirection = "left" | "right" | "up" | "down";
+
+/**
+ * The outcome of a directional keyboard snap: re-tile to a zone (`zone: null`
+ * restores the free floating box) or minimize the window to the dock.
+ */
+export type SnapAction =
+  | { type: "snap"; zone: SnapZone | null }
+  | { type: "minimize" };
+
+const toSnap = (zone: SnapZone | null): SnapAction => ({ type: "snap", zone });
+const MINIMIZE: SnapAction = { type: "minimize" };
+
+/**
+ * Windows-Aero-style directional tiling state machine for keyboard snapping.
+ *
+ * A left/right half is the middle rung of its vertical axis: Up/Down tile it to
+ * the matching quarter and back, while Left/Right toggle the half off (restore
+ * to free) or flip a quarter across to the other side. Maximize caps the
+ * vertical chain — Up maximizes from free, Down restores to free and then
+ * minimizes. Only the zones reachable by mouse drag are produced (no standalone
+ * top/bottom halves), so keyboard tiling and pointer tiling stay consistent.
+ */
+export function nextSnapAction(
+  current: SnapZone | null,
+  dir: SnapDirection,
+): SnapAction {
+  switch (dir) {
+    case "left":
+      return snapLeft(current);
+    case "right":
+      return snapRight(current);
+    case "up":
+      return snapUp(current);
+    case "down":
+      return snapDown(current);
+  }
+}
+
+function snapLeft(current: SnapZone | null): SnapAction {
+  switch (current) {
+    case null:
+    case "maximize":
+      return toSnap("left");
+    case "right":
+      return toSnap(null);
+    case "top":
+    case "top-right":
+      return toSnap("top-left");
+    case "bottom":
+    case "bottom-right":
+      return toSnap("bottom-left");
+    case "left":
+    case "top-left":
+    case "bottom-left": // already as far left as it goes
+      return toSnap(current);
+  }
+}
+
+function snapRight(current: SnapZone | null): SnapAction {
+  switch (current) {
+    case null:
+    case "maximize":
+      return toSnap("right");
+    case "left":
+      return toSnap(null);
+    case "top":
+    case "top-left":
+      return toSnap("top-right");
+    case "bottom":
+    case "bottom-left":
+      return toSnap("bottom-right");
+    case "right":
+    case "top-right":
+    case "bottom-right":
+      return toSnap(current);
+  }
+}
+
+function snapUp(current: SnapZone | null): SnapAction {
+  switch (current) {
+    case null:
+      return toSnap("maximize");
+    case "left":
+      return toSnap("top-left");
+    case "right":
+      return toSnap("top-right");
+    case "bottom-left":
+      return toSnap("left");
+    case "bottom-right":
+      return toSnap("right");
+    case "bottom":
+      return toSnap(null);
+    case "maximize":
+    case "top":
+    case "top-left":
+    case "top-right":
+      return toSnap(current);
+  }
+}
+
+function snapDown(current: SnapZone | null): SnapAction {
+  switch (current) {
+    case null:
+      return MINIMIZE;
+    case "maximize":
+    case "top":
+      return toSnap(null);
+    case "left":
+      return toSnap("bottom-left");
+    case "right":
+      return toSnap("bottom-right");
+    case "top-left":
+      return toSnap("left");
+    case "top-right":
+      return toSnap("right");
+    case "bottom":
+    case "bottom-left":
+    case "bottom-right":
+      return MINIMIZE;
+  }
+}
+
 /** Distance (px) from an edge that arms a half / maximize snap. */
 const EDGE = 28;
 /** Band (px) along the secondary axis of an edge that promotes a half to a quarter. */

@@ -1,6 +1,6 @@
 import { useCallback, useSyncExternalStore } from "react";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
-import type { SnapZone } from "./use-snap";
+import { nextSnapAction, type SnapDirection, type SnapZone } from "./use-snap";
 
 /** A window's free-floating box on the desktop, plus its chrome state. */
 export interface Geometry {
@@ -223,6 +223,51 @@ export function restoreWindow(tabId: string, minimize = false) {
   geoState.set(tabId, { ...current, minimized: minimize });
   persist();
   notify();
+}
+
+/**
+ * Apply a keyboard tiling nudge to a window (module-level so static
+ * window-management shortcuts can drive the focused window without a geometry
+ * handle). The {@link nextSnapAction} state machine turns the current snap +
+ * direction into the next tile, a restore-to-free, or a minimize — mirroring the
+ * zones the mouse drag produces. A snap always un-minimizes; nudging a minimized
+ * window also raises it so it lands on top like a fresh focus.
+ */
+export function snapWindowDirection(tabId: string, dir: SnapDirection) {
+  const current = read(tabId);
+  const action = nextSnapAction(current.snap, dir);
+  if (action.type === "minimize") {
+    restoreWindow(tabId, /* minimize */ true);
+    return;
+  }
+  const { zone } = action;
+  const next: Geometry =
+    zone === null
+      ? // Restore to the stashed free box (matching the chrome's maximize toggle).
+        {
+          ...current,
+          snap: null,
+          ...(current.restore ?? {}),
+          restore: undefined,
+          minimized: false,
+        }
+      : {
+          ...current,
+          snap: zone,
+          // Keep an existing free box; only capture one when leaving the free state.
+          restore:
+            current.restore ?? {
+              x: current.x,
+              y: current.y,
+              w: current.w,
+              h: current.h,
+            },
+          minimized: false,
+        };
+  geoState.set(tabId, next);
+  persist();
+  notify();
+  if (current.minimized) bringWindowToFront(tabId);
 }
 
 /**

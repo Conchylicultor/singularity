@@ -69,7 +69,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`surface`** — Generic per-tab surface dispatcher: renders every open tab at once positioned by its own placement, dispatched through the Surface.Placement registry. Owns the multi-placement body and the placement control; each placement (docked / floating / solo) is a self-contained sub-plugin.
       - Plugins:
         - **`docked`** — Docked surface placement — the default full-area tab that fills the surface below the tab strip.
-        - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store and window chrome.
+        - **`floating`** — Floating-window surface placement: a free-floating, draggable/resizable window over a desktop wallpaper backdrop. Owns the per-tab geometry store, window chrome, and keyboard window-management shortcuts (tile / minimize / close / cycle).
         - **`solo`** — Solo (fullscreen) surface placement — a single tab full-app over everything, with a hover exit button and an Esc shortcut back to the default placement.
     - **`workflows`** [4 sub-plugins] — Workflows app.
 

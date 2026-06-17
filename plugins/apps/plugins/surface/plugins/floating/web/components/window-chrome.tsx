@@ -1,6 +1,7 @@
 import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { MdClose, MdRemove, MdCropSquare, MdFilterNone } from "react-icons/md";
 import { Apps } from "@plugins/apps/web";
+import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-geometry";
@@ -169,14 +170,24 @@ export function WindowChrome({
         </Text>
         {/* Each control stops the pointer so it never starts a window drag. */}
         <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
-          <IconButton icon={MdRemove} label="Minimize" size="icon-sm" onClick={toggleMinimize} />
+          <IconButton
+            icon={MdRemove}
+            label={`Minimize (${formatShortcutLabel("mod+m")})`}
+            size="icon-sm"
+            onClick={toggleMinimize}
+          />
           <IconButton
             icon={geo.snap === "maximize" ? MdFilterNone : MdCropSquare}
             label={geo.snap === "maximize" ? "Restore" : "Maximize"}
             size="icon-sm"
             onClick={toggleMaximize}
           />
-          <IconButton icon={MdClose} label="Close" size="icon-sm" onClick={onClose} />
+          <IconButton
+            icon={MdClose}
+            label={`Close (${formatShortcutLabel("mod+w")})`}
+            size="icon-sm"
+            onClick={onClose}
+          />
         </div>
       </div>
 
