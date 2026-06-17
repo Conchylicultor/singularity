@@ -28,6 +28,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - **`css-vars-single-owner`**
   - **`css-vars-supplied`**
   - **`data-migration-dml-only`**
+  - **`inherited-theme-defaults-scoped`**
   - **`migration-hashes-unique`**
   - **`migrations-in-sync`**
   - **`no-hardcoded-colors`**

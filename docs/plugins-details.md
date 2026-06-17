@@ -2325,6 +2325,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`css-vars-single-owner`**
             - **`css-vars-supplied`**
             - **`data-migration-dml-only`**
+            - **`inherited-theme-defaults-scoped`**
             - **`migration-hashes-unique`**
             - **`migrations-in-sync`**
             - **`no-hardcoded-colors`**

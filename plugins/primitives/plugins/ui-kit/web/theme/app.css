@@ -343,11 +343,26 @@
   html, body, #root {
     @apply h-full overflow-hidden;
     }
+  /* Inherited, themed typographic defaults (base font-family + text color) are
+     consumed at EVERY theme-scope root — the desktop `:root` PLUS each
+     `[data-theme-scope]` — never on a bare `html`/`body` above the scope
+     boundary. CSS inheritance passes the *computed* value, not the `var()`
+     reference: anchoring these only on `html`/`body` resolves the var once at
+     `:root`, so a FORKED app's descendants inherit that computed desktop value
+     and silently ignore the app's own scoped `--font-sans` / `--foreground`
+     override (the override block is alive in the cascade but never re-read — the
+     cross-window font-bleed bug). Re-declaring them on the scope root makes each
+     `[data-theme-scope]` re-evaluate the `var()` inside its own scope, so the
+     app's preset wins per-window. Enforced by `inherited-theme-defaults-scoped`. */
+  :root,
+  [data-theme-scope] {
+    font-family: var(--font-sans);
+    color: var(--foreground);
+    }
   body {
-    @apply bg-background text-foreground;
+    @apply bg-background;
     }
   html {
-    @apply font-sans;
     /* Neutral, theme-free loading floor for the cold-cache first paint (no
        localStorage theme cache yet — first-ever visit, incognito, cleared
        storage). `Canvas` is a CSS system color that follows `color-scheme`
