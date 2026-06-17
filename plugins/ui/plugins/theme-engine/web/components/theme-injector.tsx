@@ -6,9 +6,8 @@ import {
   useMemo,
 } from "react";
 import { useConfig, useScopeForked } from "@plugins/config_v2/web";
-import { useActiveApp } from "@plugins/apps/web";
+import { useActiveApp, Apps } from "@plugins/apps/web";
 import {
-  CHROME_THEME_SCOPE,
   appThemeScope,
   themeScopeSelectors,
 } from "@plugins/primitives/plugins/ui-kit/web";
@@ -90,11 +89,10 @@ function GroupStyle({
   scopeId?: string;
   // When set, this GroupStyle emits a *scoped* override block targeting
   // `[data-theme-scope="<scopeToken>"]` instead of global `:root`/`.dark` (e.g.
-  // `"app:home"` for one desktop window's subtree, or `"chrome"` for the global
-  // app chrome). Scoped blocks use a distinct `theme-scope-` style id; both
-  // scoped and unscoped blocks feed the pre-paint cache aggregator so a warm
-  // reload paints every visible surface (global + chrome + each open app) on
-  // frame 0.
+  // `"app:home"` for one forked app's subtree). Scoped blocks use a distinct
+  // `theme-scope-` style id; both scoped and unscoped blocks feed the pre-paint
+  // cache aggregator so a warm reload paints every visible surface (the desktop
+  // `:root` + each forked app's scope) on frame 0.
   scopeToken?: string;
 }) {
   const adjustment = useContext(ColorAdjustContext);
@@ -182,11 +180,12 @@ function GroupStyle({
   return null;
 }
 
-// Reads the active app's resolved color mode and toggles the single global `.dark`
-// class. Only one app is mounted at a time (AppsLayout), so a global class is
-// correct — no per-app DOM scoping. Switching apps re-runs useActiveApp
-// (pathname store) and re-resolves the mode automatically. The resolution itself
-// lives in useResolvedColorMode so the class and prop-themed components never drift.
+// Toggles the single global `<html>.dark` class from the desktop (global,
+// unscoped) resolved color mode. Color mode is a single global class — no
+// per-app DOM scoping (per-scope dark is deferred) — and now follows the
+// desktop config, so switching the focused app never flips light/dark. The
+// resolution itself lives in useResolvedColorMode so the class and prop-themed
+// components never drift.
 function ColorModeApplier({ resolved }: { resolved: ColorMode }) {
   useLayoutEffect(() => {
     document.documentElement.classList.toggle("dark", resolved === "dark");
@@ -198,40 +197,48 @@ function ColorModeApplier({ resolved }: { resolved: ColorMode }) {
 export function ThemeInjector() {
   const active = useActiveApp();
   const appId = active?.id;
-  const scopeId = appId ? `app:${appId}` : undefined;
+  const activeScopeId = appId ? `app:${appId}` : undefined;
 
   // Persist the active app's scope (only when forked) so the pre-paint boot task
   // can re-hydrate it on a hard reload and avoid the one-frame flash of global
-  // theme. See active-scope-storage.
-  const forked = useScopeForked(scopeId);
+  // theme. See active-scope-storage. The active scope is used ONLY for cache
+  // keying + boot rehydrate — the `:root`/`.dark` blocks below are fed by the
+  // global (unscoped) config so the desktop theme is focus-independent.
+  const forked = useScopeForked(activeScopeId);
   useEffect(() => {
-    persistActiveForkedScope(scopeId, forked);
-  }, [scopeId, forked]);
+    persistActiveForkedScope(activeScopeId, forked);
+  }, [activeScopeId, forked]);
 
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
-  const resolved = useResolvedColorMode(scopeId);
+  // Desktop (global, unscoped) color mode — focus-independent like the rest of
+  // `:root`. Per-scope dark is deferred; `<html>.dark` stays a single global class.
+  const resolved = useResolvedColorMode(undefined);
   // The CONFIGURED color mode (not the resolved light/dark) is what the cache
   // stores, so the pre-paint script can re-resolve "system" against live
   // matchMedia each load. The live `.dark` class still uses `resolved` above.
-  const { colorMode } = useConfig(themeEngineConfig, { scopeId }) as {
+  const { colorMode } = useConfig(themeEngineConfig, { scopeId: undefined }) as {
     colorMode: CachedColorMode;
   };
   const appPath = active?.path;
 
   // Feed the active paint context to the module-level aggregator, which collects
-  // EVERY GroupStyle's CSS text (global `:root`/`.dark`, the chrome scope, and
-  // every open app scope) and writes the per-app-path localStorage envelope the
-  // pre-paint script in web-core/index.html replays before first paint — so a
-  // warm reload paints every visible surface themed on frame 0. The aggregator
-  // owns the debounced microtask flush and the claim-based stale-element prune
-  // (both global and scoped ids). The context is set in the render body (not an
-  // effect) so it is current before the flush microtask. See
-  // paint-cache-aggregator and theme-cache.
+  // EVERY GroupStyle's CSS text (the desktop `:root`/`.dark` and every forked
+  // app's scope) and writes the per-app-path localStorage envelope the pre-paint
+  // script in web-core/index.html replays before first paint — so a warm reload
+  // paints every visible surface themed on frame 0. The aggregator owns the
+  // debounced microtask flush and the claim-based stale-element prune (both
+  // global and scoped ids). The context is set in the render body (not an
+  // effect) so it is current before the flush microtask. `forked` keys the boot
+  // re-hydration of the active forked scope. See paint-cache-aggregator and
+  // theme-cache.
   setPaintContext({ appPath, mode: colorMode, forked });
 
+  // The `:root`/`.dark` blocks render the desktop (global, unscoped) config, so
+  // the base theme never tracks the focused app. Forked apps add their own
+  // override block via AppScopeThemes below.
   const groupStyles = groups.map((g) => (
-    <GroupStyle key={g.id} group={g} scopeId={scopeId} />
+    <GroupStyle key={g.id} group={g} scopeId={undefined} />
   ));
 
   const firstTransform = colorTransforms[0];
@@ -241,22 +248,23 @@ export function ThemeInjector() {
     <>{groupStyles}</>
   );
 
-  // Provide the active app's scopeId so slot-contributed reads that resolve via
-  // useThemeScopeId() (e.g. the color-adjust ColorTransform's useAdjustment) pick
-  // up the per-app value. GroupStyle gets scopeId directly as a prop.
+  // The `:root` blocks are unscoped (desktop), so slot-contributed reads that
+  // resolve via useThemeScopeId() (e.g. the color-adjust ColorTransform's
+  // useAdjustment) read the global value here. GroupStyle gets scopeId directly.
   return (
-    <ThemeScopeProvider scopeId={scopeId}>
+    <ThemeScopeProvider scopeId={undefined}>
       <ColorModeApplier resolved={resolved} />
       {content}
     </ThemeScopeProvider>
   );
 }
 
-// Scoped sibling of ThemeInjector for a single app id. Where ThemeInjector writes
-// the focused app's theme to global `:root`/`.dark` (and feeds the pre-paint
-// cache + the `<html>.dark` toggle), this writes a purely *additive* override
-// block targeting `[data-theme-scope="app:<id>"]`, so one desktop window's
-// subtree shows ITS app's theme while chrome and portals keep the global one.
+// Scoped sibling of ThemeInjector for a single app id, emitted ONLY when that app
+// is forked. With `:root` now carrying the desktop (global) theme, an unforked
+// app's theme IS the `:root` theme — so it needs no override block and this
+// returns null. A forked app writes a purely *additive* override block targeting
+// `[data-theme-scope="app:<id>"]`, so its subtree shows ITS app's theme while the
+// desktop `:root` (chrome, backdrop, portals) keeps the base one.
 //
 // It reuses the same preset resolution, merge, color-transform adjustment, and
 // completeness backstop as the global path (all live inside GroupStyle /
@@ -266,10 +274,18 @@ export function ThemeInjector() {
 // reload paints this app's scope on frame 0. Deliberately omits ColorModeApplier
 // (light/dark stays global) and the active-scope-storage side effect (owned by
 // ThemeInjector).
+//
+// Mounted centrally (one per registered app via AppScopeThemes at Core.Root),
+// not per open surface — so the degraded `AppTabsBody` fallback and the real
+// surface share the same scope blocks, with no `apps → theme-engine` cycle.
 export function ScopedAppTheme({ appId }: { appId: string }) {
   const scopeId = appThemeScope(appId);
+  const forked = useScopeForked(scopeId);
   const groups = ThemeEngine.TokenGroup.useContributions();
   const colorTransforms = ThemeEngine.ColorTransform.useContributions();
+
+  // Unforked apps inherit the desktop `:root` theme — no override block needed.
+  if (!forked) return null;
 
   const styles = groups.map((g) => (
     <GroupStyle key={g.id} group={g} scopeId={scopeId} scopeToken={appThemeScope(appId)} />
@@ -287,30 +303,20 @@ export function ScopedAppTheme({ appId }: { appId: string }) {
   );
 }
 
-// Stable theme for the global app chrome (sonner toaster, desktop backdrop, tab
-// bar, app rail). Like ScopedAppTheme it emits a purely *additive* override
-// block — but under the non-`app:` `chrome` token and fed by the GLOBAL
-// (unscoped) config instead of an `app:<id>` config. So the chrome wears the
-// user's base theme and does NOT track the focused window: switching desktop
-// windows no longer flips the surrounding chrome's palette. Always mounted
-// (chrome exists in every surface arrangement). Light/dark still follows the
-// global `<html>.dark` (no ColorModeApplier here — palette only).
-export function ChromeTheme() {
-  const groups = ThemeEngine.TokenGroup.useContributions();
-  const colorTransforms = ThemeEngine.ColorTransform.useContributions();
-
-  const styles = groups.map((g) => (
-    <GroupStyle key={g.id} group={g} scopeId={undefined} scopeToken={CHROME_THEME_SCOPE} />
-  ));
-
-  const firstTransform = colorTransforms[0];
+// Central mount point for every registered app's scope block: one
+// <ScopedAppTheme/> per `Apps.App` contribution (each one is forked-gated, so the
+// common unforked case emits nothing). Mounted at Core.Root — slot
+// `useContributions()` is provider-free, so this needs no TabsProvider ancestor
+// (which is exactly why it can't hang off `useTabs`). Mounting centrally (rather
+// than per open surface) is what lets the degraded `AppTabsBody` fallback be
+// themed without an `apps → theme-engine` import cycle.
+export function AppScopeThemes() {
+  const apps = Apps.App.useContributions();
   return (
-    <ThemeScopeProvider scopeId={undefined}>
-      {firstTransform ? (
-        <WithAdjustment contrib={firstTransform}>{styles}</WithAdjustment>
-      ) : (
-        <>{styles}</>
-      )}
-    </ThemeScopeProvider>
+    <>
+      {apps.map((app) => (
+        <ScopedAppTheme key={app.id} appId={app.id} />
+      ))}
+    </>
   );
 }

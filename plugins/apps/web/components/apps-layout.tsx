@@ -1,7 +1,11 @@
 import { useEffect, useMemo } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
-import { TooltipProvider } from "@plugins/primitives/plugins/ui-kit/web";
+import {
+  TooltipProvider,
+  appThemeScope,
+  PortalThemeScopeProvider,
+} from "@plugins/primitives/plugins/ui-kit/web";
 import {
   setBasePath,
   useSyncPaneRegistry,
@@ -60,12 +64,19 @@ export function AppTabsBody() {
       {tabs.map((tab) => {
         const focused = tab.tabId === focusedTabId;
         return (
+          // Tag each tab's subtree with its app scope so a forked app's content
+          // is themed by the same central scope block the real surface uses;
+          // unforked apps simply inherit the desktop `:root`. The
+          // PortalThemeScopeProvider lets portaled descendants re-adopt the scope.
           <div
             key={tab.tabId}
             className="absolute inset-0"
+            data-theme-scope={appThemeScope(tab.appId)}
             style={{ display: focused ? "block" : "none" }}
           >
-            <TabSurface tab={tab} />
+            <PortalThemeScopeProvider scope={appThemeScope(tab.appId)}>
+              <TabSurface tab={tab} />
+            </PortalThemeScopeProvider>
           </div>
         );
       })}

@@ -12,11 +12,7 @@ import {
   registerPlacementCapabilities,
   type Tab,
 } from "@plugins/apps/web";
-import {
-  CHROME_THEME_SCOPE,
-  PortalThemeScopeProvider,
-} from "@plugins/primitives/plugins/ui-kit/web";
-import { ScopedAppTheme } from "@plugins/ui/plugins/theme-engine/web";
+import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/ui-kit/web";
 import {
   Surface,
   PlacementStyleProvider,
@@ -77,12 +73,6 @@ export function SurfaceBody() {
     [sorted, defaultId],
   );
 
-  // One scoped theme `<style>` per DISTINCT app, so each tab's inline content
-  // adopts its own app's palette (two tabs of the same app share one block, keyed
-  // on app id). Each tab container is tagged `data-theme-scope="app:<id>"`; the
-  // backdrop itself wears the chrome scope so chrome/portals keep the global theme.
-  const appIds = useMemo(() => [...new Set(tabs.map((t) => t.appId))], [tabs]);
-
   // Resolve a tab's placement id, falling back to the default for unknown ids.
   const resolveId = (placement: string) =>
     byId.has(placement) ? placement : defaultId;
@@ -97,20 +87,18 @@ export function SurfaceBody() {
     // The shared backdrop for all placements. `transform-gpu` makes it the
     // containing block for the absolutely-positioned tabs (and their fixed-position
     // app chrome), so docked/floating tabs are clipped to the surface below the
-    // tab bar. (Solo tabs escape via `position: fixed` + portalToBody.)
-    <div
-      data-theme-scope={CHROME_THEME_SCOPE}
-      className="relative h-full w-full overflow-hidden bg-background transform-gpu"
-    >
+    // tab bar. (Solo tabs escape via `position: fixed` + portalToBody.) No
+    // `data-theme-scope` here — the backdrop inherits the desktop `:root` theme.
+    // Each forked app's scope block is mounted centrally (theme-engine's
+    // AppScopeThemes at Core.Root); each tab container is still tagged
+    // `data-theme-scope="app:<id>"` to pick it up.
+    <div className="relative h-full w-full overflow-hidden bg-background transform-gpu">
       {/* Per-placement backdrops (e.g. floating's desktop wallpaper), rendered
           only while >= 1 tab uses that placement so they never bleed otherwise. */}
       {backdrops.map((d) => {
         const Backdrop = d.Backdrop!;
         return <Backdrop key={d.id} />;
       })}
-      {appIds.map((id) => (
-        <ScopedAppTheme key={id} appId={id} />
-      ))}
       {tabs.map((tab) => (
         <TabContainer
           key={tab.tabId}

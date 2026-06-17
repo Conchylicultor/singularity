@@ -12,8 +12,9 @@ export function AppRail() {
   // (single source of truth — no `w-10`-vs-`2.5rem` drift).
   const activeAppId = useActiveApp()?.id;
   const { focusedTabId, replaceTabApp } = useTabs();
-  // Docked → wear the focused app's theme so the rail reads as one surface with
-  // it; desktop/solo → the neutral chrome theme. See useChromeThemeScope.
+  // Docked/solo → wear the focused app's theme so the rail reads as one surface
+  // with it; floating/no-app → inherit the desktop `:root` theme (no attribute).
+  // See useChromeThemeScope.
   const themeScope = useChromeThemeScope();
   return (
     <div

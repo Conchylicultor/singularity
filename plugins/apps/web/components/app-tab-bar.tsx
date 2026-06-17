@@ -57,8 +57,9 @@ export function AppTabBar() {
     titles,
   } = useTabs();
   const apps = Apps.App.useContributions();
-  // Docked → wear the focused app's theme so the tab bar reads as one surface
-  // with it; desktop/solo → the neutral chrome theme. See useChromeThemeScope.
+  // Docked/solo → wear the focused app's theme so the tab bar reads as one
+  // surface with it; floating/no-app → inherit the desktop `:root` theme (no
+  // attribute). See useChromeThemeScope.
   const themeScope = useChromeThemeScope();
 
   // The focused tab's placement determines what `+` spawns: a placement that

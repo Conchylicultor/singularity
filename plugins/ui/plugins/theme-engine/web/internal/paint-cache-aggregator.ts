@@ -3,10 +3,9 @@
 // precedent: active-scope-storage.ts is a plain module). The three style
 // emitters that must feed the cache live in DIFFERENT React subtrees and cannot
 // share a context:
-//   - ThemeInjector (Core.Root) — global `:root`/`.dark` blocks.
-//   - ChromeTheme  (Core.Root) — the `[data-theme-scope="chrome"]` block.
-//   - ScopedAppTheme (one per open app, mounted deep in apps' surface-body) —
-//     the `[data-theme-scope="app:<id>"]` blocks.
+//   - ThemeInjector (Core.Root) — the desktop `:root`/`.dark` blocks.
+//   - ScopedAppTheme (one per forked app, mounted centrally via AppScopeThemes
+//     at Core.Root) — the `[data-theme-scope="app:<id>"]` blocks.
 // A React context (the old CssReportContext) only spanned ThemeInjector's
 // subtree, so scoped blocks were excluded from the pre-paint cache and only
 // injected at runtime via useLayoutEffect — the flicker / "global instead of

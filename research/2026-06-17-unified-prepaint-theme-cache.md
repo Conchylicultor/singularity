@@ -105,10 +105,21 @@ These were explicitly OUT of scope here:
   redundant `chrome` scope / `ChromeTheme` entirely. Today `:root` doubles as
   "focused app" AND "neutral base", which is why `ChromeTheme` exists as a
   separate stable layer.
-- **Per-scope dark mode.** `.dark` is still a single global class driven by the
-  focused app (`ColorModeApplier`). Per-window/per-app color mode needs the dark
-  bit pushed into each `data-theme-scope` block instead.
+  - **LANDED** (`research/2026-06-17-unify-theme-model-desktop-scope.md`):
+    `:root`/`.dark` now carry the stable global desktop theme (fed by the
+    unscoped config, focus-independent); `ChromeTheme` + the `chrome` scope are
+    deleted; each app is themed solely by its own `[data-theme-scope="app:<id>"]`
+    block, emitted only when the app is forked (unforked apps inherit `:root`).
+    `ScopedAppTheme` is forked-gated and mounted centrally via `AppScopeThemes`
+    at `Core.Root`. The chrome's floating / no-app fallback now inherits `:root`
+    instead of the deleted `chrome` scope.
+- **Per-scope dark mode.** Still deferred. `.dark` is a single global class —
+  now driven by the **global/desktop** config (no longer the focused app). A
+  forked app's own `colorMode` is thus visually inert until this pass (its scoped
+  dark block still gates on the global `.dark [data-theme-scope=…]`); its
+  *preset* applies fully. Per-window/per-app color mode needs the dark bit pushed
+  into each `data-theme-scope` block instead.
 
-Both touch `plugins/apps/**` and `plugins/shell/**` (surface-body, app-rail,
-app-tab-bar, toaster) and the `<html>.dark` model, so they belong in a separate
-design pass.
+Per-scope dark touches `plugins/apps/**` and `plugins/shell/**` (surface-body,
+app-rail, app-tab-bar, toaster) and the `<html>.dark` model, so it belongs in a
+separate design pass.

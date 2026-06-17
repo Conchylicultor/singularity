@@ -46,7 +46,6 @@ export { Input } from "./components/ui/input";
 export {
   PortalThemeScopeProvider,
   usePortalThemeScope,
-  CHROME_THEME_SCOPE,
   appThemeScope,
   themeScopeSelectors,
 } from "./components/portal-theme-scope";

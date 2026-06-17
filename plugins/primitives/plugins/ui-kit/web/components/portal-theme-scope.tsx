@@ -4,7 +4,6 @@ import { createContext, useContext, type ReactNode } from "react"
  *  (this file), so it owns the token strings too — both producers (theme-engine's
  *  GroupStyle) and consumers (the chrome surfaces, the desktop window frames)
  *  reference these instead of duplicating literals. */
-export const CHROME_THEME_SCOPE = "chrome"
 export const appThemeScope = (appId: string) => `app:${appId}`
 export const themeScopeSelectors = (token: string) => ({
   light: `[data-theme-scope="${token}"]`,
