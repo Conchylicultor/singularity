@@ -2319,7 +2319,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
             - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
           - Plugins:
-            - **`app-css-source-resolves`**
             - **`app-css-utilities-in-sync`**
             - **`barrel-stubs-in-sync`**
             - **`class-token-walk-in-sync`**
@@ -2350,6 +2349,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - **`reorderable-slots-in-sync`**
             - **`snapshot-chain-intact`**
             - **`table-defs-in-schema-glob`**
+            - **`tailwind-scan-covers-classes`**
             - **`token-group-vars-in-sync`**
             - **`tsconfig-alias-single-owner`**
             - **`type-check`**
