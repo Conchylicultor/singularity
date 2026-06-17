@@ -53,12 +53,47 @@ export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
 const geoState = new Map<string, Geometry>();
 const subscribers = new Set<() => void>();
 
-// Monotonic z-order counter. `bringToFront` sets `z = ++nextZ` so the most
-// recently focused window always sits on top. Seeded past any hydrated z below.
+// Monotonic z-order counter. New windows / raise-to-front set `z = ++nextZ` so
+// the most recently focused window always sits on top. Seeded past any hydrated
+// z below. Bounded by renormalization (see `Z_CEILING` / `renormalize`).
 let nextZ = 0;
 
+/**
+ * Ceiling for the committed window z. Once `nextZ` exceeds it we renormalize the
+ * open windows down to compact ranks (`1..N`), so window z stays <= this and the
+ * dock (z-overlay = 40) always sits above the windows — and the counter never
+ * grows unbounded across a long session.
+ */
+const Z_CEILING = 30;
+
+/**
+ * The reactive whole-map snapshot returned by {@link useWindowGeometryMap}. It is
+ * a STABLE reference between mutations (rebuilt only in {@link notify} and after
+ * inserts) so `useSyncExternalStore`'s `getSnapshot` never reports a phantom
+ * change and loops.
+ */
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a derived cache of the page-global `geoState` (window geometry is keyed by tabId and shared across every keep-alive surface mount, never per-surface), mirroring the module-global store this file already is.
+let snapshot: Map<string, Geometry> = new Map();
+
+function rebuildSnapshot() {
+  snapshot = new Map(geoState);
+}
+
 function notify() {
+  rebuildSnapshot();
   for (const fn of subscribers) fn();
+}
+
+/**
+ * Compact every open window's z to a dense rank (`1..N`, N = window count) by
+ * current z ascending, so the highest-z window (just bumped by the caller) stays
+ * on top while the ceiling is respected. Mutates `geoState` only — the calling
+ * mint site already runs `persist()`/`notify()`, so this never notifies itself.
+ */
+function renormalize() {
+  const ranked = [...geoState.entries()].sort((a, b) => a[1].z - b[1].z);
+  ranked.forEach(([id, geo], i) => geoState.set(id, { ...geo, z: i + 1 }));
+  nextZ = ranked.length;
 }
 
 const LS_KEY = () => `app-windows:${getTabId()}`;
@@ -89,6 +124,7 @@ function hydrate() {
       geoState.set(id, geo);
       if (geo.z > nextZ) nextZ = geo.z;
     }
+    rebuildSnapshot();
   } catch (err) {
     if (!(err instanceof DOMException)) throw err;
   }
@@ -116,7 +152,12 @@ function read(tabId: string): Geometry {
   hydrate();
   if (!geoState.has(tabId)) {
     geoState.set(tabId, defaultGeometry());
+    // A freshly opened window mints `z = ++nextZ` (highest); if that crossed the
+    // ceiling, renormalize keeps it on top while bounding z. Refresh the snapshot
+    // so the new window appears in `useWindowGeometryMap` before any notify.
+    if (nextZ > Z_CEILING) renormalize();
     persist();
+    rebuildSnapshot();
   }
   return geoState.get(tabId)!;
 }
@@ -143,10 +184,55 @@ export function pruneWindowGeometry(openTabIds: Set<string>) {
 }
 
 /**
+ * Raise a window's z above all others (module-level so the dock can call it
+ * without a geometry handle). No-op when already on top. After minting the new
+ * z, renormalize when over the ceiling — this compacts z by current value, so
+ * the just-bumped window (now the highest) still ends up at rank N = top.
+ */
+export function bringWindowToFront(tabId: string) {
+  const current = read(tabId);
+  if (current.z === nextZ) return; // already on top
+  geoState.set(tabId, { ...current, z: ++nextZ });
+  if (nextZ > Z_CEILING) renormalize();
+  persist();
+  notify();
+}
+
+/**
+ * Set a window's `minimized` flag (default un-minimize). Module-level so the dock
+ * can restore/minimize a window without a geometry handle. No-op when unchanged
+ * so it never notifies spuriously.
+ */
+export function restoreWindow(tabId: string, minimize = false) {
+  const current = read(tabId);
+  if (current.minimized === minimize) return;
+  geoState.set(tabId, { ...current, minimized: minimize });
+  persist();
+  notify();
+}
+
+/**
+ * Reactive read of the whole geometry map (for the dock). Returns the module
+ * snapshot — a stable reference between mutations (rebuilt only in `notify` and
+ * after inserts), so `useSyncExternalStore` never sees a phantom change.
+ */
+export function useWindowGeometryMap(): Map<string, Geometry> {
+  return useSyncExternalStore(
+    (cb) => {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
+    },
+    () => snapshot,
+    () => snapshot,
+  );
+}
+
+/**
  * Per-window geometry handle, mirroring `useColumnWidth`: `[geo, setGeo,
  * bringToFront]`. `setGeo` accepts a value or a functional updater; every
  * mutation persists the whole map and notifies subscribers. `bringToFront`
- * raises this window's z above all others.
+ * delegates to the module-level {@link bringWindowToFront} so there is one
+ * implementation shared with the dock.
  */
 export function useWindowGeometry(
   tabId: string,
@@ -175,13 +261,7 @@ export function useWindowGeometry(
     [tabId],
   );
 
-  const bringToFront = useCallback(() => {
-    const current = read(tabId);
-    if (current.z === nextZ) return; // already on top
-    geoState.set(tabId, { ...current, z: ++nextZ });
-    persist();
-    notify();
-  }, [tabId]);
+  const bringToFront = useCallback(() => bringWindowToFront(tabId), [tabId]);
 
   return [geo, setGeo, bringToFront];
 }

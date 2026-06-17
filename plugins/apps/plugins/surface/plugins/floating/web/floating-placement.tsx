@@ -12,6 +12,7 @@ import {
 } from "./hooks/use-window-geometry";
 import { WindowChrome, WINDOW_TITLEBAR_INSET } from "./components/window-chrome";
 import { DesktopWallpaper } from "./components/desktop-wallpaper";
+import { WindowDock } from "./components/window-dock";
 
 /**
  * The floating placement: a free-floating, draggable/resizable window over the
@@ -31,6 +32,7 @@ export const floatingDef: PlacementDef = {
   containerClassName:
     "absolute overflow-hidden rounded-lg border bg-background shadow-lg",
   Backdrop: DesktopWallpaper,
+  Foreground: WindowDock,
   Chrome: FloatingChrome,
 };
 
@@ -61,13 +63,16 @@ function FloatingChrome({ tabId, appId, title, focused, onClose }: PlacementChro
     // eslint-disable-next-line react-hooks/exhaustive-deps -- keyed on the id set, not the tab objects
   }, [openIds]);
 
-  // The window box → the stable container (maximized fills the backdrop). The
-  // content inset clears the titlebar (and hides while minimized, kept mounted).
+  // The window box → the stable container (maximized fills the backdrop). When
+  // minimized the WHOLE window (box + titlebar overlay) leaves the desktop via
+  // `display:none` on the container — the dock chip is then the only restore
+  // target — while the tab stays mounted (keep-alive). Otherwise the content
+  // inset clears the titlebar.
   useLayoutEffect(() => {
     const box: CSSProperties = geo.maximized
       ? { left: 0, top: 0, right: 0, bottom: 0, zIndex: geo.z }
       : { left: geo.x, top: geo.y, width: geo.w, height: geo.h, zIndex: geo.z };
-    setContainerStyle(box);
+    setContainerStyle(geo.minimized ? { ...box, display: "none" } : box);
     setContentInsetStyle(
       geo.minimized ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET },
     );

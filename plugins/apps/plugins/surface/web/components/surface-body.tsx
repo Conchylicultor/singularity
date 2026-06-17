@@ -103,6 +103,14 @@ export function SurfaceBody() {
     (d) => d.Backdrop && tabs.some((t) => resolveId(t.placement) === d.id),
   );
 
+  // Foregrounds: the symmetric overlay above all containers — each placement's
+  // optional `Foreground` rendered once iff at least one open tab resolves to it
+  // (e.g. floating's desktop dock). Stays generic: passes the resolved tabIds so
+  // the foreground never re-derives placement (e.g. floating's window dock).
+  const foregrounds = sorted.filter(
+    (d) => d.Foreground && tabs.some((t) => resolveId(t.placement) === d.id),
+  );
+
   return (
     // The shared backdrop for all placements. `transform-gpu` makes it the
     // containing block for the absolutely-positioned tabs (and their fixed-position
@@ -132,6 +140,21 @@ export function SurfaceBody() {
           setPlacement={setPlacement}
         />
       ))}
+      {/* Per-placement foregrounds (e.g. floating's window dock), rendered last so
+          they sit above the tab containers, only while >= 1 tab uses that
+          placement. Each gets the tabIds resolving to it so it stays decoupled
+          from the host's placement-resolution. */}
+      {foregrounds.map((d) => {
+        const Foreground = d.Foreground!;
+        return (
+          <Foreground
+            key={d.id}
+            tabIds={tabs
+              .filter((t) => resolveId(t.placement) === d.id)
+              .map((t) => t.tabId)}
+          />
+        );
+      })}
     </div>
   );
 }

@@ -67,6 +67,13 @@ export interface PlacementDef {
   Chrome?: ComponentType<PlacementChromeProps>;
   /** Rendered once whenever >= 1 tab uses this placement (e.g. desktop wallpaper). */
   Backdrop?: ComponentType;
+  /**
+   * Optional overlay rendered ONCE, ABOVE all tab containers, whenever >= 1 open
+   * tab uses this placement. Symmetric with {@link PlacementDef.Backdrop} (which
+   * renders below). Receives the open tabIds resolving to this placement so it
+   * stays decoupled from the host's placement-resolution.
+   */
+  Foreground?: ComponentType<{ tabIds: string[] }>;
 
   // Capabilities consumed generically by apps-side chrome (no string compares):
   /** Focused tab in this placement => chrome wears the app theme. */
