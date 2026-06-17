@@ -63,6 +63,20 @@ export interface FrameProps
  * - `meta`     → `minmax(0,1fr)`          (secondary; yields all space, truncates FIRST)
  * - `trailing` → `auto`                   (rigid, never shrinks)
  *
+ * ## Why the row always carries a flexible track (the `fill`)
+ *
+ * The grid needs EXACTLY ONE flexible (`1fr`) track to absorb the container's
+ * leftover width. Without one, the leftover pools into the rigid `auto` clusters:
+ * `justify-content`'s default (`stretch`) grows auto-MAX tracks equally, so a row
+ * of `leading | content | trailing` (no `meta`) splits the slack between `leading`
+ * and `trailing`, shoving `content` into the CENTER and unpinning `trailing` from
+ * the right edge. `meta`'s `minmax(0,1fr)` is normally that flexible track; when
+ * `meta` is absent but a `trailing` cluster still needs pinning right, an inert
+ * spacer takes meta's slot (`fill = meta || trailing`). The component renders an
+ * empty `<div>` into that spacer track. `justify-content: start` (set on the grid)
+ * handles the remaining no-flex shapes (e.g. `leading | content`, no trailing):
+ * with no `fr` track to grow, leftover packs at the end so `content` stays left.
+ *
  * ## Why strict priority, not weighted `fr`
  *
  * The contract is STRICT, not proportional: `meta` must give up every pixel of
@@ -97,10 +111,12 @@ export function frameGridTemplate(present: {
   meta: boolean;
   trailing: boolean;
 }): string {
+  // The single flexible track (`meta`, or an inert spacer pinning `trailing`).
+  const fill = present.meta || present.trailing;
   return [
     present.leading && "auto",
     present.content && "minmax(0,max-content)",
-    present.meta && "minmax(0,1fr)",
+    fill && "minmax(0,1fr)",
     present.trailing && "auto",
   ]
     .filter(Boolean)
@@ -143,9 +159,19 @@ export function Frame({
     meta: meta != null,
     trailing: trailing != null,
   };
+  // The flexible track: `meta` when present, else an inert spacer that absorbs
+  // the row's slack so `trailing` pins right and `content` is never centered.
+  const fill = present.meta || present.trailing;
   return (
     <As
-      className={cn("grid", GAP_CLASS[gap], ALIGN_CLASS[align], className)}
+      // `justify-start` packs tracks left in the no-flex shapes (no fill track),
+      // so a lone rigid `auto` never stretches and shoves `content` off the edge.
+      className={cn(
+        "grid justify-start",
+        GAP_CLASS[gap],
+        ALIGN_CLASS[align],
+        className,
+      )}
       style={{ gridTemplateColumns: frameGridTemplate(present) }}
       {...rest}
     >
@@ -153,7 +179,12 @@ export function Frame({
         <div className={cn("flex items-center", GAP_CLASS[gap])}>{leading}</div>
       )}
       {present.content && <FlexSlot>{content}</FlexSlot>}
-      {present.meta && <FlexSlot>{meta}</FlexSlot>}
+      {fill &&
+        (present.meta ? (
+          <FlexSlot>{meta}</FlexSlot>
+        ) : (
+          <div className="min-w-0" aria-hidden />
+        ))}
       {present.trailing && (
         <div className={cn("flex items-center justify-end", GAP_CLASS[gap])}>
           {trailing}

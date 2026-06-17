@@ -103,6 +103,7 @@ async function setFrame(opts: {
       grid-template-columns: ${template};
       column-gap: 8px;
       align-items: center;
+      justify-content: start;
       width: ${opts.width}px;
     }
     /* rigid clusters: auto track sized to fixed-width content, never crushed */
@@ -114,7 +115,13 @@ async function setFrame(opts: {
     <div id="frame">
       <div id="leading"></div>
       <div id="content" class="flex-slot">${opts.contentText}</div>
-      ${opts.metaText != null ? `<div id="meta" class="flex-slot">${opts.metaText}</div>` : ""}
+      ${
+        opts.metaText != null
+          ? `<div id="meta" class="flex-slot">${opts.metaText}</div>`
+          : // No meta ⇒ an inert 1fr spacer takes its slot (mirrors the component),
+            // so leftover width never pools into the rigid auto clusters.
+            `<div id="spacer" style="min-width:0"></div>`
+      }
       <div id="trailing"></div>
     </div>
   </body></html>`;
@@ -240,6 +247,15 @@ describe("Frame geometry (real Chromium grid layout)", () => {
       // 3. Rigid integrity: leading/trailing keep their natural width always.
       expect(m.leading.width).toBeCloseTo(LEADING_W, 0);
       expect(m.trailing.width).toBeCloseTo(TRAILING_W, 0);
+
+      // 4. Content is left-packed immediately after leading (one column-gap, no
+      //    extra slack). The no-meta regression centered content by pooling
+      //    leftover into the rigid auto tracks — this asserts it doesn't.
+      expect(m.content.left).toBeCloseTo(m.leading.right + 8, 0);
+
+      // 5. Trailing stays pinned to the right edge (the flexible fill track, meta
+      //    or spacer, absorbs all leftover between content and trailing).
+      expect(m.trailing.right).toBeCloseTo(m.container.right, 0);
     });
   }
 

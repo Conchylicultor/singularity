@@ -30,6 +30,24 @@ a track (an absent slot ⇒ no child ⇒ no track ⇒ no phantom gap):
 The contract is **strict priority**, not proportional sharing: `meta` must give
 up every pixel of its space before `content` truncates a single character.
 
+## The flexible `fill` track (no-meta rows must not center)
+
+The row needs **exactly one** flexible (`1fr`) track to swallow the container's
+leftover width. Without one, the leftover pools into the rigid `auto` clusters —
+`justify-content`'s default `stretch` grows auto-max tracks equally — so a
+`leading | content | trailing` row (no `meta`) splits the slack between `leading`
+and `trailing` and **centers `content`** (and unpins `trailing` from the right).
+This was the regression when `CollapsibleCard` moved onto `Frame`: every card
+without a file path (task-reminder, system, thinking, …) had its title centered.
+
+`meta` is normally that flexible track. When `meta` is absent but `trailing` is
+present, an **inert spacer** takes meta's slot (`fill = meta || trailing`; the
+component renders an empty `<div>` there). The grid also sets
+`justify-content: start`, which left-packs the no-flex shapes (e.g.
+`leading | content` with no trailing) so a lone `auto` never stretches `content`
+off-edge. Net: `content` is always left-packed one gap after `leading`, and
+`trailing` is always pinned right — asserted by geometry-test checks 4 & 5.
+
 - A weighted-`fr` split (`content:3fr meta:1fr`) only expresses *proportional*
   sharing — both tracks shrink together, so a long `content` ellipsizes while
   `meta` still has room, and `meta`'s small `fr` track is starved below its

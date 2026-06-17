@@ -27,6 +27,8 @@ describe("frameGridTemplate", () => {
   });
 
   test("leading + content + trailing (the CollapsibleCard shape, no meta)", () => {
+    // A spacer `1fr` takes meta's slot so `trailing` pins right and `content`
+    // is never centered — the regression this fix guards against.
     expect(
       frameGridTemplate({
         leading: true,
@@ -34,7 +36,7 @@ describe("frameGridTemplate", () => {
         meta: false,
         trailing: true,
       }),
-    ).toBe("auto minmax(0,max-content) auto");
+    ).toBe("auto minmax(0,max-content) minmax(0,1fr) auto");
   });
 
   test("content only", () => {
@@ -43,10 +45,10 @@ describe("frameGridTemplate", () => {
     );
   });
 
-  test("leading + trailing only (no flexible track)", () => {
+  test("leading + trailing only (spacer pins trailing right)", () => {
     expect(
       frameGridTemplate({ ...ALL_ABSENT, leading: true, trailing: true }),
-    ).toBe("auto auto");
+    ).toBe("auto minmax(0,1fr) auto");
   });
 
   test("meta only", () => {
