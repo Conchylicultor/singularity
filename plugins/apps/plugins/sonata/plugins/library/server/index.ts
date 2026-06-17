@@ -1,5 +1,7 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { ConfigV2 } from "@plugins/config_v2/server";
+import { viewsDescriptor } from "@plugins/primitives/plugins/data-view/server";
 import { deleteSong, updateSong } from "../core/endpoints";
 import { handleDeleteSong } from "./internal/handle-delete-song";
 import { handleUpdateSong } from "./internal/handle-update-song";
@@ -24,5 +26,8 @@ export default {
     [deleteSong.route]: handleDeleteSong,
     [updateSong.route]: handleUpdateSong,
   },
-  contributions: [Resource.Declare(songsLiveResource)],
+  contributions: [
+    Resource.Declare(songsLiveResource),
+    ConfigV2.Register({ descriptor: viewsDescriptor("sonata:library") }),
+  ],
 } satisfies ServerPluginDefinition;

@@ -1,4 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
+import { ConfigV2 } from "@plugins/config_v2/web";
+import { viewsDescriptor } from "@plugins/primitives/plugins/data-view/web";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Sonata, SonataToolbar } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { SongLibrary } from "./components/song-library";
@@ -25,5 +27,6 @@ export default {
     SonataToolbar.Start({ id: "display-picker", component: DisplayPicker }),
     Pane.Register({ pane: sonataLibraryPane }),
     Pane.Register({ pane: sonataPlayerPane }),
+    ConfigV2.WebRegister({ descriptor: viewsDescriptor("sonata:library") }),
   ],
 } satisfies PluginDefinition;

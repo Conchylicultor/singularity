@@ -3,6 +3,7 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { viewStateDescriptor } from "../shared/view-state-config";
 
 export { DataView } from "./components/data-view";
+export { viewsDescriptor } from "../shared/views-config";
 export { DataViewSlots } from "./slots";
 export type { DataViewContribution } from "./slots";
 export { useResolveCell } from "./cell-slot";

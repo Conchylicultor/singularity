@@ -1391,6 +1391,14 @@
       "name": "@singularity/plugin-fields-text-table",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/variant": {
+      "name": "@singularity/plugin-fields-variant",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/variant/plugins/config": {
+      "name": "@singularity/plugin-fields-variant-config",
+      "version": "0.0.1",
+    },
     "plugins/framework": {
       "name": "@singularity/plugin-framework",
       "version": "0.0.1",
@@ -4137,6 +4145,10 @@
     "@singularity/plugin-fields-text-inline": ["@singularity/plugin-fields-text-inline@workspace:plugins/fields/plugins/text/plugins/inline"],
 
     "@singularity/plugin-fields-text-table": ["@singularity/plugin-fields-text-table@workspace:plugins/fields/plugins/text/plugins/table"],
+
+    "@singularity/plugin-fields-variant": ["@singularity/plugin-fields-variant@workspace:plugins/fields/plugins/variant"],
+
+    "@singularity/plugin-fields-variant-config": ["@singularity/plugin-fields-variant-config@workspace:plugins/fields/plugins/variant/plugins/config"],
 
     "@singularity/plugin-framework": ["@singularity/plugin-framework@workspace:plugins/framework"],
 

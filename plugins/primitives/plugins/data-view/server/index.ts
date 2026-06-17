@@ -2,6 +2,8 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { ConfigV2 } from "@plugins/config_v2/server";
 import { viewStateDescriptor } from "../shared/view-state-config";
 
+export { viewsDescriptor } from "../shared/views-config";
+
 export default {
   description:
     "Registers the data-view saved view-state config_v2 descriptor (per-surface active view, sort, and filter).",
