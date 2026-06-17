@@ -4,11 +4,17 @@
  * Gives the app a native-feeling elastic **rubber-band** when a wheel /
  * trackpad / touch gesture is fully **wasted** — nothing actually scrolls
  * because the surface isn't scrollable or is already pinned at the edge in that
- * direction. Like iOS/macOS overscroll, the surface follows the gesture *live*:
- * it translates proportionally to how hard you push (damped by ever-increasing
- * resistance, so it asymptotes instead of running away), then springs back when
- * the gesture stops. Every push against the wall produces movement — there is
- * no one-shot animation to "use up".
+ * direction. Like iOS/macOS overscroll, the surface follows the gesture *live*.
+ *
+ * The motion is a small continuous physics loop rather than a one-shot clip:
+ *   - every wasted scroll event PUSHES the surface out, with resistance that
+ *     grows as it nears the limit (so it asymptotes instead of running away);
+ *   - every animation frame a spring-like DECAY pulls it back toward rest.
+ * As trackpad momentum decays, the incoming pushes shrink, the decay wins, and
+ * the surface recedes smoothly — it never stays pinned waiting for the momentum
+ * tail to end. A fresh flick re-pushes it naturally, so repeated dead-end
+ * scrolls always produce feedback. While a finger is down the decay pauses so
+ * the surface tracks the touch 1:1, then springs back on release.
  *
  * Detection is cheap and 100% accurate: we record each gesture, then on the
  * next animation frame we check whether ANY real `scroll` event fired in the
@@ -28,43 +34,44 @@ interface PendingGesture {
   scrolledSince: boolean;
 }
 
-/** A surface currently being held in an overscrolled (rubber-banded) state. */
-interface ActiveOverscroll {
-  el: HTMLElement;
-  axis: Axis;
-  /** Accumulated signed overscroll intent (raw px) for the current gesture. */
-  raw: number;
-}
-
 /** Minimum dominant-axis delta (px) for a gesture to count. */
 const MIN_DELTA = 2;
 /** The furthest the surface can rubber-band, in px (the resistance asymptote). */
 const MAX_PULL = 48;
-/** Resistance factor — higher reaches MAX_PULL faster (stiffer past the wall). */
-const RESISTANCE = 0.5;
 /**
- * Quiet gap (ms) after the last wasted gesture event that ends the gesture and
- * triggers the spring-back. Long enough to ride a trackpad-momentum tail as one
- * continuous hold, short enough that releasing snaps back promptly.
+ * Fraction of a wasted scroll delta that becomes outward displacement at rest.
+ * Resistance scales this down toward 0 as the offset nears MAX_PULL, so a hard
+ * flick reaches the limit in a few events and pushing further barely moves it.
  */
-const GESTURE_END_GAP_MS = 150;
-/** Spring-back duration + easing — snappy decelerate, no overshoot (easeOutQuint). */
-const SPRING_MS = 300;
-const SPRING_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
-/** Safety net to clear the snap-back styles if `transitionend` never fires. */
-const SPRING_FALLBACK_MS = SPRING_MS + 120;
+const PUSH_FACTOR = 0.32;
+/**
+ * Spring-back time constant (ms). Each frame the offset is multiplied by
+ * exp(-dt / DECAY_TAU_MS); ~3·τ (~270ms) returns it essentially to rest. Small
+ * enough to feel snappy, large enough to read as a spring rather than a cut.
+ */
+const DECAY_TAU_MS = 90;
+/** Below this |offset| (px) we snap to 0 and stop the loop. */
+const STOP_EPS = 0.4;
+/** Clamp for a single frame's dt so a backgrounded tab can't teleport the decay. */
+const MAX_FRAME_MS = 64;
 const SCROLLABLE_OVERFLOW = new Set(["auto", "scroll", "overlay"]);
 
 /**
  * Install the global wasted-scroll detector. Returns a cleanup function that
- * removes every listener, cancels any pending frame, and resets any surface
- * left mid-rubber-band.
+ * removes every listener, cancels pending frames, and resets any surface left
+ * mid-rubber-band.
  */
 export function installOverscrollHint(): () => void {
   let pending: PendingGesture | null = null;
   let rafId: number | null = null;
-  let active: ActiveOverscroll | null = null;
-  let endTimer: number | null = null;
+
+  // Physics state for the surface currently being rubber-banded.
+  let el: HTMLElement | null = null;
+  let axis: Axis = "y";
+  let offset = 0; // current signed displacement in px
+  let touching = false; // finger down → hold (no decay) so it tracks 1:1
+  let loopId: number | null = null;
+  let lastTs: number | null = null;
 
   let touchStartX = 0;
   let touchStartY = 0;
@@ -98,82 +105,99 @@ export function installOverscrollHint(): () => void {
     // The gesture was intentionally consumed (e.g. graph zoom / canvas pan).
     if (gesture.event?.defaultPrevented) return;
 
-    const axis: Axis =
+    const gestureAxis: Axis =
       Math.abs(gesture.deltaX) > Math.abs(gesture.deltaY) ? "x" : "y";
-    const delta = axis === "x" ? gesture.deltaX : gesture.deltaY;
+    const delta = gestureAxis === "x" ? gesture.deltaX : gesture.deltaY;
     if (delta === 0) return;
     if (reducedMotion()) return;
 
     const surface = pickScrollSurface(
       gesture.target instanceof Element ? gesture.target : null,
-      axis,
+      gestureAxis,
     );
     if (!(surface instanceof HTMLElement)) return;
 
-    // Start a fresh hold, or continue the current one. A change of surface or
-    // axis settles the old hold first so it springs back cleanly.
-    if (!active || active.el !== surface || active.axis !== axis) {
-      if (active) springBack(active);
-      active = { el: surface, axis, raw: 0 };
-      surface.style.transition = "none";
-      surface.style.willChange = "transform";
+    // Switching surface or axis mid-flight: reset the old one cleanly.
+    if (el && (el !== surface || axis !== gestureAxis)) {
+      resetSurface();
     }
-    active.raw += delta;
-    applyOffset(active);
+    el = surface;
+    axis = gestureAxis;
+    el.style.willChange = "transform";
 
-    // (Re)arm the spring-back: it fires once the gesture stream goes quiet.
-    if (endTimer !== null) window.clearTimeout(endTimer);
-    endTimer = window.setTimeout(onGestureEnd, GESTURE_END_GAP_MS);
+    push(delta);
+    apply();
+    startLoop();
   }
 
-  function onGestureEnd(): void {
-    endTimer = null;
-    if (!active) return;
-    const held = active;
-    active = null;
-    springBack(held);
+  /**
+   * Add a wasted scroll delta as outward displacement. Scrolling down/right at a
+   * dead end nudges content UP/LEFT (positive delta → negative offset), like
+   * native overscroll. Resistance shrinks the contribution as we near the limit.
+   */
+  function push(delta: number): void {
+    const resistance = 1 - Math.abs(offset) / MAX_PULL;
+    offset += -delta * PUSH_FACTOR * resistance;
+    if (offset > MAX_PULL) offset = MAX_PULL;
+    else if (offset < -MAX_PULL) offset = -MAX_PULL;
   }
 
-  /** Damped displacement: asymptotes toward MAX_PULL as |raw| grows. */
-  function damp(raw: number): number {
-    const d = Math.abs(raw);
-    const pulled = MAX_PULL * (1 - MAX_PULL / (MAX_PULL + d * RESISTANCE));
-    return Math.sign(raw) * pulled;
-  }
-
-  function applyOffset(held: ActiveOverscroll): void {
-    // Scrolling down/right at a dead end nudges content UP/LEFT, like native
-    // overscroll: positive delta → negative offset.
-    const offset = -damp(held.raw);
-    held.el.style.transform =
-      held.axis === "y" ? `translateY(${offset}px)` : `translateX(${offset}px)`;
-  }
-
-  function springBack(held: ActiveOverscroll): void {
-    const el = held.el;
-    el.style.transition = `transform ${SPRING_MS}ms ${SPRING_EASE}`;
+  function apply(): void {
+    if (!el) return;
     el.style.transform =
-      held.axis === "y" ? "translateY(0px)" : "translateX(0px)";
+      axis === "y" ? `translateY(${offset}px)` : `translateX(${offset}px)`;
+  }
 
-    const clear = (): void => {
-      el.style.transition = "";
+  function startLoop(): void {
+    if (loopId === null) {
+      lastTs = null;
+      loopId = requestAnimationFrame(step);
+    }
+  }
+
+  function step(ts: number): void {
+    loopId = null;
+    if (!el) return;
+
+    const dt = lastTs === null ? 16 : Math.min(MAX_FRAME_MS, ts - lastTs);
+    lastTs = ts;
+
+    // Finger down → hold the current displacement; otherwise spring back.
+    if (!touching) {
+      offset *= Math.exp(-dt / DECAY_TAU_MS);
+      if (Math.abs(offset) < STOP_EPS) {
+        offset = 0;
+        apply();
+        resetSurface();
+        return;
+      }
+    }
+
+    apply();
+    loopId = requestAnimationFrame(step);
+  }
+
+  function resetSurface(): void {
+    if (loopId !== null) {
+      cancelAnimationFrame(loopId);
+      loopId = null;
+    }
+    if (el) {
       el.style.transform = "";
       el.style.willChange = "";
-      window.clearTimeout(fallback);
-    };
-    el.addEventListener("transitionend", clear, { once: true });
-    // Safety net only — if `transitionend` somehow never fires we still reset.
-    const fallback = window.setTimeout(clear, SPRING_FALLBACK_MS);
+    }
+    el = null;
+    offset = 0;
+    lastTs = null;
   }
 
-  function pickScrollSurface(start: Element | null, axis: Axis): Element | null {
-    const overflowProp =
-      axis === "x" ? "overflow-x" : ("overflow-y" as const);
-    let el: Element | null = start;
-    while (el) {
-      const overflow = getComputedStyle(el).getPropertyValue(overflowProp);
-      if (SCROLLABLE_OVERFLOW.has(overflow.trim())) return el;
-      el = el.parentElement;
+  function pickScrollSurface(start: Element | null, ax: Axis): Element | null {
+    const overflowProp = ax === "x" ? "overflow-x" : ("overflow-y" as const);
+    let node: Element | null = start;
+    while (node) {
+      const overflow = getComputedStyle(node).getPropertyValue(overflowProp);
+      if (SCROLLABLE_OVERFLOW.has(overflow.trim())) return node;
+      node = node.parentElement;
     }
     // Fallback chain: nearest pane → main → scrolling root.
     const pane = start?.closest("[data-pane-id]");
@@ -195,6 +219,7 @@ export function installOverscrollHint(): () => void {
   function onTouchStart(event: TouchEvent): void {
     const t = event.touches[0];
     if (!t) return;
+    touching = true;
     touchStartX = t.clientX;
     touchStartY = t.clientY;
   }
@@ -211,13 +236,9 @@ export function installOverscrollHint(): () => void {
   }
 
   function onTouchEnd(): void {
-    // Lifting the finger ends the gesture immediately — spring back now rather
-    // than waiting out the quiet gap (which only exists for wheel momentum).
-    if (endTimer !== null) {
-      window.clearTimeout(endTimer);
-      endTimer = null;
-    }
-    onGestureEnd();
+    // Finger released → resume the spring-back from wherever it was held.
+    touching = false;
+    if (el) startLoop();
   }
 
   window.addEventListener("wheel", onWheel, { passive: true });
@@ -235,12 +256,6 @@ export function installOverscrollHint(): () => void {
     window.removeEventListener("touchend", onTouchEnd);
     window.removeEventListener("touchcancel", onTouchEnd);
     if (rafId !== null) cancelAnimationFrame(rafId);
-    if (endTimer !== null) window.clearTimeout(endTimer);
-    if (active) {
-      active.el.style.transition = "";
-      active.el.style.transform = "";
-      active.el.style.willChange = "";
-      active = null;
-    }
+    resetSurface();
   };
 }
