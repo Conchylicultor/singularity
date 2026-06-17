@@ -13,6 +13,7 @@ import {
   SortableList,
   SortableItem,
 } from "@plugins/primitives/plugins/sortable-list/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { VariantEntry } from "@plugins/fields/plugins/variant/plugins/config/core";
 import type { ResolvedViewInstance } from "../internal/resolve-instances";
 import type { ViewActions } from "../internal/use-view-model";
@@ -47,9 +48,15 @@ export function EditableViewSwitcher({
   };
 
   return (
-    <div className="flex shrink-0 items-center gap-xs">
+    <Stack
+      direction="row"
+      align="center"
+      gap="xs"
+      // eslint-disable-next-line layout/no-adhoc-layout -- shrink-0 keeps the whole switcher rigid in the toolbar's flex row (a standalone trailing control, not a Frame slot)
+      className="shrink-0"
+    >
       <SortableList items={ids} onMove={onMove} orientation="horizontal">
-        <div className="flex flex-nowrap items-center gap-xs">
+        <Stack direction="row" align="center" gap="xs">
           {instances.map((r) => {
             const Icon = r.viewType.icon;
             const id = r.instance.id;
@@ -94,7 +101,7 @@ export function EditableViewSwitcher({
               </SortableItem>
             );
           })}
-        </div>
+        </Stack>
       </SortableList>
 
       <DropdownMenu>
@@ -116,6 +123,6 @@ export function EditableViewSwitcher({
           })}
         </DropdownMenuContent>
       </DropdownMenu>
-    </div>
+    </Stack>
   );
 }
