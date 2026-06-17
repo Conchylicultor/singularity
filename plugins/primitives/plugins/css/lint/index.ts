@@ -41,7 +41,6 @@ export default {
       "plugins/active-data/plugins/task/web/components/task-card.tsx",
       "plugins/active-data/web/internal/active-data-inline-node.tsx",
       "plugins/apps/plugins/agent-manager/plugins/shell/web/components/agent-manager-layout.tsx",
-      "plugins/apps/plugins/agent-manager/plugins/shell/web/components/sidebar-reopen-handle.tsx",
       "plugins/apps/plugins/agent-manager/plugins/welcome/web/components/welcome-view.tsx",
       "plugins/apps/plugins/agent-manager/plugins/worktree-switcher/web/components/worktree-dropdown.tsx",
       "plugins/apps/plugins/app-rail-framing/plugins/hidden/web/components/hidden-framing.tsx",

@@ -9,6 +9,7 @@ import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
+import { SurfaceChromeContext } from "../surface-chrome-context";
 
 interface PaneChromeProps {
   pane: PaneObject<any, any>;
@@ -57,19 +58,27 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
   const match = useContext(PaneMatchContext);
   const fallbackTitle = chromeTitle(pane, match);
   const layoutCtx = useContext(PaneLayoutContext);
+  const { contentOwnsTopChrome, leadingControl } = useContext(SurfaceChromeContext);
   const doClose = pane.useClose();
   const doPromote = pane.usePromote();
   if (!chrome.enabled) return <>{children}</>;
   const resolvedTitle = title ?? fallbackTitle;
+  // Surface-edge chrome: only when this pane header IS the surface's top chrome.
+  // The first top-row header hosts the leading control (sidebar toggle); the
+  // last reserves the floating-action-bar safe area on its right.
+  const showLeading = contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
+  const reserveEnd = contentOwnsTopChrome && layoutCtx?.atSurfaceEnd;
   return (
     <div className="flex h-full flex-col">
       <Bar
         tier="pane"
         overflow={headerSpill ? "visible" : "hidden"}
+        endSafeArea={reserveEnd}
         className={layoutCtx?.dragHandleProps ? "cursor-grab active:cursor-grabbing" : undefined}
         onDoubleClick={layoutCtx?.onDoubleClickHeader}
         {...layoutCtx?.dragHandleProps}
       >
+        {showLeading && leadingControl}
         {resolvedTitle != null &&
           resolvedTitle !== "" &&
           (typeof resolvedTitle === "string" ? (

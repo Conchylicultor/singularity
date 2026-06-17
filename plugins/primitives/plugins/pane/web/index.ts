@@ -53,6 +53,8 @@ export { PaneChrome, PaneActionsSlot } from "./components/pane-chrome";
 export { PaneIconAction } from "./components/pane-icon-action";
 export { PaneResolveGuard } from "./components/pane-resolve-guard";
 export { PaneLayoutContext } from "./maximize-context";
+export { SurfaceChromeContext } from "./surface-chrome-context";
+export type { SurfaceChrome } from "./surface-chrome-context";
 
 export default {
   description:

@@ -1,5 +1,6 @@
 import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
+import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
 import type { ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
@@ -106,11 +107,22 @@ export function AppShellLayout({
     </Bar>
   );
 
+  // Hand the content region's top-most pane header the surface-edge chrome.
+  // When there's no `chrome`-tier toolbar above it, the columns own the surface
+  // top: the first column header hosts the sidebar toggle and the last reserves
+  // the floating-action-bar safe area. With a toolbar, the toolbar owns both.
   const body = (
     <>
       {toolbar}
       <main className="min-h-0 flex-1 overflow-hidden bg-muted/30">
-        {children}
+        <SurfaceChromeContext.Provider
+          value={{
+            contentOwnsTopChrome: !toolbarSlot,
+            leadingControl: sidebarSlot ? <SidebarTrigger /> : undefined,
+          }}
+        >
+          {children}
+        </SurfaceChromeContext.Provider>
       </main>
     </>
   );

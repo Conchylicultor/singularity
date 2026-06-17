@@ -86,6 +86,7 @@ export function MillerColumns({ match: provided }: { match?: PaneMatch } = {}) {
                     >
                       <Column
                         entry={entry}
+                        isFirst={i === 0}
                         isLast={isLast}
                         dragHandleProps={canReorder ? state.handleProps : undefined}
                       />

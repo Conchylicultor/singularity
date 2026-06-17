@@ -8,4 +8,8 @@ import { createContext } from "react";
 export const PaneLayoutContext = createContext<{
   onDoubleClickHeader: () => void;
   dragHandleProps?: Record<string, unknown>;
+  /** This column is at the surface's start (leftmost) edge. */
+  atSurfaceStart?: boolean;
+  /** This column is at the surface's end (rightmost) edge. */
+  atSurfaceEnd?: boolean;
 } | null>(null);
