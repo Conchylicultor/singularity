@@ -1,30 +1,94 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ReactNode, useCallback, useMemo } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import type {
+  Contribution,
+  SealContributions,
+} from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type {
   DataViewProps,
   DataViewRenderProps,
   FilterGroup,
 } from "../../core";
-import { DataViewSlots } from "../slots";
-import { useViewState } from "../internal/use-view-state";
-import { useResolvedInstances } from "../internal/resolve-instances";
+import { DataViewSlots, type DataViewContribution } from "../slots";
+import {
+  useDefaultViewModel,
+  useConfigViewModel,
+  type ViewModel,
+} from "../internal/use-view-model";
+import { useViewVariants } from "../internal/use-view-variants";
 import { useFilterController } from "../internal/use-filter-controller";
+import { viewsDescriptor } from "../../shared/views-config";
 import { ViewSwitcher } from "./view-switcher";
+import { EditableViewSwitcher } from "./editable-view-switcher";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { CreatorsControl } from "./creators-control";
 
+/**
+ * Host entry point. Chooses a **mode once per mount** by whether the consumer
+ * registered `viewsDescriptor(storageKey)` (config mode) or not (default mode),
+ * then mounts a wrapper that builds the unified `ViewModel` and renders
+ * `DataViewInner`. The mode-branch is a stable component split — so the
+ * conditional `useConfig` inside the config wrapper is legal (it only ever runs
+ * in a mount whose branch never changes).
+ */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
+  const { storageKey } = props;
+  const descriptor = viewsDescriptor(storageKey);
+  const registrations = useConfigRegistrations();
+  const isRegistered = useMemo(
+    () => registrations.some((r) => r.descriptor === descriptor),
+    [registrations, descriptor],
+  );
+
+  return isRegistered ? (
+    <ConfigDataView {...props} />
+  ) : (
+    <DefaultDataView {...props} />
+  );
+}
+
+function DefaultDataView<TRow>(props: DataViewProps<TRow>): ReactNode {
+  const contributions = DataViewSlots.View.useContributions();
+  const viewModel = useDefaultViewModel(
+    props.storageKey,
+    contributions,
+    props.views,
+    !!props.hierarchy,
+    props.viewOptions,
+    props.defaultView,
+  );
+  return <DataViewInner viewModel={viewModel} contributions={contributions} {...props} />;
+}
+
+function ConfigDataView<TRow>(props: DataViewProps<TRow>): ReactNode {
+  const contributions = DataViewSlots.View.useContributions();
+  const viewModel = useConfigViewModel(
+    props.storageKey,
+    contributions,
+    props.views,
+    !!props.hierarchy,
+    props.viewOptions,
+    props.defaultView,
+  );
+  return <DataViewInner viewModel={viewModel} contributions={contributions} {...props} />;
+}
+
+function DataViewInner<TRow>({
+  viewModel,
+  contributions,
+  ...props
+}: DataViewProps<TRow> & {
+  viewModel: ViewModel;
+  contributions: SealContributions<DataViewContribution>[];
+}): ReactNode {
   const {
     rows,
     fields,
     rowKey,
-    views,
-    defaultView,
-    storageKey,
     title,
     actions,
     searchAccessor,
@@ -33,7 +97,6 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     emptyState,
     loading,
     loadingState,
-    viewOptions,
     hierarchy,
     selection,
     itemActions,
@@ -43,7 +106,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
 
   const embedded = mode === "embedded";
 
-  const contributions = DataViewSlots.View.useContributions();
+  const viewVariants = useViewVariants();
 
   // Derive the `hasChildren` predicate once from `hierarchy.getParentId` over
   // `rows` (absent hierarchy → always `false`). Flat views (table/gallery) use
@@ -59,40 +122,18 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     return (rowId: string) => parents.has(rowId);
   }, [rows, hierarchy]);
 
-  // Resolve view instances: synthesizes one default instance per resolved
-  // view-type (id === type, name === title), absorbing today's `available`
-  // resolution — `views` prop is authoritative for inclusion+order (resolve
-  // each type id, drop misses); otherwise all contributions by order/title;
-  // hierarchical views (the tree) dropped when no `hierarchy`.
-  const resolved = useResolvedInstances(
-    contributions,
-    views,
-    !!hierarchy,
-    viewOptions,
-  );
-
-  const instanceIds = useMemo(
-    () => resolved.map((r) => r.instance.id),
-    [resolved],
-  );
-
-  const viewState = useViewState(storageKey, instanceIds, defaultView);
-
+  const { instances, activeId } = viewModel;
   const activeInstance =
-    resolved.find((r) => r.instance.id === viewState.activeViewId) ??
-    resolved.find((r) => r.instance.id === defaultView) ??
-    resolved[0] ??
-    null;
+    instances.find((r) => r.instance.id === activeId) ?? instances[0] ?? null;
 
   const activeViewId = activeInstance?.instance.id ?? "";
-  const activeState = viewState.stateFor(activeViewId);
+  const activeState = viewModel.stateFor(activeViewId);
 
-  // Filter controller — Phase 2's popover builder consumes the full surface
-  // (filter, setFilter, filterableFields, resolveOperatorSet, ruleCount). Phase 1
-  // wires it and renders only the trigger mount point below.
+  // Filter controller — the popover builder consumes the full surface (filter,
+  // setFilter, filterableFields, resolveOperatorSet, ruleCount).
   const setActiveFilter = useCallback(
-    (filter: FilterGroup | null) => viewState.setFilter(activeViewId, filter),
-    [viewState, activeViewId],
+    (filter: FilterGroup | null) => viewModel.setFilter(activeViewId, filter),
+    [viewModel, activeViewId],
   );
   const filterController = useFilterController(
     fields,
@@ -126,8 +167,8 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     fields: fields as DataViewRenderProps<unknown>["fields"],
     rowKey: rowKey as DataViewRenderProps<unknown>["rowKey"],
     state: activeState,
-    setSort: (fieldId) => viewState.setSort(activeViewId, fieldId),
-    setFilter: (filter) => viewState.setFilter(activeViewId, filter),
+    setSort: (fieldId) => viewModel.setSort(activeViewId, fieldId),
+    setFilter: (filter) => viewModel.setFilter(activeViewId, filter),
     onRowActivate: onRowActivate as DataViewRenderProps<unknown>["onRowActivate"],
     selectedRowId,
     options: activeInstance.instance.options,
@@ -136,7 +177,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
     hierarchy: hierarchy as DataViewRenderProps<unknown>["hierarchy"],
     selection,
     expanded: activeState.expanded,
-    setExpanded: (id, next) => viewState.setExpanded(activeViewId, id, next),
+    setExpanded: (id, next) => viewModel.setExpanded(activeViewId, id, next),
     emptyState,
     loading,
     loadingState,
@@ -165,7 +206,7 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
         ) : null}
         <SearchInput
           value={activeState.query}
-          onChange={(e) => viewState.setQuery(activeViewId, e.target.value)}
+          onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
           placeholder="Search…"
           wrapperClassName="ml-auto w-48"
         />
@@ -177,11 +218,21 @@ export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
         ) : null}
         {actions}
         <CreatorsControl creators={creators} />
-        <ViewSwitcher
-          instances={resolved}
-          activeId={activeViewId}
-          onSelect={viewState.setActiveView}
-        />
+        {viewModel.actions ? (
+          <EditableViewSwitcher
+            instances={instances}
+            activeId={activeViewId}
+            onSelect={viewModel.setActiveView}
+            actions={viewModel.actions}
+            viewVariants={viewVariants}
+          />
+        ) : (
+          <ViewSwitcher
+            instances={instances}
+            activeId={activeViewId}
+            onSelect={viewModel.setActiveView}
+          />
+        )}
       </div>
       <div className={cn(!embedded && "min-h-0 flex-1 overflow-y-auto")}>
         {renderIsolated(

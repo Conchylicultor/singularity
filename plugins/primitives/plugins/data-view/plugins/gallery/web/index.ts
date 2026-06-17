@@ -1,5 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { MdGridView } from "react-icons/md";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
 import { DataViewSlots } from "@plugins/primitives/plugins/data-view/web";
 import { GalleryView } from "./components/gallery-view";
 
@@ -16,6 +17,15 @@ export default {
       title: "Gallery",
       icon: MdGridView,
       order: 0,
+      // Per-instance options sub-form (ST4 demonstrator): a named gallery
+      // instance can pick which field id supplies the card cover. The gallery
+      // already reads `options.coverField`, so this round-trips end-to-end.
+      configSchema: {
+        coverField: textField({
+          label: "Cover field",
+          description: "Field id whose value supplies the card cover image.",
+        }),
+      },
       component: GalleryView,
     }),
   ],

@@ -14,23 +14,74 @@ view independently sorted / searched / filtered.
   `defineTabbedView` factory, which exists because each tab host has a *different* set
   of tabs. Our views are a *fixed shared vocabulary*.
 - **view-type vs view-instance.** A `DataViewContribution` is a registered
-  view-*type* (the renderer: `type`, `title`, `icon`, `component`). The host
-  actually renders **view-instances** — a named, individually-configured *use* of
-  a view-type, carrying `{ id, name, type, options }`. Today the
-  `useResolvedInstances` resolver synthesizes exactly **one default instance per
-  resolved view-type** (`id === type`, `name === title`), so behavior is identical
-  to "one instance per type". ST3+ will replace that synthesis with a
-  config-authored instance list (N named instances per type, Notion-style). The
-  public `views={[…]}` whitelist is still a list of **type** ids; instances
-  reference a type via their `type` field.
-- `<DataView>` is the host: it resolves available views, owns per-view state
-  (`useViewState`) and the shared chrome (search input → `state.query`, view
-  switcher), and renders the active view via `renderIsolated`. It passes **raw
-  rows** — each view applies the processing matching its own semantics. Flat
-  views call the exported `useFlatRows` hook (search → filter → sort); the tree
-  view applies the shared `evaluateNode` filter (subtree-preserving, mirroring
-  search) then feeds the result to the tree primitive's subtree-preserving search
-  + rank ordering — so filter/search/sort behave identically across every view.
+  view-*type* (the renderer: `type`, `title`, `icon`, `component`, optional
+  `configSchema`). The host actually renders **view-instances** — a named,
+  individually-configured *use* of a view-type, carrying `{ id, name, type, options }`.
+  In **default mode** the `useResolvedInstances` resolver synthesizes exactly
+  **one default instance per resolved view-type** (`id === type`, `name === title`).
+  In **config mode** the instance list is **config-authored** (N named instances
+  per type, Notion-style — see "View modes" below). The public `views={[…]}`
+  whitelist is still a list of **type** ids; instances reference a type via their
+  `type` field.
+- `<DataView>` is the host: it resolves available views, builds a unified
+  `ViewModel` (active id, per-instance state, instance actions), owns the shared
+  chrome (search input → `state.query`, view switcher), and renders the active
+  view via `renderIsolated`. It passes **raw rows** — each view applies the
+  processing matching its own semantics. Flat views call the exported `useFlatRows`
+  hook (search → filter → sort); the tree view applies the shared `evaluateNode`
+  filter (subtree-preserving, mirroring search) then feeds the result to the tree
+  primitive's subtree-preserving search + rank ordering — so filter/search/sort
+  behave identically across every view.
+
+## View modes & state model
+
+`<DataView>` chooses a **mode once per mount**, by whether the consumer
+registered `viewsDescriptor(storageKey)` (`ConfigV2.{WebRegister,Register}`):
+
+- **Default mode** (no registration — most consumers). `DefaultDataView` →
+  `useDefaultViewModel`: synthesized one-instance-per-view-type, **no** instance
+  actions, the read-only `ViewSwitcher` chrome. Durable state (sort/filter) lives
+  in **localStorage** (its pre-config home) since there is no config row to write.
+- **Config mode** (registered — `sonata:library` today). `ConfigDataView` →
+  `useConfigViewModel`: config-authored instances, full instance actions
+  (add / rename / duplicate / delete / reorder / options sub-form), the
+  `EditableViewSwitcher`. sort/filter are written **back to the instance's config
+  row** (durable, git-promotable). Runtime edits write the **user-global layer**
+  (`setConfig` with no `scopeId`, mirroring reorder) — an `app:` scopeId would
+  write a scope key the read path ignores until the scope is forked, silently
+  dropping edits on reload. The per-`storageKey` descriptor already scopes views
+  to one surface; per-app forking stays a Settings-pane concern.
+
+The mode-branch is a **stable component split**, which is what makes the
+conditional `useConfig` inside `ConfigDataView` legal — `useConfig(viewsDescriptor…)`
+only ever runs in a mount whose branch never changes. `DataView` matches the
+registration by **reference identity** against the module-cached
+`viewsDescriptor(storageKey)` singleton (`shared/views-config.ts`).
+
+**State split** (`web/internal/use-view-state.ts` → `useEphemeralViewState`,
+localStorage-only):
+
+| State | Lives in |
+|---|---|
+| Instance def `{ id, rank, name, view:{ type, sort?, filter?, …opts } }` | `viewsDescriptor` config row (user-global layer, config mode) |
+| Active instance id | localStorage `${storageKey}:active-view` (per device) |
+| Search query, tree expand map | localStorage `${storageKey}:view-state` (per device) |
+| Default-mode sort/filter | localStorage `${storageKey}:view-state` (fallback only) |
+
+There is **no** global durable view-state config — the per-instance config row
+is the single durable home, with active-id / query / expand demoted to device-local.
+
+**Per-instance options sub-form.** A view-type's optional `configSchema`
+(`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
+web-side `variantField({ useVariants })` from the live contributions
+(`use-view-variants.ts` — generic, never names a view child) and renders it via
+`FieldRenderer`. The gallery's `coverField` is the reference `configSchema`.
+
+**Orphan hazard.** A config row whose `view.type` references a renamed/removed
+view-type (or a hierarchical type when the source has no hierarchy) **fail-soft
+skips** in `buildInstanceFromRow` — the same documented hazard as reorder
+node-type ids. The row stays in the config; it just isn't rendered until its
+view-type returns.
 
 ## Hierarchy
 
@@ -165,7 +216,7 @@ gating convention.
 
 ## Plugin reference
 
-- Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Registers the data-view saved view-state config_v2 descriptor (per-surface active view, sort, and filter).
+- Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
   - Contributes: `ConfigV2.WebRegister`
@@ -176,6 +227,8 @@ gating convention.
   - Exports: Values: `viewsDescriptor`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `config_v2/settings`, `conversations/agents`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/tags/inline`, `fields/tags/table`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
+- Server:
+  - Exports: Values: `viewsDescriptor`
 - Core:
   - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`
 - Sub-plugins:

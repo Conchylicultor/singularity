@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 import type { SealContributions } from "@plugins/framework/plugins/web-sdk/core";
+import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { DataViewContribution } from "../slots";
 import type { ViewInstance } from "../../core";
 
@@ -7,6 +8,19 @@ import type { ViewInstance } from "../../core";
 export interface ResolvedViewInstance {
   instance: ViewInstance;
   viewType: SealContributions<DataViewContribution>;
+}
+
+/**
+ * One config row of `viewsDescriptor.views`: the `listField` auto-injects `id`
+ * and `rank`; `name` is the switcher label; `view` is the `variantField` value
+ * `{ type, ...options }` where `type` selects the view-type and the rest is that
+ * type's saved options (including the host-managed `sort`/`filter` keys).
+ */
+export interface ViewConfigRow {
+  id: string;
+  rank: string;
+  name: string;
+  view: VariantValue;
 }
 
 /**
@@ -48,4 +62,33 @@ export function useResolvedInstances(
       viewType,
     }));
   }, [contributions, views, hasHierarchy, viewOptions]);
+}
+
+/**
+ * Build a resolved instance from a config row. Looks up the contribution by
+ * `view.type`; **fail-soft** returns `null` when:
+ *   - no view-type is registered for `view.type` (an *orphan* row — a renamed /
+ *     removed view-type id, same documented hazard as reorder node-type ids), or
+ *   - the view-type is hierarchical but the data source has no hierarchy.
+ *
+ * The row's whole `view` value becomes the instance `options` (the view-type
+ * component reads its own keys, including the host-managed `sort`/`filter`).
+ */
+export function buildInstanceFromRow(
+  row: ViewConfigRow,
+  contributions: SealContributions<DataViewContribution>[],
+  hasHierarchy: boolean,
+): ResolvedViewInstance | null {
+  const viewType = contributions.find((c) => c.type === row.view.type);
+  if (!viewType) return null;
+  if (viewType.hierarchical && !hasHierarchy) return null;
+  return {
+    instance: {
+      id: row.id,
+      name: row.name,
+      type: row.view.type,
+      options: row.view,
+    },
+    viewType,
+  };
 }
