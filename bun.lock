@@ -2262,8 +2262,24 @@
       "name": "@singularity/plugin-primitives-css",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/center": {
+      "name": "@singularity/plugin-primitives-css-center",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/cluster": {
+      "name": "@singularity/plugin-primitives-css-cluster",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/frame": {
       "name": "@singularity/plugin-primitives-css-frame",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/grid": {
+      "name": "@singularity/plugin-primitives-css-grid",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/overlay": {
+      "name": "@singularity/plugin-primitives-css-overlay",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/cursor-pagination": {
@@ -4518,7 +4534,15 @@
 
     "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
 
+    "@singularity/plugin-primitives-css-center": ["@singularity/plugin-primitives-css-center@workspace:plugins/primitives/plugins/css/plugins/center"],
+
+    "@singularity/plugin-primitives-css-cluster": ["@singularity/plugin-primitives-css-cluster@workspace:plugins/primitives/plugins/css/plugins/cluster"],
+
     "@singularity/plugin-primitives-css-frame": ["@singularity/plugin-primitives-css-frame@workspace:plugins/primitives/plugins/css/plugins/frame"],
+
+    "@singularity/plugin-primitives-css-grid": ["@singularity/plugin-primitives-css-grid@workspace:plugins/primitives/plugins/css/plugins/grid"],
+
+    "@singularity/plugin-primitives-css-overlay": ["@singularity/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
 
     "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
 

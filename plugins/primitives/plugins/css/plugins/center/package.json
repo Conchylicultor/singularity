@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-css-center",
+  "description": "Centering layout primitive: <Center axis> centers its content on one or both axes via a grid place-items box.",
+  "private": true,
+  "version": "0.0.1"
+}
