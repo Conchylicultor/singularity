@@ -13,7 +13,7 @@ import {
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 type ChordAnn = Annotation<"chord", ChordData>;
 
