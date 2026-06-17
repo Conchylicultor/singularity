@@ -1,4 +1,4 @@
-import type { FieldsRecord, ConfigDescriptor, ConfigValues } from "./types";
+import type { FieldsRecord, ConfigDescriptor, ConfigValues, ConfigSource } from "./types";
 import { buildFieldsSchema } from "./schema-builder";
 
 export function defineConfig<const F extends FieldsRecord>(opts: {
@@ -6,6 +6,7 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
   fields: F;
   scope?: "app";
   promotableToGit?: boolean;
+  source?: ConfigSource;
 }): ConfigDescriptor<F> {
   for (const key of Object.keys(opts.fields)) {
     if (key.includes(".")) {
@@ -28,5 +29,6 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
     defaults,
     scope: opts.scope,
     promotableToGit: opts.promotableToGit,
+    source: opts.source ?? "manual",
   });
 }

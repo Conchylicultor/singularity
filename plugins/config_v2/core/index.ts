@@ -8,6 +8,7 @@ export type {
   FieldsRecord,
   JsonValue,
   ConfigDescriptor,
+  ConfigSource,
   ConfigValues,
   InferFieldValue,
   InferFieldsObject,

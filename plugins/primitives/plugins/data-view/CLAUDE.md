@@ -181,6 +181,23 @@ the shared `evaluateNode` / `applyFilter` evaluator (resolved per field type via
 → sort); the tree view applies it subtree-preserving before handing rows to the tree
 primitive. Filter semantics are therefore identical across all views.
 
+### Typed fields are the generic extension point
+
+To make a data-view filterable on a new dimension, **add a typed `FieldDef`** —
+do **not** bolt a bespoke toggle chip onto the toolbar. A field whose `type`
+resolves a `FilterOperatorSet` (`bool`, `enum`, `number`, `date`, `tags`, `text` —
+all already registered) automatically appears in the "Filter" pill; `enum` fields
+read their choices from `FieldDef.options`. This is also the generic substrate for
+future configurability (saved filters, sort, grouping): they operate on the same
+field schema, so a new typed field unlocks all of them at once with zero chrome code.
+
+In the **tree** view only the `primary` field renders, so non-primary fields are
+**filter-only**: invisible in the tree body but fully usable in the filter builder
+(set `filterable: false` to also keep them out of the full-text search accessor).
+The settings config nav is the worked example — its `modified` (bool), `conflict`
+(bool), and `source` (enum) fields are pure filter dimensions over a hierarchy that
+only ever renders the config name, having replaced an earlier ad-hoc "Modified" chip.
+
 ## Placement mode
 
 `<DataView>` accepts a `mode?: "surface" | "embedded"` axis controlling how it

@@ -37,6 +37,7 @@ export function viewsDescriptor(storageKey: string): ConfigDescriptor {
       name: "views",
       promotableToGit: true,
       scope: "app",
+      source: "view",
       fields: {
         views: listField({
           label: "Views",

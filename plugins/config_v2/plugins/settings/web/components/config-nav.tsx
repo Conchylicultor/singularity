@@ -1,6 +1,5 @@
 import { useCallback, useMemo, useState } from "react";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";
@@ -25,7 +24,6 @@ import { ConfigRowBadge } from "./config-row-badge";
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
   const openPane = useOpenPane();
-  const [showModifiedOnly, setShowModifiedOnly] = useState(false);
   // Collapsed group ids — a row is expanded unless its id is present. Starts
   // empty (everything expanded), matching the pre-DataView nav.
   const [collapsed, setCollapsed] = useState<Set<string>>(new Set());
@@ -104,24 +102,6 @@ export function ConfigNav() {
     [conflictRes],
   );
 
-  // "Modified only": keep rows that are modified or in conflict, plus their
-  // ancestors so the surviving rows still form a valid tree (mirrors the old
-  // flat "modified" list, but in-place in the hierarchy).
-  const visibleRows = useMemo(() => {
-    if (!showModifiedOnly) return rows;
-    const byId = new Map(rows.map((r) => [r.id, r]));
-    const keep = new Set<string>();
-    for (const row of rows) {
-      if (modifiedCountOf(row) === 0 && !hasConflictOf(row)) continue;
-      let cur: ConfigNavRow | undefined = row;
-      while (cur && !keep.has(cur.id)) {
-        keep.add(cur.id);
-        cur = cur.parentId ? byId.get(cur.parentId) : undefined;
-      }
-    }
-    return rows.filter((r) => keep.has(r.id));
-  }, [rows, showModifiedOnly, modifiedCountOf, hasConflictOf]);
-
   const selectedPath = configDetailPane.useRouteEntry()?.params.configPath;
   const selectedRowId = useMemo(() => {
     if (!selectedPath) return undefined;
@@ -162,9 +142,41 @@ export function ConfigNav() {
     [collapsed],
   );
 
+  // Typed fields drive the data-view filter builder. `label` is the primary
+  // (only-rendered-in-tree) field; the rest are filter-only — invisible in the
+  // tree body but usable in the "Filter" pill (Modified / Conflict / Source).
+  // `filterable: false` keeps them out of the full-text search accessor.
   const fields = useMemo<FieldDef<ConfigNavRow>[]>(
-    () => [{ id: "label", label: "Name", primary: true, value: (r) => r.label }],
-    [],
+    () => [
+      { id: "label", label: "Name", primary: true, value: (r) => r.label },
+      {
+        id: "modified",
+        label: "Modified",
+        type: "bool",
+        filterable: false,
+        value: (r) => modifiedCountOf(r) > 0,
+      },
+      {
+        id: "conflict",
+        label: "Conflict",
+        type: "bool",
+        filterable: false,
+        value: (r) => hasConflictOf(r),
+      },
+      {
+        id: "source",
+        label: "Source",
+        type: "enum",
+        filterable: false,
+        options: [
+          { value: "manual", label: "Authored" },
+          { value: "reorder", label: "Reorder" },
+          { value: "view", label: "View" },
+        ],
+        value: (r) => r.registration?.descriptor.source ?? undefined,
+      },
+    ],
+    [modifiedCountOf, hasConflictOf],
   );
 
   const treeOptions = useMemo<TreeViewOptions<ConfigNavRow>>(
@@ -174,6 +186,7 @@ export function ConfigNav() {
         <ConfigRowBadge
           modifiedCount={modifiedCountOf(r)}
           hasConflict={hasConflictOf(r)}
+          source={r.registration?.descriptor.source}
         />
       ),
     }),
@@ -183,7 +196,7 @@ export function ConfigNav() {
   return (
     <div className="flex h-full min-h-0 flex-col">
       <DataView<ConfigNavRow>
-        rows={visibleRows}
+        rows={rows}
         fields={fields}
         rowKey={(r) => r.id}
         views={["tree"]}
@@ -194,14 +207,6 @@ export function ConfigNav() {
         onRowActivate={handleActivate}
         searchAccessor={(r) => r.searchText}
         viewOptions={{ tree: treeOptions }}
-        actions={
-          <FilterChip
-            active={showModifiedOnly}
-            onClick={() => setShowModifiedOnly((v) => !v)}
-          >
-            Modified
-          </FilterChip>
-        }
       />
     </div>
   );

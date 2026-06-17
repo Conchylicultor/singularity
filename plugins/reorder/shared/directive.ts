@@ -47,6 +47,7 @@ export function reorderDirectiveDescriptor(
   return defineConfig({
     name: slotId,
     promotableToGit: true,
+    source: "reorder",
     fields: {
       items: reorderTreeField({ label: "Items" }),
     },

@@ -39,6 +39,23 @@ field types live under `plugins/fields/plugins/`; see
 **Server:** `getConfig(myConfig)` reads the current value from the in-memory
 cache. `watchConfig(myConfig, cb)` notifies on changes.
 
+## Descriptor provenance (`source`)
+
+Every `ConfigDescriptor` carries a `source: "manual" | "reorder" | "view"`, set by
+`defineConfig` (defaults to `"manual"`). It distinguishes **hand-authored** configs
+from the two **auto-generated** families — one descriptor per reorderable render
+slot (`reorderDirectiveDescriptor`, `source: "reorder"`) and one per DataView
+consumer (`viewsDescriptor`, `source: "view"`). It is named `source`, **not
+`origin`**, deliberately: `origin` already means the `.origin.jsonc` code/git layer
+throughout this plugin, so reusing it would collide.
+
+`source` lives on the descriptor object only — it is **not** part of the config
+document or schema, so it never affects an origin `@hash` or
+`config-origins-in-sync`. The settings config nav surfaces it as a filterable
+`enum` field (filter by Authored / Reorder / View) and a per-row tag. When a new
+primitive starts generating descriptors, give it its own `source` value rather than
+leaving generated configs indistinguishable from authored ones.
+
 ## Three-layer config model
 
 Config flows through three layers, each with a human-editable override mechanism:
@@ -187,7 +204,7 @@ Adding a field to an existing config (including a `listField` item or `objectFie
   - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkDescriptorScope`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `mergeConflictByPath`, `registerFieldStorageProvider`, `removeDescriptorScope`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
 - Core:
   - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ModifiedCounts`, `ConfigV2ScopeForked`, `ConfigV2Scopes`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2ModifiedCountsResource`, `configV2ModifiedCountsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkDescriptorScope`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
+  - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigSource`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ModifiedCounts`, `ConfigV2ScopeForked`, `ConfigV2Scopes`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2ModifiedCountsResource`, `configV2ModifiedCountsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkDescriptorScope`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
 - Cross-plugin:
   - Imported by: `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/json/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/string-list/config`, `fields/text/config`, `fields/variant/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
 - Sub-plugins:
