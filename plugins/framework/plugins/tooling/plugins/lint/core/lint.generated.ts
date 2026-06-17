@@ -24,6 +24,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/badge", id: "primitives.badge", loader: () => import("@plugins/primitives/plugins/badge/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/bar", id: "primitives.bar", loader: () => import("@plugins/primitives/plugins/bar/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/control-size", id: "primitives.control-size", loader: () => import("@plugins/primitives/plugins/control-size/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css", id: "primitives.css", loader: () => import("@plugins/primitives/plugins/css/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/data-table", id: "primitives.data-table", loader: () => import("@plugins/primitives/plugins/data-table/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/icon-auto", id: "primitives.icon-auto", loader: () => import("@plugins/primitives/plugins/icon-auto/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/live-state", id: "primitives.live-state", loader: () => import("@plugins/primitives/plugins/live-state/lint"), dependsOn: [] },
