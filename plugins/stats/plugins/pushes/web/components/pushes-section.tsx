@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { WaitTimeChart } from "./wait-time-chart";
 import { ThroughputChart } from "./throughput-chart";

@@ -2,7 +2,7 @@ import {
   FieldHeader,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
-import { ColorPickerPopover } from "@plugins/primitives/plugins/color-picker/web";
+import { ColorPickerPopover } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import { colorFieldType } from "@plugins/fields/plugins/color/core";
 import type { ColorFieldDef } from "../../core";
 

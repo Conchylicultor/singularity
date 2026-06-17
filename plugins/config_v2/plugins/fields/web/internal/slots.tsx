@@ -1,7 +1,7 @@
 import type { FieldDef } from "@plugins/config_v2/core";
 import type { FieldType } from "@plugins/fields/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { defineDispatchSlot } from "@plugins/primitives/plugins/slot-render/web";
 
 export interface FieldRendererProps<T = unknown> {

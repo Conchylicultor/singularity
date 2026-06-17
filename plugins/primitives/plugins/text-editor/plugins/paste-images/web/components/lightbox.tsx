@@ -1,6 +1,6 @@
 import { useEffect } from "react";
 import { MdClose } from "react-icons/md";
-import { ViewportOverlay } from "@plugins/primitives/plugins/viewport-overlay/web";
+import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { attachmentUrl } from "../internal/markdown";
 
 export function Lightbox({

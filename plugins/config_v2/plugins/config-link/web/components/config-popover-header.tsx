@@ -1,4 +1,4 @@
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 import { ConfigGearButton } from "./config-gear-button";
 

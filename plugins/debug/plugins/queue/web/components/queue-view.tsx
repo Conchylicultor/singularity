@@ -10,8 +10,8 @@ import { eventEmissionsResource, eventTriggersResource, patchTriggerEndpoint, de
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
-import { ViewportOverlay } from "@plugins/primitives/plugins/viewport-overlay/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 
 type Tab = "jobs" | "events" | "triggers";
 

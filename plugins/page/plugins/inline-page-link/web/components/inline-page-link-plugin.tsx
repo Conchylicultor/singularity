@@ -14,7 +14,7 @@ import {
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
   usePageOptions,
   PageOptionsList,

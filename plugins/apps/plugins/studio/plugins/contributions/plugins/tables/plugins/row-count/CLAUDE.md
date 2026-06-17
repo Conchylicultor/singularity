@@ -7,7 +7,7 @@
 - Description: Live row count section (estimated from pg_stat_user_tables) in the table detail view.
 - Web:
   - Contributes: `TableDetail.Section` "row-count" → `RowCountSection`
-  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/text.Text`
+  - Uses: `apps/studio/contributions/tables.TableDetail`, `infra/endpoints.useEndpoint`, `primitives/css/placeholder.Placeholder`, `primitives/loading.Loading`, `primitives/text.Text`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`
   - Routes: `GET /api/studio/tables/:tableName/row-count`

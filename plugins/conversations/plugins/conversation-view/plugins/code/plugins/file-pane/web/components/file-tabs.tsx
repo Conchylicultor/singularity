@@ -1,4 +1,4 @@
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import type { FileRenderersHandle } from "./use-file-renderers";
 
 export function FileTabs({

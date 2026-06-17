@@ -1,6 +1,6 @@
 import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState, useEffect, useCallback, useMemo } from "react";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";

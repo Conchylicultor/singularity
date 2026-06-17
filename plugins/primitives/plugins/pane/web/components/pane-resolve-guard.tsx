@@ -3,7 +3,7 @@ import { Bar } from "@plugins/primitives/plugins/bar/web";
 import type { ComponentType, ReactNode } from "react";
 import { MdClose, MdOpenInFull } from "react-icons/md";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { paneObjectFor, type PaneInternal, type ResolveHook } from "../pane";
 

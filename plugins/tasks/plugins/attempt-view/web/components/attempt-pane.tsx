@@ -8,7 +8,7 @@ import {
 } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";

@@ -1,8 +1,8 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";

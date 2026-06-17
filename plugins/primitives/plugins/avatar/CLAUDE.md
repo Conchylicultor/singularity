@@ -48,7 +48,7 @@ color palette.
 
 - Description: Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover. Reusable circular avatar (icon + color) with an optional status-dot overlay and a chooser popover.
 - Web:
-  - Uses: `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`, `primitives/row.Row`, `primitives/section-label.SectionLabel`, `primitives/ui-kit.cn`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
+  - Uses: `primitives/css/section-label.SectionLabel`, `primitives/icon-picker.IconPicker`, `primitives/icon-picker.SvgIcon`, `primitives/row.Row`, `primitives/ui-kit.cn`, `primitives/ui-kit.Popover`, `primitives/ui-kit.PopoverContent`, `primitives/ui-kit.PopoverTrigger`
   - Exports: Types: `AvatarColor`, `AvatarPickerProps`, `AvatarProps`, `AvatarSize`, `AvatarSpec`; Values: `Avatar`, `AVATAR_COLOR_KEYS`, `AVATAR_COLORS`, `avatarColorClass`, `AvatarPicker`, `DEFAULT_AGENT_AVATAR`
 - Server:
   - Uses: `primitives/icon-picker.resolveIconSvgNodes`

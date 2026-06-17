@@ -4,7 +4,7 @@ import {
   FloatingAction,
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useConfig } from "@plugins/config_v2/web";

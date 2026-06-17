@@ -1,4 +1,4 @@
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Story } from "../slots";
 

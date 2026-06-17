@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { type ReactNode } from "react";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 
 export interface DataCardProps {
   /** Card click + Enter/Space (role=button, tabIndex=0). */

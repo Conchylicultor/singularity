@@ -53,7 +53,7 @@ the shared `FieldDef` schema.
 - Description: Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
 - Web:
   - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-  - Uses: `primitives/card.Card`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
+  - Uses: `primitives/css/card.Card`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
   - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
 - Core:
   - Exports: Types: `CoverContent`, `GalleryViewOptions`

@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,

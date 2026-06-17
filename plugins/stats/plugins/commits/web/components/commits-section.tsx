@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { commitsConfig } from "../../shared/config";

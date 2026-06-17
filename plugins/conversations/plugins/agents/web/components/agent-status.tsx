@@ -1,5 +1,5 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { agentLaunchesResource } from "../../shared/resources";
 

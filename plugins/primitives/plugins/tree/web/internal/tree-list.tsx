@@ -29,7 +29,7 @@ import {
   MultiSelectProvider,
   SelectionBar,
 } from "@plugins/primitives/plugins/multi-select/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";

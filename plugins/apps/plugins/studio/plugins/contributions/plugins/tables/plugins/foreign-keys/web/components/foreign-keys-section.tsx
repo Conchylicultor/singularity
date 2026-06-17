@@ -1,8 +1,8 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableForeignKeys } from "../../shared/endpoints";
 import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-table/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 

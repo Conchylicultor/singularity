@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useState, type ComponentType } from "react";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import {
   MdAutoMode,
   MdCheck,
@@ -24,7 +24,7 @@ import {
   SearchInput,
   useTextFilter,
 } from "@plugins/primitives/plugins/search/web";
-import { SwatchGrid } from "@plugins/primitives/plugins/color-picker/web";
+import { SwatchGrid } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import {
   setTrackColor,
   setTrackHidden,

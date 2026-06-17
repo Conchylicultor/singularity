@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import { MdCalendarToday, MdNotificationsActive } from "react-icons/md";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { formatMention } from "../internal/format-date";
 
 type SerializedDateMentionNode = {

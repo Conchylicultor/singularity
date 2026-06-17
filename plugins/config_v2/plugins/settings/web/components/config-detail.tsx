@@ -1,7 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo, useCallback, useState, useEffect } from "react";
 import { MdWarning, MdCode, MdTune, MdUndo, MdDifference, MdMerge, MdLayersClear } from "react-icons/md";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useCombinedResources, useResource } from "@plugins/primitives/plugins/live-state/web";

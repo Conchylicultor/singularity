@@ -2,7 +2,7 @@ import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdDelete, MdMusicNote, MdPlayArrow } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { deleteSong } from "../../core";
 import type { Song } from "../../core";
 import { Library } from "../slots";

@@ -4,14 +4,14 @@ import {
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import {
   chordPitches,
   invertVoicing,
   formatChordSymbol,
 } from "@plugins/apps/plugins/sonata/plugins/theory/core";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import type {
   Annotation,

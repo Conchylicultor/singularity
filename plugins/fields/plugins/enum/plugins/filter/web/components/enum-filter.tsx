@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 

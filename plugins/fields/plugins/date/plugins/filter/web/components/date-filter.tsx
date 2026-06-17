@@ -5,7 +5,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Button, Separator } from "@plugins/primitives/plugins/ui-kit/web";
 import type { DateRange, RelativeRange } from "../internal/date-filter-logic";
 import {

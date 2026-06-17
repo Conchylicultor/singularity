@@ -7,9 +7,9 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { saveKeyAutoDetect } from "@plugins/apps/plugins/sonata/plugins/rich/plugins/key-mode/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Keyboard } from "@plugins/apps/plugins/sonata/plugins/primitives/plugins/keyboard/web";
 import {
   accidentalGlyph,

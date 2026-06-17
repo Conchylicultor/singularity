@@ -1,8 +1,8 @@
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import {
   updateActiveDraft,

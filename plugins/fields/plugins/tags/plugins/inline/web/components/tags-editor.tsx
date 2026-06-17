@@ -2,7 +2,7 @@ import { useRef, useState, type ReactNode } from "react";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
 
 function sameTags(a: readonly string[], b: readonly string[]): boolean {

@@ -4,10 +4,10 @@ import { MdFolder } from "react-icons/md";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
-import { TruncatingText } from "@plugins/primitives/plugins/truncating-text/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { useHostDir } from "./use-host-dir";
 
 export interface FolderPickerProps {

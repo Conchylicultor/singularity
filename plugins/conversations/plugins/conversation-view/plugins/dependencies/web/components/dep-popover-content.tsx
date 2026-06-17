@@ -1,5 +1,5 @@
 import { MdClose } from "react-icons/md";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";

@@ -1,6 +1,6 @@
 import { useCallback, useMemo, type ReactNode } from "react";
 import { parseFileLinks } from "@plugins/primitives/plugins/file-links/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import {
   MarkdownEnhancementContext,
   useMarkdownEnhancement,

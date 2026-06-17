@@ -13,7 +13,7 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import type { BlockHandle } from "../../core";
 import type { BlockEditorAPI } from "../types";
 import {

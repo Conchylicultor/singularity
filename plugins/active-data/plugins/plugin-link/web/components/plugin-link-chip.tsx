@@ -3,7 +3,7 @@ import { MdWidgets } from "react-icons/md";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { pluginViewPane } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import { getPluginTree } from "@plugins/plugin-meta/plugins/plugin-view/core";

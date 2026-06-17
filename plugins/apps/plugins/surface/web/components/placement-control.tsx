@@ -3,7 +3,7 @@ import {
   useFocusedPlacement,
   setFocusedTabPlacement,
 } from "@plugins/apps/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Surface } from "../slots";
 
 /**

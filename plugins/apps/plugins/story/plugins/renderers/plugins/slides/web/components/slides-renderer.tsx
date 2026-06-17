@@ -4,7 +4,7 @@ import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/c
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { StoryContentTree } from "./story-content-tree";
 
 /**

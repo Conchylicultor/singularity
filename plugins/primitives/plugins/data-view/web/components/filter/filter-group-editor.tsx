@@ -2,7 +2,7 @@ import type { ReactNode } from "react";
 import { MdClose } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { ConjunctionCell } from "./conjunction-cell";

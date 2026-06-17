@@ -19,9 +19,9 @@ import {
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Row } from "@plugins/primitives/plugins/row/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 
 const TaskBindingSchema = z.object({
   taskId: z.string(),

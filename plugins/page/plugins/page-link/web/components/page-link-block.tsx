@@ -6,7 +6,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import {
   useBlockEditor,

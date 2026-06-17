@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
   useCallback,
   useLayoutEffect,

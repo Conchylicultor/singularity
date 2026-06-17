@@ -9,7 +9,7 @@ import {
   type ReactNode,
 } from "react";
 import { MdClose } from "react-icons/md";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { useGanttZoom, type ZoomWindow } from "./use-gantt-zoom";
 import { DragSelection, type DragState } from "./drag-selection";
 

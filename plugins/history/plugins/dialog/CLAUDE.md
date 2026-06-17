@@ -6,7 +6,7 @@
 
 - Description: Reusable version-history UI: the useVersionHistory hook and the <VersionHistoryDialog> dialog (preview injected via renderPreview, navigation owned by the host).
 - Web:
-  - Uses: `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/loading.Loading`, `primitives/placeholder.Placeholder`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/section-label.SectionLabel`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.Dialog`, `primitives/ui-kit.DialogContent`, `primitives/ui-kit.DialogDescription`, `primitives/ui-kit.DialogTitle`, `primitives/ui-kit.ScrollArea`, `shell/notifications.toast`
+  - Uses: `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/surface.Surface`, `primitives/loading.Loading`, `primitives/relative-time.RelativeTime`, `primitives/row.Row`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.Dialog`, `primitives/ui-kit.DialogContent`, `primitives/ui-kit.DialogDescription`, `primitives/ui-kit.DialogTitle`, `primitives/ui-kit.ScrollArea`, `shell/notifications.toast`
   - Exports: Types: `UseVersionHistoryOptions`, `VersionHistoryDialogProps`; Values: `useVersionHistory`, `VersionHistoryDialog`
 - Cross-plugin:
   - Imported by: `apps/pages/history`

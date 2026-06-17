@@ -5,7 +5,7 @@ import {
   uploadAttachment,
   type UploadedAttachment,
 } from "@plugins/infra/plugins/attachments/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 
 // Turn an `accept` spec into a mime predicate: `"*"` → always; `"image/*"` →
 // prefix match; an exact mime → equality.

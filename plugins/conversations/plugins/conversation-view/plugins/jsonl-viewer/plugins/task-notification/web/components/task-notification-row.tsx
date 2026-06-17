@@ -2,7 +2,7 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import { EventLine } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 type TaskNotificationEvent = Extract<JsonlEvent, { kind: "task-notification" }>;

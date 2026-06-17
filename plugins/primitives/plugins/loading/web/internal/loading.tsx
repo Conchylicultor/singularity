@@ -1,7 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactNode } from "react";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import "./loading.css";
 
 export type LoadingVariant = "text" | "spinner" | "rows" | "cards" | "block";

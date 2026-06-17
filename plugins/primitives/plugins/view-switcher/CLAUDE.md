@@ -6,7 +6,7 @@
 
 - Description: Presentational view-switcher chrome: borderless ghost-pill SegmentedControl mapping {id,title,icon} options to a single-select switcher. Pure chrome — selection state stays with the caller.
 - Web:
-  - Uses: `primitives/toggle-chip.SegmentedControl`
+  - Uses: `primitives/css/toggle-chip.SegmentedControl`
   - Exports: Types: `ViewSwitcherOption`, `ViewSwitcherProps`; Values: `ViewSwitcher`
 - Cross-plugin:
   - Imported by: `primitives/data-view`, `primitives/tabbed-view`

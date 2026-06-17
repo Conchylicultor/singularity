@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import type { GateDataOf, GateInput } from "../resource-utils";
 
 export interface MatchResourceHandlers<R extends GateInput> {

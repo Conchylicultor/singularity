@@ -2,7 +2,7 @@ import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { patchTask, setAutoStart, useTask, type AutoStartModel } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";

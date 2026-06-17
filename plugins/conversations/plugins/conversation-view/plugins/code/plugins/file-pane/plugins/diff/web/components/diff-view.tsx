@@ -12,7 +12,7 @@ import type { FileData, HunkData, TokenNode } from "react-diff-view";
 import "react-diff-view/style/index.css";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { useFileDiff } from "../use-file-diff";

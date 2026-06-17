@@ -1,6 +1,6 @@
 import type { ComponentType } from "react";
 import { MdWidgets } from "react-icons/md";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Inset, Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 

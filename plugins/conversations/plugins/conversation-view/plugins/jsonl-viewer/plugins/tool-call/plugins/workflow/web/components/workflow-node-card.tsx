@@ -5,7 +5,7 @@ import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/m
 import type { TracedNode } from "../internal/trace-types";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 

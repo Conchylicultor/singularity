@@ -12,7 +12,7 @@ import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Color,
   ColorPickerPopover,
-} from "@plugins/primitives/plugins/color-picker/web";
+} from "@plugins/primitives/plugins/css/plugins/color-picker/web";
 import type { ShadowParams } from "../../shared";
 import { buildShadowTiers, shadowGroup, DEFAULT_SHADOW_PARAMS } from "../../shared";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";

@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { DiffState } from "@plugins/plugin-meta/plugins/composition/web";

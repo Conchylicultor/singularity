@@ -1,5 +1,5 @@
 import type { ComponentType, ReactNode } from "react";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 
 export interface ViewSwitcherOption {
   id: string;

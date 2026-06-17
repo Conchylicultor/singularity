@@ -5,8 +5,8 @@ import {
   CONV_STATUS_DOT,
 } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 
 export function ConvChip({ content }: { content: string; attrs: Record<string, string> }) {
   const sideConvId = content.trim();

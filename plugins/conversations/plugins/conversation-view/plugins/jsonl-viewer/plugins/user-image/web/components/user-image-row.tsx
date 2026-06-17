@@ -1,7 +1,7 @@
 import { useState } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 
 type UserImageEvent = Extract<JsonlEvent, { kind: "user-image" }>;
 

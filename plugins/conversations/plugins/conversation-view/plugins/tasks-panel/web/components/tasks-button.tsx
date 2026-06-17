@@ -3,7 +3,7 @@ import { MdChecklist } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { convTasksPane } from "../panes";
 
 const STATUS_DOT: Record<string, string> = {

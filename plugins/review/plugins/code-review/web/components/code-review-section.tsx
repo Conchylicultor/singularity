@@ -1,5 +1,5 @@
 import { useMemo } from "react";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/text/web";

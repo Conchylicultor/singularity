@@ -1,4 +1,4 @@
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
 import { Stats } from "../slots";

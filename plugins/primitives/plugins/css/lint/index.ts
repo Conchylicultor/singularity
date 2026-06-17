@@ -33,9 +33,8 @@ export default {
   ignores: {
     "no-adhoc-layout": [
       // ── PERMANENT: the layout primitives themselves ──────────────────────
-      "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Frame/Grid/Cluster/Center/Overlay
+      "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Frame/Grid/Cluster/Center/Overlay + presentational css/ sub-plugins (surface, card, truncating-text, ...)
       "plugins/primitives/plugins/spacing/web/**/*.{ts,tsx}", // Stack/Inset
-      "plugins/primitives/plugins/truncating-text/web/**/*.{ts,tsx}", // the truncation leaf
       // ── BURNDOWN: grandfathered pre-rule offenders (drains to 0) ──────────
       // <BURNDOWN-START> (generated — see lint/index.ts header)
       "plugins/active-data/plugins/plugin-link/web/components/plugin-link-chip.tsx",
@@ -362,12 +361,12 @@ export default {
       "plugins/primitives/plugins/collapsible-wrap/web/internal/collapsible-wrap.tsx",
       "plugins/primitives/plugins/collapsible/web/internal/collapsible.tsx",
       "plugins/primitives/plugins/collapsible/web/internal/expand-all-button.tsx",
-      "plugins/primitives/plugins/color-picker/web/internal/alpha-slider.tsx",
-      "plugins/primitives/plugins/color-picker/web/internal/color-area.tsx",
-      "plugins/primitives/plugins/color-picker/web/internal/color-input.tsx",
-      "plugins/primitives/plugins/color-picker/web/internal/color-picker.tsx",
-      "plugins/primitives/plugins/color-picker/web/internal/hue-slider.tsx",
-      "plugins/primitives/plugins/color-picker/web/internal/swatch-grid.tsx",
+      "plugins/primitives/plugins/css/plugins/color-picker/web/internal/alpha-slider.tsx",
+      "plugins/primitives/plugins/css/plugins/color-picker/web/internal/color-area.tsx",
+      "plugins/primitives/plugins/css/plugins/color-picker/web/internal/color-input.tsx",
+      "plugins/primitives/plugins/css/plugins/color-picker/web/internal/color-picker.tsx",
+      "plugins/primitives/plugins/css/plugins/color-picker/web/internal/hue-slider.tsx",
+      "plugins/primitives/plugins/css/plugins/color-picker/web/internal/swatch-grid.tsx",
       "plugins/primitives/plugins/command-palette/web/internal/command-palette-dialog.tsx",
       "plugins/primitives/plugins/commit-list/web/internal/commit-rail.tsx",
       "plugins/primitives/plugins/commit-list/web/internal/commit-row-item.tsx",
@@ -407,15 +406,15 @@ export default {
       "plugins/primitives/plugins/responsive-overflow/web/internal/responsive-overflow.tsx",
       "plugins/primitives/plugins/row/web/internal/row.tsx",
       "plugins/primitives/plugins/search/web/internal/search-input.tsx",
-      "plugins/primitives/plugins/selection-indicator/web/internal/selection-indicator.tsx",
+      "plugins/primitives/plugins/css/plugins/selection-indicator/web/internal/selection-indicator.tsx",
       "plugins/primitives/plugins/slot-render/web/internal/render-slot.tsx",
-      "plugins/primitives/plugins/status-dot/web/internal/status-dot.tsx",
+      "plugins/primitives/plugins/css/plugins/status-dot/web/internal/status-dot.tsx",
       "plugins/primitives/plugins/syntax-highlight/web/internal/highlighted-code.tsx",
       "plugins/primitives/plugins/tabbed-view/web/internal/define-tabbed-view.tsx",
       "plugins/primitives/plugins/text-editor/plugins/paste-images/web/components/attachment-thumbnail.tsx",
       "plugins/primitives/plugins/text-editor/plugins/paste-images/web/components/lightbox.tsx",
       "plugins/primitives/plugins/text-editor/web/components/text-editor.tsx",
-      "plugins/primitives/plugins/toggle-chip/web/internal/toggle-chip.tsx",
+      "plugins/primitives/plugins/css/plugins/toggle-chip/web/internal/toggle-chip.tsx",
       "plugins/primitives/plugins/tooltip/web/components/kbd.tsx",
       "plugins/primitives/plugins/tree/web/internal/rename-input.tsx",
       "plugins/primitives/plugins/tree/web/internal/row-chrome.tsx",

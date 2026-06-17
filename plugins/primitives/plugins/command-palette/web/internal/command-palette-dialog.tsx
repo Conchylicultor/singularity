@@ -1,5 +1,5 @@
 import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/ui-kit/web";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "react";
 import { MdSearch } from "react-icons/md";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";

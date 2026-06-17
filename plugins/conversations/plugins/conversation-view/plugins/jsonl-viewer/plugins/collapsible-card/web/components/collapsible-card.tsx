@@ -4,7 +4,7 @@ import {
   useCollapsible,
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";

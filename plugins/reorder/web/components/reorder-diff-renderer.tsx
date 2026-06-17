@@ -2,7 +2,7 @@ import { useContext, useMemo } from "react";
 import { MdCheck, MdClose } from "react-icons/md";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";

@@ -5,7 +5,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands } from "@plugins/shell/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { navigate } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";

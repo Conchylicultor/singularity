@@ -5,7 +5,7 @@ import { Badge } from "@plugins/primitives/plugins/badge/web";
 import {
   CheckboxIndicator,
   RadioIndicator,
-} from "@plugins/primitives/plugins/selection-indicator/web";
+} from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";

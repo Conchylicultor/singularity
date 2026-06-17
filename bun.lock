@@ -2234,10 +2234,6 @@
       "name": "@singularity/plugin-primitives-breadcrumb",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/card": {
-      "name": "@singularity/plugin-primitives-card",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/collapsible": {
       "name": "@singularity/plugin-primitives-collapsible",
       "version": "0.0.1",
@@ -2248,10 +2244,6 @@
     },
     "plugins/primitives/plugins/collections": {
       "name": "@singularity/plugin-primitives-collections",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/color-picker": {
-      "name": "@singularity/plugin-primitives-color-picker",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/command-palette": {
@@ -2270,12 +2262,20 @@
       "name": "@singularity/plugin-primitives-css",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/card": {
+      "name": "@singularity/plugin-primitives-css-card",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/center": {
       "name": "@singularity/plugin-primitives-css-center",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/cluster": {
       "name": "@singularity/plugin-primitives-css-cluster",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/color-picker": {
+      "name": "@singularity/plugin-primitives-css-color-picker",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/control-size": {
@@ -2294,12 +2294,52 @@
       "name": "@singularity/plugin-primitives-css-icon-auto",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/link-chip": {
+      "name": "@singularity/plugin-primitives-css-link-chip",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/overlay": {
       "name": "@singularity/plugin-primitives-css-overlay",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/placeholder": {
+      "name": "@singularity/plugin-primitives-css-placeholder",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/radius": {
       "name": "@singularity/plugin-primitives-css-radius",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/section-label": {
+      "name": "@singularity/plugin-primitives-css-section-label",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/selection-indicator": {
+      "name": "@singularity/plugin-primitives-css-selection-indicator",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/spinner": {
+      "name": "@singularity/plugin-primitives-css-spinner",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/status-dot": {
+      "name": "@singularity/plugin-primitives-css-status-dot",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/surface": {
+      "name": "@singularity/plugin-primitives-css-surface",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/toggle-chip": {
+      "name": "@singularity/plugin-primitives-css-toggle-chip",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/truncating-text": {
+      "name": "@singularity/plugin-primitives-css-truncating-text",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/viewport-overlay": {
+      "name": "@singularity/plugin-primitives-css-viewport-overlay",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/z-layers": {
@@ -2390,10 +2430,6 @@
       "name": "@singularity/plugin-primitives-launch",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/link-chip": {
-      "name": "@singularity/plugin-primitives-link-chip",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/live-state": {
       "name": "@singularity/plugin-primitives-live-state",
       "version": "0.0.1",
@@ -2438,10 +2474,6 @@
       "name": "@singularity/plugin-primitives-persistent-draft",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/placeholder": {
-      "name": "@singularity/plugin-primitives-placeholder",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/popover": {
       "name": "@singularity/plugin-primitives-popover",
       "version": "0.0.1",
@@ -2482,16 +2514,8 @@
       "name": "@singularity/plugin-primitives-search",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/section-label": {
-      "name": "@singularity/plugin-primitives-section-label",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/select-scope": {
       "name": "@singularity/plugin-primitives-select-scope",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/selection-indicator": {
-      "name": "@singularity/plugin-primitives-selection-indicator",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/shortcuts": {
@@ -2508,18 +2532,6 @@
     },
     "plugins/primitives/plugins/spacing": {
       "name": "@singularity/plugin-primitives-spacing",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/spinner": {
-      "name": "@singularity/plugin-primitives-spinner",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/status-dot": {
-      "name": "@singularity/plugin-primitives-status-dot",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/surface": {
-      "name": "@singularity/plugin-primitives-surface",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/surface-id": {
@@ -2564,20 +2576,12 @@
       "name": "@singularity/plugin-primitives-text-editor-paste-images",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/toggle-chip": {
-      "name": "@singularity/plugin-primitives-toggle-chip",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/tooltip": {
       "name": "@singularity/plugin-primitives-tooltip",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/tree": {
       "name": "@singularity/plugin-primitives-tree",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/truncating-text": {
-      "name": "@singularity/plugin-primitives-truncating-text",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/ui-kit": {
@@ -2602,10 +2606,6 @@
     },
     "plugins/primitives/plugins/view-switcher": {
       "name": "@singularity/plugin-primitives-view-switcher",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/viewport-overlay": {
-      "name": "@singularity/plugin-primitives-viewport-overlay",
       "version": "0.0.1",
     },
     "plugins/reorder": {
@@ -4532,15 +4532,11 @@
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
 
-    "@singularity/plugin-primitives-card": ["@singularity/plugin-primitives-card@workspace:plugins/primitives/plugins/card"],
-
     "@singularity/plugin-primitives-collapsible": ["@singularity/plugin-primitives-collapsible@workspace:plugins/primitives/plugins/collapsible"],
 
     "@singularity/plugin-primitives-collapsible-wrap": ["@singularity/plugin-primitives-collapsible-wrap@workspace:plugins/primitives/plugins/collapsible-wrap"],
 
     "@singularity/plugin-primitives-collections": ["@singularity/plugin-primitives-collections@workspace:plugins/primitives/plugins/collections"],
-
-    "@singularity/plugin-primitives-color-picker": ["@singularity/plugin-primitives-color-picker@workspace:plugins/primitives/plugins/color-picker"],
 
     "@singularity/plugin-primitives-command-palette": ["@singularity/plugin-primitives-command-palette@workspace:plugins/primitives/plugins/command-palette"],
 
@@ -4550,9 +4546,13 @@
 
     "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
 
+    "@singularity/plugin-primitives-css-card": ["@singularity/plugin-primitives-css-card@workspace:plugins/primitives/plugins/css/plugins/card"],
+
     "@singularity/plugin-primitives-css-center": ["@singularity/plugin-primitives-css-center@workspace:plugins/primitives/plugins/css/plugins/center"],
 
     "@singularity/plugin-primitives-css-cluster": ["@singularity/plugin-primitives-css-cluster@workspace:plugins/primitives/plugins/css/plugins/cluster"],
+
+    "@singularity/plugin-primitives-css-color-picker": ["@singularity/plugin-primitives-css-color-picker@workspace:plugins/primitives/plugins/css/plugins/color-picker"],
 
     "@singularity/plugin-primitives-css-control-size": ["@singularity/plugin-primitives-css-control-size@workspace:plugins/primitives/plugins/css/plugins/control-size"],
 
@@ -4562,9 +4562,29 @@
 
     "@singularity/plugin-primitives-css-icon-auto": ["@singularity/plugin-primitives-css-icon-auto@workspace:plugins/primitives/plugins/css/plugins/icon-auto"],
 
+    "@singularity/plugin-primitives-css-link-chip": ["@singularity/plugin-primitives-css-link-chip@workspace:plugins/primitives/plugins/css/plugins/link-chip"],
+
     "@singularity/plugin-primitives-css-overlay": ["@singularity/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
 
+    "@singularity/plugin-primitives-css-placeholder": ["@singularity/plugin-primitives-css-placeholder@workspace:plugins/primitives/plugins/css/plugins/placeholder"],
+
     "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
+
+    "@singularity/plugin-primitives-css-section-label": ["@singularity/plugin-primitives-css-section-label@workspace:plugins/primitives/plugins/css/plugins/section-label"],
+
+    "@singularity/plugin-primitives-css-selection-indicator": ["@singularity/plugin-primitives-css-selection-indicator@workspace:plugins/primitives/plugins/css/plugins/selection-indicator"],
+
+    "@singularity/plugin-primitives-css-spinner": ["@singularity/plugin-primitives-css-spinner@workspace:plugins/primitives/plugins/css/plugins/spinner"],
+
+    "@singularity/plugin-primitives-css-status-dot": ["@singularity/plugin-primitives-css-status-dot@workspace:plugins/primitives/plugins/css/plugins/status-dot"],
+
+    "@singularity/plugin-primitives-css-surface": ["@singularity/plugin-primitives-css-surface@workspace:plugins/primitives/plugins/css/plugins/surface"],
+
+    "@singularity/plugin-primitives-css-toggle-chip": ["@singularity/plugin-primitives-css-toggle-chip@workspace:plugins/primitives/plugins/css/plugins/toggle-chip"],
+
+    "@singularity/plugin-primitives-css-truncating-text": ["@singularity/plugin-primitives-css-truncating-text@workspace:plugins/primitives/plugins/css/plugins/truncating-text"],
+
+    "@singularity/plugin-primitives-css-viewport-overlay": ["@singularity/plugin-primitives-css-viewport-overlay@workspace:plugins/primitives/plugins/css/plugins/viewport-overlay"],
 
     "@singularity/plugin-primitives-css-z-layers": ["@singularity/plugin-primitives-css-z-layers@workspace:plugins/primitives/plugins/css/plugins/z-layers"],
 
@@ -4608,8 +4628,6 @@
 
     "@singularity/plugin-primitives-launch": ["@singularity/plugin-primitives-launch@workspace:plugins/primitives/plugins/launch"],
 
-    "@singularity/plugin-primitives-link-chip": ["@singularity/plugin-primitives-link-chip@workspace:plugins/primitives/plugins/link-chip"],
-
     "@singularity/plugin-primitives-live-state": ["@singularity/plugin-primitives-live-state@workspace:plugins/primitives/plugins/live-state"],
 
     "@singularity/plugin-primitives-loading": ["@singularity/plugin-primitives-loading@workspace:plugins/primitives/plugins/loading"],
@@ -4632,8 +4650,6 @@
 
     "@singularity/plugin-primitives-persistent-draft": ["@singularity/plugin-primitives-persistent-draft@workspace:plugins/primitives/plugins/persistent-draft"],
 
-    "@singularity/plugin-primitives-placeholder": ["@singularity/plugin-primitives-placeholder@workspace:plugins/primitives/plugins/placeholder"],
-
     "@singularity/plugin-primitives-popover": ["@singularity/plugin-primitives-popover@workspace:plugins/primitives/plugins/popover"],
 
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
@@ -4652,11 +4668,7 @@
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
 
-    "@singularity/plugin-primitives-section-label": ["@singularity/plugin-primitives-section-label@workspace:plugins/primitives/plugins/section-label"],
-
     "@singularity/plugin-primitives-select-scope": ["@singularity/plugin-primitives-select-scope@workspace:plugins/primitives/plugins/select-scope"],
-
-    "@singularity/plugin-primitives-selection-indicator": ["@singularity/plugin-primitives-selection-indicator@workspace:plugins/primitives/plugins/selection-indicator"],
 
     "@singularity/plugin-primitives-shortcuts": ["@singularity/plugin-primitives-shortcuts@workspace:plugins/primitives/plugins/shortcuts"],
 
@@ -4665,12 +4677,6 @@
     "@singularity/plugin-primitives-sortable-list": ["@singularity/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
 
     "@singularity/plugin-primitives-spacing": ["@singularity/plugin-primitives-spacing@workspace:plugins/primitives/plugins/spacing"],
-
-    "@singularity/plugin-primitives-spinner": ["@singularity/plugin-primitives-spinner@workspace:plugins/primitives/plugins/spinner"],
-
-    "@singularity/plugin-primitives-status-dot": ["@singularity/plugin-primitives-status-dot@workspace:plugins/primitives/plugins/status-dot"],
-
-    "@singularity/plugin-primitives-surface": ["@singularity/plugin-primitives-surface@workspace:plugins/primitives/plugins/surface"],
 
     "@singularity/plugin-primitives-surface-id": ["@singularity/plugin-primitives-surface-id@workspace:plugins/primitives/plugins/surface-id"],
 
@@ -4688,21 +4694,15 @@
 
     "@singularity/plugin-primitives-text-editor-paste-images": ["@singularity/plugin-primitives-text-editor-paste-images@workspace:plugins/primitives/plugins/text-editor/plugins/paste-images"],
 
-    "@singularity/plugin-primitives-toggle-chip": ["@singularity/plugin-primitives-toggle-chip@workspace:plugins/primitives/plugins/toggle-chip"],
-
     "@singularity/plugin-primitives-tooltip": ["@singularity/plugin-primitives-tooltip@workspace:plugins/primitives/plugins/tooltip"],
 
     "@singularity/plugin-primitives-tree": ["@singularity/plugin-primitives-tree@workspace:plugins/primitives/plugins/tree"],
-
-    "@singularity/plugin-primitives-truncating-text": ["@singularity/plugin-primitives-truncating-text@workspace:plugins/primitives/plugins/truncating-text"],
 
     "@singularity/plugin-primitives-ui-kit": ["@singularity/plugin-primitives-ui-kit@workspace:plugins/primitives/plugins/ui-kit"],
 
     "@singularity/plugin-primitives-undo-redo": ["@singularity/plugin-primitives-undo-redo@workspace:plugins/primitives/plugins/undo-redo"],
 
     "@singularity/plugin-primitives-view-switcher": ["@singularity/plugin-primitives-view-switcher@workspace:plugins/primitives/plugins/view-switcher"],
-
-    "@singularity/plugin-primitives-viewport-overlay": ["@singularity/plugin-primitives-viewport-overlay@workspace:plugins/primitives/plugins/viewport-overlay"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

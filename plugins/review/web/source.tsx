@@ -1,4 +1,4 @@
-import { ToggleChip } from "@plugins/primitives/plugins/toggle-chip/web";
+import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import type { Push } from "@plugins/tasks/core";
 
 export type Source =

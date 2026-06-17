@@ -3,7 +3,7 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationsResource, listGoneConversations } from "@plugins/conversations/core";

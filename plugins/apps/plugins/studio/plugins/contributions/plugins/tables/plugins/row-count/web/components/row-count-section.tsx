@@ -1,6 +1,6 @@
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getTableRowCount } from "../../shared/endpoints";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 

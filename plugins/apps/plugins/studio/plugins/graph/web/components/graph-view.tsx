@@ -8,8 +8,8 @@ import { Row } from "@plugins/primitives/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
-import { Surface } from "@plugins/primitives/plugins/surface/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { GraphCanvas } from "@plugins/primitives/plugins/graph-canvas/web";
 import {
   useCompositionData,

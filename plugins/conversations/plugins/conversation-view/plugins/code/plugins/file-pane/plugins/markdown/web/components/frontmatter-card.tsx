@@ -1,5 +1,5 @@
-import { Card } from "@plugins/primitives/plugins/card/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Fragment } from "react";
 import type { FrontmatterField } from "../internal/frontmatter";

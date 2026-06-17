@@ -6,7 +6,7 @@
 
 - Description: Toggle-chip filter primitive: FilterChip, FilterGroup, and useChipFilter hook for single-select enum filtering.
 - Web:
-  - Uses: `primitives/text.Text`, `primitives/toggle-chip.ToggleChip`
+  - Uses: `primitives/css/toggle-chip.ToggleChip`, `primitives/text.Text`
   - Exports: Types: `ChipFilterHandle`, `FilterChipProps`, `FilterGroupProps`; Values: `FilterChip`, `FilterGroup`, `useChipFilter`
 - Cross-plugin:
   - Imported by: `apps/studio/contributions`, `config_v2/settings`, `debug/claude-cli-calls`, `debug/queue`

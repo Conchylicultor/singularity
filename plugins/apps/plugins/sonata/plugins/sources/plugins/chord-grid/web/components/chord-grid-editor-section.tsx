@@ -1,6 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import {
   beatToSeconds,

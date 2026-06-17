@@ -1,7 +1,7 @@
 import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { attemptPane } from "@plugins/tasks/plugins/attempt-view/web";
 import { attemptsResource } from "@plugins/tasks/core";
 import type { AttemptStatus } from "@plugins/tasks/plugins/tasks-core/core";

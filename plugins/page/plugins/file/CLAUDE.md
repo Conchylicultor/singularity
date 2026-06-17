@@ -7,7 +7,7 @@
 - Description: File block type: attach any file as a downloadable card; served via attachments.
 - Web:
   - Contributes: `Editor.Block` "file" → `FileBlock`
-  - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/card.Card`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text.Text`
+  - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text.Text`
   - Exports: Values: `FILE_TYPE`, `fileBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

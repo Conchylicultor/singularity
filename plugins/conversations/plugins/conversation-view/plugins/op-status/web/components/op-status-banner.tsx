@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { MdExpandLess, MdExpandMore, MdHourglassEmpty } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Spinner } from "@plugins/primitives/plugins/spinner/web";
+import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { conversationsResource, type ConversationListPayload } from "@plugins/conversations/core";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";

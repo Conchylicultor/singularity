@@ -1,6 +1,0 @@
-{
-  "name": "@singularity/plugin-primitives-color-picker",
-  "description": "Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.",
-  "private": true,
-  "version": "0.0.1"
-}

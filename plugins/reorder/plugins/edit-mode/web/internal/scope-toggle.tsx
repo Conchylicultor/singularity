@@ -8,7 +8,7 @@ import {
 import {
   SegmentedControl,
   type SegmentedOption,
-} from "@plugins/primitives/plugins/toggle-chip/web";
+} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 
 const OPTIONS: readonly SegmentedOption<ReorderScope>[] = [
   {

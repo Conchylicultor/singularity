@@ -6,7 +6,7 @@
 
 - Description: Faithful, non-editable renderer for a page block forest, with optional per-block diff highlighting. Reuses the editor's block-handle metadata + rich-text runs model without mounting Lexical.
 - Web:
-  - Uses: `page/editor.colorCssValue`, `page/editor.Editor`, `page/editor.PageIcon`, `page/math/render.KatexMath`, `primitives/link-chip.LinkChip`, `primitives/live-state.useResource`, `primitives/placeholder.Placeholder`, `primitives/selection-indicator.CheckboxIndicator`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text.Text`, `primitives/text.TextVariant`, `primitives/ui-kit.cn`
+  - Uses: `page/editor.colorCssValue`, `page/editor.Editor`, `page/editor.PageIcon`, `page/math/render.KatexMath`, `primitives/css/link-chip.LinkChip`, `primitives/css/placeholder.Placeholder`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/surface.Surface`, `primitives/live-state.useResource`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/syntax-highlight.HighlightedCode`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text.Text`, `primitives/text.TextVariant`, `primitives/ui-kit.cn`
   - Exports: Types: `BlockDiffKind`, `ReadOnlyBlocksProps`, `ReadOnlyNode`, `RunsRendererProps`; Values: `ReadOnlyBlocks`, `RunsRenderer`
 - Cross-plugin:
   - Imported by: `apps/pages/history`

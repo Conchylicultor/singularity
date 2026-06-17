@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { useResource, matchResource } from "@plugins/primitives/plugins/live-state/web";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";

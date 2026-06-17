@@ -1,11 +1,11 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { MdArrowForward } from "react-icons/md";
-import { Card } from "@plugins/primitives/plugins/card/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { useConversations } from "@plugins/conversations/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
-import { StatusDot } from "@plugins/primitives/plugins/status-dot/web";
+import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";

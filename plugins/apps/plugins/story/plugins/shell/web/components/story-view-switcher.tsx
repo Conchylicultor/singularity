@@ -1,5 +1,5 @@
 import { MdEdit, MdVerticalSplit } from "react-icons/md";
-import { SegmentedControl } from "@plugins/primitives/plugins/toggle-chip/web";
+import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Story } from "@plugins/apps/plugins/story/plugins/render/web";
 

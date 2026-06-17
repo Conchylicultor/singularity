@@ -7,7 +7,7 @@ import { blocksResource } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { ReadOnlyBlocks } from "@plugins/page/plugins/read-only-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { buildForest, buildDiff, type PageSnapshot } from "../internal/build-diff";

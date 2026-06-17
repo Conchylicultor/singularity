@@ -20,7 +20,7 @@ import {
 import {
   SegmentedControl,
   ToggleChip,
-} from "@plugins/primitives/plugins/toggle-chip/web";
+} from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";

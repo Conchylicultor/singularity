@@ -2,8 +2,8 @@ import type { ReactNode } from "react";
 import { MdLink } from "react-icons/md";
 import { DecoratorNode, type LexicalNode, type NodeKey } from "lexical";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
-import { Placeholder } from "@plugins/primitives/plugins/placeholder/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
+import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { pagesResource, pageData } from "@plugins/page/plugins/editor/core";
 import { useBlockEditor, PageIcon } from "@plugins/page/plugins/editor/web";
 

@@ -3,7 +3,7 @@ import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/badge/web";
-import { LinkChip } from "@plugins/primitives/plugins/link-chip/web";
+import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Section, type PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import {
   useActiveComposition,

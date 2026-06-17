@@ -8,7 +8,7 @@
 - Web:
   - Slots: `graphCanvasPane.Actions`
   - Contributes: `Pane.Register` "graph", `Studio.Sidebar` "Plugin Graph" → `component`
-  - Uses: `apps/studio/membership-tint.STATE_LEGEND`, `apps/studio/membership-tint.STATE_TINT`, `apps/studio/shell.Studio`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useGraph`, `primitives/app-shell.sidebarNavItem`, `primitives/graph-canvas.GraphCanvas`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/surface.Surface`, `primitives/text.Text`, `primitives/toggle-chip.SegmentedControl`
+  - Uses: `apps/studio/membership-tint.STATE_LEGEND`, `apps/studio/membership-tint.STATE_TINT`, `apps/studio/shell.Studio`, `plugin-meta/composition.useActiveComposition`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useCompositionData`, `plugin-meta/composition.useGraph`, `primitives/app-shell.sidebarNavItem`, `primitives/css/surface.Surface`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/graph-canvas.GraphCanvas`, `primitives/icon-button.IconButton`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/row.Row`, `primitives/search.SearchInput`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`
   - Exports: Values: `graphCanvasPane`
 - Cross-plugin:
   - Imported by: `apps/studio/explorer/membership`

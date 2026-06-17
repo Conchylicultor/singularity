@@ -3,7 +3,7 @@ import { MdAdd, MdClose } from "react-icons/md";
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { SectionLabel } from "@plugins/primitives/plugins/section-label/web";
+import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/badge/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
