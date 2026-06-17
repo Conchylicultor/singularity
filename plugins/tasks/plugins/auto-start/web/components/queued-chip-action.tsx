@@ -1,5 +1,5 @@
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import type { TaskListItem } from "@plugins/tasks/core";
 import { useTaskAutoStart } from "../hooks";

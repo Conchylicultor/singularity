@@ -10,7 +10,7 @@ import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";
 import { StatusSignal } from "@plugins/tasks/plugins/task-status/web";
 import { normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
 import { ModelSelect } from "@plugins/conversations/plugins/model-provider/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { AuthorDisplay } from "./author-display";
 
 export function TaskHeader({ taskId }: { taskId: string }) {

@@ -1,7 +1,7 @@
 import { useMemo, useState, type ReactElement } from "react";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { BlockHandle } from "../../core";
 import { useInsertableBlocks, filterBlockTypes, BlockTypeList } from "./block-type-list";
 

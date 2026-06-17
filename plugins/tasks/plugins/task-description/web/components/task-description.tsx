@@ -5,7 +5,7 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import { patchTask, useTask } from "@plugins/tasks/web";

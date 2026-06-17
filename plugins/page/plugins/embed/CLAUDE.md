@@ -7,7 +7,7 @@
 - Description: Embed block type: render an external URL (YouTube, Vimeo, …) in a sandboxed iframe.
 - Web:
   - Contributes: `Editor.Block` "embed" → `EmbedBlock`
-  - Uses: `page/editor.Editor`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.Input`
+  - Uses: `page/editor.Editor`, `primitives/css/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.Input`
   - Exports: Values: `EMBED_TYPE`, `embedBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

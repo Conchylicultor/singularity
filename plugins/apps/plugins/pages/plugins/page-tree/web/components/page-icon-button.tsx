@@ -3,7 +3,7 @@ import { useState, type ReactElement } from "react";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 
 export interface PageIconValue {
   icon: string | null;

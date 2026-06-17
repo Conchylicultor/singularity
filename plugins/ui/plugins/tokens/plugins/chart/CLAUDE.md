@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Chart.Preset` ← `ui.tokens.chart`
   - Contributes: `Chart.Preset` "Default", `ConfigV2.WebRegister`, `DynamicEnum.Options` "Chart preset", `ThemeEngine.TokenGroup` "Chart", `ThemeEngine.VariantGroup` "Chart" → `ChartPicker`, `ThemeCustomizer.Section` "chart" → `ChartSection`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ColorAdjustContext`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.transformValues`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine.useTokenGroupPresetOptions`, `ui/theme-engine/theme-customizer.ThemeCustomizer`, `ui/theme-engine/theme-customizer.TokenModeContext`, `ui/theme-engine/theme-customizer.TokenRow`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `fields/dynamic-enum/config.DynamicEnum`, `primitives/css/spacing.Stack`, `primitives/text.Text`, `ui/theme-engine.ColorAdjustContext`, `ui/theme-engine.ThemeEngine`, `ui/theme-engine.transformValues`, `ui/theme-engine.useThemeScopeId`, `ui/theme-engine.useTokenGroupPresetOptions`, `ui/theme-engine/theme-customizer.ThemeCustomizer`, `ui/theme-engine/theme-customizer.TokenModeContext`, `ui/theme-engine/theme-customizer.TokenRow`
   - Exports: Types: `ChartPresetContribution`; Values: `Chart`
 - Server:
   - Uses: `config_v2.ConfigV2`

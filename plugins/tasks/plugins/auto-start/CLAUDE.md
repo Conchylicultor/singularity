@@ -7,7 +7,7 @@
 - Description: Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. Owns the tasks_ext_auto_start side-table via the entity-extensions primitive. CAS mutations for setTaskAutoStart/claimAutoStart.
 - Web:
   - Contributes: `Tasks.TaskActions` "queued-chip" → `QueuedChipAction`
-  - Uses: `primitives/badge.Badge`, `primitives/live-state.useResource`, `tasks.setAutoStart`, `tasks/task-list.Tasks`
+  - Uses: `primitives/css/badge.Badge`, `primitives/live-state.useResource`, `tasks.setAutoStart`, `tasks/task-list.Tasks`
   - Exports: Types: `TaskAutoStartRow`; Values: `taskAutoStartResource`, `TaskAutoStartRowSchema`, `useTaskAutoStart`
 - Server:
   - Uses: `database.db`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`

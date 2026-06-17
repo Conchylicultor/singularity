@@ -3,7 +3,7 @@ import type { ReactNode } from "react";
 import { Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/text/web";

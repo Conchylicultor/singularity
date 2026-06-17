@@ -6,9 +6,9 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   Section,
   ConsumerList,

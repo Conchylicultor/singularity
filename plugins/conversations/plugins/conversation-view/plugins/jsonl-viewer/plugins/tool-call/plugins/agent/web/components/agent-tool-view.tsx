@@ -3,12 +3,12 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { agentReportPane } from "../panes";
 
 interface AgentInput {

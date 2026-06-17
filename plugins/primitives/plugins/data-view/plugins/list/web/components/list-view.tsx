@@ -2,7 +2,7 @@ import { type ReactNode } from "react";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
   FieldCell,
   pickPrimaryField,

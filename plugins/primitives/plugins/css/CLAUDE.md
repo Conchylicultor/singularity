@@ -34,6 +34,7 @@ escapes per-site via `// eslint-disable-next-line layout/no-adhoc-layout -- reas
 
 - Description: Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
 - Sub-plugins:
+  - **`badge`** — The canonical chip primitive and shared chip shell (region-line single-line core, rigid leading icon, truncating label leaf): semantic variant × colorClass coloring, a rect|pill shape axis, size, and an optional monospace label. LinkChip and ToggleChip compose it.
   - **`card`** — Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
   - **`center`** — Centering layout primitive: <Center axis> centers its content on one or both axes via a grid place-items box.
   - **`cluster`** — Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
@@ -46,8 +47,10 @@ escapes per-site via `// eslint-disable-next-line layout/no-adhoc-layout -- reas
   - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
   - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
   - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
+  - **`row`** — Generic interactive row primitive (list, menu, nav, tree, and collapsible section-header rows) with a sanctioned home so ad-hoc rounded+padded interactive markup routes through one primitive.
   - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
   - **`selection-indicator`** — Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
+  - **`spacing`** — Layout spacing primitives: <Stack gap> (flex + gap) and <Inset pad> (padding) draw from the closed density spacing ramp (none|2xs|xs|sm|md|lg|xl|2xl). The sanctioned home for layout rhythm; raw gap-/p-/m-/space- Tailwind is banned by no-adhoc-spacing.
   - **`spinner`** — Spinning refresh icon for loading states. Renders MdRefresh with animate-spin; defaults to always spinning, accepts spinning={false} to pause.
   - **`status-dot`** — Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
   - **`surface`** — Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.

@@ -4,7 +4,7 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 function formatSize(bytes: number): string {

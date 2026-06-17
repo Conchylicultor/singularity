@@ -8,7 +8,7 @@ import {
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatTokenCount } from "../utils";

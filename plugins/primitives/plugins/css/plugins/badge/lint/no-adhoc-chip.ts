@@ -92,7 +92,7 @@ export default createRule({
       adhocChip:
         "Ad-hoc chip/badge markup (rounded + small px/py on a span/div/button) is banned — " +
         "use a sanctioned primitive: Badge (static colored label/status, " +
-        "@plugins/primitives/plugins/badge/web), ToggleChip/SegmentedControl (interactive on/off), " +
+        "@plugins/primitives/plugins/css/plugins/badge/web), ToggleChip/SegmentedControl (interactive on/off), " +
         "FilterChip (filter rows), or LinkChip (inline navigation). For a color from a dynamic " +
         "class map, pass colorClass to Badge. If this is intentionally not a chip (positioned " +
         "overlay, container), render it through a component or use a named padding token " +

@@ -7,7 +7,7 @@ import {
   contributionId,
   type ContributionsFacetData,
 } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the contributions facet's own data. Read `node.facets[id]` directly

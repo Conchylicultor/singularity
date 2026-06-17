@@ -7,7 +7,7 @@
 - Description: Watched-folder UI for the MIDI source: registers the midi-folders config (settings pane renders it for free) and badges library cards whose folder-imported file has been deleted from disk. Watches configured folders for .mid/.midi files and mirrors them into the Sonata library: auto-imports on create/edit (via a per-file job), badges 'source deleted' on removal, and reconciles drift on boot and config change. The watched-folder list is a config_v2 listField rendered for free in the settings pane.
 - Web:
   - Contributes: `ConfigV2.WebRegister`, `Library.CardMeta` "midi-source-deleted" → `SourceDeletedBadge`
-  - Uses: `apps/sonata/library.Library`, `apps/sonata/sources/midi.useSongMidi`, `config_v2.ConfigV2`, `primitives/badge.Badge`
+  - Uses: `apps/sonata/library.Library`, `apps/sonata/sources/midi.useSongMidi`, `config_v2.ConfigV2`, `primitives/css/badge.Badge`
 - Server:
   - Uses: `apps/sonata/sources/midi.getSongMidiBySourcePath`, `apps/sonata/sources/midi.importMidiSong`, `apps/sonata/sources/midi.listFolderImportedSongs`, `apps/sonata/sources/midi.setSourceMissing`, `config_v2.ConfigV2`, `config_v2.getConfig`, `config_v2.watchConfig`, `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/jobs.defineJob`
   - Register: `defineJob('sonata.midi.import')`

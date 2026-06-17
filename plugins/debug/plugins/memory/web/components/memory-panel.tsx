@@ -4,7 +4,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-la
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { MdRefresh } from "react-icons/md";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { listMemoryFiles, readMemoryFile } from "../../shared/endpoints";

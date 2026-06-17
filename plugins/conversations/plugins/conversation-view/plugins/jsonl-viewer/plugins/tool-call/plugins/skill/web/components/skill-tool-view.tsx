@@ -6,7 +6,7 @@ import { useConversationById } from "@plugins/conversations/web";
 import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type SkillInput = { skill: string; args?: string };
 

@@ -1,7 +1,7 @@
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 export function ModelBadge() {
   const { convId } = conversationPane.useParams();

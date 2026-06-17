@@ -90,7 +90,7 @@ prop (middleware auto-detects; field is always `"vertical"`).
 
 - Description: Presentational drag-and-drop reorder editor: sortable items, hide/restore, spacers, optional grouping zones. Display-only — no config_v2, catalog, or tree-format knowledge.
 - Web:
-  - Uses: `primitives/popover.InlinePopover`, `primitives/row.Row`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.Input`
+  - Uses: `primitives/css/row.Row`, `primitives/popover.InlinePopover`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`, `primitives/ui-kit.Input`
   - Exports: Types: `ReorderAreaCtxValue`, `ReorderEditorProps`, `ReorderEntry`, `ReorderItemEntry`, `ReorderNodeEntry`; Values: `ReorderAreaContext`, `ReorderEditor`, `RestoreButton`, `SortableReorderItem`, `SpacerReorderItem`
 - Cross-plugin:
   - Imported by: `fields/reorder-tree/config`, `reorder`, `reorder/node-types/spacer`

@@ -1,5 +1,5 @@
 import type { Attempt } from "@plugins/tasks/core";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 /**
  * Single source of truth for Attempt status display metadata. Only the color

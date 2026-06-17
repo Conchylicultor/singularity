@@ -6,7 +6,7 @@ import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/we
 import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 function formatDate(value: Date | string): string {

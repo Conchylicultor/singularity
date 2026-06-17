@@ -1,4 +1,4 @@
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { CommitRow } from "../../core";
 import { CommitRail, COMMIT_ROW_HEIGHT } from "./commit-rail";

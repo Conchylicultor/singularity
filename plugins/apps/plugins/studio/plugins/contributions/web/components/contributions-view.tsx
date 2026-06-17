@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { FilterChip } from "@plugins/primitives/plugins/filter-chips/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { DataTable } from "@plugins/primitives/plugins/data-table/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";

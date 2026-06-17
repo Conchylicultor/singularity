@@ -1,11 +1,11 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdAdd, MdDeleteOutline, MdPublic, MdSave } from "react-icons/md";
 import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";

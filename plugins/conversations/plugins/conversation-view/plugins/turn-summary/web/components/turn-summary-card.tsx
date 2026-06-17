@@ -6,7 +6,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { turnSummariesResource } from "../../shared";
 
 function parseBullets(text: string): string[] {

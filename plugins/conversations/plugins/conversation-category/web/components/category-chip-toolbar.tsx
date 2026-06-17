@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { MdAutoAwesome, MdCheck } from "react-icons/md";
 import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";

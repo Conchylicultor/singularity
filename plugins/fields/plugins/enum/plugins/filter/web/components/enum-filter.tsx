@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FilterValueInputProps } from "@plugins/primitives/plugins/data-view/web";
 
 /** Single-select option chips (operand is one option value) for is / is-not. */

@@ -1,7 +1,7 @@
 import { type ReactElement } from "react";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PagesWelcome } from "./slots";
 
 export const pagesRootPane = Pane.define({

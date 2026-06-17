@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { agentReportPane } from "../panes";
 

@@ -6,8 +6,8 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Color,

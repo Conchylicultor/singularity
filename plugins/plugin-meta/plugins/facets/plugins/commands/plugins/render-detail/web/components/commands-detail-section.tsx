@@ -2,7 +2,7 @@ import {
   Section,
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { CommandDef } from "@plugins/plugin-meta/plugins/facets/plugins/commands/core";
 

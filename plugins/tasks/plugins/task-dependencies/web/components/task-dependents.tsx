@@ -9,7 +9,7 @@ import {
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { tasksResource, type TaskListItem, removeTaskDependency } from "@plugins/tasks/core";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function TaskDependents({ taskId }: { taskId: string }) {

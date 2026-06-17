@@ -1,6 +1,6 @@
 import { type ReactNode } from "react";
 import type { ToolCallEvent } from "../../core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   CollapsibleCard,
   CardHeaderAction,

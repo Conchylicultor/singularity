@@ -1,8 +1,8 @@
 import { useState, type ReactElement } from "react";
 import { MdDelete } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlinePopover, type InlinePopoverProps } from "@plugins/primitives/plugins/popover/web";
 import type { Block } from "../../core";
 import type { BlockEditorAPI } from "../types";

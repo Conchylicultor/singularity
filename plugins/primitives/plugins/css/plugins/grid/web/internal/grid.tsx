@@ -2,7 +2,7 @@ import type {
   SpaceStep,
   StackAlign,
   StackJustify,
-} from "@plugins/primitives/plugins/spacing/web";
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type React from "react";
 

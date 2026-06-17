@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useConversationById } from "@plugins/conversations/web";

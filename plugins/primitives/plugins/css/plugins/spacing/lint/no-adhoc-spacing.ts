@@ -9,7 +9,7 @@ const createRule = ESLintUtils.RuleCreator(
  *
  * Layout spacing must come from ONE closed set of roles — the 8-step density
  * spacing ramp (`none|2xs|xs|sm|md|lg|xl|2xl`), consumed through the `<Stack
- * gap>` / `<Inset pad>` primitives (`@plugins/primitives/plugins/spacing/web`)
+ * gap>` / `<Inset pad>` primitives (`@plugins/primitives/plugins/css/plugins/spacing/web`)
  * or the matching `gap-<step>` / `p-<step>` `@utility` classes. Tailwind's raw
  * spacing scale exposes ~20 continuous steps per axis (plus `gap-[7px]`), so
  * hand-written `gap-2`/`px-3`/`mt-4` is exactly how spacing drifts when many
@@ -105,7 +105,7 @@ export default createRule({
     messages: {
       adhocSpacing:
         "Raw spacing class `{{token}}` is banned — set layout spacing through the " +
-        "<Stack gap> / <Inset pad> primitives from @plugins/primitives/plugins/spacing/web, " +
+        "<Stack gap> / <Inset pad> primitives from @plugins/primitives/plugins/css/plugins/spacing/web, " +
         "or a named `*-<step>` utility (none|2xs|xs|sm|md|lg|xl|2xl) from the density spacing scale. " +
         "Margins should usually become a Stack gap or Inset pad rather than a raw margin.",
     },

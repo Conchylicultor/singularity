@@ -14,7 +14,7 @@ import {
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
   Collapsible,
   CollapsibleContent,

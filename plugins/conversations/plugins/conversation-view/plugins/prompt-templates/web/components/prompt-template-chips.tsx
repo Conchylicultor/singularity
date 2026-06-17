@@ -6,7 +6,7 @@ import {
   FloatingActionFadeIn,
 } from "@plugins/primitives/plugins/floating-action/web";
 import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";

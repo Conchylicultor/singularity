@@ -7,7 +7,7 @@
 - Description: Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
 - Web:
   - Contributes: `Pages.Sidebar` "Search" → `PagesSearch`
-  - Uses: `apps/pages/page-tree.pageDetailPane`, `apps/pages/shell.Pages`, `page/editor.PageIcon`, `primitives/pane.useOpenPane`, `primitives/row.Row`, `search/quick-find.QuickFindDialog`
+  - Uses: `apps/pages/page-tree.pageDetailPane`, `apps/pages/shell.Pages`, `page/editor.PageIcon`, `primitives/css/row.Row`, `primitives/pane.useOpenPane`, `search/quick-find.QuickFindDialog`
 - Server:
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockDeleteHook`, `page/editor.BlockLifecycle`, `page/editor.blocksChanged`, `page/editor.PAGE_BLOCK_TYPE`, `page/editor.pageData`, `search/engine.deleteSearchDocs`, `search/engine.upsertSearchDocs`
   - Register: `defineJob('pages.search.reindex')`, `defineJob('pages.search.backfill')`

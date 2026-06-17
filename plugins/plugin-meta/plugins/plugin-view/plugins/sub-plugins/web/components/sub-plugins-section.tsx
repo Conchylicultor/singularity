@@ -4,7 +4,7 @@ import {
   CollapsibleChevron,
   useCollapsible,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
   Section,
   type PluginNode,

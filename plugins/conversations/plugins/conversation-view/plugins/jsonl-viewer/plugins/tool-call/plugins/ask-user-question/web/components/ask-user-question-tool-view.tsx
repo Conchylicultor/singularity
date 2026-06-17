@@ -1,13 +1,13 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   CheckboxIndicator,
   RadioIndicator,
 } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { isInterruptContent } from "@plugins/conversations/plugins/transcript-watcher/core";

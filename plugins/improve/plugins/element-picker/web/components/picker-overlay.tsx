@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { collectMarkerLineage } from "../internal/marker-lineage";
 

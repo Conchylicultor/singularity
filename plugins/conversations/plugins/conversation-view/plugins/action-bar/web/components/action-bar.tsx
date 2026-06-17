@@ -1,4 +1,4 @@
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Conversation } from "../slots";
 
 export function ActionBarView() {

@@ -2,7 +2,7 @@ import { Button, cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 

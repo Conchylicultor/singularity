@@ -19,7 +19,7 @@ import {
 import { useTask } from "@plugins/tasks/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { Row, SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 const CONVERSATIONS_META_TASK_ID = "task-meta-conversations";

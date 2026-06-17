@@ -8,7 +8,7 @@ import { PromptInsertProvider } from "../prompt-insert-context";
 import { ActiveRelateSync } from "./active-relate-sync";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function ConversationView() {
   const { convId } = conversationPane.useParams();

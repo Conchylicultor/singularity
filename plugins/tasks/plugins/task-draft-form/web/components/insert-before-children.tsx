@@ -1,5 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export interface ChildEntry {
   id: string;

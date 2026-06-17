@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdOpenInNew, MdSmartDisplay } from "react-icons/md";
 import { cn, Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { embedBlock, toEmbedUrl } from "../../core";

@@ -6,7 +6,7 @@ import {
   type ColumnDef,
   type SortState,
 } from "@plugins/primitives/plugins/data-table/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import {

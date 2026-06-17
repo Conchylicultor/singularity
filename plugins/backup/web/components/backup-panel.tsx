@@ -11,7 +11,7 @@ import {
   MdFolder,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { BackupTargetResult } from "@plugins/backup/core";

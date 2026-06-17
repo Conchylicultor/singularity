@@ -1,7 +1,7 @@
 import { Button, cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";

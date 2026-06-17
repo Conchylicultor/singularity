@@ -1,6 +1,6 @@
 import type { CSSProperties } from "react";
 import { MdVolumeDown, MdVolumeOff, MdVolumeUp } from "react-icons/md";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useAudioControls, useAudioState } from "../audio-store";
 import "./volume-control.css";

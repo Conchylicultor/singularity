@@ -5,7 +5,7 @@ import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/co
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 export function CallRow({ call }: { call: ClaudeCliCall }) {

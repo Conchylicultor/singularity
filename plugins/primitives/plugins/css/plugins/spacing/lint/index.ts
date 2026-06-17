@@ -6,7 +6,7 @@ import noAdhocSpacing from "./no-adhoc-spacing";
  * as `error`.
  *
  * Layout spacing routes through the `<Stack gap>` / `<Inset pad>` primitives
- * (`@plugins/primitives/plugins/spacing/web`) or the matching `gap-<step>` /
+ * (`@plugins/primitives/plugins/css/plugins/spacing/web`) or the matching `gap-<step>` /
  * `p-<step>` density utilities — never a raw `gap-2`/`px-3`/`mt-4`/`space-y-2`.
  *
  * BURNDOWN — DRAINED. The grandfathered allowlist (389 files that pre-dated the

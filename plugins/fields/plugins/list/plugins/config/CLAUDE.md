@@ -22,7 +22,7 @@ owner (`@plugins/config_v2/plugins/fields/web`).
 - Description: List field type: config-render capability (sortable drag-and-drop list for config-v2.fields.renderer) plus the listField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
-  - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.Fields`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
+  - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/text.Text`, `primitives/ui-kit.Button`, `primitives/ui-kit.cn`
 - Core:
   - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.fieldSchemaWithDefault`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `fields/list.listFieldType`, `fields/list.ListItem`
   - Exports: Types: `ListFieldDef`; Values: `isListFieldDef`, `listField`

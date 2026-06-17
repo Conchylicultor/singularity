@@ -4,7 +4,7 @@ import { DataTable, type ColumnDef } from "@plugins/primitives/plugins/data-tabl
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 interface OutgoingFk {
   constraint_name: string;

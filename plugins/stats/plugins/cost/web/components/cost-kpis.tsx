@@ -2,7 +2,7 @@ import { ChartState } from "@plugins/stats/plugins/commits/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCostTotals } from "../../shared/endpoints";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { ScopeToggle } from "./scope-toggle";
 import { useScope } from "./use-scope";
 import { formatTokensCompact, formatUsd } from "./format";

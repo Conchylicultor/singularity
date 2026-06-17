@@ -9,8 +9,8 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useReconnectingWebSocket } from "@plugins/primitives/plugins/networking/web";
 import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins/auto-scroll/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import {
   Collapsible,

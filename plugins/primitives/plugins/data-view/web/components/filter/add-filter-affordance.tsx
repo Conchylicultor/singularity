@@ -4,7 +4,7 @@ import {
   Button,
   DropdownMenuSeparator,
 } from "@plugins/primitives/plugins/ui-kit/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { FieldDef } from "../../../core";
 import { FieldSearchList } from "./field-search-list";

@@ -1,4 +1,4 @@
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type React from "react";
 
 export interface LinkChipProps {

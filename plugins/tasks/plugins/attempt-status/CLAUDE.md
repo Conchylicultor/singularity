@@ -12,7 +12,7 @@ derived via `formatStatusLabel`, so they never drift from the house casing rule.
 
 - Description: Single source of truth for Attempt status display metadata — badge color and sentence-case label.
 - Web:
-  - Uses: `primitives/badge.Badge`, `primitives/badge.formatStatusLabel`
+  - Uses: `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`
   - Exports: Values: `ATTEMPT_STATUS_META`, `AttemptStatusBadge`
 - Cross-plugin:
   - Imported by: `active-data/task`, `tasks/task-events`

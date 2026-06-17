@@ -14,7 +14,7 @@ import {
   KEY_ESCAPE_COMMAND,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";

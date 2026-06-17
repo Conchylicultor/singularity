@@ -1,6 +1,6 @@
 import { MdWarningAmber } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   Section,
   type PluginNode,

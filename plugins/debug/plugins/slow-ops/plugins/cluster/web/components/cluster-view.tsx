@@ -5,9 +5,9 @@ import {
   type ColumnDef,
   type SortState,
 } from "@plugins/primitives/plugins/data-table/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";

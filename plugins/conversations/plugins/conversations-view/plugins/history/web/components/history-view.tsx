@@ -9,7 +9,7 @@ import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui
 import { MdClose } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function HistoryView({
   activeId,

@@ -3,7 +3,7 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
 import {
   defineRenderSlot,
   type RenderSlot,

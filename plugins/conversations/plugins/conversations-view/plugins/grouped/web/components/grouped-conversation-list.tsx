@@ -29,7 +29,7 @@ import { useTaskAutoGroups } from "./use-task-auto-groups";
 import { AutoGroupBox } from "./auto-group-box";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { MdChevronRight, MdClose, MdFolder, MdRemoveCircleOutline } from "react-icons/md";
 import { DraggableRow, type DropTarget } from "./draggable-row";
 import { GroupBox } from "./group-box";

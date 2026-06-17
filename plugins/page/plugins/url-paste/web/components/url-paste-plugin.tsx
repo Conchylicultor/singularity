@@ -10,7 +10,7 @@ import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext
 import { MdBookmark, MdLink, MdSmartDisplay } from "react-icons/md";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { textOf } from "@plugins/page/plugins/editor/core";
 import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { BOOKMARK_TYPE } from "@plugins/page/plugins/bookmark/core";

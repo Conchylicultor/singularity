@@ -10,7 +10,7 @@ import { $isLinkNode } from "@lexical/link";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { ViewportOverlay } from "@plugins/primitives/plugins/css/plugins/viewport-overlay/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { MARK_ORDER, type ColorToken, type Mark } from "../../core";
 import { Editor } from "../slots";
 import { FormatToolbarProvider, type FormatToolbarValue } from "../internal/format-toolbar-context";

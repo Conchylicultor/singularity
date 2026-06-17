@@ -6,9 +6,9 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { tasksResource } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 function isTerminal(status: TaskStatus): boolean {
   return status === "done" || status === "dropped";

@@ -8,7 +8,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
 

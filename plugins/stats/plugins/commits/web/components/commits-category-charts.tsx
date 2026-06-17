@@ -12,7 +12,7 @@ import {
   YAxis,
 } from "recharts";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useShowEmptyDays } from "@plugins/stats/web";
 import {
   autoColorKey,

@@ -1,5 +1,5 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import {
   Fragment,
   useCallback,

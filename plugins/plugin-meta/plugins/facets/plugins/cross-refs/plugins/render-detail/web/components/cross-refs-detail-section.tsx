@@ -13,7 +13,7 @@ import {
   asPath,
   type PluginId,
 } from "@plugins/framework/plugins/plugin-id/core";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import type {
   CrossRefsData,

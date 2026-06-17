@@ -4,7 +4,7 @@ import {
   type PluginNode,
 } from "@plugins/plugin-meta/plugins/plugin-view/web";
 import type { DocMetaRegistration } from "@plugins/plugin-meta/plugins/facets/plugins/registrations/core";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 // Renders the registrations facet's own data. Read `node.facets[id]` directly

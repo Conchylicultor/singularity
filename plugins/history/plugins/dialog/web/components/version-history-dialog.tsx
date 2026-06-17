@@ -9,8 +9,8 @@ import {
   ScrollArea,
 } from "@plugins/primitives/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";

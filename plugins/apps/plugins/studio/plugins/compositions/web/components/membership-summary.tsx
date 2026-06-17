@@ -1,6 +1,6 @@
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/badge/web";
+import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { MembershipState } from "@plugins/plugin-meta/plugins/closure/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 

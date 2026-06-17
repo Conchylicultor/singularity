@@ -4,8 +4,8 @@ import {
   Collapsible,
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { SectionHeaderRow } from "@plugins/primitives/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { SectionHeaderRow } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   ColorAdjustContext,
   transformValues,

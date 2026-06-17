@@ -8,9 +8,9 @@ import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { MODEL_REGISTRY, normalizeModel } from "@plugins/conversations/plugins/model-provider/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 type AddTaskInput = {

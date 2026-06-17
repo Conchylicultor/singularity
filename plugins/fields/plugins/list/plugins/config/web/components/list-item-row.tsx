@@ -1,5 +1,5 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useCallback } from "react";
 import { MdDragIndicator, MdClose } from "react-icons/md";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";

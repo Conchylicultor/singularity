@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdLink } from "react-icons/md";
-import { Row } from "@plugins/primitives/plugins/row/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

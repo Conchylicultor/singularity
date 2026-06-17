@@ -8,7 +8,7 @@ import {
 } from "@plugins/debug/plugins/profiling/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { BUILD_PHASE_ORDER, BUILD_PHASE_CONFIG } from "../phases";
 import { buildProfileDetailPane } from "../panes";

@@ -8,11 +8,11 @@ import {
   type Span,
 } from "@plugins/debug/plugins/profiling/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import type {
   PushDetail,

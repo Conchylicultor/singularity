@@ -1,6 +1,6 @@
 import { useContext } from "react";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   ColorAdjustContext,
   transformValues,

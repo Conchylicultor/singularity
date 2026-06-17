@@ -2222,10 +2222,6 @@
       "name": "@singularity/plugin-primitives-avatar",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/badge": {
-      "name": "@singularity/plugin-primitives-badge",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/bar": {
       "name": "@singularity/plugin-primitives-bar",
       "version": "0.0.1",
@@ -2260,6 +2256,10 @@
     },
     "plugins/primitives/plugins/css": {
       "name": "@singularity/plugin-primitives-css",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/badge": {
+      "name": "@singularity/plugin-primitives-css-badge",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/card": {
@@ -2310,12 +2310,20 @@
       "name": "@singularity/plugin-primitives-css-radius",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/row": {
+      "name": "@singularity/plugin-primitives-css-row",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/section-label": {
       "name": "@singularity/plugin-primitives-css-section-label",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/selection-indicator": {
       "name": "@singularity/plugin-primitives-css-selection-indicator",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/spacing": {
+      "name": "@singularity/plugin-primitives-css-spacing",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/spinner": {
@@ -2502,10 +2510,6 @@
       "name": "@singularity/plugin-primitives-responsive-overflow",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/row": {
-      "name": "@singularity/plugin-primitives-row",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/scoped-store": {
       "name": "@singularity/plugin-primitives-scoped-store",
       "version": "0.0.1",
@@ -2528,10 +2532,6 @@
     },
     "plugins/primitives/plugins/sortable-list": {
       "name": "@singularity/plugin-primitives-sortable-list",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/spacing": {
-      "name": "@singularity/plugin-primitives-spacing",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/surface-id": {
@@ -4526,8 +4526,6 @@
 
     "@singularity/plugin-primitives-avatar": ["@singularity/plugin-primitives-avatar@workspace:plugins/primitives/plugins/avatar"],
 
-    "@singularity/plugin-primitives-badge": ["@singularity/plugin-primitives-badge@workspace:plugins/primitives/plugins/badge"],
-
     "@singularity/plugin-primitives-bar": ["@singularity/plugin-primitives-bar@workspace:plugins/primitives/plugins/bar"],
 
     "@singularity/plugin-primitives-breadcrumb": ["@singularity/plugin-primitives-breadcrumb@workspace:plugins/primitives/plugins/breadcrumb"],
@@ -4545,6 +4543,8 @@
     "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
 
     "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
+
+    "@singularity/plugin-primitives-css-badge": ["@singularity/plugin-primitives-css-badge@workspace:plugins/primitives/plugins/css/plugins/badge"],
 
     "@singularity/plugin-primitives-css-card": ["@singularity/plugin-primitives-css-card@workspace:plugins/primitives/plugins/css/plugins/card"],
 
@@ -4570,9 +4570,13 @@
 
     "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
 
+    "@singularity/plugin-primitives-css-row": ["@singularity/plugin-primitives-css-row@workspace:plugins/primitives/plugins/css/plugins/row"],
+
     "@singularity/plugin-primitives-css-section-label": ["@singularity/plugin-primitives-css-section-label@workspace:plugins/primitives/plugins/css/plugins/section-label"],
 
     "@singularity/plugin-primitives-css-selection-indicator": ["@singularity/plugin-primitives-css-selection-indicator@workspace:plugins/primitives/plugins/css/plugins/selection-indicator"],
+
+    "@singularity/plugin-primitives-css-spacing": ["@singularity/plugin-primitives-css-spacing@workspace:plugins/primitives/plugins/css/plugins/spacing"],
 
     "@singularity/plugin-primitives-css-spinner": ["@singularity/plugin-primitives-css-spinner@workspace:plugins/primitives/plugins/css/plugins/spinner"],
 
@@ -4662,8 +4666,6 @@
 
     "@singularity/plugin-primitives-responsive-overflow": ["@singularity/plugin-primitives-responsive-overflow@workspace:plugins/primitives/plugins/responsive-overflow"],
 
-    "@singularity/plugin-primitives-row": ["@singularity/plugin-primitives-row@workspace:plugins/primitives/plugins/row"],
-
     "@singularity/plugin-primitives-scoped-store": ["@singularity/plugin-primitives-scoped-store@workspace:plugins/primitives/plugins/scoped-store"],
 
     "@singularity/plugin-primitives-search": ["@singularity/plugin-primitives-search@workspace:plugins/primitives/plugins/search"],
@@ -4675,8 +4677,6 @@
     "@singularity/plugin-primitives-slot-render": ["@singularity/plugin-primitives-slot-render@workspace:plugins/primitives/plugins/slot-render"],
 
     "@singularity/plugin-primitives-sortable-list": ["@singularity/plugin-primitives-sortable-list@workspace:plugins/primitives/plugins/sortable-list"],
-
-    "@singularity/plugin-primitives-spacing": ["@singularity/plugin-primitives-spacing@workspace:plugins/primitives/plugins/spacing"],
 
     "@singularity/plugin-primitives-surface-id": ["@singularity/plugin-primitives-surface-id@workspace:plugins/primitives/plugins/surface-id"],
 

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";
 import { LaunchControl } from "./launch-control";

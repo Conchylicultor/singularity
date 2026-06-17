@@ -7,7 +7,7 @@
 - Description: Commit-based stats: commits and lines of change over time. Commit-based stats: commits and lines of change over time.
 - Web:
   - Contributes: `Stats.Chart` "Commits" → `CommitsSection`, `Stats.Chart` "Lines changed" → `LinesChartsSection`, `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `conversations/conversation-category.autoColorKey`, `conversations/conversation-category.useCategoryAvatars`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/loading.Loading`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.cn`, `stats.Stats`, `stats.useShowEmptyDays`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `conversations/conversation-category.autoColorKey`, `conversations/conversation-category.useCategoryAvatars`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/toggle-chip.ToggleChip`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`, `stats.Stats`, `stats.useShowEmptyDays`
   - Exports: Values: `axisProps`, `barCursor`, `ChartState`, `fillGaps`, `gridProps`, `lineCursor`, `tooltipContentStyle`, `tooltipLabelStyle`, `tooltipNumberFormatter`, `yAxisFormatter`
 - Server:
   - Uses: `config_v2.ConfigV2`, `config_v2.getConfig`, `conversations/conversation-category.conversationCategory`, `conversations/conversation-category.conversationCategoryConfig`, `database.db`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/worktree.ensureMainWorktreeRoot`

@@ -8,7 +8,7 @@ import noAdhocLayout from "./no-adhoc-layout";
  * Layout composition routes through the layout primitives — `<Frame>` (named
  * slots, owns the shrink hierarchy), `<Grid>`/`<Cluster>`/`<Center>`/`<Overlay>`
  * (@plugins/primitives/plugins/css/plugins/*), `<Stack>`/`<Inset>`
- * (@plugins/primitives/plugins/spacing/web), and `<TruncatingText>` (the only
+ * (@plugins/primitives/plugins/css/plugins/spacing/web), and `<TruncatingText>` (the only
  * home for `min-w-0`) — never raw `flex`/`grid`/`items-*`/`absolute`/`overflow-*`.
  *
  * The `ignores` array below has two tiers:
@@ -33,8 +33,7 @@ export default {
   ignores: {
     "no-adhoc-layout": [
       // ── PERMANENT: the layout primitives themselves ──────────────────────
-      "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Frame/Grid/Cluster/Center/Overlay + presentational css/ sub-plugins (surface, card, truncating-text, ...)
-      "plugins/primitives/plugins/spacing/web/**/*.{ts,tsx}", // Stack/Inset
+      "plugins/primitives/plugins/css/plugins/**/*.{ts,tsx}", // Frame/Grid/Cluster/Center/Overlay + presentational css/ sub-plugins (surface, card, truncating-text, spacing, badge, row, ...)
       // ── BURNDOWN: grandfathered pre-rule offenders (drains to 0) ──────────
       // <BURNDOWN-START> (generated — see lint/index.ts header)
       "plugins/active-data/plugins/plugin-link/web/components/plugin-link-chip.tsx",
@@ -355,7 +354,6 @@ export default {
       "plugins/primitives/plugins/app-shell/web/components/sidebar-pane-section.tsx",
       "plugins/primitives/plugins/avatar/web/components/avatar-picker.tsx",
       "plugins/primitives/plugins/avatar/web/components/avatar.tsx",
-      "plugins/primitives/plugins/badge/web/internal/badge.tsx",
       "plugins/primitives/plugins/bar/web/internal/bar.tsx",
       "plugins/primitives/plugins/breadcrumb/web/internal/breadcrumb.tsx",
       "plugins/primitives/plugins/collapsible-wrap/web/internal/collapsible-wrap.tsx",
@@ -404,7 +402,6 @@ export default {
       "plugins/primitives/plugins/pane/web/components/pane-resolve-guard.tsx",
       "plugins/primitives/plugins/prompt-editor/web/components/prompt-editor.tsx",
       "plugins/primitives/plugins/responsive-overflow/web/internal/responsive-overflow.tsx",
-      "plugins/primitives/plugins/row/web/internal/row.tsx",
       "plugins/primitives/plugins/search/web/internal/search-input.tsx",
       "plugins/primitives/plugins/css/plugins/selection-indicator/web/internal/selection-indicator.tsx",
       "plugins/primitives/plugins/slot-render/web/internal/render-slot.tsx",

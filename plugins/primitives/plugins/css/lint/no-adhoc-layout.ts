@@ -28,7 +28,7 @@ const createRule = ESLintUtils.RuleCreator(
  *   - `<Frame leading content meta trailing>` — named-slot row, owns the shrink
  *     hierarchy (rigid | truncates-last | truncates-first | rigid-right).
  *   - `<Grid>` / `<Cluster>` / `<Center>` / `<Overlay>` — the other layout modes.
- *   - `<Stack>` / `<Inset>` (@plugins/primitives/plugins/spacing/web) — 1-D flow.
+ *   - `<Stack>` / `<Inset>` (@plugins/primitives/plugins/css/plugins/spacing/web) — 1-D flow.
  *   - `<TruncatingText>` — THE truncation leaf; the only home for `min-w-0`.
  *
  * NOT banned (deliberately): `relative` / `static` (positioning *context* is
@@ -153,7 +153,7 @@ export default createRule({
         "Raw layout class `{{token}}` is banned — compose layout through the primitives: " +
         "<Frame leading content meta trailing> (named-slot row, owns the shrink hierarchy), " +
         "<Grid>/<Cluster>/<Center>/<Overlay> from @plugins/primitives/plugins/css/plugins/*, " +
-        "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/spacing/web, or <TruncatingText> " +
+        "<Stack gap>/<Inset pad> from @plugins/primitives/plugins/css/plugins/spacing/web, or <TruncatingText> " +
         "for the min-w-0 truncation leaf. A genuine one-off escapes per-site with " +
         "`// eslint-disable-next-line layout/no-adhoc-layout -- <reason>`.",
     },

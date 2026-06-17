@@ -1,5 +1,5 @@
 import { Fragment, type ReactNode } from "react";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { parseFileLinks } from "./parse";
 

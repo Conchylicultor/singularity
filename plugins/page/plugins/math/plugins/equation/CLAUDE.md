@@ -7,7 +7,7 @@
 - Description: Block-level equation block type: a focusable LaTeX source editor with a live centered KaTeX render.
 - Web:
   - Contributes: `Editor.Block` "equation" → `EquationBlock`
-  - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `page/math/render.KatexMath`, `primitives/editable-field.useEditableField`, `primitives/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `page/editor.BlockRendererProps`, `page/editor.Editor`, `page/editor.useBlockEditor`, `page/math/render.KatexMath`, `primitives/css/spacing.Stack`, `primitives/editable-field.useEditableField`, `primitives/text.Text`, `primitives/ui-kit.cn`
   - Exports: Values: `EQUATION_TYPE`, `equationBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

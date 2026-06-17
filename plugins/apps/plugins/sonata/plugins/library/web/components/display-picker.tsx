@@ -1,7 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ComponentType } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /**
  * A horizontal picker rendered from a list of `{ id, label, icon? }` items.

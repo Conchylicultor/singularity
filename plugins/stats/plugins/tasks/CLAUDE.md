@@ -7,7 +7,7 @@
 - Description: Task-based stats: active (open) tasks over time.
 - Web:
   - Contributes: `Stats.Chart` "Tasks" → `TasksSection`
-  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/spacing.Stack`, `primitives/text.Text`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
+  - Uses: `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/css/spacing.Stack`, `primitives/text.Text`, `stats.Stats`, `stats.useShowEmptyDays`, `stats/commits.axisProps`, `stats/commits.barCursor`, `stats/commits.ChartState`, `stats/commits.fillGaps`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.tooltipNumberFormatter`, `stats/commits.yAxisFormatter`
 - Server:
   - Uses: `infra/endpoints.implement`, `tasks/tasks-core.CONVERSATIONS_META_TASK_ID`, `tasks/tasks-core.listTasks`
   - Routes: `GET /api/stats/tasks/cumulative`, `GET /api/stats/tasks/daily`

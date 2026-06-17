@@ -1,7 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { FieldRenderer, ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/text/web";

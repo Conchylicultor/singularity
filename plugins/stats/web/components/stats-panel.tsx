@@ -1,6 +1,6 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack, Inset } from "@plugins/primitives/plugins/spacing/web";
+import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Stats } from "../slots";
 import { StatsProvider, useShowEmptyDays } from "./stats-context";
 

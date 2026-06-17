@@ -1,5 +1,5 @@
 import { cn, type ControlSize, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type React from "react";
 
 export type ToggleChipVariant = "solid" | "ghost";

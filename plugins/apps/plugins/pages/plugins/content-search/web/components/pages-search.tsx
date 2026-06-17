@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { MdSearch } from "react-icons/md";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";

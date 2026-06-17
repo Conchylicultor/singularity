@@ -19,7 +19,7 @@ import {
   yAxisFormatter,
 } from "@plugins/stats/plugins/commits/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useEndpoint, getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";
 import { getCostAvgPerConversation } from "../../shared/endpoints";
 import { formatUsd, formatUsdCompact, formatTokensCompact } from "./format";

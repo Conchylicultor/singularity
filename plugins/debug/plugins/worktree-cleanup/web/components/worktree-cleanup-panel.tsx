@@ -1,7 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { MdDelete, MdFolderDelete, MdRefresh, MdWarning } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";

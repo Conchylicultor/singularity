@@ -13,7 +13,7 @@ import {
 } from "@plugins/config_v2/plugins/fields/web";
 import type { FieldDef } from "@plugins/config_v2/core";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   variantFieldType,
   type VariantValue,

@@ -6,7 +6,7 @@
 
 - Description: Factory for extensible detail-view section slots with built-in Reorder DnD.
 - Web:
-  - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/row.SectionHeaderRow`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.RenderSlot`
+  - Uses: `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/row.SectionHeaderRow`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.RenderSlot`
   - Exports: Types: `DetailSections`; Values: `defineDetailSections`
 - Cross-plugin:
   - Imported by: `apps/studio/contributions/tables`, `build`, `plugin-meta/plugin-view`, `review`, `tasks/task-detail`, `ui/theme-engine/theme-customizer`

@@ -6,7 +6,7 @@
 
 - Description: Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
 - Web:
-  - Uses: `primitives/badge.Badge`
+  - Uses: `primitives/css/badge.Badge`
   - Exports: Types: `LinkChipProps`; Values: `LinkChip`
 - Cross-plugin:
   - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/plugin-link`, `active-data/task`, `active-data/task-link`, `apps/studio/contributions`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/markdown-extensions`, `page/inline-date`, `page/inline-page-link`, `page/read-only-view`, `plugin-meta/plugin-view/inclusion`, `primitives/file-links`

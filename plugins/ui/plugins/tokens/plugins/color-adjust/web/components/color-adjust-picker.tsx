@@ -1,5 +1,5 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { colorAdjustConfig } from "../internal/config";
 import { ColorAdjust } from "../slots";

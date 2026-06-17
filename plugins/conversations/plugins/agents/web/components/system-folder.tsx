@@ -7,7 +7,7 @@ import {
   CollapsibleContent,
   CollapsibleTrigger,
 } from "@plugins/primitives/plugins/collapsible/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Agents as AgentsSlots } from "../slots";
 import { systemAgentDetailPane } from "../panes";
 

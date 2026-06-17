@@ -3,7 +3,7 @@ import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Auth } from "../slots";
 import { useAccountStatus } from "../hooks";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "@plugins/config_v2/plugins/settings/web";

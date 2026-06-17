@@ -1,4 +1,4 @@
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { usePluginFacetDiffs } from "@plugins/review/plugins/plugin-changes/web";
 import type { PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
 

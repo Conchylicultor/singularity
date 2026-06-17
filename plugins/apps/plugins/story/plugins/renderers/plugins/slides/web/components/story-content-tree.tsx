@@ -1,6 +1,6 @@
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 import { Story } from "@plugins/apps/plugins/story/plugins/render/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /**
  * Recursively renders a forest of StoryNodes as slide content. Keeps the

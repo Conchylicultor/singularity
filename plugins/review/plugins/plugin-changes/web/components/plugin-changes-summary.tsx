@@ -1,4 +1,4 @@
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { Source } from "@plugins/review/web";
 import { usePluginChanges } from "../use-plugin-changes";
 

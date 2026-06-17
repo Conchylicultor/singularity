@@ -1,6 +1,6 @@
 import type { MouseEvent } from "react";
 import { MdDescription } from "react-icons/md";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { useBlockEditor, type BlockEditorAPI } from "@plugins/page/plugins/editor/web";
 import type { Block } from "@plugins/page/plugins/editor/core";
 import { turnBlockIntoPage } from "../internal/turn-block-into-page";

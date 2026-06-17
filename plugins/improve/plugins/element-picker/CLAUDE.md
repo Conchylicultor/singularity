@@ -87,7 +87,7 @@ still reads pre-split legacy flat-body tags (`LEGACY_BODY_PREAMBLE`).
 - Description: Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 - Web:
   - Contributes: `ActionBar.Item` → `ElementPickerButton`, `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`, `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
-  - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/spacing.Inset`, `primitives/spacing.Stack`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
+  - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `primitives/text.Text`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`
   - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`, `viteCollectedDir`

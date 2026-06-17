@@ -2,7 +2,7 @@ import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 export function GroupContainer({
   droppableId,

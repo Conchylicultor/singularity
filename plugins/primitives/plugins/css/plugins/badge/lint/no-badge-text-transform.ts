@@ -14,7 +14,7 @@ const createRule = ESLintUtils.RuleCreator(
  * one house rule (sentence case for derived labels, verbatim for proper nouns).
  *
  * Casing must live in the CONTENT, never in CSS:
- *   - enum-derived labels → `formatStatusLabel(key)` (@plugins/primitives/plugins/badge/web)
+ *   - enum-derived labels → `formatStatusLabel(key)` (@plugins/primitives/plugins/css/plugins/badge/web)
  *   - model names → the model registry label ("Opus 4.8")
  *   - an intentional all-caps alarm → author the literal string ("BYPASS ACTIVE")
  *
@@ -83,7 +83,7 @@ export default createRule({
       textTransform:
         "CSS text-transform on a <Badge> is banned — casing must live in the content, not CSS. " +
         "For an enum-derived label use formatStatusLabel(key) " +
-        "(@plugins/primitives/plugins/badge/web); for a model name use the model registry label " +
+        "(@plugins/primitives/plugins/css/plugins/badge/web); for a model name use the model registry label " +
         '("Opus 4.8"); for an intentional all-caps alarm author the literal string ("BYPASS ACTIVE"). ' +
         "Last resort: // eslint-disable-next-line badge/no-badge-text-transform -- <reason>.",
     },

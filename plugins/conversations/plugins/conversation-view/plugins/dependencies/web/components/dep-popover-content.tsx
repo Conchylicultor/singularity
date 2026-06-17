@@ -1,7 +1,7 @@
 import { MdClose } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { SearchInput, useTextFilter } from "@plugins/primitives/plugins/search/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";

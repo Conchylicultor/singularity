@@ -3,7 +3,7 @@ import {
   type SpaceStep,
   type StackAlign,
   type StackJustify,
-} from "@plugins/primitives/plugins/spacing/web";
+} from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type React from "react";
 
 export interface ClusterProps extends React.HTMLAttributes<HTMLElement> {

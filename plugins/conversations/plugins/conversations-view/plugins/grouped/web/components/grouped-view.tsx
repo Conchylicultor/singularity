@@ -7,7 +7,7 @@ import type { ViewProps } from "@plugins/conversations/plugins/conversations-vie
 import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { GroupedConversationList } from "./grouped-conversation-list";
 
 const SHOW_SYSTEM_KEY = "conversations-view:show-system";

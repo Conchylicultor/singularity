@@ -4,7 +4,7 @@ import {
   Color,
   ColorPickerPopover,
 } from "@plugins/primitives/plugins/css/plugins/color-picker/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
 
 export interface TokenRowProps {

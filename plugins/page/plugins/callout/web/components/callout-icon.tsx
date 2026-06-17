@@ -2,7 +2,7 @@ import { cn, Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives
 import { useState } from "react";
 import { MdLightbulb } from "react-icons/md";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
-import { Row } from "@plugins/primitives/plugins/row/web";
+import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";

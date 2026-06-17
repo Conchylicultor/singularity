@@ -1,7 +1,7 @@
 import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdPlaylistPlay } from "react-icons/md";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";

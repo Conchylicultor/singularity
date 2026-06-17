@@ -1,5 +1,5 @@
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 interface SectionProps {
   title: string;

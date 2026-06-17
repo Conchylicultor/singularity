@@ -10,7 +10,7 @@
 
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useMemo } from "react";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";
 import { parseGrid } from "./parse-grid";
 import { VOICINGS } from "./voicings";

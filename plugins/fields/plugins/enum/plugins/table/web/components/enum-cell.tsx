@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { TableCellProps } from "@plugins/primitives/plugins/data-view/web";
 
 /** Read-only enum cell: the option label as a chip. */

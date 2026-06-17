@@ -1,5 +1,5 @@
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { CostKpis } from "./cost-kpis";
 import { CumulativeCostChart } from "./cumulative-cost-chart";
 import { DailyCostChart } from "./daily-cost-chart";

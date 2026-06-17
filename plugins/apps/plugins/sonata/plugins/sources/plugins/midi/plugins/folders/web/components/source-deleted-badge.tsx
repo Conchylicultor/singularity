@@ -1,6 +1,6 @@
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { useSongMidi } from "@plugins/apps/plugins/sonata/plugins/sources/plugins/midi/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 /**
  * Library-card badge for a folder-imported song whose backing `.mid` file has

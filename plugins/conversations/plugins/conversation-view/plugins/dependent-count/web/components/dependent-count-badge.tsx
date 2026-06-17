@@ -1,6 +1,6 @@
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { tasksResource, countTransitiveDependents } from "@plugins/tasks/core";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 /**
  * Muted "N blocked" chip for a task: counts the tasks transitively blocked by

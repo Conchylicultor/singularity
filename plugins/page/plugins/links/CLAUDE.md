@@ -6,7 +6,7 @@
 
 - Description: Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource. Backlinks index for cross-page links: page_links edge table, extractor registry, reindex, backlinks resource.
 - Web:
-  - Uses: `page/editor.PageIcon`, `primitives/css/section-label.SectionLabel`, `primitives/live-state.useResource`, `primitives/row.Row`, `primitives/spacing.Stack`
+  - Uses: `page/editor.PageIcon`, `primitives/css/row.Row`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Stack`, `primitives/live-state.useResource`
   - Exports: Types: `BacklinksProps`; Values: `Backlinks`
 - Server:
   - Uses: `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `page/editor._blocks`, `page/editor.BlockLifecycle`, `page/editor.blocksChanged`, `page/editor.PAGE_BLOCK_TYPE`

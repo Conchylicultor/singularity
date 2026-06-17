@@ -4,7 +4,7 @@ import {
   PluginChip,
 } from "@plugins/apps/plugins/studio/plugins/contributions/web";
 import type { ColumnDef } from "@plugins/primitives/plugins/data-table/web";
-import { Badge } from "@plugins/primitives/plugins/badge/web";
+import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { ExportsData } from "@plugins/plugin-meta/plugins/facets/plugins/exports/core";
 import { RUNTIME_FOLDERS } from "@plugins/framework/plugins/plugin-id/core";

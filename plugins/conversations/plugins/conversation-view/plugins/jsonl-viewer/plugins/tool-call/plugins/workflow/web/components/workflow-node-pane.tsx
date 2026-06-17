@@ -2,13 +2,13 @@ import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/badge/web";
+import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Text } from "@plugins/primitives/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { workflowNodePane } from "../panes";
 import { useWorkflowTrace } from "../internal/use-workflow-trace";
 

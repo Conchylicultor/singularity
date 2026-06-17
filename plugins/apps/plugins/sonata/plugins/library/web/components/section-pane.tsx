@@ -2,7 +2,7 @@ import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { Stack } from "@plugins/primitives/plugins/spacing/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 /**
  * The right-hand panel column hosting the `Sonata.Section` contributions
