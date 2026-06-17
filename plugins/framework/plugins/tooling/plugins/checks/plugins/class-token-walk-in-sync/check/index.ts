@@ -19,10 +19,10 @@ async function getRoot(): Promise<string> {
 // here; a copy that drops the sentinel will fail the "missing" branch below.
 const EXPECTED = [
   "plugins/primitives/plugins/text/lint/no-adhoc-typography.ts",
-  "plugins/primitives/plugins/radius/lint/no-adhoc-radius.ts",
-  "plugins/primitives/plugins/z-layers/lint/no-adhoc-zindex.ts",
-  "plugins/primitives/plugins/control-size/lint/no-adhoc-control.ts",
-  "plugins/primitives/plugins/icon-auto/lint/no-adhoc-slot-icon-size.ts",
+  "plugins/primitives/plugins/css/plugins/radius/lint/no-adhoc-radius.ts",
+  "plugins/primitives/plugins/css/plugins/z-layers/lint/no-adhoc-zindex.ts",
+  "plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-control.ts",
+  "plugins/primitives/plugins/css/plugins/icon-auto/lint/no-adhoc-slot-icon-size.ts",
 ].sort();
 
 const START = "// >>> shared:class-token-walk";

@@ -2258,10 +2258,6 @@
       "name": "@singularity/plugin-primitives-commit-list",
       "version": "0.0.1",
     },
-    "plugins/primitives/plugins/control-size": {
-      "name": "@singularity/plugin-primitives-control-size",
-      "version": "0.0.1",
-    },
     "plugins/primitives/plugins/copy-to-clipboard": {
       "name": "@singularity/plugin-primitives-copy-to-clipboard",
       "version": "0.0.1",
@@ -2278,6 +2274,10 @@
       "name": "@singularity/plugin-primitives-css-cluster",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/control-size": {
+      "name": "@singularity/plugin-primitives-css-control-size",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/frame": {
       "name": "@singularity/plugin-primitives-css-frame",
       "version": "0.0.1",
@@ -2286,8 +2286,20 @@
       "name": "@singularity/plugin-primitives-css-grid",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/icon-auto": {
+      "name": "@singularity/plugin-primitives-css-icon-auto",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/overlay": {
       "name": "@singularity/plugin-primitives-css-overlay",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/radius": {
+      "name": "@singularity/plugin-primitives-css-radius",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/z-layers": {
+      "name": "@singularity/plugin-primitives-css-z-layers",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/cursor-pagination": {
@@ -2357,10 +2369,6 @@
         "@xyflow/react": "^12.3.5",
         "dagre": "^0.8.5",
       },
-    },
-    "plugins/primitives/plugins/icon-auto": {
-      "name": "@singularity/plugin-primitives-icon-auto",
-      "version": "0.0.1",
     },
     "plugins/primitives/plugins/icon-button": {
       "name": "@singularity/plugin-primitives-icon-button",
@@ -2444,10 +2452,6 @@
     },
     "plugins/primitives/plugins/prompt-editor/plugins/voice-input": {
       "name": "@singularity/plugin-primitives-prompt-editor-voice-input",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/radius": {
-      "name": "@singularity/plugin-primitives-radius",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/rank": {
@@ -2598,10 +2602,6 @@
     },
     "plugins/primitives/plugins/viewport-overlay": {
       "name": "@singularity/plugin-primitives-viewport-overlay",
-      "version": "0.0.1",
-    },
-    "plugins/primitives/plugins/z-layers": {
-      "name": "@singularity/plugin-primitives-z-layers",
       "version": "0.0.1",
     },
     "plugins/reorder": {
@@ -4540,8 +4540,6 @@
 
     "@singularity/plugin-primitives-commit-list": ["@singularity/plugin-primitives-commit-list@workspace:plugins/primitives/plugins/commit-list"],
 
-    "@singularity/plugin-primitives-control-size": ["@singularity/plugin-primitives-control-size@workspace:plugins/primitives/plugins/control-size"],
-
     "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
 
     "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
@@ -4550,11 +4548,19 @@
 
     "@singularity/plugin-primitives-css-cluster": ["@singularity/plugin-primitives-css-cluster@workspace:plugins/primitives/plugins/css/plugins/cluster"],
 
+    "@singularity/plugin-primitives-css-control-size": ["@singularity/plugin-primitives-css-control-size@workspace:plugins/primitives/plugins/css/plugins/control-size"],
+
     "@singularity/plugin-primitives-css-frame": ["@singularity/plugin-primitives-css-frame@workspace:plugins/primitives/plugins/css/plugins/frame"],
 
     "@singularity/plugin-primitives-css-grid": ["@singularity/plugin-primitives-css-grid@workspace:plugins/primitives/plugins/css/plugins/grid"],
 
+    "@singularity/plugin-primitives-css-icon-auto": ["@singularity/plugin-primitives-css-icon-auto@workspace:plugins/primitives/plugins/css/plugins/icon-auto"],
+
     "@singularity/plugin-primitives-css-overlay": ["@singularity/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
+
+    "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
+
+    "@singularity/plugin-primitives-css-z-layers": ["@singularity/plugin-primitives-css-z-layers@workspace:plugins/primitives/plugins/css/plugins/z-layers"],
 
     "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
 
@@ -4587,8 +4593,6 @@
     "@singularity/plugin-primitives-folder-picker": ["@singularity/plugin-primitives-folder-picker@workspace:plugins/primitives/plugins/folder-picker"],
 
     "@singularity/plugin-primitives-graph-canvas": ["@singularity/plugin-primitives-graph-canvas@workspace:plugins/primitives/plugins/graph-canvas"],
-
-    "@singularity/plugin-primitives-icon-auto": ["@singularity/plugin-primitives-icon-auto@workspace:plugins/primitives/plugins/icon-auto"],
 
     "@singularity/plugin-primitives-icon-button": ["@singularity/plugin-primitives-icon-button@workspace:plugins/primitives/plugins/icon-button"],
 
@@ -4629,8 +4633,6 @@
     "@singularity/plugin-primitives-prompt-editor": ["@singularity/plugin-primitives-prompt-editor@workspace:plugins/primitives/plugins/prompt-editor"],
 
     "@singularity/plugin-primitives-prompt-editor-voice-input": ["@singularity/plugin-primitives-prompt-editor-voice-input@workspace:plugins/primitives/plugins/prompt-editor/plugins/voice-input"],
-
-    "@singularity/plugin-primitives-radius": ["@singularity/plugin-primitives-radius@workspace:plugins/primitives/plugins/radius"],
 
     "@singularity/plugin-primitives-rank": ["@singularity/plugin-primitives-rank@workspace:plugins/primitives/plugins/rank"],
 
@@ -4695,8 +4697,6 @@
     "@singularity/plugin-primitives-view-switcher": ["@singularity/plugin-primitives-view-switcher@workspace:plugins/primitives/plugins/view-switcher"],
 
     "@singularity/plugin-primitives-viewport-overlay": ["@singularity/plugin-primitives-viewport-overlay@workspace:plugins/primitives/plugins/viewport-overlay"],
-
-    "@singularity/plugin-primitives-z-layers": ["@singularity/plugin-primitives-z-layers@workspace:plugins/primitives/plugins/z-layers"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

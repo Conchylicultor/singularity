@@ -3300,7 +3300,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `build`, `build/build-commits`, `code-explorer`, `conversations/conversation-view/code`, `conversations/conversation-view/commits-graph`
       - Core:
         - Exports: Types: `CommitRow`; Values: `CommitRowSchema`
-    - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
     - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
       - Web:
         - Uses: `primitives/ui-kit.Button`
@@ -3317,6 +3316,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses: `primitives/spacing.SpaceStep`, `primitives/spacing.Stack`, `primitives/spacing.StackAlign`, `primitives/spacing.StackJustify`
             - Exports: Types: `ClusterProps`; Values: `Cluster`
+        - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
         - **`frame`** — Named-slot row layout primitive: <Frame leading content meta trailing> lays four role slots on a CSS grid with the shrink hierarchy baked in — rigid clusters never crush, content truncates last, meta truncates first. Callers write roles, never min-w-0/shrink-0/flex-1 mechanics.
           - Web:
             - Uses: `primitives/truncating-text.TruncatingText`, `primitives/ui-kit.cn`
@@ -3327,10 +3327,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses: `primitives/ui-kit.cn`
             - Exports: Types: `GridProps`; Values: `Grid`
+        - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
         - **`overlay`** — In-flow positioning layout primitive: <Overlay behind above clickThrough> paints full-bleed layers under/over its content within its own box, plus the click-through-toggle idiom.
           - Web:
             - Uses: `primitives/ui-kit.cn`
             - Exports: Types: `OverlayLayer`, `OverlayProps`; Values: `Overlay`, `OverlayInteractive`
+        - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
+        - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
     - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`, `conversations/conversations-view/grouped`, `conversations/conversations-view/history`
@@ -3444,7 +3447,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `GraphCanvasEdge`, `GraphCanvasEdgeTone`, `GraphCanvasGroup`, `GraphCanvasNode`, `GraphCanvasProps`; Values: `GraphCanvas`
       - Cross-plugin:
         - Imported by: `apps/studio/graph`, `tasks/task-graph`
-    - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Uses: `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`, `primitives/ui-kit.Button`, `primitives/ui-kit.iconSizeFor`, `primitives/ui-kit.useControlSize`
@@ -3575,7 +3577,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `PromptEditorSlots.FloatingAction` → `VoiceInputButton`
             - Uses: `primitives/icon-button.IconButton`, `primitives/prompt-editor.PromptEditorSlots`, `primitives/ui-kit.cn`
-    - **`radius`** — Corner-radius standard: the token-driven rounded-* scale and its enforcing lint rule (no-adhoc-radius).
     - **`rank`** — Fractional-indexing rank primitive. THE authoritative source for sortable rank strings — use nextRankIn()/nextRankUnder() from the server barrel for new insertions; use computeDrop() from the tree plugin for DnD moves. Never use floats or integers. Fractional-indexing rank primitive. THE authoritative source for sortable rank strings. Use nextRankIn() for flat tables, nextRankUnder() for parent-scoped lists. Re-exports rankText column type. Never use floats or integers for ordering.
       - Server:
         - Uses: `database.db`
@@ -3779,7 +3780,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `ViewportOverlayProps`; Values: `ViewportOverlay`
       - Cross-plugin:
         - Imported by: `debug/queue`, `improve/element-picker`, `page/editor`, `page/url-paste`, `primitives/text-editor/paste-images`, `screenshot/draw-on-app`
-    - **`z-layers`** — Semantic z-layer scale (z-base..z-max) and its enforcing lint rule (no-adhoc-zindex).
 
 - **`reorder`** — Generic reorder primitive: every defineRenderSlot is unconditionally reorderable; use defineMountSlot for headless slots. DnD is automatic via middleware. Generic reorder primitive: per-slot config_v2 directives for contribution order/visibility.
   - Web:
