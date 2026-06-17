@@ -1,5 +1,5 @@
 import { useRef, useState, type ReactNode } from "react";
-import { Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { CellEditorProps } from "@plugins/primitives/plugins/data-view/web";
 
 /** Compact inline text editor: commits on Enter/blur, cancels on Esc. */

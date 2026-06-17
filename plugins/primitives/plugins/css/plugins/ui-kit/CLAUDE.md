@@ -23,7 +23,7 @@ The global UI kit — one cohesive design-system unit. It owns:
 ## Boundary
 
 Everything public is re-exported from the single barrel
-`@plugins/primitives/plugins/ui-kit/web`. There is **no** `@/*` alias — that was
+`@plugins/primitives/plugins/css/plugins/ui-kit/web`. There is **no** `@/*` alias — that was
 deleted when this plugin was extracted, so every consumer goes through the
 boundary-legal barrel and the dependency is visible to the boundary checker.
 `custom-utilities.ts` is plugin-internal and intentionally NOT re-exported (only

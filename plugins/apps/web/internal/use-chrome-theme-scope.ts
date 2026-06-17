@@ -1,4 +1,4 @@
-import { appThemeScope } from "@plugins/primitives/plugins/ui-kit/web";
+import { appThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useActiveApp } from "./use-active-app";
 import { useFocusedPlacement } from "./use-tabs";
 import { placementHasAppThemeScope } from "./placement-registry";

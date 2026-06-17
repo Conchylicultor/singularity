@@ -1,4 +1,4 @@
-import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import {

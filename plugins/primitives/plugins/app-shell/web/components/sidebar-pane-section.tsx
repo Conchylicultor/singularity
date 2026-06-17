@@ -1,4 +1,4 @@
-import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@plugins/primitives/plugins/ui-kit/web";
+import { SidebarGroup, SidebarGroupContent, SidebarGroupLabel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ComponentType, type ReactNode } from "react";
 import {
   useCollapsible,

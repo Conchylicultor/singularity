@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentType } from "react";
 import type { Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";

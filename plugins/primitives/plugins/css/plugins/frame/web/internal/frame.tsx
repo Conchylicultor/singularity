@@ -1,6 +1,6 @@
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { SpaceStep } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 import type { ReactNode } from "react";
 

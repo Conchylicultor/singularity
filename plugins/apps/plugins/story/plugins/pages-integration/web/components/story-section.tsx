@@ -1,6 +1,6 @@
 import { MdOpenInNew } from "react-icons/md";
 import { navigate } from "@plugins/apps/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import {

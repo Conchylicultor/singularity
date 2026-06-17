@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdAdd } from "react-icons/md";
 import { useBlockEditor } from "../block-editor-context";
 import { BlockTypeMenu } from "./block-type-menu";

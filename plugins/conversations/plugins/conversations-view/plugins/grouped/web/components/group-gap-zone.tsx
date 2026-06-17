@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useDroppable } from "@dnd-kit/core";
 import type { DropTarget } from "./draggable-row";
 

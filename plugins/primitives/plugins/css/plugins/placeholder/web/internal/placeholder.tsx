@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export interface PlaceholderProps {
   children: React.ReactNode;

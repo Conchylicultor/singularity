@@ -6,7 +6,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useConversation } from "@plugins/conversations/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { tasksResource, countTransitiveDependents, type TaskListItem } from "@plugins/tasks/core";
-import { DropdownMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
+import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { dropDependents } from "../../shared";
 
 export function DropDependentsItem({

@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { MdRestore } from "react-icons/md";
 import { useQuery, useQueryClient } from "@tanstack/react-query";

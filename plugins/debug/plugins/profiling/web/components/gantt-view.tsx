@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactElement } from "react";
 import { MdRefresh } from "react-icons/md";
 import { Profiling } from "../slots";

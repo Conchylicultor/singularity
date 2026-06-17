@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdArrowForward } from "react-icons/md";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";

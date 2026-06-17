@@ -1,4 +1,4 @@
-import { Button, Input, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, Input, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdAdd, MdDragIndicator, MdClose } from "react-icons/md";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";

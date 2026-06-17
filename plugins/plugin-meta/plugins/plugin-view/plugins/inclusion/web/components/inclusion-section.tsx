@@ -1,5 +1,5 @@
 import { MdArrowForward, MdMyLocation } from "react-icons/md";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge, type BadgeVariant } from "@plugins/primitives/plugins/css/plugins/badge/web";

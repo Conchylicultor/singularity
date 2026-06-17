@@ -1,4 +1,4 @@
-import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, useCallback, Fragment, type ReactNode } from "react";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {

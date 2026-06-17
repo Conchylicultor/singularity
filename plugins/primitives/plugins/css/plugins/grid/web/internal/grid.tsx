@@ -3,7 +3,7 @@ import type {
   StackAlign,
   StackJustify,
 } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type React from "react";
 
 const GAP_CLASS: Record<SpaceStep, string> = {

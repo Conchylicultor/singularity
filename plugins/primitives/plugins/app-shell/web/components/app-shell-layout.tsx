@@ -1,4 +1,4 @@
-import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import type { ReactNode } from "react";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";

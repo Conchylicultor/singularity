@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useRef, useState } from "react";
 import type { IconType } from "react-icons";
 import { MdDeleteForever, MdLogout, MdPlayArrow, MdPlaylistAdd, MdReplay, MdRocketLaunch, MdSend, MdStop } from "react-icons/md";

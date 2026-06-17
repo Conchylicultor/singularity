@@ -10,7 +10,7 @@ import {
   MdWidgets,
   MdLightbulb,
 } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text, type TextVariant } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { CheckboxIndicator } from "@plugins/primitives/plugins/css/plugins/selection-indicator/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";

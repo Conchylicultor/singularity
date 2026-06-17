@@ -6,7 +6,7 @@ import {
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { FilterOperator } from "../../../core";
 
 /**

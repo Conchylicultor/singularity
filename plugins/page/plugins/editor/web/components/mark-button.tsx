@@ -1,7 +1,7 @@
 import type { ComponentType, ReactNode } from "react";
 import { FORMAT_TEXT_COMMAND } from "lexical";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { Mark } from "../../core";
 import { useFormatToolbar } from "../internal/format-toolbar-context";
 

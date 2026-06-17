@@ -1,5 +1,5 @@
 import { type Node, type NodeProps } from "@xyflow/react";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 export const GROUP_BG_TYPE = "graphCanvasGroup";
 

@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdExpandLess, MdExpandMore } from "react-icons/md";
 import type { ClaudeCliCall } from "@plugins/infra/plugins/claude-cli/core";
 import { MODEL_REGISTRY } from "@plugins/conversations/plugins/model-provider/core";

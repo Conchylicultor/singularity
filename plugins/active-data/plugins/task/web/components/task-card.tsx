@@ -17,7 +17,7 @@ import {
   createTask as createTaskEndpoint,
 } from "@plugins/tasks/core";
 import { AttemptStatusBadge } from "@plugins/tasks/plugins/attempt-status/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

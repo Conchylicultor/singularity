@@ -1,4 +1,4 @@
-import { Button, iconSizeFor, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, iconSizeFor, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps, ComponentType, ReactNode } from "react";
 import {
   WithTooltip,

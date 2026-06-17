@@ -1,6 +1,6 @@
 import { useRef } from "react";
 import { MdZoomIn } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useSetConfig } from "@plugins/config_v2/web";

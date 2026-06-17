@@ -1,4 +1,4 @@
-import { Popover, PopoverContent, PopoverTrigger, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Popover, PopoverContent, PopoverTrigger, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, type ReactElement } from "react";
 import { IconPicker } from "@plugins/primitives/plugins/icon-picker/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";

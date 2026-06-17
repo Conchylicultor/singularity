@@ -12,7 +12,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-la
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { getSlowOpsCluster } from "../../shared/endpoints";
 import {
   buildClusterAggregate,

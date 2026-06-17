@@ -6,7 +6,7 @@
 
 - Description: Reusable push/build Gantt chart component.
 - Web:
-  - Uses: `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useGanttContainerContext`, `primitives/ui-kit.cn`
+  - Uses: `debug/profiling.formatDuration`, `debug/profiling.GanttContainer`, `debug/profiling.Span`, `debug/profiling.SpanDetail`, `debug/profiling.useGanttContainerContext`, `primitives/css/ui-kit.cn`
   - Exports: Types: `BuildEntry`, `PushData`, `PushEntry`, `PushGanttProps`, `WorktreeGroup`; Values: `PushGantt`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/push-profiling`, `debug/profiling/push`

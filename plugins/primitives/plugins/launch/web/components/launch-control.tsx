@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, ButtonGroup, cn, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdPlayArrow, MdExpandMore, MdCheck } from "react-icons/md";
 import { useOpenPane, type PaneOpenMode } from "@plugins/primitives/plugins/pane/web";

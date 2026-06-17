@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo } from "react";
 import { MdEdit, MdSend } from "react-icons/md";
 import {

@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, type ComponentType } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import {

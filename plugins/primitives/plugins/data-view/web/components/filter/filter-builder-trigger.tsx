@@ -1,6 +1,6 @@
 import { useState, type ReactNode } from "react";
 import { MdFilterList } from "react-icons/md";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { FilterController } from "../../internal/use-filter-controller";
 import { FilterBuilderPopover } from "./filter-builder-popover";

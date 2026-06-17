@@ -10,7 +10,7 @@ import {
   type PageCover,
 } from "@plugins/page/plugins/editor/core";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
-import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { gradientCss } from "./cover-presets";
 import { ChangeCoverPopover } from "./change-cover-popover";

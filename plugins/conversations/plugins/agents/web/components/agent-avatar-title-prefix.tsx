@@ -10,7 +10,7 @@ import {
   type AgentLaunchWithStatus,
 } from "../../shared/resources";
 import { agentSidePane } from "../panes";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 function parseSvgNodes(raw: string | null | undefined): SvgNode[] | null {
   if (!raw) return null;

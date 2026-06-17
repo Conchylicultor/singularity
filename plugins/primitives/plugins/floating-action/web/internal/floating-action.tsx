@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ComponentProps, useLayoutEffect, useRef } from "react";
 import { useDisclosureIntent } from "./use-disclosure-intent";
 

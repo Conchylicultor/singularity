@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { MdFolder } from "react-icons/md";
 import { getEndpointErrorMessage } from "@plugins/infra/plugins/endpoints/web";

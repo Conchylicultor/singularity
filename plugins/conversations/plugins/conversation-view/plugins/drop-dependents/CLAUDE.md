@@ -7,7 +7,7 @@
 - Description: Exit-menu entry that drops the task and all its transitive dependents, then closes the conversation.
 - Web:
   - Contributes: `ExitMenu.Item` "drop-dependents" → `DropDependentsItem`
-  - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.useResource`, `primitives/ui-kit.DropdownMenuItem`, `shell/notifications.toast`
+  - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/live-state.useResource`, `shell/notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.dropTaskTree`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.notifyConversationsChanged`
   - Routes: `POST /api/conversations/:id/drop-dependents`

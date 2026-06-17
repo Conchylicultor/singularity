@@ -1,4 +1,4 @@
-import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useContext, useEffect, useRef, useState } from "react";
 import { MdCheck } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

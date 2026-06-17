@@ -3,7 +3,7 @@ import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { DiffState } from "@plugins/plugin-meta/plugins/composition/web";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { DIFF_LEGEND } from "@plugins/apps/plugins/studio/plugins/explorer/plugins/membership/web";

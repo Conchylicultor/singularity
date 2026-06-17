@@ -5,7 +5,7 @@ const createRule = ESLintUtils.RuleCreator(
 );
 
 /**
- * The `DropdownMenu*` components in `@plugins/primitives/plugins/ui-kit/web` wrap Base UI's
+ * The `DropdownMenu*` components in `@plugins/primitives/plugins/css/plugins/ui-kit/web` wrap Base UI's
  * `Menu.Item` (`@base-ui/react/menu`), whose activation handler is **`onClick`** —
  * Base UI has no `onSelect` prop. But `onSelect` is a valid DOM attribute on the
  * underlying `<div>` (the native text-selection event), so TypeScript happily

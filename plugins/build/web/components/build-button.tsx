@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useEffect } from "react";
 import { useResource, useNotificationsChannelStatuses } from "@plugins/primitives/plugins/live-state/web";
 import { MdOpenInFull, MdRefresh, MdBuild } from "react-icons/md";

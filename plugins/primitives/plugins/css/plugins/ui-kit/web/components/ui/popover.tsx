@@ -1,8 +1,8 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
-import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
-import { SURFACE_LEVELS } from "@plugins/primitives/plugins/ui-kit/web/theme/surface"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope"
+import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Popover({ ...props }: PopoverPrimitive.Root.Props) {

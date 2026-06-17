@@ -10,7 +10,7 @@ import { MdAdd, MdClose } from "react-icons/md";
 import {
   cn,
   PortalThemeScopeProvider,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";

@@ -6,7 +6,7 @@
 
 - Description: Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
 - Web:
-  - Uses: `primitives/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`
   - Exports: Types: `PlaceholderProps`; Values: `Placeholder`
 - Cross-plugin:
   - Imported by: `apps/pages/history`, `apps/pages/page-tree`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/row-count`, `apps/studio/contributions/tables/sample-rows`, `build/build-commits`, `config_v2/fields`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/code/file-pane/raw`, `conversations/conversation-view/commits-graph`, `conversations/recover`, `debug/profiling/build`, `debug/profiling/push`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/worktree-cleanup`, `history/dialog`, `page/attachment-block`, `page/bookmark`, `page/inline-page-link`, `page/page-link`, `page/read-only-view`, `primitives/folder-picker`, `primitives/live-state`, `primitives/loading`, `primitives/pane`, `reorder`, `review/code-review`, `review/config-defaults`, `search/quick-find`

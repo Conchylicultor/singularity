@@ -1,5 +1,5 @@
 // Regression guard for the "sidebar tail clipped below the viewport" class of
-// bug (see plugins/primitives/plugins/ui-kit/web/components/ui/sidebar.tsx).
+// bug (see plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/sidebar.tsx).
 //
 // The app shell nests the sidebar inside an offset, transformed container, so
 // any chrome above it (the app tab bar) shifts the sidebar down. If the sidebar

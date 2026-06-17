@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactElement } from "react";
 import { useMultiSelectItem } from "./use-multi-select-item";
 

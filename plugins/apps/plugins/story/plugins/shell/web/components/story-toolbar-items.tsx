@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdChevronLeft } from "react-icons/md";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { useStoryEditor } from "../context";

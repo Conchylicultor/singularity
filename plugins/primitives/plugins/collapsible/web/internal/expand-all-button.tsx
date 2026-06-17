@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdUnfoldLess, MdUnfoldMore } from "react-icons/md";
 
 export interface ExpandAllButtonProps {

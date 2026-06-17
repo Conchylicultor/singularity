@@ -1,6 +1,6 @@
 import type { ComponentProps } from "react"
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 
 /**
  * ButtonGroup joins 2+ controls into a single segmented/split control.

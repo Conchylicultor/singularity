@@ -6,7 +6,7 @@
 
 - Description: Colored status-indicator dot primitive. Composes a fixed-size rounded span with a caller-supplied Tailwind color class. Size variants: sm (size-1.5), md (size-2), lg (size-2.5).
 - Web:
-  - Uses: `primitives/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`
   - Exports: Types: `StatusDotProps`; Values: `StatusDot`
 - Cross-plugin:
   - Imported by: `active-data/attempt`, `active-data/conv`, `active-data/task-link`, `apps/agent-manager/welcome`, `apps/agent-manager/worktree-switcher`, `apps/deploy/servers`, `build/build-info`, `config_v2/settings`, `conversations/agents`, `conversations/conversation-ui/item`, `conversations/conversation-view/jsonl-viewer/task-notification`, `conversations/conversation-view/tasks-panel`, `debug/live-state-health`, `infra/health`, `reorder/edit-mode`, `shell/global-action-bar`, `tasks/attempt-view`, `tasks/task-status`

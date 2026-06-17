@@ -1,4 +1,4 @@
-import { Button, cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useEffect, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdSend } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";

@@ -7,7 +7,7 @@
 - Description: Stateless piano keyboard: the single source of truth for laying out and drawing piano keys across a MIDI range, lighting given pitches (accent or per-key color) with optional per-key content. Composed by the full PianoKeyboard and the chord readout. Server registration of the keyboard style config (flat / realistic key rendering).
 - Web:
   - Contributes: `ConfigV2.WebRegister`
-  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/ui-kit.cn`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `primitives/css/ui-kit.cn`
   - Exports: Types: `KeyboardProps`, `KeyHighlight`, `KeyLane`, `KeyStyle`; Values: `isBlackPitch`, `Keyboard`, `keyLayout`
 - Server:
   - Uses: `config_v2.ConfigV2`

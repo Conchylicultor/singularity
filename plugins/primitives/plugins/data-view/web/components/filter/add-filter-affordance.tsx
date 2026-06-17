@@ -3,7 +3,7 @@ import { MdAdd, MdAccountTree } from "react-icons/md";
 import {
   Button,
   DropdownMenuSeparator,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { FieldDef } from "../../../core";

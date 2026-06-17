@@ -1,4 +1,4 @@
-import { cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdClose, MdSearch } from "react-icons/md";
 
 export interface SearchInputProps

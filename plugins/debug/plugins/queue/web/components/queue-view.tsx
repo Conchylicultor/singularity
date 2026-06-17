@@ -1,4 +1,4 @@
-import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdBolt, MdDelete, MdRefresh, MdReplay, MdWorkOutline } from "react-icons/md";
 import { toast } from "@plugins/shell/plugins/notifications/web";

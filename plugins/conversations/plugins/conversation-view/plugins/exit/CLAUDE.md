@@ -7,7 +7,7 @@
 - Description: Exit-menu entry that closes the conversation without changing any task state.
 - Web:
   - Contributes: `ExitMenu.Item` "exit" → `ExitItem`
-  - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/ui-kit.DropdownMenuItem`, `shell/notifications.toast`
+  - Uses: `conversations.useConversation`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/css/ui-kit.DropdownMenuItem`, `shell/notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.notifyConversationsChanged`
   - Routes: `POST /api/conversations/:id/exit`

@@ -9,7 +9,7 @@ import {
   useTreeRow,
   type TreeItem,
 } from "@plugins/primitives/plugins/tree/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * The tree's editable primary-field label. Reuses the shared

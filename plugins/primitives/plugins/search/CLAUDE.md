@@ -6,7 +6,7 @@
 
 - Description: Search input primitive: SearchInput component, useTextFilter hook for flat lists, and filterTree/collectAllIds utilities for recursive tree filtering.
 - Web:
-  - Uses: `primitives/ui-kit.cn`, `primitives/ui-kit.Input`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`
   - Exports: Types: `SearchInputProps`, `TextFilterHandle`, `UseTextFilterOptions`; Values: `collectAllIds`, `filterTree`, `SearchInput`, `useTextFilter`
 - Cross-plugin:
   - Imported by: `apps/sonata/track-mixer`, `apps/studio/compositions`, `apps/studio/contributions`, `apps/studio/explorer`, `apps/studio/graph`, `code-explorer`, `conversations/conversation-view/dependencies`, `page/editor`, `page/page-link`, `primitives/data-view`, `primitives/tree`, `search/quick-find`, `ui/theme-engine/theme-customizer`

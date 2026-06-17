@@ -10,7 +10,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   stagedConfigDefaultsResource,
   useApplyConfigDefault,

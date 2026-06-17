@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { cn, usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 // The viewport-fill recipe lives in module consts (not inline className literals)
 // so the `no-adhoc-viewport-overlay` rule — which only harvests literals reached

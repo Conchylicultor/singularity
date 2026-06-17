@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { MdArticle } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

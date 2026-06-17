@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState } from "react";
 import { MdChevronRight, MdExpandMore } from "react-icons/md";
 import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";

@@ -8,7 +8,7 @@
 - Web:
   - Slots: `googleSetupPane.Actions`
   - Contributes: `Pane.Register` "google-setup"
-  - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/ui-kit.Button`, `primitives/ui-kit.Input`
+  - Uses: `auth.accountsPane`, `auth.currentWorktreeName`, `auth.startConnectFlow`, `auth.useAccountStatus`, `config_v2.useConfigRegistrations`, `infra/endpoints.fetchEndpoint`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`
   - Exports: Values: `googleSetupPane`
 - Cross-plugin:
   - Imported by: `auth/google`

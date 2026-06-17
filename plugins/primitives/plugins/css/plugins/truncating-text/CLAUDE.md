@@ -44,7 +44,7 @@ escapes per-site, travelling with the code:
 
 - Description: Single-line text that truncates with an ellipsis instead of wrapping. Bakes in the min-w-0 + truncate pair flexible labels need inside a flex row.
 - Web:
-  - Uses: `primitives/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`
   - Exports: Types: `TruncatingTextProps`; Values: `TruncatingText`
 - Cross-plugin:
   - Imported by: `apps`, `apps/agent-manager/worktree-switcher`, `apps/pages/welcome/recent-pages`, `debug/live-state-health`, `primitives/css/frame`, `primitives/folder-picker`

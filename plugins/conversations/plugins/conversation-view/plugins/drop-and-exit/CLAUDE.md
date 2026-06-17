@@ -7,7 +7,7 @@
 - Description: Exit-menu entry that marks the top task as dropped and closes the conversation.
 - Web:
   - Contributes: `ExitMenu.Item` "drop-and-exit" → `DropAndExitItem`
-  - Uses: `conversations.useConversation`, `conversations.useHasActiveSiblings`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/ui-kit.DropdownMenuItem`, `shell/notifications.toast`
+  - Uses: `conversations.useConversation`, `conversations.useHasActiveSiblings`, `conversations/conversation-view/exit-menu.ExitMenu`, `infra/endpoints.useEndpointMutation`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `shell/notifications.toast`
 - Server:
   - Uses: `conversations.deleteConversation`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `tasks/tasks-core.getConversation`, `tasks/tasks-core.markConversationClosed`, `tasks/tasks-core.maybeDropTaskOnExit`, `tasks/tasks-core.notifyConversationsChanged`
   - Routes: `POST /api/conversations/:id/drop-and-exit`

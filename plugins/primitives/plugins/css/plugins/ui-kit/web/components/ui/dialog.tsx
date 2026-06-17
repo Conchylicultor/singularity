@@ -1,7 +1,7 @@
 import { Dialog as DialogPrimitive } from "@base-ui/react/dialog"
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
-import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
 function Dialog({ ...props }: DialogPrimitive.Root.Props) {

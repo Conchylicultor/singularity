@@ -24,7 +24,7 @@ of scope; they have no `--radius` rounding problem. See
 
 - Description: Presentational checkbox / radio indicator boxes (border + fill + glyph) with the correct preset-independent fixed shape baked in (rounded-checkbox for the checkbox, rounded-full for the radio). The sanctioned home for styled selection indicators so the fixed shape lives in one place and consumers never write radius classes.
 - Web:
-  - Uses: `primitives/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`
   - Exports: Types: `SelectionIndicatorProps`; Values: `CheckboxIndicator`, `RadioIndicator`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `page/read-only-view`

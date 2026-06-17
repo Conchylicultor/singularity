@@ -1,4 +1,4 @@
-import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactElement, ReactNode } from "react";
 import { MdExpandMore } from "react-icons/md";
 import type { StickyScrollHandle } from "./use-sticky-scroll";

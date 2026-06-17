@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRef, useEffect } from "react";
 import { Color, MAX_CHROMA } from "./color";
 import { useColorDrag } from "./use-color-drag";

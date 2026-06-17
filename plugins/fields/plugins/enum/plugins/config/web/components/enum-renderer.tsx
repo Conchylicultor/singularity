@@ -1,4 +1,4 @@
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/ui-kit/web";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import type { EnumFieldDef } from "../../core";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";

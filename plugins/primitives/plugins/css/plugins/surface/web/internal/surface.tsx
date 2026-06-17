@@ -1,4 +1,4 @@
-import { cn, SURFACE_LEVELS, type SurfaceLevel } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, SURFACE_LEVELS, type SurfaceLevel } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { selectScopeProps } from "@plugins/primitives/plugins/select-scope/web";
 import type React from "react";
 

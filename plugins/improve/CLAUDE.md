@@ -7,7 +7,7 @@
 - Web:
   - Commands: `Improve.OpenWithText`
   - Contributes: `ActionBar.Item` → `ImproveButton`
-  - Uses: `primitives/ui-kit.Button`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftPopover`
+  - Uses: `primitives/css/ui-kit.Button`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftPopover`
   - Exports: Types: `OpenWithTextArgs`; Values: `ImproveCommands`
 - Server:
   - Uses: `conversations.conversationCreated`, `conversations/conversations-view/grouped.addMemberToGroup`, `database.db`, `infra/events.Trigger`, `infra/jobs.defineJob`, `tasks/tasks-core.ensureMetaTask`

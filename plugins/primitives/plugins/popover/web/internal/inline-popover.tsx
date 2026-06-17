@@ -1,4 +1,4 @@
-import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/ui-kit/web";
+import { Popover, PopoverContent, PopoverTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ComponentProps } from "react";
 
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";

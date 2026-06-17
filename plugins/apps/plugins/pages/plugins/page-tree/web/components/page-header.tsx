@@ -12,7 +12,7 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { BLOCK_GUTTER } from "@plugins/page/plugins/editor/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PageIconButton, PageIconPicker, type PageIconValue } from "./page-icon-button";
 import { ChangeCoverPopover } from "./change-cover-popover";
 import "./page-header.css";

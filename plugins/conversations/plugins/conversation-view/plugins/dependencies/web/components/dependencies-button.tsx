@@ -1,4 +1,4 @@
-import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, ButtonGroup, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useMemo, useCallback } from "react";
 import { MdLink } from "react-icons/md";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";

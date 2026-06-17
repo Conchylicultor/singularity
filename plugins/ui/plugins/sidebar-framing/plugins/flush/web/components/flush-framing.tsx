@@ -1,4 +1,4 @@
-import { Sidebar, SidebarHeader, SidebarInset, SidebarProvider } from "@plugins/primitives/plugins/ui-kit/web";
+import { Sidebar, SidebarHeader, SidebarInset, SidebarProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { SidebarFramingProps } from "@plugins/primitives/plugins/app-shell/core";
 
 /**

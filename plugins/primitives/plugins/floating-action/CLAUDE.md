@@ -6,7 +6,7 @@
 
 - Description: Disclosure-intent floating action: a single morphing panel revealed by hover, focus, or touch via the useDisclosureIntent state machine (grace-delay close, no re-entry dead zone, Esc/outside-press dismiss), over a stable hover hitbox that cures open/close flicker.
 - Web:
-  - Uses: `primitives/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`
   - Exports: Types: `FloatingActionFadeInProps`, `FloatingActionProps`, `FloatingAnchor`; Values: `FloatingAction`, `FloatingActionFadeIn`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/message-toc`, `conversations/conversation-view/prompt-templates`, `shell/global-action-bar`

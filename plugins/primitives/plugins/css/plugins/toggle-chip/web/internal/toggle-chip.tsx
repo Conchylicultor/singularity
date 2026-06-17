@@ -1,4 +1,4 @@
-import { cn, type ControlSize, useControlSize } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, type ControlSize, useControlSize } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import type React from "react";
 

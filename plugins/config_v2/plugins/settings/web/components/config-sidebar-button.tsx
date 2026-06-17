@@ -1,4 +1,4 @@
-import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
+import { SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdTune } from "react-icons/md";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { configNavPane } from "../internal/panes";

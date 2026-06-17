@@ -8,13 +8,13 @@ interactive control, plus the lint rule that keeps it the single source of truth
 Heights live in the **density** token group as `--control-height-{xs,sm,md,lg}`
 runtime vars, exposed as the `control-{xs,sm,md,lg}` and square
 `control-icon-{xs,sm,md,lg}` `@utility` classes (defined in
-`plugins/primitives/plugins/ui-kit/web/theme/app.css`). Picking a density preset
+`plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css`). Picking a density preset
 (Comfortable / Cozy / Compact) rescales all controls together.
 
 These utilities are consumed by the sanctioned primitives — `Button`/`IconButton`
 (single actions), `ButtonGroup` (split / segmented controls), and `ToggleChip` —
 which carry the `ControlSize = "xs" | "sm" | "md" | "lg"` type exported from
-`@plugins/primitives/plugins/ui-kit/web`. Height is the only axis the utilities own; padding,
+`@plugins/primitives/plugins/css/plugins/ui-kit/web`. Height is the only axis the utilities own; padding,
 font, radius, and icon size stay per-primitive.
 
 ## Enforcement
@@ -47,7 +47,7 @@ named by a density `ControlSize = "xs" | "sm" | "md" | "lg"`. Size should be set
   hatch for standalone controls (forms/dialogs); inside a toolbar it's a smell.
 
 The runtime context lives in the **ui-kit** plugin at
-`@plugins/primitives/plugins/ui-kit/web` (`ControlSizeProvider`, `useControlSize`,
+`@plugins/primitives/plugins/css/plugins/ui-kit/web` (`ControlSizeProvider`, `useControlSize`,
 `iconSizeFor`/`textSizeFor`, `ControlSize`) — co-located with the shadcn `Button`
 in the same design-system unit, NOT in this plugin, so the foundational `Button`
 reads it without importing a primitive above it. This plugin owns the CSS scale

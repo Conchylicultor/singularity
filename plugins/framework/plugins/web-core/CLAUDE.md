@@ -8,7 +8,7 @@ The foundational UI layer (the `cn()` util, the shadcn/ui primitives, the global
 `theme/app.css` stylesheet, and the `ControlSize` affordance-sizing context) used
 to live here behind an ambient `@/*` alias. It now lives in its own boundary-legal
 plugin, [`primitives/ui-kit`](../../../primitives/plugins/ui-kit/CLAUDE.md);
-consumers import `@plugins/primitives/plugins/ui-kit/web`. The `@/*` alias has been
+consumers import `@plugins/primitives/plugins/css/plugins/ui-kit/web`. The `@/*` alias has been
 deleted, so a stray `@/` import is now an unresolved-module error at build time.
 
 ## Stack
@@ -47,7 +47,7 @@ bun run test:dom plugins/framework/plugins/web-core/web/__tests__/plugin-render.
 ## Plugin reference
 
 - Web:
-  - Uses: `primitives/css/text.Text`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`, `primitives/ui-kit`
+  - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/live-state.NotificationsProvider`
 - Structure:
   - Loose top-level files: `vite.config.ts`
   - Composition root: yes

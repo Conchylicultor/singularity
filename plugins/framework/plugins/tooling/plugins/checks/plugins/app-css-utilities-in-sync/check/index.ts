@@ -12,8 +12,8 @@ async function getRoot(): Promise<string> {
   return (await new Response(proc.stdout).text()).trim();
 }
 
-const APP_CSS = "plugins/primitives/plugins/ui-kit/web/theme/app.css";
-const CUSTOM_UTILITIES = "plugins/primitives/plugins/ui-kit/web/theme/custom-utilities.ts";
+const APP_CSS = "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css";
+const CUSTOM_UTILITIES = "plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.ts";
 
 /**
  * Extract every `@utility <name>` declaration from app.css. CSS block comments
@@ -82,7 +82,7 @@ const check: Check = {
         ok: false,
         message: `app.css declares unregistered @utility: ${unregistered.join(", ")}`,
         hint:
-          "Add it to a *_UTILITIES array in plugins/primitives/plugins/ui-kit/web/theme/custom-utilities.ts and give it a CUSTOM_UTILITY_REGISTRY entry " +
+          "Add it to a *_UTILITIES array in plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.ts and give it a CUSTOM_UTILITY_REGISTRY entry " +
           "(extend a built-in group, a synthetic group + conflictsWith, or standalone with a reason).",
       };
     }

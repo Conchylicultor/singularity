@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { BlockTextEditor, type BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { calloutBlock, type CalloutColor } from "../../core";
 import { CalloutIcon } from "./callout-icon";

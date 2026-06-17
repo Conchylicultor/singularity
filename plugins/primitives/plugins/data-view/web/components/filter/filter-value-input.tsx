@@ -1,5 +1,5 @@
 import type { ComponentProps, ReactNode } from "react";
-import { Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 /**
  * The control-sized text/number operand input shared by every field type's

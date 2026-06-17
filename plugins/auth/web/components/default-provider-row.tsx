@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Auth } from "../slots";

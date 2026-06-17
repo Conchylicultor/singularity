@@ -17,7 +17,7 @@ import {
   type RowMenuItem,
 } from "@plugins/primitives/plugins/tree/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { TreeViewOptions } from "../internal/types";
 import { EditableTreeLabel } from "./editable-tree-label";
 

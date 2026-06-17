@@ -10,7 +10,7 @@ import { useActiveApp, Apps } from "@plugins/apps/web";
 import {
   appThemeScope,
   themeScopeSelectors,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useResolvedColorMode, type ColorMode } from "../use-color-mode";
 import { themeEngineConfig } from "../../core";
 import { persistActiveForkedScope } from "../internal/active-scope-storage";

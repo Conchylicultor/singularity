@@ -1,6 +1,6 @@
 import { ScrollArea as ScrollAreaPrimitive } from "@base-ui/react/scroll-area"
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
 
 function ScrollArea({
   className,

@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createElement } from "react";
 import type { ReactNode } from "react";
 import { MdCampaign } from "react-icons/md";

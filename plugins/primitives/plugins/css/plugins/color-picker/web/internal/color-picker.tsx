@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useRef, useCallback, useEffect } from "react";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Color } from "./color";

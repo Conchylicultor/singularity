@@ -22,7 +22,7 @@ import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-la
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { PianoRollFx } from "../slots";
 
 type FxItem = ReturnType<typeof PianoRollFx.useContributions>[number];

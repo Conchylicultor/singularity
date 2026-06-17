@@ -6,7 +6,7 @@
  * Errors are surfaced visibly — never swallowed.
  */
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";

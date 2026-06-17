@@ -3,7 +3,7 @@ import { MdDelete } from "react-icons/md";
 import {
   Button,
   DropdownMenuSeparator,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FilterController } from "../../internal/use-filter-controller";
 import type { FilterGroup } from "../../../core";

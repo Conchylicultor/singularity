@@ -58,7 +58,7 @@ token (raised), or
 
 - Description: Semantic surface elevation primitive: <Surface level> bundles background + border + radius + shadow into a closed set of roles (sunken/base/raised/overlay), plus the no-adhoc-surface lint rule.
 - Web:
-  - Uses: `primitives/select-scope.selectScopeProps`, `primitives/ui-kit.cn`, `primitives/ui-kit.SURFACE_LEVELS`, `primitives/ui-kit.SurfaceLevel`
+  - Uses: `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SURFACE_LEVELS`, `primitives/css/ui-kit.SurfaceLevel`, `primitives/select-scope.selectScopeProps`
   - Exports: Types: `SurfaceProps`; Values: `Surface`
 - Cross-plugin:
   - Imported by: `apps/studio/graph`, `fields/json/config`, `history/dialog`, `page/editor`, `page/inline-date`, `page/inline-page-link`, `page/math/inline`, `page/read-only-view`, `page/url-paste`, `primitives/collapsible-wrap`, `primitives/command-palette`, `primitives/css/card`, `primitives/data-view`, `search/quick-find`

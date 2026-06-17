@@ -1,4 +1,4 @@
-import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   MdContentCopy,
   MdCrop,

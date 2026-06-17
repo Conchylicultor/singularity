@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState } from "react";
 import { MdVisibility, MdVisibilityOff } from "react-icons/md";
 import { useConversations } from "@plugins/conversations/web";

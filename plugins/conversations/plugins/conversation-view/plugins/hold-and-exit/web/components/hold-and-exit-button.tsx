@@ -1,4 +1,4 @@
-import { DropdownMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
+import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdPauseCircle } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";

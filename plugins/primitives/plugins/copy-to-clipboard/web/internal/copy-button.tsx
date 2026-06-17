@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdCheck, MdContentCopy } from "react-icons/md";
 import { useCopyToClipboard } from "./use-copy-to-clipboard";
 

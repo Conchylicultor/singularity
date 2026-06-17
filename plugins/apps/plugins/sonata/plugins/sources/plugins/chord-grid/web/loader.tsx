@@ -8,7 +8,7 @@
  * Parse problems (unrecognised tokens) are surfaced visibly — never swallowed.
  */
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { asChordGridRaw, type ChordGridRaw } from "./compile";

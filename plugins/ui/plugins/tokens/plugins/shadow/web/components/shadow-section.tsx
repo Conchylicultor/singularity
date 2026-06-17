@@ -1,4 +1,4 @@
-import { Button } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useRef, useState } from "react";
 import { MdUndo } from "react-icons/md";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";

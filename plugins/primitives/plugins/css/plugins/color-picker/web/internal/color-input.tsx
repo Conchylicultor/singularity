@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useState, useEffect, useCallback } from "react";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Color } from "./color";

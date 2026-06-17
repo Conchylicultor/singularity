@@ -1,4 +1,4 @@
-import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,

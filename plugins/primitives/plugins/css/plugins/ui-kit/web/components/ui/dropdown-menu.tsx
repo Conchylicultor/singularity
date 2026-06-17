@@ -1,9 +1,9 @@
 import * as React from "react"
 import { Menu as MenuPrimitive } from "@base-ui/react/menu"
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
-import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
-import { SURFACE_LEVELS } from "@plugins/primitives/plugins/ui-kit/web/theme/surface"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope"
+import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
 import { MdChevronRight, MdCheck } from "react-icons/md"
 
 function DropdownMenu({ ...props }: MenuPrimitive.Root.Props) {

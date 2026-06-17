@@ -1,4 +1,4 @@
-import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { useConversations } from "@plugins/conversations/web";
 import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";

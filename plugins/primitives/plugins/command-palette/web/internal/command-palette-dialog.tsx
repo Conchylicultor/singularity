@@ -1,4 +1,4 @@
-import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn, Dialog, DialogContent, ScrollArea } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "react";
 import { MdSearch } from "react-icons/md";

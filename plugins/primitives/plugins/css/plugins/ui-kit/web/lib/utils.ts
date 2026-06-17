@@ -1,7 +1,7 @@
 import { clsx, type ClassValue } from "clsx";
 import { extendTailwindMerge } from "tailwind-merge";
 
-import { CUSTOM_UTILITY_REGISTRY, type CustomGroupId } from "@plugins/primitives/plugins/ui-kit/web/theme/custom-utilities";
+import { CUSTOM_UTILITY_REGISTRY, type CustomGroupId } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities";
 
 // Derive the twMerge extension from the single-source registry so adding a custom
 // @utility never requires a separate hand-edit of the conflict map (the coupling

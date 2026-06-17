@@ -1,8 +1,8 @@
 # app-css-utilities-in-sync
 
 Keeps the custom `@utility` classes in
-`plugins/primitives/plugins/ui-kit/web/theme/app.css` in **total** sync with
-`plugins/primitives/plugins/ui-kit/web/theme/custom-utilities.ts` — the single-source registry from which
+`plugins/primitives/plugins/css/plugins/ui-kit/web/theme/app.css` in **total** sync with
+`plugins/primitives/plugins/css/plugins/ui-kit/web/theme/custom-utilities.ts` — the single-source registry from which
 the `lib/utils.ts` twMerge config is derived. Both files are **text-parsed** (no
 TS import) to dodge runtime/boundary questions:
 

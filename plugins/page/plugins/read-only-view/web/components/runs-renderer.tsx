@@ -1,5 +1,5 @@
 import { Fragment, type CSSProperties, type ReactNode } from "react";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { colorCssValue } from "@plugins/page/plugins/editor/web";
 import { runsOf, type RichText, type TextRun } from "@plugins/page/plugins/editor/core";
 import { PAGE_LINK_TOKEN_PATTERN } from "@plugins/page/plugins/inline-page-link/core";

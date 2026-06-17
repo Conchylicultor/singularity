@@ -1,6 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { JsonlViewer } from "../slots";
 
 const EventActionContext = createContext<JsonlEvent | null>(null);

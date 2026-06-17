@@ -6,7 +6,7 @@ import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
-import { Button, Separator } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, Separator } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { DateRange, RelativeRange } from "../internal/date-filter-logic";
 import {
   formatAnchor,

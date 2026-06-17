@@ -96,7 +96,7 @@ not track allocation. See the doc comment on `frameGridTemplate`.
 
 - Description: Named-slot row layout primitive: <Frame leading content meta trailing> lays four role slots on a CSS grid with the shrink hierarchy baked in — rigid clusters never crush, content truncates last, meta truncates first. Callers write roles, never min-w-0/shrink-0/flex-1 mechanics.
 - Web:
-  - Uses: `primitives/css/truncating-text.TruncatingText`, `primitives/ui-kit.cn`
+  - Uses: `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.cn`
   - Exports: Types: `FrameAlign`, `FrameProps`; Values: `Frame`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/collapsible-card`

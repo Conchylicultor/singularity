@@ -1,4 +1,4 @@
-import { Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { MdCancel, MdCheckCircle, MdFolderOpen } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";

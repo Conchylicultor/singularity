@@ -1,4 +1,4 @@
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Spinner } from "@plugins/primitives/plugins/css/plugins/spinner/web";

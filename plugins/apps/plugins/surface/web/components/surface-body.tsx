@@ -12,7 +12,7 @@ import {
   registerPlacementCapabilities,
   type Tab,
 } from "@plugins/apps/web";
-import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/ui-kit/web";
+import { PortalThemeScopeProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Surface,
   PlacementStyleProvider,

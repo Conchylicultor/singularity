@@ -1,4 +1,4 @@
-import { Button, cn, Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { createContext, useContext, useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { MdAdd, MdClose, MdSearch, MdStorefront } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";

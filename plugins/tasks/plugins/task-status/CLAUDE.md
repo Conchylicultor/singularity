@@ -8,7 +8,7 @@ Single source of truth for `TaskStatus` display metadata. All plugins that rende
 
 - Description: Single source of truth for TaskStatus display metadata — icon, label, icon color, and badge style.
 - Web:
-  - Uses: `primitives/css/badge.Badge`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `primitives/css/badge.Badge`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`
   - Exports: Values: `STATUS_META`, `StatusBadge`, `StatusIcon`, `StatusSignal`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `tasks/task-graph`, `tasks/task-header`, `tasks/task-list/recent`, `tasks/task-list/tree`

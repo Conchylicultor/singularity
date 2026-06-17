@@ -45,7 +45,7 @@ makes).
 - Description: Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.
 - Web:
   - Contributes: `Explorer.TreeRowBadge` "membership" → `MembershipBand`
-  - Uses: `apps/studio/explorer.Explorer`, `apps/studio/graph.graphCanvasPane`, `apps/studio/membership-tint.STATE_TINT`, `plugin-meta/composition.DiffState`, `plugin-meta/composition.pinAsRoot`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useEnsureCompositionData`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`, `primitives/ui-kit.cn`
+  - Uses: `apps/studio/explorer.Explorer`, `apps/studio/graph.graphCanvasPane`, `apps/studio/membership-tint.STATE_TINT`, `plugin-meta/composition.DiffState`, `plugin-meta/composition.pinAsRoot`, `plugin-meta/composition.useActiveMembership`, `plugin-meta/composition.useDiffMap`, `plugin-meta/composition.useEnsureCompositionData`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`, `primitives/pane.openPane`
   - Exports: Values: `DIFF_LEGEND`, `DIFF_TINT`
 - Cross-plugin:
   - Imported by: `apps/studio/compositions`

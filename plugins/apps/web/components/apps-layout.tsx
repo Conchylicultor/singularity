@@ -5,7 +5,7 @@ import {
   TooltipProvider,
   appThemeScope,
   PortalThemeScopeProvider,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   setBasePath,
   useSyncPaneRegistry,

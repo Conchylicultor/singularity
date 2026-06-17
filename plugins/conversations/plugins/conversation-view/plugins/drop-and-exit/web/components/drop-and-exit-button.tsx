@@ -1,4 +1,4 @@
-import { DropdownMenuItem } from "@plugins/primitives/plugins/ui-kit/web";
+import { DropdownMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { MdCheckCircle, MdDeleteForever } from "react-icons/md";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";

@@ -1,5 +1,5 @@
 import { MdMyLocation, MdHub } from "react-icons/md";
-import { cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { openPane } from "@plugins/primitives/plugins/pane/web";
 import {

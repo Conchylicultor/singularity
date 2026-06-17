@@ -29,7 +29,7 @@ specifically — the dedicated card-surface token — not the broader `bg-muted`
 
 - Description: Card chrome primitive (rounded + border + bg + padding) with the Ctrl+A select-scope baked into its root, so cards are a sanctioned home for ad-hoc card markup.
 - Web:
-  - Uses: `primitives/css/surface.Surface`, `primitives/ui-kit.cn`
+  - Uses: `primitives/css/surface.Surface`, `primitives/css/ui-kit.cn`
   - Exports: Types: `CardProps`; Values: `Card`
 - Cross-plugin:
   - Imported by: `active-data/task`, `apps/agent-manager/welcome`, `apps/pages/welcome/quick-create`, `apps/pages/welcome/recent-pages`, `apps/sonata/library`, `apps/sonata/rich/chord-readout`, `apps/sonata/rich/key-readout`, `apps/sonata/sources/chord-grid`, `apps/sonata/track-mixer`, `apps/story/renderers/blog`, `apps/story/renderers/slides`, `conversations/conversation-view/code/file-pane/markdown`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `page/bookmark`, `page/file`, `primitives/data-view/gallery`, `review/config-defaults`, `review/plugin-changes`

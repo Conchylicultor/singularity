@@ -7,7 +7,7 @@
 - Description: Code block type: editable with live syntax highlighting, language picker, and copy button.
 - Web:
   - Contributes: `Editor.Block` "code-block" → `CodeBlock`
-  - Uses: `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/editable-field.useEditableField`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`, `primitives/ui-kit.cn`, `primitives/ui-kit.Select`, `primitives/ui-kit.SelectContent`, `primitives/ui-kit.SelectItem`, `primitives/ui-kit.SelectTrigger`, `primitives/ui-kit.SelectValue`
+  - Uses: `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `primitives/editable-field.useEditableField`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`
   - Exports: Values: `codeBlock`
 - Core:
   - Uses: `page/editor.defineBlock`

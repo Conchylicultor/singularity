@@ -1,4 +1,4 @@
-import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 
 // Shared button styling for the JSONL row action strip. The strip handles

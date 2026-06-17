@@ -1,4 +1,4 @@
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdLogout } from "react-icons/md";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";

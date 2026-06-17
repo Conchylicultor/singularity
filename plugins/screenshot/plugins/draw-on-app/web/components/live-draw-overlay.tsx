@@ -1,4 +1,4 @@
-import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useState } from "react";
 import { MdClear, MdUndo } from "react-icons/md";
 import { DrawCanvas, type Stroke } from "@plugins/screenshot/plugins/draw-canvas/web";

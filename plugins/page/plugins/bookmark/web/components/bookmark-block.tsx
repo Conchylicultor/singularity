@@ -7,7 +7,7 @@ import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
+import { Button, Input } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { bookmarkBlock, linkPreviewEndpoint } from "../../core";
 

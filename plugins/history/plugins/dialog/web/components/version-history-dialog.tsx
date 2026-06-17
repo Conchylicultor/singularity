@@ -7,7 +7,7 @@ import {
   DialogDescription,
   DialogTitle,
   ScrollArea,
-} from "@plugins/primitives/plugins/ui-kit/web";
+} from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";

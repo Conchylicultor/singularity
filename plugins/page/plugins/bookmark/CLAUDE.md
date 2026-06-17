@@ -7,7 +7,7 @@
 - Description: Bookmark block type: paste a link into an empty block to scrape OG metadata server-side and render a rich preview card (title, description, site, favicon, og:image cached same-origin). Link-preview scraper for the bookmark block: fetches a URL (SSRF-guarded), extracts OG/Twitter metadata via HTMLRewriter, and caches og:image + favicon as same-origin attachments.
 - Web:
   - Contributes: `Editor.Block` "bookmark" → `BookmarkBlock`
-  - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/loading.Loading`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/ui-kit.Button`, `primitives/ui-kit.Input`
+  - Uses: `infra/endpoints.fetchEndpoint`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/css/placeholder.Placeholder`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/loading.Loading`, `primitives/text-editor/paste-images.attachmentUrl`
   - Exports: Values: `BOOKMARK_TYPE`, `bookmarkBlock`
 - Server:
   - Uses: `infra/attachments.createAttachment`, `infra/endpoints.HttpError`, `infra/endpoints.implement`

@@ -1,5 +1,5 @@
 import { MdChevronRight } from "react-icons/md";
-import { useSidebar, cn } from "@plugins/primitives/plugins/ui-kit/web";
+import { useSidebar, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 
 /**

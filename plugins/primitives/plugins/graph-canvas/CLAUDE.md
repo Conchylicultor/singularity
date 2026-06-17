@@ -6,7 +6,7 @@
 
 - Description: Generic dagre+xyflow graph canvas primitive: a pan/zoom/fit viewer with HTML/Tailwind nodes and solid/dashed directed edges, behind a domain-agnostic node/edge API. Read-only by default, with opt-in editor affordances (hover connect handles + onConnect, node/edge action overlays, group-background layers, smoothstep edges).
 - Web:
-  - Uses: `primitives/ui-kit.cn`
+  - Uses: `primitives/css/ui-kit.cn`
   - Exports: Types: `GraphCanvasEdge`, `GraphCanvasEdgeTone`, `GraphCanvasGroup`, `GraphCanvasNode`, `GraphCanvasProps`; Values: `GraphCanvas`
 - Cross-plugin:
   - Imported by: `apps/studio/graph`, `tasks/task-graph`

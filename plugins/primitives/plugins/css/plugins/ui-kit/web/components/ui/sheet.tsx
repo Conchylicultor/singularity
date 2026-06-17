@@ -1,10 +1,10 @@
 import * as React from "react"
 import { Dialog as SheetPrimitive } from "@base-ui/react/dialog"
 
-import { cn } from "@plugins/primitives/plugins/ui-kit/web/lib/utils"
-import { usePortalThemeScope } from "@plugins/primitives/plugins/ui-kit/web/components/portal-theme-scope"
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
+import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
-import { Button } from "@plugins/primitives/plugins/ui-kit/web/components/ui/button"
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/ui/button"
 import { MdClose } from "react-icons/md"
 
 function Sheet({ ...props }: SheetPrimitive.Root.Props) {
