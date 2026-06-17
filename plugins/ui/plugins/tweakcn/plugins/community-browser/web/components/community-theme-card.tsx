@@ -1,6 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import type { CatalogTheme } from "../../shared";
 
 const COLOR_BARS = [
@@ -20,6 +21,13 @@ function getColor(
   return dark ? theme.cssVars.dark[key] : theme.cssVars.light[key];
 }
 
+/**
+ * A single theme preview in the community gallery. Built on the shared `<Card>`
+ * primitive (a block `<div>` that fills its grid cell) so it sizes identically to
+ * every other gallery card — mirroring Sonata's SongCard. A raw `<button>` here
+ * would shrink-wrap to its content (form controls are fit-content), leaving each
+ * card a different width.
+ */
 export function CommunityThemeCard({
   theme,
   isPending,
@@ -33,31 +41,42 @@ export function CommunityThemeCard({
   const bg = getColor(theme, "background", dark);
   const fg = getColor(theme, "foreground", dark);
 
+  const activate = () => {
+    if (!isPending) onApply();
+  };
+
   return (
-    <button
-      type="button"
-      onClick={onApply}
-      disabled={isPending}
+    <Card
+      interactive
+      role="button"
+      tabIndex={0}
+      aria-disabled={isPending}
+      onClick={activate}
+      onKeyDown={(e) => {
+        if (e.key === "Enter" || e.key === " ") {
+          e.preventDefault();
+          activate();
+        }
+      }}
       className={cn(
-        "flex w-full flex-col overflow-hidden rounded-lg border border-border text-left transition-all",
-        "hover:ring-1 hover:ring-primary/40 hover:shadow-sm",
-        isPending && "opacity-50 cursor-wait",
+        "flex flex-col gap-md rounded-lg p-lg",
+        isPending && "cursor-wait opacity-50",
       )}
     >
       <div
-        className="flex items-end justify-center gap-xs px-md py-md h-16"
+        className="flex h-16 items-end justify-center gap-xs rounded-md px-md py-md"
         style={{ backgroundColor: bg }}
       >
         {COLOR_BARS.map((key) => (
           <div
             key={key}
-            className="flex-1 h-8 rounded-sm"
+            className="h-8 flex-1 rounded-sm"
             style={{ backgroundColor: getColor(theme, key, dark) }}
           />
         ))}
       </div>
 
-      <div className="flex items-center gap-xs border-t border-border px-sm py-xs">
+      <div className="flex items-center gap-xs">
         <Text
           as="span"
           variant="label"
@@ -72,6 +91,6 @@ export function CommunityThemeCard({
           </span>
         )}
       </div>
-    </button>
+    </Card>
   );
 }
