@@ -157,7 +157,15 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
 
         if (options.renderCard) {
           // Custom card owns click + actions; never wrapped or re-wired here.
-          return <div key={key}>{options.renderCard(row)}</div>;
+          // `display:contents` dissolves this key-holder wrapper so the card
+          // itself is the grid item (stretched by justify-items, like the
+          // default DataCard path) — a plain block wrapper would let a
+          // width-less custom card shrink-wrap to its content.
+          return (
+            <div key={key} className="contents">
+              {options.renderCard(row)}
+            </div>
+          );
         }
 
         const media = renderMedia(options, coverField, row);

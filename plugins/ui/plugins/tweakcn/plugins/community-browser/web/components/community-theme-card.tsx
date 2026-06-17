@@ -39,7 +39,7 @@ export function CommunityThemeCard({
       onClick={onApply}
       disabled={isPending}
       className={cn(
-        "flex flex-col overflow-hidden rounded-lg border border-border text-left transition-all",
+        "flex w-full flex-col overflow-hidden rounded-lg border border-border text-left transition-all",
         "hover:ring-1 hover:ring-primary/40 hover:shadow-sm",
         isPending && "opacity-50 cursor-wait",
       )}
