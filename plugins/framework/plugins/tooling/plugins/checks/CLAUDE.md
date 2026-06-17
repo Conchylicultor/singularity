@@ -18,6 +18,7 @@ lives in a string (e.g. `text/event-stream`, `/api/…` URLs, hardcoded paths);
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`, `framework/tooling/collected-dir.loadCollectedDir`, `infra/paths.SINGULARITY_DIR`, `plugin-meta/parse-utils.maskSource`, `plugin-meta/plugin-tree.buildPluginTree`
   - Exports: Types: `Check`, `CheckCache`, `CheckResult`, `CodeMatch`, `RunChecksOptions`, `TscTarget`; Values: `checkCollectedDir`, `computeTreeHash`, `discoverTscTargets`, `grepCode`, `listAllChecks`, `openCheckCache`, `runChecks`, `tsBuildInfoPath`
 - Sub-plugins:
+  - **`app-css-source-resolves`**
   - **`app-css-utilities-in-sync`**
   - **`barrel-stubs-in-sync`**
   - **`class-token-walk-in-sync`**
