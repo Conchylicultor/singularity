@@ -1,7 +1,7 @@
 import { eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _tasks } from "./tables";
-import { tasks } from "./schema";
+import { tasks } from "./views";
 import type { TaskStatus } from "./schema";
 import type { ConversationStatus } from "../../core/conversation-status";
 import { taskStatusChanged, conversationStatusChanged } from "./tables-events";

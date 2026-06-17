@@ -619,6 +619,13 @@ export async function generateMigration(opts: {
     process.exit(1);
   }
 
+  // Reorder DROP VIEW / CREATE VIEW statements into dependency order BEFORE
+  // renameMigrations hashes the content (so the committed filename's sha8
+  // matches its reordered body). drizzle-kit emits view statements in
+  // snapshot/alphabetical order, which can drop a dependency before its
+  // dependent (Postgres refuses); this fixes the order in place.
+  reorderViewStatements(migrationsDir);
+
   const renameResult = renameMigrations(migrationsDir);
   for (const r of renameResult.renamed) {
     console.log(`  ${r.from} → ${r.to}`);
@@ -855,6 +862,241 @@ export function renameMigrations(migrationsDir: string): RenameResult {
 
   regenerateJournal(migrationsDir);
   return { renamed };
+}
+
+// ─── View statement dependency reordering ────────────────────────────────────
+
+const STATEMENT_BREAKPOINT = "--> statement-breakpoint";
+// DROP VIEW [MATERIALIZED] "schema"."name" — capture the bare view name.
+const DROP_VIEW_RE = /^\s*DROP\s+(?:MATERIALIZED\s+)?VIEW\s+(?:IF\s+EXISTS\s+)?(?:"[^"]+"\.)?"([^"]+)"/i;
+// CREATE [OR REPLACE] [MATERIALIZED] VIEW "schema"."name" AS … — capture the name.
+const CREATE_VIEW_RE = /^\s*CREATE\s+(?:OR\s+REPLACE\s+)?(?:MATERIALIZED\s+)?VIEW\s+(?:"[^"]+"\.)?"([^"]+)"/i;
+
+interface ViewStatement {
+  /** Index of this statement within the file's statement list. */
+  pos: number;
+  kind: "drop" | "create";
+  view: string;
+  text: string;
+}
+
+/**
+ * Topologically sort `nodes` given a `deps` map (node → set of nodes it depends
+ * on, restricted to `nodes`). Returns dependency order (a node appears after all
+ * the nodes it depends on). Throws on a cycle — fail loud, never emit a bad order.
+ */
+function topoSort(nodes: string[], deps: Map<string, Set<string>>): string[] {
+  const order: string[] = [];
+  const state = new Map<string, "visiting" | "done">();
+
+  const visit = (n: string, stack: string[]): void => {
+    const s = state.get(n);
+    if (s === "done") return;
+    if (s === "visiting") {
+      throw new Error(
+        `Cycle detected among views while reordering migration statements: ` +
+          `${[...stack, n].join(" → ")}`,
+      );
+    }
+    state.set(n, "visiting");
+    for (const dep of deps.get(n) ?? []) {
+      if (nodes.includes(dep)) visit(dep, [...stack, n]);
+    }
+    state.set(n, "done");
+    order.push(n);
+  };
+
+  for (const n of nodes) visit(n, []);
+  return order;
+}
+
+/**
+ * Read the prior snapshot's `views` map (keyed `"public.<name>"`, each value
+ * `{ name, definition, … }`). The prior snapshot is the latest one already in
+ * the journal — drizzle has written the NEW snapshot as `meta/NNNN_snapshot.json`
+ * but has NOT yet appended it to `_journal.json` (we regenerate the journal later
+ * in renameMigrations), so the journal's last entry is the prior one.
+ */
+function readPriorSnapshotViewDefs(
+  migrationsDir: string,
+): Map<string, string> {
+  const defs = new Map<string, string>();
+  const metaDir = join(migrationsDir, "meta");
+  const journalPath = join(metaDir, "_journal.json");
+  if (!existsSync(journalPath)) return defs;
+
+  const journal = JSON.parse(readFileSync(journalPath, "utf8")) as {
+    entries?: Array<{ tag: string }>;
+  };
+  const lastTag = journal.entries?.at(-1)?.tag;
+  if (!lastTag) return defs;
+
+  const snapPath = join(metaDir, `${lastTag}_snapshot.json`);
+  if (!existsSync(snapPath)) return defs;
+
+  const snap = JSON.parse(readFileSync(snapPath, "utf8")) as {
+    views?: Record<string, { name?: string; definition?: string }>;
+  };
+  for (const v of Object.values(snap.views ?? {})) {
+    if (v.name && typeof v.definition === "string") {
+      defs.set(v.name, v.definition);
+    }
+  }
+  return defs;
+}
+
+/**
+ * Reorder DROP VIEW / CREATE VIEW statements in freshly generated (not-yet-renamed)
+ * migration files so that DROPs run in reverse-topological order (dependents first)
+ * and CREATEs in topological order (dependencies first). Non-view statements keep
+ * their original positions. No-op for files with <2 interdependent views.
+ */
+export function reorderViewStatements(migrationsDir: string): void {
+  for (const file of readdirSync(migrationsDir)) {
+    if (!file.endsWith(".sql")) continue;
+    if (NEW_FORMAT.test(file)) continue; // already renamed — never touch
+    if (!DRIZZLE_FORMAT.test(file)) continue; // not a freshly generated file
+
+    const sqlPath = join(migrationsDir, file);
+    const sql = readFileSync(sqlPath, "utf8");
+    const reordered = reorderViewStatementsInSql(sql, () =>
+      readPriorSnapshotViewDefs(migrationsDir),
+    );
+    if (reordered !== sql) writeFileSync(sqlPath, reordered);
+  }
+}
+
+/**
+ * Pure core: reorder the view statements within one migration's SQL text.
+ * `getPriorDefs` lazily provides the prior snapshot's view definitions, used to
+ * derive deps for pure-drop views whose body isn't in this migration. Returns a
+ * byte-identical string when there's nothing to reorder.
+ */
+export function reorderViewStatementsInSql(
+  sql: string,
+  getPriorDefs: () => Map<string, string>,
+): string {
+  // drizzle's canonical form is `<stmt>--> statement-breakpoint\n<stmt>…`: every
+  // marker is immediately followed by a newline and every statement starts on its
+  // own line. Splitting on the bare marker leaves that `\n` glued to the start of
+  // each following fragment, so a fragment moved to a new slot would carry/lose a
+  // leading newline. Normalize each fragment (strip one surrounding newline) and
+  // rejoin with a canonical `--> statement-breakpoint\n` so the invariant holds
+  // regardless of which slot a statement ends up in. Preserve drizzle's optional
+  // leading blank line on the very first statement.
+  const rawStatements = sql.split(STATEMENT_BREAKPOINT);
+  const leadingBlankLine = /^\n/.test(rawStatements[0] ?? "");
+  const statements = rawStatements.map((s) =>
+    // Strip a single leading newline from each fragment: for non-first fragments
+    // it's the newline that followed the prior marker; for the first it's
+    // drizzle's leading blank line (re-applied verbatim on rejoin). This makes
+    // every fragment slot-independent.
+    s.startsWith("\n") ? s.slice(1) : s,
+  );
+
+  // Classify each statement; collect the view statements with their positions.
+  const viewStatements: ViewStatement[] = [];
+  for (let pos = 0; pos < statements.length; pos++) {
+    const text = statements[pos]!;
+    const dropM = DROP_VIEW_RE.exec(text);
+    if (dropM) {
+      viewStatements.push({ pos, kind: "drop", view: dropM[1]!, text });
+      continue;
+    }
+    const createM = CREATE_VIEW_RE.exec(text);
+    if (createM) {
+      viewStatements.push({ pos, kind: "create", view: createM[1]!, text });
+    }
+  }
+
+  if (viewStatements.length < 2) return sql; // nothing to reorder
+
+  const createdViews = new Set(
+    viewStatements.filter((s) => s.kind === "create").map((s) => s.view),
+  );
+  const allViewNames = [...new Set(viewStatements.map((s) => s.view))];
+
+  // Build the dependency graph: view → set of (in-migration) views it references.
+  // For a view CREATEd here, parse its own CREATE body. For a pure-drop view
+  // (dropped but not recreated), its body isn't in the migration — read it from
+  // the prior snapshot. Candidate deps are restricted to views in this migration.
+  const bodyFor = new Map<string, string>();
+  for (const s of viewStatements) {
+    if (s.kind === "create") bodyFor.set(s.view, s.text);
+  }
+  const pureDrops = allViewNames.filter((v) => !createdViews.has(v));
+  if (pureDrops.length > 0) {
+    const priorDefs = getPriorDefs();
+    for (const v of pureDrops) {
+      const def = priorDefs.get(v);
+      if (def !== undefined) bodyFor.set(v, def);
+    }
+  }
+
+  const deps = new Map<string, Set<string>>();
+  for (const view of allViewNames) {
+    const body = bodyFor.get(view);
+    const set = new Set<string>();
+    if (body !== undefined) {
+      for (const other of allViewNames) {
+        if (other === view) continue;
+        // A reference is the other view's quoted name, optionally schema-qualified.
+        const ref = new RegExp(
+          `"${escapeRegExp(other)}"|"[^"]+"\\."${escapeRegExp(other)}"`,
+        );
+        if (ref.test(body)) set.add(other);
+      }
+    }
+    deps.set(view, set);
+  }
+
+  // Compute the desired view order. CREATE in topo order (deps first); DROP in
+  // reverse topo (dependents first). Both derive from the same dependency graph.
+  const topo = topoSort(allViewNames, deps);
+  const createOrder = topo.filter((v) => createdViews.has(v));
+  const dropOrder = [...topo].reverse();
+
+  // Reassemble: keep non-view statements in place; fill the DROP slots in
+  // reverse-topo order and the CREATE slots in topo order.
+  const dropPositions = viewStatements
+    .filter((s) => s.kind === "drop")
+    .map((s) => s.pos);
+  const createPositions = viewStatements
+    .filter((s) => s.kind === "create")
+    .map((s) => s.pos);
+
+  const dropTextByView = new Map(
+    viewStatements.filter((s) => s.kind === "drop").map((s) => [s.view, s.text]),
+  );
+  const createTextByView = new Map(
+    viewStatements
+      .filter((s) => s.kind === "create")
+      .map((s) => [s.view, s.text]),
+  );
+
+  // Order the drop view names by the desired (reverse-topo) sequence, restricted
+  // to the views actually dropped here.
+  const droppedViews = dropOrder.filter((v) => dropTextByView.has(v));
+  const out = [...statements];
+  dropPositions.forEach((slot, i) => {
+    out[slot] = dropTextByView.get(droppedViews[i]!)!;
+  });
+  createOrder.forEach((view, i) => {
+    out[createPositions[i]!] = createTextByView.get(view)!;
+  });
+
+  // Rejoin canonically: every marker is followed by exactly one newline, so no
+  // statement ever shares a line with a preceding `--> statement-breakpoint`.
+  // Re-apply drizzle's optional leading blank line on the first statement.
+  const body = out.join(`${STATEMENT_BREAKPOINT}\n`);
+  const rejoined = leadingBlankLine ? `\n${body}` : body;
+  // Byte-identical no-op guarantee: if normalization+canonical rejoin reproduced
+  // the original exactly (nothing moved), return the original string untouched.
+  return rejoined === sql ? sql : rejoined;
+}
+
+function escapeRegExp(s: string): string {
+  return s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 export function removeGeneratedFiles(

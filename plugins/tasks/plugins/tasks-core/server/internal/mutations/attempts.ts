@@ -1,6 +1,6 @@
 import { db } from "@plugins/database/server";
 import { _attempts } from "../tables";
-import { attempts } from "../schema";
+import { attempts } from "../views";
 import { attemptsResource } from "../resources";
 import { eq } from "drizzle-orm";
 import { emitStatusChangeIfChanged, readTaskStatus } from "../status-emit";

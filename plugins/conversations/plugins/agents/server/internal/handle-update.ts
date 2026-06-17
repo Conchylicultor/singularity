@@ -6,7 +6,7 @@ import { updateAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
 import { agentAttachments } from "./tables-attachments";
-import { agents } from "./schema";
+import { agents } from "./views";
 import { agentsResource } from "./resources";
 
 export const handleUpdate = implement(updateAgent, async ({ params, body }) => {

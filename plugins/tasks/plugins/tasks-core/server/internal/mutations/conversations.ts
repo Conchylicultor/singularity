@@ -3,7 +3,7 @@ import { db } from "@plugins/database/server";
 import type { ConversationModel } from "@plugins/conversations/plugins/model-provider/core";
 import type { ConversationStatus } from "../../../core/conversation-status";
 import { _attempts, _conversations } from "../tables";
-import { conversations } from "../schema";
+import { conversations } from "../views";
 import { conversationsLiveResource } from "../resources";
 import { emitStatusChangeIfChanged, emitConversationStatusChange, readTaskStatus } from "../status-emit";
 

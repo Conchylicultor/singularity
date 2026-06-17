@@ -1,6 +1,6 @@
 import { asc, eq } from "drizzle-orm";
 import { db } from "@plugins/database/server";
-import { attempts } from "../schema";
+import { attempts } from "../views";
 import type { Attempt } from "../schema";
 
 export async function listAttempts(): Promise<Attempt[]> {

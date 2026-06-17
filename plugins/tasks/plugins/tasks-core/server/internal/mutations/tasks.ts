@@ -1,7 +1,7 @@
 import { and, eq, inArray, isNull, ne, sql } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _attempts, _taskDependencies, _tasks } from "../tables";
-import { tasks } from "../schema";
+import { tasks } from "../views";
 import type { TaskStatus } from "../schema";
 import { tasksResource, taskDetailResource } from "../resources";
 import { findNextRankInFolder, isDescendant, taskDependsOn } from "../queries/tasks";

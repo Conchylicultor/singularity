@@ -2,7 +2,7 @@ import { asc, desc, eq, inArray } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
 import { pushes } from "./tables";
-import { attempts, conversations, tasks } from "./schema";
+import { attempts, conversations, tasks } from "./views";
 import {
   TaskSchema,
   TaskListItemSchema,

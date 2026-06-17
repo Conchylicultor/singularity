@@ -4,7 +4,7 @@ import { implement, HttpError } from "@plugins/infra/plugins/endpoints/server";
 import { createAgent } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
 import { _agents } from "./tables";
-import { agents } from "./schema";
+import { agents } from "./views";
 import { nextAgentRankUnder } from "./rank";
 import { agentsResource } from "./resources";
 

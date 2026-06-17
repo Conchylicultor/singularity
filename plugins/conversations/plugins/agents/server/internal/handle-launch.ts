@@ -9,7 +9,7 @@ import {
 } from "@plugins/conversations/plugins/model-provider/core";
 import { launchAgent } from "../../core/endpoints";
 import { _agent_launches } from "./tables";
-import { agents } from "./schema";
+import { agents } from "./views";
 import { AGENTS_META_TASK_ID } from "./meta-agents";
 import { agentLaunchesResource } from "./resources";
 

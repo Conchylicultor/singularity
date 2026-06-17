@@ -61,14 +61,18 @@ export async function runMigrations(db: NodePgDatabase): Promise<void> {
     );
     const appliedHashes = new Set(applied.rows.map((r) => r.hash));
 
-    // Drift warning: a hash recorded as applied but with no matching file on disk
-    // means someone rebased away a migration after it ran here. The DB retains
-    // whatever that migration did, silently diverging from the codebase.
+    // Applied-but-no-file: a hash recorded as applied with no matching file on
+    // this branch. This is EXPECTED when the worktree branch predates a
+    // migration that landed on main — the DB was forked from main (or merged it)
+    // and already carries that migration's effects, but the branch checkout
+    // doesn't have the file yet. It is only real drift if you deleted a migration
+    // you authored (rebased it away after it ran here), in which case the DB
+    // keeps whatever that migration did. No rollback either way.
     const onDiskHashes = new Set(migrations.map((m) => m.hash));
     for (const h of appliedHashes) {
       if (!onDiskHashes.has(h)) {
         log.publish(
-          `[migrate] applied hash ${h} has no matching file on disk — DB may have drifted`,
+          `[migrate] applied hash ${h} has no file on this branch — expected if this worktree predates a migration that landed on main (the DB already has its effects). Real drift only if you deleted a migration you authored.`,
           "stderr",
         );
       }

@@ -1049,6 +1049,10 @@
       "name": "@singularity/plugin-database-admin",
       "version": "0.0.1",
     },
+    "plugins/database/plugins/derived-views": {
+      "name": "@singularity/plugin-database-derived-views",
+      "version": "0.0.1",
+    },
     "plugins/database/plugins/embedded": {
       "name": "@singularity/plugin-database-embedded",
       "version": "0.0.1",
@@ -3945,6 +3949,8 @@
     "@singularity/plugin-database": ["@singularity/plugin-database@workspace:plugins/database"],
 
     "@singularity/plugin-database-admin": ["@singularity/plugin-database-admin@workspace:plugins/database/plugins/admin"],
+
+    "@singularity/plugin-database-derived-views": ["@singularity/plugin-database-derived-views@workspace:plugins/database/plugins/derived-views"],
 
     "@singularity/plugin-database-embedded": ["@singularity/plugin-database-embedded@workspace:plugins/database/plugins/embedded"],
 

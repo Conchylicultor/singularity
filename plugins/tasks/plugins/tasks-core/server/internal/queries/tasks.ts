@@ -3,7 +3,7 @@ import { nextRankUnder, type RankExecutor } from "@plugins/primitives/plugins/ra
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
 import { db } from "@plugins/database/server";
 import { _taskDependencies, _tasks } from "../tables";
-import { attempts, tasks } from "../schema";
+import { attempts, tasks } from "../views";
 import type { Task } from "../schema";
 
 export interface TaskFilters {

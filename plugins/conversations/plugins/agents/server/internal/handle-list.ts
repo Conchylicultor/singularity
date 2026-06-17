@@ -3,7 +3,7 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { listAgents } from "../../core/endpoints";
 import { AgentSchema } from "../../core/schemas";
-import { agents } from "./schema";
+import { agents } from "./views";
 
 export const handleList = implement(listAgents, async () => {
   const rows = await db.select().from(agents).orderBy(asc(agents.rank), asc(agents.createdAt));

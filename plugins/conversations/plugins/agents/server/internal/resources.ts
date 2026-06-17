@@ -7,8 +7,8 @@ import {
   conversationsLiveResource,
 } from "@plugins/tasks/plugins/tasks-core/server";
 import { _agent_launches } from "./tables";
+import { agents } from "./views";
 import {
-  agents,
   AgentSchema,
   AgentLaunchWithStatusSchema,
   type Agent,

@@ -1,7 +1,7 @@
 import { db } from "@plugins/database/server";
 import { DEFAULT_MODEL } from "@plugins/conversations/plugins/model-provider/core";
 import { _attempts, _conversations, _tasks } from "../tables";
-import { conversations } from "../schema";
+import { conversations } from "../views";
 import type { Conversation } from "../schema";
 import { eq } from "drizzle-orm";
 import { findNextRankInFolder } from "../queries/tasks";

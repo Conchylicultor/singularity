@@ -21,7 +21,8 @@ import {
 } from "../core/endpoints";
 
 export { _agent_launches, _agents } from "./internal/tables";
-export { agents, AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./internal/schema";
+export { agents } from "./internal/views";
+export { AgentSchema, AgentLaunchSchema, AgentLaunchWithStatusSchema } from "./internal/schema";
 export type { Agent, AgentLaunch, AgentLaunchWithStatus } from "./internal/schema";
 export { agentsResource, agentLaunchesResource } from "./internal/resources";
 export { AGENTS_META_TASK_ID } from "./internal/meta-agents";

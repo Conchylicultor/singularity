@@ -1,7 +1,7 @@
 import { and, asc, count, desc, eq, inArray, isNotNull, lt, ne, type SQL } from "drizzle-orm";
 import { db } from "@plugins/database/server";
 import { _conversations } from "../tables";
-import { conversations } from "../schema";
+import { conversations } from "../views";
 import type { Conversation } from "../schema";
 
 export const RECENT_GONE_LIMIT = 30;
