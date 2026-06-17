@@ -1,13 +1,13 @@
 import { eq, getTableColumns, sql } from "drizzle-orm";
 import { pgView, QueryBuilder } from "drizzle-orm/pg-core";
 import { _attempts, _conversations, _taskDependencies, _tasks, pushes } from "./tables";
-import { defineView } from "@plugins/database/plugins/derived-views/core";
 
 // Derived (plain, non-materialized) views. These live in `views.ts` — NOT
 // `schema.ts`/`tables.ts` — so the drizzle codegen glob never sees them: they
-// are derived code rebuilt from source on every boot via `defineView` +
-// rebuildDerivedViews, never tracked in the migration chain. To change a view,
-// edit it here and `./singularity build` — no migration is generated. See
+// are derived code rebuilt from source on every boot, declared via the `View`
+// server contribution (see server/index.ts) + rebuildDerivedViews, never
+// tracked in the migration chain. To change a view, edit it here and
+// `./singularity build` — no migration is generated. See
 // plugins/database/plugins/derived-views/CLAUDE.md.
 //
 // The view objects stay valid `pgView` relations so the rest of tasks-core can
@@ -23,8 +23,9 @@ import { defineView } from "@plugins/database/plugins/derived-views/core";
 // status from the base tables rather than reading attempts_v) for historical
 // reasons — a view-on-view dependency used to be un-migratable under drizzle-kit
 // 0.28.1, which emitted `DROP VIEW` in snapshot order with no topological sort.
-// That constraint is now lifted: these views are derived code (defineView), no
-// longer in the migration chain, and the migration generator topologically
+// That constraint is now lifted: these views are derived code (declared via the
+// `View` contribution), no longer in the migration chain, and the migration
+// generator topologically
 // reorders any view DROP/CREATE it does emit. tasks_v could safely read
 // attempts_v again — see the follow-up to re-couple and drop the duplication.
 //
@@ -255,9 +256,7 @@ export const conversations = pgView("conversations_v").as((qb) =>
     .innerJoin(_attempts, eq(_attempts.id, _conversations.attemptId)),
 );
 
-// All three views are currently independent (no view-on-view references), so the
-// rebuild order is unconstrained. dependsOn is declared anyway so re-coupling
-// tasks_v → attempts_v later is a one-line change here.
-defineView({ view: attempts });
-defineView({ view: conversations });
-defineView({ view: tasks });
+// These view objects are declared as derived views via the `View` server
+// contribution in this plugin's server barrel (server/index.ts). All three are
+// currently independent (no view-on-view references); re-coupling tasks_v →
+// attempts_v later is a one-line `dependsOn: ["attempts_v"]` there.

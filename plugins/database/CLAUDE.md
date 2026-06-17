@@ -62,7 +62,7 @@ Edit `plugins/{name}/server/internal/tables.ts` → run `./singularity build`. T
   - Exports: Types: `DatabaseConfig`, `DatabaseProvider`; Values: `buildConnectionString`, `DATABASE_CONFIG_PATH`, `readDatabaseConfig`
 - Sub-plugins:
   - **`admin`** — Admin operations for the database plugin — fork, backup, drop, list.
-  - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (defineView), not stateful migration schema.
+  - **`derived-views`** — Rebuilds plain DB views from source on every boot, in dependency order. Plain views are derived code (declared via the View contribution), not stateful migration schema.
   - **`embedded`** — Embedded Postgres binaries for the gateway-owned cluster. Provides shared connection constants used by every worktree backend.
   - **`fork`** — Durable, self-healing worktree DB fork: a graphile job that forks the singularity DB per worktree (idempotent, atomic), plus a scheduled sweep of orphaned temp forks.
   - **`migrations`** — DDL lifecycle: migration runner and SQL files.

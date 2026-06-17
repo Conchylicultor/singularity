@@ -1,5 +1,6 @@
 import { Resource } from "@plugins/framework/plugins/server-core/core";
 import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-core/core";
+import { View } from "@plugins/database/plugins/derived-views/server";
 import {
   tasksResource,
   taskDetailResource,
@@ -7,6 +8,7 @@ import {
   pushesResource,
   conversationsLiveResource,
 } from "./internal/resources";
+import { attempts, conversations, tasks } from "./internal/views";
 import { pushLanded, taskStatusChanged, conversationStatusChanged } from "./internal/tables-events";
 import { sweepOrphanedAttempts } from "./internal/sweep-orphaned-attempts";
 
@@ -168,7 +170,7 @@ export default {
   description:
     "Schema + repository layer for the tasks/attempts/conversations FK cluster.",
   loadBearing: true,
-  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true })],
+  contributions: [Resource.Declare(tasksResource, { bootCritical: true }), Resource.Declare(taskDetailResource), Resource.Declare(attemptsResource, { bootCritical: true }), Resource.Declare(pushesResource, { bootCritical: true }), Resource.Declare(conversationsLiveResource, { bootCritical: true }), View({ view: attempts }), View({ view: conversations }), View({ view: tasks })],
   register: [pushLanded, taskStatusChanged, conversationStatusChanged],
   onReady: sweepOrphanedAttempts,
 } satisfies ServerPluginDefinition;

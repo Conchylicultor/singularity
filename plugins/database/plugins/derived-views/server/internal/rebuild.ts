@@ -1,11 +1,13 @@
 import type { NodePgDatabase } from "drizzle-orm/node-postgres";
 import { sql as drizzleSql } from "drizzle-orm";
+import { getViewConfig } from "drizzle-orm/pg-core";
 import {
-  getRegisteredViews,
   topoSortViews,
   compileCreateView,
+  type RegisteredView,
 } from "@plugins/database/plugins/derived-views/core";
 import { Log } from "@plugins/primitives/plugins/log-channels/server";
+import { View } from "./contribution";
 
 const log = Log.channel("derived-views", { persist: true });
 
@@ -23,7 +25,17 @@ const log = Log.channel("derived-views", { persist: true });
 // `db` is passed in (like runMigrations) so this module never imports
 // @plugins/database/server — that would form a cycle (database/server calls us).
 export async function rebuildDerivedViews(db: NodePgDatabase): Promise<void> {
-  const ordered = topoSortViews(getRegisteredViews());
+  // Views are declared via the `View` server contribution on each owning
+  // plugin's definition. The framework collects all contributions before any
+  // onReadyBlocking runs, so this list is complete regardless of import order.
+  const declared: RegisteredView[] = View.getContributions().map(
+    ({ view, dependsOn }) => ({
+      name: getViewConfig(view).name,
+      view,
+      dependsOn: dependsOn ?? [],
+    }),
+  );
+  const ordered = topoSortViews(declared);
   if (ordered.length === 0) return;
 
   log.publish(
