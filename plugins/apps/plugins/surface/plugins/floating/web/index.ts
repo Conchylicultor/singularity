@@ -8,6 +8,7 @@ import {
   cycleWindows,
   minimizeFocusedWindow,
   snapFocusedWindow,
+  togglePinFocusedWindow,
 } from "./window-commands";
 
 export default {
@@ -59,6 +60,16 @@ export default {
       group: "Window",
       when: () => getFocusedPlacement() === "floating",
       handler: () => minimizeFocusedWindow(),
+    }),
+    // Always-on-top toggle: uses the Ctrl+Alt window-manager modifier family (like
+    // the tiling shortcuts), keeping the platform `mod` free for app shortcuts.
+    defineShortcut({
+      id: "floating.toggle-pin",
+      keys: "ctrl+alt+p",
+      label: "Toggle always on top",
+      group: "Window",
+      when: () => getFocusedPlacement() === "floating",
+      handler: () => togglePinFocusedWindow(),
     }),
     defineShortcut({
       id: "floating.close",

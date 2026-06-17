@@ -9,6 +9,8 @@ import {
   MdRemove,
   MdCropSquare,
   MdFilterNone,
+  MdOutlinePushPin,
+  MdPushPin,
   MdWebAsset,
 } from "react-icons/md";
 import { Apps } from "@plugins/apps/web";
@@ -20,7 +22,11 @@ import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-g
 import { detectSnapZone, setSnapPreview, type SnapZone } from "../hooks/use-snap";
 import { useWindowKeyboardInteraction } from "../hooks/use-window-interaction";
 import { WindowResizeHandles } from "./window-resize-handles";
-import { WindowSystemMenu, type MenuAnchor } from "./window-system-menu";
+import {
+  TOGGLE_PIN_SHORTCUT,
+  WindowSystemMenu,
+  type MenuAnchor,
+} from "./window-system-menu";
 
 /** Fixed titlebar height; mirrored by `WINDOW_TITLEBAR_INSET` so content clears it. */
 export const WINDOW_TITLEBAR_INSET = "2.25rem";
@@ -32,6 +38,8 @@ interface WindowChromeProps {
   geo: Geometry;
   setGeo: (next: (g: Geometry) => Geometry) => void;
   onClose: () => void;
+  /** Toggle this window's always-on-top flag (re-ranks z in the geometry store). */
+  onTogglePin: () => void;
 }
 
 /**
@@ -53,6 +61,7 @@ export function WindowChrome({
   geo,
   setGeo,
   onClose,
+  onTogglePin,
 }: WindowChromeProps) {
   const apps = Apps.App.useContributions();
   const app = apps.find((a) => a.id === appId);
@@ -230,6 +239,18 @@ export function WindowChrome({
         {/* Each control stops the pointer so it never starts a window drag. */}
         <div onPointerDown={(e) => e.stopPropagation()} className="flex shrink-0 items-center gap-2xs">
           <IconButton
+            icon={geo.pinned ? MdPushPin : MdOutlinePushPin}
+            label={
+              geo.pinned
+                ? `Unpin (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
+                : `Keep on top (${formatShortcutLabel(TOGGLE_PIN_SHORTCUT)})`
+            }
+            size="icon-sm"
+            // Pinned reads as "active" via the accent tint, matching the menu check.
+            className={geo.pinned ? "text-primary" : undefined}
+            onClick={onTogglePin}
+          />
+          <IconButton
             icon={MdRemove}
             label={`Minimize (${formatShortcutLabel("mod+m")})`}
             size="icon-sm"
@@ -285,6 +306,7 @@ export function WindowChrome({
         onSize={() => interaction.begin("size")}
         onMinimize={toggleMinimize}
         onMaximize={toggleMaximize}
+        onTogglePin={onTogglePin}
         onCloseWindow={onClose}
       />
     </>

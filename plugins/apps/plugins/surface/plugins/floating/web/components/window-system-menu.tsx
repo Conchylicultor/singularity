@@ -4,10 +4,12 @@ import {
   MdCropSquare,
   MdFilterNone,
   MdOpenWith,
+  MdPushPin,
   MdRemove,
 } from "react-icons/md";
 import {
   DropdownMenu,
+  DropdownMenuCheckboxItem,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuSeparator,
@@ -16,6 +18,9 @@ import {
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import type { Geometry } from "../hooks/use-window-geometry";
+
+/** Display label for the always-on-top toggle shortcut, shared by chrome + menu. */
+export const TOGGLE_PIN_SHORTCUT = "ctrl+alt+p";
 
 /** A viewport-space point the menu opens at (right-click cursor or icon corner). */
 export interface MenuAnchor {
@@ -33,6 +38,7 @@ interface WindowSystemMenuProps {
   onSize: () => void;
   onMinimize: () => void;
   onMaximize: () => void;
+  onTogglePin: () => void;
   onCloseWindow: () => void;
 }
 
@@ -56,6 +62,7 @@ export function WindowSystemMenu({
   onSize,
   onMinimize,
   onMaximize,
+  onTogglePin,
   onCloseWindow,
 }: WindowSystemMenuProps) {
   const maximized = geo.snap === "maximize";
@@ -105,6 +112,17 @@ export function WindowSystemMenu({
           <MdCropSquare />
           Maximize
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        <DropdownMenuCheckboxItem
+          checked={geo.pinned}
+          onClick={onTogglePin}
+        >
+          <MdPushPin />
+          Always on top
+          <DropdownMenuShortcut>
+            {formatShortcutLabel(TOGGLE_PIN_SHORTCUT)}
+          </DropdownMenuShortcut>
+        </DropdownMenuCheckboxItem>
         <DropdownMenuSeparator />
         <DropdownMenuItem variant="destructive" onClick={onCloseWindow}>
           <MdClose />

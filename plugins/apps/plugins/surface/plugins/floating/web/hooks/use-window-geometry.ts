@@ -8,8 +8,18 @@ export interface Geometry {
   y: number;
   w: number;
   h: number;
-  /** Stacking order; bumped to `++nextZ` on focus so the focused window wins. */
+  /**
+   * Stacking order, kept dense (`1..N`) and tier-ordered by {@link reorder}:
+   * pinned windows always rank above unpinned ones, and within a tier the most
+   * recently focused window wins. Applied verbatim as the container `zIndex`.
+   */
   z: number;
+  /**
+   * "Always on top": when set, the window ranks above every unpinned window
+   * regardless of focus order (enforced in {@link reorder}, not at render, so the
+   * committed z stays `<= N` and the dock overlay always sits above the windows).
+   */
+  pinned: boolean;
   minimized: boolean;
   /**
    * The window's snap state: a half/quarter tile, `"maximize"` (full), or null
@@ -59,18 +69,11 @@ export function clampToBounds(g: Geometry, bounds: Bounds): Geometry {
 const geoState = new Map<string, Geometry>();
 const subscribers = new Set<() => void>();
 
-// Monotonic z-order counter. New windows / raise-to-front set `z = ++nextZ` so
-// the most recently focused window always sits on top. Seeded past any hydrated
-// z below. Bounded by renormalization (see `Z_CEILING` / `renormalize`).
+// Monotonic z-order counter. New windows / raise-to-front set `z = ++nextZ` to
+// float above their tier-mates, then {@link reorder} compacts the open windows
+// back to dense, tier-ordered ranks — so the counter never grows unbounded and
+// the committed z stays `<= N` (the dock's z-overlay always sits above windows).
 let nextZ = 0;
-
-/**
- * Ceiling for the committed window z. Once `nextZ` exceeds it we renormalize the
- * open windows down to compact ranks (`1..N`), so window z stays <= this and the
- * dock (z-overlay = 40) always sits above the windows — and the counter never
- * grows unbounded across a long session.
- */
-const Z_CEILING = 30;
 
 /**
  * The reactive whole-map snapshot returned by {@link useWindowGeometryMap}. It is
@@ -91,13 +94,20 @@ function notify() {
 }
 
 /**
- * Compact every open window's z to a dense rank (`1..N`, N = window count) by
- * current z ascending, so the highest-z window (just bumped by the caller) stays
- * on top while the ceiling is respected. Mutates `geoState` only — the calling
- * mint site already runs `persist()`/`notify()`, so this never notifies itself.
+ * Re-rank every open window to a dense `1..N` z-order with the two-tier invariant
+ * baked in: unpinned windows take the low ranks, pinned ("always on top") windows
+ * the high ranks, and within each tier the existing z order (focus recency) is
+ * preserved. The just-bumped window (highest z in its tier) therefore lands on top
+ * of its tier. Enforcing pinned-above-unpinned here — rather than via a render-time
+ * z offset — keeps the committed z `<= N`, so the dock overlay (z-overlay) always
+ * sits above the windows. Mutates `geoState` only; the calling mint site runs
+ * `persist()`/`notify()`, so this never notifies itself.
  */
-function renormalize() {
-  const ranked = [...geoState.entries()].sort((a, b) => a[1].z - b[1].z);
+function reorder() {
+  const ranked = [...geoState.entries()].sort((a, b) => {
+    const pinDelta = Number(a[1].pinned) - Number(b[1].pinned);
+    return pinDelta !== 0 ? pinDelta : a[1].z - b[1].z;
+  });
   ranked.forEach(([id, geo], i) => geoState.set(id, { ...geo, z: i + 1 }));
   nextZ = ranked.length;
 }
@@ -132,6 +142,8 @@ function hydrate() {
       const legacy = geo as Geometry & { maximized?: boolean };
       const normalized: Geometry = {
         ...geo,
+        // Default the always-on-top flag for sessions persisted before pinning.
+        pinned: geo.pinned ?? false,
         snap: geo.snap ?? (legacy.maximized ? "maximize" : null),
       };
       delete (normalized as { maximized?: boolean }).maximized;
@@ -157,6 +169,7 @@ function defaultGeometry(): Geometry {
     w: 880,
     h: 600,
     z: ++nextZ,
+    pinned: false,
     minimized: false,
     snap: null,
   };
@@ -166,10 +179,11 @@ function read(tabId: string): Geometry {
   hydrate();
   if (!geoState.has(tabId)) {
     geoState.set(tabId, defaultGeometry());
-    // A freshly opened window mints `z = ++nextZ` (highest); if that crossed the
-    // ceiling, renormalize keeps it on top while bounding z. Refresh the snapshot
-    // so the new window appears in `useWindowGeometryMap` before any notify.
-    if (nextZ > Z_CEILING) renormalize();
+    // A freshly opened (unpinned) window mints `z = ++nextZ` (highest); reorder
+    // then settles it onto the top of the unpinned tier — below any always-on-top
+    // window — while keeping z dense. Refresh the snapshot so the new window
+    // appears in `useWindowGeometryMap` before any notify.
+    reorder();
     persist();
     rebuildSnapshot();
   }
@@ -198,16 +212,35 @@ export function pruneWindowGeometry(openTabIds: Set<string>) {
 }
 
 /**
- * Raise a window's z above all others (module-level so the dock can call it
- * without a geometry handle). No-op when already on top. After minting the new
- * z, renormalize when over the ceiling — this compacts z by current value, so
- * the just-bumped window (now the highest) still ends up at rank N = top.
+ * Raise a window to the top of its own tier (module-level so the dock can call it
+ * without a geometry handle). A pinned window rises above other pinned windows; an
+ * unpinned one rises above other unpinned windows but stays below any always-on-top
+ * window. No-op when already topmost in its tier — so repeated pointer-downs inside
+ * the focused window never churn the z-order. Mints the new z, then {@link reorder}
+ * compacts back to dense, tier-ordered ranks with this window on top of its tier.
  */
 export function bringWindowToFront(tabId: string) {
   const current = read(tabId);
-  if (current.z === nextZ) return; // already on top
+  // Topmost in its tier already? Every same-tier window sits at or below it.
+  const topOfTier = [...geoState.values()].every(
+    (g) => g.pinned !== current.pinned || g.z <= current.z,
+  );
+  if (topOfTier) return;
   geoState.set(tabId, { ...current, z: ++nextZ });
-  if (nextZ > Z_CEILING) renormalize();
+  reorder();
+  persist();
+  notify();
+}
+
+/**
+ * Toggle a window's "always on top" flag (module-level so chrome / shortcuts can
+ * call it without a geometry handle). Bumps the window so it lands on top of its
+ * NEW tier, then {@link reorder} re-ranks so pinned windows sit above unpinned ones.
+ */
+export function toggleWindowPin(tabId: string) {
+  const current = read(tabId);
+  geoState.set(tabId, { ...current, pinned: !current.pinned, z: ++nextZ });
+  reorder();
   persist();
   notify();
 }

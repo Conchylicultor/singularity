@@ -3,6 +3,7 @@ import {
   bringWindowToFront,
   restoreWindow,
   snapWindowDirection,
+  toggleWindowPin,
 } from "./hooks/use-window-geometry";
 import type { SnapDirection } from "./hooks/use-snap";
 
@@ -46,6 +47,12 @@ export function snapFocusedWindow(dir: SnapDirection) {
 export function minimizeFocusedWindow() {
   const tabId = getFocusedSurfaceId();
   if (tabId) restoreWindow(tabId, /* minimize */ true);
+}
+
+/** Toggle the focused window's always-on-top flag. */
+export function togglePinFocusedWindow() {
+  const tabId = getFocusedSurfaceId();
+  if (tabId) toggleWindowPin(tabId);
 }
 
 /** Close the focused window. */

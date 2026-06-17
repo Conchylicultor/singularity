@@ -1,4 +1,10 @@
-import { useEffect, useLayoutEffect, useMemo, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useMemo,
+  type CSSProperties,
+} from "react";
 import { MdWebAsset } from "react-icons/md";
 import { useTabs } from "@plugins/apps/web";
 import {
@@ -8,6 +14,7 @@ import {
 } from "@plugins/apps/plugins/surface/web";
 import {
   pruneWindowGeometry,
+  toggleWindowPin,
   useWindowGeometry,
 } from "./hooks/use-window-geometry";
 import { WindowChrome, WINDOW_TITLEBAR_INSET } from "./components/window-chrome";
@@ -50,6 +57,7 @@ export const floatingDef: PlacementDef = {
  */
 function FloatingChrome({ tabId, appId, title, focused, onClose }: PlacementChromeProps) {
   const [geo, setGeo, bringToFront] = useWindowGeometry(tabId);
+  const togglePin = useCallback(() => toggleWindowPin(tabId), [tabId]);
   const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
     usePlacementStyle();
 
@@ -99,6 +107,7 @@ function FloatingChrome({ tabId, appId, title, focused, onClose }: PlacementChro
       geo={geo}
       setGeo={setGeo}
       onClose={onClose}
+      onTogglePin={togglePin}
     />
   );
 }
