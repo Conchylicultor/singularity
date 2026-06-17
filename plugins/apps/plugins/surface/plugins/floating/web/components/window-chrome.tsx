@@ -1,12 +1,26 @@
-import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
-import { MdClose, MdRemove, MdCropSquare, MdFilterNone } from "react-icons/md";
+import {
+  useCallback,
+  useRef,
+  useState,
+  type PointerEvent as ReactPointerEvent,
+} from "react";
+import {
+  MdClose,
+  MdRemove,
+  MdCropSquare,
+  MdFilterNone,
+  MdWebAsset,
+} from "react-icons/md";
 import { Apps } from "@plugins/apps/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-geometry";
 import { detectSnapZone, setSnapPreview, type SnapZone } from "../hooks/use-snap";
+import { useWindowKeyboardInteraction } from "../hooks/use-window-interaction";
 import { WindowResizeHandles } from "./window-resize-handles";
+import { WindowSystemMenu, type MenuAnchor } from "./window-system-menu";
 
 /** Fixed titlebar height; mirrored by `WINDOW_TITLEBAR_INSET` so content clears it. */
 export const WINDOW_TITLEBAR_INSET = "2.25rem";
@@ -42,6 +56,23 @@ export function WindowChrome({
 }: WindowChromeProps) {
   const apps = Apps.App.useContributions();
   const app = apps.find((a) => a.id === appId);
+
+  const titlebarRef = useRef<HTMLDivElement>(null);
+  const [menuAnchor, setMenuAnchor] = useState<MenuAnchor | null>(null);
+  const openMenuAt = useCallback(
+    (x: number, y: number) => setMenuAnchor({ x, y }),
+    [],
+  );
+
+  // The desktop backdrop box (titlebar → tab container → backdrop), read lazily
+  // so the keyboard move/size clamp matches the pointer-drag clamp.
+  const getBounds = useCallback((): Bounds | null => {
+    const backdrop = titlebarRef.current?.parentElement?.parentElement ?? null;
+    const rect = backdrop?.getBoundingClientRect();
+    return rect ? { width: rect.width, height: rect.height } : null;
+  }, []);
+
+  const interaction = useWindowKeyboardInteraction(geo, setGeo, getBounds);
 
   // Drag the titlebar. A snapped/maximized window pops back to its restored free
   // box (centered under the cursor) on the first move, then free-drags. During the
@@ -149,7 +180,19 @@ export function WindowChrome({
     setGeo((g) => ({ ...g, minimized: !g.minimized }));
   }, [setGeo]);
 
-  const Icon = app?.icon;
+  // System-menu "Restore": pop a snapped/maximized window back to its free box
+  // (and un-minimize), mirroring the maximize-toggle's restore path.
+  const restore = useCallback(() => {
+    setGeo((g) => ({
+      ...g,
+      snap: null,
+      ...(g.restore ?? {}),
+      restore: undefined,
+      minimized: false,
+    }));
+  }, [setGeo]);
+
+  const Icon = app?.icon ?? MdWebAsset;
   const label = title ?? app?.tooltip ?? "Window";
 
   return (
@@ -157,14 +200,30 @@ export function WindowChrome({
       {/* Titlebar — absolutely pinned to the top of the window box, overlaying the
           surface (which SurfaceBody insets below it). Drag surface + controls. */}
       <div
+        ref={titlebarRef}
         onPointerDown={onTitlePointerDown}
         onDoubleClick={toggleMaximize}
-        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b px-sm py-xs cursor-grab ${
+        onContextMenu={(e) => {
+          e.preventDefault();
+          openMenuAt(e.clientX, e.clientY);
+        }}
+        className={`absolute inset-x-0 top-0 z-raised flex shrink-0 items-center gap-xs border-b pr-sm pl-2xs py-xs cursor-grab ${
           focused ? "bg-muted" : "bg-muted/40"
         }`}
         style={{ height: WINDOW_TITLEBAR_INSET, touchAction: "none" }}
       >
-        {Icon && <Icon className="size-4 shrink-0 text-muted-foreground" />}
+        {/* The window icon doubles as the system-menu button (Win32 icon-click). */}
+        <div onPointerDown={(e) => e.stopPropagation()} className="shrink-0">
+          <IconButton
+            icon={Icon}
+            label="Window menu"
+            size="icon-sm"
+            onClick={(e) => {
+              const r = e.currentTarget.getBoundingClientRect();
+              openMenuAt(r.left, r.bottom);
+            }}
+          />
+        </div>
         <Text variant="label" as="span" className="min-w-0 flex-1 truncate">
           {label}
         </Text>
@@ -194,6 +253,40 @@ export function WindowChrome({
       {/* Resize handles only in the normal state — a min/snapped window has no
           free border to drag. */}
       {!geo.minimized && !geo.snap && <WindowResizeHandles setGeo={setGeo} />}
+
+      {/* Modal keyboard move/size affordance: a full-window cursor layer (a click
+          drops the window where it is) plus a centred keyboard hint. */}
+      {interaction.mode && (
+        <div
+          className="absolute inset-0 z-raised"
+          style={{
+            cursor: interaction.mode === "move" ? "move" : "nwse-resize",
+          }}
+        >
+          <Surface
+            level="overlay"
+            className="pointer-events-none absolute left-1/2 top-3 -translate-x-1/2 px-sm py-2xs"
+          >
+            <Text variant="caption" as="span">
+              {interaction.mode === "move"
+                ? "Arrow keys move · Enter places · Esc cancels"
+                : "Arrow keys resize · Enter applies · Esc cancels"}
+            </Text>
+          </Surface>
+        </div>
+      )}
+
+      <WindowSystemMenu
+        anchor={menuAnchor}
+        onClose={() => setMenuAnchor(null)}
+        geo={geo}
+        onRestore={restore}
+        onMove={() => interaction.begin("move")}
+        onSize={() => interaction.begin("size")}
+        onMinimize={toggleMinimize}
+        onMaximize={toggleMaximize}
+        onCloseWindow={onClose}
+      />
     </>
   );
 }
