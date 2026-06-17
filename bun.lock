@@ -132,6 +132,10 @@
       "name": "@singularity/plugin-apps-browser-omnibox",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/browser/plugins/proxy": {
+      "name": "@singularity/plugin-apps-browser-proxy",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/browser/plugins/shell": {
       "name": "@singularity/plugin-apps-browser-shell",
       "version": "0.0.1",
@@ -1785,6 +1789,10 @@
     },
     "plugins/infra/plugins/runtime-profiler": {
       "name": "@singularity/plugin-infra-runtime-profiler",
+      "version": "0.0.1",
+    },
+    "plugins/infra/plugins/safe-fetch": {
+      "name": "@singularity/plugin-infra-safe-fetch",
       "version": "0.0.1",
     },
     "plugins/infra/plugins/secrets": {
@@ -3586,6 +3594,8 @@
 
     "@singularity/plugin-apps-browser-omnibox": ["@singularity/plugin-apps-browser-omnibox@workspace:plugins/apps/plugins/browser/plugins/omnibox"],
 
+    "@singularity/plugin-apps-browser-proxy": ["@singularity/plugin-apps-browser-proxy@workspace:plugins/apps/plugins/browser/plugins/proxy"],
+
     "@singularity/plugin-apps-browser-shell": ["@singularity/plugin-apps-browser-shell@workspace:plugins/apps/plugins/browser/plugins/shell"],
 
     "@singularity/plugin-apps-browser-start-page": ["@singularity/plugin-apps-browser-start-page@workspace:plugins/apps/plugins/browser/plugins/start-page"],
@@ -4375,6 +4385,8 @@
     "@singularity/plugin-infra-paths": ["@singularity/plugin-infra-paths@workspace:plugins/infra/plugins/paths"],
 
     "@singularity/plugin-infra-runtime-profiler": ["@singularity/plugin-infra-runtime-profiler@workspace:plugins/infra/plugins/runtime-profiler"],
+
+    "@singularity/plugin-infra-safe-fetch": ["@singularity/plugin-infra-safe-fetch@workspace:plugins/infra/plugins/safe-fetch"],
 
     "@singularity/plugin-infra-secrets": ["@singularity/plugin-infra-secrets@workspace:plugins/infra/plugins/secrets"],
 

@@ -7,6 +7,7 @@ export { Browser } from "./slots";
 export {
   useBrowserNav,
   useBrowserTabs,
+  useBrowserProxy,
   BrowserTabsStore,
 } from "./nav-store";
 export type {
@@ -15,6 +16,7 @@ export type {
   BrowserTabsState,
   BrowserTabSummary,
   BrowserTabsApi,
+  BrowserProxyApi,
 } from "./nav-store";
 export { Favicon, type FaviconProps } from "./components/favicon";
 

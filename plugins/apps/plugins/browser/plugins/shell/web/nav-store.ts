@@ -26,6 +26,12 @@ export type BrowserTabsState = {
   activeId: string;
   /** Monotonic id counter — deterministic per surface (no Date.now/random). */
   seq: number;
+  /**
+   * Whether the framing-stripping proxy is on for this surface. When on, the
+   * webview loads each tab through the same-origin proxy so framing-blocked
+   * sites render. Top-level surface state (not per-tab); default on.
+   */
+  proxyEnabled: boolean;
 };
 
 /** A fresh tab pointed at `url` (default: the start page). */
@@ -44,6 +50,7 @@ const INITIAL: BrowserTabsState = {
   tabs: [FIRST],
   activeId: FIRST.id,
   seq: 1,
+  proxyEnabled: true,
 };
 
 /** Per-surface store (each surface tab gets its own isolated instance). */
@@ -207,7 +214,7 @@ export function useBrowserTabs(): BrowserTabsApi {
           const remaining = s.tabs.filter((t) => t.id !== id);
           if (remaining.length === 0) {
             const tab = freshTab(s.seq);
-            return { tabs: [tab], activeId: tab.id, seq: s.seq + 1 };
+            return { ...s, tabs: [tab], activeId: tab.id, seq: s.seq + 1 };
           }
           let { activeId } = s;
           if (activeId === id) {
@@ -239,4 +246,29 @@ export function useBrowserTabs(): BrowserTabsApi {
     activeId: state.activeId,
     ...actions,
   };
+}
+
+/** The per-surface proxy-mode API consumed by the proxy toggle + webview. */
+export interface BrowserProxyApi {
+  /** Whether the framing-stripping proxy is on for this surface. */
+  enabled: boolean;
+  /** Flip the proxy on/off for this surface. */
+  toggle(): void;
+}
+
+/**
+ * Reads the surface's proxy-mode flag and returns its toggle. Must be called
+ * inside `<BrowserTabsStore.Provider>`.
+ */
+export function useBrowserProxy(): BrowserProxyApi {
+  const state = BrowserTabsStore.useStore();
+  const store = BrowserTabsStore.useStoreApi();
+
+  const toggle = useMemo(
+    () => () =>
+      store.setState((s) => ({ ...s, proxyEnabled: !s.proxyEnabled })),
+    [store],
+  );
+
+  return { enabled: state.proxyEnabled, toggle };
 }

@@ -1,12 +1,27 @@
+import { useEffect, useRef } from "react";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   Browser,
+  useBrowserNav,
+  useBrowserProxy,
   useBrowserTabs,
 } from "@plugins/apps/plugins/browser/plugins/shell/web";
+import {
+  proxyUrl,
+  isProxyUrl,
+  parseBrowserProxyNavMessage,
+} from "@plugins/apps/plugins/browser/plugins/proxy/core";
 import { LoadingBar } from "./loading-bar";
+
+/**
+ * Base iframe sandbox capabilities. `allow-same-origin` is appended ONLY for
+ * direct (non-proxied) cross-origin loads — see {@link Viewport}.
+ */
+const BASE_SANDBOX =
+  "allow-scripts allow-forms allow-popups allow-popups-to-escape-sandbox";
 
 /**
  * The webview viewport. Every tab with a real URL keeps a persistent iframe so
@@ -15,35 +30,86 @@ import { LoadingBar } from "./loading-bar";
  */
 export function Viewport() {
   const { tabs, finishLoad } = useBrowserTabs();
+  const { enabled } = useBrowserProxy();
+  const { navigate } = useBrowserNav();
   const activeLoading = tabs.find((t) => t.active)?.loading ?? false;
+  const activeId = tabs.find((t) => t.active)?.id;
+
+  // Map tabId → iframe element, populated via each iframe's ref callback. Used
+  // to match an incoming postMessage `e.source` against our own iframes (and
+  // specifically the active one) before trusting it as a nav request.
+  const framesRef = useRef(new Map<string, HTMLIFrameElement>());
+
+  // NAV SYNC: the proxied page can't self-navigate (it runs in an opaque
+  // origin and the injected script intercepts link clicks). It instead posts a
+  // nav message to us; we route it through `navigate()` so the omnibox +
+  // history stay in sync and the page reloads through the proxy exactly once.
+  // We only honor messages whose `e.source` is the ACTIVE tab's iframe — only
+  // the visible iframe receives user clicks, and an inactive/foreign frame must
+  // not be able to hijack navigation.
+  useEffect(() => {
+    const onMessage = (e: MessageEvent) => {
+      const msg = parseBrowserProxyNavMessage(e.data);
+      if (!msg) return;
+      if (!activeId) return;
+      const activeFrame = framesRef.current.get(activeId);
+      if (!activeFrame || e.source !== activeFrame.contentWindow) return;
+      navigate(msg.url);
+    };
+    window.addEventListener("message", onMessage);
+    return () => window.removeEventListener("message", onMessage);
+  }, [activeId, navigate]);
 
   return (
     <Overlay
       className="h-full w-full bg-background"
       above={activeLoading ? <LoadingBar /> : undefined}
     >
-      {tabs.map((tab) => (
-        <div
-          key={tab.id}
-          className={cn("h-full w-full", !tab.active && "hidden")}
-        >
-          {tab.url === "" ? (
-            tab.active ? (
-              <StartPageHost />
-            ) : null
-          ) : (
-            <iframe
-              key={`${tab.id}:${tab.loadKey}`}
-              src={tab.url}
-              title="Browser viewport"
-              className="h-full w-full border-0"
-              sandbox="allow-scripts allow-same-origin allow-forms allow-popups allow-popups-to-escape-sandbox"
-              referrerPolicy="no-referrer"
-              onLoad={() => finishLoad(tab.id)}
-            />
-          )}
-        </div>
-      ))}
+      {tabs.map((tab) => {
+        // When proxy mode is on, real URLs load through the same-origin proxy
+        // (the start page, URL `""`, has no iframe).
+        const src = enabled && tab.url !== "" ? proxyUrl(tab.url) : tab.url;
+        // SECURITY: proxied content is served from OUR origin. If the iframe
+        // kept `allow-same-origin` while same-origin (proxied), the foreign
+        // page's JS would be same-origin with the Singularity app and could
+        // reach `window.parent`. So we DROP `allow-same-origin` for proxied
+        // (same-origin) src — opaque, isolated origin — and only add it back
+        // for direct cross-origin loads (where a site is same-origin with
+        // itself, not with us). See the security model in the design doc.
+        const sandbox = isProxyUrl(src)
+          ? BASE_SANDBOX
+          : `${BASE_SANDBOX} allow-same-origin`;
+
+        return (
+          <div
+            key={tab.id}
+            className={cn("h-full w-full", !tab.active && "hidden")}
+          >
+            {tab.url === "" ? (
+              tab.active ? (
+                <StartPageHost />
+              ) : null
+            ) : (
+              <iframe
+                key={`${tab.id}:${tab.loadKey}`}
+                ref={(el) => {
+                  if (el) {
+                    framesRef.current.set(tab.id, el);
+                  } else {
+                    framesRef.current.delete(tab.id);
+                  }
+                }}
+                src={src}
+                title="Browser viewport"
+                className="h-full w-full border-0"
+                sandbox={sandbox}
+                referrerPolicy="no-referrer"
+                onLoad={() => finishLoad(tab.id)}
+              />
+            )}
+          </div>
+        );
+      })}
     </Overlay>
   );
 }

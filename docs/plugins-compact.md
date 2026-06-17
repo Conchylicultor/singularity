@@ -17,7 +17,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
       - Plugins:
         - **`hidden`** — Hidden app rail — no switcher; sidebar slides flush to the edge.
         - **`rail`** — App-rail framing — the default 2.5rem icon rail.
-    - **`browser`** [8 sub-plugins] — Minimal iframe-based web browser app.
+    - **`browser`** [9 sub-plugins] — Minimal iframe-based web browser app.
     - **`debug`** [1 sub-plugin] — Debug app.
     - **`deploy`** [2 sub-plugins] — Self-hosted deployment platform. Manages remote servers, health checks, deploys, and logs from the UI.
     - **`file-explorer`** [1 sub-plugin] — File explorer app.
@@ -174,6 +174,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`mcp`** [load-bearing] — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
     - **`paths`**
     - **`runtime-profiler`** [load-bearing]
+    - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which follows redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
     - **`secrets`** [load-bearing] — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
     - **`worktree`**
 

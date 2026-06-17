@@ -110,7 +110,6 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Routes: `POST /api/browser/bookmarks`, `DELETE /api/browser/bookmarks/:id`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
-            - Endpoint callers: `history`
         - **`history`** — Browser history: a headless recorder that logs every navigation to the history store, plus the useRecents() hook over the browser-recents live resource. Browser history store (browser_history table), the distinct-by-url recents live resource, and the POST /api/browser/history record endpoint.
           - Web:
             - Contributes: `Browser.Effects` "Effects" → `RecordVisits`
@@ -135,14 +134,25 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `NormalizedInput`; Values: `normalizeInput`
           - Cross-plugin:
             - Imported by: `apps/browser/start-page`
+        - **`proxy`** — Browser proxy-mode toggle: a shield button in the chrome actions that flips the framing-stripping proxy on/off for the surface. Framing-stripping browser proxy: fetches the target server-side (SSRF-guarded, anonymous), strips X-Frame-Options/CSP and credential headers, and rewrites HTML to inject a <base> + nav-interception script so framing-blocked sites render in the in-app browser.
+          - Web:
+            - Contributes: `Browser.Actions` "Chrome actions" → `ProxyToggle`
+            - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.useBrowserProxy`, `primitives/icon-button.IconButton`
+          - Server:
+            - Uses: `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
+            - Routes: `GET /api/browser/proxy`
+          - Core:
+            - Exports: Types: `BrowserProxyNavMessage`; Values: `BROWSER_PROXY_NAV_MESSAGE`, `BROWSER_PROXY_PATH`, `isProxyUrl`, `parseBrowserProxyNavMessage`, `proxyUrl`
+          - Cross-plugin:
+            - Endpoint callers: `history`
         - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.
           - Web:
-            - Slots: `Browser.TabStrip` ← `apps.browser.tabs`, `Browser.NavControls` ← `apps.browser.navigation`, `Browser.Omnibox` ← `apps.browser.omnibox`, `Browser.Actions` ← `apps.browser.bookmarks`, `apps.browser.webview`, `Browser.SubBar` ← `apps.browser.bookmarks`, `Browser.Viewport` ← `apps.browser.webview`, `Browser.StartPage` ← `apps.browser.start-page`, `Browser.Effects` ← `apps.browser.history`
+            - Slots: `Browser.TabStrip` ← `apps.browser.tabs`, `Browser.NavControls` ← `apps.browser.navigation`, `Browser.Omnibox` ← `apps.browser.omnibox`, `Browser.Actions` ← `apps.browser.bookmarks`, `apps.browser.proxy`, `apps.browser.webview`, `Browser.SubBar` ← `apps.browser.bookmarks`, `Browser.Viewport` ← `apps.browser.webview`, `Browser.StartPage` ← `apps.browser.start-page`, `Browser.Effects` ← `apps.browser.history`
             - Contributes: `Apps.App` "Browser" → `BrowserLayout`
             - Uses: `apps.Apps`, `primitives/bar.Bar`, `primitives/css/frame.Frame`, `primitives/scoped-store.defineScopedStore`, `primitives/slot-render.defineMountSlot`, `primitives/slot-render.defineRenderSlot`
-            - Exports: Types: `BrowserNavApi`, `BrowserTab`, `BrowserTabsApi`, `BrowserTabsState`, `BrowserTabSummary`, `FaviconProps`; Values: `Browser`, `BrowserTabsStore`, `Favicon`, `useBrowserNav`, `useBrowserTabs`
+            - Exports: Types: `BrowserNavApi`, `BrowserProxyApi`, `BrowserTab`, `BrowserTabsApi`, `BrowserTabsState`, `BrowserTabSummary`, `FaviconProps`; Values: `Browser`, `BrowserTabsStore`, `Favicon`, `useBrowserNav`, `useBrowserProxy`, `useBrowserTabs`
           - Cross-plugin:
-            - Imported by: `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/navigation`, `apps/browser/omnibox`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/browser/webview`
+            - Imported by: `apps/browser/bookmarks`, `apps/browser/history`, `apps/browser/navigation`, `apps/browser/omnibox`, `apps/browser/proxy`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/browser/webview`
         - **`start-page`** — Browser start page: the empty-state landing shown in the viewport when no URL is loaded — a centered hero (wordmark + search), curated quick links, and the live bookmarks and recents sections.
           - Web:
             - Contributes: `Browser.StartPage` "Start page" → `StartPage`
@@ -154,7 +164,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`webview`** — Browser webview: the iframe viewport with a loading bar and start-page fallback, plus an open-in-new-tab chrome action.
           - Web:
             - Contributes: `Browser.Viewport` "Viewport" → `Viewport`, `Browser.Actions` "Chrome actions" → `OpenExternal`
-            - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.useBrowserNav`, `apps/browser/shell.useBrowserTabs`, `primitives/css/center.Center`, `primitives/css/overlay.Overlay`, `primitives/css/placeholder.Placeholder`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`
+            - Uses: `apps/browser/shell.Browser`, `apps/browser/shell.useBrowserNav`, `apps/browser/shell.useBrowserProxy`, `apps/browser/shell.useBrowserTabs`, `primitives/css/center.Center`, `primitives/css/overlay.Overlay`, `primitives/css/placeholder.Placeholder`, `primitives/css/ui-kit.cn`, `primitives/icon-button.IconButton`
     - **`debug`** — Debug app.
       - Plugins:
         - **`shell`** — App shell for the debug tools. Registers the /debug app entry and defines DebugApp.Sidebar/Toolbar slots.
@@ -2663,6 +2673,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Imported by: `framework/server-core`, `infra/endpoints`
       - Core:
         - Exports: Types: `Aggregate`, `ParentBreakdown`, `SlowSpan`, `SlowSpanHandler`, `SpanKind`, `SpanRef`; Values: `getRuntimeProfile`, `installProfilingSuppressionRuntime`, `installSpanContextRuntime`, `onSlowSpan`, `recordEntrySpan`, `recordSpan`, `resetRuntimeProfile`, `runWithoutProfiling`
+    - **`safe-fetch`** — SSRF-guarded fetch primitive: parsePublicUrl + DNS-resolution checks (isPrivateIp/assertResolvesPublic) and safeFetch, which follows redirects with per-hop revalidation so a target can never reach loopback/private/link-local/metadata addresses.
+      - Cross-plugin:
+        - Imported by: `apps/browser/proxy`
+      - Server:
+        - Exports: Types: `SafeFetchInit`; Values: `assertResolvesPublic`, `isPrivateIp`, `parsePublicUrl`, `safeFetch`, `SsrfError`
     - **`secrets`** — Encrypted key-value primitive. AES-256-GCM blob at ~/.singularity/secrets.json.enc with the master key in the OS keychain (fallback to ~/.singularity/secrets/.key). Hosted on the central runtime; consumers (auth, config) call /api/secrets/* via the gateway.
       - Core:
         - Uses: `infra/endpoints.defineEndpoint`
@@ -3614,7 +3629,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.iconSizeFor`, `primitives/css/ui-kit.useControlSize`, `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/tabs`, `apps/browser/webview`, `apps/pages/history`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `apps/surface/solo`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `review/config-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`
+        - Imported by: `apps`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/proxy`, `apps/browser/tabs`, `apps/browser/webview`, `apps/pages/history`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `apps/surface/solo`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `review/config-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/css/section-label.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/loading.Loading`
