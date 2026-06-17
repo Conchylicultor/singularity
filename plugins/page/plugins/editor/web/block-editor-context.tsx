@@ -10,31 +10,73 @@ import {
 } from "react";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
+import { useUndoRedo } from "@plugins/primitives/plugins/undo-redo/web";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import { subtreeIds } from "@plugins/primitives/plugins/tree/core";
 import {
   updateBlock,
   moveBlock,
   applyBlockOpEndpoint,
+  patchBlocks,
   blocksResource,
   prevVisibleLeaf,
   textOf,
+  applyBlockOp,
+  diffBlocks,
+  patchesFromDiff,
+  isEmptyPatch,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
   pasteBlocks,
   type Block,
   type BlockOp,
+  type BlockPatch,
   type RichText,
   type SerializedBlock,
 } from "../core";
 import {
   applyOverlayOp,
   buildOverlayOp,
+  buildPatchOverlayOp,
   isReflected,
+  isPatchReflected,
   toNodes,
+  fromNodes,
   type BlockOverlayOp,
 } from "./internal/optimistic-block-ops";
 import type { BlockEditorAPI } from "./types";
+
+/** Human labels for the structural-undo history (tooltips / menus). */
+const OP_LABELS: Record<BlockOp["kind"], string> = {
+  insert: "Insert block",
+  delete: "Delete block",
+  split: "Split block",
+  merge: "Merge blocks",
+  indent: "Indent block",
+  outdent: "Outdent block",
+  move: "Move block",
+};
+
+/** The block id the user is "on" for an op, used to restore focus on undo/redo. */
+function opFocusId(op: BlockOp): string {
+  switch (op.kind) {
+    case "insert":
+    case "split":
+      return op.newId;
+    case "merge":
+    case "delete":
+    case "indent":
+    case "outdent":
+    case "move":
+      return op.blockId;
+  }
+}
+
+/** Run the pure reducer over full rows and project back to `Block[]`. */
+function fromOpResult(before: Block[], op: BlockOp): Block[] {
+  return fromNodes(applyBlockOp(toNodes(before), op), before);
+}
 
 /**
  * A block's focus capabilities, registered by its renderer. Every focusable
@@ -90,6 +132,14 @@ interface BlockEditorContextValue {
    * once the live resource re-renders the list.
    */
   insert: (type: string, data: unknown) => void;
+  /** Structural (document-tier) undo — reverses the last recorded block edit. */
+  undo: () => void;
+  /** Structural (document-tier) redo — re-applies the last undone block edit. */
+  redo: () => void;
+  /** Whether there is a recorded structural edit to undo. */
+  canUndo: boolean;
+  /** Whether there is an undone structural edit to redo. */
+  canRedo: boolean;
   /**
    * Optional navigation callback so link/mention block renderers can open a
    * page without hardcoding any host app's pane. Undefined when the host did
@@ -130,9 +180,17 @@ export function BlockEditorProvider({
     resource: blocksResource,
     params,
     apply: applyOverlayOp,
+    // Structural ops keep their own `op` endpoint; undo/redo patches POST to the
+    // generic `patch` endpoint. Both flow through this one instance so the
+    // overlay + freeze pipeline (and confirmation) is shared.
     mutate: (v) =>
-      fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then(() => undefined),
-    isConfirmedBy: (serverData, v) => isReflected(serverData, v.effect),
+      v.tag === "patch"
+        ? fetchEndpoint(patchBlocks, { pageId }, { body: v.patch }).then(() => undefined)
+        : fetchEndpoint(applyBlockOpEndpoint, { pageId }, { body: v.op }).then(() => undefined),
+    isConfirmedBy: (serverData, v) =>
+      v.tag === "patch"
+        ? isPatchReflected(serverData, v.patch)
+        : isReflected(serverData, v.effect),
   });
 
   // Block ids whose text any in-flight op owns — `BlockTextEditor` freezes their
@@ -173,12 +231,65 @@ export function BlockEditorProvider({
     else pendingFocusRef.current = id;
   }, []);
 
+  // --- Structural undo/redo (document tier) ---------------------------------
+  // The per-block Lexical `HistoryPlugin` owns intra-block TEXT undo; THIS owns
+  // the document tier (create/split/merge/indent/outdent/delete/move/convert/
+  // bulk). Recording happens at the mutation chokepoints below: snapshot the
+  // current rows, compute the resulting rows, diff into a minimal patch pair,
+  // and `record` undo/redo thunks that dispatch those patches.
+  const { record, undo, redo, canUndo, canRedo } = useUndoRedo();
+
+  // Dispatch a minimal patch through the SAME optimistic instance (instant
+  // overlay + server reconcile). Goes DIRECTLY to `optimistic.dispatch`, never
+  // through `recordStructural`, so a replayed patch is never re-recorded — and
+  // the primitive's re-entrancy guard ignores `record` during replay anyway.
+  const dispatchPatch = useCallback(
+    (patch: BlockPatch) => {
+      if (isEmptyPatch(patch)) return;
+      optimistic.dispatch(buildPatchOverlayOp(patch));
+    },
+    [optimistic],
+  );
+
+  // Record a structural before→after change as a reversible command. Diffs the
+  // two full-row snapshots into minimal forward/reverse patches; the thunks
+  // dispatch them and best-effort restore focus to `focusId` (the block the user
+  // was on). A no-op diff records nothing.
+  const recordStructural = useCallback(
+    (before: Block[], after: Block[], label: string, focusId: string | null) => {
+      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
+      if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
+      // Fallback focus target: the first row the patch upserts (so even if the
+      // originally-focused block was deleted, undo/redo land somewhere sane).
+      const redoFocus = focusId ?? redoPatch.upserts[0]?.id ?? null;
+      const undoFocus = focusId ?? undoPatch.upserts[0]?.id ?? null;
+      record({
+        label,
+        undo: () => {
+          dispatchPatch(undoPatch);
+          if (undoFocus) queueMicrotask(() => focusBlock(undoFocus));
+        },
+        redo: () => {
+          dispatchPatch(redoPatch);
+          if (redoFocus) queueMicrotask(() => focusBlock(redoFocus));
+        },
+      });
+    },
+    [record, dispatchPatch, focusBlock],
+  );
+
   const bulkDelete = useCallback(
     (ids: string[]) => {
       if (ids.length === 0) return;
+      // Record before firing: after = current rows minus each id's full subtree
+      // (the server cascade-deletes the subtree, so mirror that exactly).
+      const before = rowsRef.current;
+      const removed = new Set(ids.flatMap((id) => subtreeIds(before, id)));
+      const after = before.filter((b) => !removed.has(b.id));
+      recordStructural(before, after, "Delete blocks", null);
       bulkDeleteMutation({ params: { pageId }, body: { ids } });
     },
-    [pageId, bulkDeleteMutation],
+    [pageId, bulkDeleteMutation, recordStructural],
   );
 
   const bulkMove = useCallback(
@@ -222,6 +333,17 @@ export function BlockEditorProvider({
 
   const move = useCallback(
     (id: string, dest: { parentId: string | null; rank: Rank }) => {
+      // Record before firing: the destination parent/rank is client-known, so the
+      // resulting rows are exactly `applyBlockOp(before, move)` (the same reducer
+      // the server's move path is consistent with for a single in-page reparent).
+      const before = rowsRef.current;
+      const after = fromOpResult(before, {
+        kind: "move",
+        blockId: id,
+        parentId: dest.parentId,
+        rank: dest.rank.toJSON(),
+      });
+      recordStructural(before, after, OP_LABELS.move, id);
       // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: DnD rank/parent write; blocksResource push re-renders, drag again to fix.
       void fetchEndpoint(
         moveBlock,
@@ -229,18 +351,24 @@ export function BlockEditorProvider({
         { body: { parentId: dest.parentId, rank: dest.rank } },
       );
     },
-    [],
+    [recordStructural],
   );
 
-  // Apply a single tree op optimistically. The effect + textOwners are captured
-  // from the CURRENT optimistic rows (`rowsRef.current`), so chained keystrokes
-  // compose; `optimistic.dispatch` overlays the prediction and fires the network
-  // call. New blocks carry client-minted ids, so callers mint + focus up front.
+  // Apply a single tree op optimistically AND record it for structural undo. The
+  // effect + textOwners are captured from the CURRENT optimistic rows
+  // (`rowsRef.current`), so chained keystrokes compose; `optimistic.dispatch`
+  // overlays the prediction and fires the network call. New blocks carry
+  // client-minted ids, so callers mint + focus up front. The op's after-state is
+  // computed with the SAME pure `applyBlockOp` the server runs, so the recorded
+  // diff is exact.
   const dispatchOp = useCallback(
     (op: BlockOp) => {
-      optimistic.dispatch(buildOverlayOp(op, rowsRef.current));
+      const before = rowsRef.current;
+      const after = fromOpResult(before, op);
+      recordStructural(before, after, OP_LABELS[op.kind], opFocusId(op));
+      optimistic.dispatch(buildOverlayOp(op, before));
     },
-    [optimistic],
+    [optimistic, recordStructural],
   );
 
   // Focus a freshly-minted block by its known id. If its text editor has already
@@ -275,10 +403,26 @@ export function BlockEditorProvider({
         updateBlockMutation({ params: { id: blockId }, body: { data } });
       },
       setExpanded(expanded: boolean) {
+        // Pure view state — deliberately NOT recorded into structural history
+        // (Notion doesn't undo collapse/expand; it's not a document edit). It
+        // self-corrects on re-click via the blocksResource push.
         // eslint-disable-next-line endpoints/no-void-fetch-endpoint -- fire-and-forget: expand/collapse toggle; self-correcting on re-click via blocksResource push.
         void fetchEndpoint(updateBlock, { id: blockId }, { body: { expanded } });
       },
       convertTo(type: string, data: unknown, opts?: { expanded?: boolean }) {
+        // Type conversion IS a recorded document edit. Compute the single-row
+        // after-state (type + data, and expanded when the convert resets it) and
+        // record before firing the PATCH.
+        const before = rowsRef.current;
+        const current = before.find((b) => b.id === blockId);
+        if (current) {
+          const after = before.map((b) =>
+            b.id === blockId
+              ? { ...b, type, data, expanded: opts?.expanded ?? b.expanded }
+              : b,
+          );
+          recordStructural(before, after, "Change block type", blockId);
+        }
         updateBlockMutation({ params: { id: blockId }, body: { type, data, ...(opts ?? {}) } });
       },
       insertAfter(type: string, data: unknown) {
@@ -383,7 +527,7 @@ export function BlockEditorProvider({
         setFocusedBlockId(blockId);
       },
     }),
-    [dispatchOp, focusNew, focusBlock, updateBlockMutation],
+    [dispatchOp, focusNew, focusBlock, updateBlockMutation, recordStructural],
   );
 
   return (
@@ -407,6 +551,10 @@ export function BlockEditorProvider({
         bulkDuplicate,
         paste,
         insert,
+        undo,
+        redo,
+        canUndo,
+        canRedo,
         onOpenPage,
       }}
     >

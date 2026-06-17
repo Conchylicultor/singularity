@@ -11,6 +11,7 @@ export {
   deleteBlock,
   moveBlock,
   applyBlockOpEndpoint,
+  patchBlocks,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
@@ -35,6 +36,14 @@ export type {
 
 export { BlockOpSchema, applyBlockOp, childrenOf, prevVisibleLeaf, textOf, runsOfNode, withRuns } from "./block-ops";
 export type { BlockOp, BlockNode } from "./block-ops";
+
+export {
+  BlockPatchSchema,
+  diffBlocks,
+  patchesFromDiff,
+  isEmptyPatch,
+} from "./block-diff";
+export type { BlockPatch, BlockDiff } from "./block-diff";
 
 export {
   MARK_ORDER,

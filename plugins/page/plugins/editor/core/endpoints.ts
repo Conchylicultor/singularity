@@ -3,6 +3,7 @@ import { defineEndpoint } from "@plugins/infra/plugins/endpoints/core";
 import { RankSchema } from "@plugins/primitives/plugins/rank/core";
 import { BlockSchema } from "./schemas";
 import { BlockOpSchema } from "./block-ops";
+import { BlockPatchSchema } from "./block-diff";
 import { SerializedBlockSchema } from "./serialized-block";
 
 export const CreateBlockBodySchema = z.object({
@@ -107,6 +108,17 @@ export const moveBlock = defineEndpoint({
 export const applyBlockOpEndpoint = defineEndpoint({
   route: "POST /api/pages/:pageId/blocks/op",
   body: BlockOpSchema,
+  response: z.object({ blocks: z.array(BlockSchema) }),
+});
+
+// Generic minimal-change patch: upsert the given full rows (insert-or-update by
+// id) and delete the given ids, all in one transaction. Used by undo/redo to
+// re-apply minimal forward/reverse changes onto the CURRENT document state (the
+// command-pattern inverse path), so undoing an old action never clobbers later
+// unrelated edits. The forward user actions keep their own specific endpoints.
+export const patchBlocks = defineEndpoint({
+  route: "POST /api/pages/:pageId/blocks/patch",
+  body: BlockPatchSchema,
   response: z.object({ blocks: z.array(BlockSchema) }),
 });
 

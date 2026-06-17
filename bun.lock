@@ -2552,6 +2552,10 @@
         "tailwindcss": "^4.1.4",
       },
     },
+    "plugins/primitives/plugins/undo-redo": {
+      "name": "@singularity/plugin-primitives-undo-redo",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/view-switcher": {
       "name": "@singularity/plugin-primitives-view-switcher",
       "version": "0.0.1",
@@ -4631,6 +4635,8 @@
     "@singularity/plugin-primitives-truncating-text": ["@singularity/plugin-primitives-truncating-text@workspace:plugins/primitives/plugins/truncating-text"],
 
     "@singularity/plugin-primitives-ui-kit": ["@singularity/plugin-primitives-ui-kit@workspace:plugins/primitives/plugins/ui-kit"],
+
+    "@singularity/plugin-primitives-undo-redo": ["@singularity/plugin-primitives-undo-redo@workspace:plugins/primitives/plugins/undo-redo"],
 
     "@singularity/plugin-primitives-view-switcher": ["@singularity/plugin-primitives-view-switcher@workspace:plugins/primitives/plugins/view-switcher"],
 

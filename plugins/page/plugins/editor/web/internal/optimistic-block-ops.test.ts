@@ -15,7 +15,10 @@ import { OpNoLongerApplies } from "@plugins/primitives/plugins/optimistic-mutati
 import type { Block } from "../../core";
 import {
   applyOverlayOp,
+  applyPatch,
   buildOverlayOp,
+  buildPatchOverlayOp,
+  isPatchReflected,
   isReflected,
   type BlockOverlayOp,
   type OpEffect,
@@ -174,24 +177,83 @@ describe("chained compose", () => {
     const r2 = after(r1);
     const rows = [mk("P1", null, r1, { text: "one" }), mk("P2", null, r2, { text: "two" })];
 
-    const split = buildOverlayOp({ kind: "split", blockId: "P1", position: 1, newId: "S" }, rows);
+    // `buildOverlayOp` always yields the `op`-tagged variant; assert + narrow.
+    const expectOp = (v: BlockOverlayOp): Extract<BlockOverlayOp, { tag: "op" }> => {
+      expect(v.tag).toBe("op");
+      if (v.tag !== "op") throw new Error("expected op variant");
+      return v;
+    };
+
+    const split = expectOp(buildOverlayOp({ kind: "split", blockId: "P1", position: 1, newId: "S" }, rows));
     expect(split.effect).toEqual({ kind: "create", id: "S" });
     expect(split.textOwners).toEqual(["P1"]);
 
-    const ins = buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows);
+    const ins = expectOp(buildOverlayOp({ kind: "insert", newId: "I", type: "text" }, rows));
     expect(ins.effect).toEqual({ kind: "create", id: "I" });
     expect(ins.textOwners).toEqual([]);
 
     // merge P2 into its prev sibling P1 ⇒ both are text owners.
-    const merge = buildOverlayOp({ kind: "merge", blockId: "P2" }, rows);
+    const merge = expectOp(buildOverlayOp({ kind: "merge", blockId: "P2" }, rows));
     expect(merge.effect).toEqual({ kind: "remove", id: "P2" });
     expect(merge.textOwners).toEqual(["P2", "P1"]);
 
-    const del = buildOverlayOp({ kind: "delete", blockId: "P1" }, rows);
+    const del = expectOp(buildOverlayOp({ kind: "delete", blockId: "P1" }, rows));
     expect(del.effect).toEqual({ kind: "remove", id: "P1" });
     expect(del.textOwners).toEqual([]);
 
-    const merged: BlockOverlayOp = merge;
-    expect(merged.op.kind).toBe("merge");
+    expect(merge.op.kind).toBe("merge");
+  });
+});
+
+// ---------------------------------------------------------------------------
+// Patch overlay (undo/redo inverse path)
+// ---------------------------------------------------------------------------
+
+describe("applyPatch", () => {
+  test("upserts insert new + replace existing, deletes drop ids", () => {
+    const blocks = [mk("A", null, a, { text: "a" }), mk("B", null, after(a), { text: "b" })];
+    const out = applyPatch(blocks, {
+      upserts: [mk("A", null, a, { text: "A!" }), mk("C", null, after(after(a)), { text: "c" })],
+      deleteIds: ["B"],
+    });
+    expect(out.map((b) => b.id).sort()).toEqual(["A", "C"]);
+    expect((out.find((b) => b.id === "A")!.data as { text: string }).text).toBe("A!");
+  });
+
+  test("deleting a subtree root drops descendants too (mirrors FK cascade)", () => {
+    const blocks = [
+      mk("P", null, a, { expanded: true }),
+      mk("C1", "P", after(a)),
+      mk("C2", "C1", after(after(a))),
+    ];
+    const out = applyPatch(blocks, { upserts: [], deleteIds: ["P"] });
+    expect(out.length).toBe(0);
+  });
+});
+
+describe("isPatchReflected", () => {
+  test("true once every upsert is present + matching and every delete is gone", () => {
+    const base = [mk("A", null, a, { type: "heading" })];
+    const patch = { upserts: [mk("A", null, a, { type: "heading" })], deleteIds: ["B"] };
+    expect(isPatchReflected(base, patch)).toBe(true);
+    // An upsert whose column differs ⇒ not yet reflected.
+    expect(isPatchReflected([mk("A", null, a, { type: "text" })], patch)).toBe(false);
+    // A delete id still present ⇒ not reflected.
+    expect(isPatchReflected([...base, mk("B", null, after(a))], patch)).toBe(false);
+  });
+
+  test("buildPatchOverlayOp freezes the upserted ids as text owners", () => {
+    const overlay = buildPatchOverlayOp({
+      upserts: [mk("A", null, a), mk("B", null, after(a))],
+      deleteIds: ["C"],
+    });
+    expect(overlay.tag).toBe("patch");
+    expect(overlay.textOwners).toEqual(["A", "B"]);
+  });
+
+  test("applyOverlayOp on a patch that the base already reflects throws", () => {
+    const base = [mk("A", null, a)];
+    const overlay = buildPatchOverlayOp({ upserts: [mk("A", null, a)], deleteIds: [] });
+    expect(() => applyOverlayOp(base, overlay)).toThrow(OpNoLongerApplies);
   });
 });

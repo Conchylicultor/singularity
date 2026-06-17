@@ -3,13 +3,11 @@ import { db } from "@plugins/database/server";
 import { implement } from "@plugins/infra/plugins/endpoints/server";
 import { applyBlockOpEndpoint } from "../../core/endpoints";
 import { applyBlockOp } from "../../core/block-ops";
-import { BlockSchema, PAGE_BLOCK_TYPE } from "../../core/schemas";
+import { BlockSchema } from "../../core/schemas";
 import { _blocks } from "./tables";
 import { loadPageBlocks } from "./forest";
 import { rowToNode, reconcileBlocks } from "./reconcile";
-import { notifyBlockChange } from "./notify";
-import { pagesLiveResource, blocksLiveResource } from "./resources";
-import { blocksChanged } from "./tables-events";
+import { notifyStructuralChange } from "./notify-structural-change";
 import { BlockLifecycle } from "./document-hooks";
 
 /**
@@ -34,7 +32,6 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
   // that depends on the soon-to-vanish rows, and collect their after-callbacks.
   const deletedSet = new Set(deletedIds);
   const deletedRows = rows.filter((r) => deletedSet.has(r.id));
-  const deletedPages = deletedRows.filter((r) => r.type === PAGE_BLOCK_TYPE);
 
   const afterCallbacks: Array<() => void | Promise<void>> = [];
   if (deletedIds.length > 0) {
@@ -96,28 +93,18 @@ export const handleApplyBlockOp = implement(applyBlockOpEndpoint, async ({ param
   // deliberately DO NOT call recomputePageIdSubtree (only cross-page moves need
   // it, and those go through the dedicated moveBlock endpoint).
 
-  // --- Notify (mirrors handle-delete-block.ts / notify.ts) -------------------
-  // The op's primary block lived on this page; notify its content resource and
-  // emit `blocksChanged` so links/image reindexers refresh. Derive a `type` from
-  // the op's primary block (page vs content) so a page edit also refreshes the
-  // sidebar; default to a content type otherwise.
+  // --- Notify (shared with the patch handler) --------------------------------
+  // The op's primary block lived on this page; derive a `type` from it (page vs
+  // content) so a page edit also refreshes the sidebar; default to a content
+  // type otherwise. The shared helper notifies the content resource, emits
+  // `blocksChanged`, and fans out per emptied sub-page in the deleted subtree.
   const primaryId =
     "blockId" in body ? body.blockId : "newId" in body ? body.newId : null;
   const primaryType =
     (primaryId ? before.find((b) => b.id === primaryId)?.type : undefined) ??
     after.find((b) => b.id === primaryId)?.type ??
     "block";
-  await notifyBlockChange({ pageId: params.pageId, type: primaryType });
-
-  // Any page inside the deleted subtree leaves the sidebar and its content
-  // resource is now empty — refresh once for the sidebar and per emptied page.
-  if (deletedPages.length > 0) {
-    pagesLiveResource.notify();
-    for (const p of deletedPages) {
-      blocksLiveResource.notify({ pageId: p.id });
-      await blocksChanged.emit({ pageId: p.id });
-    }
-  }
+  await notifyStructuralChange({ pageId: params.pageId, primaryType, deletedRows });
 
   // Hooks re-push state that depended on the now-deleted rows (e.g. backlinks).
   for (const cb of afterCallbacks) await cb();

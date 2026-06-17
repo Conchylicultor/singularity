@@ -28,6 +28,7 @@ import {
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
 import { textOf, type Block, type SerializedBlock } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
@@ -107,9 +108,14 @@ export function BlockEditor({
   onOpenPage?: (pageId: string) => void;
 }) {
   return (
-    <BlockEditorProvider pageId={pageId} onOpenPage={onOpenPage}>
-      <BlockEditorInner />
-    </BlockEditorProvider>
+    // One independent structural-undo history per editor surface (per tab). The
+    // provider sits ABOVE BlockEditorProvider because the latter calls
+    // `useUndoRedo()` to record at the mutation chokepoints.
+    <UndoRedoProvider>
+      <BlockEditorProvider pageId={pageId} onOpenPage={onOpenPage}>
+        <BlockEditorInner />
+      </BlockEditorProvider>
+    </UndoRedoProvider>
   );
 }
 
@@ -160,6 +166,8 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
     insert,
     focusBlock,
     focusedBlockId,
+    undo,
+    redo,
   } = useBlockEditor();
   const { selectedIds, isActive, setRange, clearAll, selectAll } =
     useMultiSelect();
@@ -340,6 +348,21 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
       if (!isActive) return;
       const mod = e.metaKey || e.ctrlKey;
 
+      // Structural undo/redo in block-selection mode (no Lexical editor is
+      // focused here, so there's no text tier to delegate to — go straight to
+      // the document-tier history). Cmd+Z undo; Cmd+Shift+Z / Cmd+Y redo.
+      if (mod && e.key.toLowerCase() === "z") {
+        e.preventDefault();
+        if (e.shiftKey) redo();
+        else undo();
+        return;
+      }
+      if (mod && e.key.toLowerCase() === "y") {
+        e.preventDefault();
+        redo();
+        return;
+      }
+
       if (e.key === "Escape") {
         e.preventDefault();
         clearSelection();
@@ -400,6 +423,8 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
       neighbor,
       applyRange,
       moveSelection,
+      undo,
+      redo,
     ],
   );
 

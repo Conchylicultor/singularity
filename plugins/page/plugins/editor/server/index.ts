@@ -7,6 +7,7 @@ import { handleUpdateBlock } from "./internal/handle-update-block";
 import { handleDeleteBlock } from "./internal/handle-delete-block";
 import { handleMoveBlock } from "./internal/handle-move-block";
 import { handleApplyBlockOp } from "./internal/handle-apply-block-op";
+import { handlePatchBlocks } from "./internal/handle-patch-blocks";
 import { handleBulkDeleteBlock } from "./internal/handle-bulk-delete-block";
 import { handleBulkMoveBlock } from "./internal/handle-bulk-move-block";
 import { handleBulkDuplicateBlock } from "./internal/handle-bulk-duplicate-block";
@@ -21,6 +22,7 @@ import {
   deleteBlock,
   moveBlock,
   applyBlockOpEndpoint,
+  patchBlocks,
   bulkDeleteBlocks,
   bulkMoveBlocks,
   bulkDuplicateBlocks,
@@ -48,6 +50,7 @@ export default {
     [deleteBlock.route]: handleDeleteBlock,
     [moveBlock.route]: handleMoveBlock,
     [applyBlockOpEndpoint.route]: handleApplyBlockOp,
+    [patchBlocks.route]: handlePatchBlocks,
     [bulkDeleteBlocks.route]: handleBulkDeleteBlock,
     [bulkMoveBlocks.route]: handleBulkMoveBlock,
     [bulkDuplicateBlocks.route]: handleBulkDuplicateBlock,

@@ -1,5 +1,7 @@
 import { useEffect, useRef } from "react";
 import {
+  CAN_REDO_COMMAND,
+  CAN_UNDO_COMMAND,
   COMMAND_PRIORITY_HIGH,
   KEY_ARROW_DOWN_COMMAND,
   KEY_ARROW_LEFT_COMMAND,
@@ -8,7 +10,10 @@ import {
   KEY_BACKSPACE_COMMAND,
   KEY_ENTER_COMMAND,
   KEY_ESCAPE_COMMAND,
+  KEY_MODIFIER_COMMAND,
   KEY_TAB_COMMAND,
+  REDO_COMMAND,
+  UNDO_COMMAND,
   type LexicalCommand,
 } from "lexical";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -41,7 +46,11 @@ export function KeyboardPlugin({
   editor: BlockEditorAPI;
 }) {
   const [lexicalEditor] = useLexicalComposerContext();
-  const { rowsRef, pageId } = useBlockEditor();
+  const { rowsRef, pageId, undo, redo } = useBlockEditor();
+  // Latest structural undo/redo callbacks, read from the modifier handler below
+  // without re-subscribing the Lexical command on every render.
+  const structuralRef = useRef({ undo, redo });
+  structuralRef.current = { undo, redo };
   // The block-type registry: every block's static handle config (incl. the edit
   // policy and split-into-child flag). Resolved here, not prop-drilled.
   const contributions = Editor.Block.useContributions();
@@ -179,6 +188,62 @@ export function KeyboardPlugin({
       for (const u of unregister) u();
     };
   }, [lexicalEditor, rowsRef]);
+
+  // Two-tier undo/redo delegation. The per-block Lexical `HistoryPlugin` owns
+  // intra-block TEXT undo; the editor's structural history owns the document
+  // tier. Cmd+Z routes to Lexical while it has text history (`canUndo`),
+  // otherwise falls through to structural undo. Cmd+Shift+Z / Cmd+Y are the
+  // mirror for redo. Registered at HIGH priority so it wins over Lexical's own
+  // built-in undo/redo command bindings (which we delegate to explicitly).
+  useEffect(() => {
+    let lexCanUndo = false;
+    let lexCanRedo = false;
+
+    const unregister = [
+      lexicalEditor.registerCommand(
+        CAN_UNDO_COMMAND,
+        (payload) => {
+          lexCanUndo = payload;
+          return false; // observe only; don't consume
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      lexicalEditor.registerCommand(
+        CAN_REDO_COMMAND,
+        (payload) => {
+          lexCanRedo = payload;
+          return false;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+      lexicalEditor.registerCommand<KeyboardEvent>(
+        KEY_MODIFIER_COMMAND,
+        (event) => {
+          const mod = event.metaKey || event.ctrlKey;
+          if (!mod || event.altKey) return false;
+          const key = event.key.toLowerCase();
+          const isUndo = key === "z" && !event.shiftKey;
+          const isRedo = (key === "z" && event.shiftKey) || key === "y";
+          if (!isUndo && !isRedo) return false;
+
+          event.preventDefault();
+          if (isUndo) {
+            if (lexCanUndo) lexicalEditor.dispatchCommand(UNDO_COMMAND, undefined);
+            else structuralRef.current.undo();
+          } else {
+            if (lexCanRedo) lexicalEditor.dispatchCommand(REDO_COMMAND, undefined);
+            else structuralRef.current.redo();
+          }
+          return true;
+        },
+        COMMAND_PRIORITY_HIGH,
+      ),
+    ];
+
+    return () => {
+      for (const u of unregister) u();
+    };
+  }, [lexicalEditor]);
 
   return null;
 }

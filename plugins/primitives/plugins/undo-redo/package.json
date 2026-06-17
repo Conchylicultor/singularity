@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-undo-redo",
+  "private": true,
+  "version": "0.0.1",
+  "description": "Surface-scoped client-side undo/redo command-history stack primitive."
+}
