@@ -73,6 +73,26 @@ export function SurfaceBody() {
     [sorted, defaultId],
   );
 
+  // Heal any tab whose stored placement isn't a registered id back to the
+  // default. A tab seeded before this registry populated stores "" as its
+  // placement (apps' `getDefaultPlacement()` returns "" until `surface`
+  // registers), and a removed placement sub-plugin leaves dangling ids. The
+  // surface RENDERS such tabs under the default (resolveId below), but the raw
+  // `tab.placement` must also be made canonical: other consumers read it
+  // unresolved — the focused-placement store and, through it, the app-theme
+  // chrome scope (`useChromeThemeScope` → `placementHasAppThemeScope`). Without
+  // this, a freshly-seeded docked tab leaves chrome (rail / tab bar) on the
+  // global theme instead of the focused app's. Resolution lives here because the
+  // surface owns the placement registry; apps just stores whatever it's told.
+  // The setPlacement no-op guard (same value) makes this idempotent — it fires
+  // once per unknown placement, never loops.
+  useEffect(() => {
+    if (!defaultId) return;
+    for (const tab of tabs) {
+      if (!byId.has(tab.placement)) setPlacement(tab.tabId, defaultId);
+    }
+  }, [tabs, byId, defaultId, setPlacement]);
+
   // Resolve a tab's placement id, falling back to the default for unknown ids.
   const resolveId = (placement: string) =>
     byId.has(placement) ? placement : defaultId;
@@ -171,12 +191,9 @@ function TabContainer({
     [],
   );
 
-  // Self-heal: an unknown persisted placement (its sub-plugin was removed) renders
-  // under the default; rewrite `tab.placement` once so it persists correctly.
-  useEffect(() => {
-    if (!def && defaultId) setPlacement(tab.tabId, defaultId);
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- one-shot heal keyed on the missing def
-  }, [def, defaultId, tab.tabId]);
+  // Unknown / empty placements are healed to the default canonically by
+  // SurfaceBody (it owns the registry), so `tab.placement` is always a
+  // registered id by the time this renders — no per-container self-heal needed.
 
   // Empty registry (no placement plugins): fall back to a built-in docked-like
   // full-area container so the app stays usable. The control renders nothing.
