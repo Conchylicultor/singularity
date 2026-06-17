@@ -2258,6 +2258,14 @@
       "name": "@singularity/plugin-primitives-copy-to-clipboard",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css": {
+      "name": "@singularity/plugin-primitives-css",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/frame": {
+      "name": "@singularity/plugin-primitives-css-frame",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/cursor-pagination": {
       "name": "@singularity/plugin-primitives-cursor-pagination",
       "version": "0.0.1",
@@ -4507,6 +4515,10 @@
     "@singularity/plugin-primitives-control-size": ["@singularity/plugin-primitives-control-size@workspace:plugins/primitives/plugins/control-size"],
 
     "@singularity/plugin-primitives-copy-to-clipboard": ["@singularity/plugin-primitives-copy-to-clipboard@workspace:plugins/primitives/plugins/copy-to-clipboard"],
+
+    "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
+
+    "@singularity/plugin-primitives-css-frame": ["@singularity/plugin-primitives-css-frame@workspace:plugins/primitives/plugins/css/plugins/frame"],
 
     "@singularity/plugin-primitives-cursor-pagination": ["@singularity/plugin-primitives-cursor-pagination@workspace:plugins/primitives/plugins/cursor-pagination"],
 

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-css-frame",
+  "description": "Named-slot row layout primitive: leading/content/meta/trailing roles over a CSS grid with the shrink hierarchy baked in so rows can't crush themselves.",
+  "private": true,
+  "version": "0.0.1"
+}

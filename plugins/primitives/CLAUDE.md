@@ -21,6 +21,7 @@
   - **`commit-list`** — Reusable commit row rendering and git log types. Git log parser and commit row types for reuse across plugins.
   - **`control-size`** — Control-size standard: the shared control-* height scale and its enforcing lint rule (no-adhoc-control).
   - **`copy-to-clipboard`** — useCopyToClipboard hook and CopyButton component for the clipboard write + timeout-reset pattern.
+  - **`css`** — Umbrella for global CSS layout primitives (named-slot rows, grids, clusters, overlays) with the shrink hierarchy baked into one place.
   - **`cursor-pagination`** — Cursor-pagination primitive: useCursorPagination hook with frozen-cursor capture, useInfiniteQuery wiring, IntersectionObserver auto-fetch, and ScrollSentinel component.
   - **`data-table`** — Sortable/filterable flex-layout data table primitive.
   - **`data-view`** — Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Registers the data-view saved view-state config_v2 descriptor (per-surface active view, sort, and filter).
