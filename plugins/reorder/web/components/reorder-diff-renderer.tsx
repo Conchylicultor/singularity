@@ -3,7 +3,7 @@ import { MdCheck, MdClose } from "react-icons/md";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { StagedDiffProps } from "@plugins/config_v2/plugins/staging/web";

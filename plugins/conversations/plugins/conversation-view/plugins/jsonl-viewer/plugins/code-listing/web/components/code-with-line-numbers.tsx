@@ -1,7 +1,7 @@
 import { useEffect, useState } from "react";
 import type { ShikiTransformer } from "shiki";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   getHighlighter,
   languageForPath,

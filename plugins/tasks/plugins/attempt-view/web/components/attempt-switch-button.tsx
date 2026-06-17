@@ -4,7 +4,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { attemptsResource } from "@plugins/tasks/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { attemptPane } from "../panes";
 
 export function AttemptSwitchButton() {

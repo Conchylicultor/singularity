@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";

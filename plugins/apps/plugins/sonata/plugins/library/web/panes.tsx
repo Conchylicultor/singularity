@@ -1,7 +1,7 @@
 import { type ReactElement, useEffect, useState } from "react";
 import { Pane, type } from "@plugins/primitives/plugins/pane/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Sonata,
   SonataToolbar,

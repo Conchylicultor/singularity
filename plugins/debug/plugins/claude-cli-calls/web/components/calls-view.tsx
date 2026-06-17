@@ -9,7 +9,7 @@ import {
   MODEL_REGISTRY,
   type ModelTier,
 } from "@plugins/conversations/plugins/model-provider/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { CallRow } from "./call-row";
 
 type ModelFilter = "all" | ModelTier;

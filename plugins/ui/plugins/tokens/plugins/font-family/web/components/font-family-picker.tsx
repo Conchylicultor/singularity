@@ -1,6 +1,6 @@
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { fontFamilyConfig } from "../internal/config";
 import { FontFamily } from "../slots";
 

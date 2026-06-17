@@ -7,7 +7,7 @@ import { getConfigRawFile } from "@plugins/config_v2/plugins/settings/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";

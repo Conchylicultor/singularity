@@ -9,7 +9,7 @@ import {
   MdExpandLess,
   MdClose,
 } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
 
 function StatusIcon({ status }: { status: string }) {

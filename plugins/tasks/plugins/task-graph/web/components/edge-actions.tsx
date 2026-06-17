@@ -1,7 +1,7 @@
 import { useCallback, useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { removeTaskDependency, insertTaskBetween } from "@plugins/tasks/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export type EdgeActionsProps = {
   sourceTaskId: string;

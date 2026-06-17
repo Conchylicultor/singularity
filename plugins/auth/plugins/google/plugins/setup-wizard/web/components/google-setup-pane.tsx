@@ -12,7 +12,7 @@ import { setConfigField } from "@plugins/config_v2/core";
 import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2SecretMetaResource } from "@plugins/fields/plugins/secret/plugins/config/core";
 import { MdCheck, MdOpenInNew } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 const REDIRECT_URI = "http://localhost:9000/api/auth/callback/google";

@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { RowActions } from "../internal/event-action-context";
 
 /**

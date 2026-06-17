@@ -3,7 +3,7 @@ import { MdClose } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FilterConjunction, FilterGroup } from "../../../core";
 import { ConjunctionCell } from "./conjunction-cell";
 import { FilterRuleRow } from "./filter-rule-row";

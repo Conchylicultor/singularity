@@ -20,7 +20,7 @@ import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { PianoRollFx } from "../slots";

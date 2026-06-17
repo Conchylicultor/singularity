@@ -1,7 +1,7 @@
 import { Button } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useMemo } from "react";
 import { MdAdd } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";

@@ -7,7 +7,7 @@
 - Description: Per-task preprompt picker in the task detail pane; the selection is prepended to the agent's first user turn on launch. Owns the tasks_ext_preprompt side-table: the per-task selected preprompt id, prepended to the agent's first user turn at launch as a <special_instructions> block.
 - Web:
   - Contributes: `TaskDetailSlots.Section` "preprompt" → `TaskPrepromptSection`
-  - Uses: `conversations/preprompts.PrepromptSelect`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/row.SectionHeaderRow`, `primitives/live-state.useResource`, `primitives/text.Text`, `shell/notifications.toast`, `tasks/task-detail.TaskDetailSlots`
+  - Uses: `conversations/preprompts.PrepromptSelect`, `infra/endpoints.fetchEndpoint`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleContent`, `primitives/css/row.SectionHeaderRow`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `shell/notifications.toast`, `tasks/task-detail.TaskDetailSlots`
   - Exports: Values: `useTaskPreprompt`
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `tasks/tasks-core._tasks`

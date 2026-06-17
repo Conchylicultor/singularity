@@ -7,7 +7,7 @@ import { tasksResource } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 function isTerminal(status: TaskStatus): boolean {

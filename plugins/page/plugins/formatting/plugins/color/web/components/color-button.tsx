@@ -11,7 +11,7 @@ import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useFormatToolbar, colorCssValue } from "@plugins/page/plugins/editor/web";
 import { COLOR_TOKENS, type ColorToken } from "@plugins/page/plugins/editor/core";
 

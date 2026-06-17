@@ -1,6 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { createContext, useContext, type ReactElement } from "react";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   formatDuration,

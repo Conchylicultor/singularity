@@ -1,6 +1,6 @@
 import { type ReactElement } from "react";
 import { Pane } from "@plugins/primitives/plugins/pane/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PagesWelcome } from "./slots";
 

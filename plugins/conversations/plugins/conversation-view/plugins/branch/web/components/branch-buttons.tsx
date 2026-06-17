@@ -5,7 +5,7 @@ import type { ConversationRecord } from "@plugins/conversations/plugins/conversa
 import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   MODEL_REGISTRY,

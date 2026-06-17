@@ -1,7 +1,7 @@
 import type { EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { FileContent } from "./file-content";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { FileTabs } from "./file-tabs";
 import { useFileRenderers } from "./use-file-renderers";
 

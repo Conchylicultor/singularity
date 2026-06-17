@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { ConfigPopoverHeader } from "@plugins/config_v2/plugins/config-link/web";
 import { prepromptsConfig } from "@plugins/conversations/plugins/preprompts/web";

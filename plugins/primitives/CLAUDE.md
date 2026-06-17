@@ -61,7 +61,6 @@
   - **`tab-id`** — Stable per-tab id (sessionStorage-backed) for crash/notification attribution.
   - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
   - **`terminal`** — Exposes view factories for terminal panes; no web contributions yet.
-  - **`text`** — Semantic typography primitive: <Text variant tone as> picks a frozen size/line-height/weight role from the typography token group. The single sanctioned home for text hierarchy; raw text-size/leading-* is banned by no-adhoc-typography.
   - **`text-editor`** — Generic Lexical-based rich text editor primitive. Plugins inject behaviors via the Plugin slot and registerNodeExtension.
   - **`tooltip`** — WithTooltip wrapper and <Kbd> keyboard shortcut badge.
   - **`tree`** — Tree hierarchy utilities (buildTree, isDescendant, computeDrop) and a generic TreeList with composable row primitives (RowChrome, RenameInput, useTreeRow) for list plugins.

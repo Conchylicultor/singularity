@@ -4,7 +4,7 @@ import { getAllowFiles } from "../../shared/endpoints";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function AllowMonitorChip() {
   const { convId } = conversationPane.useParams();

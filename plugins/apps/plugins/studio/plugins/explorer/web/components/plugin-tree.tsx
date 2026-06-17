@@ -4,7 +4,7 @@ import { MdChevronRight, MdExpandMore } from "react-icons/md";
 import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";
 import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Explorer } from "../slots";
 import { PluginTreeProvider, usePluginTree } from "../context";
 

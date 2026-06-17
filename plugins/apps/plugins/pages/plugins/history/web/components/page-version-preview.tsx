@@ -9,7 +9,7 @@ import { ReadOnlyBlocks } from "@plugins/page/plugins/read-only-view/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { buildForest, buildDiff, type PageSnapshot } from "../internal/build-diff";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/web";
 

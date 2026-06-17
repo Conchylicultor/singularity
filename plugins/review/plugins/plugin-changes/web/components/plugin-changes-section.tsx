@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { useExpandAll, ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { Source } from "@plugins/review/web";

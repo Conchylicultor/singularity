@@ -1,6 +1,6 @@
 import type React from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { TaskChainRelateMode } from "@plugins/tasks/core";
 
 type ModeValue = TaskChainRelateMode | "independent";

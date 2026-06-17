@@ -49,7 +49,7 @@ disc and the color palette) on top, and future pickers reuse the same block.
 
 - Description: Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
 - Web:
-  - Uses: `primitives/css/section-label.SectionLabel`, `primitives/loading.Loading`, `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `primitives/css/section-label.SectionLabel`, `primitives/css/text.Text`, `primitives/loading.Loading`, `primitives/ui-kit.cn`
   - Exports: Types: `FullIconCategory`, `FullIconEntry`, `FullIconSet`, `IconPickerProps`, `IconSelection`, `SvgIconProps`, `SvgNode`; Values: `extractSvgNodes`, `IconPicker`, `loadFullIconSet`, `SvgIcon`
 - Cross-plugin:
   - Imported by: `apps/pages/page-tree`, `conversations/agents`, `page/callout`, `page/editor`, `primitives/avatar`

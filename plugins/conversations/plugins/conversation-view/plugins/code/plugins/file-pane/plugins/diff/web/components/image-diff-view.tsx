@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 type ImgStatus = "loading" | "ok" | "missing";

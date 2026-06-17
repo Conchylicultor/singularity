@@ -10,7 +10,7 @@ import {
   type CollisionDetection,
   type DragStartEvent,
 } from "@dnd-kit/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {

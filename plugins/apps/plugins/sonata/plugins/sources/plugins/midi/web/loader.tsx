@@ -9,7 +9,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface Props {
   onRaw: (raw: unknown) => void;

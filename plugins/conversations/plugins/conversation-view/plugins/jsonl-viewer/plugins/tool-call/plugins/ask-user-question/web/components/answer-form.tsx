@@ -1,7 +1,7 @@
 import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";

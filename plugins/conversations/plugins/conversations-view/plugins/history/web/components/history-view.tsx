@@ -7,7 +7,7 @@ import { useGoneConversationsPagination } from "@plugins/conversations/plugins/c
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { MdClose } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 

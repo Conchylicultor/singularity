@@ -1,5 +1,5 @@
 import { useConversations } from "@plugins/conversations/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function ConvCountLabel() {
   const conv = useConversations();

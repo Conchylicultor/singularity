@@ -7,7 +7,7 @@
 - Description: Runtime HTTP/DB/loader profiling tables in the Gantt debug pane. Runtime HTTP/DB/loader profiling tables in the Gantt debug pane.
 - Web:
   - Contributes: `Profiling.Section` → `RuntimeSection`
-  - Uses: `debug/profiling.formatDuration`, `debug/profiling.Profiling`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/placeholder.Placeholder`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/text.Text`, `primitives/ui-kit.Button`
+  - Uses: `debug/profiling.formatDuration`, `debug/profiling.Profiling`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/placeholder.Placeholder`, `primitives/css/text.Text`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/ui-kit.Button`
 - Server:
   - Uses: `infra/endpoints.implement`, `infra/mcp.Mcp`, `tasks/tasks-core.getConversation`
   - Register: `mcpTool('get_runtime_profile')`

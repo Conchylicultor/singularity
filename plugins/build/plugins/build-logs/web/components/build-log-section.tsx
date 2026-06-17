@@ -11,7 +11,7 @@ import {
   CollapsibleChevron,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";

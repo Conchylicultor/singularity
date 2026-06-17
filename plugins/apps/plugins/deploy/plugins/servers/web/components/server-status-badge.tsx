@@ -1,6 +1,6 @@
 import type { ServerStatus } from "../../shared";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 const styles: Record<ServerStatus, { bg: string; label: string }> = {
   online: { bg: "bg-success", label: "Online" },

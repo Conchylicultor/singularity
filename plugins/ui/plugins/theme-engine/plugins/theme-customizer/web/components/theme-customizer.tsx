@@ -5,7 +5,7 @@ import { useConfig, useSetConfig, useConfigRegistrations, useScopeForked } from 
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField, forkScope, deleteScope } from "@plugins/config_v2/core";
 import { useCurrentAppId } from "@plugins/apps/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 import { ThemeEngine, ThemeScopeProvider, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import { themeCustomizerPane } from "../panes";

@@ -3,7 +3,7 @@
  * "waiting for your input" indicator shown for any `waitingFor` kind that has no
  * contributed variant. Kept generic — no per-kind logic lives here.
  */
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function PendingContentIndicator() {
   return (

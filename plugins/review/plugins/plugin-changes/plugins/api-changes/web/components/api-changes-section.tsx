@@ -4,7 +4,7 @@ import {
   type FacetDiff,
 } from "@plugins/review/plugins/plugin-changes/web";
 import type { PluginReviewProps } from "@plugins/review/plugins/plugin-changes/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 function DiffSection({ label, diff }: { label: string; diff: FacetDiff["diff"] }) {

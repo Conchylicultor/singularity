@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { createServer } from "../../shared/endpoints";
 
 export function AddServerForm({ onSuccess }: { onSuccess: (id: string) => void }) {

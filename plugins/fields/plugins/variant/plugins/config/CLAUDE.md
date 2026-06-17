@@ -30,7 +30,7 @@ absent → a read-only display of the current `type`. `FieldRenderer` /
 - Description: Variant field type: config-render capability (type-dispatched renderer for config-v2.fields.renderer) plus the variantField factory.
 - Web:
   - Contributes: `config-v2.fields.renderer` "variant" → `VariantRenderer`
-  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/text.Text`, `primitives/ui-kit.Select`, `primitives/ui-kit.SelectContent`, `primitives/ui-kit.SelectItem`, `primitives/ui-kit.SelectTrigger`, `primitives/ui-kit.SelectValue`
+  - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/ui-kit.Select`, `primitives/ui-kit.SelectContent`, `primitives/ui-kit.SelectItem`, `primitives/ui-kit.SelectTrigger`, `primitives/ui-kit.SelectValue`
 - Core:
   - Uses: `config_v2.buildFieldsSchema`, `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldsRecord`, `config_v2.pickMeta`, `fields/object/config.objectField`, `fields/text/config.textField`, `fields/variant.variantFieldType`, `fields/variant.VariantValue`
   - Exports: Types: `VariantEntry`, `VariantFieldDef`; Values: `isVariantFieldDef`, `validateVariant`, `variantField`

@@ -3,7 +3,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { buildHistoryResource } from "@plugins/build/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 
 function formatDuration(start: Date, end: Date | null): string {

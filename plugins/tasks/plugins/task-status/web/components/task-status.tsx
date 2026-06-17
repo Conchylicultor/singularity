@@ -12,7 +12,7 @@ import type { IconType } from "react-icons";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /**
  * States that warrant a colored filled badge (they need the user's attention).

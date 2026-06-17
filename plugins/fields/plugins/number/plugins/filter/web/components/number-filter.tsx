@@ -4,7 +4,7 @@ import {
   type FilterValueInputProps,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { NumberRange } from "../internal/number-filter-logic";
 
 function parse(raw: string): number | undefined {

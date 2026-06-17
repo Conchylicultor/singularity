@@ -1,7 +1,7 @@
 import { MdAdsClick } from "react-icons/md";
 import type { UiContextMeta } from "../../core";
 import { Inset, Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 
 /** A single detail row in the popover: label + value, value omitted when absent. */

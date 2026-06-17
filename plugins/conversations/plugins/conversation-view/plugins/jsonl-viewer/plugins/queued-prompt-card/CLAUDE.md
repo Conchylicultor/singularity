@@ -6,7 +6,7 @@
 
 - Description: Shared appearance for a queued prompt (a message the user parked while the agent was busy). Used by both the queued_command attachment and the prompt-queue enqueue row so the two never diverge.
 - Web:
-  - Uses: `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/css/text.Text`, `primitives/ui-kit.cn`
   - Exports: Values: `QueuedPromptCard`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer/attachment/queued-command`, `conversations/conversation-view/jsonl-viewer/queue-operation`

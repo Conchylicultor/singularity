@@ -1,5 +1,5 @@
 import { PaneOverlayHost } from "@plugins/layouts/plugins/miller/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 import { Home } from "../slots";
 

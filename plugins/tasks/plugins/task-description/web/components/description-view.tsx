@@ -8,7 +8,7 @@ import {
   isAttachmentUrl,
 } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { InlineText } from "@plugins/primitives/plugins/inline-text/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 // Two-mode description editor:
 //   - Display: text rendered with inline widgets via <InlineText> (file-path

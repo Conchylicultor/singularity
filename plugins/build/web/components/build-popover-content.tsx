@@ -11,7 +11,7 @@ import { useStickyScroll, JumpToBottomButton } from "@plugins/primitives/plugins
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Collapsible,
   CollapsibleTrigger,

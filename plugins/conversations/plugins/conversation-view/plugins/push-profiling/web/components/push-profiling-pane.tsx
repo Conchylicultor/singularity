@@ -11,7 +11,7 @@ import { pushDetailPane, getPushProfiling } from "@plugins/debug/plugins/profili
 import { buildProfileDetailPane } from "@plugins/debug/plugins/profiling/plugins/build/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { ShellCommands } from "@plugins/shell/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { convPushProfilingPane } from "../panes";
 
 export function PushProfilingPaneBody() {

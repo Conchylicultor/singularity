@@ -6,7 +6,7 @@ import {
 } from "@plugins/apps/plugins/story/plugins/story-core/core";
 import { useGeneratedUnits } from "@plugins/apps/plugins/story/plugins/generation/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";

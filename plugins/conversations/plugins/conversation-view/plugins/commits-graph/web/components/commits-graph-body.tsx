@@ -5,7 +5,7 @@ import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder
 import { MergeBaseMarker, CommitRowItem } from "@plugins/primitives/plugins/commit-list/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { commitsGraphResource } from "../../shared/resources";
 import { convCommitDiffPane, convCommitsGraphPane } from "../panes";
 

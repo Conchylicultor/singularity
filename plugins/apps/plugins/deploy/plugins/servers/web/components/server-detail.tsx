@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { Server } from "../../shared";
 import { deleteServer } from "../../shared/endpoints";
 import { ServerStatusBadge } from "./server-status-badge";

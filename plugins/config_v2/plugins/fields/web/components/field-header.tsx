@@ -1,5 +1,5 @@
 import type { FieldDef } from "@plugins/config_v2/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function FieldHeader({ field }: { field: FieldDef }) {

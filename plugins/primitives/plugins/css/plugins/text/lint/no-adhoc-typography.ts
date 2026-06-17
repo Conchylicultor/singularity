@@ -8,7 +8,7 @@ const createRule = ESLintUtils.RuleCreator(
  * Typographic-hierarchy guardrail.
  *
  * Text hierarchy must come from ONE closed set of semantic roles — the `<Text
- * role>` primitive (`@plugins/primitives/plugins/text/web`), whose roles map to
+ * role>` primitive (`@plugins/primitives/plugins/css/plugins/text/web`), whose roles map to
  * the `text-<role>` `@utility` bundles backed by the typography token group.
  * Hand-writing a raw named font size (`text-sm`, `text-xl`, …) or a raw
  * `leading-*` line-height reintroduces the per-call type sprawl the role set
@@ -155,7 +155,7 @@ export default createRule({
     messages: {
       adhocTypography:
         "Raw typography class `{{token}}` is banned — set text hierarchy through " +
-        "the <Text variant> primitive from @plugins/primitives/plugins/text/web " +
+        "the <Text variant> primitive from @plugins/primitives/plugins/css/plugins/text/web " +
         "(variants: title | heading | subheading | body | label | caption). The " +
         "sub-scale text-2xs / text-3xs stays for chips/badges.",
     },

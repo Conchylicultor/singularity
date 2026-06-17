@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { MdChevronLeft, MdChevronRight } from "react-icons/md";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";

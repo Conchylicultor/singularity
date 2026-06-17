@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import type { TableCellProps } from "@plugins/primitives/plugins/data-view/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /** Read-only color cell: a small swatch tinted with the projected CSS color. */
 export function ColorCell(props: TableCellProps): ReactNode {

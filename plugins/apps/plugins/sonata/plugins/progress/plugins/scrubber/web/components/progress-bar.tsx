@@ -10,7 +10,7 @@ import {
   scoreEndBeat,
   buildTempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SonataProgress } from "../slots";
 import { RAIL_THICKNESS } from "../rail-geometry";
 

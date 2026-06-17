@@ -2,7 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import type { EnumFieldDef } from "../../core";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 const EnumRenderer: FieldRendererComponent<string> = ({
   field,

@@ -11,7 +11,7 @@ App shell for the Home launcher. Registers the `/home` app entry and defines the
 - Web:
   - Slots: `Home.Section` ← `apps.home.app-cards`
   - Contributes: `Apps.App` "Home" → `HomeLayout`
-  - Uses: `apps.Apps`, `layouts/miller.PaneOverlayHost`, `primitives/slot-render.defineRenderSlot`, `primitives/text.Text`
+  - Uses: `apps.Apps`, `layouts/miller.PaneOverlayHost`, `primitives/css/text.Text`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Home`
 - Cross-plugin:
   - Imported by: `apps/home/app-cards`

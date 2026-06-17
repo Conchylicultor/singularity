@@ -1,6 +1,6 @@
 import { Component, useEffect, useState, type ErrorInfo, type ReactNode } from "react";
 import { UNSAFE_unsealSlotComponent } from "@plugins/framework/plugins/web-sdk/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { ErrorBoundary } from "../slots";
 import { callReporter, type BoundaryErrorReport } from "../reporter";
 

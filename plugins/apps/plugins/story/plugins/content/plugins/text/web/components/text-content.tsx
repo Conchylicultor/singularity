@@ -1,4 +1,4 @@
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { textBlock } from "@plugins/page/plugins/text/core";
 import type { StoryNode } from "@plugins/apps/plugins/story/plugins/story-core/core";
 

@@ -1,6 +1,6 @@
 import type { ToolRendererProps } from "../../core";
 import { ToolCallCard } from "./tool-call-card";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 function formatJson(value: unknown): string {
   try {

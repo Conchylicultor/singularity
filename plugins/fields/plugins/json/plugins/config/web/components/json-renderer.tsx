@@ -4,7 +4,7 @@ import {
 } from "@plugins/config_v2/plugins/fields/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { jsonFieldType } from "@plugins/fields/plugins/json/core";
 
 /**

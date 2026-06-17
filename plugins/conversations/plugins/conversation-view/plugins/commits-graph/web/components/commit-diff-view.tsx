@@ -4,7 +4,7 @@ import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-vie
 import type { EditedFile } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({

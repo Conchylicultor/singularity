@@ -7,7 +7,7 @@ import { CONV_STATUS_DOT } from "@plugins/conversations/plugins/conversation-ui/
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { agentLaunchesResource } from "../../shared/resources";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 function formatDate(value: Date | string): string {
   const d = typeof value === "string" ? new Date(value) : value;

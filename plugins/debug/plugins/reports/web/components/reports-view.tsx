@@ -7,7 +7,7 @@ import { useStaleFrontend } from "@plugins/build/web";
 import { reportsResource } from "@plugins/reports/core";
 import type { Report } from "@plugins/reports/core";
 import { Reports } from "@plugins/reports/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { navigate } from "@plugins/apps/web";
 
 export function ReportsView() {

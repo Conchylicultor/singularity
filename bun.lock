@@ -2338,6 +2338,10 @@
       "name": "@singularity/plugin-primitives-css-surface",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/text": {
+      "name": "@singularity/plugin-primitives-css-text",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/toggle-chip": {
       "name": "@singularity/plugin-primitives-css-toggle-chip",
       "version": "0.0.1",
@@ -2559,10 +2563,6 @@
         "@xterm/xterm": "^6.0.0",
         "bun-pty": "^0.4.8",
       },
-    },
-    "plugins/primitives/plugins/text": {
-      "name": "@singularity/plugin-primitives-text",
-      "version": "0.0.1",
     },
     "plugins/primitives/plugins/text-editor": {
       "name": "@singularity/plugin-primitives-text-editor",
@@ -4584,6 +4584,8 @@
 
     "@singularity/plugin-primitives-css-surface": ["@singularity/plugin-primitives-css-surface@workspace:plugins/primitives/plugins/css/plugins/surface"],
 
+    "@singularity/plugin-primitives-css-text": ["@singularity/plugin-primitives-css-text@workspace:plugins/primitives/plugins/css/plugins/text"],
+
     "@singularity/plugin-primitives-css-toggle-chip": ["@singularity/plugin-primitives-css-toggle-chip@workspace:plugins/primitives/plugins/css/plugins/toggle-chip"],
 
     "@singularity/plugin-primitives-css-truncating-text": ["@singularity/plugin-primitives-css-truncating-text@workspace:plugins/primitives/plugins/css/plugins/truncating-text"],
@@ -4687,8 +4689,6 @@
     "@singularity/plugin-primitives-tabbed-view": ["@singularity/plugin-primitives-tabbed-view@workspace:plugins/primitives/plugins/tabbed-view"],
 
     "@singularity/plugin-primitives-terminal": ["@singularity/plugin-primitives-terminal@workspace:plugins/primitives/plugins/terminal"],
-
-    "@singularity/plugin-primitives-text": ["@singularity/plugin-primitives-text@workspace:plugins/primitives/plugins/text"],
 
     "@singularity/plugin-primitives-text-editor": ["@singularity/plugin-primitives-text-editor@workspace:plugins/primitives/plugins/text-editor"],
 

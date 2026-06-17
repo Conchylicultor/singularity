@@ -4,7 +4,7 @@ import {
   MdArrowUpward,
   MdUnfoldMore,
 } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { ColumnDef, DataTableProps } from "./types";
 import { useDataTable } from "./use-data-table";
 

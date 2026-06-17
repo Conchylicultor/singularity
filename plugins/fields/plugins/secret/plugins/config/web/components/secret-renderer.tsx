@@ -1,7 +1,7 @@
 import { Button, Input } from "@plugins/primitives/plugins/ui-kit/web";
 import { useContext, useEffect, useRef, useState } from "react";
 import { MdCheck } from "react-icons/md";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { ConfigFieldContext } from "@plugins/config_v2/plugins/fields/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";

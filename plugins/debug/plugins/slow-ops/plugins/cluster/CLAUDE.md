@@ -35,7 +35,7 @@ so the pane never imports this component directly.
 - Description: Cross-worktree cluster tab for the Slow Ops pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
 - Web:
   - Contributes: `SlowOps.View` "Cluster" → `ClusterView`
-  - Uses: `debug/slow-ops/pane.SlowOps`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Stack`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/loading.Loading`, `primitives/relative-time.RelativeTime`, `primitives/text.Text`, `primitives/ui-kit.Button`
+  - Uses: `debug/slow-ops/pane.SlowOps`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/data-table.ColumnDef`, `primitives/data-table.DataTable`, `primitives/data-table.SortState`, `primitives/loading.Loading`, `primitives/relative-time.RelativeTime`, `primitives/ui-kit.Button`
 - Server:
   - Uses: `database/admin.listDatabases`, `database/admin.openShortLivedClient`, `infra/endpoints.implement`
   - Routes: `GET /api/slow-ops/cluster`

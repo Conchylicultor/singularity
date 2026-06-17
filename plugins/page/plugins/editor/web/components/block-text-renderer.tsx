@@ -1,5 +1,5 @@
 import { useMemo, type ReactNode } from "react";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockRendererProps } from "../types";
 import { Editor } from "../slots";
 import { BlockTextEditor } from "./block-text-editor";

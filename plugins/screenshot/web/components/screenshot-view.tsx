@@ -5,7 +5,7 @@ import {
   type Stroke,
 } from "@plugins/screenshot/plugins/draw-canvas/web";
 import { EndpointError, fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getScreenshot } from "../../shared/endpoints";
 import { ToolsPane, type Tool, type DrawSettings } from "./tools-pane";

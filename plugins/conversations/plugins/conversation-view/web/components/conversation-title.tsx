@@ -1,5 +1,5 @@
 import { useConversationById } from "@plugins/conversations/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationPane } from "../panes";
 
 export function ConversationTitle() {

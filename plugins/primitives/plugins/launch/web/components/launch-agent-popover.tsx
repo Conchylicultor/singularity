@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { PrepromptSelect } from "@plugins/conversations/plugins/preprompts/web";

@@ -11,7 +11,7 @@ import { buildHistoryResource, type BuildRun } from "../../shared";
 import { useStaleFrontend } from "../hooks/use-stale-frontend";
 import { BuildPopoverContent } from "./build-popover-content";
 import { buildPane, buildDetailPane } from "../panes";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 /** Inner component: receives settled history data so hooks run unconditionally with real values. */
 function BuildButtonInner({

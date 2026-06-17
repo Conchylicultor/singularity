@@ -1,5 +1,5 @@
 import type { PluginLoadError } from "@plugins/framework/plugins/web-sdk/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function PluginLoadErrors({ errors }: { errors: PluginLoadError[] }) {
   return (

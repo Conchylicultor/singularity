@@ -30,6 +30,7 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/css/plugins/row", id: "primitives.css.row", loader: () => import("@plugins/primitives/plugins/css/plugins/row/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/spacing", id: "primitives.css.spacing", loader: () => import("@plugins/primitives/plugins/css/plugins/spacing/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/surface", id: "primitives.css.surface", loader: () => import("@plugins/primitives/plugins/css/plugins/surface/lint"), dependsOn: [] },
+  { pluginPath: "primitives/plugins/css/plugins/text", id: "primitives.css.text", loader: () => import("@plugins/primitives/plugins/css/plugins/text/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/truncating-text", id: "primitives.css.truncating-text", loader: () => import("@plugins/primitives/plugins/css/plugins/truncating-text/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/viewport-overlay", id: "primitives.css.viewport-overlay", loader: () => import("@plugins/primitives/plugins/css/plugins/viewport-overlay/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/css/plugins/z-layers", id: "primitives.css.z-layers", loader: () => import("@plugins/primitives/plugins/css/plugins/z-layers/lint"), dependsOn: [] },
@@ -40,6 +41,5 @@ export const lintEntries: CollectedEntry[] = [
   { pluginPath: "primitives/plugins/pane-toolbar", id: "primitives.pane-toolbar", loader: () => import("@plugins/primitives/plugins/pane-toolbar/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/pane", id: "primitives.pane", loader: () => import("@plugins/primitives/plugins/pane/lint"), dependsOn: [] },
   { pluginPath: "primitives/plugins/scoped-store", id: "primitives.scoped-store", loader: () => import("@plugins/primitives/plugins/scoped-store/lint"), dependsOn: [] },
-  { pluginPath: "primitives/plugins/text", id: "primitives.text", loader: () => import("@plugins/primitives/plugins/text/lint"), dependsOn: [] },
   { pluginPath: "ui/plugins/tokens/plugins/type-scale", id: "ui.tokens.type-scale", loader: () => import("@plugins/ui/plugins/tokens/plugins/type-scale/lint"), dependsOn: [] },
 ];

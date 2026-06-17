@@ -1,7 +1,7 @@
 import { cn } from "@plugins/primitives/plugins/ui-kit/web";
 import { useState } from "react";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import {
   Section,
   PluginLink,

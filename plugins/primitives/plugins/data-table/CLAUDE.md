@@ -16,7 +16,7 @@ and inert for consumers that don't pass `rowActions`.
 
 - Description: Sortable/filterable flex-layout data table primitive.
 - Web:
-  - Uses: `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `primitives/css/text.Text`, `primitives/ui-kit.cn`
   - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
 - Cross-plugin:
   - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `primitives/data-view/table`

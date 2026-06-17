@@ -1,6 +1,6 @@
 import { useMemo } from "react";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockHandle } from "../../core";
 import { Editor } from "../slots";
 

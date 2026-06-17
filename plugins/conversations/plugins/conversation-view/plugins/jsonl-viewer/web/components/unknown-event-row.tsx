@@ -1,5 +1,5 @@
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export function UnknownEventRow({ event }: { event: JsonlEvent }) {
   return (

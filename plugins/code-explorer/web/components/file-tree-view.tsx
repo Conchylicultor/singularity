@@ -2,7 +2,7 @@ import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@plugins/p
 import { useEffect, useState } from "react";
 import { FilePaneView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { getCodeTree } from "@plugins/code-explorer/plugins/code-api/core";
 import { FileTree } from "./file-tree";

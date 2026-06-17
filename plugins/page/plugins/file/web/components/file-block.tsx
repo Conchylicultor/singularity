@@ -13,7 +13,7 @@ import type { ComponentType } from "react";
 import { AttachmentUpload } from "@plugins/page/plugins/attachment-block/web";
 import { attachmentUrl } from "@plugins/primitives/plugins/text-editor/plugins/paste-images/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { fileBlock } from "../../core";

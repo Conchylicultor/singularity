@@ -18,7 +18,7 @@ async function getRoot(): Promise<string> {
 // the copies in lockstep. A NEW rule that adopts the sentinel must be added
 // here; a copy that drops the sentinel will fail the "missing" branch below.
 const EXPECTED = [
-  "plugins/primitives/plugins/text/lint/no-adhoc-typography.ts",
+  "plugins/primitives/plugins/css/plugins/text/lint/no-adhoc-typography.ts",
   "plugins/primitives/plugins/css/plugins/radius/lint/no-adhoc-radius.ts",
   "plugins/primitives/plugins/css/plugins/z-layers/lint/no-adhoc-zindex.ts",
   "plugins/primitives/plugins/css/plugins/control-size/lint/no-adhoc-control.ts",

@@ -10,7 +10,7 @@ import {
   DataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { listTweakcnThemes } from "@plugins/ui/plugins/tweakcn/core";
 import type { CatalogTheme } from "../../shared";
 import { getCatalog, applyCatalogTheme } from "../../core";

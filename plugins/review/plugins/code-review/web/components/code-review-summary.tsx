@@ -1,6 +1,6 @@
 import { MdWarning } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { pushesResource } from "@plugins/tasks/core";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";

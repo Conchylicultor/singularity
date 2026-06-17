@@ -2,7 +2,7 @@ import { MdBolt } from "react-icons/md";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { Breadcrumb } from "@plugins/primitives/plugins/breadcrumb/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { PluginNode } from "../../core/types";
 import { PluginView } from "../slots";

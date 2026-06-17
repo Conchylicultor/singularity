@@ -2,7 +2,7 @@ import { useFileContent } from "@plugins/conversations/plugins/conversation-view
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { splitFrontmatter } from "../internal/frontmatter";
 import { FrontmatterCard } from "./frontmatter-card";
 

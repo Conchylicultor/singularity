@@ -1,6 +1,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export interface FilterChipProps {
   active: boolean;

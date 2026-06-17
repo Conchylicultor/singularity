@@ -14,7 +14,7 @@ markers byte-for-byte. A 6th rule adopting the sentinel, a copy losing it, or a
 drifted body all fail loudly.
 
 Fix by re-stamping the differing rule with the exact block from
-`plugins/primitives/plugins/text/lint/no-adhoc-typography.ts`, or by updating the
+`plugins/primitives/plugins/css/plugins/text/lint/no-adhoc-typography.ts`, or by updating the
 `EXPECTED` list when the set of rules legitimately changes.
 
 ## Plugin reference

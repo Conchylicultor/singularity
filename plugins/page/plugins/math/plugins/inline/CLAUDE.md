@@ -6,7 +6,7 @@
 
 - Description: Inline math: type $$ in any text block to drop a live KaTeX-rendered formula; stored as a \\(latex\\) token, click to edit.
 - Web:
-  - Uses: `page/editor.registerBlockTextExtension`, `page/math/render.KatexMath`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/popover.InlinePopover`, `primitives/text.Text`, `primitives/ui-kit.cn`
+  - Uses: `page/editor.registerBlockTextExtension`, `page/math/render.KatexMath`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/popover.InlinePopover`, `primitives/ui-kit.cn`
   - Exports: Values: `INLINE_MATH_TOKEN_PATTERN`, `inlineMathToken`
 - Core:
   - Exports: Values: `INLINE_MATH_TOKEN_PATTERN`, `inlineMathToken`

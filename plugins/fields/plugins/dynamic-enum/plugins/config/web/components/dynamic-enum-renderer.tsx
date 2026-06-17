@@ -2,7 +2,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
 import { dynamicEnumFieldType } from "@plugins/fields/plugins/dynamic-enum/core";
 import type { DynamicEnumFieldDef } from "../../core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { DynamicEnum, type DynamicEnumOption } from "../internal/slots";
 
 const DynamicEnumRenderer: FieldRendererComponent<string> = ({

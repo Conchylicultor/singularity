@@ -7,7 +7,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { FilterConjunction } from "../../../core";
 
 const LABEL: Record<FilterConjunction, string> = { and: "And", or: "Or" };

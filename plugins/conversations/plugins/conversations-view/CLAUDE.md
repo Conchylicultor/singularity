@@ -8,7 +8,7 @@
 - Web:
   - Slots: `ConversationsView.View` ← `conversations.conversations-view.grouped`, `conversations.conversations-view.history`, `conversations.conversations-view.queue`
   - Contributes: `Shell.Sidebar` "Conversations" → `ConversationsSidebar`
-  - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/pane-restore.loadRouteForConversation`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/cursor-pagination.useCursorPagination`, `primitives/launch.LaunchControl`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/tabbed-view.defineTabbedView`, `primitives/text.Text`, `shell.Shell`
+  - Uses: `conversations.useConversations`, `conversations/conversation-view.conversationPane`, `conversations/pane-restore.loadRouteForConversation`, `infra/endpoints.fetchEndpoint`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/text.Text`, `primitives/cursor-pagination.useCursorPagination`, `primitives/launch.LaunchControl`, `primitives/pane.useOpenPane`, `primitives/pane.usePaneStore`, `primitives/tabbed-view.defineTabbedView`, `shell.Shell`
   - Exports: Types: `ViewProps`; Values: `ConversationsView`, `useGoneConversationsPagination`
 - Cross-plugin:
   - Imported by: `conversations/conversations-view/grouped`, `conversations/conversations-view/history`, `conversations/conversations-view/queue`

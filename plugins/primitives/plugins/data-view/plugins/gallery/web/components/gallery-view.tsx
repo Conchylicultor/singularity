@@ -1,7 +1,7 @@
 import { type ReactNode } from "react";
 import { MdAdd } from "react-icons/md";
 import { Button, cn } from "@plugins/primitives/plugins/ui-kit/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import {

@@ -3,7 +3,7 @@ import { MdAdd, MdRemove } from "react-icons/md";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { pluginIdSegments } from "@plugins/framework/plugins/plugin-id/core";
 import { Stack, Inset } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";

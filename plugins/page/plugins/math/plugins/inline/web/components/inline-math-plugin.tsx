@@ -13,7 +13,7 @@ import {
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
 import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { BlockTextPluginProps } from "@plugins/page/plugins/editor/web";
 import { KatexMath } from "@plugins/page/plugins/math/plugins/render/web";
 import { $createInlineMathNode } from "./inline-math-node";

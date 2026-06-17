@@ -3,7 +3,7 @@ import type { ComponentType } from "react";
 import type { Slot } from "@plugins/framework/plugins/web-sdk/core";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import type { VariantRegionCore } from "../../core";
 import type { VariantContribution } from "../slots";

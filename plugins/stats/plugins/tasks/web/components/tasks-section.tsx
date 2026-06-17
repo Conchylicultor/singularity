@@ -1,4 +1,4 @@
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { TasksCumulativeChart } from "./tasks-cumulative-chart";
 import { TasksVelocityChart } from "./tasks-velocity-chart";

@@ -2,7 +2,7 @@ import { useCallback, type PointerEvent as ReactPointerEvent } from "react";
 import { MdClose, MdRemove, MdCropSquare, MdFilterNone } from "react-icons/md";
 import { Apps } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { clampToBounds, type Bounds, type Geometry } from "../hooks/use-window-geometry";
 import { WindowResizeHandles } from "./window-resize-handles";
 

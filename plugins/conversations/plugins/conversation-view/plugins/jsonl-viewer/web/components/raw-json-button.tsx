@@ -1,7 +1,7 @@
 import { MdDataObject } from "react-icons/md";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { rowActionClass } from "./row-action-button";
 
 export function RawJsonAction({ event }: { event: JsonlEvent }) {

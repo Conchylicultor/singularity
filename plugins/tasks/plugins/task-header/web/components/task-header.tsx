@@ -3,7 +3,7 @@ import { useCallback } from "react";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { SectionLabel } from "@plugins/primitives/plugins/css/plugins/section-label/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { patchTask, setAutoStart, useTask, type AutoStartModel } from "@plugins/tasks/web";
 import { useTaskAutoStart } from "@plugins/tasks/plugins/auto-start/web";
 import { useRegisterFlush } from "@plugins/tasks/plugins/task-detail/web";

@@ -3,7 +3,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import { useState, useMemo, useRef, useEffect, useCallback, forwardRef } from "react";
 import { MdSearch } from "react-icons/md";
 import { Kbd } from "@plugins/primitives/plugins/tooltip/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { CommandPaletteItem } from "../slots";
 import { fuzzyMatch, type FuzzyMatch } from "./fuzzy";
 

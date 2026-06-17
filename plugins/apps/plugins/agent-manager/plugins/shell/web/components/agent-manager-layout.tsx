@@ -1,7 +1,7 @@
 import { MillerColumns } from "@plugins/layouts/plugins/miller/web";
 import { navigate } from "@plugins/apps/web";
 import { AppShellLayout } from "@plugins/primitives/plugins/app-shell/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { SidebarTrigger } from "@plugins/primitives/plugins/ui-kit/web";
 import { Shell } from "@plugins/shell/web";
 import { SidebarReopenHandle } from "./sidebar-reopen-handle";

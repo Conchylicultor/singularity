@@ -9,7 +9,7 @@ import { useConfigRegistrations } from "@plugins/config_v2/web";
 import { configV2Resource, removeDescriptorScope } from "@plugins/config_v2/core";
 import type { ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Values } from "@plugins/config_v2/core";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { acknowledgeConflict, deleteOverride, mergeConflict, getConfigRawFile } from "../../core";
 import { configDetailPane } from "../internal/panes";
 import { useConflicts } from "../internal/use-conflicts";

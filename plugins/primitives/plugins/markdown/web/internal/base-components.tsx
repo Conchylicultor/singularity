@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { Components } from "react-markdown";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { langFromClassName, nodeToText } from "./helpers";
 
 export function buildBaseComponents(

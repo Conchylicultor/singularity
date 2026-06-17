@@ -14,7 +14,7 @@ import { LaunchControl } from "@plugins/primitives/plugins/launch/web";
 import type { AttemptWithConversations } from "@plugins/tasks/core";
 import { attemptsResource } from "@plugins/tasks/core";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { attemptPane } from "../panes";
 
 function SideBySideButton({ convId }: { convId: string }) {

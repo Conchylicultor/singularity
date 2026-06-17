@@ -4,7 +4,7 @@ import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle
 import { DataView } from "@plugins/primitives/plugins/data-view/web";
 import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";

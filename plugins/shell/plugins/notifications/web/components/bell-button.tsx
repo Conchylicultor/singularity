@@ -10,7 +10,7 @@ import { getTabId } from "@plugins/primitives/plugins/tab-id/web";
 import { navigate } from "@plugins/apps/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { recentClientIds } from "../internal/toast";
 import { notificationsResource } from "../../shared/resources";
 import { dismissNotification, dismissAllNotifications, markAllNotificationsRead } from "../../shared/endpoints";

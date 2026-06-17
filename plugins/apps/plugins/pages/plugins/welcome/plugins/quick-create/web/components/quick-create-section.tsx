@@ -1,6 +1,6 @@
 import { type ReactElement } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
-import { Text } from "@plugins/primitives/plugins/text/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
