@@ -48,9 +48,9 @@ const RESISTANCE = 0.5;
  * continuous hold, short enough that releasing snaps back promptly.
  */
 const GESTURE_END_GAP_MS = 150;
-/** Spring-back duration + easing (slight overshoot → native bounce feel). */
-const SPRING_MS = 420;
-const SPRING_EASE = "cubic-bezier(0.34, 1.4, 0.5, 1)";
+/** Spring-back duration + easing — snappy decelerate, no overshoot (easeOutQuint). */
+const SPRING_MS = 300;
+const SPRING_EASE = "cubic-bezier(0.22, 1, 0.36, 1)";
 /** Safety net to clear the snap-back styles if `transitionend` never fires. */
 const SPRING_FALLBACK_MS = SPRING_MS + 120;
 const SCROLLABLE_OVERFLOW = new Set(["auto", "scroll", "overlay"]);

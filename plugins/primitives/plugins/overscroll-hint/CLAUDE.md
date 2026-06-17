@@ -45,7 +45,8 @@ it tracks the gesture frame-by-frame.
 
 When the wheel/momentum stream goes quiet for `GESTURE_END_GAP_MS` (~150ms) — or
 immediately on `touchend`/`touchcancel` — the surface **springs back** to 0 via a
-`transform` transition with a slightly-overshooting ease (`SPRING_MS` ~420ms).
+`transform` transition with a snappy no-overshoot decelerate ease (easeOutQuint,
+`SPRING_MS` ~300ms — the native iOS/Android snap-back range).
 The inline styles (`transform`, `transition`, `will-change`) are cleared on
 `transitionend` (with a `setTimeout` safety net). `prefers-reduced-motion:
 reduce` disables the effect entirely (checked per gesture in JS). All of this is
