@@ -1,9 +1,9 @@
-import { stat } from "node:fs/promises";
 import { listAttempts, listTasks } from "@plugins/tasks/plugins/tasks-core/server";
 import { listDatabases } from "@plugins/database/plugins/admin/server";
 import { ensureMainWorktreeRoot } from "@plugins/infra/plugins/worktree/server";
 import { ndjsonResponse } from "../../shared/ndjson";
 import { type WorktreeEntry } from "../../shared/endpoints";
+import { dirExists } from "./reap";
 
 import { GIT } from "@plugins/infra/plugins/paths/server";
 const CONCURRENCY = 50;
@@ -14,16 +14,6 @@ const DELETABLE_TASK_STATUSES = new Set([
   "done",
   "dropped",
 ]);
-
-async function dirExists(path: string): Promise<boolean> {
-  try {
-    await stat(path);
-    return true;
-  } catch (err) {
-    if ((err as NodeJS.ErrnoException).code !== "ENOENT") throw err;
-    return false;
-  }
-}
 
 // `git status --porcelain=v2 --branch` gives us branch tracking info (ahead N)
 // AND dirty working tree in one subprocess. `du` was removed — it takes ~5s per

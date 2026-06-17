@@ -2,6 +2,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { handleList } from "./internal/handle-list";
 import { handleDelete } from "./internal/handle-delete";
 import { handleBulkDelete } from "./internal/handle-bulk-delete";
+import { worktreeReapJob } from "./internal/reap-job";
 import { listWorktrees, bulkDeleteWorktrees, deleteWorktree } from "../shared/endpoints";
 
 export default {
@@ -11,4 +12,5 @@ export default {
     [bulkDeleteWorktrees.route]: handleBulkDelete,
     [deleteWorktree.route]: handleDelete,
   },
+  register: [worktreeReapJob],
 } satisfies ServerPluginDefinition;

@@ -1829,7 +1829,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.reportEndpointError`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
         - Exports: Values: `worktreeCleanupPane`
       - Server:
-        - Uses: `database/admin.dropDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listTasks`
+        - Uses: `database/admin.dropDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `infra/worktree.worktreePathFor`, `primitives/log-channels.Log`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listTasks`
+        - Register: `defineJob('worktree-cleanup.reap-stale')`
         - Routes: `GET /api/debug/worktrees`, `POST /api/debug/worktrees/bulk-delete`, `DELETE /api/debug/worktrees/:id`
       - Shared:
         - Exports: Types: `BulkDeleteWorktreesBody`; Values: `bulkDeleteWorktrees`, `BulkDeleteWorktreesBodySchema`, `deleteWorktree`, `listWorktrees`
@@ -2544,7 +2545,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
         - Exports: Types: `JobRow`, `JobsPayload`, `JobState`; Values: `cancelJob`, `JobRowSchema`, `jobsListResource`, `JobsPayloadSchema`, `JobStateSchema`, `listJobs`, `retryJob`
       - Cross-plugin:
-        - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/transcript-retention`, `database/fork`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
+        - Imported by: `apps/pages/content-search`, `apps/pages/history`, `apps/sonata/sources/midi/folders`, `apps/story/generation`, `apps/workflows/engine`, `backup`, `build`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/conversations-view/queue`, `conversations/transcript-retention`, `database/fork`, `debug/worktree-cleanup`, `improve`, `infra/attachments`, `infra/events`, `infra/events-test`, `page/attachment-block`, `page/inline-date`, `page/links`, `shell/notifications`, `tasks`, `tasks/task-title`
     - **`mcp`** — HTTP MCP server endpoint. Hosts tools contributed by other plugins via Mcp.tool.
       - Cross-plugin:
         - Imported by: `conversations/conversation-view/push-and-exit`, `conversations/summary`, `database/query`, `debug/profiling/runtime`, `plugin-meta/plugin-health`, `tasks`
@@ -3452,7 +3453,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/migrations`, `infra/attachments`, `primitives/live-state`
+        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/migrations`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`

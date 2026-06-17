@@ -11,7 +11,8 @@
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.EndpointError`, `infra/endpoints.fetchEndpoint`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.reportEndpointError`, `primitives/app-shell.sidebarNavItem`, `primitives/badge.Badge`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/placeholder.Placeholder`, `primitives/spinner.Spinner`, `primitives/text.Text`, `primitives/ui-kit.Button`
   - Exports: Values: `worktreeCleanupPane`
 - Server:
-  - Uses: `database/admin.dropDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listTasks`
+  - Uses: `database/admin.dropDatabase`, `database/admin.listDatabases`, `infra/endpoints.implement`, `infra/jobs.defineJob`, `infra/paths.GIT`, `infra/paths.SINGULARITY_DIR`, `infra/worktree.ensureMainWorktreeRoot`, `infra/worktree.removeWorktree`, `infra/worktree.worktreePathFor`, `primitives/log-channels.Log`, `tasks/tasks-core.getAttempt`, `tasks/tasks-core.listAttempts`, `tasks/tasks-core.listTasks`
+  - Register: `defineJob('worktree-cleanup.reap-stale')`
   - Routes: `GET /api/debug/worktrees`, `POST /api/debug/worktrees/bulk-delete`, `DELETE /api/debug/worktrees/:id`
 - Shared:
   - Exports: Types: `BulkDeleteWorktreesBody`; Values: `bulkDeleteWorktrees`, `BulkDeleteWorktreesBodySchema`, `deleteWorktree`, `listWorktrees`

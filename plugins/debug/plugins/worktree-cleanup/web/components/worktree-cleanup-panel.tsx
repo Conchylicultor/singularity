@@ -231,6 +231,11 @@ export function WorktreeCleanupPanel() {
         </div>
       </div>
 
+      {/* Automatic-reaper policy note */}
+      <Text as="div" variant="caption" className="px-lg py-sm text-muted-foreground border-b">
+        Orphaned forks are dropped hourly; worktrees are deleted automatically after 30 days. Use the controls below to reap early.
+      </Text>
+
       {/* Bulk result banner */}
       {bulkResult && (
         <Text as="div" variant="caption" className="px-lg py-sm bg-muted text-muted-foreground border-b">
