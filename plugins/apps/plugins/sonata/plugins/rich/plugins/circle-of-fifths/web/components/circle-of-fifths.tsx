@@ -1,0 +1,210 @@
+import { useMemo } from "react";
+import {
+  useCursorSelector,
+  useSonata,
+} from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import type {
+  Annotation,
+  ChordData,
+} from "@plugins/apps/plugins/sonata/plugins/score/core";
+
+/**
+ * The twelve circle-of-fifths positions, clockwise from the top (12 o'clock).
+ * Each position sits a perfect fifth above the previous one, so the major
+ * pitch class at position `i` is `(i * 7) % 12`. The outer ring shows the major
+ * key, the inner ring its relative minor (a minor third / three semitones
+ * below the major tonic).
+ */
+const MAJOR_LABELS = [
+  "C", "G", "D", "A", "E", "B", "F♯", "D♭", "A♭", "E♭", "B♭", "F",
+];
+const MINOR_LABELS = [
+  "Am", "Em", "Bm", "F♯m", "C♯m", "G♯m", "D♯m", "B♭m", "Fm", "Cm", "Gm", "Dm",
+];
+
+/** Pitch class (0–11) of the major key at each circle position. */
+const MAJOR_PC = MAJOR_LABELS.map((_, i) => (i * 7) % 12);
+/** Pitch class of the relative-minor tonic at each position (major − 3 semis). */
+const MINOR_PC = MAJOR_PC.map((pc) => (pc + 9) % 12);
+
+/**
+ * Chord qualities built on a minor third — these highlight on the inner
+ * (relative-minor) ring; everything else (major triads, dominants, …) lands on
+ * the outer major ring.
+ */
+const MINOR_QUALITIES = new Set([
+  "min", "min7", "min6", "min9", "halfdim7", "dim", "dim7",
+]);
+
+// --- Wheel geometry (SVG user units; viewBox is 160×160, centre at 80,80) ---
+const CX = 80;
+const CY = 80;
+const R_OUT = 76; // outer edge of the major ring
+const R_MID = 50; // major/minor ring boundary
+const R_IN = 26; // inner edge of the minor ring (centre hole)
+const R_MAJOR_LABEL = (R_OUT + R_MID) / 2;
+const R_MINOR_LABEL = (R_MID + R_IN) / 2;
+const SEG_HALF = 15; // half a 30° segment
+
+/** Point on the wheel at `r` units from centre, `deg` clockwise from the top. */
+function point(r: number, deg: number): [number, number] {
+  const a = (deg * Math.PI) / 180;
+  return [CX + r * Math.sin(a), CY - r * Math.cos(a)];
+}
+
+/** Path for an annular sector (a ring slice) between two radii and two angles. */
+function sector(rIn: number, rOut: number, a0: number, a1: number): string {
+  const [x0, y0] = point(rOut, a0);
+  const [x1, y1] = point(rOut, a1);
+  const [x2, y2] = point(rIn, a1);
+  const [x3, y3] = point(rIn, a0);
+  return [
+    `M ${x0} ${y0}`,
+    `A ${rOut} ${rOut} 0 0 1 ${x1} ${y1}`,
+    `L ${x2} ${y2}`,
+    `A ${rIn} ${rIn} 0 0 0 ${x3} ${y3}`,
+    "Z",
+  ].join(" ");
+}
+
+/**
+ * The circle-of-fifths panel — a free-floating `Sonata.Section`, sibling to the
+ * chord and key readouts. Reads the shared Score + cursor from `useSonata()` and
+ * highlights the wedge for the chord under the playhead: a major-ish chord lights
+ * its major key on the outer ring, a minor-ish chord lights its tonic on the
+ * inner ring. Tracks the cursor as the transport advances.
+ */
+export function CircleOfFifths() {
+  const { score } = useSonata();
+
+  const chords = useMemo(
+    () =>
+      score.annotations.filter(
+        (a): a is Annotation<"chord", ChordData> => a.type === "chord",
+      ),
+    [score.annotations],
+  );
+
+  // The chord covering the playhead — a STABLE reference from the memoized
+  // `chords` array, so this panel re-renders only when the chord changes, not on
+  // every cursor frame. Falls back to the first chord before playback starts.
+  const current = useCursorSelector(
+    (cursorBeat) =>
+      chords.find((c) => cursorBeat >= c.start && cursorBeat < c.end) ??
+      (cursorBeat <= 0 ? chords[0] : undefined),
+    [chords],
+  );
+
+  // Which wedge to light: position index on the major or the minor ring.
+  const { majorPos, minorPos } = useMemo(() => {
+    if (!current) return { majorPos: -1, minorPos: -1 };
+    const { root, quality } = current.data;
+    if (MINOR_QUALITIES.has(quality)) {
+      return { majorPos: -1, minorPos: MINOR_PC.indexOf(root) };
+    }
+    return { majorPos: MAJOR_PC.indexOf(root), minorPos: -1 };
+  }, [current]);
+
+  return (
+    <Card className="rounded-lg p-lg">
+      <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+        Circle of fifths
+      </div>
+
+      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the wheel from the section label inside the Card chrome; no flex parent owns a gap here */}
+      <div className="mt-3">
+        <svg
+          viewBox="0 0 160 160"
+          className="mx-auto block w-full max-w-[14rem]"
+          role="img"
+          aria-label="Circle of fifths"
+        >
+          {MAJOR_LABELS.map((label, i) => {
+            const a0 = i * 30 - SEG_HALF;
+            const a1 = i * 30 + SEG_HALF;
+            const lit = i === majorPos;
+            const [lx, ly] = point(R_MAJOR_LABEL, i * 30);
+            return (
+              <g key={`maj-${i}`}>
+                <path
+                  d={sector(R_MID, R_OUT, a0, a1)}
+                  fill={lit ? "var(--primary)" : "var(--muted)"}
+                  stroke="var(--border)"
+                  strokeWidth={1}
+                />
+                <text
+                  x={lx}
+                  y={ly}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={9}
+                  fontWeight={lit ? 700 : 500}
+                  fill={lit ? "var(--primary-foreground)" : "var(--foreground)"}
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
+
+          {MINOR_LABELS.map((label, i) => {
+            const a0 = i * 30 - SEG_HALF;
+            const a1 = i * 30 + SEG_HALF;
+            const lit = i === minorPos;
+            const [lx, ly] = point(R_MINOR_LABEL, i * 30);
+            return (
+              <g key={`min-${i}`}>
+                <path
+                  d={sector(R_IN, R_MID, a0, a1)}
+                  fill={lit ? "var(--primary)" : "var(--background)"}
+                  stroke="var(--border)"
+                  strokeWidth={1}
+                />
+                <text
+                  x={lx}
+                  y={ly}
+                  textAnchor="middle"
+                  dominantBaseline="central"
+                  fontSize={7}
+                  fontWeight={lit ? 700 : 500}
+                  fill={
+                    lit ? "var(--primary-foreground)" : "var(--muted-foreground)"
+                  }
+                >
+                  {label}
+                </text>
+              </g>
+            );
+          })}
+
+          {/* Centre hole — the current chord symbol, or a dash before playback. */}
+          <circle cx={CX} cy={CY} r={R_IN} fill="var(--card)" />
+          <text
+            x={CX}
+            y={CY}
+            textAnchor="middle"
+            dominantBaseline="central"
+            fontSize={11}
+            fontWeight={700}
+            fill={current ? "var(--foreground)" : "var(--muted-foreground)"}
+          >
+            {current ? current.data.symbol : "—"}
+          </text>
+        </svg>
+      </div>
+
+      {chords.length === 0 && (
+        <Text
+          as="div"
+          variant="caption"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the empty-state caption from the wheel above; no flex parent owns a gap
+          className="mt-2 text-center text-muted-foreground"
+        >
+          No chords detected.
+        </Text>
+      )}
+    </Card>
+  );
+}

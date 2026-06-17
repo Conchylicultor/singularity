@@ -9,6 +9,7 @@
   - **`chord-analyzer`** — Sonata Analyzer: derives chord annotations from the score's notes. Slices the score at every onset, runs interval-set chord detection over each window, and emits coalesced source:"derived" chord annotations.
   - **`chord-overlay`** — Sonata Overlay: labels chord annotations along the timeline. Requires the time-axis capability, so it renders on the piano roll and any future time-based display.
   - **`chord-readout`** — Sonata Section: a large current-chord readout panel that tracks the playback cursor, reading the shared Score + cursor from useSonata().
+  - **`circle-of-fifths`** — Sonata Section: a small circle-of-fifths wheel — major keys on the outer ring, their relative minors on the inner ring — that highlights the chord under the playback cursor, reading the shared Score + cursor from useSonata().
   - **`key-chip`** — Sonata Hud: current-key chip overlaid on the display, tracking the playback cursor. Reads the shared Score + cursor via useSonata().
   - **`key-mode`** — Per-song key-source mode: persists a toggle to override an authored (MIDI) key with auto-detection, and syncs it into the shell's score pipeline via a headless Sonata.Effect observer. Owns the sonata_songs_ext_key_auto_detect side-table: per-song toggle to ignore the authored (MIDI) key and auto-detect from notes. Serves the reactive rollup.
   - **`key-readout`** — Sonata Section: a current-key readout panel that lights the key's scale notes on a mini keyboard, tracking the playback cursor. Reads the shared Score + cursor from useSonata().

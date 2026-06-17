@@ -333,6 +333,10 @@
       "name": "@singularity/plugin-apps-sonata-rich-chord-readout",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/sonata/plugins/rich/plugins/circle-of-fifths": {
+      "name": "@singularity/plugin-apps-sonata-rich-circle-of-fifths",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/sonata/plugins/rich/plugins/key-chip": {
       "name": "@singularity/plugin-apps-sonata-rich-key-chip",
       "version": "0.0.1",
@@ -3627,6 +3631,8 @@
     "@singularity/plugin-apps-sonata-rich-chord-overlay": ["@singularity/plugin-apps-sonata-rich-chord-overlay@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-overlay"],
 
     "@singularity/plugin-apps-sonata-rich-chord-readout": ["@singularity/plugin-apps-sonata-rich-chord-readout@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/chord-readout"],
+
+    "@singularity/plugin-apps-sonata-rich-circle-of-fifths": ["@singularity/plugin-apps-sonata-rich-circle-of-fifths@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/circle-of-fifths"],
 
     "@singularity/plugin-apps-sonata-rich-key-chip": ["@singularity/plugin-apps-sonata-rich-key-chip@workspace:plugins/apps/plugins/sonata/plugins/rich/plugins/key-chip"],
 
