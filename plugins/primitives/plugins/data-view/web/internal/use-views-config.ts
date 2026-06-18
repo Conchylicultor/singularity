@@ -58,6 +58,7 @@ export function useViewsConfig(
   storageKey: string,
   contributions: SealContributions<DataViewContribution>[],
   hasHierarchy: boolean,
+  viewOptions: Record<string, unknown> | undefined,
   defaults: ResolvedViewInstance[],
 ): ViewsConfigHandle {
   const descriptor = viewsDescriptor(storageKey);
@@ -175,9 +176,11 @@ export function useViewsConfig(
       Rank.compare(Rank.from(a.rank), Rank.from(b.rank)),
     );
     return sorted
-      .map((row) => buildInstanceFromRow(row, contributions, hasHierarchy))
+      .map((row) =>
+        buildInstanceFromRow(row, contributions, hasHierarchy, viewOptions),
+      )
       .filter((r): r is ResolvedViewInstance => r !== null);
-  }, [displayRows, contributions, hasHierarchy]);
+  }, [displayRows, contributions, hasHierarchy, viewOptions]);
 
   const rowById = useCallback(
     (id: string): ViewConfigRow | undefined =>

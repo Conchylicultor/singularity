@@ -130,7 +130,13 @@ export function useConfigViewModel(
     hasHierarchy,
     viewOptions,
   );
-  const cfg = useViewsConfig(storageKey, contributions, hasHierarchy, defaults);
+  const cfg = useViewsConfig(
+    storageKey,
+    contributions,
+    hasHierarchy,
+    viewOptions,
+    defaults,
+  );
   const ephemeral = useEphemeralViewState(storageKey);
 
   const activeId = resolveActiveId(

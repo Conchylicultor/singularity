@@ -71,13 +71,17 @@ export function useResolvedInstances(
  *     removed view-type id, same documented hazard as reorder node-type ids), or
  *   - the view-type is hierarchical but the data source has no hierarchy.
  *
- * The row's whole `view` value becomes the instance `options` (the view-type
- * component reads its own keys, including the host-managed `sort`/`filter`).
+ * The row's whole `view` value is layered **over** the consumer's code-supplied
+ * `viewOptions[type]` to become the instance `options`: config-authored keys
+ * (`sort`/`filter`/`coverField`/…) override, while non-serializable code-only
+ * options (e.g. `renderCard`, `cover`) — which can never live in a config row —
+ * survive. The view-type component reads its own keys off the merged result.
  */
 export function buildInstanceFromRow(
   row: ViewConfigRow,
   contributions: SealContributions<DataViewContribution>[],
   hasHierarchy: boolean,
+  viewOptions?: Record<string, unknown>,
 ): ResolvedViewInstance | null {
   const viewType = contributions.find((c) => c.type === row.view.type);
   if (!viewType) return null;
@@ -87,7 +91,10 @@ export function buildInstanceFromRow(
       id: row.id,
       name: row.name,
       type: row.view.type,
-      options: row.view,
+      options: {
+        ...((viewOptions?.[row.view.type] as object | undefined) ?? {}),
+        ...(row.view as object),
+      },
     },
     viewType,
   };
