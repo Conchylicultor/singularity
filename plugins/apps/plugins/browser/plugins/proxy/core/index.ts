@@ -4,5 +4,10 @@ export {
   proxyUrl,
   isProxyUrl,
   parseBrowserProxyNavMessage,
+  parseMetaRefresh,
 } from "./url";
-export type { BrowserProxyNavKind, BrowserProxyNavMessage } from "./url";
+export type {
+  BrowserProxyNavKind,
+  BrowserProxyNavMessage,
+  MetaRefreshDirective,
+} from "./url";

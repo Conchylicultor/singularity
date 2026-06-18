@@ -67,6 +67,52 @@ export interface BrowserProxyNavMessage {
   url: string;
 }
 
+/**
+ * A declarative refresh redirect parsed from a `<meta http-equiv="refresh">`
+ * `content` attribute or an HTTP `Refresh` response header.
+ */
+export interface MetaRefreshDirective {
+  /** Delay before the navigation, in milliseconds (0 = immediate). */
+  delayMs: number;
+  /** The (possibly relative) target URL — resolve against the document base. */
+  url: string;
+}
+
+/**
+ * Parse a refresh `content` value (`"<delay>; url=<target>"`) shared by
+ * `<meta http-equiv="refresh">` and the HTTP `Refresh` header.
+ *
+ * Returns `null` for a bare delay with no `url=` (a same-document reload — the
+ * proxied document just re-fetches itself, so there is nothing to redirect).
+ * The returned `url` is left untouched (possibly relative); the caller resolves
+ * it against the real document base. A leaf pure function so the server handler
+ * can depend on it and it stays unit-testable.
+ */
+export function parseMetaRefresh(content: string): MetaRefreshDirective | null {
+  if (!content) return null;
+  const semi = content.indexOf(";");
+  const delayPart = (semi === -1 ? content : content.slice(0, semi)).trim();
+  const delaySec = Number.parseFloat(delayPart);
+  const delayMs =
+    Number.isFinite(delaySec) && delaySec > 0 ? Math.round(delaySec * 1000) : 0;
+  if (semi === -1) return null; // bare delay → same-document reload, not ours.
+
+  const rest = content.slice(semi + 1).trim();
+  const match = /url\s*=\s*(.*)$/i.exec(rest);
+  if (!match || match[1] === undefined) return null;
+  let url = match[1].trim();
+  // Strip a single layer of matching surrounding quotes (`url='...'`).
+  if (
+    url.length >= 2 &&
+    ((url.startsWith('"') && url.endsWith('"')) ||
+      (url.startsWith("'") && url.endsWith("'")))
+  ) {
+    url = url.slice(1, -1).trim();
+  }
+  if (!url) return null;
+  return { delayMs, url };
+}
+
 /** Narrow an untrusted `message` event payload to a nav message, else null. */
 export function parseBrowserProxyNavMessage(
   data: unknown,

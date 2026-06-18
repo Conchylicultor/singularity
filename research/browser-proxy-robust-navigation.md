@@ -16,12 +16,62 @@ frame), or desync the omnibox:
    real origin directly (un-proxied → framing block).
 3. **Cross-URL server redirects** — followed server-side; the omnibox keeps
    showing the original (pre-redirect) URL.
+4. **Declarative refresh redirects** — `<meta http-equiv="refresh" url=…>` and
+   the HTTP `Refresh` response header. Now handled (see below).
 
 > `location = …` / `location.assign/replace` cannot be intercepted from inside
 > the page in modern browsers (non-configurable accessor/methods). Genuinely
 > robust coverage of those requires full server-side URL rewriting or a service
-> worker (impossible on the proxy's opaque-origin sandboxed iframe). Out of
-> scope here — filed as a follow-up.
+> worker (impossible on the proxy's opaque-origin sandboxed iframe). See
+> "JS location assignments — why this is unsolvable in-page" below.
+
+## Declarative refresh redirects (meta refresh / `Refresh` header)
+
+Unlike JS `location` assignments, refresh redirects are **declarative and fully
+visible server-side**, so they are fixed cleanly without any in-page hook:
+
+- The injected shim exposes `window.__singularityProxyScheduleRefresh(delayMs,
+  url)`, which after `delayMs` posts `navigate {url}` to the parent — the exact
+  same parent-driven path link clicks already use (parent re-wraps through the
+  proxy, pushes history, reflects the omnibox).
+- `<meta http-equiv="refresh" content="…; url=…">` is replaced in the
+  HTMLRewriter pass with a `<script>` calling that scheduler (URL resolved
+  server-side against the real document base, JSON-encoded + `<`-escaped so a
+  `</script>` in the URL can't break out). A bare-delay `<meta refresh>` with no
+  `url=` is left untouched — it just re-fetches the current proxied document.
+- The HTTP `Refresh` response header (never forwarded — it would escape) is
+  parsed the same way and appended to the head injection as one more scheduler
+  call.
+
+`parseMetaRefresh()` (proxy `core/url.ts`) is the shared, unit-tested parser for
+both the meta `content` value and the header.
+
+## JS location assignments — why this is unsolvable in-page
+
+`location.href = …`, `location.assign(…)`, `location.replace(…)` **cannot** be
+intercepted from within the page. Per the HTML spec, every member of the
+`Location` interface is `[LegacyUnforgeable]` — non-configurable *and*
+non-writable — so no shim (`Object.defineProperty`, prototype override, global
+shadowing) can wrap them. The frame navigates straight to the real origin and
+re-hits the framing block.
+
+Path-based URL encoding (the "server-side URL rewriting" idea) does **not** rescue
+this class:
+
+- `location.href = "/login"` (root-relative, the common case) resolves against
+  the proxy *origin* → `…localhost:9000/login`, not the proxied site. `<base>`
+  never governs root-relative URLs.
+- `location.href = "https://real/x"` (absolute) escapes regardless of any base.
+- Only directory-relative assignments (rare) would benefit — not worth the cost
+  of rewriting every URL in HTML/CSS and routing every subresource through the
+  proxy.
+
+The only mechanisms that genuinely cover JS location are **(a)** full JavaScript
+instrumentation (parse + rewrite every script so `location` reads go through a
+proxied accessor — the testcafe-hammerhead approach; a large, brittle parser
+dependency) or **(b)** a service worker (impossible on the opaque-origin
+sandboxed iframe). Both are out of scope; filed as a follow-up. Same root cause
+limits SPA URL reflection (`window.location` inside the frame is the proxy URL).
 
 ## Design
 

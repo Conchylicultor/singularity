@@ -2,7 +2,11 @@ import {
   SsrfError,
   safeFetch,
 } from "@plugins/infra/plugins/safe-fetch/server";
-import { BROWSER_PROXY_NAV_MESSAGE, BROWSER_PROXY_PATH } from "../../core";
+import {
+  BROWSER_PROXY_NAV_MESSAGE,
+  BROWSER_PROXY_PATH,
+  parseMetaRefresh,
+} from "../../core";
 
 const PROXY_TIMEOUT_MS = 20_000;
 
@@ -20,6 +24,29 @@ function escapeAttribute(value: string): string {
     .replaceAll("&", "&amp;")
     .replaceAll('"', "&quot;")
     .replaceAll("<", "&lt;");
+}
+
+/** Resolve a (possibly relative) URL against `base`, keeping only http(s). */
+function resolveHttp(raw: string, base: string): string | null {
+  try {
+    const u = new URL(raw, base);
+    return /^https?:$/i.test(u.protocol) ? u.href : null;
+  } catch (err) {
+    // `new URL` throws TypeError for a malformed/relative-without-base input —
+    // expected for arbitrary upstream refresh targets. Anything else is real.
+    if (err instanceof TypeError) return null;
+    throw err;
+  }
+}
+
+/**
+ * A `<script>` calling the injected refresh scheduler. `JSON.stringify` makes
+ * the URL a safe JS string literal; we additionally escape `<` to `<` so a
+ * URL containing `</script>` can never break out of the script element.
+ */
+function scheduleRefreshScript(delayMs: number, absUrl: string): string {
+  const urlLiteral = JSON.stringify(absUrl).replaceAll("<", "\\u003c");
+  return `<script>window.__singularityProxyScheduleRefresh(${delayMs},${urlLiteral})</script>`;
 }
 
 /**
@@ -56,6 +83,20 @@ const NAV_SCRIPT = `(function () {
 
   // Report the committed document URL (post-redirect final URL via <base>).
   post(document.baseURI, "commit");
+
+  // Declarative refresh redirects (<meta http-equiv=refresh> / Refresh header)
+  // are rewritten server-side into a call to this scheduler so they route
+  // through the same parent-driven \`navigate\` path as link clicks instead of
+  // navigating the iframe straight to the (un-proxied) real origin. The URL is
+  // already absolute (resolved server-side against the real document base).
+  window.__singularityProxyScheduleRefresh = function (delayMs, url) {
+    try {
+      if (!isHttp(url)) return;
+      setTimeout(function () {
+        post(url, "navigate");
+      }, delayMs > 0 ? delayMs : 0);
+    } catch (e) {}
+  };
 
   document.addEventListener("click", function (e) {
     if (e.defaultPrevented || e.button !== 0) return;
@@ -315,16 +356,43 @@ export async function handleProxy(req: Request): Promise<Response> {
   // JS-relative URL resolves to the real origin and loads directly.
   const finalUrl = res.url || target;
   const baseTag = `<base href="${escapeAttribute(finalUrl)}">`;
-  const injection = `${baseTag}<script>${NAV_SCRIPT}</script>`;
+  let injection = `${baseTag}<script>${NAV_SCRIPT}</script>`;
+
+  // HTTP `Refresh` response header → schedule a proxied navigate. (We never
+  // forward the raw header — it would navigate the iframe to the un-proxied real
+  // origin and re-hit the framing block.) Resolved against finalUrl up front.
+  const refreshHeader = res.headers.get("refresh");
+  if (refreshHeader) {
+    const directive = parseMetaRefresh(refreshHeader);
+    const abs = directive && resolveHttp(directive.url, finalUrl);
+    if (directive && abs) injection += scheduleRefreshScript(directive.delayMs, abs);
+  }
 
   let injected = false;
-  const rewriter = new HTMLRewriter().on("head", {
-    element(el) {
-      if (injected) return; // only the first <head> gets the injection.
-      injected = true;
-      el.prepend(injection, { html: true });
-    },
-  });
+  const rewriter = new HTMLRewriter()
+    .on("head", {
+      element(el) {
+        if (injected) return; // only the first <head> gets the injection.
+        injected = true;
+        el.prepend(injection, { html: true });
+      },
+    })
+    // <meta http-equiv="refresh" content="…; url=…"> would otherwise navigate
+    // the iframe straight to the real origin (un-proxied). Replace it with a
+    // call to the injected scheduler so it routes through the proxy navigate
+    // path. A bare-delay reload (no url=) is left untouched — it just re-fetches
+    // the current proxied document.
+    .on("meta", {
+      element(el) {
+        const httpEquiv = el.getAttribute("http-equiv");
+        if (!httpEquiv || httpEquiv.trim().toLowerCase() !== "refresh") return;
+        const directive = parseMetaRefresh(el.getAttribute("content") ?? "");
+        if (!directive) return;
+        const abs = resolveHttp(directive.url, finalUrl);
+        if (!abs) return;
+        el.replace(scheduleRefreshScript(directive.delayMs, abs), { html: true });
+      },
+    });
 
   // Buffer the rewritten HTML rather than streaming `transformed.body`: piping
   // an HTMLRewriter transform stream over the gateway's unix socket truncates

@@ -142,7 +142,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `infra/safe-fetch.safeFetch`, `infra/safe-fetch.SsrfError`
             - Routes: `GET /api/browser/proxy`, `POST /api/browser/proxy`
           - Core:
-            - Exports: Types: `BrowserProxyNavKind`, `BrowserProxyNavMessage`; Values: `BROWSER_PROXY_NAV_MESSAGE`, `BROWSER_PROXY_PATH`, `isProxyUrl`, `parseBrowserProxyNavMessage`, `proxyUrl`
+            - Exports: Types: `BrowserProxyNavKind`, `BrowserProxyNavMessage`, `MetaRefreshDirective`; Values: `BROWSER_PROXY_NAV_MESSAGE`, `BROWSER_PROXY_PATH`, `isProxyUrl`, `parseBrowserProxyNavMessage`, `parseMetaRefresh`, `proxyUrl`
           - Cross-plugin:
             - Endpoint callers: `history`
         - **`shell`** — App shell for the Browser app. Registers the /browser app entry, owns the per-surface tab store (each tab an independent nav stack), defines the Browser.* slots, and exports the <Favicon> component.
