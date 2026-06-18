@@ -1,5 +1,9 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
+import {
   MdArrowDownward,
   MdArrowUpward,
   MdUnfoldMore,
@@ -81,6 +85,7 @@ export function DataTable<TRow>({
             key={key}
             className={cn(
               "group/dt-row col-span-full grid grid-cols-subgrid items-center border-b border-border/30 p-control text-caption hover:bg-accent/30",
+              hoverRevealGroup,
               key === selectedRowId && "bg-accent",
               onRowClick && "cursor-pointer",
             )}
@@ -109,7 +114,10 @@ export function DataTable<TRow>({
             ))}
             {rowActions && (
               <div
-                className="flex items-center justify-end gap-xs opacity-0 transition-opacity group-hover/dt-row:opacity-100 focus-within:opacity-100"
+                className={cn(
+                  "flex items-center justify-end gap-xs",
+                  hoverRevealTarget,
+                )}
                 onClick={(e) => e.stopPropagation()}
               >
                 {rowActions(row, i)}

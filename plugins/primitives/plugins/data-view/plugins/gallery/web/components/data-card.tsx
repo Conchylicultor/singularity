@@ -1,4 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { type ReactNode } from "react";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 
@@ -40,7 +44,8 @@ export function DataCard(props: DataCardProps) {
         }
       }}
       className={cn(
-        "group relative flex flex-col gap-md rounded-lg p-lg",
+        hoverRevealGroup,
+        "relative flex flex-col gap-md rounded-lg p-lg",
         selected && "ring-2 ring-primary",
         className,
       )}
@@ -52,7 +57,7 @@ export function DataCard(props: DataCardProps) {
         <div
           className={cn(
             "absolute right-2 top-2 flex items-center gap-xs",
-            "opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100",
+            hoverRevealTarget,
           )}
           // Action clicks must not bubble up to onActivate.
           onClick={(e) => e.stopPropagation()}

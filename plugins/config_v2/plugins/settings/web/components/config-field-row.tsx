@@ -1,4 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import {
+  hoverRevealGroup,
+  hoverRevealTarget,
+} from "@plugins/primitives/plugins/hover-reveal/web";
 import { useCallback } from "react";
 import { MdUndo, MdWarning } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -89,7 +93,7 @@ export function ConfigFieldRow({
 
   return (
     <div>
-      <div className="group flex items-center gap-sm rounded-md py-xs pl-none pr-sm">
+      <div className={cn(hoverRevealGroup, "flex items-center gap-sm rounded-md py-xs pl-none pr-sm")}>
         <div
           className={cn(
             "h-8 w-0.5 shrink-0 rounded-full transition-colors",
@@ -111,8 +115,7 @@ export function ConfigFieldRow({
           onClick={handleReset}
           className={cn(
             "shrink-0 rounded-sm p-xs text-muted-foreground hover:text-foreground",
-            "opacity-0 transition-opacity",
-            isModified && "group-hover:opacity-100",
+            isModified ? hoverRevealTarget : "pointer-events-none opacity-0",
           )}
           aria-label={`Reset ${field.meta.label ?? fieldKey}`}
         >

@@ -1012,7 +1012,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `configDetailPane.Actions`, `configNavPane.Actions`
         - Contributes: `Pane.Register` "config-v2-nav", `Pane.Register` "config-v2-detail"
-        - Uses: `apps.Apps`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SidebarMenu`, `primitives/css/ui-kit.SidebarMenuButton`, `primitives/css/ui-kit.SidebarMenuItem`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/syntax-highlight.HighlightedCode`
+        - Uses: `apps.Apps`, `config_v2.useConfigRegistrations`, `config_v2/fields.ConfigFieldContext`, `config_v2/fields.FieldRenderer`, `conversations/conversation-view/code/file-pane/diff.TextDiff`, `infra/endpoints.useEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/status-dot.StatusDot`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.SidebarMenu`, `primitives/css/ui-kit.SidebarMenuButton`, `primitives/css/ui-kit.SidebarMenuItem`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/syntax-highlight.HighlightedCode`
         - Exports: Values: `configDetailPane`, `ConfigNav`, `configNavPane`, `ConfigSidebarButton`
       - Server:
         - Uses: `config_v2.acknowledgeConflictByPath`, `config_v2.deleteOverrideByPath`, `config_v2.getRawFileContent`, `config_v2.mergeConflictByPath`, `config_v2.resetConfigByPath`, `config_v2.setConfigByPath`
@@ -2538,6 +2538,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Plugins:
             - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
             - **`button-safety`** — button-safety lint rule: no-async-raw-button
+            - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
             - **`icon-safety`** — icon-safety lint rules: no-lucide-react
             - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
             - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
@@ -3658,7 +3659,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `CursorPage`; Values: `cursorPageSchema`
     - **`data-table`** — Sortable/filterable flex-layout data table primitive.
       - Web:
-        - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit.cn`
+        - Uses: `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`
         - Exports: Types: `ColumnDef`, `DataTableProps`, `SortState`; Values: `DataTable`
       - Cross-plugin:
         - Imported by: `apps/studio/contributions`, `apps/studio/contributions/tables/columns`, `apps/studio/contributions/tables/foreign-keys`, `apps/studio/contributions/tables/indexes`, `apps/studio/contributions/tables/sample-rows`, `debug/heap-snapshot`, `debug/profiling/boot`, `debug/profiling/runtime`, `debug/slow-ops/cluster`, `debug/slow-ops/pane`, `primitives/data-view/table`
@@ -3678,7 +3679,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
           - Web:
             - Contributes: `DataViewSlots.View` "Gallery" → `GalleryView`
-            - Uses: `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/loading.Loading`
+            - Uses: `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/data-view.CreateOption`, `primitives/data-view.DataViewRenderProps`, `primitives/data-view.DataViewSlots`, `primitives/data-view.FieldCell`, `primitives/data-view.FieldDef`, `primitives/data-view.ItemActionsDescriptor`, `primitives/data-view.pickPrimaryField`, `primitives/data-view.useFlatRows`, `primitives/data-view.useResolveCell`, `primitives/data-view.useResolveCellEditor`, `primitives/data-view.useResolveOperatorSet`, `primitives/hover-reveal.hoverRevealGroup`, `primitives/hover-reveal.hoverRevealTarget`, `primitives/loading.Loading`
             - Exports: Types: `CoverContent`, `DataCardProps`, `GalleryViewOptions`; Values: `DataCard`
           - Core:
             - Exports: Types: `CoverContent`, `GalleryViewOptions`
@@ -3784,9 +3785,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`hover-reveal`** — Hover/focus reveal for trailing affordances: useHoverReveal() + hoverRevealClass() couple opacity with pointer-events so a hidden control is never a live click-target (no invisible dead-zone over the blank space beside it).
       - Web:
         - Uses: `primitives/css/ui-kit.cn`
-        - Exports: Values: `hoverRevealClass`, `useHoverReveal`
+        - Exports: Values: `hoverRevealClass`, `hoverRevealGroup`, `hoverRevealTarget`, `useHoverReveal`
       - Cross-plugin:
-        - Imported by: `apps/surface/floating`, `primitives/css/row`, `primitives/data-view`
+        - Imported by: `apps/surface/floating`, `config_v2/settings`, `primitives/css/row`, `primitives/data-table`, `primitives/data-view`, `primitives/data-view/gallery`
     - **`icon-button`** — Ghost icon button with tooltip. Composes Button + Tooltip into a single component.
       - Web:
         - Uses: `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.iconSizeFor`, `primitives/css/ui-kit.useControlSize`, `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`

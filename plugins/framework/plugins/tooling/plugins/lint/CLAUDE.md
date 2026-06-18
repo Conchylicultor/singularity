@@ -10,6 +10,7 @@
 - Sub-plugins:
   - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
   - **`button-safety`** — button-safety lint rule: no-async-raw-button
+  - **`hover-reveal-safety`** — hover-reveal-safety lint rule: no-uncoupled-hover-reveal
   - **`icon-safety`** — icon-safety lint rules: no-lucide-react
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io
