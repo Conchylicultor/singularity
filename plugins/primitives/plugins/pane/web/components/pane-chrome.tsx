@@ -6,6 +6,7 @@ import { MdClose, MdMoreHoriz, MdOpenInFull } from "react-icons/md";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { PaneMatchContext, type PaneMatch, type PaneObject } from "../pane";
 import { PaneLayoutContext } from "../maximize-context";
@@ -69,64 +70,68 @@ export function PaneChrome({ pane, title, actions, hideRightActions, headerSpill
   const showLeading = contentOwnsTopChrome && layoutCtx?.atSurfaceStart && leadingControl != null;
   const reserveEnd = contentOwnsTopChrome && layoutCtx?.atSurfaceEnd;
   return (
-    <div className="flex h-full flex-col">
-      <Bar
-        tier="pane"
-        overflow={headerSpill ? "visible" : "hidden"}
-        endSafeArea={reserveEnd}
-        className={layoutCtx?.dragHandleProps ? "cursor-grab active:cursor-grabbing" : undefined}
-        onDoubleClick={layoutCtx?.onDoubleClickHeader}
-        {...layoutCtx?.dragHandleProps}
-      >
-        {showLeading && leadingControl}
-        {resolvedTitle != null &&
-          resolvedTitle !== "" &&
-          (typeof resolvedTitle === "string" ? (
-            <Text as="span" variant="label" className="min-w-0 truncate">
-              {resolvedTitle}
-            </Text>
+    <Column
+      className="h-full"
+      header={
+        <Bar
+          tier="pane"
+          overflow={headerSpill ? "visible" : "hidden"}
+          endSafeArea={reserveEnd}
+          className={layoutCtx?.dragHandleProps ? "cursor-grab active:cursor-grabbing" : undefined}
+          onDoubleClick={layoutCtx?.onDoubleClickHeader}
+          {...layoutCtx?.dragHandleProps}
+        >
+          {showLeading && leadingControl}
+          {resolvedTitle != null &&
+            resolvedTitle !== "" &&
+            (typeof resolvedTitle === "string" ? (
+              // eslint-disable-next-line layout/no-adhoc-layout -- string pane title: min-w-0 truncate leaf inside Bar's flex row so a long title ellipsizes rather than crushing siblings
+              <Text as="span" variant="label" className="min-w-0 truncate">
+                {resolvedTitle}
+              </Text>
+            ) : (
+              // Node titles get the SAME `label` typography baseline as string
+              // titles, so a title node inherits the canonical pane-title size
+              // instead of drifting to the ambient body size. The size is
+              // enforced by the container (CSS inheritance), so title nodes need
+              // not — and should not — set their own size; per-segment weight/
+              // color (e.g. breadcrumb) still applies on top.
+              // eslint-disable-next-line layout/no-adhoc-layout -- node title needs inline-flex baseline alignment for breadcrumb-style multi-segment compositions
+              <Text as="div" variant="label" className="flex min-w-0 items-center">
+                {resolvedTitle}
+              </Text>
+            ))}
+          <PaneActionsSlot pane={pane} position="left" />
+          {hideRightActions ? (
+            // eslint-disable-next-line layout/no-adhoc-layout -- explicit flex-grow spacer to push expand/close buttons to far right inside Bar's flex row
+            <div className="flex-1" />
           ) : (
-            // Node titles get the SAME `label` typography baseline as string
-            // titles, so a title node inherits the canonical pane-title size
-            // instead of drifting to the ambient body size. The size is
-            // enforced by the container (CSS inheritance), so title nodes need
-            // not — and should not — set their own size; per-segment weight/
-            // color (e.g. breadcrumb) still applies on top.
-            <Text as="div" variant="label" className="flex min-w-0 items-center">
-              {resolvedTitle}
-            </Text>
-          ))}
-        <PaneActionsSlot pane={pane} position="left" />
-        {hideRightActions ? (
-          <div className="flex-1" />
-        ) : (
-          <OverflowActionsBar pane={pane} extraActions={actions} />
-        )}
-        {chrome.promote && doPromote && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={doPromote}
-            aria-label="Promote"
-          >
-            <MdOpenInFull className="size-4" />
-          </Button>
-        )}
-        {chrome.close && doClose && (
-          <Button
-            variant="ghost"
-            size="sm"
-            onClick={doClose}
-            aria-label="Close"
-          >
-            <MdClose className="size-4" />
-          </Button>
-        )}
-      </Bar>
-      <div className="min-h-0 flex-1 overflow-y-auto">
-        <ContentScope>{children}</ContentScope>
-      </div>
-    </div>
+            <OverflowActionsBar pane={pane} extraActions={actions} />
+          )}
+          {chrome.promote && doPromote && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={doPromote}
+              aria-label="Promote"
+            >
+              <MdOpenInFull className="size-4" />
+            </Button>
+          )}
+          {chrome.close && doClose && (
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={doClose}
+              aria-label="Close"
+            >
+              <MdClose className="size-4" />
+            </Button>
+          )}
+        </Bar>
+      }
+      body={<ContentScope>{children}</ContentScope>}
+    />
   );
 }
 
@@ -151,6 +156,7 @@ export function PaneActionsSlot({
   );
   if (actions.length === 0) return null;
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- horizontal chip row of action contributions inside Bar; Frame needs named slots but this is a dynamic list
     <div className="flex items-center gap-xs">
       {actions.map((a, i) => (
         <Fragment key={i}>
@@ -284,6 +290,8 @@ function OverflowActionsBar({
       {/* Container takes all remaining space; items are right-aligned. */}
       <div
         ref={containerRef}
+        // flex-1 measurement container for overflow detection; Row/Frame can't model a right-aligned flex-1 measurement region
+        // eslint-disable-next-line layout/no-adhoc-layout
         className="flex min-w-0 flex-1 items-center justify-end gap-xs overflow-hidden whitespace-nowrap"
       >
         {visibleSlot.map((a, i) => (
@@ -296,6 +304,7 @@ function OverflowActionsBar({
         {hasOverflow && (
           <Popover>
             <PopoverTrigger
+              // eslint-disable-next-line layout/no-adhoc-layout -- icon-button trigger: inline-flex centering glyph; a self-contained control, not a layout region
               className="inline-flex size-8 items-center justify-center rounded-md text-body hover:bg-accent hover:text-accent-foreground"
               aria-label="More actions"
             >
@@ -304,8 +313,10 @@ function OverflowActionsBar({
             <PopoverContent
               side="bottom"
               align="end"
+              // eslint-disable-next-line layout/no-adhoc-layout -- min-w-0 lets the popover shrink to its content width; sizing concern on the popover surface, not a layout region
               className="w-auto min-w-0 p-xs"
             >
+              {/* eslint-disable-next-line layout/no-adhoc-layout -- flex column of overflow action items inside Popover; Column needs named slots but this is a flat list */}
               <div className="flex flex-col">
                 {overflowSlot.map((a, i) => (
                   <Fragment key={visibleSlot.length + i}>

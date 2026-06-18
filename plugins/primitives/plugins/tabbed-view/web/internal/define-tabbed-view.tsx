@@ -1,7 +1,9 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
 
@@ -58,32 +60,39 @@ export function defineTabbedView<ViewProps extends object>(
     };
 
     return (
-      <div className={cn("flex min-h-0 flex-1 flex-col", className)}>
-        {(header || ordered.length > 1) && (
-          <div className="flex shrink-0 flex-col gap-xs px-sm pb-xs">
-            {header}
-            {ordered.length > 1 && activeView && (
-              <ViewSwitcher
-                options={ordered.map((v) => ({
-                  id: v.id,
-                  title: v.title,
-                  icon: v.icon,
-                }))}
-                activeId={activeView.id}
-                onSelect={selectView}
-              />
-            )}
-          </div>
-        )}
-        <div className="no-scrollbar min-h-0 flex-1 overflow-y-auto">
-          {activeView &&
-            renderIsolated(
-              View.id,
-              activeView as unknown as Contribution,
-              viewProps as ViewProps,
-            )}
-        </div>
-      </div>
+      <Column
+        fill
+        className={className}
+        header={
+          header != null || ordered.length > 1 ? (
+            <Stack gap="xs" className="px-sm pb-xs">
+              {header}
+              {ordered.length > 1 && activeView && (
+                <ViewSwitcher
+                  options={ordered.map((v) => ({
+                    id: v.id,
+                    title: v.title,
+                    icon: v.icon,
+                  }))}
+                  activeId={activeView.id}
+                  onSelect={selectView}
+                />
+              )}
+            </Stack>
+          ) : undefined
+        }
+        scrollBody={false}
+        body={
+          <Scroll fill hideScrollbar>
+            {activeView &&
+              renderIsolated(
+                View.id,
+                activeView as unknown as Contribution,
+                viewProps as ViewProps,
+              )}
+          </Scroll>
+        }
+      />
     );
   }
 

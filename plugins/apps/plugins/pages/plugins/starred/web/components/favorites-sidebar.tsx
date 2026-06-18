@@ -3,6 +3,7 @@ import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { SortableList, SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
@@ -61,7 +62,7 @@ export function FavoritesSidebar() {
 
   return (
     <SidebarPaneSection title="Favorites" icon={MdGrade}>
-      <div className="min-h-0 flex-1 overflow-y-auto py-xs">
+      <Scroll fill className="py-xs">
         <SortableList items={ids} onMove={onMove}>
           <Stack gap="2xs">
             {rows.map((r) => {
@@ -84,7 +85,7 @@ export function FavoritesSidebar() {
             })}
           </Stack>
         </SortableList>
-      </div>
+      </Scroll>
     </SidebarPaneSection>
   );
 }

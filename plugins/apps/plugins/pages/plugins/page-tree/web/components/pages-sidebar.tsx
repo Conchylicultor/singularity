@@ -5,6 +5,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type {
@@ -70,7 +71,7 @@ export function PagesSidebar() {
       icon={MdDescription}
       labelExtra={PagesHeaderAdd}
     >
-      <div className="min-h-0 flex-1 overflow-y-auto py-xs">
+      <Scroll fill className="py-xs">
         {result.pending ? (
           <Loading variant="rows" />
         ) : (
@@ -123,7 +124,7 @@ export function PagesSidebar() {
             itemActions={PageTree.RowActions}
           />
         )}
-      </div>
+      </Scroll>
     </SidebarPaneSection>
   );
 }

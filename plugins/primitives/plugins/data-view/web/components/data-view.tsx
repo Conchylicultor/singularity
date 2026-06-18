@@ -6,6 +6,7 @@ import type {
 } from "@plugins/framework/plugins/web-sdk/core";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type {
   DataViewProps,
@@ -113,19 +114,23 @@ function DataViewInner<TRow>({
 
   if (!activeInstance) {
     return (
-      <div className={cn("flex flex-col", !embedded && "min-h-0 flex-1")}>
-        <div className="flex items-center gap-sm px-sm pb-sm">
-          {title ? (
-            <Text as="div" variant="label">
-              {title}
-            </Text>
-          ) : null}
-          {actions ? <div className="ml-auto">{actions}</div> : null}
-          <div className={actions ? undefined : "ml-auto"}>
-            <CreatorsControl creators={creators} />
+      <Column
+        fill={!embedded}
+        header={
+          // eslint-disable-next-line layout/no-adhoc-layout -- horizontal toolbar row; no named-slot primitive maps to a variable-content control set
+          <div className="flex items-center gap-sm px-sm pb-sm">
+            {title ? (
+              <Text as="div" variant="label">
+                {title}
+              </Text>
+            ) : null}
+            {actions ? <div className="ml-auto">{actions}</div> : null}
+            <div className={actions ? undefined : "ml-auto"}>
+              <CreatorsControl creators={creators} />
+            </div>
           </div>
-        </div>
-      </div>
+        }
+      />
     );
   }
 
@@ -157,51 +162,54 @@ function DataViewInner<TRow>({
   };
 
   return (
-    <div className={cn("flex flex-col", !embedded && "min-h-0 flex-1")}>
-      {/* pr-14 reserves the top-right gutter for the global floating action bar
-          (fixed top-2 right-3, ~44px footprint) so right-aligned controls stay
-          visible and clickable rather than sitting under it. */}
-      <div
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- pr-14 reserves the fixed ~44px floating-action-bar gutter, a layout dimension the ramp can't express
-        className={cn(
-          "flex shrink-0 items-center gap-sm pb-sm pl-sm",
-          !embedded && "pr-14",
-        )}
-      >
-        {title ? (
-          <Text as="div" variant="label">
-            {title}
-          </Text>
-        ) : null}
-        <SearchInput
-          value={activeState.query}
-          onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
-          placeholder="Search…"
-          wrapperClassName="ml-auto w-48"
-        />
-        {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
-            the Notion-style nested AND/OR popover builder. Rendered only when
-            the schema has at least one filterable field. */}
-        {hasFilters ? (
-          <FilterBuilderTrigger controller={filterController} />
-        ) : null}
-        {actions}
-        <CreatorsControl creators={creators} />
-        <EditableViewSwitcher
-          instances={instances}
-          activeId={activeViewId}
-          onSelect={viewModel.setActiveView}
-          actions={viewModel.actions}
-          viewVariants={viewVariants}
-        />
-      </div>
-      <div className={cn(!embedded && "min-h-0 flex-1 overflow-y-auto")}>
-        {renderIsolated(
-          DataViewSlots.View.id,
-          activeInstance.viewType as unknown as Contribution,
-          renderProps,
-        )}
-      </div>
-    </div>
+    <Column
+      fill={!embedded}
+      scrollBody={!embedded}
+      header={
+        // pr-14 reserves the top-right gutter for the global floating action bar
+        // (fixed top-2 right-3, ~44px footprint) so right-aligned controls stay
+        // visible and clickable rather than sitting under it.
+        <div
+          // horizontal toolbar row of variable-content controls; no named-slot primitive maps; pr-14 reserves the fixed ~44px floating-action-bar gutter, a layout dimension the ramp can't express
+          // eslint-disable-next-line layout/no-adhoc-layout, spacing/no-adhoc-spacing
+          className={cn(
+            "flex shrink-0 items-center gap-sm pb-sm pl-sm",
+            !embedded && "pr-14",
+          )}
+        >
+          {title ? (
+            <Text as="div" variant="label">
+              {title}
+            </Text>
+          ) : null}
+          <SearchInput
+            value={activeState.query}
+            onChange={(e) => viewModel.setQuery(activeViewId, e.target.value)}
+            placeholder="Search…"
+            wrapperClassName="ml-auto w-48"
+          />
+          {/* The filter builder: a pill trigger ("Filter" / "N rules") opening
+              the Notion-style nested AND/OR popover builder. Rendered only when
+              the schema has at least one filterable field. */}
+          {hasFilters ? (
+            <FilterBuilderTrigger controller={filterController} />
+          ) : null}
+          {actions}
+          <CreatorsControl creators={creators} />
+          <EditableViewSwitcher
+            instances={instances}
+            activeId={activeViewId}
+            onSelect={viewModel.setActiveView}
+            actions={viewModel.actions}
+            viewVariants={viewVariants}
+          />
+        </div>
+      }
+      body={renderIsolated(
+        DataViewSlots.View.id,
+        activeInstance.viewType as unknown as Contribution,
+        renderProps,
+      )}
+    />
   );
 }
