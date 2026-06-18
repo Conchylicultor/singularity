@@ -10,7 +10,7 @@ import { defineScopedStore } from "@plugins/primitives/plugins/scoped-store/web"
 export interface BrowserTab {
   /** Stable per-surface id (`tab-<seq>`). */
   id: string;
-  /** Visited URLs; `""` sentinel = start page. */
+  /** Visited (request) URLs; `""` sentinel = start page. Drives the iframe src. */
   history: string[];
   /** Pointer into `history` (current = history[index]). */
   index: number;
@@ -18,6 +18,20 @@ export interface BrowserTab {
   loadKey: number;
   /** True between navigate/reload and the iframe `onLoad`. */
   loading: boolean;
+  /**
+   * User-facing URL override for the omnibox/history/bookmarks, distinct from
+   * the request URL (`history[index]`) that drives the iframe src. Set by a
+   * `commit` (redirect reflection) or `sync` (SPA URL change). `null` => fall
+   * back to `history[index]`. Keeping it separate keeps the iframe src stable so
+   * a redirect/SPA URL change never reloads the frame.
+   */
+  displayUrl: string | null;
+  /**
+   * True when the next document `commit` is the result of a parent-initiated
+   * load (navigate/back/forward/reload). It reconciles into `displayUrl` rather
+   * than pushing a new history entry. Cleared once consumed.
+   */
+  expectCommit: boolean;
 }
 
 /** The per-surface collection of tabs with one active. */
@@ -42,6 +56,8 @@ function freshTab(seq: number, url = ""): BrowserTab {
     index: 0,
     loadKey: 0,
     loading: url !== "",
+    displayUrl: null,
+    expectCommit: url !== "",
   };
 }
 
@@ -58,7 +74,10 @@ export const BrowserTabsStore = defineScopedStore<BrowserTabsState>(INITIAL);
 
 /** The derived navigation API consumed by the chrome bars and webview. */
 export interface BrowserNavApi {
-  /** Active tab's `history[index]`; `""` => start page. */
+  /**
+   * Active tab's user-facing URL: `displayUrl ?? history[index] ?? ""`. Drives
+   * the omnibox, history recorder, and bookmarks. `""` => start page.
+   */
   current: string;
   canGoBack: boolean;
   canGoForward: boolean;
@@ -66,7 +85,8 @@ export interface BrowserNavApi {
   loadKey: number;
   /**
    * Truncate forward entries, push `url`, point at the end, mark loading. If
-   * `url === current`, reloads instead. Operates on the active tab.
+   * `url === current`, reloads instead. Operates on the active tab. Clears
+   * `displayUrl` and arms `expectCommit`.
    */
   navigate(url: string): void;
   back(): void;
@@ -77,6 +97,16 @@ export interface BrowserNavApi {
   goHome(): void;
   /** Mark the active tab's load done (called by the webview `onLoad`). */
   finishLoad(): void;
+  /**
+   * The iframe committed a full document at `url` (post-redirect / POST landing).
+   * If `expectCommit` (a parent-initiated load): reconcile into `displayUrl`
+   * (redirect reflection) — no history mutation, no reload. Otherwise (an
+   * iframe-driven load, e.g. a PRG POST landing): push a new history entry so
+   * back/forward + reload behave correctly.
+   */
+  commit(url: string): void;
+  /** SPA in-page URL change — update the omnibox display only, nothing else. */
+  syncDisplay(url: string): void;
 }
 
 /**
@@ -102,14 +132,26 @@ export function useBrowserNav(): BrowserNavApi {
       }));
 
     const reload = () =>
-      patchActive((t) => ({ ...t, loadKey: t.loadKey + 1, loading: true }));
+      patchActive((t) => ({
+        ...t,
+        loadKey: t.loadKey + 1,
+        loading: true,
+        displayUrl: null,
+        expectCommit: true,
+      }));
 
     const navigate = (url: string) =>
       patchActive((t) => {
         const cur = t.history[t.index] ?? "";
         if (url === cur) {
           // Same URL: reload (the start page has no iframe, so never "loading").
-          return { ...t, loadKey: t.loadKey + 1, loading: url !== "" };
+          return {
+            ...t,
+            loadKey: t.loadKey + 1,
+            loading: url !== "",
+            displayUrl: null,
+            expectCommit: url !== "",
+          };
         }
         const history = [...t.history.slice(0, t.index + 1), url];
         return {
@@ -117,12 +159,43 @@ export function useBrowserNav(): BrowserNavApi {
           history,
           index: history.length - 1,
           loading: url !== "",
+          displayUrl: null,
+          expectCommit: url !== "",
         };
       });
+
+    const commit = (url: string) =>
+      patchActive((t) => {
+        if (t.expectCommit) {
+          // Parent-initiated load completed: reflect a redirect via displayUrl
+          // (no history mutation, no reload). Clear the expectation.
+          const requestUrl = t.history[t.index] ?? "";
+          return {
+            ...t,
+            displayUrl: url !== requestUrl ? url : null,
+            expectCommit: false,
+          };
+        }
+        // Iframe-driven landing (e.g. a PRG POST): push a real history entry so
+        // back/forward + reload re-GET it. The iframe already shows it; its src
+        // updates to proxyUrl(url) on its own (accepted PRG re-GET).
+        const history = [...t.history.slice(0, t.index + 1), url];
+        return {
+          ...t,
+          history,
+          index: history.length - 1,
+          displayUrl: null,
+        };
+      });
+
+    const syncDisplay = (url: string) =>
+      patchActive((t) => ({ ...t, displayUrl: url }));
 
     return {
       navigate,
       reload,
+      commit,
+      syncDisplay,
       back: () =>
         patchActive((t) =>
           t.index > 0
@@ -130,6 +203,8 @@ export function useBrowserNav(): BrowserNavApi {
                 ...t,
                 index: t.index - 1,
                 loading: (t.history[t.index - 1] ?? "") !== "",
+                displayUrl: null,
+                expectCommit: (t.history[t.index - 1] ?? "") !== "",
               }
             : t,
         ),
@@ -140,6 +215,8 @@ export function useBrowserNav(): BrowserNavApi {
                 ...t,
                 index: t.index + 1,
                 loading: (t.history[t.index + 1] ?? "") !== "",
+                displayUrl: null,
+                expectCommit: (t.history[t.index + 1] ?? "") !== "",
               }
             : t,
         ),
@@ -150,7 +227,7 @@ export function useBrowserNav(): BrowserNavApi {
   }, [store]);
 
   return {
-    current: active.history[active.index] ?? "",
+    current: active.displayUrl ?? active.history[active.index] ?? "",
     canGoBack: active.index > 0,
     canGoForward: active.index < active.history.length - 1,
     loading: active.loading,

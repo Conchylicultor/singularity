@@ -39,8 +39,30 @@ export function isProxyUrl(src: string): boolean {
  */
 export const BROWSER_PROXY_NAV_MESSAGE = "singularity:browser-proxy-nav";
 
+/**
+ * The kind of in-page navigation the proxied page is reporting:
+ * - `navigate` — parent-driven load (link click, GET form). Parent pushes a
+ *   history entry and (re)loads the iframe.
+ * - `newtab` — `window.open` / `target="_blank"`. Parent opens a new tab.
+ * - `commit` — the iframe finished loading a full document at `url`
+ *   (`document.baseURI` = the post-redirect final URL). Reconciles redirects +
+ *   POST landings.
+ * - `sync` — in-page SPA URL change (`pushState`/`replaceState`/`popstate`).
+ *   Omnibox-display only; no reload, no history entry.
+ */
+export type BrowserProxyNavKind = "navigate" | "newtab" | "commit" | "sync";
+
+const NAV_KINDS: readonly BrowserProxyNavKind[] = [
+  "navigate",
+  "newtab",
+  "commit",
+  "sync",
+];
+
 export interface BrowserProxyNavMessage {
   type: typeof BROWSER_PROXY_NAV_MESSAGE;
+  /** Which navigation the proxied page is reporting. */
+  kind: BrowserProxyNavKind;
   /** Absolute target URL (real origin) the proxied page wants to navigate to. */
   url: string;
 }
@@ -53,5 +75,10 @@ export function parseBrowserProxyNavMessage(
   const m = data as Record<string, unknown>;
   if (m.type !== BROWSER_PROXY_NAV_MESSAGE) return null;
   if (typeof m.url !== "string" || m.url === "") return null;
-  return { type: BROWSER_PROXY_NAV_MESSAGE, url: m.url };
+  // `kind` defaults to "navigate" for robustness (missing/invalid field).
+  const kind =
+    typeof m.kind === "string" && NAV_KINDS.includes(m.kind as BrowserProxyNavKind)
+      ? (m.kind as BrowserProxyNavKind)
+      : "navigate";
+  return { type: BROWSER_PROXY_NAV_MESSAGE, kind, url: m.url };
 }

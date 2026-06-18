@@ -27,6 +27,10 @@ const DEFAULT_MAX_REDIRECTS = 8;
 
 export interface SafeFetchInit {
   headers?: Record<string, string>;
+  /** HTTP method (default GET). */
+  method?: string;
+  /** Request body for non-GET methods (raw bytes / stream). */
+  body?: BodyInit;
   timeoutMs?: number;
   maxRedirects?: number;
   signal?: AbortSignal;
@@ -207,9 +211,17 @@ export async function safeFetch(
   let url = parsePublicUrl(typeof target === "string" ? target : target.href);
   await assertResolvesPublic(url);
 
+  // Method + body are mutated across hops: a 301/302/303 downgrades the request
+  // to a bodyless GET (standard browser behavior for the POST→GET redirect of
+  // the PRG pattern), while 307/308 preserve the original method + body.
+  let method = init.method ?? "GET";
+  let body = init.body;
+
   for (let hop = 0; hop <= maxRedirects; hop++) {
     const signal = mergeSignals(AbortSignal.timeout(timeoutMs), init.signal);
     const res = await fetch(url.href, {
+      method,
+      body,
       redirect: "manual",
       signal,
       headers: init.headers,
@@ -219,6 +231,12 @@ export async function safeFetch(
 
     const loc = res.headers.get("location");
     if (!loc) return res; // 3xx without Location — nothing to follow.
+
+    // 301/302/303: downgrade to GET and drop the body (PRG); 307/308 preserve.
+    if (res.status !== 307 && res.status !== 308) {
+      method = "GET";
+      body = undefined;
+    }
 
     // Resolve relative Location against the current URL, then re-guard the hop.
     url = parsePublicUrl(new URL(loc, url).href);

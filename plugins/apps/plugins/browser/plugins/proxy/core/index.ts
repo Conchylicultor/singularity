@@ -5,4 +5,4 @@ export {
   isProxyUrl,
   parseBrowserProxyNavMessage,
 } from "./url";
-export type { BrowserProxyNavMessage } from "./url";
+export type { BrowserProxyNavKind, BrowserProxyNavMessage } from "./url";

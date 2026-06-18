@@ -29,9 +29,9 @@ const BASE_SANDBOX =
  * active tab's start page (URL `""`) renders the contributed start page.
  */
 export function Viewport() {
-  const { tabs, finishLoad } = useBrowserTabs();
+  const { tabs, finishLoad, open } = useBrowserTabs();
   const { enabled } = useBrowserProxy();
-  const { navigate } = useBrowserNav();
+  const { navigate, commit, syncDisplay } = useBrowserNav();
   const activeLoading = tabs.find((t) => t.active)?.loading ?? false;
   const activeId = tabs.find((t) => t.active)?.id;
 
@@ -54,11 +54,24 @@ export function Viewport() {
       if (!activeId) return;
       const activeFrame = framesRef.current.get(activeId);
       if (!activeFrame || e.source !== activeFrame.contentWindow) return;
-      navigate(msg.url);
+      switch (msg.kind) {
+        case "navigate":
+          navigate(msg.url);
+          break;
+        case "commit":
+          commit(msg.url);
+          break;
+        case "sync":
+          syncDisplay(msg.url);
+          break;
+        case "newtab":
+          open(msg.url);
+          break;
+      }
     };
     window.addEventListener("message", onMessage);
     return () => window.removeEventListener("message", onMessage);
-  }, [activeId, navigate]);
+  }, [activeId, navigate, commit, syncDisplay, open]);
 
   return (
     <Overlay

@@ -12,3 +12,14 @@ export const browserProxyEndpoint = defineEndpoint({
   route: "GET /api/browser/proxy",
   query: z.object({ url: z.string() }),
 });
+
+/**
+ * POST variant of the browser proxy — same route, same raw `handleProxy`
+ * handler. Forms inside the proxied page rewrite their `action` to this route so
+ * a POST submit lands inside the proxy (forwarded method + body + Content-Type)
+ * instead of escaping to the real origin and hitting its framing block. No body
+ * schema: it's a raw streaming handler, not wrapped with `implement()`.
+ */
+export const browserProxyPostEndpoint = defineEndpoint({
+  route: "POST /api/browser/proxy",
+});

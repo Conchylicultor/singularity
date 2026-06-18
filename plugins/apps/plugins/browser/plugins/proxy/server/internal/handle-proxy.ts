@@ -2,7 +2,7 @@ import {
   SsrfError,
   safeFetch,
 } from "@plugins/infra/plugins/safe-fetch/server";
-import { BROWSER_PROXY_NAV_MESSAGE } from "../../core";
+import { BROWSER_PROXY_NAV_MESSAGE, BROWSER_PROXY_PATH } from "../../core";
 
 const PROXY_TIMEOUT_MS = 20_000;
 
@@ -25,24 +25,43 @@ function escapeAttribute(value: string): string {
 /**
  * Script injected into proxied HTML. Runs inside the sandboxed, opaque-origin
  * iframe (no `allow-same-origin`), so it cannot reach the parent's DOM — only
- * `postMessage`. It intercepts same-frame navigations (link clicks, GET form
- * submits) and routes them to the parent, which re-navigates through the proxy
- * (keeping the omnibox + history in sync). Asset/JS subresources are untouched —
- * they resolve directly against the real origin via the injected `<base>`.
+ * `postMessage`. It intercepts in-page navigations and routes them to the parent
+ * via typed `kind` messages (navigate / newtab / commit / sync), keeping the
+ * omnibox + history in sync and reflecting redirects / SPA URL changes. POST
+ * forms are rewritten to submit through the proxy natively. Asset/JS subresources
+ * are untouched — they resolve directly against the real origin via the injected
+ * `<base>`, which is injected BEFORE this script so `document.baseURI` is already
+ * the final (post-redirect) URL when this runs.
  */
 const NAV_SCRIPT = `(function () {
   var NAV = ${JSON.stringify(BROWSER_PROXY_NAV_MESSAGE)};
-  function post(url) {
+  var PROXY_PATH = ${JSON.stringify(BROWSER_PROXY_PATH)};
+  function post(url, kind) {
     try {
-      parent.postMessage({ type: NAV, url: url }, "*");
+      parent.postMessage({ type: NAV, kind: kind, url: url }, "*");
     } catch (e) {}
   }
+  function isHttp(u) {
+    try {
+      return /^https?:$/i.test(new URL(u).protocol);
+    } catch (e) {
+      return false;
+    }
+  }
+  // The opaque-origin sandbox reports location.origin as "null"; rebuild the
+  // proxy origin from protocol + host, which stay readable to the frame.
+  function proxyOrigin() {
+    return location.protocol + "//" + location.host;
+  }
+
+  // Report the committed document URL (post-redirect final URL via <base>).
+  post(document.baseURI, "commit");
+
   document.addEventListener("click", function (e) {
     if (e.defaultPrevented || e.button !== 0) return;
     if (e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return;
     var a = e.target && e.target.closest ? e.target.closest("a[href]") : null;
     if (!a) return;
-    if (a.target && a.target.toLowerCase() === "_blank") return;
     var href = a.getAttribute("href");
     if (!href) return;
     var trimmed = href.trim();
@@ -54,35 +73,93 @@ const NAV_SCRIPT = `(function () {
     } catch (err) {
       return;
     }
-    if (!/^https?:$/i.test(new URL(abs).protocol)) return;
+    if (!isHttp(abs)) return;
+    if (a.target && a.target.toLowerCase() === "_blank") {
+      e.preventDefault();
+      post(abs, "newtab");
+      return;
+    }
     e.preventDefault();
-    post(abs);
+    post(abs, "navigate");
   }, true);
+
   document.addEventListener("submit", function (e) {
     if (e.defaultPrevented) return;
     var form = e.target;
-    if (!form || (form.method && form.method.toLowerCase() !== "get")) return;
+    if (!form) return;
+    var method = form.method ? form.method.toLowerCase() : "get";
     var action = form.getAttribute("action") || document.baseURI;
-    var url;
+    var abs;
     try {
-      url = new URL(action, document.baseURI);
+      abs = new URL(action, document.baseURI);
     } catch (err) {
       return;
     }
-    if (!/^https?:$/i.test(url.protocol)) return;
-    try {
-      var data = new FormData(form);
-      var params = new URLSearchParams();
-      data.forEach(function (value, key) {
-        if (typeof value === "string") params.append(key, value);
-      });
-      url.search = params.toString();
-    } catch (err) {
+    if (!/^https?:$/i.test(abs.protocol)) return;
+    var blank = form.target && form.target.toLowerCase() === "_blank";
+
+    if (method === "get") {
+      try {
+        var data = new FormData(form);
+        var params = new URLSearchParams();
+        data.forEach(function (value, key) {
+          if (typeof value === "string") params.append(key, value);
+        });
+        abs.search = params.toString();
+      } catch (err) {
+        return;
+      }
+      e.preventDefault();
+      post(abs.href, blank ? "newtab" : "navigate");
       return;
     }
-    e.preventDefault();
-    post(url.href);
+
+    // Non-GET (POST etc.): rewrite the action to the proxy route and let the
+    // native submit proceed so the body (url-encoded / multipart) is preserved.
+    form.action =
+      proxyOrigin() + PROXY_PATH + "?url=" + encodeURIComponent(abs.href);
+    if (blank) form.target = "_self";
   }, true);
+
+  // SPA routing: report pushState/replaceState as display-only syncs, but ONLY
+  // for RELATIVE url args. \`window.location\` inside the iframe is the proxy URL
+  // (not the real one), so any absolute url a site derives from \`location\` would
+  // leak the internal proxy URL into the omnibox. Relative urls resolve against
+  // <base> (the real origin), so they are the only trustworthy signal; absolute
+  // urls and \`popstate\` (which can only read the proxy \`location\`) are ignored —
+  // the omnibox then keeps the reliable \`commit\` value (document.baseURI).
+  function isAbsolute(u) {
+    return /^[a-z][a-z0-9+.-]*:/i.test(u) || u.indexOf("//") === 0;
+  }
+  function wrapHistory(name) {
+    var orig = history[name];
+    if (typeof orig !== "function") return;
+    history[name] = function (state, title, url) {
+      var ret = orig.apply(this, arguments);
+      try {
+        if (typeof url === "string" && url !== "" && !isAbsolute(url)) {
+          var real = new URL(url, document.baseURI).href;
+          if (isHttp(real)) post(real, "sync");
+        }
+      } catch (e) {}
+      return ret;
+    };
+  }
+  wrapHistory("pushState");
+  wrapHistory("replaceState");
+
+  // window.open: there's no live handle in the sandbox; surface as a new tab.
+  try {
+    window.open = function (url) {
+      try {
+        if (url) {
+          var abs = new URL(url, document.baseURI).href;
+          if (isHttp(abs)) post(abs, "newtab");
+        }
+      } catch (e) {}
+      return null;
+    };
+  } catch (e) {}
 })();`;
 
 /** Small, self-contained styled HTML error page (no external assets). */
@@ -182,9 +259,26 @@ export async function handleProxy(req: Request): Promise<Response> {
   const range = req.headers.get("range");
   if (range) headers.range = range;
 
+  // POST (rewritten form submits): forward the method + body + Content-Type so
+  // url-encoded and multipart/file uploads are preserved. The body is buffered
+  // (not streamed) so it survives `safeFetch`'s redirect re-issue. GET keeps the
+  // original behavior.
+  const isPost = req.method === "POST";
+  let body: BodyInit | undefined;
+  if (isPost) {
+    const contentType = req.headers.get("content-type");
+    if (contentType) headers["content-type"] = contentType;
+    body = await req.arrayBuffer();
+  }
+
   let res: Response;
   try {
-    res = await safeFetch(target, { headers, timeoutMs: PROXY_TIMEOUT_MS });
+    res = await safeFetch(target, {
+      headers,
+      method: isPost ? "POST" : "GET",
+      body,
+      timeoutMs: PROXY_TIMEOUT_MS,
+    });
   } catch (err) {
     if (err instanceof SsrfError) {
       return errorPage(400, target, "This address can't be loaded for security reasons.");
