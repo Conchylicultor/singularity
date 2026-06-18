@@ -8,6 +8,7 @@ import { setConfigField } from "@plugins/config_v2/core";
 import { ThemeEngine, useThemeScopeId } from "@plugins/ui/plugins/theme-engine/web";
 import {
   DataView,
+  defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
@@ -16,6 +17,8 @@ import type { CatalogTheme } from "../../shared";
 import { getCatalog, applyCatalogTheme } from "../../core";
 import { CommunityThemeCard } from "./community-theme-card";
 import { ImportByUrl } from "./import-by-url";
+
+const COMMUNITY_BROWSER_VIEW = defineDataView("tweakcn.community-browser");
 
 export function CommunityBrowserSection({ search }: { search: string }) {
   const scopeId = useThemeScopeId();
@@ -127,7 +130,7 @@ export function CommunityBrowserSection({ search }: { search: string }) {
     <div className="flex flex-col gap-md">
       <DataView<CatalogTheme>
         mode="embedded"
-        storageKey="tweakcn.community-browser"
+        storageKey={COMMUNITY_BROWSER_VIEW}
         rows={hostFilteredThemes}
         fields={fields}
         rowKey={(t) => t.id}

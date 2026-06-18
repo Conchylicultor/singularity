@@ -4,11 +4,14 @@ import { matchResource, useResource } from "@plugins/primitives/plugins/live-sta
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import {
   DataView,
+  defineDataView,
   type FieldDef,
 } from "@plugins/primitives/plugins/data-view/web";
 import { serversResource, type Server } from "../../shared";
 import { addServerPane, serverDetailPane } from "../panes";
 import { ServerStatusBadge } from "./server-status-badge";
+
+const SERVERS_VIEW = defineDataView("deploy.servers");
 
 export function ServersList() {
   const result = useResource(serversResource);
@@ -51,7 +54,7 @@ export function ServersList() {
       rowKey={(s) => s.id}
       views={["list"]}
       defaultView="list"
-      storageKey="deploy:servers"
+      storageKey={SERVERS_VIEW}
       loading={loading}
       selectedRowId={selectedId}
       onRowActivate={(s) => openPane(serverDetailPane, { serverId: s.id }, { mode: "push" })}

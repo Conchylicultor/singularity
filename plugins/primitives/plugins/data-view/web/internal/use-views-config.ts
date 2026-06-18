@@ -5,7 +5,7 @@ import { Rank } from "@plugins/primitives/plugins/rank/web";
 import type { VariantValue } from "@plugins/fields/plugins/variant/core";
 import type { FilterGroup, SortState } from "../../core";
 import type { DataViewContribution } from "../slots";
-import { viewsDescriptor } from "../../shared/views-config";
+import { dataViewDescriptors } from "./descriptors";
 import { buildInstanceFromRow, type ViewConfigRow } from "./resolve-instances";
 import type { ResolvedViewInstance } from "./resolve-instances";
 
@@ -61,7 +61,19 @@ export function useViewsConfig(
   viewOptions: Record<string, unknown> | undefined,
   defaults: ResolvedViewInstance[],
 ): ViewsConfigHandle {
-  const descriptor = viewsDescriptor(storageKey);
+  // Resolve the descriptor via the central registration map (reference identity
+  // against the registered `ConfigV2.WebRegister` descriptor). A missing id
+  // means the `defineDataView` marker wasn't scraped into the manifest — fail
+  // loud rather than hand `useConfig` an undefined descriptor (which throws
+  // opaquely downstream).
+  const descriptor = dataViewDescriptors.get(storageKey);
+  if (!descriptor) {
+    throw new Error(
+      `data-view: no registered descriptor for storageKey "${storageKey}". ` +
+        `Declare it with defineDataView("${storageKey}") under the plugin's web/ ` +
+        `and run \`./singularity build\` to regenerate the manifest.`,
+    );
+  }
   // No `scopeId`: runtime per-instance edits write to the user-global layer
   // (mirroring reorder's `setConfig("items", …)`). data-view is a PRIMITIVE and
   // stays app-agnostic — it never reaches for the current appId. The

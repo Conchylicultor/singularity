@@ -5,7 +5,7 @@ import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { DataView } from "@plugins/primitives/plugins/data-view/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type {
   RowChromeMenuHelpers,
   RowMenuItem,
@@ -21,6 +21,8 @@ import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { pageDetailPane } from "../panes";
 import { createPageWithSeed } from "../internal/create-page-with-seed";
 import { PageTree } from "../slots";
+
+const PAGES_SIDEBAR_VIEW = defineDataView("pages-sidebar");
 
 export function PagesSidebar() {
   const result = useResource(pagesResource);
@@ -97,7 +99,7 @@ export function PagesSidebar() {
             ]}
             rowKey={(b) => b.id}
             views={["tree"]}
-            storageKey="pages-sidebar"
+            storageKey={PAGES_SIDEBAR_VIEW}
             selectedRowId={selectedId}
             onRowActivate={(b) =>
               openPane(pageDetailPane, { pageId: b.id }, { mode: "push" })

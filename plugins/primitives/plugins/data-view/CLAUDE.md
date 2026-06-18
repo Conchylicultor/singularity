@@ -33,6 +33,7 @@ view independently sorted / searched / filtered.
   primitive's subtree-preserving search + rank ordering — so filter/search/sort
   behave identically across every view.
 
+<<<<<<< .merge_file_8I9ofr
 ## View modes & state model
 
 `<DataView>` chooses a **mode once per mount**, by whether the consumer
@@ -59,19 +60,57 @@ conditional `useConfig` inside `ConfigDataView` legal — `useConfig(viewsDescri
 only ever runs in a mount whose branch never changes. `DataView` matches the
 registration by **reference identity** against the module-cached
 `viewsDescriptor(storageKey)` singleton (`shared/views-config.ts`).
+=======
+## Config mode is universal (no default mode)
+
+Every `<DataView>` is config-backed — there is **no per-mount mode branch**. A
+consumer declares its surface id with `defineDataView("<id>")` (branded
+`DataViewId`, the type of `DataViewProps.storageKey`), and the data-view
+primitive's own barrels register **one `viewsDescriptor` per id** centrally —
+`ConfigV2.WebRegister` (web) + `ConfigV2.Register` (server), all under the
+`primitives.data-view` plugin — with **zero per-consumer registration
+boilerplate**. This mirrors `reorder` exactly: build-time codegen scrapes the
+markers, the primitive registers the descriptors.
+
+- **`defineDataView("id")` marker** (`core/internal/define-data-view.ts`): asserts
+  the id grammar `^[a-zA-Z0-9._-]+$` (bans `:` so the id is a filename-safe
+  config name) and brands the string `DataViewId`. The brand is the structural
+  guarantee — a consumer cannot pass a raw string, so every id is discoverable.
+- **Codegen** (`framework/tooling/codegen/.../data-views-gen.ts`) scans every
+  plugin's `web/**` for `defineDataView(...)` calls (via `findMarkerCalls` over a
+  comment/regex-masked copy) and emits the sorted id list to
+  `shared/data-views.generated.ts`. The `data-views-in-sync` check fails on drift;
+  `./singularity build` regenerates it.
+- **Central registration** (`{web,server}/internal/{descriptors,config-registrations}.ts`):
+  `dataViewDescriptors = new Map(dataViews.map(v => [v.id, viewsDescriptor(v.id)]))`
+  builds the reference-stable descriptors once per runtime; the barrels spread one
+  `ConfigV2.{WebRegister,Register}` per id. `useViewsConfig` resolves the
+  descriptor via `dataViewDescriptors.get(storageKey)` (reference identity vs the
+  registration, like `reorderDescriptors.get(slotId)`).
+
+The single model is `useConfigViewModel`: config-authored instances, full
+instance actions (add / rename / duplicate / delete / reorder / options
+sub-form), the `EditableViewSwitcher`, and per-instance sort/filter written
+**back to the config row** (durable, git-promotable). Runtime edits write the
+**user-global layer** (`setConfig` with no `scopeId`, mirroring reorder) — an
+`app:` scopeId would write a scope key the read path ignores until the scope is
+forked, silently dropping edits on reload. The per-id descriptor already scopes
+views to one surface; per-app forking stays a Settings-pane concern.
+>>>>>>> .merge_file_dbmi2G
 
 **State split** (`web/internal/use-view-state.ts` → `useEphemeralViewState`,
-localStorage-only):
+localStorage-only for device-local state):
 
 | State | Lives in |
 |---|---|
-| Instance def `{ id, rank, name, view:{ type, sort?, filter?, …opts } }` | `viewsDescriptor` config row (user-global layer, config mode) |
+| Instance def `{ id, rank, name, view:{ type, sort?, filter?, …opts } }` | `viewsDescriptor` config row (user-global layer) |
 | Active instance id | localStorage `${storageKey}:active-view` (per device) |
 | Search query, tree expand map | localStorage `${storageKey}:view-state` (per device) |
-| Default-mode sort/filter | localStorage `${storageKey}:view-state` (fallback only) |
 
-There is **no** global durable view-state config — the per-instance config row
-is the single durable home, with active-id / query / expand demoted to device-local.
+The per-instance config row is the single durable home for sort/filter, with
+active-id / query / expand demoted to device-local. The localStorage reader stays
+tolerant of legacy `view-state` blobs that still carry `sort`/`filter` keys (they
+are ignored).
 
 **Per-instance options sub-form.** A view-type's optional `configSchema`
 (`FieldsRecord`) drives the settings popover's options sub-form: the host builds a
@@ -238,14 +277,16 @@ gating convention.
 - Description: Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter. Notion-like multi-view data surface: one typed field schema rendered through swappable views with per-view sort/search/filter.
 - Web:
   - Slots: `DataViewSlots.View` ← `primitives.data-view.gallery`, `primitives.data-view.list`, `primitives.data-view.table`, `primitives.data-view.tree`, `DataViewSlots.Cell` ← `fields.bool.table`, `fields.color.table`, `fields.date.table`, `fields.enum.table`, `fields.image.table`, `fields.number.table`, `fields.tags.table`, `fields.text.table`, `DataViewSlots.CellEditor` ← `fields.bool.inline`, `fields.date.inline`, `fields.enum.inline`, `fields.number.inline`, `fields.tags.inline`, `fields.text.inline`, `DataViewSlots.Filter` ← `fields.bool.filter`, `fields.date.filter`, `fields.enum.filter`, `fields.number.filter`, `fields.tags.filter`, `fields.text.filter`
-  - Uses: `config_v2.useConfig`, `config_v2.useConfigRegistrations`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/rank.Rank`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`, `primitives/view-switcher.ViewSwitcher`
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `viewsDescriptor`
+  - Contributes: `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`, `ConfigV2.WebRegister`
+  - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `config_v2.useSetConfig`, `config_v2/fields.FieldRenderer`, `primitives/css/placeholder.Placeholder`, `primitives/css/row.Row`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/toggle-chip.ToggleChip`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuSeparator`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/css/ui-kit.Input`, `primitives/hover-reveal.hoverRevealClass`, `primitives/hover-reveal.useHoverReveal`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/rank.Rank`, `primitives/search.SearchInput`, `primitives/search.useTextFilter`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.renderIsolated`, `primitives/slot-render.RenderSlot`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewContribution`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldCellProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterController`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionContribution`, `ItemActionProps`, `ItemActions`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`; Values: `applyFilter`, `ChipSelectFilterInput`, `DataView`, `DataViewSlots`, `defineDataView`, `defineItemActions`, `EditableCell`, `evaluateNode`, `FieldCell`, `FilterValueInput`, `isFilterGroup`, `pickPrimaryField`, `useFilterController`, `useFlatRows`, `useResolveCell`, `useResolveCellEditor`, `useResolveOperatorSet`, `viewsDescriptor`
+- Server:
+  - Uses: `config_v2.ConfigV2`
+  - Exports: Values: `viewsDescriptor`
 - Cross-plugin:
   - Imported by: `apps/deploy/servers`, `apps/home/app-cards`, `apps/pages/page-tree`, `apps/sonata/library`, `apps/story/shell`, `config_v2/settings`, `conversations/agents`, `fields/bool/filter`, `fields/bool/inline`, `fields/bool/table`, `fields/color/table`, `fields/date/filter`, `fields/date/inline`, `fields/date/table`, `fields/enum/filter`, `fields/enum/inline`, `fields/enum/table`, `fields/image/table`, `fields/number/filter`, `fields/number/inline`, `fields/number/table`, `fields/tags/filter`, `fields/tags/inline`, `fields/tags/table`, `fields/text/filter`, `fields/text/inline`, `fields/text/table`, `primitives/data-view/gallery`, `primitives/data-view/list`, `primitives/data-view/table`, `primitives/data-view/tree`, `tasks/task-list`, `tasks/task-list/tree`, `ui/tweakcn/community-browser`
-- Server:
-  - Exports: Values: `viewsDescriptor`
 - Core:
-  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`
+  - Exports: Types: `CellEditorProps`, `CreateOption`, `DataViewId`, `DataViewProps`, `DataViewRenderProps`, `FieldDef`, `FieldValue`, `FilterConjunction`, `FilterFieldValue`, `FilterGroup`, `FilterNode`, `FilterOperator`, `FilterOperatorSet`, `FilterRule`, `FilterValueInputProps`, `HierarchyConfig`, `ItemActionProps`, `ItemActionsDescriptor`, `SelectionConfig`, `SortState`, `TableCellProps`, `ViewInstance`, `ViewState`; Values: `defineDataView`
 - Sub-plugins:
   - **`gallery`** — Gallery view child for the data-view primitive: a responsive card grid with a field-driven default card plus a composable DataCard chrome.
   - **`list`** — List view child for the data-view primitive: a compact single-row-per-item list (Row primitive) with field-driven label/subtitle/trailing, active-row highlight, and hover item actions.

@@ -14,7 +14,7 @@ import {
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { DataView } from "@plugins/primitives/plugins/data-view/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { createAgent, deleteAgent } from "@plugins/conversations/plugins/agents/core";
 import { agentsResource } from "../../shared/resources";
@@ -26,6 +26,8 @@ import { SystemFolder } from "./system-folder";
 import { patchAgent } from "./patch-agent";
 
 export { patchAgent } from "./patch-agent";
+
+const AGENTS_LIST_VIEW = defineDataView("agents-list");
 
 function randomFrom<T>(arr: readonly T[]): T {
   return arr[Math.floor(Math.random() * arr.length)] as T;
@@ -104,7 +106,7 @@ export function AgentsList({
         ]}
         rowKey={(a) => a.id}
         views={["tree"]}
-        storageKey="agents-list"
+        storageKey={AGENTS_LIST_VIEW}
         selectedRowId={selectedId}
         onRowActivate={(a) =>
           onSelect ? onSelect(a.id) : openPane(agentDetailPane, { id: a.id }, { mode: "push" })

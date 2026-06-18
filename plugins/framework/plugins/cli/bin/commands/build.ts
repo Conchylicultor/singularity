@@ -5,7 +5,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs, generateReorderableSlots, generateTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs, generateReorderableSlots, generateDataViews, generateTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
@@ -774,6 +774,16 @@ export function registerBuild(program: Command) {
       endSpan = buildProfilerStart("reorderableSlots", "build:codegen", "reorderable slots manifest");
       console.log("Generating reorderable-slots manifest...");
       await generateReorderableSlots({ root });
+      endSpan();
+
+      // 4a'b. Generate the data-views manifest from the `defineDataView(...)`
+      // markers (scanned from each plugin's web/**). Must run AFTER plugin docs
+      // (reuses the enriched tree) and BEFORE config origins: the data-view
+      // primitive registers one config_v2 `views` descriptor per id, so those
+      // descriptors must exist when origins regenerate.
+      endSpan = buildProfilerStart("dataViews", "build:codegen", "data-views manifest");
+      console.log("Generating data-views manifest...");
+      await generateDataViews({ root });
       endSpan();
 
       // 4a''. Generate the token-group-vars manifest from the real

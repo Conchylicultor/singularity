@@ -57,6 +57,13 @@ export {
 } from "./reorderable-slots-gen";
 
 export {
+  collectDataViews,
+  generateDataViews,
+  renderDataViewsManifest,
+  dataViewsManifestPath,
+} from "./data-views-gen";
+
+export {
   generateBarrelStubs,
   renderBarrelStubs,
   barrelStubsPath,

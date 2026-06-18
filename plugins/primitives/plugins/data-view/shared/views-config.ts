@@ -30,11 +30,15 @@ import { variantField } from "@plugins/fields/plugins/variant/plugins/config/cor
  */
 const cache = new Map<string, ConfigDescriptor>();
 
-export function viewsDescriptor(storageKey: string): ConfigDescriptor {
-  let descriptor = cache.get(storageKey);
+export function viewsDescriptor(id: string): ConfigDescriptor {
+  let descriptor = cache.get(id);
   if (!descriptor) {
     descriptor = defineConfig({
-      name: "views",
+      // The id IS the descriptor name — one distinct store path per DataView
+      // surface (`config/primitives/data-view/<id>.jsonc`), mirroring how
+      // reorder's `slotId` is its directive name. Every id is registered (under
+      // the `primitives.data-view` plugin) so `useConfig` never throws.
+      name: id,
       promotableToGit: true,
       scope: "app",
       source: "view",
@@ -48,7 +52,7 @@ export function viewsDescriptor(storageKey: string): ConfigDescriptor {
         }),
       },
     });
-    cache.set(storageKey, descriptor);
+    cache.set(id, descriptor);
   }
   return descriptor;
 }

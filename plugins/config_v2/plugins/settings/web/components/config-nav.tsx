@@ -12,6 +12,7 @@ import {
 } from "@plugins/config_v2/core";
 import {
   DataView,
+  defineDataView,
   type FieldDef,
   type HierarchyConfig,
 } from "@plugins/primitives/plugins/data-view/web";
@@ -20,6 +21,8 @@ import { configDetailPane } from "../internal/panes";
 import { pruneConfigTree } from "../internal/prune-config-tree";
 import { flattenConfigTree, type ConfigNavRow } from "../internal/flatten-config-tree";
 import { ConfigRowBadge } from "./config-row-badge";
+
+const CONFIG_NAV_VIEW = defineDataView("config_v2.settings.nav");
 
 export function ConfigNav() {
   const registrations = useConfigRegistrations();
@@ -200,7 +203,7 @@ export function ConfigNav() {
         fields={fields}
         rowKey={(r) => r.id}
         views={["tree"]}
-        storageKey="config_v2.settings.nav"
+        storageKey={CONFIG_NAV_VIEW}
         loading={isPending}
         hierarchy={hierarchy}
         selectedRowId={selectedRowId}

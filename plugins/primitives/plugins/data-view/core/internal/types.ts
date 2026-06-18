@@ -1,5 +1,6 @@
 import { type ComponentType, type ReactNode } from "react";
 import type { Rank } from "@plugins/primitives/plugins/rank/core";
+import type { DataViewId } from "./define-data-view";
 
 export type FieldValue = string | number | boolean | Date | null | undefined;
 
@@ -327,7 +328,7 @@ export interface DataViewProps<TRow> {
   /** Restrict + order by view id; omitted → all contributions by order/title. */
   views?: string[];
   defaultView?: string;
-  storageKey: string;
+  storageKey: DataViewId;
   title?: ReactNode;
   actions?: ReactNode;
   searchAccessor?: (row: TRow) => string;

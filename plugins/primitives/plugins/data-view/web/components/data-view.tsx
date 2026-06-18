@@ -7,7 +7,6 @@ import type {
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { useConfigRegistrations } from "@plugins/config_v2/web";
 import type {
   DataViewProps,
   DataViewRenderProps,
@@ -15,56 +14,24 @@ import type {
 } from "../../core";
 import { DataViewSlots, type DataViewContribution } from "../slots";
 import {
-  useDefaultViewModel,
   useConfigViewModel,
   type ViewModel,
 } from "../internal/use-view-model";
 import { useViewVariants } from "../internal/use-view-variants";
 import { useFilterController } from "../internal/use-filter-controller";
-import { viewsDescriptor } from "../../shared/views-config";
-import { ViewSwitcher } from "./view-switcher";
 import { EditableViewSwitcher } from "./editable-view-switcher";
 import { FilterBuilderTrigger } from "./filter/filter-builder-trigger";
 import { CreatorsControl } from "./creators-control";
 
 /**
- * Host entry point. Chooses a **mode once per mount** by whether the consumer
- * registered `viewsDescriptor(storageKey)` (config mode) or not (default mode),
- * then mounts a wrapper that builds the unified `ViewModel` and renders
- * `DataViewInner`. The mode-branch is a stable component split — so the
- * conditional `useConfig` inside the config wrapper is legal (it only ever runs
- * in a mount whose branch never changes).
+ * Host entry point. Every DataView is config-backed (config mode is universal):
+ * its `storageKey` is a `defineDataView` id with a centrally-registered
+ * `viewsDescriptor`, so the host always builds the config-backed `ViewModel`
+ * (config-authored instances, full instance actions, durable per-instance
+ * sort/filter written back to the config row) and renders the editable
+ * view-switcher.
  */
 export function DataView<TRow>(props: DataViewProps<TRow>): ReactNode {
-  const { storageKey } = props;
-  const descriptor = viewsDescriptor(storageKey);
-  const registrations = useConfigRegistrations();
-  const isRegistered = useMemo(
-    () => registrations.some((r) => r.descriptor === descriptor),
-    [registrations, descriptor],
-  );
-
-  return isRegistered ? (
-    <ConfigDataView {...props} />
-  ) : (
-    <DefaultDataView {...props} />
-  );
-}
-
-function DefaultDataView<TRow>(props: DataViewProps<TRow>): ReactNode {
-  const contributions = DataViewSlots.View.useContributions();
-  const viewModel = useDefaultViewModel(
-    props.storageKey,
-    contributions,
-    props.views,
-    !!props.hierarchy,
-    props.viewOptions,
-    props.defaultView,
-  );
-  return <DataViewInner viewModel={viewModel} contributions={contributions} {...props} />;
-}
-
-function ConfigDataView<TRow>(props: DataViewProps<TRow>): ReactNode {
   const contributions = DataViewSlots.View.useContributions();
   const viewModel = useConfigViewModel(
     props.storageKey,
@@ -218,21 +185,13 @@ function DataViewInner<TRow>({
         ) : null}
         {actions}
         <CreatorsControl creators={creators} />
-        {viewModel.actions ? (
-          <EditableViewSwitcher
-            instances={instances}
-            activeId={activeViewId}
-            onSelect={viewModel.setActiveView}
-            actions={viewModel.actions}
-            viewVariants={viewVariants}
-          />
-        ) : (
-          <ViewSwitcher
-            instances={instances}
-            activeId={activeViewId}
-            onSelect={viewModel.setActiveView}
-          />
-        )}
+        <EditableViewSwitcher
+          instances={instances}
+          activeId={activeViewId}
+          onSelect={viewModel.setActiveView}
+          actions={viewModel.actions}
+          viewVariants={viewVariants}
+        />
       </div>
       <div className={cn(!embedded && "min-h-0 flex-1 overflow-y-auto")}>
         {renderIsolated(

@@ -7,7 +7,7 @@
 - Description: Tree-view tab for the task list.
 - Web:
   - Contributes: `Tasks.View` "Tree" → `TasksList`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataView`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/css/ui-kit.cn`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `tasks.patchTask`, `tasks/task-list.Tasks`, `tasks/task-status.StatusIcon`
   - Exports: Values: `TasksList`
 - Cross-plugin:
   - Imported by: `tasks/task-detail`

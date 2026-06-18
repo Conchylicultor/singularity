@@ -1,7 +1,13 @@
 import { Apps, type ActiveApp, useCurrentAppId, useTabs } from "@plugins/apps/web";
-import { DataView, type CreateOption } from "@plugins/primitives/plugins/data-view/web";
+import {
+  DataView,
+  defineDataView,
+  type CreateOption,
+} from "@plugins/primitives/plugins/data-view/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
 import { MdAdd } from "react-icons/md";
+
+const HOME_APPS_VIEW = defineDataView("home.apps");
 
 export function AppGrid() {
   const apps = Apps.App.useContributions();
@@ -33,7 +39,7 @@ export function AppGrid() {
       ]}
       views={["gallery"]}
       defaultView="gallery"
-      storageKey="home:apps"
+      storageKey={HOME_APPS_VIEW}
       // The grid only renders inside the visible (focused) Home tab, so the
       // launcher navigates that tab into the picked app in place.
       onRowActivate={(a) =>

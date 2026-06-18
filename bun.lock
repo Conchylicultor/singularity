@@ -1590,6 +1590,10 @@
       "name": "@singularity/plugin-framework-tooling-checks-data-migration-dml-only",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/checks/plugins/data-views-in-sync": {
+      "name": "@singularity/plugin-framework-tooling-checks-data-views-in-sync",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped": {
       "name": "@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped",
       "version": "0.0.1",
@@ -4360,6 +4364,8 @@
     "@singularity/plugin-framework-tooling-checks-css-vars-supplied": ["@singularity/plugin-framework-tooling-checks-css-vars-supplied@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/css-vars-supplied"],
 
     "@singularity/plugin-framework-tooling-checks-data-migration-dml-only": ["@singularity/plugin-framework-tooling-checks-data-migration-dml-only@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-migration-dml-only"],
+
+    "@singularity/plugin-framework-tooling-checks-data-views-in-sync": ["@singularity/plugin-framework-tooling-checks-data-views-in-sync@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/data-views-in-sync"],
 
     "@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped": ["@singularity/plugin-framework-tooling-checks-inherited-theme-defaults-scoped@workspace:plugins/framework/plugins/tooling/plugins/checks/plugins/inherited-theme-defaults-scoped"],
 

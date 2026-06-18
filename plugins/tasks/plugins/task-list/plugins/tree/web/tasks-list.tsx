@@ -3,7 +3,7 @@ import { MdAdd } from "react-icons/md";
 import { useResource, ResourceView } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { DataView } from "@plugins/primitives/plugins/data-view/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { tasksResource, createTask, type TaskListItem } from "@plugins/tasks/core";
 import { patchTask } from "@plugins/tasks/web";
@@ -21,6 +21,8 @@ async function createTaskRow(args: {
   const task = await fetchEndpoint(createTask, {}, { body: { folderId: args.parentId, rank: args.rank?.toString() } });
   return task.id;
 }
+
+const TASKS_LIST_VIEW = defineDataView("tasks-list");
 
 const isTerminal = (t: TaskListItem) =>
   t.status === "done" || t.status === "dropped";
@@ -69,7 +71,7 @@ function TasksListInner({
       ]}
       rowKey={(t) => t.id}
       views={["tree"]}
-      storageKey="tasks-list"
+      storageKey={TASKS_LIST_VIEW}
       selectedRowId={selectedId}
       onRowActivate={(t) => onSelect(t.id)}
       selection={{}}

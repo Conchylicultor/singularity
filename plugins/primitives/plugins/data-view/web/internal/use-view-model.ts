@@ -16,7 +16,7 @@ export interface AddableViewType {
   icon: ComponentType<{ className?: string }>;
 }
 
-/** Instance actions — present only in config mode (registered consumer). */
+/** Instance actions for the editable view-switcher (every DataView has these). */
 export interface ViewActions {
   /** View-types the `+` menu offers: registered contributions ∩ `views`
    *  whitelist (if any) ∩ hierarchical gate. */
@@ -39,8 +39,8 @@ export interface ViewModel {
   setFilter: (id: string, filter: FilterGroup | null) => void;
   setQuery: (id: string, q: string) => void;
   setExpanded: (id: string, k: string, v: boolean) => void;
-  /** null in default mode. */
-  actions: ViewActions | null;
+  /** Instance actions for the editable switcher (always present). */
+  actions: ViewActions;
 }
 
 /** Resolve the active instance id given the persisted selection + fallbacks. */
@@ -57,63 +57,9 @@ function resolveActiveId(
 }
 
 /**
- * Default mode: synthesized one-instance-per-view-type, ephemeral state, NO
- * actions. sort/filter live in localStorage.
- */
-export function useDefaultViewModel(
-  storageKey: string,
-  contributions: SealContributions<DataViewContribution>[],
-  views: string[] | undefined,
-  hasHierarchy: boolean,
-  viewOptions: Record<string, unknown> | undefined,
-  defaultView: string | undefined,
-): ViewModel {
-  const instances = useResolvedInstances(
-    contributions,
-    views,
-    hasHierarchy,
-    viewOptions,
-  );
-  const ephemeral = useEphemeralViewState(storageKey);
-  const activeId = resolveActiveId(
-    instances,
-    ephemeral.activeViewId,
-    defaultView,
-  );
-
-  const stateFor = useCallback(
-    (id: string): ViewState => {
-      const local = ephemeral.localFor(id);
-      return {
-        sort: local.sort,
-        filter: local.filter,
-        query: local.query,
-        expanded: local.expanded,
-      };
-    },
-    [ephemeral],
-  );
-
-  return useMemo(
-    () => ({
-      instances,
-      activeId,
-      setActiveView: ephemeral.setActiveView,
-      stateFor,
-      setSort: ephemeral.setLocalSort,
-      setFilter: ephemeral.setLocalFilter,
-      setQuery: ephemeral.setQuery,
-      setExpanded: ephemeral.setExpanded,
-      actions: null,
-    }),
-    [instances, activeId, ephemeral, stateFor],
-  );
-}
-
-/**
- * Config mode: config-authored instances, durable sort/filter written back to
- * the instance's config row, full instance actions. active-id / query / expand
- * stay device-local via the same ephemeral store.
+ * The single view model: config-authored instances, durable sort/filter written
+ * back to the instance's config row, full instance actions. active-id / query /
+ * expand stay device-local via the ephemeral store.
  */
 export function useConfigViewModel(
   storageKey: string,

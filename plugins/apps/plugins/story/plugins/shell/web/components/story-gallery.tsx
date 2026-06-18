@@ -8,10 +8,12 @@ import {
 } from "@plugins/page/plugins/editor/core";
 import { PageIcon } from "@plugins/page/plugins/editor/web";
 import { storiesResource } from "@plugins/apps/plugins/story/plugins/marker/web";
-import { DataView } from "@plugins/primitives/plugins/data-view/web";
+import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { storyDetailPane } from "../panes";
 import { createStory } from "../internal/create-story";
+
+const STORY_GALLERY_VIEW = defineDataView("story.gallery");
 
 /**
  * The gallery surface: a prominent header + a `DataView` over story-marked pages,
@@ -86,7 +88,7 @@ export function StoryGallery() {
           ]}
           views={["gallery"]}
           defaultView="gallery"
-          storageKey="story:gallery"
+          storageKey={STORY_GALLERY_VIEW}
           onRowActivate={openStory}
           emptyState={'No stories yet. Create one with "New story".'}
           viewOptions={{
