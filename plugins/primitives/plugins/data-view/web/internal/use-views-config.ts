@@ -62,10 +62,12 @@ export function useViewsConfig(
 ): ViewsConfigHandle {
   const descriptor = viewsDescriptor(storageKey);
   // No `scopeId`: runtime per-instance edits write to the user-global layer
-  // (mirroring reorder's `setConfig("items", …)`). An `app:` scopeId would write
-  // to a scope key the read path ignores until the scope is forked, silently
-  // dropping every edit on reload. The per-`storageKey` descriptor already scopes
-  // views to one surface; per-app forking stays a Settings-pane concern.
+  // (mirroring reorder's `setConfig("items", …)`). data-view is a PRIMITIVE and
+  // stays app-agnostic — it never reaches for the current appId. The
+  // per-`storageKey` descriptor already scopes views to one surface; if per-app
+  // config is ever wanted, thread a `scopeId` in as a prop (config_v2 scoped
+  // read/write is symmetric now — fork-on-write makes the scope exist on first
+  // write — so a threaded scopeId would persist and read back correctly).
   const config = useConfig(descriptor);
   const setConfig = useSetConfig(descriptor);
 

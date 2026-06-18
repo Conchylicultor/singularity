@@ -1,31 +1,22 @@
 import { existsSync, unlinkSync, rmdirSync } from "node:fs";
 import { join } from "node:path";
-import { computeHash, APP_SCOPE_DIR, scopeAppId } from "../../core";
+import { APP_SCOPE_DIR, scopeAppId } from "../../core";
 import type { ConfigDescriptor, JsonValue } from "../../core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { userScopedDir } from "./scope-paths";
 import { getScopedDescriptors, getDescriptorByStorePath, getHierarchyPath, configV2ScopeForkedServerResource } from "./resource";
-import { ensureScopeEntry, getConfig, disposeScopeEntry, notifyDescriptorScopeChange } from "./registry";
-import { hasFieldStorageProvider } from "./field-storage-providers";
+import { ensureScopeEntry, disposeScopeEntry, notifyDescriptorScopeChange } from "./registry";
+import { buildScopeSnapshot } from "./scope-snapshot";
 
 // Fork ONE descriptor into a scope: snapshot its scope-effective value set into
 // the scope's @app/<id> origin + override files (same content + hash → zero
 // conflict at fork time), then build the scoped entry so it resolves live
-// afterwards. Reading the SCOPE-effective value (not base) preserves any
-// committed git scope for this app instead of resetting it to global.
-// Provider-backed (secret) fields are stripped from the snapshot — we never
-// write redacted secret values into JSONC.
+// afterwards. The snapshot (scope-effective values, redacted secrets) is built
+// by the shared buildScopeSnapshot helper — the exact same writer setConfig's
+// fork-on-write uses, so the two paths can never drift.
 async function forkDescriptor(descriptor: ConfigDescriptor, hierarchyPath: string, scopeId: string): Promise<void> {
-  const resolved = getConfig(descriptor, scopeId) as Record<string, unknown>;
-  const snapshot: Record<string, unknown> = {};
-  for (const [key, field] of Object.entries(descriptor.fields)) {
-    if (hasFieldStorageProvider(field.type.id)) continue;
-    snapshot[key] = resolved[key];
-  }
-
-  const dir = userScopedDir(hierarchyPath, scopeId);
-  const hash = computeHash(snapshot as JsonValue);
+  const { snapshot, hash, dir } = buildScopeSnapshot(descriptor, hierarchyPath, scopeId);
   jsoncConfigProxy(join(dir, `${descriptor.name}.origin.jsonc`)).write(snapshot as JsonValue, hash);
   jsoncConfigProxy(join(dir, `${descriptor.name}.jsonc`)).write(snapshot as JsonValue, hash);
 

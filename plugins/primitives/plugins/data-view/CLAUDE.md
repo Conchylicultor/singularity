@@ -47,10 +47,12 @@ registered `viewsDescriptor(storageKey)` (`ConfigV2.{WebRegister,Register}`):
   (add / rename / duplicate / delete / reorder / options sub-form), the
   `EditableViewSwitcher`. sort/filter are written **back to the instance's config
   row** (durable, git-promotable). Runtime edits write the **user-global layer**
-  (`setConfig` with no `scopeId`, mirroring reorder) — an `app:` scopeId would
-  write a scope key the read path ignores until the scope is forked, silently
-  dropping edits on reload. The per-`storageKey` descriptor already scopes views
-  to one surface; per-app forking stays a Settings-pane concern.
+  (`setConfig` with no `scopeId`, mirroring reorder): data-view is a primitive and
+  stays app-agnostic — it never reaches for the current appId. The
+  per-`storageKey` descriptor already scopes views to one surface; if per-app
+  config is ever wanted, thread a `scopeId` in as a prop (config_v2 scoped
+  read/write is symmetric — fork-on-write makes the scope exist on first write —
+  so a threaded scopeId persists and reads back correctly).
 
 The mode-branch is a **stable component split**, which is what makes the
 conditional `useConfig` inside `ConfigDataView` legal — `useConfig(viewsDescriptor…)`

@@ -19,6 +19,7 @@ import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
 import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
+import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { CONFIG_DIR } from "./config-dir";
@@ -427,6 +428,11 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
   const userOverwrites = jsoncConfigProxy(entry.userOverwritesPath);
   const userOrigin = jsoncConfigProxy(entry.userOriginPath);
 
+  // For a scoped write, fork-on-write keys off the BASE origin (the only thing we
+  // can snapshot from). Read it off the base CacheEntry's userOriginPath — the
+  // authoritative base-origin location for this descriptor.
+  const baseOriginPath = getEntry(descriptor, BASE_SCOPE)?.userOriginPath;
+
   let base: Record<string, unknown>;
   let hash: string | null;
 
@@ -438,13 +444,39 @@ export async function setConfig<F extends FieldsRecord, K extends keyof F & stri
     const orig = userOrigin.read()!;
     base = { ...(orig.content as Record<string, unknown>) };
     hash = computeHash(orig.content);
+  } else if (scopeId && baseOriginPath && jsoncConfigProxy(baseOriginPath).exists()) {
+    // FORK-ON-WRITE. The scope has no own config (neither scoped override nor
+    // scoped origin), but the BASE origin exists — so this is a first scoped
+    // write to an app that tracks base. Rather than throwing, auto-create the
+    // scope by snapshotting base-effective values into the scoped origin (the
+    // exact snapshot forkDescriptor writes, via the shared buildScopeSnapshot
+    // helper), then fall through to the normal write path below: userOrigin now
+    // exists, so the override is anchored against the freshly-written scoped
+    // origin's hash. This makes a scoped write make the scope exist *and*
+    // readable — fully symmetric with the read path, no fork ceremony.
+    const hierarchyPath = getHierarchyPath(descriptor);
+    if (!hierarchyPath) {
+      throw new Error(
+        `[config-v2] setConfig: descriptor "${descriptor.name}" has no registered hierarchy path.`,
+      );
+    }
+    writeScopedOriginSnapshot(descriptor, hierarchyPath, scopeId);
+    // Surface the scope-membership flip promptly (the config-v2.scopes resource)
+    // rather than waiting on the ~100ms watcher debounce — mirrors
+    // forkDescriptorScope. The override write below is picked up by the entry's
+    // own watcher as today.
+    notifyDescriptorScopeChange(entry.storePath, scopeId);
+    const orig = userOrigin.read()!;
+    base = { ...(orig.content as Record<string, unknown>) };
+    hash = computeHash(orig.content);
   } else {
     // ./singularity build propagates a hashed origin for every registered
     // descriptor, so a missing origin here means the build never ran (or the
-    // file was deleted). For app-scoped writes the origin is created by the fork
-    // operation — a write before forking correctly throws here. Writing a
-    // hashless override to paper over it would produce a corrupt file that
-    // conflict detection can't anchor — fail loudly.
+    // file was deleted). A base write with no origin — or a scoped write when
+    // even the BASE origin is absent (the fork-on-write branch above can't fire,
+    // since there is no base to snapshot) — both land here. Writing a hashless
+    // override to paper over it would produce a corrupt file that conflict
+    // detection can't anchor — fail loudly.
     throw new Error(
       `[config-v2] setConfig: no origin file for "${entry.storePath}" at ${entry.userOriginPath}. ` +
         `Run ./singularity build to propagate the config origin before setting overrides.`,

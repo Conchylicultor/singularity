@@ -1,12 +1,10 @@
-import { useContext } from "react";
+import { useContext, useCallback } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { configV2Resource } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/config_v2/core";
-import { useScopeForked } from "./use-scope-forked";
+import { configV2Resource, configV2ScopesResource } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigValues, ConfigV2Scopes, FieldsRecord } from "@plugins/config_v2/core";
 import { storePathOf } from "./store-path";
 import { useKnownServerPaths } from "./server-paths";
-import { useHasCommittedScope } from "./committed-scopes";
 
 export function useConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
@@ -45,19 +43,31 @@ export function useConfig<F extends FieldsRecord>(
   // config boot task), so it is never `pending` on first paint — that replaces
   // what Suspense was doing (no flash of default values).
   //
-  // A scope DIFFERS from global only when it has its own config: a committed git
-  // scope (known from the boot snapshot) or a runtime user fork (useScopeForked).
-  // Both are boot-hydrated and live-tracked server-side, so we subscribe to the
-  // scoped key for them. An untracked scope resolves server-side to exactly the
-  // global value — and the server never pushes base changes to an untracked
-  // scoped key — so for it we reuse the live global key. While a scoped value is
-  // still loading, we fall back to the GLOBAL value (the correct currently-shown
-  // value), never `descriptor.defaults` (the original flash). All hooks run
-  // unconditionally; only the returned value branches.
+  // A scope DIFFERS from global only when it has its OWN config on disk — a
+  // committed git scope, a runtime theme fork, OR a plain scoped setConfig write.
+  // There is a single authoritative signal for all three: `configV2ScopesResource`
+  // (keyed by `{ path }`), the live per-descriptor list the server publishes from
+  // `scopeHasOwnConfig` — the exact predicate read/write/server-resolve all key
+  // off, so no client re-derivation can drift from it. We subscribe to the scoped
+  // key iff our scopeId is in that list; otherwise an untracked scope resolves
+  // server-side to exactly the global value (and the server never pushes base
+  // changes to an untracked scoped key), so we reuse the live global key.
+  //
+  // We read membership through a `select` (the no-pending-data-collapse carve-out,
+  // mirroring useScopeForked): the derived boolean is a sanctioned point read, and
+  // false-while-pending is the documented-correct fallback — we fall back to the
+  // GLOBAL value (the currently-shown value), never `descriptor.defaults` (the
+  // original flash). The false→true flip when the scope IS a member changes the
+  // selected slice and re-renders. Committed scopes are boot-hydrated into this
+  // resource (see the config boot task), so they paint scoped on the first frame.
+  // All hooks run unconditionally (Rules of Hooks); only the returned value branches.
   const scopeId = opts?.scopeId;
-  const forked = useScopeForked(scopeId);
-  const hasCommittedScope = useHasCommittedScope(path, scopeId);
-  const useScoped = !!scopeId && (forked || hasCommittedScope);
+  const inScope = useCallback(
+    (list: ConfigV2Scopes) => (scopeId ? list.includes(scopeId) : false),
+    [scopeId],
+  );
+  const scopesRes = useResource(configV2ScopesResource, { path }, { select: inScope });
+  const useScoped = scopesRes.pending ? false : scopesRes.data;
   const globalRes = useResource(configV2Resource, { path });
   const scopedRes = useResource(
     configV2Resource,
