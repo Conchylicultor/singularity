@@ -2888,7 +2888,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`code-block`** — Code block type: editable with live syntax highlighting, language picker, and copy button.
       - Web:
         - Contributes: `Editor.Block` "code-block" → `CodeBlock`
-        - Uses: `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`, `primitives/editable-field.useEditableField`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`
+        - Uses: `page/editor.Editor`, `primitives/copy-to-clipboard.CopyButton`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectSeparator`, `primitives/css/ui-kit.SelectTrigger`, `primitives/editable-field.useEditableField`, `primitives/syntax-highlight.getHighlighter`, `primitives/syntax-highlight.resolveLang`, `primitives/syntax-highlight.SHIKI_LANGS`, `primitives/syntax-highlight.themeForMode`, `primitives/syntax-highlight.useDarkMode`
         - Exports: Values: `codeBlock`
       - Core:
         - Uses: `page/editor.defineBlock`

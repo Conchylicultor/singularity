@@ -1,5 +1,6 @@
-import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, Select, SelectContent, SelectItem, SelectSeparator, SelectTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { MdAutoAwesome } from "react-icons/md";
 import type { BundledLanguage } from "shiki";
 import {
   getHighlighter,
@@ -12,9 +13,16 @@ import { CopyButton } from "@plugins/primitives/plugins/copy-to-clipboard/web";
 import { useEditableField } from "@plugins/primitives/plugins/editable-field/web";
 import type { BlockRendererProps } from "@plugins/page/plugins/editor/web";
 import { codeBlock } from "../../core";
+import { detectLanguage } from "../detect-language";
 
-// Sentinel for the "no language" (plain text) option — Select needs a string value.
-const PLAIN = "__plain__";
+// Tri-state language model, all stored in the single optional `language` field:
+//   undefined  → AUTO: detect the language from the content and highlight it
+//   "text"     → explicit plain text (user opted out of highlighting)
+//   "<lang>"   → an explicit shiki language id
+// AUTO is the sentinel the Select uses for the undefined state (Select needs a
+// non-empty string value); PLAIN is the persisted value for explicit plain text.
+const AUTO = "__auto__";
+const PLAIN = "text";
 
 // Text-metric contract: the transparent <textarea> and the highlighted underlay
 // must share font, size, line-height, padding, wrapping, and tab-size *exactly*,
@@ -46,7 +54,13 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   });
   const code = field.value;
 
-  const resolved = resolveLang(language);
+  // In AUTO mode (language undefined) guess the language from the content; an
+  // explicit choice (including the "text" plain sentinel) wins over detection.
+  const detected = useMemo(
+    () => (language === undefined ? detectLanguage(code) : null),
+    [language, code],
+  );
+  const resolved = resolveLang(language ?? detected);
   const [html, setHtml] = useState<string | null>(null);
 
   // Re-highlight on every keystroke. The highlighter + its grammars are cached
@@ -123,13 +137,15 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
   }
 
   function onLanguageChange(value: string | null) {
-    const lang = !value || value === PLAIN ? undefined : value;
+    // AUTO maps back to undefined; "text" (PLAIN) and concrete langs persist as-is.
+    const lang = !value || value === AUTO ? undefined : value;
     setLanguage(lang);
     editor.update({ code, language: lang });
   }
 
   const langItems = useMemo<Record<string, string>>(
     () => ({
+      [AUTO]: "Auto",
       [PLAIN]: "Plain text",
       ...Object.fromEntries(SHIKI_LANGS.map((l) => [l, l])),
     }),
@@ -141,16 +157,35 @@ export function CodeBlock({ block, isFocused, editor }: BlockRendererProps) {
       <div className="group relative overflow-hidden rounded-md bg-muted">
         {/* Hover/focus toolbar: language picker + copy. */}
         <div className="absolute top-1 right-1 z-raised flex items-center gap-xs opacity-0 transition-opacity group-hover:opacity-100 focus-within:opacity-100">
-          <Select items={langItems} value={language ?? PLAIN} onValueChange={onLanguageChange}>
+          <Select items={langItems} value={language ?? AUTO} onValueChange={onLanguageChange}>
             <SelectTrigger
               size="sm"
               aria-label="Code language"
-              className="h-6 w-28 bg-background/80 text-caption backdrop-blur"
+              className="h-6 w-36 bg-background/80 text-caption backdrop-blur"
             >
-              <SelectValue />
+              {language === undefined ? (
+                <span className="flex min-w-0 items-center gap-xs">
+                  <MdAutoAwesome className="shrink-0 text-muted-foreground" />
+                  <span className="truncate">
+                    Auto
+                    {detected ? (
+                      <span className="text-muted-foreground"> · {detected}</span>
+                    ) : null}
+                  </span>
+                </span>
+              ) : (
+                <span className="truncate">
+                  {language === PLAIN ? "Plain text" : language}
+                </span>
+              )}
             </SelectTrigger>
             <SelectContent align="end">
+              <SelectItem value={AUTO}>
+                <MdAutoAwesome />
+                Auto
+              </SelectItem>
               <SelectItem value={PLAIN}>Plain text</SelectItem>
+              <SelectSeparator />
               {SHIKI_LANGS.map((lang) => (
                 <SelectItem key={lang} value={lang}>
                   {lang}
