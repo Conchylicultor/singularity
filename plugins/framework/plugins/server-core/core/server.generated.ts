@@ -132,6 +132,7 @@ export const serverEntries: CollectedEntry[] = [
   { pluginPath: "infra/plugins/claude-cli", id: "infra.claude-cli", loader: () => import("@plugins/infra/plugins/claude-cli/server"), dependsOn: ["conversations/plugins/model-provider", "database", "infra/plugins/paths"] },
   { pluginPath: "infra/plugins/contention", id: "infra.contention", loader: () => import("@plugins/infra/plugins/contention/server"), dependsOn: ["database", "infra/plugins/runtime-profiler"] },
   { pluginPath: "infra/plugins/endpoints", id: "infra.endpoints", loader: () => import("@plugins/infra/plugins/endpoints/server"), dependsOn: [] },
+  { pluginPath: "infra/plugins/entities", id: "infra.entities", loader: () => import("@plugins/infra/plugins/entities/server"), dependsOn: ["fields"] },
   { pluginPath: "infra/plugins/entity-extensions", id: "infra.entity-extensions", loader: () => import("@plugins/infra/plugins/entity-extensions/server"), dependsOn: ["database"] },
   { pluginPath: "infra/plugins/events-test", id: "infra.events-test", loader: () => import("@plugins/infra/plugins/events-test/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/events", "infra/plugins/jobs"] },
   { pluginPath: "infra/plugins/events", id: "infra.events", loader: () => import("@plugins/infra/plugins/events/server"), dependsOn: ["database", "infra/plugins/endpoints", "infra/plugins/jobs"] },

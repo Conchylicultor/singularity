@@ -1966,7 +1966,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `config_v2`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`
+    - Imported by: `config_v2`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/entities`
   - Server:
     - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldStorage`
   - Core:
@@ -2659,6 +2659,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Types: `EndpointErrorInfo`; Values: `EndpointError`, `endpointQueryKey`, `fetchEndpoint`, `getEndpointErrorMessage`, `registerEndpointErrorReporter`, `reportEndpointError`, `useEndpoint`, `useEndpointMutation`
       - Server:
         - Exports: Values: `HttpError`, `implement`
+    - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
+      - Server:
+        - Uses: `fields.Fields`, `fields.resolveFieldStorage`
+        - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
+        - Exports: Types: `ColumnDefault`, `DbDefault`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
         - Uses: `database.db`

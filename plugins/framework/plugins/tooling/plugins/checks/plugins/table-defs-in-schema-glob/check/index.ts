@@ -32,6 +32,10 @@ const TABLE_FACTORIES: { name: string; definedIn: string }[] = [
     name: "defineTriggerEvent",
     definedIn: "plugins/infra/plugins/events/server/internal/event.ts",
   },
+  {
+    name: "defineEntity",
+    definedIn: "plugins/infra/plugins/entities/server/internal/define-entity.ts",
+  },
 ];
 
 const FACTORY_DEFINITION_FILES = new Set(TABLE_FACTORIES.map((f) => f.definedIn));

@@ -165,6 +165,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
     - **`claude-cli`** — One-shot Claude CLI helper (`claude --print`) for short, latency-tolerant generations. Reuses the user's local Claude CLI auth — no API key plumbing.
     - **`contention`** — Cached, cluster-wide system-contention snapshot (OS load average + Postgres backend counts) stamped onto slow ops.
     - **`endpoints`** [load-bearing] — Typed endpoint contract primitive. fetchEndpoint, useEndpoint, and useEndpointMutation consume endpoint definitions on the client. Typed endpoint contract primitive. defineEndpoint declares the contract; implement() creates the server handler; fetchEndpoint/useEndpoint consume on the client.
+    - **`entities`** — Derives a Drizzle pgTable AND a zod wire schema from one FieldsRecord, so entity.table.$inferSelect is identical by construction to z.infer<entity.schema>. Field-set drift becomes a tsc error; loaders drop their row projection.
     - **`entity-extensions`** [load-bearing] — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
     - **`events`** [load-bearing] — Event→job bindings layered on @plugins/jobs. Plugins declare events with typed filter columns via defineTriggerEvent, subscribers bind jobs via trigger().
     - **`events-test`** — Dummy UI for exercising the events plugin end-to-end. Dummy plugin exercising the events and jobs APIs end-to-end.

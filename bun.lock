@@ -1809,6 +1809,10 @@
       "name": "@singularity/plugin-infra-endpoints",
       "version": "0.0.1",
     },
+    "plugins/infra/plugins/entities": {
+      "name": "@singularity/plugin-infra-entities",
+      "version": "0.0.1",
+    },
     "plugins/infra/plugins/entity-extensions": {
       "name": "@singularity/plugin-infra-entity-extensions",
       "version": "0.0.1",
@@ -4482,6 +4486,8 @@
     "@singularity/plugin-infra-contention": ["@singularity/plugin-infra-contention@workspace:plugins/infra/plugins/contention"],
 
     "@singularity/plugin-infra-endpoints": ["@singularity/plugin-infra-endpoints@workspace:plugins/infra/plugins/endpoints"],
+
+    "@singularity/plugin-infra-entities": ["@singularity/plugin-infra-entities@workspace:plugins/infra/plugins/entities"],
 
     "@singularity/plugin-infra-entity-extensions": ["@singularity/plugin-infra-entity-extensions@workspace:plugins/infra/plugins/entity-extensions"],
 
