@@ -31,9 +31,18 @@ import {
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import { pendingFocus } from "./pending-focus";
 import { TreeListProvider } from "./use-tree-row";
 import type { TreeItem } from "./types";
+
+/** Above this many *visible* (expanded) rows the tree windows its rows via
+ * VirtualRows. Below it the recursive render runs unchanged. Mirrors the list
+ * view's threshold. */
+const VIRTUALIZE_THRESHOLD = 100;
+/** Initial per-row height estimate (min-h-7 row + py-xs). Dynamic measurement
+ * refines it after mount. */
+const ROW_ESTIMATE_PX = 32;
 
 export type TreeListProps<T extends TreeItem> = {
   rows: readonly T[];
@@ -196,20 +205,32 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
     [afterSearch, hideTerminal, isTerminal],
   );
 
-  // Visible selection order: DFS over the painted tree, descending into a node's
-  // children only when it is expanded. Drives MultiSelectProvider so shift-range
-  // selection spans exactly the rows on screen (collapsed subtrees excluded).
-  const orderedIds = useMemo(() => {
-    const ids: string[] = [];
-    const walk = (nodes: TreeNode<T>[]) => {
+  // Flattened DFS of the painted tree: each visible row in paint order with its
+  // depth, descending into a node's children only when expanded. Drives both the
+  // windowed render (VirtualRows items) and — via orderedIds — MultiSelect
+  // shift-range ordering, so the two never diverge.
+  const flatVisible = useMemo(() => {
+    const out: { node: TreeNode<T>; depth: number }[] = [];
+    const walk = (nodes: TreeNode<T>[], depth: number) => {
       for (const node of nodes) {
-        ids.push(node.id);
-        if (node.expanded) walk(node.children);
+        out.push({ node, depth });
+        if (node.expanded) walk(node.children, depth + 1);
       }
     };
-    walk(visibleTree);
-    return ids;
+    walk(visibleTree, 0);
+    return out;
   }, [visibleTree]);
+  const orderedIds = useMemo(
+    () => flatVisible.map((f) => f.node.id),
+    [flatVisible],
+  );
+
+  const windowed = flatVisible.length > VIRTUALIZE_THRESHOLD;
+  const selectedIndex = useMemo(() => {
+    if (!windowed || !selectedId) return undefined;
+    const i = flatVisible.findIndex((f) => f.node.id === selectedId);
+    return i >= 0 ? i : undefined;
+  }, [windowed, selectedId, flatVisible]);
 
   const nodesWithChildren = useMemo(() => {
     const childSet = new Set(
@@ -311,6 +332,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       multiSelect: !!multiSelect,
       canCreate: canCreate && !!onCreate,
       canReorder: !!onMove,
+      windowed,
     }),
     [
       rows,
@@ -325,6 +347,7 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
       Row,
       multiSelect,
       canCreate,
+      windowed,
     ],
   );
 
@@ -387,9 +410,18 @@ export function TreeList<T extends TreeItem>(props: TreeListProps<T>) {
               </div>
             )}
             {multiSelect && <SelectionBar actions={multiSelect.actions} />}
-            {visibleTree.map((node) => (
-              <Row key={node.id} node={node} depth={0} />
-            ))}
+            {windowed ? (
+              <VirtualRows
+                items={flatVisible}
+                estimateSize={ROW_ESTIMATE_PX}
+                getKey={(item) => item.node.id}
+                scrollToIndex={selectedIndex}
+              >
+                {(item) => <Row node={item.node} depth={item.depth} />}
+              </VirtualRows>
+            ) : (
+              visibleTree.map((node) => <Row key={node.id} node={node} depth={0} />)
+            )}
             {showRootAdd && (
               <Button
                 variant="ghost"

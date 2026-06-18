@@ -10,10 +10,10 @@ import {
   useResolveCell,
   useResolveCellEditor,
   useResolveOperatorSet,
-  VirtualRows,
   type DataViewRenderProps,
   type ItemActionsDescriptor,
 } from "@plugins/primitives/plugins/data-view/web";
+import { VirtualRows } from "@plugins/primitives/plugins/virtual-rows/web";
 import type { ListViewOptions } from "../../core";
 
 /** Above this row count the list windows its rows (VirtualRows finds the nearest

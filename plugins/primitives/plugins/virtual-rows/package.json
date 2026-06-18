@@ -1,0 +1,8 @@
+{
+  "name": "@singularity/plugin-primitives-virtual-rows",
+  "private": true,
+  "version": "0.0.1",
+  "dependencies": {
+    "@tanstack/react-virtual": "^3.13.0"
+  }
+}

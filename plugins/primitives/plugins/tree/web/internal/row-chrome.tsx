@@ -170,7 +170,8 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
           )}
         </div>
       </div>
-      {r.isOpen && (
+      {/* In windowed mode the flat list already contains every visible descendant in paint order, so recursing here would double-render. */}
+      {!ctx.windowed && r.isOpen && (
         <div>
           {node.children.map((child) => (
             <Row

@@ -2544,9 +2544,6 @@
     "plugins/primitives/plugins/data-view": {
       "name": "@singularity/plugin-primitives-data-view",
       "version": "0.0.1",
-      "dependencies": {
-        "@tanstack/react-virtual": "^3.13.0",
-      },
     },
     "plugins/primitives/plugins/data-view/plugins/gallery": {
       "name": "@singularity/plugin-primitives-data-view-gallery",
@@ -2781,6 +2778,13 @@
     "plugins/primitives/plugins/view-switcher": {
       "name": "@singularity/plugin-primitives-view-switcher",
       "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/virtual-rows": {
+      "name": "@singularity/plugin-primitives-virtual-rows",
+      "version": "0.0.1",
+      "dependencies": {
+        "@tanstack/react-virtual": "^3.13.0",
+      },
     },
     "plugins/reorder": {
       "name": "@singularity/plugin-reorder",
@@ -4965,6 +4969,8 @@
     "@singularity/plugin-primitives-undo-redo": ["@singularity/plugin-primitives-undo-redo@workspace:plugins/primitives/plugins/undo-redo"],
 
     "@singularity/plugin-primitives-view-switcher": ["@singularity/plugin-primitives-view-switcher@workspace:plugins/primitives/plugins/view-switcher"],
+
+    "@singularity/plugin-primitives-virtual-rows": ["@singularity/plugin-primitives-virtual-rows@workspace:plugins/primitives/plugins/virtual-rows"],
 
     "@singularity/plugin-reorder": ["@singularity/plugin-reorder@workspace:plugins/reorder"],
 

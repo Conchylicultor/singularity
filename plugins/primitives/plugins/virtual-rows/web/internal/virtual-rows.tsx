@@ -1,5 +1,6 @@
 import {
   type ReactNode,
+  useEffect,
   useLayoutEffect,
   useRef,
   useState,
@@ -16,6 +17,8 @@ export interface VirtualRowsProps<T> {
   getKey: (item: T, index: number) => string;
   /** Applied to each absolute-positioned row wrapper (e.g. horizontal inset). */
   itemClassName?: string;
+  /** When set, scrolls the virtualizer to this index (align: auto — only when off-screen). For host-driven selection reveal. */
+  scrollToIndex?: number | null;
   children: (item: T, index: number) => ReactNode;
 }
 
@@ -56,6 +59,7 @@ export function VirtualRows<T>({
   overscan = 8,
   getKey,
   itemClassName,
+  scrollToIndex,
   children,
 }: VirtualRowsProps<T>): ReactNode {
   const sizerRef = useRef<HTMLDivElement>(null);
@@ -85,6 +89,11 @@ export function VirtualRows<T>({
     getItemKey: (index) => getKey(items[index]!, index),
     scrollMargin,
   });
+
+  useEffect(() => {
+    if (scrollToIndex == null || scrollToIndex < 0) return;
+    virtualizer.scrollToIndex(scrollToIndex, { align: "auto" });
+  }, [scrollToIndex, virtualizer]);
 
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- the windowing sizer: a relative positioning host whose height is the full virtual extent, anchoring each row at a measured translateY offset; no positioning primitive models a windowed list

@@ -38,6 +38,8 @@ export type TreeListContextValue<T extends TreeItem> = {
   canCreate: boolean;
   /** True when `onMove` is wired → RowChrome renders the drag handle. */
   canReorder: boolean;
+  /** True when TreeList renders rows through VirtualRows; RowChrome then skips its own child recursion. */
+  windowed: boolean;
 };
 
 // The context is invariant in T at the React level; we cast through `unknown`
