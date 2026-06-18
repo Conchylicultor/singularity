@@ -2354,6 +2354,10 @@
       "name": "@singularity/plugin-primitives-css-badge",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/bouncing-dots": {
+      "name": "@singularity/plugin-primitives-css-bouncing-dots",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/card": {
       "name": "@singularity/plugin-primitives-css-card",
       "version": "0.0.1",
@@ -4703,6 +4707,8 @@
     "@singularity/plugin-primitives-css": ["@singularity/plugin-primitives-css@workspace:plugins/primitives/plugins/css"],
 
     "@singularity/plugin-primitives-css-badge": ["@singularity/plugin-primitives-css-badge@workspace:plugins/primitives/plugins/css/plugins/badge"],
+
+    "@singularity/plugin-primitives-css-bouncing-dots": ["@singularity/plugin-primitives-css-bouncing-dots@workspace:plugins/primitives/plugins/css/plugins/bouncing-dots"],
 
     "@singularity/plugin-primitives-css-card": ["@singularity/plugin-primitives-css-card@workspace:plugins/primitives/plugins/css/plugins/card"],
 

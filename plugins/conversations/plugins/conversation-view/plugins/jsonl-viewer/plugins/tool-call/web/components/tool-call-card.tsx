@@ -1,6 +1,7 @@
 import { type ReactNode } from "react";
 import type { ToolCallEvent } from "../../core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
+import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import {
   CollapsibleCard,
   CardHeaderAction,
@@ -27,20 +28,6 @@ interface ToolCallCardProps {
   isError?: boolean;
 }
 
-function RunningDots() {
-  return (
-    <span className="flex shrink-0 items-center gap-xs">
-      {[0, 150, 300].map((delay) => (
-        <span
-          key={delay}
-          className="size-1 animate-bounce rounded-full bg-muted-foreground/40"
-          style={{ animationDelay: `${delay}ms` }}
-        />
-      ))}
-    </span>
-  );
-}
-
 export function ToolCallCard({
   event,
   summary,
@@ -57,7 +44,7 @@ export function ToolCallCard({
       error={hasError}
       defaultOpen={defaultOpen}
       aside={aside}
-      trailing={isRunning ? <RunningDots /> : undefined}
+      trailing={isRunning ? <BouncingDots size="sm" /> : undefined}
       label={
         <>
           <Badge

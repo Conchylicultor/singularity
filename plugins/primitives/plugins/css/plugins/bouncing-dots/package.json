@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-primitives-css-bouncing-dots",
+  "description": "Three-dot bouncing activity indicator for 'working'/'pending' states.",
+  "private": true,
+  "version": "0.0.1"
+}

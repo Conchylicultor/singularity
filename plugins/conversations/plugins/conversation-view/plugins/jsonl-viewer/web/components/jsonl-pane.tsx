@@ -10,6 +10,7 @@ import { jsonlEventsResource } from "../../core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
@@ -66,15 +67,7 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
 
   return (
     <div className="flex items-center gap-sm px-xs py-xs">
-      <div className="flex items-center gap-xs">
-        {[0, 150, 300].map((delay) => (
-          <span
-            key={delay}
-            className="size-1.5 animate-bounce rounded-full bg-muted-foreground/40"
-            style={{ animationDelay: `${delay}ms` }}
-          />
-        ))}
-      </div>
+      <BouncingDots />
       <Text as="span" variant="caption" className="tabular-nums text-muted-foreground/60">
         Working for {formatElapsed(elapsed)}
       </Text>

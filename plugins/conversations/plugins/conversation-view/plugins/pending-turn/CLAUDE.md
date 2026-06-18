@@ -6,7 +6,7 @@
 
 - Description: Pure-web library leaf holding the per-conversation pending-turn store (markTurnSent / clearPendingTurn / usePendingTurn) and the optimistic PendingTurnEcho card. The prompt-input writes on a successful turn POST; the jsonl-viewer echoes a dimmed 'Sending…' card until the real user-text event streams in. No slot contributions.
 - Web:
-  - Uses: `primitives/css/spacing.Stack`, `primitives/css/text.Text`
+  - Uses: `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
   - Exports: Types: `PendingTurn`; Values: `clearPendingTurn`, `markTurnSent`, `PendingTurnEcho`, `usePendingTurn`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/prompt-input`
