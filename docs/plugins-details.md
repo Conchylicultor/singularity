@@ -295,7 +295,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Slots: `prototypeDetailPane.Actions`, `prototypesGalleryPane.Actions`
             - Contributes: `Pane.Register` "prototypes-gallery", `Pane.Register` "prototypes-detail"
-            - Uses: `improve.IMPROVEMENTS_META_TASK_ID`, `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/live-state.matchResource`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `tasks/task-draft-form.TaskDraftPopover`
+            - Uses: `primitives/css/text.Text`, `primitives/css/toggle-chip.SegmentedControl`, `primitives/css/ui-kit.Button`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/launch.LaunchAgentPopover`, `primitives/live-state.matchResource`, `primitives/live-state.useCombinedResources`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `shell/notifications.toast`
             - Exports: Values: `prototypeDetailPane`, `prototypesGalleryPane`
         - **`shell`** — App shell for Prototypes. Registers the /prototypes app entry and renders the gallery + Focus/Compare detail panes in a Miller layout.
           - Web:
@@ -2579,7 +2579,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Exports: Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
     - Register: `defineJob('improve.apply-group')`
   - Cross-plugin:
-    - Imported by: `apps/prototypes/gallery`, `improve/element-picker`, `screenshot/draw-on-app`
+    - Imported by: `improve/element-picker`, `screenshot/draw-on-app`
   - Plugins:
     - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
       - Web:
@@ -3777,7 +3777,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `conversations/conversation-view.conversationPane`, `conversations/model-provider.useDefaultModel`, `conversations/model-provider.useSetDefaultModel`, `conversations/model-provider.useVisibleModels`, `conversations/preprompts.PrepromptSelect`, `infra/endpoints.fetchEndpoint`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.ButtonGroup`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.DropdownMenu`, `primitives/css/ui-kit.DropdownMenuContent`, `primitives/css/ui-kit.DropdownMenuItem`, `primitives/css/ui-kit.DropdownMenuTrigger`, `primitives/pane.PaneOpenMode`, `primitives/pane.useOpenPane`, `primitives/popover.InlinePopover`, `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`
         - Exports: Types: `LaunchAgentPopoverProps`, `LaunchControlProps`, `LaunchRequest`; Values: `LaunchAgentPopover`, `LaunchControl`, `useLaunchConversation`
       - Cross-plugin:
-        - Imported by: `active-data/task`, `apps/agent-manager/welcome`, `build/build-fix`, `conversations/conversation-view/branch`, `conversations/conversation-view/fork-conversation`, `conversations/conversation-view/fork-session`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversations-view`, `reports/launch-fix`, `screenshot`, `tasks/attempt-view`, `tasks/task-description`, `tasks/task-list`
+        - Imported by: `active-data/task`, `apps/agent-manager/welcome`, `apps/prototypes/gallery`, `build/build-fix`, `conversations/conversation-view/branch`, `conversations/conversation-view/fork-conversation`, `conversations/conversation-view/fork-session`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversations-view`, `reports/launch-fix`, `screenshot`, `tasks/attempt-view`, `tasks/task-description`, `tasks/task-list`
     - **`live-state`** — Server live-state primitive: useResource hook + NotificationsProvider + NotificationsClient. Thin TanStack Query wrapper over the app's leader-elected /ws/notifications channel.
       - Web:
         - Uses: `infra/endpoints.endpointQueryKey`, `primitives/css/placeholder.Placeholder`, `primitives/loading.Loading`, `primitives/log-channels.clientLog`, `primitives/networking.NetDiagEvent`, `primitives/networking.SharedWebSocket`, `primitives/networking.subscribeNetDiag`, `primitives/networking.subscribeWsStatus`, `primitives/networking.WsStatus`, `primitives/tab-id.getTabId`
@@ -4206,7 +4206,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Resources: `notifications` (push)
         - Routes: `POST /api/notifications`, `POST /api/notifications/dismiss-all`, `POST /api/notifications/mark-all-read`, `POST /api/notifications/:id/dismiss`
       - Cross-plugin:
-        - Imported by: `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `database/fork`, `debug/queue`, `history/dialog`, `infra/events-test`, `page/inline-date`, `reports`, `reports/launch-fix`, `reports/mutation-errors`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `tasks/task-draft-form`, `tasks/task-preprompt`
+        - Imported by: `apps/prototypes/gallery`, `auth`, `build`, `build/build-fix`, `build/build-logs`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/branch`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/drop-and-exit`, `conversations/conversation-view/drop-dependents`, `conversations/conversation-view/exit`, `conversations/conversation-view/hold-and-exit`, `conversations/conversation-view/jsonl-viewer/investigate-event`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-input`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/resume`, `conversations/summary`, `database/fork`, `debug/queue`, `history/dialog`, `infra/events-test`, `page/inline-date`, `reports`, `reports/launch-fix`, `reports/mutation-errors`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `tasks/task-draft-form`, `tasks/task-preprompt`
       - Shared:
         - Exports: Values: `createNotification`, `dismissAllNotifications`, `dismissNotification`, `markAllNotificationsRead`
     - **`toaster`** — Global toast notifications. Mounts the sonner Toaster and handles Shell.Toast commands.
@@ -4336,7 +4336,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `config_v2.ConfigV2`
       - Cross-plugin:
-        - Imported by: `apps/prototypes/gallery`, `conversations/conversation-view`, `conversations/conversation-view/new-child-task`, `improve`, `improve/element-picker`, `tasks/task-dependencies`
+        - Imported by: `conversations/conversation-view`, `conversations/conversation-view/new-child-task`, `improve`, `improve/element-picker`, `tasks/task-dependencies`
     - **`task-events`** — Lists pushes, attempts, and conversations for a task. Clicking a conversation opens conversationPane.
       - Web:
         - Contributes: `TaskDetailSlots.Section` "events" → `TaskEvents`
