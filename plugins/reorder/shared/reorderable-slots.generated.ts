@@ -50,7 +50,6 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "pages.detail.header-actions", pluginId: "apps.pages.page-tree" },
   { slotId: "pages.detail.section", pluginId: "apps.pages.page-tree" },
   { slotId: "pages.sidebar", pluginId: "apps.pages.shell" },
-  { slotId: "pages.toolbar", pluginId: "apps.pages.shell" },
   { slotId: "pages.tree.row-actions", pluginId: "apps.pages.page-tree" },
   { slotId: "pages.welcome.section", pluginId: "apps.pages.welcome" },
   { slotId: "plugin-view.section", pluginId: "plugin-meta.plugin-view" },

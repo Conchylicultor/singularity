@@ -7,7 +7,7 @@ export { Pages } from "./slots";
 
 export default {
   description:
-    "App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.",
+    "App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.",
   contributions: [
     Apps.App({
       id: "pages",

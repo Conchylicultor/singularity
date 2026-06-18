@@ -4,9 +4,9 @@
 
 ## Plugin reference
 
-- Description: App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
+- Description: App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.
 - Web:
-  - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.starred`, `Pages.Toolbar`
+  - Slots: `Pages.Sidebar` ← `apps.pages.content-search`, `apps.pages.page-tree`, `apps.pages.starred`
   - Contributes: `Apps.App` "Pages" → `PagesLayout`
   - Uses: `apps.Apps`, `layouts/miller.MillerColumns`, `primitives/app-shell.AppShellLayout`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Pages`

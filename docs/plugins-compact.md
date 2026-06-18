@@ -30,7 +30,7 @@ Slim, always-loaded index of every plugin. Shows only `name — description`; lo
         - **`content-search`** — Pages full-text search consumer: contributes the Search button into the Pages sidebar, opening the reusable quick-find dialog scoped to the pages source. Pages full-text search consumer: indexes pages into the search engine, reindexing on blocksChanged and seeding existing pages via a one-shot boot backfill.
         - **`history`** — Pages version-history UI: contributes the Version history header button to the page-detail pane, opening the reusable version-history dialog with a faithful, diffed read-only preview of each page version. Pages version-history consumer: registers the page history source (serialize/restore via the editor's page-content API), captures time-bucketed snapshots through a debounced two-job pipeline bound to blocksChanged, and drops a page's history on delete.
         - **`page-tree`** — Sidebar page-tree plus the page-detail pane (header, editor, sections slot) for the Pages app.
-        - **`shell`** — App shell for Pages. Registers the /pages app entry and defines Pages.Sidebar/Toolbar slots.
+        - **`shell`** — App shell for Pages. Registers the /pages app entry and defines the Pages.Sidebar slot.
         - **`starred`** — Favorites/starred pages for the Pages app: a Favorites sidebar section plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred), live resource, and toggle/reorder endpoints for the Pages Favorites section.
         - **`welcome`** — Landing surface for the Pages app (shown at bare `/pages`): a quick-create + recent-pages launchpad rendered through the PagesWelcome.Section slot.
           - Plugins:
