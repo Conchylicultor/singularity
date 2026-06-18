@@ -135,7 +135,8 @@ export function FloatingTemplateChips({
         variant="ghost"
         panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-open/fa:px-xs max-w-7 group-data-open/fa:max-w-sm max-h-7 group-data-open/fa:max-h-56"
       >
-        <MdEdit className="size-3.5 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- load-bearing: the trigger icon is a flex sibling of the (tall, clipped) template list inside the height-clamped (max-h-7) morph panel; without shrink-0 it collapses to height 0 and vanishes */}
+        <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
         <FloatingActionFadeIn>
           <Stack gap="xs" align="start">
             {/* eslint-disable-next-line layout/no-adhoc-layout -- per-child self-alignment (right-align the gear within the start-aligned column); no container primitive owns one child's cross-axis override */}
