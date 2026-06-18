@@ -2,6 +2,13 @@
  * Abstract desktop wallpaper — the backdrop revealed in "desktop mode" (once any
  * tab floats). A real, full-bleed wallpaper rather than a flat fill.
  *
+ * Intentionally PASSIVE: `pointer-events-none` + `aria-hidden`, with no click /
+ * pointer handlers, no desktop icons, shortcuts, context menus, or app launcher.
+ * Clicking empty desktop does nothing by design. App launching/switching lives in
+ * the Home app + app-rail, and the bottom dock ({@link WindowDock}) is a window
+ * taskbar — never a launcher. Keep this component a pure, non-interactive SVG; see
+ * the plugin CLAUDE.md ("the desktop is a passive backdrop") before adding anything.
+ *
  * It's a soft mesh gradient: a diagonal color wash, two large blurred orbs for
  * depth, and one organic ribbon swoosh, finished with faint film grain so it
  * reads as a surface rather than a gradient swatch. Structure leans on the two
