@@ -1,0 +1,115 @@
+/* ============================================================
+   Prototype design tokens — shared across all prototypes.
+   Each prototype selects a palette via meta.theme (a class name
+   applied to <html> and <body> by the harness).
+
+   Two palettes today:
+     .theme-helix  — warm cream, light, terracotta accent (+ accent/density modifiers)
+     .theme-mist   — cool lifted slate, dark, teal/periwinkle accent
+   ============================================================ */
+
+:root {
+  --ui:    'Inter', system-ui, sans-serif;
+  --font:  'Plus Jakarta Sans', system-ui, sans-serif;
+  --serif: 'Instrument Serif', 'Iowan Old Style', Georgia, serif;
+  --mono:  'JetBrains Mono', ui-monospace, monospace;
+}
+
+/* ============================================================
+   HELIX — soft warm cream palette (light)
+   ============================================================ */
+.theme-helix {
+  --bg-0: oklch(0.982 0.012 80);      /* page cream */
+  --bg-1: oklch(0.995 0.006 85);      /* panel paper */
+  --bg-2: oklch(0.96 0.014 78);       /* raised card */
+  --bg-3: oklch(0.935 0.018 76);      /* hover */
+  --bg-4: oklch(0.91  0.022 74);      /* pressed */
+
+  --line:        oklch(0.91 0.014 75);
+  --line-soft:   oklch(0.94 0.012 78);
+  --line-strong: oklch(0.85 0.02 72);
+
+  --fg-0: oklch(0.28 0.025 55);       /* warm ink */
+  --fg-1: oklch(0.45 0.022 55);
+  --fg-2: oklch(0.58 0.02 60);
+  --fg-3: oklch(0.70 0.018 65);
+
+  --accent:       oklch(0.68 0.14 45);   /* terracotta */
+  --accent-soft:  oklch(0.92 0.05 45);
+  --accent-ink:   oklch(0.45 0.13 40);
+
+  --sage:       oklch(0.72 0.09 145);    /* success */
+  --sage-soft:  oklch(0.94 0.04 145);
+  --sage-ink:   oklch(0.42 0.08 145);
+
+  --honey:      oklch(0.80 0.12 85);     /* waiting */
+  --honey-soft: oklch(0.95 0.05 85);
+  --honey-ink:  oklch(0.52 0.10 75);
+
+  --rose:       oklch(0.70 0.14 22);
+  --rose-soft:  oklch(0.95 0.03 22);
+  --rose-ink:   oklch(0.48 0.12 22);
+
+  --violet:     oklch(0.70 0.10 305);
+  --violet-soft:oklch(0.95 0.03 305);
+  --violet-ink: oklch(0.42 0.10 305);
+
+  --sky:        oklch(0.72 0.08 230);
+  --sky-soft:   oklch(0.95 0.02 230);
+  --sky-ink:    oklch(0.42 0.08 235);
+
+  background: var(--bg-0);
+  color: var(--fg-0);
+  font-family: var(--ui);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+  letter-spacing: -0.005em;
+}
+
+.theme-helix ::selection { background: var(--accent-soft); }
+.theme-helix ::-webkit-scrollbar { width: 10px; height: 10px; }
+.theme-helix ::-webkit-scrollbar-track { background: transparent; }
+.theme-helix ::-webkit-scrollbar-thumb { background: transparent; border-radius: 10px; border: 3px solid transparent; background-clip: padding-box; }
+.theme-helix *:hover > ::-webkit-scrollbar-thumb,
+.theme-helix *:hover::-webkit-scrollbar-thumb { background: var(--bg-4); background-clip: padding-box; border: 3px solid transparent; }
+
+/* Helix accent modifiers (apply alongside .theme-helix, e.g. body.theme-helix.accent-sage) */
+.theme-helix.accent-terracotta { --accent: oklch(0.68 0.14 45); --accent-soft: oklch(0.92 0.05 45); --accent-ink: oklch(0.45 0.13 40); }
+.theme-helix.accent-sage       { --accent: oklch(0.65 0.12 145); --accent-soft: oklch(0.93 0.04 145); --accent-ink: oklch(0.42 0.10 145); }
+.theme-helix.accent-clay       { --accent: oklch(0.70 0.10 65);  --accent-soft: oklch(0.93 0.04 65);  --accent-ink: oklch(0.44 0.09 55);  }
+.theme-helix.accent-plum       { --accent: oklch(0.60 0.10 340); --accent-soft: oklch(0.93 0.03 340); --accent-ink: oklch(0.40 0.09 340); }
+
+/* ============================================================
+   MIST — cool lifted slate, teal/periwinkle, airy + clean (dark)
+   ============================================================ */
+.theme-mist {
+  --bg-0: oklch(0.195 0.012 248);
+  --bg-1: oklch(0.225 0.013 246);
+  --bg-2: oklch(0.265 0.015 244);
+  --bg-3: oklch(0.305 0.017 242);
+  --line: oklch(0.35 0.02 244 / 0.7);
+  --line-soft: oklch(0.33 0.018 244 / 0.45);
+  --text: oklch(0.95 0.008 240);
+  --text-2: oklch(0.80 0.012 238);
+  --muted: oklch(0.66 0.014 238);
+  --faint: oklch(0.52 0.014 240);
+  --accent: oklch(0.78 0.10 208);
+  --accent-ink: oklch(0.28 0.05 220);
+  --accent-soft: oklch(0.78 0.10 208 / 0.14);
+  --coral: oklch(0.74 0.11 28);
+  --green: oklch(0.80 0.11 158);
+  --blue: oklch(0.76 0.10 244);
+  --amber: oklch(0.82 0.12 82);
+  --violet: oklch(0.76 0.11 286);
+  --radius: 12px;
+  --radius-sm: 9px;
+  --radius-pill: 999px;
+  --glow: none;
+  --avatar-tint: 0.12;
+
+  background: #0d0d0f;
+  color: #fff;
+  font-family: var(--font);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}

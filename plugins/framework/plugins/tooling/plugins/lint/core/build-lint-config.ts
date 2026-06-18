@@ -140,6 +140,9 @@ export async function buildLintConfig(opts: BuildLintConfigOptions): Promise<Lin
         ".claude/worktrees/**",
         "plugins/framework/plugins/web-core/dist/**",
         "**/*.generated.ts",
+        // Repo-root prototype mocks: standalone CDN-React/Babel-in-browser files,
+        // not part of any tsconfig/plugin tree. Skip a stray `bunx eslint prototypes/`.
+        "prototypes/**",
       ],
     },
   ];

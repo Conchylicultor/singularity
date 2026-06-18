@@ -1,0 +1,8 @@
+{
+  "name": "Helix",
+  "blurb": "Warm, calm agent-run view — sidebar of runs, a center timeline, and a right detail rail. Cream paper, terracotta accent, serif headings.",
+  "theme": "theme-helix",
+  "viewport": { "w": 1320, "h": 868 },
+  "scripts": ["icons.jsx", "app.jsx"],
+  "styles": ["styles.css"]
+}

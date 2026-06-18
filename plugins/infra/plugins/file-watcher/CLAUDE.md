@@ -6,7 +6,7 @@
 
 - Description: Shared @parcel/watcher primitive with debounce, ceiling, and reconcile timer management.
 - Cross-plugin:
-  - Imported by: `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`
+  - Imported by: `apps/prototypes/files`, `apps/sonata/sources/midi/folders`, `config_v2`, `conversations/conversation-view/op-status`, `conversations/transcript-watcher`, `infra/git-watcher`
 - Server:
   - Exports: Types: `FileWatcher`, `FileWatcherOptions`; Values: `createFileWatcher`
 

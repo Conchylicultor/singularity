@@ -12,6 +12,7 @@
     { "type": "spacer", "id": "spacer-1" },
     "apps.file-explorer.shell:file-explorer",
     "apps.studio.shell:studio",
+    "apps.prototypes.shell:prototypes",
     "apps.deploy.shell:deploy",
     "apps.settings.shell:settings",
     "apps.debug.shell:debug"

@@ -1,0 +1,8 @@
+{
+  "name": "Mist panes",
+  "blurb": "Cool dark conversation layout — rail, sidebar, and main thread — explored across three pane surfaces: flush hairlines, floating cards, and raised soft trays. Flip between them with the bottom-right switcher.",
+  "theme": "theme-mist",
+  "viewport": { "w": 1320, "h": 868 },
+  "scripts": ["icons.jsx", "sidebar.jsx", "thread.jsx", "app.jsx"],
+  "styles": ["styles.css"]
+}

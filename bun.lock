@@ -228,6 +228,22 @@
       "name": "@singularity/plugin-apps-pages-welcome-recent-pages",
       "version": "0.0.1",
     },
+    "plugins/apps/plugins/prototypes": {
+      "name": "@singularity/plugin-apps-prototypes",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/prototypes/plugins/files": {
+      "name": "@singularity/plugin-apps-prototypes-files",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/prototypes/plugins/gallery": {
+      "name": "@singularity/plugin-apps-prototypes-gallery",
+      "version": "0.0.1",
+    },
+    "plugins/apps/plugins/prototypes/plugins/shell": {
+      "name": "@singularity/plugin-apps-prototypes-shell",
+      "version": "0.0.1",
+    },
     "plugins/apps/plugins/settings": {
       "name": "@singularity/plugin-apps-settings",
       "version": "0.0.1",
@@ -3712,6 +3728,14 @@
     "@singularity/plugin-apps-pages-welcome-quick-create": ["@singularity/plugin-apps-pages-welcome-quick-create@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/quick-create"],
 
     "@singularity/plugin-apps-pages-welcome-recent-pages": ["@singularity/plugin-apps-pages-welcome-recent-pages@workspace:plugins/apps/plugins/pages/plugins/welcome/plugins/recent-pages"],
+
+    "@singularity/plugin-apps-prototypes": ["@singularity/plugin-apps-prototypes@workspace:plugins/apps/plugins/prototypes"],
+
+    "@singularity/plugin-apps-prototypes-files": ["@singularity/plugin-apps-prototypes-files@workspace:plugins/apps/plugins/prototypes/plugins/files"],
+
+    "@singularity/plugin-apps-prototypes-gallery": ["@singularity/plugin-apps-prototypes-gallery@workspace:plugins/apps/plugins/prototypes/plugins/gallery"],
+
+    "@singularity/plugin-apps-prototypes-shell": ["@singularity/plugin-apps-prototypes-shell@workspace:plugins/apps/plugins/prototypes/plugins/shell"],
 
     "@singularity/plugin-apps-settings": ["@singularity/plugin-apps-settings@workspace:plugins/apps/plugins/settings"],
 

@@ -4,6 +4,7 @@ import { ImproveButton } from "./components/improve-button";
 
 export { Improve as ImproveCommands } from "./commands";
 export type { OpenWithTextArgs } from "./commands";
+export { IMPROVEMENTS_META_TASK_ID } from "../shared/constants";
 
 export default {
   description:
