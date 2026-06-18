@@ -10,7 +10,7 @@ import {
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import type { FieldDef } from "@plugins/config_v2/core";
+import type { FieldDef } from "@plugins/fields/core";
 import { objectFieldType } from "@plugins/fields/plugins/object/core";
 import type { ObjectFieldDef } from "../../core";
 

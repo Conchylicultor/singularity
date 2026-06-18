@@ -1,5 +1,5 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
-import type { FieldDef } from "@plugins/config_v2/core";
+import type { FieldDef } from "@plugins/fields/core";
 
 export interface DynamicEnumOption {
   readonly value: string;

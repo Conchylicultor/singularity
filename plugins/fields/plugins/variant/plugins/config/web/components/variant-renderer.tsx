@@ -11,7 +11,7 @@ import {
   FieldRenderer,
   type FieldRendererComponent,
 } from "@plugins/config_v2/plugins/fields/web";
-import type { FieldDef } from "@plugins/config_v2/core";
+import type { FieldDef } from "@plugins/fields/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {

@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type FieldDef, type FieldMeta } from "@plugins/config_v2/core";
+import { type FieldDef, type FieldMeta } from "@plugins/fields/core";
 import { enumFieldType } from "@plugins/fields/plugins/enum/core";
 
 export type EnumOptionInput = string | { value: string; label: string };

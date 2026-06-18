@@ -3,7 +3,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import { boolFieldType } from "@plugins/fields/plugins/bool/core";
 
 export interface BoolFieldDef extends FieldDef<boolean> {

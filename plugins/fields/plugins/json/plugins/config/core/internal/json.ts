@@ -3,7 +3,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import type { FieldType } from "@plugins/fields/core";
 import { jsonFieldType } from "@plugins/fields/plugins/json/core";
 

@@ -4,9 +4,9 @@ import {
   type FieldDef,
   type FieldMeta,
   type FieldsRecord,
+  type FieldType,
   type InferFieldsObject,
-} from "@plugins/config_v2/core";
-import type { FieldType } from "@plugins/fields/core";
+} from "@plugins/fields/core";
 import { listFieldType, type ListItem } from "@plugins/fields/plugins/list/core";
 
 export interface ListFieldDef<F extends FieldsRecord = FieldsRecord>

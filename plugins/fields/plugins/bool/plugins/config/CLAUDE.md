@@ -18,7 +18,7 @@ a config_v2 `FieldDef<boolean>` carrying the canonical `fields/` bool token
   - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`
   - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/bool.boolFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/bool.boolFieldType`
   - Exports: Types: `BoolFieldDef`; Values: `boolField`
 - Cross-plugin:
   - Imported by: `conversations`

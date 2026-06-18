@@ -3,7 +3,7 @@ import {
   pickMeta,
   type FieldDef,
   type FieldMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import {
   reorderTreeFieldType,
   type ReorderNode,

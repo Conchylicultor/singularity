@@ -1,5 +1,6 @@
 import { defineConfig } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, FieldDef } from "@plugins/config_v2/core";
+import type { ConfigDescriptor } from "@plugins/config_v2/core";
+import type { FieldDef } from "@plugins/fields/core";
 import { dynamicEnumField } from "@plugins/fields/plugins/dynamic-enum/plugins/config/core";
 
 /** The config fields shape every variant region shares: a single dynamic-enum. */

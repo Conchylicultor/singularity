@@ -1,5 +1,6 @@
-import type { FieldsRecord, ConfigDescriptor, ConfigValues, ConfigSource } from "./types";
-import { buildFieldsSchema } from "./schema-builder";
+import type { ConfigDescriptor, ConfigValues, ConfigSource } from "./types";
+import type { FieldsRecord } from "@plugins/fields/core";
+import { fieldsToZodObject } from "@plugins/fields/core";
 
 export function defineConfig<const F extends FieldsRecord>(opts: {
   name?: string;
@@ -16,7 +17,11 @@ export function defineConfig<const F extends FieldsRecord>(opts: {
     }
   }
 
-  const schema = buildFieldsSchema(opts.fields);
+  // .passthrough() for parity with object/list: unknown keys are preserved, not
+  // stripped (redaction/tiers iterate descriptor.fields explicitly anyway).
+  // `fieldsToZodObject` returns a STRICT object — config applies passthrough
+  // here, where the old `buildFieldsSchema` used to bake it in.
+  const schema = fieldsToZodObject(opts.fields).passthrough();
 
   const defaults = Object.fromEntries(
     Object.entries(opts.fields).map(([k, f]) => [k, f.defaultValue]),

@@ -5,7 +5,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { SortableList } from "@plugins/primitives/plugins/sortable-list/web";
 import type { FieldRendererComponent } from "@plugins/config_v2/plugins/fields/web";
-import type { FieldsRecord } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import { listFieldType, type ListItem } from "@plugins/fields/plugins/list/core";
 import type { ListFieldDef } from "../../core";
 import { ListItemRow } from "./list-item-row";

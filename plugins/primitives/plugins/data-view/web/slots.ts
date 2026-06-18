@@ -1,6 +1,6 @@
 import { defineSlot } from "@plugins/framework/plugins/web-sdk/core";
 import type { ComponentType } from "react";
-import type { FieldsRecord } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import type { DataViewRenderProps } from "../core";
 import { Cell } from "./cell-slot";
 import { CellEditor } from "./cell-editor-slot";

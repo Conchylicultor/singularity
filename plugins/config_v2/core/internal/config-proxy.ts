@@ -1,5 +1,6 @@
-import type { ConfigDescriptor, FieldsRecord } from "./types";
+import type { ConfigDescriptor } from "./types";
 import type { JsonValue } from "./types";
+import type { FieldsRecord } from "@plugins/fields/core";
 
 export interface ConfigProxy {
   read(): { content: JsonValue; hash: string | null } | null;

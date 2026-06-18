@@ -3,7 +3,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import { multilineTextFieldType } from "@plugins/fields/plugins/multiline-text/core";
 
 export interface MultilineTextFieldDef extends FieldDef<string> {

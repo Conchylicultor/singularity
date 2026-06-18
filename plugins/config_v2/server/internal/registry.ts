@@ -1,11 +1,7 @@
 import { existsSync, readFileSync, unlinkSync } from "node:fs";
 import { join, relative } from "node:path";
-import type {
-  ConfigDescriptor,
-  ConfigValues,
-  FieldsRecord,
-  InferFieldValue,
-} from "../../core";
+import type { ConfigDescriptor, ConfigValues } from "../../core";
+import type { FieldsRecord, InferFieldValue } from "@plugins/fields/core";
 import {
   computeHash,
   readTypedConfig,

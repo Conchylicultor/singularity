@@ -2,7 +2,9 @@
 
 The global unified **fields** primitive: a single `type × capability` matrix
 shared by every data surface (data-view, Sonata, and config_v2 — which now sources
-its `FieldType` token directly from `fields/core`).
+the **field atom + zod-derivation** (`FieldDef`, `FieldsRecord`,
+`fieldsToZodObject`, `fieldSchemaWithDefault`, `pickMeta`, the field-value
+resolver registry) directly from `fields/core`).
 
 ## Mental model
 
@@ -14,9 +16,15 @@ by the consuming surface** — never owned by `fields`. This mirrors the facets
 dimension is owned by each consumer.
 
 - `fields/core` — pure, browser-safe sink. The `FieldType` token, the
-  `FieldIdentity` (label, icon, `extends`, `coerce`), and `resolveTypeChain` —
+  `FieldIdentity` (label, icon, `extends`, `coerce`), `resolveTypeChain` —
   the single source of `extends`-chain truth, reused by every capability
-  dispatcher. No `fs`, no server imports; only a type-only `ComponentType`.
+  dispatcher — **and the canonical field atom**: `FieldDef` /
+  `FieldsRecord` / `InferFieldValue` / `InferFieldsObject`, the zod-derivation
+  `fieldsToZodObject` (a strict `z.object`, no `.passthrough()`) +
+  `fieldSchemaWithDefault`, `pickMeta`, and the field-value resolver registry
+  (`registerFieldResolver` / `getFieldResolver`). `zod` is permitted here
+  (browser-safe, pure). No `fs`, no server imports; only a type-only
+  `ComponentType` and `zod`.
 - `fields/web` (this umbrella barrel) owns the **identity registry slot**
   `fields.identity`. This is the *type-dimension* registry — legitimately owned
   by `fields`. Consumers read it **by string-literal id** (`bySlot.get(
@@ -70,11 +78,11 @@ specifically to keep `drizzle-orm/pg-core` out of the browser bundle.
   - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
   - Exports: Values: `Fields`
 - Cross-plugin:
-  - Imported by: `fields/avatar`, `fields/bool`, `fields/bool/storage`, `fields/color`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/storage`, `fields/json`, `fields/json/storage`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`
+  - Imported by: `config_v2`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`
 - Server:
-  - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `resolveFieldStorage`
+  - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldStorage`
 - Core:
-  - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
+  - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
 - Sub-plugins:
   - **`avatar`** [1 sub-plugin] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
   - **`bool`** [5 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.

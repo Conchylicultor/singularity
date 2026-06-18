@@ -1,11 +1,11 @@
 import { z } from "zod";
 import {
-  buildFieldsSchema,
+  fieldsToZodObject,
   pickMeta,
   type FieldDef,
   type FieldMeta,
   type FieldsRecord,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import {
   variantFieldType,
   type VariantValue,
@@ -60,7 +60,7 @@ export function isVariantFieldDef(field: FieldDef): field is VariantFieldDef {
  *
  * Fail-soft on an unknown `type` (returns `{ ok: false }`, mirroring
  * `reorder-tree-renderer`'s `if (!nodeType) continue` skip). Dependency-light
- * (zod + config_v2/core only) so it stays co-located-`bun:test`-able.
+ * (zod + fields/core only) so it stays co-located-`bun:test`-able.
  */
 export function validateVariant(
   value: VariantValue,
@@ -70,7 +70,12 @@ export function validateVariant(
   if (!entry) return { ok: false };
 
   const { type: _type, ...payload } = value;
-  const parsed = buildFieldsSchema(entry.fields).safeParse(payload);
+  // `.passthrough()`: preserve payload keys not described by the current per-type
+  // `fields` registry, so re-saving a variant never silently drops data
+  // (matches the opaque/passthrough contract at the config boundary above, and
+  // mirrors how `defineConfig` opts back into passthrough over the now-strict
+  // `fieldsToZodObject` primitive).
+  const parsed = fieldsToZodObject(entry.fields).passthrough().safeParse(payload);
   if (!parsed.success) return { ok: false };
 
   return { ok: true, value: { type: value.type, ...parsed.data } };

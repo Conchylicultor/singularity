@@ -1,4 +1,5 @@
-import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigValues } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import { getSecret } from "@plugins/infra/plugins/secrets/central";
 
 const NAMESPACE = "config-fields";

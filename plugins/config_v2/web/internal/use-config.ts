@@ -2,7 +2,8 @@ import { useContext, useCallback } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2Resource, configV2ScopesResource } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigValues, ConfigV2Scopes, FieldsRecord } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigValues, ConfigV2Scopes } from "@plugins/config_v2/core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import { storePathOf } from "./store-path";
 import { useKnownServerPaths } from "./server-paths";
 

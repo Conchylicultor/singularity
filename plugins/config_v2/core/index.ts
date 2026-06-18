@@ -1,17 +1,10 @@
 export { defineConfig } from "./internal/define-config";
-export { buildFieldsSchema, fieldSchemaWithDefault } from "./internal/schema-builder";
-export { pickMeta } from "./internal/pick-meta";
 export type {
   Disposable,
-  FieldDef,
-  FieldMeta,
-  FieldsRecord,
   JsonValue,
   ConfigDescriptor,
   ConfigSource,
   ConfigValues,
-  InferFieldValue,
-  InferFieldsObject,
 } from "./internal/types";
 export {
   configV2Resource,
@@ -39,10 +32,6 @@ export {
   codeConfigProxy,
   readonlyProxy,
 } from "./internal/config-proxy";
-export {
-  registerFieldResolver,
-  getFieldResolver,
-} from "./internal/field-resolvers";
 export {
   effective,
   hasConflict,

@@ -22,7 +22,7 @@ string. `FieldHeader` comes from the slot owner
   - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
   - Uses: `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/enum.enumFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields/enum.enumFieldType`
   - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`
 - Cross-plugin:
   - Imported by: `plugin-meta/composition`, `ui/theme-engine`

@@ -4,7 +4,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import {
   avatarFieldType,
   type AvatarSpec,

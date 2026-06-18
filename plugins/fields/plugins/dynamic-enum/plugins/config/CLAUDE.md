@@ -25,7 +25,7 @@ text input when no contribution matches.
   - Uses: `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
   - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`
   - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`
 - Cross-plugin:
   - Imported by: `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/variant-region`

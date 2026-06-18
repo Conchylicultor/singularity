@@ -3,7 +3,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import { textFieldType } from "@plugins/fields/plugins/text/core";
 
 export interface TextFieldDef extends FieldDef<string> {

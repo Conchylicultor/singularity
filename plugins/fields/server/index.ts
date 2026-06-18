@@ -5,6 +5,7 @@ export type {
   StorageColumnBuilder,
   FieldStorageContribution,
 } from "./internal/storage";
+export { fieldsToColumns } from "./internal/fields-to-columns";
 
 export default {
   description:

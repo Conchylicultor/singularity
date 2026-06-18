@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { FieldDef, FieldsRecord } from "./types";
+import type { FieldDef, FieldsRecord } from "./field-spec";
 
 // A missing key resolves to the field's own default, so adding a field to an
 // existing config / list item / object is backward-compatible: documents that
@@ -10,16 +10,19 @@ export function fieldSchemaWithDefault(field: FieldDef): z.ZodTypeAny {
   return field.schema.default(field.defaultValue);
 }
 
-export function buildFieldsSchema<F extends FieldsRecord>(
+// Derives a strict `z.object` from a FieldsRecord — each field wrapped with its
+// default-backfill. Returns a plain object schema (NO `.passthrough()`): a
+// strict base so the future `defineEntity` (Stage C) gets clean row validation.
+// Consumers that need unknown-key tolerance (config_v2's `defineConfig`, across
+// schema evolution) apply `.passthrough()` themselves at the call site.
+export function fieldsToZodObject<F extends FieldsRecord>(
   fields: F,
 ): z.ZodObject<{ [K in keyof F]: F[K]["schema"] }> {
   const shape: z.ZodRawShape = {};
   for (const [key, field] of Object.entries(fields)) {
     shape[key] = fieldSchemaWithDefault(field);
   }
-  // .passthrough() for parity with object/list: unknown keys are preserved, not
-  // stripped (redaction/tiers iterate descriptor.fields explicitly anyway).
-  return z.object(shape).passthrough() as unknown as z.ZodObject<{
+  return z.object(shape) as unknown as z.ZodObject<{
     [K in keyof F]: F[K]["schema"];
   }>;
 }

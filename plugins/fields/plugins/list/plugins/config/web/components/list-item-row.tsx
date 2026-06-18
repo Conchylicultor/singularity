@@ -4,7 +4,7 @@ import { useCallback } from "react";
 import { MdDragIndicator, MdClose } from "react-icons/md";
 import { SortableItem } from "@plugins/primitives/plugins/sortable-list/web";
 import { FieldRenderer } from "@plugins/config_v2/plugins/fields/web";
-import type { FieldsRecord, FieldDef } from "@plugins/config_v2/core";
+import type { FieldsRecord, FieldDef } from "@plugins/fields/core";
 import type { ListItem } from "@plugins/fields/plugins/list/core";
 
 export function ListItemRow<F extends FieldsRecord>({

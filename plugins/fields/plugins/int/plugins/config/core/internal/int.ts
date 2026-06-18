@@ -3,7 +3,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import { intFieldType } from "@plugins/fields/plugins/int/core";
 
 export interface IntFieldDef extends FieldDef<number> {

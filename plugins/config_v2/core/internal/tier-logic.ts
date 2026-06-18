@@ -1,7 +1,8 @@
 import type { ConfigProxy } from "./config-proxy";
 import { computeHash } from "./config-proxy";
-import type { ConfigDescriptor, ConfigValues, FieldsRecord } from "./types";
+import type { ConfigDescriptor, ConfigValues } from "./types";
 import type { JsonValue } from "./types";
+import type { FieldsRecord } from "@plugins/fields/core";
 import type { ConfigV2ValidationIssue } from "./resource";
 
 export function effective(

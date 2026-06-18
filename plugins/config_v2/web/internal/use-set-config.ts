@@ -2,7 +2,8 @@ import { useContext, useCallback } from "react";
 import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField } from "../../core";
-import type { ConfigDescriptor, FieldsRecord } from "../../core";
+import type { ConfigDescriptor } from "../../core";
+import type { FieldsRecord } from "@plugins/fields/core";
 import { storePathOf } from "./store-path";
 
 export function useSetConfig<F extends FieldsRecord>(

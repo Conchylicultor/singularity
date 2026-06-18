@@ -1,5 +1,5 @@
 import { z } from "zod";
-import type { FieldDef, FieldMeta } from "@plugins/config_v2/core";
+import type { FieldDef, FieldMeta } from "@plugins/fields/core";
 import { secretFieldType } from "@plugins/fields/plugins/secret/core";
 
 export interface SecretFieldDef extends FieldDef<string> {

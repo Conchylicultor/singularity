@@ -3,7 +3,7 @@ import {
   pickMeta,
   type FieldDef,
   type FieldMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import { stringListFieldType } from "@plugins/fields/plugins/string-list/core";
 
 export interface StringListFieldDef extends FieldDef<string[]> {

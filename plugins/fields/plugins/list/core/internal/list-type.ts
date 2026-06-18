@@ -1,6 +1,10 @@
 import { MdList } from "react-icons/md";
-import { defineFieldType, defineFieldIdentity } from "@plugins/fields/core";
-import type { FieldsRecord, InferFieldsObject } from "@plugins/config_v2/core";
+import {
+  defineFieldType,
+  defineFieldIdentity,
+  type FieldsRecord,
+  type InferFieldsObject,
+} from "@plugins/fields/core";
 
 export type ListItem<F extends FieldsRecord> = {
   id: string;

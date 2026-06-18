@@ -19,7 +19,7 @@ its table/filter capabilities from `number` via the identity `extends` chain.
   - Contributes: `config-v2.fields.renderer` "int" → `IntRenderer`
   - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/int.intFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/int.intFieldType`
   - Exports: Types: `IntFieldDef`; Values: `intField`
 - Cross-plugin:
   - Imported by: `conversations`, `debug/slow-ops`

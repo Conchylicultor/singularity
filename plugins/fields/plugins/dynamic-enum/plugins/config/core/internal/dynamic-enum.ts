@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { type FieldDef, type FieldMeta } from "@plugins/config_v2/core";
+import { type FieldDef, type FieldMeta } from "@plugins/fields/core";
 import { dynamicEnumFieldType } from "@plugins/fields/plugins/dynamic-enum/core";
 
 export interface DynamicEnumFieldDef extends FieldDef<string> {

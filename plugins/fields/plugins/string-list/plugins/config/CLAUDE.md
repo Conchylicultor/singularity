@@ -30,7 +30,7 @@ and remove flush immediately. `FieldRendererComponent` comes from the slot owner
   - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
   - Uses: `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/string-list.stringListFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/string-list.stringListFieldType`
   - Exports: Types: `StringListFieldDef`; Values: `stringListField`
 - Cross-plugin:
   - Imported by: `plugin-meta/composition`

@@ -4,7 +4,8 @@ import { dirname, join } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
 import { computeHash, effective, propagate, readonlyProxy, stringifyConfigValue, APP_SCOPE_DIR } from "@plugins/config_v2/core";
-import type { ConfigDescriptor, ConfigProxy, FieldDef, JsonValue } from "@plugins/config_v2/core";
+import type { ConfigDescriptor, ConfigProxy, JsonValue } from "@plugins/config_v2/core";
+import type { FieldDef } from "@plugins/fields/core";
 import {
   registerBarrelStubs,
   importBarrel,

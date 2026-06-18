@@ -24,7 +24,7 @@ owner (`@plugins/config_v2/plugins/fields/web`).
   - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
   - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.fieldSchemaWithDefault`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `fields/list.listFieldType`, `fields/list.ListItem`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/list.listFieldType`, `fields/list.ListItem`
   - Exports: Types: `ListFieldDef`; Values: `isListFieldDef`, `listField`
 - Cross-plugin:
   - Imported by: `plugin-meta/composition`

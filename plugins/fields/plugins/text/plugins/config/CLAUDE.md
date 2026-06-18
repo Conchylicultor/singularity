@@ -18,7 +18,7 @@ Shared `FieldHeader` / `useLocalValue` come from the slot owner
   - Contributes: `config-v2.fields.renderer` "text" → `TextRenderer`
   - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/text.textFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/text.textFieldType`
   - Exports: Types: `TextFieldDef`; Values: `textField`
 - Cross-plugin:
   - Imported by: `fields/variant/config`, `plugin-meta/composition`

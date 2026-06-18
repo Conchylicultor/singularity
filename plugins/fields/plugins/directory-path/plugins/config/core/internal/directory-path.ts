@@ -3,7 +3,7 @@ import {
   type FieldDef,
   type FieldMeta,
   pickMeta,
-} from "@plugins/config_v2/core";
+} from "@plugins/fields/core";
 import { directoryPathFieldType } from "@plugins/fields/plugins/directory-path/core";
 
 export interface DirPathFieldDef extends FieldDef<string> {

@@ -1,4 +1,4 @@
-import { registerFieldResolver } from "@plugins/config_v2/core";
+import { registerFieldResolver } from "@plugins/fields/core";
 import type { SvgNode } from "@plugins/fields/plugins/avatar/core";
 import { resolveIconSvgNodes } from "@plugins/primitives/plugins/icon-picker/server";
 

@@ -25,7 +25,7 @@ via `FieldRenderer` — nested `objectField` instances recurse automatically.
   - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
   - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/text.Text`
 - Core:
-  - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.fieldSchemaWithDefault`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `fields/object.objectFieldType`
+  - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/object.objectFieldType`
   - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
 - Cross-plugin:
   - Imported by: `fields/variant/config`
