@@ -36,7 +36,8 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
   return (
     <Stack gap="md">
       <Stack direction="row" wrap align="end" gap="lg">
-        <label className="flex flex-1 flex-col gap-xs">
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- flex-1: the chord-grid label grows to fill the wrapping Stack row; Stack has no per-child grow prop */}
+        <Stack as="label" gap="xs" className="flex-1">
           <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             Chord grid
           </span>
@@ -48,9 +49,9 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
             spellCheck={false}
             className="w-full resize-y rounded-md border border-border bg-background px-md py-sm font-mono text-body outline-none focus:border-primary"
           />
-        </label>
+        </Stack>
 
-        <label className="flex flex-col gap-xs">
+        <Stack as="label" gap="xs">
           <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             Voicing
           </span>
@@ -65,9 +66,9 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
               </option>
             ))}
           </select>
-        </label>
+        </Stack>
 
-        <label className="flex flex-col gap-xs">
+        <Stack as="label" gap="xs">
           <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             Octave
           </span>
@@ -86,9 +87,10 @@ export function ChordGridLoader({ raw, onRaw }: Props) {
             }
             className="w-16 rounded-md border border-border bg-background px-sm py-xs text-caption outline-none focus:border-primary"
           />
-        </label>
+        </Stack>
       </Stack>
 
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- asymmetric two-axis wrap gaps (gap-x-md / gap-y-xs) on a wrapping row; no primitive expresses a per-axis gap split */}
       <div className="flex flex-wrap items-center gap-x-md gap-y-xs text-caption">
         <span className="text-muted-foreground">
           {events.length} chord{events.length === 1 ? "" : "s"} · each cell is a

@@ -11,6 +11,7 @@ import {
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import {
   useCursorSelector,
   useSonata,
@@ -127,9 +128,11 @@ function SeekButton({
       onPointerDown={onPointerDown}
       onPointerUp={onPointerUp}
       onLostPointerCapture={onLostCapture}
-      className="flex size-7 touch-none items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+      className="size-7 touch-none rounded-md text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
     >
-      <Icon className="size-4" />
+      <Center className="size-full">
+        <Icon className="size-4" />
+      </Center>
     </button>
   );
 }
@@ -153,9 +156,11 @@ function StepButton({
       title={label}
       disabled={disabled}
       onClick={onClick}
-      className="flex size-6 items-center justify-center text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
+      className="size-6 text-muted-foreground transition-colors hover:bg-muted/50 hover:text-foreground disabled:pointer-events-none disabled:opacity-40"
     >
-      <Icon className="size-3.5" />
+      <Center className="size-full">
+        <Icon className="size-3.5" />
+      </Center>
     </button>
   );
 }
@@ -212,7 +217,7 @@ export function PlaybackControls() {
       />
 
       {/* Speed stepper: [− xx% +]. ↑/↓ keyboard shortcuts nudge the same value. */}
-      <div className="flex items-center rounded-md border border-border">
+      <Stack direction="row" gap="none" align="center" className="rounded-md border border-border">
         <StepButton
           icon={MdRemove}
           label="Slow down"
@@ -232,7 +237,7 @@ export function PlaybackControls() {
           disabled={tempoScale >= MAX_SCALE}
           onClick={() => setTempoScale(tempoScale + SPEED_STEP)}
         />
-      </div>
+      </Stack>
 
       {/* Live playback BPM (reflects the current speed). */}
       <Text

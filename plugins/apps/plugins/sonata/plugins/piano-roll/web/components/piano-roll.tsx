@@ -1,4 +1,8 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import {
   forwardRef,
   useCallback,
@@ -128,6 +132,7 @@ function useElementSize(): [
 const ScrollLayer = forwardRef<HTMLDivElement, { children: React.ReactNode }>(
   function ScrollLayer({ children }, ref) {
     return (
+      // eslint-disable-next-line layout/no-adhoc-layout -- imperatively transformed scroll layer: the parent's cursor subscription writes translateY per frame (see applyCursor); full-bleed positioning context for the projection-anchored overlays
       <div ref={ref} className="absolute inset-0">
         {children}
       </div>
@@ -461,17 +466,18 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
   );
 
   return (
-    <div className="flex h-full w-full flex-col bg-background">
+    <Stack gap="none" className="h-full w-full bg-background">
       {/* The note lane. Notes, grid, and labels render on the Pixi canvas in
           cursor-invariant authored space; DOM keeps the overlays, now-line,
           HUD, and keyboard. Pitch is the fixed full keyboard across the width,
           so canvas notes align column-for-key with the keyboard below. */}
-      <div
+      <Clip
+        fill
         ref={laneRef}
         {...(hasNotes ? handlers : null)}
         style={{ backgroundColor: ROLL_BG }}
         className={cn(
-          "relative min-h-0 flex-1 touch-none select-none overflow-hidden",
+          "relative touch-none select-none",
           hasNotes
             ? phase === "idle"
               ? "cursor-grab"
@@ -506,6 +512,7 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
         {/* Playback now-line: where falling notes land on the keyboard. Screen-
             anchored, so it sits OUTSIDE the scroll layer (and above it). */}
         <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- now-line position is JS-computed from the measured lane size (top/width come from the ResizeObserver)
           className="pointer-events-none absolute left-0 z-raised h-0.5 bg-primary"
           style={{ top: lane.height, width: lane.width }}
         />
@@ -515,34 +522,40 @@ function PianoRollInner({ score, tempoScale }: PianoRollProps) {
             of the chord overlay that hugs the left edge. Contributors read the
             shared cursor via useSonata(); collection-consumer clean (renders the
             generic Sonata.Hud slot, never naming a contributor). */}
-        <div className="pointer-events-none absolute right-2 top-2 z-float flex flex-col items-end gap-xs">
-          <Sonata.Hud.Render>
-            {(h) => <h.component key={h.id} />}
-          </Sonata.Hud.Render>
-          {/* Host-owned FX popover — sits with the HUD chips; re-enables its
-              own pointer events (the cluster is pointer-events-none). */}
-          <FxToggle />
-        </div>
+        <Pin to="top-right" offset="sm" layer="float" decorative>
+          <Stack gap="xs" align="end">
+            <Sonata.Hud.Render>
+              {(h) => <h.component key={h.id} />}
+            </Sonata.Hud.Render>
+            {/* Host-owned FX popover — sits with the HUD chips; re-enables its
+                own pointer events (the cluster is pointer-events-none). */}
+            <FxToggle />
+          </Stack>
+        </Pin>
 
         {/* Empty-score affordance. */}
         {score.notes.length === 0 ? (
-          <div className="pointer-events-none absolute inset-0 flex items-center justify-center">
-            <Text as="span" variant="body" className="text-muted-foreground">
-              No notes to display. Load a source to see the piano roll.
-            </Text>
+          // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context layered over the lane (sibling of the canvas/scroll layers); centers the empty-state message
+          <div className="pointer-events-none absolute inset-0">
+            <Center className="h-full w-full">
+              <Text as="span" variant="body" className="text-muted-foreground">
+                No notes to display. Load a source to see the piano roll.
+              </Text>
+            </Center>
           </div>
         ) : null}
-      </div>
+      </Clip>
 
       {/* Pitch-axis gutter: the piano keyboard (and any future pitch-axis
           decorations) contributed via `Sonata.PitchAxis`. */}
       <div
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid footer edge of the column (fixed keyboard height); Stack has no per-child shrink-0 role and the body is a canvas Clip, not a Scroll, so Column doesn't fit
         className="relative shrink-0 border-t border-border"
         style={{ height: KEYBOARD_HEIGHT }}
       >
         <PitchAxisHost projection={projection} />
       </div>
-    </div>
+    </Stack>
   );
 }
 

@@ -5,6 +5,8 @@ import {
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import {
   chordPitches,
   invertVoicing,
@@ -117,22 +119,26 @@ export function ChordReadout() {
           {voicings && (
             // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the voicings section from the beats line above; no flex parent to own a gap
             <div className="mt-3">
-              <div className="flex items-center justify-between">
-                <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Notes
-                </div>
-                {voicings.length > 1 && (
-                  <ToggleChip
-                    size="sm"
-                    active={showInversions}
-                    onClick={() => setShowInversions((v) => !v)}
-                  >
-                    Inversions
-                  </ToggleChip>
-                )}
-              </div>
+              <Frame
+                content={
+                  <div className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
+                    Notes
+                  </div>
+                }
+                trailing={
+                  voicings.length > 1 ? (
+                    <ToggleChip
+                      size="sm"
+                      active={showInversions}
+                      onClick={() => setShowInversions((v) => !v)}
+                    >
+                      Inversions
+                    </ToggleChip>
+                  ) : undefined
+                }
+              />
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 top offset below the Notes header row inside the Card; no parent gap to own it */}
-              <div className="mt-2 flex flex-col gap-sm">
+              <Stack gap="sm" className="mt-2">
                 {(showInversions ? voicings : voicings.slice(0, 1)).map(
                   (voicing, k) => {
                     const slash = formatChordSymbol({
@@ -141,7 +147,7 @@ export function ChordReadout() {
                       bass: ((voicing[0]! % 12) + 12) % 12,
                     });
                     return (
-                      <div key={k} className="flex flex-col gap-xs">
+                      <Stack key={k} gap="xs">
                         {/* Per-row caption — only when stacking inversions; the
                             big symbol above already names the root chord. */}
                         {showInversions && (
@@ -161,11 +167,11 @@ export function ChordReadout() {
                           lit={voicing}
                           className="h-11 w-full"
                         />
-                      </div>
+                      </Stack>
                     );
                   },
                 )}
-              </div>
+              </Stack>
             </div>
           )}
         </>

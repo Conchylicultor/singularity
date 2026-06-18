@@ -45,22 +45,23 @@ export function Picker({
             type="button"
             onClick={() => onSelect(item.id)}
             aria-pressed={active}
-            // eslint-disable-next-line row/no-adhoc-row -- bespoke picker: per-item "loaded" dot indicator that SegmentedControl can't express
             className={cn(
-              "flex items-center gap-xs rounded-md border px-sm py-xs text-label transition-colors",
+              "rounded-md border px-sm py-xs text-label transition-colors",
               active
                 ? "border-primary bg-primary/10 text-foreground"
                 : "border-border bg-transparent text-muted-foreground hover:bg-muted/50",
             )}
           >
-            {Icon ? <Icon className="size-3.5" /> : null}
-            {item.label}
-            {loaded ? (
-              <span
-                aria-label="loaded"
-                className="size-1.5 rounded-full bg-primary"
-              />
-            ) : null}
+            <Stack direction="row" align="center" gap="xs">
+              {Icon ? <Icon className="size-3.5" /> : null}
+              {item.label}
+              {loaded ? (
+                <span
+                  aria-label="loaded"
+                  className="size-1.5 rounded-full bg-primary"
+                />
+              ) : null}
+            </Stack>
           </button>
         );
       })}

@@ -1,4 +1,5 @@
 import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 
 /**
  * The library index surface — Sonata's landing pane at `/sonata`. The (separate)
@@ -7,8 +8,13 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
  */
 export function SonataLibrarySurface() {
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      <Sonata.Home.Render>{(h) => <h.component key={h.id} />}</Sonata.Home.Render>
-    </div>
+    <Column
+      fill
+      scrollBody={false}
+      className="h-full bg-background text-foreground"
+      body={
+        <Sonata.Home.Render>{(h) => <h.component key={h.id} />}</Sonata.Home.Render>
+      }
+    />
   );
 }

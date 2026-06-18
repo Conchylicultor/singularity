@@ -2,6 +2,7 @@ import type {
   Score,
   SectionAnnotation,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 /**
  * Section-region marker. The Score's `section` annotations carry the song's
@@ -44,6 +45,7 @@ export function SectionBands({
   if (sections.length === 0) return null;
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven section-band strip hosting JS fraction-positioned bands
     <div className="pointer-events-none absolute inset-x-0 bottom-0 h-1/2">
       {sections.map((a, idx) => {
         const left = beatToFraction(a.start);
@@ -51,14 +53,15 @@ export function SectionBands({
         return (
           <div
             key={`${a.start}-${a.end}-${a.data.name}-${idx}`}
+            // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned band (left/width from beatToFraction); flex/items-center/overflow-hidden vertically center + clip the label inside the coordinate-driven box
             className={`absolute inset-y-0 flex items-center overflow-hidden whitespace-nowrap rounded-sm px-xs ${PALETTE[idx % PALETTE.length]}`}
             style={{ left: `${left * 100}%`, width: `${width * 100}%` }}
             title={a.data.name}
           >
             {/* eslint-disable-next-line text/no-adhoc-typography -- tight chip label: line-height must stay 1 so the band stays slim */}
-            <span className="overflow-hidden text-ellipsis whitespace-nowrap text-3xs leading-none text-foreground/70">
+            <TruncatingText className="text-3xs leading-none text-foreground/70">
               {a.data.name}
-            </span>
+            </TruncatingText>
           </div>
         );
       })}

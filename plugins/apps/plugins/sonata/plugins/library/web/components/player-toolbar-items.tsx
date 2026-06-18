@@ -1,5 +1,6 @@
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { usePaneStore } from "@plugins/primitives/plugins/pane/web";
 import { Sonata, useSonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { Picker } from "./display-picker";
@@ -42,7 +43,7 @@ export function DisplayPicker() {
   const displays = Sonata.Display.useContributions();
   const effectiveDisplayId = activeDisplayId ?? displays[0]?.id ?? null;
   return (
-    <div className="flex items-center gap-sm">
+    <Stack direction="row" align="center" gap="sm">
       <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
         Display
       </span>
@@ -52,6 +53,6 @@ export function DisplayPicker() {
         onSelect={setActiveDisplay}
         empty="No displays"
       />
-    </div>
+    </Stack>
   );
 }

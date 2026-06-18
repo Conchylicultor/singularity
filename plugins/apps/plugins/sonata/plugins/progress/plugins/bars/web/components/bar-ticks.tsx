@@ -35,12 +35,14 @@ export function BarTicks({
   }
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting JS fraction-positioned ticks
     <div className="pointer-events-none absolute inset-0">
       {boundaries.map(({ index, startBeat }) => {
         const left = `${beatToFraction(startBeat) * 100}%`;
         return (
           <div
             key={index}
+            // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned tick (left from beatToFraction)
             className="absolute inset-y-0 -translate-x-1/2"
             style={{ left }}
           >

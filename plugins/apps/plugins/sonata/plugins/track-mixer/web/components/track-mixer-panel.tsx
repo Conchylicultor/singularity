@@ -20,6 +20,9 @@ import {
   CollapsibleContent,
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   SearchInput,
   useTextFilter,
@@ -63,7 +66,7 @@ function ColorSwatch({
         <button
           type="button"
           aria-label="Track color"
-          className="size-4 shrink-0 rounded-full border border-border/60 transition-transform hover:scale-110"
+          className="size-4 rounded-full border border-border/60 transition-transform hover:scale-110"
           style={{ background: blackKeyColor(color) }}
         />
       }
@@ -139,11 +142,15 @@ function InstrumentPicker({
         <button
           type="button"
           aria-label="Track instrument"
-          className="flex min-w-0 items-center gap-xs rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
+          // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of TrackRow's instrument+notes Stack (button is the interaction wrapper; Frame inside owns the icon|label|chevron shrink hierarchy)
+          className="min-w-0 rounded-md text-3xs text-muted-foreground transition-colors hover:text-foreground"
         >
-          {ResolvedIcon ? <ResolvedIcon className="size-3 shrink-0" /> : null}
-          <span className="truncate">{resolvedLabel}</span>
-          <MdExpandMore className="size-3 shrink-0" />
+          <Frame
+            gap="xs"
+            leading={ResolvedIcon ? <ResolvedIcon className="size-3" /> : undefined}
+            content={resolvedLabel}
+            trailing={<MdExpandMore className="size-3" />}
+          />
         </button>
       }
     >
@@ -155,14 +162,14 @@ function InstrumentPicker({
       />
 
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the scroll list below the search input (no named margin utility) */}
-      <div className="mt-2 max-h-64 overflow-y-auto">
+      <Scroll className="mt-2 max-h-64">
         {/* Reset-to-auto: clears the override so resolution falls back to the
             track's GM program / the default timbre. Active when no override. */}
         <Row
           size="sm"
           hover="muted"
           selected={!customized}
-          icon={<MdAutoMode className="shrink-0" />}
+          icon={<MdAutoMode />}
           actions={
             !customized ? <MdCheck className="size-3.5 text-primary" /> : undefined
           }
@@ -189,9 +196,9 @@ function InstrumentPicker({
                   selected={active}
                   icon={
                     Icon ? (
-                      <Icon className="size-3.5 shrink-0" />
+                      <Icon className="size-3.5" />
                     ) : (
-                      <span className="size-3.5 shrink-0" />
+                      <span className="size-3.5" />
                     )
                   }
                   actions={
@@ -208,7 +215,7 @@ function InstrumentPicker({
             })}
           </div>
         ))}
-      </div>
+      </Scroll>
     </InlinePopover>
   );
 }
@@ -234,45 +241,50 @@ function TrackRow({
     customized,
   } = entry;
   return (
-    <div className="flex items-center gap-sm py-xs">
-      <ColorSwatch songId={songId} trackId={trackId} color={color} />
-
-      <div className={cn("min-w-0 flex-1", hidden && "opacity-50")}>
-        <Text as="div" variant="caption" className="truncate font-medium text-foreground">
-          {name}
-        </Text>
-        <div className="flex items-center gap-xs text-3xs text-muted-foreground">
-          <InstrumentPicker
-            songId={songId}
-            trackId={trackId}
-            options={options}
-            resolvedId={instrumentId}
-            resolvedLabel={instrumentLabel}
-            customized={customized}
-          />
-          <span className="shrink-0">
-            · {noteCount} {noteCount === 1 ? "note" : "notes"}
-          </span>
+    <Frame
+      className="py-xs"
+      leading={<ColorSwatch songId={songId} trackId={trackId} color={color} />}
+      content={
+        <div className={cn(hidden && "opacity-50")}>
+          <Text as="div" variant="caption" className="truncate font-medium text-foreground">
+            {name}
+          </Text>
+          <Stack direction="row" align="center" gap="xs" className="text-3xs text-muted-foreground">
+            <InstrumentPicker
+              songId={songId}
+              trackId={trackId}
+              options={options}
+              resolvedId={instrumentId}
+              resolvedLabel={instrumentLabel}
+              customized={customized}
+            />
+            <span>
+              · {noteCount} {noteCount === 1 ? "note" : "notes"}
+            </span>
+          </Stack>
         </div>
-      </div>
-
-      <IconButton
-        icon={muted ? MdVolumeOff : MdVolumeUp}
-        label={muted ? "Unmute track" : "Mute track"}
-        aria-pressed={muted}
-        size="icon-sm"
-        className={cn(muted && "text-destructive")}
-        onClick={() => setTrackMuted(songId, trackId, !muted)}
-      />
-      <IconButton
-        icon={hidden ? MdVisibilityOff : MdVisibility}
-        label={hidden ? "Show track" : "Hide track"}
-        aria-pressed={hidden}
-        size="icon-sm"
-        className={cn(hidden && "text-muted-foreground")}
-        onClick={() => setTrackHidden(songId, trackId, !hidden)}
-      />
-    </div>
+      }
+      trailing={
+        <Stack direction="row" align="center" gap="sm">
+          <IconButton
+            icon={muted ? MdVolumeOff : MdVolumeUp}
+            label={muted ? "Unmute track" : "Mute track"}
+            aria-pressed={muted}
+            size="icon-sm"
+            className={cn(muted && "text-destructive")}
+            onClick={() => setTrackMuted(songId, trackId, !muted)}
+          />
+          <IconButton
+            icon={hidden ? MdVisibilityOff : MdVisibility}
+            label={hidden ? "Show track" : "Hide track"}
+            aria-pressed={hidden}
+            size="icon-sm"
+            className={cn(hidden && "text-muted-foreground")}
+            onClick={() => setTrackHidden(songId, trackId, !hidden)}
+          />
+        </Stack>
+      }
+    />
   );
 }
 

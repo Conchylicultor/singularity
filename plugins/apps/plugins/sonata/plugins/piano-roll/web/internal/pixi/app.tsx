@@ -233,5 +233,8 @@ export function PianoRollCanvas(props: PianoRollCanvasProps) {
     return watchThemeColors(() => scene.refreshColors());
   }, [scene]);
 
-  return <div ref={hostRef} className="pointer-events-none absolute inset-0" />;
+  return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- pixi canvas host: full-bleed inert layer the appended <canvas> fills; the lane bg shows through (transparent canvas)
+    <div ref={hostRef} className="pointer-events-none absolute inset-0" />
+  );
 }

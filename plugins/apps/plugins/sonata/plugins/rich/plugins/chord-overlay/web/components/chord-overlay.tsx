@@ -3,6 +3,7 @@ import type {
   ChordData,
   Projection,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 /**
  * Chord-symbol overlay. Anchored to the time axis only (`requires:["time-axis"]`),
@@ -27,14 +28,14 @@ export function ChordOverlay({
   if (!beatToY) return null; // defensive: host only mounts us with time-axis.
 
   return (
-    <div className="pointer-events-none absolute inset-y-0 left-0 z-float w-12">
+    <Pin to="left" stretch decorative layer="float" className="w-12">
       {annotations.map((a, i) => {
         const data = a.data as ChordData;
         const y = beatToY(a.start);
         return (
           <div
             key={`${a.start}-${data.symbol}-${i}`}
-            // eslint-disable-next-line text/no-adhoc-typography -- tight leading keeps this compact chord chip a single line (size via the text-2xs sub-scale)
+            // eslint-disable-next-line text/no-adhoc-typography, layout/no-adhoc-layout -- tight leading keeps this compact chord chip a single line (size via the text-2xs sub-scale); positioned at a runtime-computed pixel Y (style={{ top: beatToY(a.start) }}), so -translate-y-1/2 centers on that JS coordinate, not a ramp offset
             className="absolute left-0 -translate-y-1/2 rounded-r-md border border-border/60 bg-background/90 px-xs py-2xs text-2xs font-semibold leading-none text-foreground shadow-sm backdrop-blur-sm"
             style={{ top: y }}
             title={(() => {
@@ -50,6 +51,6 @@ export function ChordOverlay({
           </div>
         );
       })}
-    </div>
+    </Pin>
   );
 }

@@ -43,12 +43,14 @@ export function KeyFlags({
   if (entries.length === 0) return null;
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting JS fraction-positioned key flags
     <div className="pointer-events-none absolute inset-0">
       {entries.map((e) => {
         const startF = beatToFraction(e.beat);
         return (
           <div
             key={`${e.beat}-${keyLabel(e.key)}`}
+            // eslint-disable-next-line layout/no-adhoc-layout -- JS fraction-positioned key flag (left from beatToFraction)
             className="absolute inset-y-0"
             style={{ left: `${startF * 100}%` }}
             title={keyLabel(e.key)}
@@ -59,7 +61,7 @@ export function KeyFlags({
             <div className={`${railBandClass} left-0 w-0.5 bg-foreground/60`} />
             {/* Small neutral key chip — names the key without a colored band,
                 floating in the headroom just above the rail. */}
-            {/* eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing -- tight key chip: line-height must stay 1 so the marker stays slim, matching the bands below; mb-2 lifts the chip into the headroom above the rail (no named margin utility) */}
+            {/* eslint-disable-next-line text/no-adhoc-typography, spacing/no-adhoc-spacing, layout/no-adhoc-layout -- tight key chip: line-height must stay 1 so the marker stays slim, matching the bands below; mb-2 lifts the chip into the headroom above the rail (no named margin utility); bottom-1/2 floats it in the coordinate-driven flag headroom (not a clean Pin anchor) */}
             <span className="absolute bottom-1/2 left-1 mb-2 whitespace-nowrap rounded-sm bg-muted px-xs text-3xs font-medium leading-none text-foreground/80">
               {keyLabel(e.key)}
             </span>

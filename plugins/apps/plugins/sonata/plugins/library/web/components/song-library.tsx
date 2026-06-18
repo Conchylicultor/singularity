@@ -5,6 +5,7 @@ import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/
 import type { CreateOption, FieldDef } from "@plugins/primitives/plugins/data-view/web";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { songsResource, updateSong } from "../../core";
 import type { Song } from "../../core";
@@ -162,19 +163,24 @@ export function SongLibrary() {
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      {songs.error ? (
-        <Text as="div" variant="body" tone="destructive" className="px-xl py-lg">
-          Failed to load songs: {songs.error.message}
-        </Text>
-      ) : null}
-      {matchResource(songs, {
+    <Column
+      fill
+      scrollBody={false}
+      className="h-full"
+      header={
+        songs.error ? (
+          <Text as="div" variant="body" tone="destructive" className="px-xl py-lg">
+            Failed to load songs: {songs.error.message}
+          </Text>
+        ) : null
+      }
+      body={matchResource(songs, {
         pending: () => renderLibrary([], true),
         // The error banner above already covers the failed-load case; keep the
         // (skeleton) chrome underneath it rather than a second error block.
         error: () => renderLibrary([], true),
         ready: (rows) => renderLibrary(rows, false),
       })}
-    </div>
+    />
   );
 }

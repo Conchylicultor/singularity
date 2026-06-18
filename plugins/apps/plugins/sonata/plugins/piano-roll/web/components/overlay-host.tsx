@@ -18,6 +18,7 @@ export function OverlayHost({ score }: { score: Score }) {
   const projection = useProjection();
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context over the projection-anchored note grid; every child positions via runtime projection coordinates
     <div className="pointer-events-none absolute inset-0">
       {overlays
         .filter((o) => o.requires.every((r) => projection.capabilities.has(r)))

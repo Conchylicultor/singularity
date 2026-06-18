@@ -75,7 +75,7 @@ export function ChordGridEditorSection() {
   return (
     <Card className="rounded-lg p-lg">
       <Stack gap="md">
-        <label className="flex flex-col gap-xs">
+        <Stack as="label" gap="xs">
           <span className="text-2xs font-semibold uppercase tracking-wide text-muted-foreground">
             Title
           </span>
@@ -86,7 +86,7 @@ export function ChordGridEditorSection() {
             placeholder="Untitled"
             className="w-full rounded-md border border-border bg-background px-md py-xs text-body outline-none focus:border-primary"
           />
-        </label>
+        </Stack>
         <ChordGridLoader
           raw={rawValue}
           onRaw={(r) => setSourceRaw(CHORD_GRID_SOURCE_ID, r)}

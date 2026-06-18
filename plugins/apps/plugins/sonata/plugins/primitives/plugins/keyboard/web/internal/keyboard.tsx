@@ -1,5 +1,7 @@
 import { type CSSProperties, type ReactNode, useMemo } from "react";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { useConfig } from "@plugins/config_v2/web";
 import { keyboardStyleConfig, type KeyStyle } from "../../shared/config";
 import { type KeyLane, keyLayout } from "./key-layout";
@@ -284,6 +286,7 @@ export function Keyboard({
     return (
       <div
         key={k.pitch}
+        // eslint-disable-next-line layout/no-adhoc-layout -- computed key geometry (left/width from key-layout projection); flex/items-end/justify-center bottom-center the key label inside the lane
         className={cn(
           "absolute flex items-end justify-center",
           k.isBlack ? "top-0 z-raised" : "bottom-0 top-0",
@@ -300,6 +303,7 @@ export function Keyboard({
         {k.isBlack && style === "realistic" && (
           <div
             aria-hidden
+            // eslint-disable-next-line layout/no-adhoc-layout -- computed black-key face: height (14%/8%) and negative z-index (-1, paints behind the in-flow label) come from BLACK_FACE; not a clean Pin anchor
             className="pointer-events-none absolute inset-x-0 bottom-0"
             style={{ ...BLACK_FACE(litColor), ...KEY_BOTTOM_RADIUS }}
           />
@@ -310,8 +314,8 @@ export function Keyboard({
   };
 
   return (
-    <div
-      className={cn("relative overflow-hidden", className)}
+    <Clip
+      className={cn("relative", className)}
       // Physical keyboard frame — fixed shape, preset-independent (see
       // KEY_BOTTOM_RADIUS). overflow-hidden would otherwise clip the corner
       // keys to a theme-token radius.
@@ -320,9 +324,9 @@ export function Keyboard({
       {/* White keys (back layer). */}
       {whites.map(renderLane)}
       {/* Red felt strip across the keybed top — above whites, below blacks. */}
-      <div aria-hidden className="pointer-events-none absolute inset-x-0 top-0" style={feltStyle(style)} />
+      <Pin to="top" stretch decorative aria-hidden style={feltStyle(style)} />
       {/* Black keys (front layer), ~62% height. */}
       {blacks.map(renderLane)}
-    </div>
+    </Clip>
   );
 }

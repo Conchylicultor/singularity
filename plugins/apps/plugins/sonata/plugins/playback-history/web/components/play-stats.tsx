@@ -1,5 +1,8 @@
 import { MdPlayArrow } from "react-icons/md";
 import { formatRelativeTime } from "@plugins/primitives/plugins/relative-time/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import type { Song } from "@plugins/apps/plugins/sonata/plugins/library/core";
 import { usePlaybackHistory } from "../hooks";
 
@@ -13,19 +16,25 @@ export function PlayStats({ song }: { song: Song }) {
   }
 
   return (
-    <div className="flex items-center gap-xs text-2xs text-muted-foreground">
-      <MdPlayArrow className="size-3 shrink-0" />
-      <span className="tabular-nums">
-        {playCount} {playCount === 1 ? "play" : "plays"}
-      </span>
-      {history?.lastPlayedAt ? (
-        <>
-          <span aria-hidden>·</span>
-          <span className="truncate">
-            {formatRelativeTime(new Date(history.lastPlayedAt))}
+    <Frame
+      gap="xs"
+      className="text-2xs text-muted-foreground"
+      leading={<MdPlayArrow className="size-3" />}
+      content={
+        <Stack direction="row" align="center" gap="xs">
+          <span className="tabular-nums">
+            {playCount} {playCount === 1 ? "play" : "plays"}
           </span>
-        </>
-      ) : null}
-    </div>
+          {history?.lastPlayedAt ? (
+            <>
+              <span aria-hidden>·</span>
+              <TruncatingText>
+                {formatRelativeTime(new Date(history.lastPlayedAt))}
+              </TruncatingText>
+            </>
+          ) : null}
+        </Stack>
+      }
+    />
   );
 }

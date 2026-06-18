@@ -10,6 +10,9 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useRef, useState } from "react";
 import { MdMusicNote, MdUploadFile } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 interface Props {
   onRaw: (raw: unknown) => void;
@@ -66,8 +69,8 @@ export function MidiLoader({ onRaw }: Props) {
   );
 
   return (
-    <div className="flex flex-col items-center gap-md p-lg">
-      <div
+    <Stack align="center" gap="md" className="p-lg">
+      <Stack
         role="button"
         tabIndex={0}
         aria-label="Drop a MIDI file or click to browse"
@@ -81,8 +84,10 @@ export function MidiLoader({ onRaw }: Props) {
         }}
         onDragLeave={() => setDragging(false)}
         onDrop={handleDrop}
+        align="center"
+        gap="md"
         className={cn(
-          "flex w-full max-w-sm cursor-pointer flex-col items-center gap-md rounded-xl border-2 border-dashed px-xl py-2xl transition-colors",
+          "w-full max-w-sm cursor-pointer rounded-xl border-2 border-dashed px-xl py-2xl transition-colors",
           dragging
             ? "border-primary bg-primary/5"
             : "border-border hover:border-muted-foreground/50 hover:bg-muted/30",
@@ -102,13 +107,20 @@ export function MidiLoader({ onRaw }: Props) {
           <Text
             as="div"
             variant="caption"
-            className="flex items-center gap-xs rounded-md bg-muted px-sm py-xs text-muted-foreground"
+            className="rounded-md bg-muted px-sm py-xs text-muted-foreground"
           >
-            <MdMusicNote className="size-3.5 shrink-0" />
-            <span className="truncate max-w-[16rem]">{fileName}</span>
+            <Frame
+              gap="xs"
+              leading={<MdMusicNote className="size-3.5" />}
+              content={
+                <TruncatingText className="max-w-[16rem]">
+                  {fileName}
+                </TruncatingText>
+              }
+            />
           </Text>
         ) : null}
-      </div>
+      </Stack>
 
       {error ? (
         <Text as="p" variant="caption" className="text-destructive" role="alert">
@@ -123,6 +135,6 @@ export function MidiLoader({ onRaw }: Props) {
         className="hidden"
         onChange={handleChange}
       />
-    </div>
+    </Stack>
   );
 }

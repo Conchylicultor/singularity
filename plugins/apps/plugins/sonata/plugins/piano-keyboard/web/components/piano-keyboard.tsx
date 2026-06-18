@@ -134,6 +134,7 @@ export function PianoKeyboard({ projection }: { projection: Projection }) {
       // A lit black key shows the same darker accidental shade as the falling
       // note that lands on it — the exact `blackKeyColor` the piano-roll uses.
       accidentalColor={blackKeyColor}
+      // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed fill of the pitch-axis gutter; the keyboard primitive lays its keys via runtime projection coordinates
       className="absolute inset-0 rounded-none bg-muted/30"
       renderKey={(k, lit) => {
         const text = keyLabel(k, speller, scope);

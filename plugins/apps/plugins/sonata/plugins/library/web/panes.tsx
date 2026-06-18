@@ -8,6 +8,10 @@ import {
   TEMPO_MATH_FLOOR,
   useSonata,
 } from "@plugins/apps/plugins/sonata/plugins/shell/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { songsResource } from "../core";
 import { Library } from "./slots";
 import { SonataLibrarySurface } from "./components/library-surface";
@@ -136,46 +140,51 @@ function SonataPlayerSurface(): ReactElement {
   const effectiveDisplayId = activeDisplayId ?? displays[0]?.id ?? null;
 
   return (
-    <div className="flex h-full min-h-0 flex-col bg-background text-foreground">
-      {/* Toolbar: the PaneToolbar host renders both zones — Start (← Library,
-          title, display picker; contributed by this plugin) and End (transport,
-          volume; contributed by transport-bar / engine). Both reorderable. */}
-      <SonataToolbar.Host />
+    <Column
+      fill
+      scrollBody={false}
+      className="h-full bg-background text-foreground"
+      header={
+        <>
+          {/* Toolbar: the PaneToolbar host renders both zones — Start (← Library,
+              title, display picker; contributed by this plugin) and End (transport,
+              volume; contributed by transport-bar / engine). Both reorderable. */}
+          <SonataToolbar.Host />
 
-      {/* Transport strip: full-width progression bar (and future transport
-          widgets). Renders nothing when no contributor is present. */}
-      <Sonata.Transport.Render>
-        {(t) => <t.component key={t.id} />}
-      </Sonata.Transport.Render>
+          {/* Transport strip: full-width progression bar (and future transport
+              widgets). Renders nothing when no contributor is present. */}
+          <Sonata.Transport.Render>
+            {(t) => <t.component key={t.id} />}
+          </Sonata.Transport.Render>
+        </>
+      }
+      body={
+        /* Main area: the active display + free-floating Section panels. */
+        <Stack direction="row" gap="none" align="stretch" className="h-full">
+          <Clip fill>
+            {effectiveDisplayId ? (
+              <Sonata.Display.Dispatch
+                score={score}
+                // Displays scale geometry by this to cancel the scale folded into
+                // `score`; floor it so a frozen 0% (which scales `score` by the
+                // same floor) cancels to a finite layout instead of NaN.
+                tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
+                activeDisplayId={effectiveDisplayId}
+              />
+            ) : (
+              <Center className="h-full p-2xl">
+                <Text as="div" variant="body" tone="muted">
+                  No display selected.
+                </Text>
+              </Center>
+            )}
+          </Clip>
 
-      {/* Main area: the active display + free-floating Section panels. */}
-      <div className="flex min-h-0 flex-1">
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {effectiveDisplayId ? (
-            <Sonata.Display.Dispatch
-              score={score}
-              // Displays scale geometry by this to cancel the scale folded into
-              // `score`; floor it so a frozen 0% (which scales `score` by the
-              // same floor) cancels to a finite layout instead of NaN.
-              tempoScale={Math.max(tempoScale, TEMPO_MATH_FLOOR)}
-              activeDisplayId={effectiveDisplayId}
-            />
-          ) : (
-            <Text
-              as="div"
-              variant="body"
-              tone="muted"
-              className="flex h-full items-center justify-center p-2xl"
-            >
-              No display selected.
-            </Text>
-          )}
-        </div>
-
-        {/* Free-floating panels (current-chord readout, controls, …),
-            collapsible to a thin rail. */}
-        <SectionPane />
-      </div>
-    </div>
+          {/* Free-floating panels (current-chord readout, controls, …),
+              collapsible to a thin rail. */}
+          <SectionPane />
+        </Stack>
+      }
+    />
   );
 }

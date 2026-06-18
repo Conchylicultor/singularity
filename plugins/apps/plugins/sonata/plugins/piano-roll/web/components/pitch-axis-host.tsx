@@ -16,6 +16,7 @@ export function PitchAxisHost({ projection }: { projection: Projection }) {
   const decorations = Sonata.PitchAxis.useContributions();
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- full-bleed positioning context over the pitch-axis gutter; each decoration anchors via runtime projection coordinates (projection.keys / pitchToX)
     <div className="absolute inset-0">
       {decorations
         .filter((d) => d.requires.every((r) => projection.capabilities.has(r)))

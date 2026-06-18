@@ -11,6 +11,7 @@ import {
   buildTempoIndex,
 } from "@plugins/apps/plugins/sonata/plugins/score/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { SonataProgress } from "../slots";
 import { RAIL_THICKNESS } from "../rail-geometry";
 
@@ -90,7 +91,12 @@ export function ProgressBar() {
   const filledPct = beatToFraction(cursorBeat) * 100;
 
   return (
-    <div className="flex items-center gap-md border-b border-border px-xl py-md">
+    <Stack
+      direction="row"
+      align="center"
+      gap="md"
+      className="border-b border-border px-xl py-md"
+    >
       {/* Interactive track. Extra vertical height (py) reserves headroom above
           and below for markers; the track itself is centered within it. */}
       <div
@@ -101,6 +107,7 @@ export function ProgressBar() {
         aria-valuenow={cursorBeat}
         onPointerDown={ready ? onPointerDown : undefined}
         onPointerMove={ready ? onPointerMove : undefined}
+        // eslint-disable-next-line layout/no-adhoc-layout -- flexible track fills the row; a role="slider" positioning context with pointer handlers has no primitive home
         className={
           "relative flex-1 py-md" + (ready ? " cursor-pointer" : "")
         }
@@ -117,6 +124,7 @@ export function ProgressBar() {
         <div className={`relative ${RAIL_THICKNESS} rounded-full bg-muted`}>
           {/* Filled portion up to the playhead. */}
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- JS-driven fill (width from cursor fraction) pinned to the rail's left edge
             className="absolute inset-y-0 left-0 rounded-full bg-primary"
             style={{ width: `${filledPct}%` }}
           />
@@ -127,6 +135,7 @@ export function ProgressBar() {
             Painted above the rail so on-rail markers (bar ticks) are visible;
             pointer-transparent so clicks fall through to the seek track; each
             marker anchors itself horizontally via `beatToFraction`. */}
+        {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative coordinate-driven marker layer hosting fraction-positioned contributed markers */}
         <div className="pointer-events-none absolute inset-0">
           {markers.map((m) =>
             renderIsolated("sonata.progress.marker", m as unknown as Contribution, {
@@ -141,6 +150,7 @@ export function ProgressBar() {
             region's mid-line is the rail's). */}
         {ready ? (
           <div
+            // eslint-disable-next-line layout/no-adhoc-layout -- JS-positioned playhead handle (left from cursor fraction, centered on the rail)
             className="absolute top-1/2 size-3.5 -translate-x-1/2 -translate-y-1/2 rounded-full border-2 border-background bg-primary shadow"
             style={{ left: `${filledPct}%` }}
           />
@@ -148,6 +158,7 @@ export function ProgressBar() {
       </div>
 
       {/* Minimal elapsed / total time readout (m:ss.s). */}
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid time readout: never shrinks in the flex row beside the flexible track */}
       <Text variant="caption" tone="muted" className="shrink-0 tabular-nums">
         {ready ? (
           <>
@@ -158,6 +169,6 @@ export function ProgressBar() {
           "—"
         )}
       </Text>
-    </div>
+    </Stack>
   );
 }

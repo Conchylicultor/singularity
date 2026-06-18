@@ -1,6 +1,8 @@
 import { useRef } from "react";
 import { MdZoomIn } from "react-icons/md";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { useSetConfig } from "@plugins/config_v2/web";
@@ -47,12 +49,12 @@ export function SpreadWheel() {
 
   return (
     <WithTooltip content="Note spread — drag to zoom the falling notes">
-      <div className="flex items-center rounded-md border border-border">
-        <MdZoomIn className="ml-2xs size-3.5 shrink-0 text-muted-foreground" />
+      <Stack direction="row" align="center" gap="none" className="rounded-md border border-border">
+        <MdZoomIn className="ml-2xs size-3.5 text-muted-foreground" />
         {/* The ribbed wheel face. The tick pattern + its sliding position are
             inline styles (no Tailwind spacing/radius to lint); the value-bound
             background-position makes the ribs travel as the wheel is dragged. */}
-        <div
+        <Clip
           {...handlers}
           role="slider"
           aria-label="Note spread"
@@ -61,7 +63,7 @@ export function SpreadWheel() {
           aria-valuenow={Math.round(spread * 100)}
           aria-valuetext={asZoom(spread)}
           className={cn(
-            "relative h-6 w-16 touch-none select-none overflow-hidden",
+            "relative h-6 w-16 touch-none select-none",
             phase === "idle" ? "cursor-ew-resize" : "cursor-grabbing",
           )}
           style={{
@@ -76,8 +78,9 @@ export function SpreadWheel() {
           }}
         >
           {/* Center index mark the ribs travel past. */}
+          {/* eslint-disable-next-line layout/no-adhoc-layout -- decorative center rule: horizontally centered (left-1/2 + translate) yet vertically stretched with a constant inset; not a single Pin anchor */}
           <div className="pointer-events-none absolute inset-y-1 left-1/2 w-px -translate-x-1/2 bg-primary" />
-        </div>
+        </Clip>
         <Text
           as="span"
           variant="caption"
@@ -85,7 +88,7 @@ export function SpreadWheel() {
         >
           {asZoom(spread)}
         </Text>
-      </div>
+      </Stack>
     </WithTooltip>
   );
 }

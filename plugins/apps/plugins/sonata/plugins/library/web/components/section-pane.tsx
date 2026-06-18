@@ -3,6 +3,7 @@ import { Sonata } from "@plugins/apps/plugins/sonata/plugins/shell/web";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
 /**
  * The right-hand panel column hosting the `Sonata.Section` contributions
@@ -17,7 +18,11 @@ export function SectionPane() {
 
   if (collapsed) {
     return (
-      <div className="flex w-8 shrink-0 flex-col items-center gap-sm border-l border-border bg-muted/40 py-sm">
+      <Stack
+        align="center"
+        gap="sm"
+        className="w-8 border-l border-border bg-muted/40 py-sm"
+      >
         <IconButton
           icon={MdChevronLeft}
           label="Expand panels"
@@ -30,31 +35,30 @@ export function SectionPane() {
         >
           Panels
         </span>
-      </div>
+      </Stack>
     );
   }
 
   return (
-    <div className="flex w-80 shrink-0 flex-col border-l border-border">
-      <div className="flex justify-end px-sm pt-sm">
+    <Stack gap="none" className="w-80 border-l border-border">
+      <Stack direction="row" gap="none" justify="end" className="px-sm pt-sm">
         <IconButton
           icon={MdChevronRight}
           label="Collapse panels"
           side="left"
           onClick={() => setCollapsed(true)}
         />
-      </div>
-      <Stack
-        gap="lg"
-        className="min-h-0 flex-1 overflow-auto px-lg pb-lg"
-      >
-        <Sonata.Section.Render subId="editor">
-          {(s) => (s.area === "editor" ? <s.component key={s.label} /> : null)}
-        </Sonata.Section.Render>
-        <Sonata.Section.Render subId="player">
-          {(s) => (s.area !== "editor" ? <s.component key={s.label} /> : null)}
-        </Sonata.Section.Render>
       </Stack>
-    </div>
+      <Scroll fill axis="both" className="px-lg pb-lg">
+        <Stack gap="lg">
+          <Sonata.Section.Render subId="editor">
+            {(s) => (s.area === "editor" ? <s.component key={s.label} /> : null)}
+          </Sonata.Section.Render>
+          <Sonata.Section.Render subId="player">
+            {(s) => (s.area !== "editor" ? <s.component key={s.label} /> : null)}
+          </Sonata.Section.Render>
+        </Stack>
+      </Scroll>
+    </Stack>
   );
 }
