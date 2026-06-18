@@ -59,16 +59,29 @@ function selectionColor(): ColorToken | null {
 interface BarPosition {
   /** Left edge in px (already clamped to the viewport). */
   left: number;
-  /** Top edge in px (above the selection rect). */
+  /**
+   * Vertical anchor in px. When `placement` is `"above"` this is the bar's
+   * BOTTOM edge (it is pulled up its own height via `translateY(-100%)`); when
+   * `"below"` it is the bar's top edge.
+   */
   top: number;
+  /**
+   * Side of the selection the bar sits on. Anchoring the bottom edge for
+   * `"above"` (via the CSS translate) means the bar never overlaps the selected
+   * text regardless of its measured height — the height is needed only to decide
+   * whether it fits above, never to keep it clear of the selection.
+   */
+  placement: "above" | "below";
 }
 
-/** Vertical gap between the selection's top and the bar's bottom. */
+/** Vertical gap between the selection rect and the nearest bar edge. */
 const BAR_GAP = 8;
 /** Horizontal viewport inset the bar is clamped to. */
 const VIEWPORT_INSET = 8;
 /** Estimated bar width used for initial horizontal clamping before measure. */
 const BAR_EST_WIDTH = 200;
+/** Estimated bar height used for the above/below flip decision before measure. */
+const BAR_EST_HEIGHT = 44;
 
 /**
  * Floating selection format toolbar host. Mounted inside every block composer.
@@ -80,9 +93,12 @@ const BAR_EST_WIDTH = 200;
  * selection collapses, lands in another editor, or the editor blurs.
  *
  * Positioning: the bar is portaled through `ViewportOverlay` (so `fixed` resolves
- * against the real viewport, never a transformed ancestor) above the selection,
- * horizontally clamped into view. The overlay root is `pointer-events-none` so it
- * never blocks clicks elsewhere; only the bar itself is interactive.
+ * against the real viewport, never a transformed ancestor) above the selection —
+ * flipping below it when there's no room above — and horizontally clamped into
+ * view. When above, its bottom edge is anchored to the selection via a CSS
+ * `translateY(-100%)` so it never covers the selected text regardless of its
+ * height. The overlay root is `pointer-events-none` so it never blocks clicks
+ * elsewhere; only the bar itself is interactive.
  *
  * No flicker / no focus steal: position+visibility update synchronously on
  * selection change (no async layout), and the bar's pointer-events are isolated
@@ -95,7 +111,11 @@ export function FormatToolbarPlugin() {
   const [active, setActive] = useState<Record<Mark, boolean>>(emptyActive);
   const [link, setLink] = useState<string | null>(null);
   const [color, setColor] = useState<ColorToken | null>(null);
-  const [position, setPosition] = useState<BarPosition>({ left: 0, top: 0 });
+  const [position, setPosition] = useState<BarPosition>({
+    left: 0,
+    top: 0,
+    placement: "above",
+  });
   const barRef = useRef<HTMLElement>(null);
   // While a control's popover is open it pins the bar visible so blurring the
   // editor into the popover input doesn't collapse the selection and tear the
@@ -135,14 +155,21 @@ export function FormatToolbarPlugin() {
     setColor(selectionColor());
 
     // Measure the rendered bar if present; otherwise estimate so the first frame
-    // is already clamped (avoids a one-frame jump off-screen).
+    // is already clamped (avoids a one-frame jump off-screen). On a fresh
+    // selection the bar isn't mounted yet, so its real height is unknown — the
+    // `translateY(-100%)` anchor below keeps it clear of the selection regardless,
+    // and the estimate only needs to be close enough for the flip decision.
     const barWidth = barRef.current?.offsetWidth || BAR_EST_WIDTH;
-    const barHeight = barRef.current?.offsetHeight ?? 0;
+    const barHeight = barRef.current?.offsetHeight || BAR_EST_HEIGHT;
     const centeredLeft = rect.left + rect.width / 2 - barWidth / 2;
     const maxLeft = window.innerWidth - barWidth - VIEWPORT_INSET;
     const left = Math.max(VIEWPORT_INSET, Math.min(centeredLeft, maxLeft));
-    const top = rect.top - barHeight - BAR_GAP;
-    setPosition({ left, top });
+    // Prefer sitting above the selection; flip below when the bar wouldn't clear
+    // the top of the viewport.
+    const fitsAbove = rect.top - barHeight - BAR_GAP >= VIEWPORT_INSET;
+    const placement: BarPosition["placement"] = fitsAbove ? "above" : "below";
+    const top = fitsAbove ? rect.top - BAR_GAP : rect.bottom + BAR_GAP;
+    setPosition({ left, top, placement });
     setVisible(true);
   }, []);
 
@@ -188,7 +215,14 @@ export function FormatToolbarPlugin() {
           level="overlay"
           // eslint-disable-next-line spacing/no-adhoc-spacing -- absolute-positioned floating bar placed at a computed viewport coordinate (inside the fixed-inset-0 overlay), not sibling rhythm
           className="pointer-events-auto absolute p-2xs"
-          style={{ left: position.left, top: position.top }}
+          style={{
+            left: position.left,
+            top: position.top,
+            // "above": anchor the bar's bottom edge at `top` by lifting it its
+            // own height, so it always clears the selection without measuring.
+            transform:
+              position.placement === "above" ? "translateY(-100%)" : undefined,
+          }}
         >
           <Stack direction="row" gap="2xs" align="center">
             <Editor.FormatAction.Render />
