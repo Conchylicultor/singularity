@@ -7,19 +7,30 @@ import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import {
   bringWindowToFront,
   restoreWindow,
+  useDesktops,
   useFloatingWindows,
   windowForTab,
   type FloatingWindow,
 } from "../hooks/use-floating-windows";
+import { WorkspacePager } from "./workspace-pager";
 
 /**
  * The desktop dock (taskbar) for floating windows — the floating placement's
- * {@link PlacementDef.Foreground}, rendered once above all windows whenever >= 1
- * tab is floating. A macOS-style centered, translucent bar: one chip per
- * **window** (active member's app icon + title, suffixed ` (N)` when the window
- * groups several tabs). The focused (and visible) window reads as active;
- * minimized windows dim, since they have fully left the desktop. It is the
- * restore target once a window is minimized.
+ * {@link PlacementDef.Foreground}, rendered once above all windows whenever the
+ * floating Foreground is mounted. A macOS-style centered, translucent bar: one
+ * chip per **window on the active virtual desktop** (active member's app icon +
+ * title, suffixed ` (N)` when the window groups several tabs). The focused (and
+ * visible) window reads as active; minimized windows dim, since they have fully
+ * left the desktop. It is the restore target once a window is minimized.
+ *
+ * Its LEFT segment hosts the {@link WorkspacePager} — the per-desktop pager —
+ * separated from the window chips by a thin divider, so the whole thing reads as
+ * one cohesive bottom shelf (KDE / ChromeOS pattern) rather than two competing
+ * centered bars. The pager organizes windows; like the dock it is still
+ * windows/organization-only, never an app launcher (see this plugin's CLAUDE.md
+ * passive-backdrop invariant). The bar therefore always renders while the
+ * Foreground is mounted — even when the active desktop has zero windows, the user
+ * must still see and switch desktops.
  *
  * Click follows the taskbar convention: the already-focused, non-minimized
  * window minimizes (toggles back to the dock); any other (or a minimized) window
@@ -31,6 +42,7 @@ import {
 export function WindowDock({ tabIds }: { tabIds: string[] }) {
   const { tabs, titles, focusedTabId, focusTab } = useTabs();
   const map = useFloatingWindows();
+  const { activeDesktopId } = useDesktops();
   const apps = Apps.App.useContributions();
 
   // tabId → Tab, so each chip can resolve its app (icon / tooltip) from appId.
@@ -42,8 +54,9 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
 
   // Windows in the open-tab order: walk the open floating tabIds, mapping each to
   // its window and deduping (so a grouped window appears once, at its first
-  // member's position). Keeps the dock ordering stable and aligned with the
-  // apps tab order, exactly like cycle order.
+  // member's position). Filtered to the ACTIVE desktop — off-desktop windows are
+  // hidden (display:none) and must not appear as taskbar chips. Keeps the dock
+  // ordering stable and aligned with the apps tab order, exactly like cycle order.
   const windows = useMemo(() => {
     const seen = new Set<string>();
     const out: FloatingWindow[] = [];
@@ -51,14 +64,12 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
       const wid = windowForTab(tabId);
       if (!wid || seen.has(wid)) continue;
       const win = map.get(wid);
-      if (!win) continue;
+      if (!win || win.desktopId !== activeDesktopId) continue;
       seen.add(wid);
       out.push(win);
     }
     return out;
-  }, [tabIds, map]);
-
-  if (windows.length === 0) return null;
+  }, [tabIds, map, activeDesktopId]);
 
   return (
     // The bottom-centered floating dock anchor over the desktop. This is the one
@@ -71,6 +82,16 @@ export function WindowDock({ tabIds }: { tabIds: string[] }) {
         gap="xs"
         className="pointer-events-auto rounded-lg border bg-muted/70 px-sm py-xs shadow-lg backdrop-blur"
       >
+        {/* Per-desktop workspace pager on the LEFT, then a thin divider, then the
+            active desktop's window chips — one cohesive bottom shelf. The divider
+            is dropped when there are no chips (empty active desktop = pager only). */}
+        <WorkspacePager />
+        {windows.length > 0 && (
+          // A 1px hairline separating the pager from the chips. No layout
+          // primitive models an in-row divider; the smallest acceptable construct.
+          // eslint-disable-next-line layout/no-adhoc-layout -- genuine one-off: in-row hairline divider between the pager and the window chips; no primitive models it
+          <div aria-hidden className="w-px self-stretch bg-border" />
+        )}
         {windows.map((win) => {
           const tab = byTabId.get(win.activeTabId);
           const app = apps.find((a) => a.id === tab?.appId);

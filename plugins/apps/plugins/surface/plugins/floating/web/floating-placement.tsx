@@ -7,11 +7,14 @@ import {
   type PlacementDef,
 } from "@plugins/apps/plugins/surface/web";
 import {
+  createDesktop,
   mergeTabIntoWindow,
+  moveWindowToDesktop,
   reorderMember,
   setActiveMember,
   splitTabToNewWindow,
   toggleWindowPin,
+  useDesktops,
   useFloatingWindows,
   useTabWindow,
 } from "./hooks/use-floating-windows";
@@ -72,6 +75,7 @@ export const floatingDef: PlacementDef = {
 function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   const { window: win, isActive, setGeo, bringToFront } = useTabWindow(tabId);
   const windows = useFloatingWindows();
+  const { desktops, activeDesktopId } = useDesktops();
   const { tabs, titles, focusTab, closeTab } = useTabs();
   const apps = Apps.App.useContributions();
   const { setContainerStyle, setContentInsetStyle, setContainerPointerDownCapture } =
@@ -106,11 +110,16 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
   );
   const windowClosing = exiting && win.members.every((m) => !liveIds.has(m));
 
+  // Virtual-desktop visibility: a window off the active desktop is hidden
+  // (display:none, kept mounted) so a desktop switch is instant with no remount.
+  const onActiveDesktop = win.desktopId === activeDesktopId;
+
   const { containerStyle, hidden } = useFloatingWindowStyle(
     win,
     isActive,
     windowClosing,
     focused,
+    onActiveDesktop,
   );
   const insetStyle = useMemo(
     () => (hidden ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET }),
@@ -197,6 +206,20 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
     [win.activeTabId],
   );
 
+  // Move-to-desktop (system-menu submenu). Moving via the menu deliberately does
+  // NOT switch the active desktop (macOS "move to desktop" behaviour): the window
+  // simply leaves the current desktop and disappears; the user stays put. "New
+  // desktop" mints one and moves the window there, again without following.
+  const onMoveToDesktop = useCallback(
+    (desktopId: string) => moveWindowToDesktop(win.id, desktopId),
+    [win.id],
+  );
+
+  const onMoveToNewDesktop = useCallback(() => {
+    const id = createDesktop();
+    moveWindowToDesktop(win.id, id);
+  }, [win.id]);
+
   // Commit ops for a finished tab-chip drag. reorder/merge mutate the strip;
   // split tears off at the drop point. Each ends by focusing the moved tab so it
   // is shown + focused in its new home (merge/split already set it active in the
@@ -233,6 +256,10 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
       mergeTargets={mergeTargets}
       onMergeInto={onMergeInto}
       onSplit={onSplit}
+      desktops={desktops}
+      currentDesktopId={win.desktopId}
+      onMoveToDesktop={onMoveToDesktop}
+      onMoveToNewDesktop={onMoveToNewDesktop}
       dragCommit={dragCommit}
     />
   );

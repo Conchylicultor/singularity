@@ -177,12 +177,20 @@ export interface WindowStyle {
  * collapse to the old instant show/hide. The box itself always comes from the
  * geometry store; this layer only adds `transition` (suppressed mid-drag) and the
  * transform/opacity of the open/minimize tweens on top.
+ *
+ * `onActiveDesktop` folds the virtual-desktop visibility in: a window on a
+ * non-active desktop is `display:none` (it stays mounted = keep-alive, so a
+ * desktop switch is instant with no remount), with NO transition — it is not an
+ * animated minimize, it simply isn't on this desktop. Phase logic is untouched:
+ * phases are driven by minimize/close/intro-consume, never by the desktop, so an
+ * off-desktop window never spuriously enters an enter/exit tween.
  */
 export function useFloatingWindowStyle(
   win: FloatingWindow,
   isActive: boolean,
   closing: boolean,
   focused: boolean,
+  onActiveDesktop: boolean,
 ): WindowStyle {
   const reduced = usePrefersReducedMotion();
   const dragging = useWindowInteracting(win.id);
@@ -262,15 +270,18 @@ export function useFloatingWindowStyle(
       ? snapBox(geo.snap)
       : { left: geo.x, top: geo.y, width: geo.w, height: geo.h };
 
-    // Fully hidden: an inactive member, a settled-minimized window, or a window
-    // that is flagged minimized while resting (hydrated-minimized / reduced). A
-    // `closing` window must keep painting to animate, so it is never hidden by the
-    // resting-minimized rules below (the `closing` arm short-circuits them).
+    // Fully hidden: off the active virtual desktop, an inactive member, a
+    // settled-minimized window, or a window that is flagged minimized while
+    // resting (hydrated-minimized / reduced). Off-desktop hides unconditionally
+    // (even while closing — a window closing on another desktop need not animate
+    // where it can't be seen); otherwise a `closing` window keeps painting to
+    // animate, so it is never hidden by the resting-minimized rules below.
     const hidden =
-      phase !== "closing" &&
-      (!isActive ||
-        phase === "minimized" ||
-        ((phase === "normal" || phase === "intro") && geo.minimized));
+      !onActiveDesktop ||
+      (phase !== "closing" &&
+        (!isActive ||
+          phase === "minimized" ||
+          ((phase === "normal" || phase === "intro") && geo.minimized)));
 
     let transform: string | undefined;
     let opacity: number | undefined;
@@ -329,5 +340,15 @@ export function useFloatingWindowStyle(
     };
 
     return { containerStyle, hidden };
-  }, [geo, isActive, phase, play, boxReady, dragging, reduced, focused]);
+  }, [
+    geo,
+    isActive,
+    phase,
+    play,
+    boxReady,
+    dragging,
+    reduced,
+    focused,
+    onActiveDesktop,
+  ]);
 }

@@ -1,8 +1,10 @@
 import {
+  MdAdd,
   MdAspectRatio,
   MdCallSplit,
   MdClose,
   MdCropSquare,
+  MdDesktopWindows,
   MdFilterNone,
   MdOpenWith,
   MdPushPin,
@@ -22,7 +24,7 @@ import {
   DropdownMenuTrigger,
 } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { formatShortcutLabel } from "@plugins/primitives/plugins/shortcuts/web";
-import type { Geometry, WindowId } from "../hooks/use-floating-windows";
+import type { Desktop, Geometry, WindowId } from "../hooks/use-floating-windows";
 
 /** A merge target offered in the "Merge into ▸" submenu (another open window). */
 export interface MergeTarget {
@@ -59,6 +61,14 @@ interface WindowSystemMenuProps {
   canSplit: boolean;
   /** Tear this window's active tab out into a new window. */
   onSplit: () => void;
+  /** Every virtual desktop, for the "Move to desktop ▸" submenu. */
+  desktops: Desktop[];
+  /** The desktop this window currently lives on (checked + disabled). */
+  currentDesktopId: string;
+  /** Move this window to an existing desktop. */
+  onMoveToDesktop: (desktopId: string) => void;
+  /** Move this window to a freshly-created desktop. */
+  onMoveToNewDesktop: () => void;
 }
 
 /**
@@ -87,6 +97,10 @@ export function WindowSystemMenu({
   onMergeInto,
   canSplit,
   onSplit,
+  desktops,
+  currentDesktopId,
+  onMoveToDesktop,
+  onMoveToNewDesktop,
 }: WindowSystemMenuProps) {
   const maximized = geo.snap === "maximize";
   const snapped = geo.snap !== null;
@@ -173,6 +187,33 @@ export function WindowSystemMenu({
           <MdCallSplit />
           Move tab to new window
         </DropdownMenuItem>
+        <DropdownMenuSeparator />
+        {/* Send the whole window to another virtual desktop (or a new one). The
+            current desktop is checked + disabled; "New desktop" mints + moves. */}
+        <DropdownMenuSub>
+          <DropdownMenuSubTrigger>
+            <MdDesktopWindows />
+            Move to desktop
+          </DropdownMenuSubTrigger>
+          <DropdownMenuSubContent>
+            {desktops.map((desktop, index) => (
+              <DropdownMenuCheckboxItem
+                key={desktop.id}
+                checked={desktop.id === currentDesktopId}
+                disabled={desktop.id === currentDesktopId}
+                onClick={() => onMoveToDesktop(desktop.id)}
+              >
+                <MdDesktopWindows />
+                {`Desktop ${index + 1}`}
+              </DropdownMenuCheckboxItem>
+            ))}
+            <DropdownMenuSeparator />
+            <DropdownMenuItem onClick={onMoveToNewDesktop}>
+              <MdAdd />
+              New desktop
+            </DropdownMenuItem>
+          </DropdownMenuSubContent>
+        </DropdownMenuSub>
         <DropdownMenuSeparator />
         {/* Closes the WHOLE window (every member); per-tab close is the chip ×
             and the `mod+w` shortcut, which act on the active member alone. */}

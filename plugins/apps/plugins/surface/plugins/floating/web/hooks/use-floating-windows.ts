@@ -35,6 +35,19 @@ export interface Geometry {
 export type WindowId = string;
 
 /**
+ * A virtual desktop (workspace): a logical grouping of windows over the single
+ * floating surface — the macOS Spaces / GNOME workspaces model. There is NO
+ * multi-monitor concept; a desktop is purely a window grouping. Switching
+ * desktops re-uses the keep-alive "hidden" mechanism (off-desktop windows stay
+ * mounted but `display:none`), so a switch is instant with zero remounts. Pills
+ * are numbered (1..N); `name` is reserved for a later rename affordance.
+ */
+export interface Desktop {
+  id: string;
+  name?: string;
+}
+
+/**
  * A floating **window** — the geometry-owning unit. A window holds an ordered
  * list of member tabIds (the tab-strip order) and the one `activeTabId` it
  * currently shows; every other member stays mounted but hidden. By default each
@@ -47,6 +60,12 @@ export interface FloatingWindow {
   members: string[];
   /** The shown member; every other member is mounted-but-hidden. */
   activeTabId: string;
+  /**
+   * The virtual desktop this window lives on — a window-organization property,
+   * NOT part of {@link Geometry}'s box/chrome. Off-active-desktop windows stay
+   * mounted but hidden (`display:none`). New windows mint on the active desktop.
+   */
+  desktopId: string;
   geo: Geometry;
 }
 
@@ -99,6 +118,21 @@ function mintWindowId(): WindowId {
   return `w${++nextWindowId}`;
 }
 
+// Virtual-desktop state, mirroring the window store's shape: a module-global
+// ordered list + the active id, both persisted alongside the windows map. Ids
+// mint monotonically (`d1, d2, …`). A default `d1` is guaranteed to exist after
+// `hydrate()`, so `activeDesktopId` always points at a real desktop.
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: virtual desktops group the page-global floating windows across every keep-alive surface mount (never per-surface), mirroring the module-global windows map beside it.
+let desktops: Desktop[] = [];
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: the active virtual desktop for the (single) floating surface, mirroring this plugin's module-global window store.
+let activeDesktopId = "";
+
+/** Monotonic desktop-id counter (deterministic, mirrors the window-id counter). */
+let nextDesktopId = 0;
+function mintDesktopId(): string {
+  return `d${++nextDesktopId}`;
+}
+
 /**
  * Windows freshly *minted* this session (a new floating tab, a tear-off split) —
  * NOT hydrated from a prior session or formed by a merge. The chrome consumes the
@@ -143,10 +177,27 @@ function rebuildSnapshot() {
   snapshot = new Map(windows);
 }
 
-/** Recompute the reverse index + snapshot together (every structural mutation). */
+/**
+ * The reactive desktop-state snapshot returned by {@link useDesktops}. Like
+ * {@link snapshot} it is a STABLE reference between mutations (rebuilt only in
+ * {@link reindex}) so `useSyncExternalStore`'s `getSnapshot` never reports a
+ * phantom change and loops.
+ */
+// eslint-disable-next-line scoped-store/no-module-mutable-store -- page-global by design: a derived cache of the page-global desktop list + active id (shared across every keep-alive surface mount, never per-surface), mirroring the module-global store this file is.
+let desktopSnapshot: { desktops: Desktop[]; activeDesktopId: string } = {
+  desktops: [],
+  activeDesktopId: "",
+};
+
+function rebuildDesktopSnapshot() {
+  desktopSnapshot = { desktops: [...desktops], activeDesktopId };
+}
+
+/** Recompute the reverse index + snapshots together (every structural mutation). */
 function reindex() {
   rebuildTabIndex();
   rebuildSnapshot();
+  rebuildDesktopSnapshot();
 }
 
 function notify() {
@@ -177,14 +228,22 @@ function reorder() {
 
 const LS_KEY = () => `app-windows:${getTabId()}`;
 
-/** The persisted shape of a window (drops nothing — members + active + geo). */
+/** The persisted shape of a window (members + active + desktop + geo). */
 interface PersistedWindow {
   members: string[];
   activeTabId: string;
+  desktopId: string;
   geo: Geometry;
 }
 
-/** Whole-map serialization to sessionStorage (per browser tab, like PersistedTabs). */
+/** The persisted whole-store shape (windows map + the desktop layout). */
+interface PersistedStore {
+  windows: Record<WindowId, PersistedWindow>;
+  desktops: Desktop[];
+  activeDesktopId: string;
+}
+
+/** Whole-store serialization to sessionStorage (per browser tab, like PersistedTabs). */
 function persist() {
   if (typeof window === "undefined") return;
   try {
@@ -193,9 +252,15 @@ function persist() {
       record[id] = {
         members: win.members,
         activeTabId: win.activeTabId,
+        desktopId: win.desktopId,
         geo: win.geo,
       };
-    sessionStorage.setItem(LS_KEY(), JSON.stringify(record));
+    const store: PersistedStore = {
+      windows: record,
+      desktops,
+      activeDesktopId,
+    };
+    sessionStorage.setItem(LS_KEY(), JSON.stringify(store));
   } catch (err) {
     if (!(err instanceof DOMException)) throw err;
   }
@@ -217,20 +282,59 @@ function normalizeGeo(geo: Geometry): Geometry {
   return normalized;
 }
 
-// Hydrate the whole map once on first read, so cascade defaults pick up from the
-// persisted count and z-order resumes above the highest stored z.
+/**
+ * Mint and register the default desktop (`d1`) and make it active. Called from
+ * {@link hydrate} so a default desktop always exists after first access — every
+ * window can resolve a real `desktopId` and `activeDesktopId` is never empty.
+ */
+function ensureDefaultDesktop() {
+  if (desktops.length > 0) return;
+  const id = mintDesktopId();
+  desktops = [{ id }];
+  activeDesktopId = id;
+}
+
+// Hydrate the whole store once on first read, so cascade defaults pick up from
+// the persisted count and z-order resumes above the highest stored z, and the
+// desktop layout (or a freshly-minted default for legacy sessions) is restored.
 let hydrated = false;
 function hydrate() {
   if (hydrated || typeof window === "undefined") return;
   hydrated = true;
   try {
     const raw = sessionStorage.getItem(LS_KEY());
-    if (!raw) return;
-    const record = JSON.parse(raw) as Record<string, unknown>;
-    for (const [key, value] of Object.entries(record)) {
+    if (!raw) {
+      ensureDefaultDesktop();
+      reindex();
+      return;
+    }
+    const parsed = JSON.parse(raw) as Record<string, unknown>;
+    // The current shape carries a `windows` key; its absence marks a legacy
+    // session — a bare `Record<WindowId, PersistedWindow>` (or the even older
+    // `Record<tabId, Geometry>`), where the parsed object IS the windows record.
+    const legacy = !("windows" in parsed);
+    const store = parsed as Partial<PersistedStore>;
+    const windowsRecord = (
+      legacy ? parsed : (store.windows ?? {})
+    ) as Record<string, unknown>;
+
+    // Restore (or mint a default) desktop layout BEFORE the windows, so legacy
+    // windows can land on the default desktop and `nextDesktopId` is kept ahead
+    // of any persisted `d<N>` id (mirroring how `nextWindowId` is kept ahead).
+    if (!legacy && store.desktops && store.desktops.length > 0) {
+      desktops = store.desktops;
+      for (const d of desktops) {
+        const m = /^d(\d+)$/.exec(d.id);
+        if (m && Number(m[1]) > nextDesktopId) nextDesktopId = Number(m[1]);
+      }
+    }
+    ensureDefaultDesktop();
+
+    for (const [key, value] of Object.entries(windowsRecord)) {
       // Legacy shape: `Record<tabId, Geometry>` (no `members` field) — wrap each
       // entry as a singleton window keyed by its own (legacy = tabId) key, so a
-      // session persisted before window-grouping migrates losslessly.
+      // session persisted before window-grouping migrates losslessly. A window
+      // missing `desktopId` (any legacy shape) lands on the default desktop.
       const entry = value as Partial<PersistedWindow> & Geometry;
       const win: FloatingWindow =
         entry.members === undefined
@@ -238,12 +342,14 @@ function hydrate() {
               id: key,
               members: [key],
               activeTabId: key,
+              desktopId: activeDesktopId,
               geo: normalizeGeo(value as Geometry),
             }
           : {
               id: key,
               members: entry.members,
               activeTabId: entry.activeTabId ?? entry.members[0]!,
+              desktopId: entry.desktopId ?? activeDesktopId,
               geo: normalizeGeo(entry.geo as Geometry),
             };
       windows.set(win.id, win);
@@ -253,6 +359,16 @@ function hydrate() {
       const m = /^w(\d+)$/.exec(win.id);
       if (m && Number(m[1]) > nextWindowId) nextWindowId = Number(m[1]);
     }
+
+    // Restore the active desktop only if it still names a real desktop; else fall
+    // back to the first, so `activeDesktopId` always points at an existing one.
+    if (
+      !legacy &&
+      store.activeDesktopId &&
+      desktops.some((d) => d.id === store.activeDesktopId)
+    )
+      activeDesktopId = store.activeDesktopId;
+
     reindex();
   } catch (err) {
     if (!(err instanceof DOMException)) throw err;
@@ -295,6 +411,7 @@ function readWindowForTab(tabId: string): FloatingWindow {
     id,
     members: [tabId],
     activeTabId: tabId,
+    desktopId: activeDesktopId,
     geo: defaultGeometry(),
   });
   reorder();
@@ -401,6 +518,7 @@ export function splitTabToNewWindow(
     id,
     members: [tabId],
     activeTabId: tabId,
+    desktopId: activeDesktopId,
     geo: point ? { ...geo, x: point.x, y: point.y } : geo,
   });
   reorder();
@@ -581,6 +699,112 @@ export function snapWindowDirection(windowId: WindowId, dir: SnapDirection) {
   persist();
   notify();
   if (geo.minimized) bringWindowToFront(windowId);
+}
+
+/**
+ * Mint a new virtual desktop, appended to the end of the list. With
+ * `activate: true` it becomes the active desktop (the workspace-pager "+" path);
+ * otherwise the active desktop is unchanged (e.g. moving a window past the last
+ * desktop creates one without yanking the user there). Returns the new id.
+ */
+export function createDesktop(opts?: { activate?: boolean }): string {
+  hydrate();
+  const id = mintDesktopId();
+  desktops = [...desktops, { id }];
+  if (opts?.activate) activeDesktopId = id;
+  persist();
+  notify();
+  return id;
+}
+
+/**
+ * Remove a virtual desktop. No-op when it's the last desktop (there is always at
+ * least one). Every window on it is reassigned to the adjacent desktop (the prior
+ * one in list order, else the next); if the removed desktop was active, the same
+ * neighbour becomes active so the user lands on the windows that just moved.
+ */
+export function removeDesktop(id: string) {
+  hydrate();
+  if (desktops.length <= 1) return;
+  const idx = desktops.findIndex((d) => d.id === id);
+  if (idx === -1) return;
+  const neighbour = desktops[idx - 1] ?? desktops[idx + 1]!;
+  for (const [wid, win] of windows)
+    if (win.desktopId === id)
+      windows.set(wid, { ...win, desktopId: neighbour.id });
+  desktops = desktops.filter((d) => d.id !== id);
+  if (activeDesktopId === id) activeDesktopId = neighbour.id;
+  persist();
+  notify();
+}
+
+/** Switch the active desktop (no-op if unknown or already active). */
+export function setActiveDesktop(id: string) {
+  hydrate();
+  if (id === activeDesktopId || !desktops.some((d) => d.id === id)) return;
+  activeDesktopId = id;
+  persist();
+  notify();
+}
+
+/** Reassign a window to a desktop (no-op if the window/desktop is unknown or unchanged). */
+export function moveWindowToDesktop(windowId: WindowId, desktopId: string) {
+  hydrate();
+  const win = windows.get(windowId);
+  if (!win || win.desktopId === desktopId) return;
+  if (!desktops.some((d) => d.id === desktopId)) return;
+  windows.set(windowId, { ...win, desktopId });
+  persist();
+  notify();
+}
+
+/**
+ * The highest-`z`, non-minimized window on a desktop (the focus target when
+ * switching to it). Returns undefined when the desktop has no non-minimized
+ * window — an empty (or all-minimized) desktop simply gets no focus on switch.
+ */
+export function topmostWindowOnDesktop(id: string): FloatingWindow | undefined {
+  hydrate();
+  let top: FloatingWindow | undefined;
+  for (const win of windows.values()) {
+    if (win.desktopId !== id || win.geo.minimized) continue;
+    if (!top || win.geo.z > top.geo.z) top = win;
+  }
+  return top;
+}
+
+/** Imperative read of the desktop layout (commands), mirroring {@link getFloatingWindow}. */
+export function getDesktopsState(): {
+  desktops: Desktop[];
+  activeDesktopId: string;
+} {
+  hydrate();
+  return { desktops, activeDesktopId };
+}
+
+/**
+ * Reactive read of the virtual-desktop layout (pager / chrome). Returns the
+ * module desktop snapshot — a stable reference between mutations (rebuilt only in
+ * `reindex`), so `useSyncExternalStore` never sees a phantom change.
+ */
+export function useDesktops(): { desktops: Desktop[]; activeDesktopId: string } {
+  return useSyncExternalStore(
+    (cb) => {
+      subscribers.add(cb);
+      return () => subscribers.delete(cb);
+    },
+    // Hydrate on first read so the default desktop exists before first paint
+    // (mirrors `useTabWindow`, whose getSnapshot resolves through `hydrate`); the
+    // returned reference stays stable between mutations so the store never loops.
+    () => readDesktopSnapshot(),
+    () => desktopSnapshot,
+  );
+}
+
+/** Hydrate-then-read the desktop snapshot (the client getSnapshot for {@link useDesktops}). */
+function readDesktopSnapshot(): { desktops: Desktop[]; activeDesktopId: string } {
+  hydrate();
+  return desktopSnapshot;
 }
 
 /**

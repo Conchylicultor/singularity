@@ -7,7 +7,9 @@ import {
   closeFocusedWindow,
   cycleWindows,
   minimizeFocusedWindow,
+  moveFocusedWindowByDelta,
   snapFocusedWindow,
+  switchDesktopByDelta,
   togglePinFocusedWindow,
 } from "./window-commands";
 
@@ -106,6 +108,41 @@ export default {
       group: "Window",
       when: () => getFocusedPlacement() === "floating",
       handler: () => cycleWindows(-1),
+    }),
+    // Virtual-desktop (workspace) navigation. Page keys keep the Ctrl+Alt
+    // window-manager modifier family but stay collision-free with the
+    // Ctrl+Alt+arrow snap shortcuts; Shift moves the focused window across.
+    defineShortcut({
+      id: "floating.desktop-next",
+      keys: "ctrl+alt+pagedown",
+      label: "Next desktop",
+      group: "Window",
+      when: () => getFocusedPlacement() === "floating",
+      handler: () => switchDesktopByDelta(1),
+    }),
+    defineShortcut({
+      id: "floating.desktop-prev",
+      keys: "ctrl+alt+pageup",
+      label: "Previous desktop",
+      group: "Window",
+      when: () => getFocusedPlacement() === "floating",
+      handler: () => switchDesktopByDelta(-1),
+    }),
+    defineShortcut({
+      id: "floating.window-to-next-desktop",
+      keys: "ctrl+alt+shift+pagedown",
+      label: "Move window to next desktop",
+      group: "Window",
+      when: () => getFocusedPlacement() === "floating",
+      handler: () => moveFocusedWindowByDelta(1),
+    }),
+    defineShortcut({
+      id: "floating.window-to-prev-desktop",
+      keys: "ctrl+alt+shift+pageup",
+      label: "Move window to previous desktop",
+      group: "Window",
+      when: () => getFocusedPlacement() === "floating",
+      handler: () => moveFocusedWindowByDelta(-1),
     }),
   ],
 } satisfies PluginDefinition;

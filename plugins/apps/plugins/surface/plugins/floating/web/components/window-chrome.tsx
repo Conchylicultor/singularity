@@ -20,6 +20,7 @@ import { Surface } from "@plugins/primitives/plugins/css/plugins/surface/web";
 import {
   clampToBounds,
   type Bounds,
+  type Desktop,
   type FloatingWindow,
   type Geometry,
   type WindowId,
@@ -67,6 +68,14 @@ interface WindowChromeProps {
   onMergeInto: (targetWindowId: WindowId) => void;
   /** Tear the active tab out into a new window (enabled when grouped). */
   onSplit: () => void;
+  /** Every virtual desktop, for the "Move to desktop ▸" submenu. */
+  desktops: Desktop[];
+  /** The desktop this window currently lives on (checked + disabled in the menu). */
+  currentDesktopId: string;
+  /** Move this window to an existing desktop. */
+  onMoveToDesktop: (desktopId: string) => void;
+  /** Move this window to a freshly-created desktop. */
+  onMoveToNewDesktop: () => void;
   /** Commit ops for a finished tab-chip drag (reorder / merge / split). */
   dragCommit: TabDragCommit;
 }
@@ -95,6 +104,10 @@ export function WindowChrome({
   mergeTargets,
   onMergeInto,
   onSplit,
+  desktops,
+  currentDesktopId,
+  onMoveToDesktop,
+  onMoveToNewDesktop,
   dragCommit,
 }: WindowChromeProps) {
   const geo = win.geo;
@@ -382,6 +395,10 @@ export function WindowChrome({
         onMergeInto={onMergeInto}
         canSplit={canSplit}
         onSplit={onSplit}
+        desktops={desktops}
+        currentDesktopId={currentDesktopId}
+        onMoveToDesktop={onMoveToDesktop}
+        onMoveToNewDesktop={onMoveToNewDesktop}
       />
     </>
   );
