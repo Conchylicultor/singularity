@@ -110,8 +110,10 @@ const check: Check = {
 
     // Orphan pass: any `*.origin.jsonc` on disk that `renderConfigOriginContent`
     // did not produce is no longer backed by a `defineConfig` (its descriptor was
-    // moved or removed). The codegen never deletes stale origins, so without this
-    // they accumulate as committed dead duplicates. `expected` keys are relative
+    // moved or removed). `./singularity build` now prunes these via
+    // `pruneOrphanedConfigFiles`, so a normal build self-heals — but this pass
+    // remains the guard for orphans committed WITHOUT a build (e.g. a descriptor
+    // deleted and pushed straight from a hand edit). `expected` keys are relative
     // to configDir; `allConfigFiles` are relative to root — normalize via relative().
     const orphans: string[] = [];
     for (const relFromRoot of allConfigFiles) {
@@ -123,7 +125,7 @@ const check: Check = {
       return {
         ok: false,
         message: `Orphaned origin file(s) no longer backed by any defineConfig:\n  ${orphans.join("\n  ")}`,
-        hint: "These were generated for a config descriptor that was moved or removed. Delete them (`git rm`), then re-run the check.",
+        hint: "These were generated for a config descriptor that was moved or removed. Run `./singularity build` to prune them automatically (or `git rm` them), then re-run the check.",
       };
     }
 

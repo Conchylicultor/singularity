@@ -1,6 +1,6 @@
 import { existsSync, mkdirSync, readFileSync, writeFileSync, renameSync, unlinkSync, readdirSync, rmdirSync } from "fs";
 import { randomUUID } from "crypto";
-import { dirname, join } from "path";
+import { dirname, join, relative } from "path";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildEnrichedTree } from "./docgen";
 import { computeHash, effective, propagate, readonlyProxy, stringifyConfigValue, APP_SCOPE_DIR } from "@plugins/config_v2/core";
@@ -327,6 +327,99 @@ export async function loadConfigDescriptorsByOriginPath(opts: {
   return result;
 }
 
+/**
+ * Resolve the (hierarchyPath, descriptor name) a config file is governed by — the
+ * descriptor whose presence keeps the file alive. Mirrors the check's
+ * `stripScopeSegment`: a scoped override (`<hier>/@app/<id>/<name>.jsonc`) is
+ * anchored to its BASE descriptor `<hier>/<name>`, never to the scope dir; a base
+ * value `<hier>/<name>.jsonc` and an origin `<hier>/<name>.origin.jsonc` are
+ * anchored directly. Returns null for non-config files (e.g. `config/CLAUDE.md`).
+ * Paths are relative to `config/`, forward-slash separated.
+ */
+function configFileOwner(relPath: string): { hier: string; name: string } | null {
+  const cut = (p: string, suffix: string): { hier: string; name: string } => {
+    const base = p.slice(0, p.length - suffix.length);
+    const idx = base.lastIndexOf("/");
+    return { hier: idx === -1 ? "" : base.slice(0, idx), name: base.slice(idx + 1) };
+  };
+  if (relPath.endsWith(".origin.jsonc")) return cut(relPath, ".origin.jsonc");
+  if (relPath.endsWith(".jsonc")) {
+    // Scoped delta: strip the trailing `@app/<id>/` segment to recover the base
+    // descriptor key, matching the check's anchor resolution exactly.
+    const scoped = new RegExp(`^(.*)/${APP_SCOPE_DIR}/[^/]+/([^/]+)\\.jsonc$`).exec(relPath);
+    if (scoped) return { hier: scoped[1]!, name: scoped[2]! };
+    return cut(relPath, ".jsonc");
+  }
+  return null;
+}
+
+function walkJsoncFiles(dir: string, baseDir: string, out: string[]): void {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    const full = join(dir, entry.name);
+    if (entry.isDirectory()) walkJsoncFiles(full, baseDir, out);
+    else if (entry.isFile() && entry.name.endsWith(".jsonc"))
+      out.push(relative(baseDir, full).split("\\").join("/"));
+  }
+}
+
+function removeEmptyDirs(dir: string, rootDir: string): void {
+  if (!existsSync(dir)) return;
+  for (const entry of readdirSync(dir, { withFileTypes: true })) {
+    if (entry.isDirectory()) removeEmptyDirs(join(dir, entry.name), rootDir);
+  }
+  if (dir === rootDir) return;
+  if (readdirSync(dir).length > 0) return;
+  try {
+    rmdirSync(dir);
+  } catch (err) {
+    const code = (err as NodeJS.ErrnoException).code;
+    if (code !== "ENOTEMPTY" && code !== "ENOENT") throw err;
+  }
+}
+
+/**
+ * Delete config files (`config/`, git-committed layer) whose owning
+ * `defineConfig` descriptor is no longer live — closing the footgun where
+ * removing a descriptor left orphaned `.origin.jsonc`, `.jsonc`, and `@app/`
+ * scoped deltas committed on disk, displacing a `config-origins-in-sync` failure
+ * onto the next unrelated pusher. Safe to run unconditionally: discovery is
+ * all-or-nothing (it throws on any barrel-import failure), so `liveOriginRelPaths`
+ * is always the complete live set — never a partial view that could delete a real
+ * config. Returns the pruned paths (relative to `config/`) for logging.
+ */
+export function pruneOrphanedConfigFiles(opts: {
+  configDir: string;
+  liveOriginRelPaths: Set<string>;
+}): string[] {
+  if (!existsSync(opts.configDir)) return [];
+
+  // Live descriptors grouped by hierarchy → the set of names that keep files alive.
+  const liveByHier = new Map<string, Set<string>>();
+  for (const relPath of opts.liveOriginRelPaths) {
+    const owner = configFileOwner(relPath);
+    if (!owner) continue;
+    let names = liveByHier.get(owner.hier);
+    if (!names) liveByHier.set(owner.hier, (names = new Set()));
+    names.add(owner.name);
+  }
+
+  const onDisk: string[] = [];
+  walkJsoncFiles(opts.configDir, opts.configDir, onDisk);
+
+  const pruned: string[] = [];
+  for (const relPath of onDisk) {
+    const owner = configFileOwner(relPath);
+    if (!owner) continue;
+    if (liveByHier.get(owner.hier)?.has(owner.name)) continue;
+    unlinkSync(join(opts.configDir, relPath));
+    pruned.push(relPath);
+  }
+
+  if (pruned.length > 0) removeEmptyDirs(opts.configDir, opts.configDir);
+  return pruned;
+}
+
 export async function generateConfigOrigins(opts: {
   root: string;
   originAnnotations?: OriginAnnotationsProvider;
@@ -342,6 +435,19 @@ export async function generateConfigOrigins(opts: {
       mkdirSync(dirname(filePath), { recursive: true });
       writeFileSync(filePath, content);
     }
+  }
+
+  // Prune anything whose descriptor disappeared, so removing a `defineConfig`
+  // never leaves committed orphans that break the repo-wide check downstream.
+  const pruned = pruneOrphanedConfigFiles({
+    configDir,
+    liveOriginRelPaths: new Set(rendered.keys()),
+  });
+  if (pruned.length > 0) {
+    console.warn(
+      `[config-v2] pruned ${pruned.length} orphaned config file(s) no longer backed by defineConfig:`,
+    );
+    for (const p of pruned) console.warn(`  config/${p}`);
   }
 }
 

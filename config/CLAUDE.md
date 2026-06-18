@@ -31,6 +31,10 @@ Customize app `<id>` (e.g. `agent-manager`) for a descriptor:
 
 See `plugins/config_v2/CLAUDE.md` → "App scopes" for resolution semantics and how consumers read scoped values.
 
+## When a descriptor is removed
+
+If a `defineConfig` descriptor is deleted, its files here become orphaned (no live default backs them). `./singularity build` prunes them automatically — the orphaned `.origin.jsonc`, its `.jsonc` override, and any `@app/<id>/<name>.jsonc` scoped deltas — and removes the now-empty directories. Just commit the deletions. The `config-origins-in-sync` check remains a guard for orphans committed without a build.
+
 ## When origin changes
 
 If `defineConfig` defaults change, build regenerates `.origin.jsonc` with a new hash. The `config-origins-in-sync` check fails until you update the `// @hash` in your `.jsonc` override to match. Review the new origin, reconcile your overrides, update the hash.
