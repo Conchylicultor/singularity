@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface AgentListingDeltaPayload {
@@ -51,22 +52,22 @@ export function AgentListingDeltaView({ event }: AttachmentRendererProps) {
           No agents listed.
         </Text>
       ) : (
-        <Text as="ul" variant="caption" className="flex flex-col gap-2xs">
+        <Stack as="ul" gap="2xs">
           {agents.map((agent) => (
-            <li key={agent.name} className="text-muted-foreground">
+            <Text as="li" variant="caption" key={agent.name} className="text-muted-foreground">
               <span className="font-semibold text-foreground">{agent.name}</span>
               {agent.description && (
                 /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from agent name within a text line; not a flex-sibling gap */
                 <span className="ml-1.5 text-muted-foreground/60">— {agent.description}</span>
               )}
-            </li>
+            </Text>
           ))}
           {removed.map((name) => (
-            <li key={name} className="text-muted-foreground line-through">
+            <Text as="li" variant="caption" key={name} className="text-muted-foreground line-through">
               <span className="text-destructive no-underline">−</span> {name}
-            </li>
+            </Text>
           ))}
-        </Text>
+        </Stack>
       )}
     </CollapsibleCard>
   );

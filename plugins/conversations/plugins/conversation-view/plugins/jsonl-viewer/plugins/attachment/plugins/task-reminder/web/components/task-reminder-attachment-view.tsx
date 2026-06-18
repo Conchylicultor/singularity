@@ -1,5 +1,7 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface TaskReminderItem {
@@ -41,30 +43,33 @@ export function TaskReminderAttachmentView({ event }: AttachmentRendererProps) {
           No active tasks.
         </Text>
       ) : (
-        <ul className="flex flex-col gap-xs">
+        <Stack as="ul" gap="xs">
           {att.content.map((task) => (
-            <Text
+            <Frame
               as="li"
-              variant="caption"
               key={task.id}
-              className="flex items-start gap-sm"
-            >
-              <span
-                // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset aligning the status dot with the first line of wrapping subject text; not a sibling gap
-                className={`mt-1.5 size-2 shrink-0 rounded-full ${STATUS_DOT[task.status] ?? DEFAULT_DOT}`}
-              />
-              <span className="min-w-0">
-                <span className="text-foreground">{task.subject}</span>
-                {task.description && (
-                  /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from subject within a text line; not a flex-sibling gap */
-                  <span className="ml-1.5 text-muted-foreground/60 truncate">
-                    — {task.description}
-                  </span>
-                )}
-              </span>
-            </Text>
+              gap="sm"
+              align="start"
+              leading={
+                <span
+                  // eslint-disable-next-line spacing/no-adhoc-spacing -- vertical offset aligning the status dot with the first line of wrapping subject text; not a sibling gap
+                  className={`mt-1.5 size-2 rounded-full ${STATUS_DOT[task.status] ?? DEFAULT_DOT}`}
+                />
+              }
+              content={
+                <Text as="div" variant="caption">
+                  <span className="text-foreground">{task.subject}</span>
+                  {task.description && (
+                    /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from subject within a text line; not a flex-sibling gap */
+                    <span className="ml-1.5 text-muted-foreground/60">
+                      — {task.description}
+                    </span>
+                  )}
+                </Text>
+              }
+            />
           ))}
-        </ul>
+        </Stack>
       )}
     </CollapsibleCard>
   );

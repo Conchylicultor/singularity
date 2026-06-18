@@ -8,6 +8,7 @@ import { RowActions, useRowMarkdown } from "@plugins/conversations/plugins/conve
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 
 type AssistantTextEvent = Extract<JsonlEvent, { kind: "assistant-text" }>;
 
@@ -20,7 +21,9 @@ export function AssistantTextRow({ event }: { event: JsonlEvent }) {
   return (
     <ContentScope>
       <div className="relative px-md py-sm">
-        <RowActions floating className="absolute right-2 top-2 z-raised" />
+        <Pin to="top-right" offset="sm">
+          <RowActions floating />
+        </Pin>
         {markdownMode ? (
           <Text as="div" variant="body">
             {(() => {

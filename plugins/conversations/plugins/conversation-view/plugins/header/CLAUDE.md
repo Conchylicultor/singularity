@@ -7,7 +7,7 @@
 - Description: Hosts the Conversation.Header slot — all header segments (title, chips) rendered in the PaneChrome title area.
 - Web:
   - Slots: `Conversation.Header` ← `conversations.agents`, `conversations.conversation-category`, `conversations.conversation-preprompt`, `conversations.conversation-progress`, `conversations.conversation-view`, `conversations.conversation-view.allow-monitor`, `conversations.conversation-view.model`, `conversations.conversation-view.status`
-  - Uses: `primitives/collapsible-wrap.CollapsibleWrap`, `primitives/slot-render.defineRenderSlot`
+  - Uses: `primitives/collapsible-wrap.CollapsibleWrap`, `primitives/css/spacing.Stack`, `primitives/slot-render.defineRenderSlot`
   - Exports: Values: `Conversation`, `HeaderView`
 - Cross-plugin:
   - Imported by: `conversations/agents`, `conversations/conversation-category`, `conversations/conversation-preprompt`, `conversations/conversation-progress`, `conversations/conversation-view`, `conversations/conversation-view/allow-monitor`, `conversations/conversation-view/model`, `conversations/conversation-view/status`

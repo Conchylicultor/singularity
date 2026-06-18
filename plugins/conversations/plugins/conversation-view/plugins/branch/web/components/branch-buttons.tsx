@@ -6,6 +6,7 @@ import { useLaunchConversation } from "@plugins/primitives/plugins/launch/web";
 import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { TextEditor } from "@plugins/primitives/plugins/text-editor/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   MODEL_REGISTRY,
@@ -63,7 +64,7 @@ export function BranchButtons({
       tooltip="Fork this session into a background conversation"
       contentClassName="w-[480px]"
     >
-      <div className="flex flex-col gap-md p-md">
+      <Stack gap="md" className="p-md">
         <Text as="div" variant="label">Branch from this conversation</Text>
         <TextEditor
           value={prompt}
@@ -78,7 +79,7 @@ export function BranchButtons({
           maxHeight="12rem"
           namespace="branch-prompt"
         />
-        <div className="flex justify-end gap-sm">
+        <Stack direction="row" gap="sm" justify="end">
           {visibleModels.map((model: ConversationModel) => (
             <Button
               key={model}
@@ -93,8 +94,8 @@ export function BranchButtons({
                 : `Branch → ${MODEL_REGISTRY[model].label}`}
             </Button>
           ))}
-        </div>
-      </div>
+        </Stack>
+      </Stack>
     </InlinePopover>
   );
 }

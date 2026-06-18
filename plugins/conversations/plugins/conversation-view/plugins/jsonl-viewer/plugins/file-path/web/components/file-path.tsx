@@ -36,9 +36,11 @@ export function FilePath({ filePath }: FilePathProps) {
   };
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- inline-flex path chip (baseline-aligned for inline-in-text use); min-w-0 lets it shrink so the button's RTL ellipsis engages. No inline-flex layout primitive (Frame/Stack are block-level).
     <span className="group/path inline-flex items-center gap-2xs max-w-full min-w-0">
       <button
         onClick={openFile}
+        // eslint-disable-next-line layout/no-adhoc-layout -- RTL-ellipsis path truncation (overflow-hidden + whitespace-nowrap paired with direction:rtl / textOverflow inline styles); not the LTR TruncatingText leaf
         className="min-w-0 max-w-full overflow-hidden whitespace-nowrap font-mono text-2xs text-muted-foreground underline-offset-2 hover:text-foreground hover:underline"
         style={{ direction: "rtl", textOverflow: "ellipsis" }}
         title={relativePath}
@@ -51,6 +53,7 @@ export function FilePath({ filePath }: FilePathProps) {
         text={relativePath}
         title="Copy path"
         size="inline"
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid trailing copy affordance in the inline-flex chip above; never shrinks
         className="opacity-0 group-hover/path:opacity-100 transition-opacity shrink-0"
         onClick={(e) => e.stopPropagation()}
       />

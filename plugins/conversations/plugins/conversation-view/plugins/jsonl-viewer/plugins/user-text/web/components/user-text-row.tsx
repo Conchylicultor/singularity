@@ -5,6 +5,9 @@ import type { JsonlEvent, UserTextSegment } from "@plugins/conversations/plugins
 import { RowActions, useStickyReport } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type UserTextEvent = Extract<JsonlEvent, { kind: "user-text" }>;
 
@@ -73,40 +76,50 @@ export function UserTextRow({ event }: { event: JsonlEvent }) {
   const reportSticky = useStickyReport();
   const showCollapsed = collapsible && !expanded;
 
+  const body = e.segments ? (
+    <SegmentedContent segments={e.segments} />
+  ) : (
+    <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
+      <InlineText text={e.text} />
+    </Text>
+  );
+
   return (
     <ContentScope>
       <div className="relative rounded-md border border-border/60 bg-background px-md py-sm">
-        <RowActions floating className="absolute right-2 top-2 z-raised" />
-        <div
-          className={showCollapsed ? "max-h-48 overflow-hidden" : ""}
-          style={showCollapsed ? { maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK } : undefined}
-        >
-          {e.segments ? (
-            <SegmentedContent segments={e.segments} />
-          ) : (
-            <Text as="div" variant="body" className="whitespace-pre-wrap break-words">
-              <InlineText text={e.text} />
-            </Text>
-          )}
-        </div>
+        <Pin to="top-right" offset="sm">
+          <RowActions floating />
+        </Pin>
+        {showCollapsed ? (
+          <Clip
+            className="max-h-48"
+            style={{ maskImage: FADE_MASK, WebkitMaskImage: FADE_MASK }}
+          >
+            {body}
+          </Clip>
+        ) : (
+          <div>{body}</div>
+        )}
         {collapsible ? (
           <button
             type="button"
             onClick={() => setExpanded((v) => { const next = !v; reportSticky(next); return next; })}
             // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 spaces the show-more toggle from the content above it
-            className="text-caption mt-1 flex items-center gap-xs text-muted-foreground hover:text-foreground"
+            className="text-caption mt-1 text-muted-foreground hover:text-foreground"
           >
-            {expanded ? (
-              <>
-                <MdExpandLess className="size-3.5" />
-                Show less
-              </>
-            ) : (
-              <>
-                <MdExpandMore className="size-3.5" />
-                Show more
-              </>
-            )}
+            <Stack direction="row" gap="xs" align="center">
+              {expanded ? (
+                <>
+                  <MdExpandLess className="size-3.5" />
+                  Show less
+                </>
+              ) : (
+                <>
+                  <MdExpandMore className="size-3.5" />
+                  Show more
+                </>
+              )}
+            </Stack>
           </button>
         ) : null}
       </div>

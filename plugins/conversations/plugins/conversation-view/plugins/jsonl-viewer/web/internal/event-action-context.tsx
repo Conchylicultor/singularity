@@ -1,5 +1,6 @@
 import { createContext, useContext, type ReactNode } from "react";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { JsonlViewer } from "../slots";
 
@@ -40,9 +41,13 @@ export function RowActions({
   const actions = JsonlViewer.RowAction.useContributions();
   if (actions.length === 0) return null;
   return (
-    <div
+    <Stack
+      direction="row"
+      align="center"
+      gap="xs"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid action strip; stays whole when hosted in a non-Frame flex parent (floating headerless renderers)
       className={cn(
-        "flex shrink-0 items-center gap-xs opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100",
+        "shrink-0 opacity-0 transition-opacity group-hover/row:opacity-100 focus-within:opacity-100",
         floating && "rounded-lg border border-border/60 bg-background/90 px-xs py-2xs shadow-md backdrop-blur-sm",
         className,
       )}
@@ -50,6 +55,6 @@ export function RowActions({
       <JsonlViewer.RowAction.Render>
         {(item) => <item.component event={event} />}
       </JsonlViewer.RowAction.Render>
-    </div>
+    </Stack>
   );
 }

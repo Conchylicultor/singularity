@@ -6,6 +6,7 @@ import { type ComponentPropsWithoutRef, type ReactNode } from "react";
 // applying the same styling to a non-Button element (e.g. a base-ui trigger
 // rendered as its own native button).
 export function rowActionClass(extra?: string): string {
+  // eslint-disable-next-line layout/no-adhoc-layout -- shared class-string helper for native/base-ui buttons (not JSX); rigid centered action glyph
   return cn(
     "inline-flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground aria-pressed:bg-accent aria-pressed:text-accent-foreground",
     extra,
@@ -31,6 +32,7 @@ export function RowActionButton({
       type="button"
       variant="ghost"
       size="icon"
+      // eslint-disable-next-line layout/no-adhoc-layout -- rigid action-glyph leaf in the hover-reveal row strip; never shrinks
       className={cn(
         "size-5 shrink-0 text-muted-foreground hover:text-foreground",
         active && "bg-accent text-accent-foreground",

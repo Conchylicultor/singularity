@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface HookSuccessPayload {
@@ -31,17 +32,29 @@ export function HookSuccessView({ event }: AttachmentRendererProps) {
       label={`Hook ${att.hookName ?? att.hookEvent ?? "ran"}`}
       note={typeof att.durationMs === "number" ? `· ${att.durationMs}ms` : undefined}
     >
-      <Text
-        as="div"
-        variant="caption"
-        className="flex flex-col gap-2xs font-mono text-muted-foreground"
-      >
-        {att.command && <p className="break-all">$ {att.command}</p>}
-        <p className={failed ? "text-destructive" : undefined}>exit {exitCode}</p>
-        {stderr && (
-          <p className="whitespace-pre-wrap break-words text-destructive">{stderr}</p>
+      <Stack as="div" gap="2xs" className="font-mono text-muted-foreground">
+        {att.command && (
+          <Text as="p" variant="caption" className="break-all">
+            $ {att.command}
+          </Text>
         )}
-      </Text>
+        <Text
+          as="p"
+          variant="caption"
+          className={failed ? "text-destructive" : undefined}
+        >
+          exit {exitCode}
+        </Text>
+        {stderr && (
+          <Text
+            as="p"
+            variant="caption"
+            className="whitespace-pre-wrap break-words text-destructive"
+          >
+            {stderr}
+          </Text>
+        )}
+      </Stack>
     </CollapsibleCard>
   );
 }

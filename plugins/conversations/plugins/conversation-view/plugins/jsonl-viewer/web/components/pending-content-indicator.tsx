@@ -4,13 +4,14 @@
  * contributed variant. Kept generic — no per-kind logic lives here.
  */
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 export function PendingContentIndicator() {
   return (
-    <div className="flex items-center gap-sm px-xs py-xs">
+    <Stack direction="row" align="center" gap="sm" className="px-xs py-xs">
       <Text as="span" variant="caption" className="text-warning/70">
         Content pending in terminal — waiting for your input
       </Text>
-    </div>
+    </Stack>
   );
 }

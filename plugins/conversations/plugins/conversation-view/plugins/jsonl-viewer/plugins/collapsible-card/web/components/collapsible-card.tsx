@@ -6,6 +6,8 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { RowActions } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 
@@ -74,12 +76,12 @@ const ERROR_CARD = "border-destructive/60 bg-destructive/5";
 // font-sans pins one house font for every transcript card title — the header
 // font is a property of the card chrome, not of each renderer. Without it,
 // call sites drifted (some plain strings in sans, some font-mono spans).
-// `relative` makes this the positioning context for the full-bleed toggle
-// overlay; the row layout itself is owned by <Frame> below. region-line keeps
-// the strip single-line (whitespace-nowrap); the typography/color/hover are
-// inherited by every slot.
+// The positioning context for the full-bleed toggle overlay is owned by the
+// <Overlay> below (it emits `relative`); the row layout itself is owned by
+// <Frame>. region-line keeps the strip single-line (whitespace-nowrap); the
+// typography/color/hover are inherited by every slot.
 const HEADER =
-  "relative w-full region-line font-sans text-2xs text-muted-foreground hover:text-foreground";
+  "w-full region-line font-sans text-2xs text-muted-foreground hover:text-foreground";
 
 export function CollapsibleCard({
   icon,
@@ -103,19 +105,26 @@ export function CollapsibleCard({
         className,
       )}
     >
-      {/* The toggle is a full-bleed overlay sitting BEHIND the content, not a
-          row sibling. This decouples the click target (the whole header row)
-          from the layout (the named-slot row below) — the two roles that, fused
-          onto one <button>, pulled in opposite directions. The button is a
-          sibling of <Frame> (not a Frame slot) so it never occupies a grid
-          track. Hovering anywhere in the row drives `t.hover` (it bubbles to
-          this ancestor). */}
-      <div className={HEADER}>
-        <button
-          {...triggerProps}
-          aria-label={open ? "Collapse" : "Expand"}
-          className="absolute inset-0 cursor-pointer transition-colors"
-        />
+      {/* The toggle is a full-bleed layer sitting BEHIND the content via
+          <Overlay behind clickThrough>, not a row sibling. This decouples the
+          click target (the whole header row) from the layout (the named-slot row
+          below) — the two roles that, fused onto one <button>, pulled in
+          opposite directions. Overlay paints the button under the content and
+          makes the children click-through, so a tap anywhere on the strip toggles
+          the card; the few interactive bits opt back in via CardHeaderAction
+          (pointer-events-auto). Hovering anywhere in the row drives `t.hover` (it
+          bubbles to this ancestor). */}
+      <Overlay
+        className={HEADER}
+        clickThrough
+        behind={
+          <button
+            {...triggerProps}
+            aria-label={open ? "Collapse" : "Expand"}
+            className="size-full cursor-pointer transition-colors"
+          />
+        }
+      >
         {/* The header row is a <Frame>: rigid disclosure chevron + the title
             content + the secondary aside + rigid trailing actions, laid out on a
             grid that OWNS the shrink hierarchy. The title (`content`) holds its
@@ -125,28 +134,27 @@ export function CollapsibleCard({
             this primitive was built to make unrepresentable. */}
         <Frame
           gap="sm"
-          leading={
-            // pointer-events-none lets the click fall through to the overlay
-            // button (the chevron toggles too); relative paints it above the
-            // overlay despite the button being earlier in the DOM.
-            <span className="pointer-events-none relative">
-              <CollapsibleChevron open={open} className="size-3" />
-            </span>
-          }
+          leading={<CollapsibleChevron open={open} className="size-3" />}
           content={
             // The card OWNS the title group: leading icon, the title content,
             // and an optional muted note, all in the one canonical title font
             // (inherited from HEADER). Call sites pass content — never their own
-            // `font-*`/`text-*`. Identity chips inside the label stay `shrink-0`
-            // and only the flexible text leaf (`flex-1 truncate`) ellipsizes,
-            // and the grid keeps this whole group off the aside's track.
-            <span className="pointer-events-none relative flex min-w-0 items-center gap-xs">
+            // `font-*`/`text-*`. Identity chips inside the label stay rigid and
+            // only the flexible text leaf ellipsizes; this group rides in the
+            // content track, kept off the aside's track by the grid.
+            <Stack
+              direction="row"
+              gap="xs"
+              align="center"
+              // eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf of Frame's content track: min-w-0 lets the title's text leaf truncate inside this nested flex row
+              className="min-w-0"
+            >
               {icon}
               {label}
               {note != null && (
                 <span className="text-muted-foreground/60">{note}</span>
               )}
-            </span>
+            </Stack>
           }
           meta={
             // Interactive aside opts back into pointer events via
@@ -169,7 +177,7 @@ export function CollapsibleCard({
             </>
           }
         />
-      </div>
+      </Overlay>
       {open && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- top offset separating the collapsible body from the header inside the non-flex Card; lifting into Card padding would also pad the always-present header
         <div id={contentId} className="mt-2">

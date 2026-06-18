@@ -1,6 +1,7 @@
 import { MdAutoAwesome } from "react-icons/md";
 import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 export function InvestigateEventButton({
   label,
@@ -24,9 +25,11 @@ export function InvestigateEventButton({
           type="button"
           aria-label="Launch agent to investigate"
           title="Launch agent to investigate this event"
-          className={`flex items-center justify-center rounded-md p-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${className ?? ""}`}
+          className={`rounded-md p-xs text-muted-foreground transition-colors hover:bg-accent hover:text-foreground ${className ?? ""}`}
         >
-          <MdAutoAwesome className="size-3.5" />
+          <Center>
+            <MdAutoAwesome className="size-3.5" />
+          </Center>
         </button>
       }
       onLaunched={(conv) => {

@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { terminalPane } from "@plugins/primitives/plugins/terminal/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
 import { convTerminalPane } from "../panes";
 
 const TMUX = "tmux";
@@ -46,8 +47,8 @@ function TerminalPaneInner({
   }, [wasDisconnected]);
 
   return (
-    <div className="h-full min-h-0 overflow-hidden">
+    <Clip fill className="h-full">
       <TerminalComponent key={reattachKey} />
-    </div>
+    </Clip>
   );
 }

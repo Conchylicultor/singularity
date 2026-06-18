@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface HookAdditionalContextPayload {
@@ -24,17 +25,18 @@ export function HookAdditionalContextView({ event }: AttachmentRendererProps) {
           No context injected.
         </Text>
       ) : (
-        <Text
-          as="div"
-          variant="caption"
-          className="flex flex-col gap-xs text-muted-foreground"
-        >
+        <Stack as="div" gap="xs" className="text-muted-foreground">
           {items.map((c) => (
-            <p key={c} className="whitespace-pre-wrap break-words">
+            <Text
+              as="p"
+              variant="caption"
+              key={c}
+              className="whitespace-pre-wrap break-words"
+            >
               {c}
-            </p>
+            </Text>
           ))}
-        </Text>
+        </Stack>
       )}
     </CollapsibleCard>
   );

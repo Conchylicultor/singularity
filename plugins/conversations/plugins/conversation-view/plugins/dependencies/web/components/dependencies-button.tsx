@@ -12,6 +12,7 @@ import { InlinePopover } from "@plugins/primitives/plugins/popover/web";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { DepPopoverContent } from "./dep-popover-content";
 
 export function DependenciesButton({
@@ -242,9 +243,9 @@ function DependenciesButtonInner({
           />
         </InlinePopover>
 
-        <div className="flex shrink-0 items-center px-xs">
+        <Center axis="vertical" className="px-xs">
           <MdLink className="size-3 text-muted-foreground" />
-        </div>
+        </Center>
 
         <InlinePopover
           open={blockingOpen}

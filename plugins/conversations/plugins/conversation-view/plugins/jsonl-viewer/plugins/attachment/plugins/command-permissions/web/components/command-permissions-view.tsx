@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface CommandPermissionsPayload {
@@ -21,13 +22,13 @@ export function CommandPermissionsView({ event }: AttachmentRendererProps) {
           No permissions granted.
         </Text>
       ) : (
-        <Text as="div" variant="caption" className="flex flex-col gap-2xs font-mono">
+        <Stack as="div" gap="2xs" className="font-mono">
           {tools.map((tool) => (
-            <p key={tool} className="text-muted-foreground">
+            <Text as="p" variant="caption" key={tool} className="text-muted-foreground">
               {tool}
-            </p>
+            </Text>
           ))}
-        </Text>
+        </Stack>
       )}
     </CollapsibleCard>
   );

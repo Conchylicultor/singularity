@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import type { ShikiTransformer } from "shiki";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   getHighlighter,
   languageForPath,
@@ -103,18 +104,19 @@ export function CodeWithLineNumbers({
   if (html === null) {
     return (
       <ContentScope>
-        <pre className="max-h-[280px] overflow-auto rounded-md bg-muted p-md font-mono text-caption">
+        <Scroll as="pre" axis="both" className="max-h-[280px] rounded-md bg-muted p-md font-mono text-caption">
           <code>{code}</code>
-        </pre>
+        </Scroll>
       </ContentScope>
     );
   }
 
   return (
     <ContentScope>
-      <div
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- `[&_.ln]:mr-4` is a Shiki-injected line-number gutter margin targeted via arbitrary variant; not expressible through Stack/Inset
-        className="max-h-[280px] overflow-auto [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
+      <Scroll
+        axis="both"
+        // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- `[&_.ln]:mr-4` is a Shiki-injected line-number gutter margin and `[&>pre]:overflow-auto` a child-pre clip, both targeted via arbitrary variant on dangerouslySetInnerHTML output; not expressible through Stack/Inset/Scroll on the child
+        className="max-h-[280px] [&>pre]:m-0 [&>pre]:overflow-auto [&>pre]:rounded-md [&>pre]:bg-muted [&>pre]:p-md [&>pre]:font-mono [&>pre]:text-caption [&_.ln]:mr-4 [&_.ln]:inline-block [&_.ln]:w-7 [&_.ln]:select-none [&_.ln]:text-right [&_.ln]:text-muted-foreground/50 [&_.ln]:tabular-nums"
         dangerouslySetInnerHTML={{ __html: html }}
       />
     </ContentScope>

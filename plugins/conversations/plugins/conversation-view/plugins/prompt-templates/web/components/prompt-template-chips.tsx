@@ -7,6 +7,8 @@ import {
 } from "@plugins/primitives/plugins/floating-action/web";
 import { ResponsiveOverflow } from "@plugins/primitives/plugins/responsive-overflow/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import type { PromptEditorActionProps } from "@plugins/primitives/plugins/prompt-editor/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -53,7 +55,7 @@ function TemplateChip({
         onMouseDown={(e) => e.preventDefault()}
         onClick={() => applyTemplate(template, insertText)}
       >
-        <MdEdit className="size-3 shrink-0" />
+        <MdEdit className="size-3" />
         <span>{template.title}</span>
       </Button>
       <Button
@@ -64,7 +66,7 @@ function TemplateChip({
         onClick={() => onSend(template)}
         className={canSend && !sending ? "text-muted-foreground" : "text-muted-foreground/30"}
       >
-        <MdSend className="size-3 shrink-0" />
+        <MdSend className="size-3" />
       </Button>
     </ButtonGroup>
   );
@@ -113,6 +115,7 @@ export function FloatingTemplateChips({
   return (
     <Stack direction="row" gap="xs" align="center">
       {pinnedTemplates.length > 0 && (
+        // eslint-disable-next-line layout/no-adhoc-layout -- items-center cross-aligns chips on ResponsiveOverflow's internal flex container; the primitive exposes no align prop
         <ResponsiveOverflow gap={4} className="items-center">
           {pinnedTemplates.map((t) => (
             <TemplateChip
@@ -132,26 +135,31 @@ export function FloatingTemplateChips({
         variant="ghost"
         panelClassName="flex-col-reverse items-end gap-xs p-xs group-data-open/fa:px-xs max-w-7 group-data-open/fa:max-w-sm max-h-7 group-data-open/fa:max-h-56"
       >
-        <MdEdit className="size-3.5 shrink-0 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
-        <FloatingActionFadeIn className="flex flex-col items-start gap-xs">
-          <div className="self-end">
-            <ConfigGearButton
-              descriptor={promptTemplatesConfig}
-              label="Configure: Prompt templates"
-            />
-          </div>
-          <div className="flex max-h-40 flex-wrap items-center gap-xs overflow-y-auto">
-            {templates.map((t) => (
-              <TemplateChip
-                key={t.id}
-                template={t}
-                insertText={insertText}
-                onSend={(tpl) => void sendTemplate(tpl)}
-                canSend={canSend}
-                sending={sendingId === t.id}
+        <MdEdit className="size-3.5 text-muted-foreground/40 group-data-open/fa:text-muted-foreground transition-colors" />
+        <FloatingActionFadeIn>
+          <Stack gap="xs" align="start">
+            {/* eslint-disable-next-line layout/no-adhoc-layout -- per-child self-alignment (right-align the gear within the start-aligned column); no container primitive owns one child's cross-axis override */}
+            <div className="self-end">
+              <ConfigGearButton
+                descriptor={promptTemplatesConfig}
+                label="Configure: Prompt templates"
               />
-            ))}
-          </div>
+            </div>
+            <Scroll className="max-h-40">
+              <Cluster gap="xs" align="center">
+                {templates.map((t) => (
+                  <TemplateChip
+                    key={t.id}
+                    template={t}
+                    insertText={insertText}
+                    onSend={(tpl) => void sendTemplate(tpl)}
+                    canSend={canSend}
+                    sending={sendingId === t.id}
+                  />
+                ))}
+              </Cluster>
+            </Scroll>
+          </Stack>
         </FloatingActionFadeIn>
       </FloatingAction>
     </Stack>

@@ -11,6 +11,8 @@ import { ActiveRelateSync } from "./active-relate-sync";
 import { JsonlPane } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 
 export function ConversationView() {
   const { convId } = conversationPane.useParams();
@@ -35,7 +37,9 @@ export function ConversationView() {
 
   if (!conversation) {
     return (
-      <Loading className="flex h-full items-center justify-center p-xl" />
+      <Center axis="both" className="h-full p-xl">
+        <Loading />
+      </Center>
     );
   }
 
@@ -48,14 +52,15 @@ export function ConversationView() {
       hideRightActions
       headerSpill
     >
-      <div className="flex h-full min-h-0 flex-col overflow-hidden">
-        <div className="flex items-center border-b px-sm py-xs">
+      <Clip fill as={Stack} className="h-full">
+        <Stack direction="row" gap="none" align="center" className="border-b px-sm py-xs">
           <ActionBarView />
-        </div>
-        <div className="min-h-0 flex-1 overflow-hidden">
+        </Stack>
+        <Clip fill>
           <JsonlPane conversation={conversation}>
             {showBottomBar && (
               <PromptInsertProvider>
+                {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid bottom bar: must not shrink under the scrolling transcript above; lone shrink-0 block has no container primitive */}
                 <div className="shrink-0">
                 <Stack gap="sm" className="mx-auto max-w-reading px-md pt-xs pb-sm">
                   <Conversation.AbovePromptInput.Render>
@@ -65,24 +70,24 @@ export function ConversationView() {
                     {(item) => <item.component conversation={conversation} />}
                   </Conversation.PromptInput.Render>
                   {promptBarItems.length > 0 && (
-                    <div className="flex justify-end">
-                      <div className="flex items-center gap-xs">
+                    <Stack direction="row" gap="none" justify="end">
+                      <Stack direction="row" gap="xs" align="center">
                         <Conversation.PromptBar.Render>
                           {(item) => {
                             const Component = item.component;
                             return <Component conversation={conversation} />;
                           }}
                         </Conversation.PromptBar.Render>
-                      </div>
-                    </div>
+                      </Stack>
+                    </Stack>
                   )}
                 </Stack>
                 </div>
               </PromptInsertProvider>
             )}
           </JsonlPane>
-        </div>
-      </div>
+        </Clip>
+      </Clip>
     </PaneChrome>
     </>
   );

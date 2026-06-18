@@ -5,6 +5,8 @@ import {
 } from "@plugins/primitives/plugins/floating-action/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watcher/core";
@@ -71,38 +73,55 @@ export function MessageToc() {
 
   return (
     <FloatingAction
+      // eslint-disable-next-line layout/no-adhoc-layout -- FloatingAction's API takes the consumer's absolute positioning (here an asymmetric top/right corner inset Pin can't express) in its className
       className="absolute top-2 right-3 z-nav"
       anchor="top-right"
       panelClassName="flex-col w-[3.25rem] group-data-open/fa:w-56 max-h-[1.625rem] group-data-open/fa:max-h-80"
     >
-      <div className="flex shrink-0 items-center gap-xs px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40">
-        <MdFormatListNumbered className="size-3.5 shrink-0 text-muted-foreground" />
-        <Text as="span" variant="caption" className="shrink-0 tabular-nums text-muted-foreground">
-          {entries.length}
-        </Text>
-        <span className="ml-auto text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
-          messages
-        </span>
-      </div>
+      <Frame
+        gap="xs"
+        // eslint-disable-next-line layout/no-adhoc-layout -- rigid header row pinned in FloatingAction's not-yet-drained panel flex column
+        className="shrink-0 px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40"
+        leading={
+          <>
+            <MdFormatListNumbered className="size-3.5 text-muted-foreground" />
+            <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
+              {entries.length}
+            </Text>
+          </>
+        }
+        trailing={
+          <span className="text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
+            messages
+          </span>
+        }
+      />
 
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible scroll region filling FloatingAction's not-yet-drained panel flex column */}
       <FloatingActionFadeIn className="min-h-0 flex-1 overflow-y-auto">
         {entries.map((entry) => (
           <button
             key={entry.eventIndex}
             type="button"
             onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
-            className="flex w-full items-start gap-sm px-sm py-xs text-left text-caption hover:bg-accent"
+            className="w-full px-sm py-xs text-left text-caption hover:bg-accent"
           >
-            <span className="shrink-0 tabular-nums text-muted-foreground">
-              #{entry.userIndex}
-            </span>
-            <span className="min-w-0 flex-1 truncate text-foreground/80">
-              {truncate(entry.text)}
-            </span>
+            <Frame
+              gap="sm"
+              align="start"
+              leading={
+                <span className="tabular-nums text-muted-foreground">
+                  #{entry.userIndex}
+                </span>
+              }
+              content={truncate(entry.text)}
+              className="text-foreground/80"
+            />
           </button>
         ))}
       </FloatingActionFadeIn>
 
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid footer pinned in FloatingAction's not-yet-drained panel flex column */}
       <FloatingActionFadeIn className="shrink-0">
         <button
           type="button"
@@ -110,9 +129,11 @@ export function MessageToc() {
             const container = paneScrollFrom(e.currentTarget);
             container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
           }}
-          className="flex w-full items-center justify-center border-t border-border/40 py-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+          className="w-full border-t border-border/40 py-xs text-muted-foreground hover:bg-accent hover:text-foreground"
         >
-          <MdKeyboardArrowDown className="size-4" />
+          <Center>
+            <MdKeyboardArrowDown className="size-4" />
+          </Center>
         </button>
       </FloatingActionFadeIn>
     </FloatingAction>

@@ -1,5 +1,6 @@
 import { CollapsibleCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/collapsible-card/web";
 import type { AttachmentRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/attachment/core";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 interface SkillListingPayload {
@@ -39,9 +40,9 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
           No skills listed.
         </Text>
       ) : (
-        <Text as="ul" variant="caption" className="flex flex-col gap-2xs">
+        <Stack as="ul" gap="2xs">
           {skills.map((skill) => (
-            <li key={skill.name} className="text-muted-foreground">
+            <Text as="li" variant="caption" key={skill.name} className="text-muted-foreground">
               <span className="font-semibold text-foreground">{skill.name}</span>
               {skill.description && (
                 /* eslint-disable-next-line spacing/no-adhoc-spacing -- inline left offset separating description from skill name within a text line; not a flex-sibling gap */
@@ -49,9 +50,9 @@ export function SkillListingView({ event }: AttachmentRendererProps) {
                   — {skill.description}
                 </span>
               )}
-            </li>
+            </Text>
           ))}
-        </Text>
+        </Stack>
       )}
     </CollapsibleCard>
   );

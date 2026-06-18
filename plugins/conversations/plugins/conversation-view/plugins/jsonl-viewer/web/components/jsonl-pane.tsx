@@ -11,6 +11,10 @@ import type { JsonlEvent } from "@plugins/conversations/plugins/transcript-watch
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { BouncingDots } from "@plugins/primitives/plugins/css/plugins/bouncing-dots/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
@@ -66,12 +70,12 @@ function WorkingIndicator({ startAt }: { startAt: number }) {
   }, [startAt]);
 
   return (
-    <div className="flex items-center gap-sm px-xs py-xs">
+    <Stack direction="row" align="center" gap="sm" className="px-xs py-xs">
       <BouncingDots />
       <Text as="span" variant="caption" className="tabular-nums text-muted-foreground/60">
         Working for {formatElapsed(elapsed)}
       </Text>
-    </div>
+    </Stack>
   );
 }
 
@@ -80,15 +84,17 @@ function StickyUserHeader({ children }: { children: ReactNode }) {
   const report = useCallback((v: boolean) => setExpanded(v), []);
   return (
     <StickyReportProvider value={report}>
-      <div
-        className={
-          expanded
-            ? "z-raised bg-background pb-2xs"
-            : "sticky top-0 z-nav bg-background pb-2xs shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
-        }
-      >
-        {children}
-      </div>
+      {expanded ? (
+        <div className="z-raised bg-background pb-2xs">{children}</div>
+      ) : (
+        <Sticky
+          edge="top"
+          layer="nav"
+          className="bg-background pb-2xs shadow-[0_2px_6px_-2px_rgba(0,0,0,0.1)]"
+        >
+          {children}
+        </Sticky>
+      )}
     </StickyReportProvider>
   );
 }
@@ -121,7 +127,7 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
   };
 
   return (
-    <div className="mx-auto flex max-w-reading flex-col gap-sm p-sm pb-2xl">
+    <Stack gap="sm" className="mx-auto max-w-reading p-sm pb-2xl">
       {sections.map((section) => {
         const firstEvent = events[section.start]!;
         if (firstEvent.kind !== "user-text") {
@@ -134,18 +140,18 @@ function EventSections({ events, children }: { events: JsonlEvent[]; children?: 
           );
         }
         return (
-          <div key={section.start} className="flex flex-col gap-sm">
+          <Stack key={section.start} gap="sm">
             <StickyUserHeader>
               {renderEvent(section.start)}
             </StickyUserHeader>
             {Array.from({ length: section.end - section.start - 1 }, (_, j) =>
               renderEvent(section.start + 1 + j),
             )}
-          </div>
+          </Stack>
         );
       })}
       {children}
-    </div>
+    </Stack>
   );
 }
 
@@ -227,17 +233,21 @@ function JsonlPaneInner({
   }, [events.length, pending, isGone, conversation.id]);
 
   return (
+    // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
     <div className="relative min-h-0 flex-1 isolate">
       <div
         ref={sticky.scrollRef}
         data-pane-scroll
+        // eslint-disable-next-line layout/no-adhoc-layout -- scroll container needs a ref for sticky auto-scroll; the frozen Scroll primitive is a plain function component and cannot forward one (overflow-auto = Scroll axis="both")
         className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
       >
         {events.length === 0 ? (
-          <Text as="div" variant="caption" className="flex flex-col px-md py-sm text-muted-foreground">
-            <span>No transcript yet. Claude may not have written its session log.</span>
-            {isWorking && <WorkingIndicator startAt={workingStartAt} />}
-            {showPending && <PendingTurnEcho text={pending!.text} />}
+          <Text as="div" variant="caption" className="text-muted-foreground">
+            <Stack gap="none" className="px-md py-sm">
+              <span>No transcript yet. Claude may not have written its session log.</span>
+              {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+              {showPending && <PendingTurnEcho text={pending!.text} />}
+            </Stack>
           </Text>
         ) : (
           <LastAssistantProvider event={lastAssistantEvent}>
@@ -255,8 +265,8 @@ function JsonlPaneInner({
         )}
       </div>
       {totals && (
-        <div className="pointer-events-none absolute bottom-2 left-0 right-0 z-raised">
-          <div className="mx-auto flex max-w-reading justify-end px-md">
+        <Pin to="bottom" stretch offset="sm" layer="raised" decorative>
+          <Stack direction="row" justify="end" gap="none" className="mx-auto max-w-reading px-md">
             <Badge
               colorClass="bg-background/80 text-muted-foreground/60 backdrop-blur-sm"
               className="pointer-events-auto"
@@ -264,12 +274,13 @@ function JsonlPaneInner({
             >
               {formatTokenCount(totals.latestContext)} ctx · {formatTokenCount(totals.output)} out
             </Badge>
-          </div>
-        </div>
+          </Stack>
+        </Pin>
       )}
       <JsonlViewer.Overlay.Render />
       <JumpToBottomButton
         handle={sticky}
+        // eslint-disable-next-line layout/no-adhoc-layout -- off-ramp corner pin on an external Button (self-renders null when hidden); bottom-12/right-4 are off the spacing ramp
         className="absolute bottom-12 right-4 z-nav"
       />
     </div>
@@ -289,23 +300,25 @@ export function JsonlPane({
 
   return (
     <ConversationIdProvider id={conversation.id}>
-      <div className="flex h-full min-h-0 flex-col">
+      <Stack gap="none" className="h-full min-h-0">
         <ResourceView
           resource={eventsResult}
           fallback={
+            // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
             <div className="relative min-h-0 flex-1 isolate">
-              <div data-pane-scroll className="h-full overflow-auto">
+              <Scroll axis="both" data-pane-scroll className="h-full">
                 <Loading className="px-md py-sm" />
-              </div>
+              </Scroll>
             </div>
           }
           errorFallback={(err) => (
+            // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of the transcript column (mirrors JsonlPaneInner)
             <div className="relative min-h-0 flex-1 isolate">
-              <div data-pane-scroll className="h-full overflow-auto">
+              <Scroll axis="both" data-pane-scroll className="h-full">
                 <Text as="div" variant="caption" className="px-md py-sm text-destructive">
                   {err.message}
                 </Text>
-              </div>
+              </Scroll>
             </div>
           )}
         >
@@ -317,7 +330,7 @@ export function JsonlPane({
           )}
         </ResourceView>
         {children}
-      </div>
+      </Stack>
     </ConversationIdProvider>
   );
 }

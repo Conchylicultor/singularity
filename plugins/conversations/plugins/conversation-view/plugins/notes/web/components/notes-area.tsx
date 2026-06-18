@@ -1,4 +1,5 @@
 import type { ConversationRecord } from "@plugins/conversations/plugins/conversation-view/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
 import { useConversationNote } from "../internal/use-conversation-note";
 
 export function NotesArea({
@@ -24,9 +25,16 @@ export function NotesArea({
         aria-label="Conversation notes"
       />
       {isSaving && (
-        <span className="pointer-events-none absolute right-2 bottom-1.5 text-3xs text-muted-foreground select-none">
+        <Pin
+          as="span"
+          to="bottom-right"
+          decorative
+          // off-ramp insets: right-2 / bottom-1.5 aren't a single ramp step
+          style={{ right: "0.5rem", bottom: "0.375rem" }}
+          className="text-3xs text-muted-foreground select-none"
+        >
           Saving…
-        </span>
+        </Pin>
       )}
     </div>
   );
