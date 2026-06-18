@@ -23,7 +23,7 @@ Write the role, not the mechanics; let the container own the policy.
 
 ## Layout primitives
 
-Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the five new layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last.
+Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the `css/*` layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last.
 
 - **`Stack` / `Inset`** (`spacing`) — 1-D flow container (dir·gap·align·justify·wrap) · padding container. The home for layout rhythm. → [CLAUDE.md](../../../plugins/primitives/plugins/spacing/CLAUDE.md)
 - **`Frame`** (`css/frame`) — named-slot row, **slots-as-props** (no children): `leading` (rigid) · `content` (truncates last) · `meta` (truncates first) · `trailing` (rigid-right). CSS Grid owns the shrink hierarchy in one place — the structural fix for overlapping/overflowing header rows. String `content`/`meta` auto-wrap in the truncation leaf.
@@ -31,6 +31,10 @@ Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugi
 - **`Cluster`** (`css/cluster`) — wrap-friendly group of rigid chips/tags. Thin `Stack` row+wrap specialization (chips wrap, never crush).
 - **`Center`** (`css/center`) — centering box (`grid place-items`), `axis: both|horizontal|vertical`.
 - **`Overlay`** (`css/overlay`) — in-flow positioning: `behind`/`above` full-bleed layers (z-layer-aware) + `clickThrough` with `Overlay.Interactive` opt-in (the sanctioned home for the click-through-toggle idiom). Pairs with `ViewportOverlay` (which portals to body for true `fixed inset-0`).
+- **`Scroll`** (`css/scroll`) — scroll-container box: owns overflow + the flex-child fill policy as one role. `axis: y|x|both`, `fill` (`min-h-0 flex-1`), `hideScrollbar`, `isolate`. Sizing (`h-*`/`max-h-*`) stays in `className`. The home for `min-h-0 flex-1 overflow-y-auto`.
+- **`Clip`** (`css/clip`) — clipped, non-scrolling overflow (`overflow-hidden`); sibling of Scroll. `axis: both|x|y`, `fill`. **Not** for text truncation (that's `TruncatingText`); `rounded-*`/`border` stay in `className`.
+- **`Sticky`** (`css/sticky`) — sticky header/footer: `edge: top|bottom|left|right`, `offset: SpaceStep`, z-layer-aware `layer`. The home for `sticky top-0 z-raised`; `bg-*`/`border-*` stay in `className`.
+- **`Pin`** (`css/pin`) — point-anchored absolute child of a `relative` parent (sibling of Overlay, not full-bleed): `to` (9 anchors: corners·edge-centers·center), `offset`/`outset`, `layer`, `decorative`, `stretch`. The home for `absolute top-1 right-1`. JS/pixel coords stay an `eslint-disable`.
 - **`TruncatingText`** (`truncating-text`) — **the** truncation leaf; bakes in the `min-w-0 + truncate` pair a flexible label needs in a flex row. → [CLAUDE.md](../../../plugins/primitives/plugins/truncating-text/CLAUDE.md)
 - **`Row` / `SectionHeaderRow`** (`row`) — interactive row (list·menu·nav·tree·section-header). → [CLAUDE.md](../../../plugins/primitives/plugins/row/CLAUDE.md)
 - **`Surface`** (`surface`) — elevation roles (sunken·base·raised·overlay). → [CLAUDE.md](../../../plugins/primitives/plugins/surface/CLAUDE.md)
@@ -38,7 +42,7 @@ Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugi
 - **`ViewportOverlay`** (`viewport-overlay`) — portals to body for true `fixed inset-0` + z-layer + theme-scope. → [CLAUDE.md](../../../plugins/primitives/plugins/viewport-overlay/CLAUDE.md)
 - **`ResponsiveOverflow`** (`responsive-overflow`) — progressively hides children that don't fit the width. → [CLAUDE.md](../../../plugins/primitives/plugins/responsive-overflow/CLAUDE.md)
 
-Design rationale + track mechanics for the five `css/*` primitives are frozen in [the API spec](../../../research/2026-06-15-global-css-layout-primitive-apis.md); the roadmap is in [the vision doc](../../../research/2026-06-15-global-css-layout-primitives-vision.md).
+Design rationale + track mechanics for the original `css/*` primitives are frozen in [the API spec](../../../research/2026-06-15-global-css-layout-primitive-apis.md); the roadmap is in [the vision doc](../../../research/2026-06-15-global-css-layout-primitives-vision.md). The Scroll/Clip/Sticky/Pin set (closing the scroll/clip/sticky/positioning gaps) is specified in the [allowlist-drain plan](../../../research/2026-06-17-global-drain-no-adhoc-layout-allowlist.md).
 
 ## Enforcement
 

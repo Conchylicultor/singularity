@@ -70,8 +70,9 @@ const SELF = /^self-/;
 // `place-items|content|self-*` — the `(items|content|self)` guard keeps the
 // regex off `placeholder-*` (a color utility), which also starts with `place`.
 const PLACE = /^place-(?:items|content|self)-/;
-// Overflow / clip — scroll-container concerns. A genuine scroll container is the
-// canonical eslint-disable-with-reason case.
+// Overflow / clip — scroll-container concerns. A genuine scroll container is
+// `<Scroll>` (the css/scroll primitive owns overflow + the flex-child fill
+// policy); a clipped, non-scrolling box is `<Clip>`.
 const OVERFLOW = /^overflow-/;
 
 const LAYOUT_PATTERNS = [

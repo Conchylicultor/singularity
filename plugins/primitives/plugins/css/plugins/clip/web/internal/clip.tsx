@@ -1,0 +1,61 @@
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import type React from "react";
+
+/** Which axis (or both) to clip. */
+export type ClipAxis = "both" | "x" | "y";
+
+const CLIP_CLASS: Record<ClipAxis, string> = {
+  both: "overflow-hidden",
+  x: "overflow-x-hidden",
+  y: "overflow-y-hidden",
+};
+
+/**
+ * The pure clip + fill class map — single source of truth, exported so the
+ * component and the pure test share one definition. `fill` adds the same
+ * flex-child fill pair `Scroll` uses (`min-h-0 flex-1`) for a clipped pane that
+ * must fill its flex parent.
+ */
+export function clipClasses(opts: { axis: ClipAxis; fill: boolean }): string {
+  return [CLIP_CLASS[opts.axis], opts.fill ? "min-h-0 flex-1" : null]
+    .filter(Boolean)
+    .join(" ");
+}
+
+export interface ClipProps extends React.HTMLAttributes<HTMLElement> {
+  /** Which axis to clip. Defaults to `both`. */
+  axis?: ClipAxis;
+  /** Emit the flex-child fill pair (`min-h-0 flex-1`). Defaults to false. */
+  fill?: boolean;
+  /** Host element/component. Defaults to a `div`. */
+  as?: React.ElementType;
+}
+
+/**
+ * The sanctioned clipping primitive — hides overflow WITHOUT scrolling, the
+ * `overflow-hidden` sibling of `<Scroll>`. Kept orthogonal: Scroll owns
+ * scrollable overflow, Clip owns clipped overflow.
+ *
+ * Decoration stays in `className` — `rounded-*` / `border` are not banned, so a
+ * rounded-clipped media box is `<Clip className="rounded-md border">`.
+ *
+ * NOT for single-line text truncation (`overflow-hidden text-ellipsis
+ * whitespace-nowrap`) — that is `<TruncatingText>`, the dedicated truncation
+ * leaf. Clip is purely the box-level clipping mechanic.
+ *
+ * Caller `className` composes last.
+ */
+export function Clip({
+  axis = "both",
+  fill = false,
+  as: As = "div",
+  className,
+  children,
+  ...rest
+}: ClipProps) {
+  return (
+    <As className={cn(clipClasses({ axis, fill }), className)} {...rest}>
+      {children}
+    </As>
+  );
+}

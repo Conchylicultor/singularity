@@ -163,6 +163,16 @@
  * lint rule treats `region-line` as nowrap-safe (it implies `whitespace-nowrap`). */
 @utility region-line { @apply items-center whitespace-nowrap; }
 
+/* Scrollbar-chrome hider — keeps a box scrollable while removing the visible
+ * scrollbar (Firefox `scrollbar-width` + the WebKit pseudo-element). The home for
+ * the `<Scroll hideScrollbar>` mechanic so call sites never hand-write it. */
+@utility no-scrollbar {
+  scrollbar-width: none;
+  &::-webkit-scrollbar {
+    display: none;
+  }
+}
+
 /* Density padding utilities — the only bridge for runtime-themeable padding,
  * since padding utilities can't read theme vars. Values come from the density
  * token group (--pad-* runtime vars, overridden by ThemeInjector). */

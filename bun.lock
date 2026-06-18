@@ -2358,6 +2358,10 @@
       "name": "@singularity/plugin-primitives-css-center",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/clip": {
+      "name": "@singularity/plugin-primitives-css-clip",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/cluster": {
       "name": "@singularity/plugin-primitives-css-cluster",
       "version": "0.0.1",
@@ -2390,6 +2394,10 @@
       "name": "@singularity/plugin-primitives-css-overlay",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/pin": {
+      "name": "@singularity/plugin-primitives-css-pin",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/placeholder": {
       "name": "@singularity/plugin-primitives-css-placeholder",
       "version": "0.0.1",
@@ -2400,6 +2408,10 @@
     },
     "plugins/primitives/plugins/css/plugins/row": {
       "name": "@singularity/plugin-primitives-css-row",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/scroll": {
+      "name": "@singularity/plugin-primitives-css-scroll",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/section-label": {
@@ -2420,6 +2432,10 @@
     },
     "plugins/primitives/plugins/css/plugins/status-dot": {
       "name": "@singularity/plugin-primitives-css-status-dot",
+      "version": "0.0.1",
+    },
+    "plugins/primitives/plugins/css/plugins/sticky": {
+      "name": "@singularity/plugin-primitives-css-sticky",
       "version": "0.0.1",
     },
     "plugins/primitives/plugins/css/plugins/surface": {
@@ -4686,6 +4702,8 @@
 
     "@singularity/plugin-primitives-css-center": ["@singularity/plugin-primitives-css-center@workspace:plugins/primitives/plugins/css/plugins/center"],
 
+    "@singularity/plugin-primitives-css-clip": ["@singularity/plugin-primitives-css-clip@workspace:plugins/primitives/plugins/css/plugins/clip"],
+
     "@singularity/plugin-primitives-css-cluster": ["@singularity/plugin-primitives-css-cluster@workspace:plugins/primitives/plugins/css/plugins/cluster"],
 
     "@singularity/plugin-primitives-css-color-picker": ["@singularity/plugin-primitives-css-color-picker@workspace:plugins/primitives/plugins/css/plugins/color-picker"],
@@ -4702,11 +4720,15 @@
 
     "@singularity/plugin-primitives-css-overlay": ["@singularity/plugin-primitives-css-overlay@workspace:plugins/primitives/plugins/css/plugins/overlay"],
 
+    "@singularity/plugin-primitives-css-pin": ["@singularity/plugin-primitives-css-pin@workspace:plugins/primitives/plugins/css/plugins/pin"],
+
     "@singularity/plugin-primitives-css-placeholder": ["@singularity/plugin-primitives-css-placeholder@workspace:plugins/primitives/plugins/css/plugins/placeholder"],
 
     "@singularity/plugin-primitives-css-radius": ["@singularity/plugin-primitives-css-radius@workspace:plugins/primitives/plugins/css/plugins/radius"],
 
     "@singularity/plugin-primitives-css-row": ["@singularity/plugin-primitives-css-row@workspace:plugins/primitives/plugins/css/plugins/row"],
+
+    "@singularity/plugin-primitives-css-scroll": ["@singularity/plugin-primitives-css-scroll@workspace:plugins/primitives/plugins/css/plugins/scroll"],
 
     "@singularity/plugin-primitives-css-section-label": ["@singularity/plugin-primitives-css-section-label@workspace:plugins/primitives/plugins/css/plugins/section-label"],
 
@@ -4717,6 +4739,8 @@
     "@singularity/plugin-primitives-css-spinner": ["@singularity/plugin-primitives-css-spinner@workspace:plugins/primitives/plugins/css/plugins/spinner"],
 
     "@singularity/plugin-primitives-css-status-dot": ["@singularity/plugin-primitives-css-status-dot@workspace:plugins/primitives/plugins/css/plugins/status-dot"],
+
+    "@singularity/plugin-primitives-css-sticky": ["@singularity/plugin-primitives-css-sticky@workspace:plugins/primitives/plugins/css/plugins/sticky"],
 
     "@singularity/plugin-primitives-css-surface": ["@singularity/plugin-primitives-css-surface@workspace:plugins/primitives/plugins/css/plugins/surface"],
 
