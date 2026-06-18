@@ -10,8 +10,8 @@ import { PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { SegmentedControl } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
-import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { IMPROVEMENTS_META_TASK_ID } from "@plugins/improve/web";
+import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   prototypesResource,
   prototypesVersionResource,
@@ -50,18 +50,31 @@ export function PrototypeDetail() {
   const openPane = useOpenPane();
 
   const improveButton = (
-    <TaskDraftPopover
+    <LaunchAgentPopover
       trigger={
         <Button variant="outline" size="sm">
           <MdAutoAwesome />
           Improve this prototype
         </Button>
       }
-      tooltip="Improve this prototype"
-      target={{ kind: "metaTask", metaTaskId: IMPROVEMENTS_META_TASK_ID }}
-      captures={["url"]}
-      initialText={improveText(name)}
-      heading={`Improve prototype: ${name}`}
+      title="Improve prototype"
+      description={`Launch an agent to iterate on the ${name} prototype.`}
+      placeholder="What should change? (optional)"
+      align="end"
+      onLaunched={(conv) => {
+        toast({
+          type: "prototype",
+          title: "Improving prototype",
+          description: "Agent launched in the background — open it from here or the bell.",
+          variant: "info",
+          linkTo: `/agents/c/${conv.id}`,
+        });
+      }}
+      getRequest={(userText) => {
+        const parts = [improveText(name)];
+        if (userText.trim()) parts.push(`Additional context: ${userText.trim()}`);
+        return { prompt: parts.join("\n\n") };
+      }}
     />
   );
 

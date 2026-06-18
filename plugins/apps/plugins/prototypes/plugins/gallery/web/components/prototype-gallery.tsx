@@ -1,4 +1,3 @@
-import { useState } from "react";
 import { MdAdd } from "react-icons/md";
 import {
   DataView,
@@ -8,8 +7,8 @@ import {
 import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
-import { TaskDraftPopover } from "@plugins/tasks/plugins/task-draft-form/web";
-import { IMPROVEMENTS_META_TASK_ID } from "@plugins/improve/web";
+import { LaunchAgentPopover } from "@plugins/primitives/plugins/launch/web";
+import { toast } from "@plugins/shell/plugins/notifications/web";
 import {
   prototypesResource,
   type PrototypeMeta,
@@ -49,14 +48,13 @@ const NEW_PROTOTYPE_TEXT = [
 /**
  * Gallery surface: a `DataView` gallery over the live prototype list. Each card
  * shows the name + blurb over a theme-tinted cover. Activating a card opens the
- * Focus/Compare detail pane. A "New prototype" button opens the task-draft
- * popover pre-seeded to scaffold a new mock.
+ * Focus/Compare detail pane. A "New prototype" button opens the launch-agent
+ * popover that fires a background agent to scaffold a new mock.
  */
 export function PrototypeGallery() {
   const result = useResource(prototypesResource);
   const openPane = useOpenPane();
   const selectedName = prototypeDetailPane.useRouteEntry()?.params.name;
-  const [newOpen, setNewOpen] = useState(false);
 
   const fields: FieldDef<PrototypeMeta>[] = [
     { id: "name", label: "Name", type: "text", primary: true, value: (p) => p.name },
@@ -65,20 +63,31 @@ export function PrototypeGallery() {
   ];
 
   const newButton = (
-    <TaskDraftPopover
-      open={newOpen}
-      onOpenChange={setNewOpen}
+    <LaunchAgentPopover
       trigger={
         <Button variant="default" size="sm">
           <MdAdd />
           New prototype
         </Button>
       }
-      tooltip="New prototype"
-      target={{ kind: "metaTask", metaTaskId: IMPROVEMENTS_META_TASK_ID }}
-      captures={["url"]}
-      initialText={NEW_PROTOTYPE_TEXT}
-      heading="New prototype"
+      title="New prototype"
+      description="Launch an agent to scaffold a new throwaway UI prototype."
+      placeholder="Extra context (optional) — e.g. desired style, layout, reference…"
+      align="end"
+      onLaunched={(conv) => {
+        toast({
+          type: "prototype",
+          title: "Creating prototype",
+          description: "Agent launched in the background — open it from here or the bell.",
+          variant: "info",
+          linkTo: `/agents/c/${conv.id}`,
+        });
+      }}
+      getRequest={(userText) => {
+        const parts = [NEW_PROTOTYPE_TEXT];
+        if (userText.trim()) parts.push(`Additional context: ${userText.trim()}`);
+        return { prompt: parts.join("\n\n") };
+      }}
     />
   );
 

@@ -15,7 +15,7 @@
   - Exports: Values: `_improve_config`, `_improvePendingGroups`, `IMPROVEMENTS_META_TASK_ID`
   - Register: `defineJob('improve.apply-group')`
 - Cross-plugin:
-  - Imported by: `apps/prototypes/gallery`, `improve/element-picker`, `screenshot/draw-on-app`
+  - Imported by: `improve/element-picker`, `screenshot/draw-on-app`
 - Sub-plugins:
   - **`element-picker`** — Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 
