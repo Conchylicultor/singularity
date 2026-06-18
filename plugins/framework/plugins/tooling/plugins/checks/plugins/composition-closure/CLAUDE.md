@@ -7,10 +7,19 @@ fileConfigProxy(config/plugin-meta/composition/compositions.origin.jsonc),
 fileConfigProxy(…/compositions.jsonc))` — no server runtime, falls back to the
 seeded defaults on a fresh checkout), builds the
 plugin tree + edge graph once, and for each composition enforces: unique `name`,
-non-empty entry points, every entry/contributor id resolves to a real plugin, no
-redundant selections (already locked by the entries' hard closure), and every
-selected contributor is a genuine **load-bearing soft option** (deselecting it
-removes it from the bundle). Fails loudly naming the composition and offending id.
+every entry/contributor id resolves to a real plugin, every `extends` reference
+resolves to a real composition name, no redundant selections (already locked by
+the entries' hard closure), and every selected contributor is a genuine
+**load-bearing soft option** (deselecting it removes it from the bundle). Fails
+loudly naming the composition and offending id.
+
+**Packs vs. flattening.** A composition with **no entry points** is a pure
+contributor SET (a pack) — it carries no bundle context, so the redundant /
+soft-option checks are skipped for it (only id + `extends`-name resolution
+apply); its contributors are validated where an app `extends` it. Every
+composition WITH entry points is validated against its **flattened** manifest
+(`flattenManifest(m, allManifests)` — own + extended packs' entries/contributors
+unioned), so a profile's `extends` packs are checked in the app's real bundle.
 
 Under the conservative opt-in model dependency-closedness is automatic
 (`resolveComposition` always returns a hard-closed bundle), so this check is a

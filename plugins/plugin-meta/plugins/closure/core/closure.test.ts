@@ -15,6 +15,7 @@ import { buildPluginTree, type PluginTree } from "@plugins/plugin-meta/plugins/p
 import { asPluginId } from "@plugins/framework/plugins/plugin-id/core";
 import { classifyEdges } from "./classify-edges";
 import { resolveComposition } from "./resolve-composition";
+import { flattenManifest } from "./flatten-manifest";
 import { explainInclusion } from "./explain";
 import { impactOfPruning, impactOfSelecting } from "./impact";
 import type { EdgeGraph, CompositionManifest } from "./types";
@@ -182,4 +183,68 @@ test("explainInclusion for a required node returns an all-hard path from the ent
 
 test("impactOfPruning a hard-required node drops nothing", () => {
   expect(impactOfPruning(graph, manifest, SHELL)).toEqual([]);
+});
+
+// ── flattenManifest: extends resolution (pure, no graph needed) ──────────────
+
+test("flattenManifest unions an extended pack's contributors into the host", () => {
+  const pack: CompositionManifest = {
+    name: "self-improvement",
+    entryPoints: [],
+    selectedContributors: [asPluginId("review"), asPluginId("screenshot.draw-on-app")],
+    extends: [],
+  };
+  const profile: CompositionManifest = {
+    name: "full",
+    entryPoints: [AGENT_MANAGER],
+    selectedContributors: [asPluginId("ui.theme-toggle")],
+    extends: ["self-improvement"],
+  };
+
+  const flat = flattenManifest(profile, [pack, profile]);
+  expect([...flat.selectedContributors].map(String).sort()).toEqual(
+    ["review", "screenshot.draw-on-app", "ui.theme-toggle"].sort(),
+  );
+  expect(flat.entryPoints).toEqual([AGENT_MANAGER]);
+  // Always cleared after folding so downstream resolution never re-walks extends.
+  expect(flat.extends).toEqual([]);
+});
+
+test("flattenManifest is diamond/cycle-safe and dedupes", () => {
+  // a → b, a → c, b → c (diamond); plus c → a (cycle). All terminate, c folds once.
+  const a: CompositionManifest = {
+    name: "a",
+    entryPoints: [asPluginId("apps.home")],
+    selectedContributors: [asPluginId("ui.theme-toggle")],
+    extends: ["b", "c"],
+  };
+  const b: CompositionManifest = {
+    name: "b",
+    entryPoints: [],
+    selectedContributors: [asPluginId("review")],
+    extends: ["c"],
+  };
+  const c: CompositionManifest = {
+    name: "c",
+    entryPoints: [],
+    selectedContributors: [asPluginId("review"), asPluginId("reports.crash")],
+    extends: ["a"],
+  };
+
+  const flat = flattenManifest(a, [a, b, c]);
+  expect([...flat.selectedContributors].map(String).sort()).toEqual(
+    ["reports.crash", "review", "ui.theme-toggle"].sort(),
+  );
+  expect([...flat.entryPoints].map(String)).toEqual(["apps.home"]);
+});
+
+test("flattenManifest ignores unknown extends references inertly", () => {
+  const m: CompositionManifest = {
+    name: "x",
+    entryPoints: [asPluginId("apps.home")],
+    selectedContributors: [asPluginId("ui.theme-toggle")],
+    extends: ["does-not-exist"],
+  };
+  const flat = flattenManifest(m, [m]);
+  expect([...flat.selectedContributors].map(String)).toEqual(["ui.theme-toggle"]);
 });

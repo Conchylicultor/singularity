@@ -2,28 +2,45 @@
 
 The **composition manifest registry** — owns the named compositions of the repo
 as runtime-editable data. A composition is a `CompositionManifest`
-(`{ name, entryPoints, selectedContributors }`, **owned by and imported from**
-[`closure`](../closure/CLAUDE.md) — never redefined here); this plugin is the
-*registry* that stores them, the engine is the algorithm that resolves them.
-Sibling of `closure` / `plugin-tree` / `facets` under `plugin-meta`; ships
-`core` / `web` / `server` barrels.
+(`{ name, entryPoints, selectedContributors, extends? }`, **owned by and imported
+from** [`closure`](../closure/CLAUDE.md) — never redefined here) plus a
+`category` (organisation metadata only — `app | profile | subsystem | pack`,
+NOT consumed by the engine); this plugin is the *registry* that stores them, the
+engine is the algorithm that resolves them. Sibling of `closure` / `plugin-tree`
+/ `facets` under `plugin-meta`; ships `core` / `web` / `server` barrels.
+
+## Taxonomy & seeds
+
+The config `default` seeds the whole repo's compositions, grouped by `category`:
+**app** (one lean baseline per top-level `Apps.App`, entry = the app shell
+umbrella), **profile** (variants of one app along the self-improvement axis — the
+worked example is `agent-manager` full vs. `agent-manager-lean`), **subsystem**
+(infra closures used as building blocks / inspection lenses — `data`,
+`jobs-events`, `live-state`, `auth`, …), and **pack** (entry-less contributor
+SETs apps opt into via `extends`; `self-improvement` is the pack the
+agent-manager profile pulls in). The full bundle is never enforced at runtime
+yet — compositions remain a Studio inspection concept; releasing/runtime-gating
+is future work.
 
 ## Manifests are a config_v2 config — no codegen
 
 Manifests live in a [`config_v2`](../../../config_v2/CLAUDE.md) config named
 `compositions` (`core/config.ts`, `defineConfig` + a `listField` of
-`{ name, entryPoints (string-list), selectedContributors (string-list) }`,
-`promotableToGit: true`). This replaces the former collected-dir / barrel
-registry: there is **no** `composition.generated.ts`, `loadCompositions()`, or
+`{ name, category (enum), entryPoints (string-list), selectedContributors
+(string-list), extends (string-list) }`, `promotableToGit: true`). This replaces
+the former collected-dir / barrel registry: there is **no**
+`composition.generated.ts`, `loadCompositions()`, or
 `<plugin>/composition/index.ts` — creating or editing a manifest is now a plain
 runtime write, no `./singularity build` required.
 
-The config's `default` seeds the agent-manager anchor demo: a full
-`agent-manager` and an `agent-manager-lean` that differ by exactly the
-self-improvement contributors. Each seed carries an **explicit stable `id` +
-`rank`** (the list field only auto-injects those on UI "Add"), so seeded rows
-are editable and ordered. The two ranks are the first two fractional-index keys
-(`"a0"`, `"a1"`).
+The config's `default` seeds the full repo taxonomy (apps / profiles /
+subsystems / packs — see above). The agent-manager anchor demo is the
+`profile` pair: a full `agent-manager` that `extends: ["self-improvement"]` and
+an `agent-manager-lean` that does not, so the flattened full \ lean contributor
+difference is exactly the self-improvement pack. Each seed carries an **explicit
+stable `id` + `rank`** (the list field only auto-injects those on UI "Add"), so
+seeded rows are editable and ordered; ranks are the leading fractional-index
+keys (`"a0"`, `"a1"`, `"a2"`, …).
 
 Because config_v2 carries a built-in **git layer** (committed default) and
 **user layer** (runtime override), a manifest set edited in the UI lands in the
@@ -33,17 +50,19 @@ per-worktree user config; promoting it to a committed default is the filed
 - `core/config.ts` — the `compositionsConfig` descriptor (core-safe: imported by
   web, server, and the future build-time check).
 - `core/manifest-map.ts` — `manifestItemToManifest(item)` drops the list `id` /
-  `rank` and casts the id arrays to `PluginId[]` at the config boundary, plus the
-  `CompositionManifestItem` type (a manifest + its `id` / `rank`).
+  `rank` and the engine-opaque `category`, carries `extends` through verbatim,
+  and casts the id arrays to `PluginId[]` at the config boundary, plus the
+  `CompositionManifestItem` type (a manifest + `category` + its `id` / `rank`).
 - `server/index.ts` registers the config (`ConfigV2.Register`); `web/index.ts`
   registers it on the client (`ConfigV2.WebRegister`).
 
 ## Override is forbidden — by construction
 
 The manifest vocabulary is **additive only** (`entryPoints`,
-`selectedContributors`). There is no field that replaces or redirects a plugin's
-file, so override is *inexpressible*; resolution is a pure union / hard-closure
-with no precedence rules. The `composition-closure` check
+`selectedContributors`, and `extends` — which only unions in another
+composition's additive vocabulary). There is no field that replaces or redirects
+a plugin's file, so override is *inexpressible*; resolution is a pure union /
+hard-closure with no precedence rules. The `composition-closure` check
 (`framework/tooling/checks`) adds validity (ids resolve, names unique, every
 selection is a genuine load-bearing soft option) by reading the committed
 git-layer config off disk — runtime-only (user-layer) manifests are not
@@ -95,10 +114,12 @@ Beyond the registry, this plugin ships the **Studio closure data**:
 ## Tests
 
 `core/config.test.ts` is pure logic (no generated registry, no server): it
-asserts the config `default` seeds parse against the descriptor schema, map to
-valid `CompositionManifest`s via `manifestItemToManifest`, and that the
-agent-manager full-vs-lean `selectedContributors` set-difference is exactly the
-self-improvement set. Run with
+asserts the config `default` seeds parse against the descriptor schema, that the
+taxonomy is populated (app / profile / subsystem / pack), each seed maps to a
+valid `CompositionManifest` via `manifestItemToManifest` (only packs may omit
+entry points), the `self-improvement` pack holds exactly the self-improvement
+set, and that the **flattened** agent-manager full-vs-lean `selectedContributors`
+difference (via `flattenManifest`) is exactly that pack. Run with
 `bun test plugins/plugin-meta/plugins/composition/core/config.test.ts`.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
@@ -114,7 +135,7 @@ self-improvement set. Run with
   - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
   - Routes: `GET /api/composition/data`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`
+  - Uses: `config_v2.defineConfig`, `fields/enum/config.enumField`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `plugin-meta/closure.flattenManifest`
   - Exports: Types: `CompositionData`, `CompositionManifestItem`; Values: `compositionDataSchema`, `compositionsConfig`, `getCompositionData`, `manifestItemToManifest`
 - Cross-plugin:
   - Imported by: `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `plugin-meta/plugin-view/inclusion`

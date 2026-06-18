@@ -2,15 +2,18 @@
  * Pure-logic tests for the compositions config: the seeded `default` items parse
  * against the descriptor schema, map to valid `CompositionManifest`s via the
  * mapper, and the agent-manager full-vs-lean pair realises the vision's anchor
- * demo (their `selectedContributors` set-difference IS exactly the
- * self-improvement selection). No generated registry, no server. Run with:
+ * demo (their flattened `selectedContributors` set-difference IS exactly the
+ * self-improvement PACK, now pulled in via first-class `extends`). No generated
+ * registry, no server. Run with:
  *   bun test plugins/plugin-meta/plugins/composition/core/config.test.ts
  */
 import { test, expect } from "bun:test";
+import { flattenManifest } from "@plugins/plugin-meta/plugins/closure/core";
 import { compositionsConfig } from "./config";
 import { manifestItemToManifest, type CompositionManifestItem } from "./manifest-map";
 
 const seeds = compositionsConfig.defaults.manifests as CompositionManifestItem[];
+const registry = seeds.map(manifestItemToManifest);
 
 const SELF_IMPROVEMENT = [
   "improve.element-picker",
@@ -31,14 +34,22 @@ test("the seeded default parses against the descriptor schema", () => {
   expect(parsed.success).toBe(true);
 });
 
-test("both seeds carry explicit, distinct id + rank and the two flavors", () => {
-  expect(seeds).toHaveLength(2);
+test("every seed carries a distinct id + rank", () => {
   const ids = seeds.map((s) => s.id);
   const ranks = seeds.map((s) => s.rank);
-  expect(new Set(ids).size).toBe(2);
-  expect(new Set(ranks).size).toBe(2);
-  expect(byName("agent-manager")).toBeDefined();
-  expect(byName("agent-manager-lean")).toBeDefined();
+  expect(new Set(ids).size).toBe(seeds.length);
+  expect(new Set(ranks).size).toBe(seeds.length);
+});
+
+test("the taxonomy is populated: app, profile, subsystem, and pack seeds all exist", () => {
+  const categories = new Set(seeds.map((s) => s.category));
+  for (const c of ["app", "profile", "subsystem", "pack"]) {
+    expect(categories.has(c)).toBe(true);
+  }
+  // The two agent-manager flavors are profiles; self-improvement is a pack.
+  expect(byName("agent-manager").category).toBe("profile");
+  expect(byName("agent-manager-lean").category).toBe("profile");
+  expect(byName("self-improvement").category).toBe("pack");
 });
 
 test("each seed maps to a valid CompositionManifest via the mapper", () => {
@@ -47,25 +58,39 @@ test("each seed maps to a valid CompositionManifest via the mapper", () => {
     expect(typeof m.name).toBe("string");
     expect(m.name.length).toBeGreaterThan(0);
     expect(Array.isArray(m.entryPoints)).toBe(true);
-    expect(m.entryPoints.length).toBeGreaterThan(0);
     expect(Array.isArray(m.selectedContributors)).toBe(true);
     expect(m.selectedContributors.every((id) => typeof id === "string")).toBe(true);
+    // Only packs (pure contributor sets) may omit entry points.
+    if (item.category !== "pack") {
+      expect(m.entryPoints.length).toBeGreaterThan(0);
+    }
   }
 });
 
-test("anchor demo: full \\ lean contributor difference is exactly the self-improvement set", () => {
-  const full = manifestItemToManifest(byName("agent-manager"));
-  const lean = manifestItemToManifest(byName("agent-manager-lean"));
+test("the self-improvement pack holds exactly the self-improvement set", () => {
+  const pack = manifestItemToManifest(byName("self-improvement"));
+  expect([...pack.selectedContributors].map(String).sort()).toEqual(
+    [...SELF_IMPROVEMENT].sort(),
+  );
+  expect(pack.entryPoints.length).toBe(0);
+});
+
+test("anchor demo: flattened full \\ lean is exactly the self-improvement pack", () => {
+  // Full extends the self-improvement pack; lean does not. After flattening the
+  // `extends` chain against the registry, the contributor set-difference is the
+  // pack's contributors (order-independent).
+  const full = flattenManifest(manifestItemToManifest(byName("agent-manager")), registry);
+  const lean = flattenManifest(
+    manifestItemToManifest(byName("agent-manager-lean")),
+    registry,
+  );
 
   const diff = full.selectedContributors.filter(
     (c) => !lean.selectedContributors.includes(c),
   );
-
-  // Set equality (order-independent) between the diff and the self-improvement
-  // set. Compare as plain strings — `diff` is branded `PluginId[]`.
   expect([...diff].map(String).sort()).toEqual([...SELF_IMPROVEMENT].sort());
 
-  // Lean's contributors are a strict subset of full's.
+  // Lean's contributors are a strict subset of full's flattened contributors.
   for (const c of lean.selectedContributors) {
     expect(full.selectedContributors).toContain(c);
   }

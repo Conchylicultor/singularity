@@ -44,11 +44,22 @@ export interface EdgeGraph {
  * `selectedContributors` are the soft contributors a human/agent has explicitly
  * opted IN — reviewed options pulled into the bundle. Default `[]` ⇒ the bundle
  * is the pure hard closure of the entries; NOTHING soft is included by default.
+ *
+ * `extends` names other compositions (typically **packs** — reusable, entry-less
+ * contributor sets) whose `entryPoints` + `selectedContributors` are unioned into
+ * this one, transitively, before resolution. Purely additive: a pack can only add
+ * options, never replace or redirect — so composing remains a union/hard-closure
+ * with no precedence. Resolve `extends` with {@link flattenManifest} BEFORE feeding
+ * a manifest to {@link resolveComposition} / the causality queries; the engine core
+ * always operates on an already-flattened (`extends: []`) manifest.
  */
 export interface CompositionManifest {
   name: string;
   entryPoints: PluginId[];
   selectedContributors: PluginId[];
+  /** Names of other compositions merged into this one, transitively. Optional;
+   *  absent ⇒ `[]`. Cleared to `[]` once {@link flattenManifest} has merged them. */
+  extends?: string[];
 }
 
 export type MembershipState =

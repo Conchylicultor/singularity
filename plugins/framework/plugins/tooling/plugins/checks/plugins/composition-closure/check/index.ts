@@ -2,7 +2,11 @@ import { join } from "path";
 import { readFileSync, existsSync } from "node:fs";
 import { parse as parseJsonc } from "jsonc-parser";
 import { buildPluginTree } from "@plugins/plugin-meta/plugins/plugin-tree/core";
-import { classifyEdges, resolveComposition } from "@plugins/plugin-meta/plugins/closure/core";
+import {
+  classifyEdges,
+  flattenManifest,
+  resolveComposition,
+} from "@plugins/plugin-meta/plugins/closure/core";
 import {
   compositionsConfig,
   manifestItemToManifest,
@@ -101,12 +105,10 @@ const check: Check = {
       }
       seenNames.add(m.name);
     }
+    const allNames = seenNames;
 
     for (const m of manifests) {
-      // 2. Entry points: non-empty and every id resolves.
-      if (m.entryPoints.length === 0) {
-        return fail(`composition "${m.name}" has no entryPoints`);
-      }
+      // 2. Every id (own entry + own contributor) resolves to a real plugin.
       for (const id of [...m.entryPoints, ...m.selectedContributors]) {
         if (!allIds.has(id)) {
           return fail(
@@ -116,30 +118,50 @@ const check: Check = {
         }
       }
 
-      const comp = resolveComposition(graph, m);
+      // 3. Every `extends` reference resolves to a real composition name.
+      for (const ref of m.extends ?? []) {
+        if (!allNames.has(ref)) {
+          return fail(
+            `composition "${m.name}" extends unknown composition "${ref}"`,
+            "`extends` lists other composition NAMES (typically packs). Confirm the referenced composition exists.",
+          );
+        }
+      }
 
-      // 3. No selection already locked in by the entries' hard edges.
+      // A composition with NO entry points is a pure contributor SET (a pack):
+      // its contributors only become genuine soft options inside an app that
+      // `extends` it, so it carries no bundle context to validate standalone.
+      // Validity for those ids is enforced where the pack is folded in (below).
+      if (m.entryPoints.length === 0) continue;
+
+      // Non-pack: validate against the FLATTENED manifest (own + extended packs'
+      // entries/contributors unioned), so a profile's `extends` packs are checked
+      // in the app's real bundle context.
+      const flat = flattenManifest(m, manifests);
+      const comp = resolveComposition(graph, flat);
+
+      // 4. No selection already locked in by the entries' hard edges.
       if (comp.redundantSelections.length > 0) {
         return fail(
           `composition "${m.name}" selects already-required contributor(s): ${comp.redundantSelections.join(", ")}`,
-          "A contributor pulled in by the entry points' hard closure is included unconditionally — remove it from selectedContributors.",
+          "A contributor pulled in by the entry points' hard closure is included unconditionally — remove it from selectedContributors (or from the extended pack).",
         );
       }
 
-      // 4. Every selected contributor must be a genuine, load-bearing soft option:
+      // 5. Every selected contributor must be a genuine, load-bearing soft option:
       //    deselecting it must remove it from the bundle (i.e. it is in the
       //    `available` frontier of the composition resolved without it). This rejects
       //    selections that are already pulled in via another contributor's hard
       //    closure, and selections that aren't soft contributors at all.
-      for (const id of m.selectedContributors) {
+      for (const id of flat.selectedContributors) {
         const without = resolveComposition(graph, {
-          ...m,
-          selectedContributors: m.selectedContributors.filter((x) => x !== id),
+          ...flat,
+          selectedContributors: flat.selectedContributors.filter((x) => x !== id),
         });
         if (!without.available.includes(id)) {
           return fail(
             `composition "${m.name}" selects "${id}", which is not a genuine soft option`,
-            "It is either not a soft contributor to this bundle, or it is already pulled in by another selection's hard closure. Remove it from selectedContributors.",
+            "It is either not a soft contributor to this bundle, or it is already pulled in by another selection's hard closure. Remove it from selectedContributors (or from the extended pack).",
           );
         }
       }

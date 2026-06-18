@@ -42,10 +42,13 @@ export function useManifestActions(): ManifestActions {
         // branded string, so it widens to `string[]` at the config boundary.
         entryPoints: [...draft.entryPoints] as string[],
         selectedContributors: [...draft.selectedContributors] as string[],
+        extends: [...(draft.extends ?? [])],
       };
 
       let next: CompositionManifestItem[];
       if (editingId !== undefined) {
+        // Spreading the existing item first preserves its `category` (engine-opaque
+        // metadata the draft doesn't carry); `fields` overwrites the rest.
         next = items.map((item) =>
           item.id === editingId ? { ...item, ...fields } : item,
         );
@@ -60,6 +63,8 @@ export function useManifestActions(): ManifestActions {
         const newItem: CompositionManifestItem = {
           id: crypto.randomUUID(),
           rank: Rank.between(lastRank, null).toString(),
+          // New drafts default to the `app` category; re-categorise via config edit.
+          category: "app",
           ...fields,
         };
         next = [...items, newItem];

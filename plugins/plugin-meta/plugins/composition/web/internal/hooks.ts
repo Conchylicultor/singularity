@@ -3,6 +3,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import {
   deserializeEdgeGraph,
   explainInclusion,
+  flattenManifest,
   impactOfPruning,
   impactOfSelecting,
   type CompositionManifest,
@@ -16,7 +17,13 @@ import {
 } from "@plugins/plugin-meta/plugins/composition/core";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
 import type { PluginId } from "@plugins/framework/plugins/plugin-id/core";
-import { setGraph, useActiveComposition, useGraph } from "./store";
+import {
+  setGraph,
+  setRegistry,
+  useActiveComposition,
+  useGraph,
+  useRegistry,
+} from "./store";
 import { useManifestItems } from "./manifests";
 
 export interface CompositionDataResult {
@@ -63,6 +70,13 @@ export function useCompositionData(): CompositionDataResult {
     if (graph) setGraph(graph);
   }, [graph]);
 
+  // Publish the full manifest set so the store's resolution boundary can flatten
+  // each draft's `extends` against it. `manifests` is `useMemo`-stable per `items`
+  // (config) change, so this fires once per config edit, not per render.
+  useEffect(() => {
+    setRegistry(manifests);
+  }, [manifests]);
+
   return {
     graph,
     manifests,
@@ -86,14 +100,16 @@ export function useEnsureCompositionData(): void {
 }
 
 /** Why `node` is in the active composition's bundle (or `null` when not bundled /
- *  no active composition / graph not loaded). */
+ *  no active composition / graph not loaded). The active draft is flattened
+ *  against the registry so `extends`-pulled contributors are explained too. */
 export function useInclusion(node: PluginNode): InclusionPath | null {
   const active = useActiveComposition();
   const graph = useGraph();
+  const registry = useRegistry();
   return useMemo(() => {
     if (!active || !graph) return null;
-    return explainInclusion(graph, active, node.id);
-  }, [active, graph, node.id]);
+    return explainInclusion(graph, flattenManifest(active, registry), node.id);
+  }, [active, graph, registry, node.id]);
 }
 
 export interface ImpactResult {
@@ -108,11 +124,13 @@ export interface ImpactResult {
 export function useImpact(node: PluginNode): ImpactResult | null {
   const active = useActiveComposition();
   const graph = useGraph();
+  const registry = useRegistry();
   return useMemo(() => {
     if (!active || !graph) return null;
+    const flat = flattenManifest(active, registry);
     return {
-      select: impactOfSelecting(graph, active, node.id),
-      prune: impactOfPruning(graph, active, node.id),
+      select: impactOfSelecting(graph, flat, node.id),
+      prune: impactOfPruning(graph, flat, node.id),
     };
-  }, [active, graph, node.id]);
+  }, [active, graph, registry, node.id]);
 }

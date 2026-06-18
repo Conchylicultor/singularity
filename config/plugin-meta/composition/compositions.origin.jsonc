@@ -1,28 +1,11 @@
-// @hash 087b0fef4dc1
+// @hash 15fd2835cb6b
 {
   "manifests": [
     {
       "id": "agent-manager",
       "rank": "a0",
       "name": "agent-manager",
-      "entryPoints": [
-        "apps.agent-manager"
-      ],
-      "selectedContributors": [
-        "tasks.attempt-view",
-        "tasks.task-list.recent",
-        "ui.theme-toggle",
-        "improve.element-picker",
-        "review",
-        "reports.crash",
-        "reports.launch-fix",
-        "screenshot.draw-on-app"
-      ]
-    },
-    {
-      "id": "agent-manager-lean",
-      "rank": "a1",
-      "name": "agent-manager-lean",
+      "category": "profile",
       "entryPoints": [
         "apps.agent-manager"
       ],
@@ -30,7 +13,298 @@
         "tasks.attempt-view",
         "tasks.task-list.recent",
         "ui.theme-toggle"
+      ],
+      "extends": [
+        "self-improvement"
       ]
+    },
+    {
+      "id": "agent-manager-lean",
+      "rank": "a1",
+      "name": "agent-manager-lean",
+      "category": "profile",
+      "entryPoints": [
+        "apps.agent-manager"
+      ],
+      "selectedContributors": [
+        "tasks.attempt-view",
+        "tasks.task-list.recent",
+        "ui.theme-toggle"
+      ],
+      "extends": []
+    },
+    {
+      "id": "home",
+      "rank": "a2",
+      "name": "home",
+      "category": "app",
+      "entryPoints": [
+        "apps.home"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "pages",
+      "rank": "a3",
+      "name": "pages",
+      "category": "app",
+      "entryPoints": [
+        "apps.pages"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "settings",
+      "rank": "a4",
+      "name": "settings",
+      "category": "app",
+      "entryPoints": [
+        "apps.settings"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "studio",
+      "rank": "a5",
+      "name": "studio",
+      "category": "app",
+      "entryPoints": [
+        "apps.studio"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "sonata",
+      "rank": "a6",
+      "name": "sonata",
+      "category": "app",
+      "entryPoints": [
+        "apps.sonata"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "story",
+      "rank": "a7",
+      "name": "story",
+      "category": "app",
+      "entryPoints": [
+        "apps.story"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "debug",
+      "rank": "a8",
+      "name": "debug",
+      "category": "app",
+      "entryPoints": [
+        "apps.debug"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "deploy",
+      "rank": "a9",
+      "name": "deploy",
+      "category": "app",
+      "entryPoints": [
+        "apps.deploy"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "file-explorer",
+      "rank": "aA",
+      "name": "file-explorer",
+      "category": "app",
+      "entryPoints": [
+        "apps.file-explorer"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "workflows",
+      "rank": "aB",
+      "name": "workflows",
+      "category": "app",
+      "entryPoints": [
+        "apps.workflows"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "data",
+      "rank": "aC",
+      "name": "data",
+      "category": "subsystem",
+      "entryPoints": [
+        "database"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "jobs-events",
+      "rank": "aD",
+      "name": "jobs-events",
+      "category": "subsystem",
+      "entryPoints": [
+        "infra.jobs",
+        "infra.events",
+        "infra.secrets"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "live-state",
+      "rank": "aE",
+      "name": "live-state",
+      "category": "subsystem",
+      "entryPoints": [
+        "primitives.live-state",
+        "primitives.networking"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "auth",
+      "rank": "aF",
+      "name": "auth",
+      "category": "subsystem",
+      "entryPoints": [
+        "auth"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "search",
+      "rank": "aG",
+      "name": "search",
+      "category": "subsystem",
+      "entryPoints": [
+        "search.engine"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "history",
+      "rank": "aH",
+      "name": "history",
+      "category": "subsystem",
+      "entryPoints": [
+        "history.engine"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "conversations",
+      "rank": "aI",
+      "name": "conversations",
+      "category": "subsystem",
+      "entryPoints": [
+        "conversations"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "tasks-domain",
+      "rank": "aJ",
+      "name": "tasks-domain",
+      "category": "subsystem",
+      "entryPoints": [
+        "tasks"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "page-editor",
+      "rank": "aK",
+      "name": "page-editor",
+      "category": "subsystem",
+      "entryPoints": [
+        "page"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "fields",
+      "rank": "aL",
+      "name": "fields",
+      "category": "subsystem",
+      "entryPoints": [
+        "fields"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "design-system",
+      "rank": "aM",
+      "name": "design-system",
+      "category": "subsystem",
+      "entryPoints": [
+        "primitives.css"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "mcp",
+      "rank": "aN",
+      "name": "mcp",
+      "category": "subsystem",
+      "entryPoints": [
+        "infra.mcp"
+      ],
+      "selectedContributors": [],
+      "extends": []
+    },
+    {
+      "id": "self-improvement",
+      "rank": "aO",
+      "name": "self-improvement",
+      "category": "pack",
+      "entryPoints": [],
+      "selectedContributors": [
+        "improve.element-picker",
+        "review",
+        "reports.crash",
+        "reports.launch-fix",
+        "screenshot.draw-on-app"
+      ],
+      "extends": []
+    },
+    {
+      "id": "theming",
+      "rank": "aP",
+      "name": "theming",
+      "category": "pack",
+      "entryPoints": [],
+      "selectedContributors": [
+        "ui.theme-toggle",
+        "ui.tweakcn",
+        "ui.tweakcn.community-browser"
+      ],
+      "extends": []
     }
   ]
 }

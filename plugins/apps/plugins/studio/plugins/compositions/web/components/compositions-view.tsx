@@ -31,6 +31,7 @@ import {
   type CompositionManifestItem,
 } from "@plugins/plugin-meta/plugins/composition/core";
 import {
+  flattenManifest,
   resolveComposition,
   type CompositionManifest,
 } from "@plugins/plugin-meta/plugins/closure/core";
@@ -42,6 +43,15 @@ import { DiffDelta } from "./diff-delta";
 /** Default A / B for compare mode — the with/without self-improvement anchor demo. */
 const DEFAULT_A = "agent-manager";
 const DEFAULT_B = "agent-manager-lean";
+
+/** Display order + headings for the composition taxonomy. Compositions whose
+ *  `category` falls outside this set are grouped last under "Other". */
+const CATEGORY_GROUPS: { id: string; label: string }[] = [
+  { id: "profile", label: "Profiles" },
+  { id: "app", label: "Apps" },
+  { id: "subsystem", label: "Subsystems" },
+  { id: "pack", label: "Packs" },
+];
 
 type Mode = "draft" | "compare";
 
@@ -149,8 +159,10 @@ export function CompositionsView() {
 
   const resolved = useMemo(() => {
     if (!active || !graph) return null;
-    return resolveComposition(graph, active);
-  }, [active, graph]);
+    // Flatten the draft's `extends` (e.g. a profile's self-improvement pack)
+    // against the full registry before resolving, mirroring the store.
+    return resolveComposition(graph, flattenManifest(active, manifests));
+  }, [active, graph, manifests]);
 
   const byName = useCallback(
     (name: string): CompositionManifest | undefined =>
@@ -318,24 +330,11 @@ function DraftSection({
             No named compositions yet. Create one with New.
           </Text>
         ) : (
-          <Stack gap="2xs">
-            {items.map((item) => (
-              <Row
-                key={item.id}
-                selected={editingId === item.id}
-                onClick={() => onSelect(item)}
-                actions={
-                  <Badge size="sm" variant="muted">
-                    {item.entryPoints.length} entry ·{" "}
-                    {item.selectedContributors.length} sel
-                  </Badge>
-                }
-                actionsAlwaysVisible
-              >
-                <span className="truncate">{item.name}</span>
-              </Row>
-            ))}
-          </Stack>
+          <CompositionList
+            items={items}
+            editingId={editingId}
+            onSelect={onSelect}
+          />
         )}
       </Stack>
 
@@ -371,6 +370,58 @@ function DraftSection({
           <EntryEditor draft={active} allIds={allIds} />
         </Stack>
       )}
+    </Stack>
+  );
+}
+
+/**
+ * The named compositions, grouped by their `category` (Profiles / Apps /
+ * Subsystems / Packs, then any "Other"). Each row opens the manifest as the
+ * working draft; the trailing badge summarises entry / contributor / extends
+ * counts. Empty groups are omitted.
+ */
+function CompositionList({
+  items,
+  editingId,
+  onSelect,
+}: {
+  items: CompositionManifestItem[];
+  editingId: string | null;
+  onSelect: (item: CompositionManifestItem) => void;
+}) {
+  const known = new Set(CATEGORY_GROUPS.map((g) => g.id));
+  const groups = [
+    ...CATEGORY_GROUPS.map((g) => ({
+      label: g.label,
+      rows: items.filter((it) => it.category === g.id),
+    })),
+    { label: "Other", rows: items.filter((it) => !known.has(it.category)) },
+  ].filter((g) => g.rows.length > 0);
+
+  return (
+    <Stack gap="md">
+      {groups.map((group) => (
+        <Stack key={group.label} gap="2xs">
+          <SectionLabel>{group.label}</SectionLabel>
+          {group.rows.map((item) => (
+            <Row
+              key={item.id}
+              selected={editingId === item.id}
+              onClick={() => onSelect(item)}
+              actions={
+                <Badge size="sm" variant="muted">
+                  {item.entryPoints.length} entry · {item.selectedContributors.length}{" "}
+                  sel
+                  {item.extends.length > 0 ? ` · ${item.extends.length} ext` : ""}
+                </Badge>
+              }
+              actionsAlwaysVisible
+            >
+              <span className="truncate">{item.name}</span>
+            </Row>
+          ))}
+        </Stack>
+      ))}
     </Stack>
   );
 }

@@ -1,5 +1,6 @@
 import { useSyncExternalStore } from "react";
 import {
+  flattenManifest,
   resolveComposition,
   type CompositionManifest,
   type EdgeGraph,
@@ -35,16 +36,23 @@ function createCompositionStore() {
   let activeManifest: CompositionManifest | null = null;
   let compareManifest: CompositionManifest | null = null;
   let graph: EdgeGraph | null = null;
+  // The full manifest set, published by `useCompositionData`. The resolution
+  // boundary flattens active/compare against this so a composition's `extends`
+  // (e.g. a profile pulling in the self-improvement PACK) is folded in before
+  // closure — no caller resolves a raw, un-flattened manifest.
+  let registry: CompositionManifest[] = [];
 
-  // Cached derived membership + the (active, graph) refs it was computed for.
+  // Cached derived membership + the (active, registry, graph) refs it was computed for.
   let membershipCache: Map<PluginId, MembershipState> | null = null;
   let membershipForActive: CompositionManifest | null = null;
+  let membershipForRegistry: CompositionManifest[] | null = null;
   let membershipForGraph: EdgeGraph | null = null;
 
-  // Cached derived diff map + the (active, compareWith, graph) refs it was computed for.
+  // Cached derived diff map + the (active, compareWith, registry, graph) refs it was computed for.
   let diffCache: Map<PluginId, DiffState> | null = null;
   let diffForActive: CompositionManifest | null = null;
   let diffForCompare: CompositionManifest | null = null;
+  let diffForRegistry: CompositionManifest[] | null = null;
   let diffForGraph: EdgeGraph | null = null;
 
   const listeners = new Set<() => void>();
@@ -69,33 +77,46 @@ function createCompositionStore() {
     getGraph(): EdgeGraph | null {
       return graph;
     },
-    /** Recompute (and cache) membership when the active manifest or graph changed. */
+    getRegistry(): CompositionManifest[] {
+      return registry;
+    },
+    /** Recompute (and cache) membership when the active manifest, registry, or
+     *  graph changed. The active draft is flattened against the registry first so
+     *  its `extends` packs land in the bundle. */
     getMembership(): Map<PluginId, MembershipState> | null {
       if (!activeManifest || !graph) {
         membershipCache = null;
         membershipForActive = null;
+        membershipForRegistry = null;
         membershipForGraph = null;
         return null;
       }
       if (
         membershipCache &&
         membershipForActive === activeManifest &&
+        membershipForRegistry === registry &&
         membershipForGraph === graph
       ) {
         return membershipCache;
       }
-      membershipCache = resolveComposition(graph, activeManifest).membership;
+      membershipCache = resolveComposition(
+        graph,
+        flattenManifest(activeManifest, registry),
+      ).membership;
       membershipForActive = activeManifest;
+      membershipForRegistry = registry;
       membershipForGraph = graph;
       return membershipCache;
     },
     /** Recompute (and cache) the per-plugin A↔B diff map when active, compareWith,
-     *  or the graph changed. `null` unless BOTH manifests are set (compare mode). */
+     *  the registry, or the graph changed. `null` unless BOTH manifests are set
+     *  (compare mode). Both sides are flattened against the registry first. */
     getDiffMap(): Map<PluginId, DiffState> | null {
       if (!activeManifest || !compareManifest || !graph) {
         diffCache = null;
         diffForActive = null;
         diffForCompare = null;
+        diffForRegistry = null;
         diffForGraph = null;
         return null;
       }
@@ -103,12 +124,19 @@ function createCompositionStore() {
         diffCache &&
         diffForActive === activeManifest &&
         diffForCompare === compareManifest &&
+        diffForRegistry === registry &&
         diffForGraph === graph
       ) {
         return diffCache;
       }
-      const bundleA = resolveComposition(graph, activeManifest).bundle;
-      const bundleB = resolveComposition(graph, compareManifest).bundle;
+      const bundleA = resolveComposition(
+        graph,
+        flattenManifest(activeManifest, registry),
+      ).bundle;
+      const bundleB = resolveComposition(
+        graph,
+        flattenManifest(compareManifest, registry),
+      ).bundle;
       const map = new Map<PluginId, DiffState>();
       // Every node defaults to "neither"; mark bundle members from each side.
       for (const id of graph.hardForward.keys()) map.set(id, "neither");
@@ -121,12 +149,18 @@ function createCompositionStore() {
       diffCache = map;
       diffForActive = activeManifest;
       diffForCompare = compareManifest;
+      diffForRegistry = registry;
       diffForGraph = graph;
       return diffCache;
     },
     setGraph(next: EdgeGraph): void {
       if (graph === next) return;
       graph = next;
+      emit();
+    },
+    setRegistry(next: CompositionManifest[]): void {
+      if (registry === next) return;
+      registry = next;
       emit();
     },
     setActive(manifest: CompositionManifest | null): void {
@@ -149,6 +183,16 @@ export function setGraph(next: EdgeGraph): void {
 
 export function getGraph(): EdgeGraph | null {
   return store.getGraph();
+}
+
+/** Published by `useCompositionData()` with the full manifest set, so the
+ *  resolution boundary can flatten `extends` against it. */
+export function setRegistry(next: CompositionManifest[]): void {
+  store.setRegistry(next);
+}
+
+export function getRegistry(): CompositionManifest[] {
+  return store.getRegistry();
 }
 
 export function getActiveComposition(): CompositionManifest | null {
@@ -200,6 +244,10 @@ export function useActiveMembership(): Map<PluginId, MembershipState> | null {
 
 export function useGraph(): EdgeGraph | null {
   return useSyncExternalStore(store.subscribe, store.getGraph, store.getGraph);
+}
+
+export function useRegistry(): CompositionManifest[] {
+  return useSyncExternalStore(store.subscribe, store.getRegistry, store.getRegistry);
 }
 
 export function useCompareComposition(): CompositionManifest | null {

@@ -2109,7 +2109,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/enum.enumFieldType`
             - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`
           - Cross-plugin:
-            - Imported by: `ui/theme-engine`
+            - Imported by: `plugin-meta/composition`, `ui/theme-engine`
         - **`filter`** — Enum (select) field type: data-view filter operator set (is / is-any-of / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "enum"
@@ -3102,7 +3102,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`closure`**
       - Core:
         - Uses: `framework/plugin-id.asPluginId`, `plugin-meta/facets.getFacet`, `plugin-meta/facets/contributions.contributionsFacetDef`, `plugin-meta/facets/cross-refs.crossRefsFacetDef`, `plugin-meta/facets/slots.slotsFacetDef`, `plugin-meta/plugin-tree.buildPluginTree`, `plugin-meta/plugin-tree.PluginTree`
-        - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `explainInclusion`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`, `serializeEdgeGraph`
+        - Exports: Types: `Composition`, `CompositionManifest`, `Edge`, `EdgeGraph`, `EdgeKind`, `InclusionPath`, `InclusionStep`, `MembershipState`, `SerializedEdgeGraph`; Values: `classifyEdges`, `deserializeEdgeGraph`, `explainInclusion`, `flattenManifest`, `hardClosure`, `impactOfPruning`, `impactOfSelecting`, `resolveComposition`, `serializeEdgeGraph`
+      - Cross-plugin:
+        - Imported by: `plugin-meta/composition`
     - **`composition`** — Web hooks + active-composition store for the Studio closure visualization: fetches and deserializes the edge graph once, holds the working draft, and derives membership / inclusion / impact client-side. Owns the manifest read/write API over the compositions config_v2 config. Serves the classified edge graph for the Studio closure visualization; registers the runtime-editable compositions config.
       - Web:
         - Contributes: `ConfigV2.WebRegister`
@@ -3112,7 +3114,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `config_v2.ConfigV2`, `infra/endpoints.implement`, `infra/paths.PLUGINS_DIR`
         - Routes: `GET /api/composition/data`
       - Core:
-        - Uses: `config_v2.defineConfig`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`
+        - Uses: `config_v2.defineConfig`, `fields/enum/config.enumField`, `fields/list/config.listField`, `fields/string-list/config.stringListField`, `fields/text/config.textField`, `infra/endpoints.defineEndpoint`, `plugin-meta/closure.flattenManifest`
         - Exports: Types: `CompositionData`, `CompositionManifestItem`; Values: `compositionDataSchema`, `compositionsConfig`, `getCompositionData`, `manifestItemToManifest`
       - Cross-plugin:
         - Imported by: `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `plugin-meta/plugin-view/inclusion`
