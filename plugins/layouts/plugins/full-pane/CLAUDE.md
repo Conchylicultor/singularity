@@ -41,7 +41,7 @@ declared on the pane.**
 
 - Description: Full-pane layout renderer. Paints only the active pane (route.at(-1)) full-surface — the screen-stack navigation model, mounted by full-surface apps.
 - Web:
-  - Uses: `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.usePaneRoute`
+  - Uses: `primitives/css/ui-kit.PortalForwardProvider`, `primitives/error-boundary.PluginErrorBoundary`, `primitives/pane.PaneBasePathContext`, `primitives/pane.PaneInstanceContext`, `primitives/pane.PaneLayoutContext`, `primitives/pane.PaneMatch`, `primitives/pane.PaneMatchContext`, `primitives/pane.PaneResolveGuard`, `primitives/pane.usePaneRoute`
   - Exports: Values: `FullPane`
 - Cross-plugin:
   - Imported by: `apps/sonata/shell`, `apps/story/shell`, `layouts/host`

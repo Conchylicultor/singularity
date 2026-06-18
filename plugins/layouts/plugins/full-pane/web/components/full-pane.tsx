@@ -1,5 +1,6 @@
 import { useContext } from "react";
 import { PluginErrorBoundary } from "@plugins/primitives/plugins/error-boundary/web";
+import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import {
   type PaneMatch,
   PaneBasePathContext,
@@ -35,7 +36,11 @@ export function FullPane({ match: provided }: { match?: PaneMatch }) {
       <PaneLayoutContext.Provider value={null}>
         <PluginErrorBoundary slot="layouts.full-pane" label={active.pane.id}>
           <div className="h-full min-h-0" data-pane-id={active.pane.id}>
-            <PaneResolveGuard pane={active.pane} params={active.params} />
+            {/* Forward the pane id across portals so popovers/menus opened from
+                this pane still report their containing pane to the picker. */}
+            <PortalForwardProvider name="data-pane-id" value={active.pane.id}>
+              <PaneResolveGuard pane={active.pane} params={active.params} />
+            </PortalForwardProvider>
           </div>
         </PluginErrorBoundary>
       </PaneLayoutContext.Provider>

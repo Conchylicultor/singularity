@@ -3,7 +3,7 @@
 import { Tooltip as TooltipPrimitive } from "@base-ui/react/tooltip"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
-import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope"
+import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 
 function TooltipProvider({
   delay = 0,
@@ -39,11 +39,11 @@ function TooltipContent({
     TooltipPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
   >) {
-  const themeScope = usePortalThemeScope()
+  const forwarded = usePortalForwardedAttrs()
   return (
     <TooltipPrimitive.Portal>
       <TooltipPrimitive.Positioner
-        data-theme-scope={themeScope}
+        {...forwarded}
         align={align}
         alignOffset={alignOffset}
         side={side}

@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { cn, usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 
 // The viewport-fill recipe lives in module consts (not inline className literals)
 // so the `no-adhoc-viewport-overlay` rule — which only harvests literals reached
@@ -40,8 +40,10 @@ export interface ViewportOverlayProps {
  * `fixed inset-0` box is relative to the real VIEWPORT — never to a
  * `transform-gpu` (or any transform / filter / will-change) ancestor that would
  * otherwise become the containing block and silently clip it to the content
- * area. Stamps `data-theme-scope` from `usePortalThemeScope()` so themed content
- * keeps the originating surface's palette after the portal hop.
+ * area. Re-stamps the portal-forwarded `data-*` bag (theme scope, plugin
+ * lineage, pane id) via `usePortalForwardedAttrs()` so ancestry-derived signals
+ * survive the portal hop — themed content keeps the originating surface's palette
+ * and the element-picker still resolves the owning plugin.
  *
  * Why this exists: several app surfaces deliberately transform a container to
  * scope `position: fixed` chrome; any hand-rolled `fixed inset-0` descendant is
@@ -56,11 +58,11 @@ export function ViewportOverlay({
   children,
   ...rest
 }: ViewportOverlayProps) {
-  const scope = usePortalThemeScope();
+  const forwarded = usePortalForwardedAttrs();
   if (!active) return <>{children}</>;
   return createPortal(
     <div
-      data-theme-scope={scope}
+      {...forwarded}
       className={cn(OVERLAY_ROOT, LAYER_CLASS[layer], className)}
       {...rest}
     >

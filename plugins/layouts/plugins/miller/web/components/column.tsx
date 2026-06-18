@@ -5,6 +5,7 @@ import {
   type MatchEntry,
 } from "@plugins/primitives/plugins/pane/web";
 import { useSurfaceTabId } from "@plugins/primitives/plugins/surface-id/web";
+import { PortalForwardProvider } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useColumnCollapse } from "../hooks/use-column-collapse";
 import { useClearMaximize, useColumnMaximize, useMaximizedId } from "../hooks/use-column-maximize";
 import { hasStoredWidth, useColumnWidth } from "../hooks/use-column-widths";
@@ -97,7 +98,11 @@ export function Column({ entry, isFirst, isLast, dragHandleProps }: ColumnProps)
             atSurfaceEnd: isLast || isMaximized,
           }}
         >
-          <PaneResolveGuard pane={entry.pane} params={entry.params} />
+          {/* Forward the pane id across portals so popovers/menus opened from
+              this column still report their containing pane to the picker. */}
+          <PortalForwardProvider name="data-pane-id" value={paneId}>
+            <PaneResolveGuard pane={entry.pane} params={entry.params} />
+          </PortalForwardProvider>
         </PaneLayoutContext.Provider>
       </div>
       {isCollapsed ? (

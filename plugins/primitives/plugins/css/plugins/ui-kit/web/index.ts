@@ -49,6 +49,11 @@ export {
   appThemeScope,
   themeScopeSelectors,
 } from "./components/portal-theme-scope";
+export {
+  PortalForwardProvider,
+  usePortalForwardedAttrs,
+  type PortalForwardedAttrs,
+} from "./components/portal-forward";
 export { Popover, PopoverTrigger, PopoverContent } from "./components/ui/popover";
 export {
   ResizableHandle,

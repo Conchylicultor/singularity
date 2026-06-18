@@ -25,6 +25,20 @@ tag later appears (the sent user message, assistant text) because it is just an
   precisely than the innermost plugin id alone. `data-pane-id` is added at the
   layout pane-render chokepoints (miller / full-pane) so the lineage walk can
   also report the containing pane.
+- **Surviving portals.** Popovers, dialogs, menus, and the viewport overlay
+  relocate their content to `document.body`, which severs it from the
+  `[data-plugin-id]` marker spans (those stay in the source tree) — so a naive
+  DOM-ancestry walk loses the whole lineage for portaled UI. The marker
+  middleware therefore *also* appends each marker to the **portal-forward bridge**
+  (`primitives/css/ui-kit`'s `PortalForwardProvider` / `usePortalForwardedAttrs`),
+  a React-context bag of `data-*` attributes that crosses portals; every portal
+  surface re-stamps the bag onto its positioner. The serialized chain rides as
+  `data-plugin-lineage` (see `marker-lineage.ts`), and `collectMarkerLineage`
+  splices it in when the walk hits a portaled positioner. This is the same generic
+  bridge theme scope (`data-theme-scope`) and pane id (`data-pane-id`) ride — add a
+  forwarded signal once, every portal surface carries it. Without it, picks inside
+  a popover reported `source`/`owner` (build-stamped on the element) but no
+  `plugin`/`slot`/`path`.
 - **Overlay.** `picker-overlay.tsx` is a `fixed inset-0 z-max` portal with
   `pointer-events:none` so `document.elementFromPoint` returns the real
   underlying element. Window capture-phase `mousemove`/`click`/`keydown` track
@@ -87,7 +101,7 @@ still reads pre-split legacy flat-body tags (`LEGACY_BODY_PREAMBLE`).
 - Description: Chrome-inspector-style 'pick a UI element' toolbar button. Overlays the live app to hover/click any element, captures its plugin/slot/pane/URL metadata, and hands a readable <ui-context/> tag to the Improve popover as a rich inline chip.
 - Web:
   - Contributes: `ActionBar.Item` → `ElementPickerButton`, `TaskDraftFormSlots.Action` → `TaskDraftPickerButton`, `ActiveData.Tag` "<ui-context(?:\s+[\w-]+="[^"]*")*\s*>[\s\S]*?<\/ui-context>" → `UiContextTag`
-  - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
+  - Uses: `active-data.ActiveData`, `improve.ImproveCommands`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.PortalForwardProvider`, `primitives/css/ui-kit.usePortalForwardedAttrs`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/icon-button.IconButton`, `primitives/popover.InlinePopover`, `primitives/slot-render.registerSlotItemMiddleware`, `shell/action-bar.ActionBar`, `tasks/task-draft-form.TaskDraftFormSlots`
 - Core:
   - Uses: `framework/tooling/collected-dir.defineCollectedDir`
   - Exports: Types: `UiContextMeta`; Values: `parseUiContext`, `serializeUiContext`, `UI_CONTEXT_RE`, `viteCollectedDir`

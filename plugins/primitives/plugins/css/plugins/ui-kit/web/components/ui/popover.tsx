@@ -1,7 +1,7 @@
 import { Popover as PopoverPrimitive } from "@base-ui/react/popover"
 
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/lib/utils"
-import { usePortalThemeScope } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-theme-scope"
+import { usePortalForwardedAttrs } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/components/portal-forward"
 import { SURFACE_LEVELS } from "@plugins/primitives/plugins/css/plugins/ui-kit/web/theme/surface"
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web"
 
@@ -31,11 +31,11 @@ function PopoverContent({
   // block. Re-stamp the scope here (flowing through React context, which
   // crosses portals) so the popup adopts the launching window's scoped theme
   // instead of the global :root chrome theme. Undefined → no attribute → default.
-  const themeScope = usePortalThemeScope()
+  const forwarded = usePortalForwardedAttrs()
   return (
     <PopoverPrimitive.Portal>
       <PopoverPrimitive.Positioner
-        data-theme-scope={themeScope}
+        {...forwarded}
         className="isolate z-popover outline-none"
         align={align}
         alignOffset={alignOffset}
