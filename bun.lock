@@ -1239,6 +1239,10 @@
       "name": "@singularity/plugin-fields-bool-inline",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/bool/plugins/storage": {
+      "name": "@singularity/plugin-fields-bool-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/bool/plugins/table": {
       "name": "@singularity/plugin-fields-bool-table",
       "version": "0.0.1",
@@ -1265,6 +1269,10 @@
     },
     "plugins/fields/plugins/date/plugins/inline": {
       "name": "@singularity/plugin-fields-date-inline",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/date/plugins/storage": {
+      "name": "@singularity/plugin-fields-date-storage",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/date/plugins/table": {
@@ -1315,6 +1323,10 @@
       "name": "@singularity/plugin-fields-float-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/float/plugins/storage": {
+      "name": "@singularity/plugin-fields-float-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/image": {
       "name": "@singularity/plugin-fields-image",
       "version": "0.0.1",
@@ -1331,12 +1343,20 @@
       "name": "@singularity/plugin-fields-int-config",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/int/plugins/storage": {
+      "name": "@singularity/plugin-fields-int-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/json": {
       "name": "@singularity/plugin-fields-json",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/json/plugins/config": {
       "name": "@singularity/plugin-fields-json-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/json/plugins/storage": {
+      "name": "@singularity/plugin-fields-json-storage",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/list": {
@@ -1435,8 +1455,20 @@
       "name": "@singularity/plugin-fields-text-inline",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/text/plugins/storage": {
+      "name": "@singularity/plugin-fields-text-storage",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/text/plugins/table": {
       "name": "@singularity/plugin-fields-text-table",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/uuid": {
+      "name": "@singularity/plugin-fields-uuid",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/uuid/plugins/storage": {
+      "name": "@singularity/plugin-fields-uuid-storage",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/variant": {
@@ -1445,6 +1477,10 @@
     },
     "plugins/fields/plugins/variant/plugins/config": {
       "name": "@singularity/plugin-fields-variant-config",
+      "version": "0.0.1",
+    },
+    "plugins/fields/server": {
+      "name": "@singularity/plugin-fields-server",
       "version": "0.0.1",
     },
     "plugins/framework": {
@@ -4130,6 +4166,8 @@
 
     "@singularity/plugin-fields-bool-inline": ["@singularity/plugin-fields-bool-inline@workspace:plugins/fields/plugins/bool/plugins/inline"],
 
+    "@singularity/plugin-fields-bool-storage": ["@singularity/plugin-fields-bool-storage@workspace:plugins/fields/plugins/bool/plugins/storage"],
+
     "@singularity/plugin-fields-bool-table": ["@singularity/plugin-fields-bool-table@workspace:plugins/fields/plugins/bool/plugins/table"],
 
     "@singularity/plugin-fields-color": ["@singularity/plugin-fields-color@workspace:plugins/fields/plugins/color"],
@@ -4143,6 +4181,8 @@
     "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
 
     "@singularity/plugin-fields-date-inline": ["@singularity/plugin-fields-date-inline@workspace:plugins/fields/plugins/date/plugins/inline"],
+
+    "@singularity/plugin-fields-date-storage": ["@singularity/plugin-fields-date-storage@workspace:plugins/fields/plugins/date/plugins/storage"],
 
     "@singularity/plugin-fields-date-table": ["@singularity/plugin-fields-date-table@workspace:plugins/fields/plugins/date/plugins/table"],
 
@@ -4168,6 +4208,8 @@
 
     "@singularity/plugin-fields-float-config": ["@singularity/plugin-fields-float-config@workspace:plugins/fields/plugins/float/plugins/config"],
 
+    "@singularity/plugin-fields-float-storage": ["@singularity/plugin-fields-float-storage@workspace:plugins/fields/plugins/float/plugins/storage"],
+
     "@singularity/plugin-fields-image": ["@singularity/plugin-fields-image@workspace:plugins/fields/plugins/image"],
 
     "@singularity/plugin-fields-image-table": ["@singularity/plugin-fields-image-table@workspace:plugins/fields/plugins/image/plugins/table"],
@@ -4176,9 +4218,13 @@
 
     "@singularity/plugin-fields-int-config": ["@singularity/plugin-fields-int-config@workspace:plugins/fields/plugins/int/plugins/config"],
 
+    "@singularity/plugin-fields-int-storage": ["@singularity/plugin-fields-int-storage@workspace:plugins/fields/plugins/int/plugins/storage"],
+
     "@singularity/plugin-fields-json": ["@singularity/plugin-fields-json@workspace:plugins/fields/plugins/json"],
 
     "@singularity/plugin-fields-json-config": ["@singularity/plugin-fields-json-config@workspace:plugins/fields/plugins/json/plugins/config"],
+
+    "@singularity/plugin-fields-json-storage": ["@singularity/plugin-fields-json-storage@workspace:plugins/fields/plugins/json/plugins/storage"],
 
     "@singularity/plugin-fields-list": ["@singularity/plugin-fields-list@workspace:plugins/fields/plugins/list"],
 
@@ -4208,6 +4254,8 @@
 
     "@singularity/plugin-fields-secret-config": ["@singularity/plugin-fields-secret-config@workspace:plugins/fields/plugins/secret/plugins/config"],
 
+    "@singularity/plugin-fields-server": ["@singularity/plugin-fields-server@workspace:plugins/fields/server"],
+
     "@singularity/plugin-fields-string-list": ["@singularity/plugin-fields-string-list@workspace:plugins/fields/plugins/string-list"],
 
     "@singularity/plugin-fields-string-list-config": ["@singularity/plugin-fields-string-list-config@workspace:plugins/fields/plugins/string-list/plugins/config"],
@@ -4228,7 +4276,13 @@
 
     "@singularity/plugin-fields-text-inline": ["@singularity/plugin-fields-text-inline@workspace:plugins/fields/plugins/text/plugins/inline"],
 
+    "@singularity/plugin-fields-text-storage": ["@singularity/plugin-fields-text-storage@workspace:plugins/fields/plugins/text/plugins/storage"],
+
     "@singularity/plugin-fields-text-table": ["@singularity/plugin-fields-text-table@workspace:plugins/fields/plugins/text/plugins/table"],
+
+    "@singularity/plugin-fields-uuid": ["@singularity/plugin-fields-uuid@workspace:plugins/fields/plugins/uuid"],
+
+    "@singularity/plugin-fields-uuid-storage": ["@singularity/plugin-fields-uuid-storage@workspace:plugins/fields/plugins/uuid/plugins/storage"],
 
     "@singularity/plugin-fields-variant": ["@singularity/plugin-fields-variant@workspace:plugins/fields/plugins/variant"],
 

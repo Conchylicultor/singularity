@@ -29,6 +29,28 @@ its identity. When a surface looks up a capability (cell, filter) for `int` and
 finds none, it walks `resolveTypeChain` to the base (`number`) and reuses its
 capability. Leaf plugins under `plugins/` register one type each.
 
+## Storage — the one capability `fields` owns directly
+
+The general rule above is that capability slots are **owned by the consuming
+surface, never by `fields`** (data-view owns cell/filter; config_v2 owns the
+config renderer). **`storage` is the single carve-out.** It is intrinsic to a
+type's identity — there is exactly one DB column mapping per type, system-wide —
+so the `fields` plugin owns it directly, on a **new `fields/server` runtime**
+(symmetric to `fields/core` and `fields/web`). It lives on the server runtime
+specifically to keep `drizzle-orm/pg-core` out of the browser bundle.
+
+- `fields/server` owns the `fields.storage` server-contribution registry (the
+  `Fields.Storage` token) and the generic `resolveFieldStorage(typeId)` resolver.
+- Each persisted type contributes its Drizzle column builder from a
+  `plugins/<type>/plugins/storage/` server sub-plugin
+  (`Fields.Storage({ type, build })`), so adding/removing a type updates the
+  matrix with zero consumer edits.
+- **Resolution is exact-token — no `extends` fallback.** Every persisted type
+  declares its own builder; `resolveFieldStorage` does a direct keyed lookup.
+  (A future derived type wanting the same column re-declares a one-line builder
+  rather than inheriting, keeping storage self-contained on the server with no
+  need to mirror the web identity/`extends` map.)
+
 ## Adding a field type
 
 1. Create `plugins/fields/plugins/<type>/`.
@@ -43,26 +65,28 @@ capability. Leaf plugins under `plugins/` register one type each.
 
 ## Plugin reference
 
-- Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- Description: Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
 - Web:
-  - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.variant`
+  - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
   - Exports: Values: `Fields`
 - Cross-plugin:
-  - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/json`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`, `fields/variant`
+  - Imported by: `fields/avatar`, `fields/bool`, `fields/bool/storage`, `fields/color`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/storage`, `fields/json`, `fields/json/storage`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`
+- Server:
+  - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `resolveFieldStorage`
 - Core:
   - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
 - Sub-plugins:
   - **`avatar`** [1 sub-plugin] — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
-  - **`bool`** [4 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`bool`** [5 sub-plugins] — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`color`** [2 sub-plugins] — Color field type: identity only. The read-only swatch cell lives in the plugins/table sub-plugin; color has no filter (sparse).
-  - **`date`** [3 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`date`** [4 sub-plugins] — Date field type: identity only. The data-view cell (relative time) and filter (date range) capabilities live in the plugins/{table,filter} sub-plugins.
   - **`directory-path`** [1 sub-plugin] — Directory-path field type: identity only. The config-render capability (a folder picker) and the dirPathField factory live in the plugins/config sub-plugin.
   - **`dynamic-enum`** [1 sub-plugin] — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
   - **`enum`** [4 sub-plugins] — Enum (select) field type: identity only. The config-render, table (chip cell), and filter (multi-select) capabilities live in the plugins/{config,table,filter} sub-plugins.
-  - **`float`** [1 sub-plugin] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
+  - **`float`** [2 sub-plugins] — Float field type: identity only, extends number — reuses number's cell and filter via the extends chain.
   - **`image`** [1 sub-plugin] — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
-  - **`int`** [1 sub-plugin] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
-  - **`json`** [1 sub-plugin] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
+  - **`int`** [2 sub-plugins] — Integer field type: identity only, extends number — reuses number's cell and filter via the extends chain.
+  - **`json`** [2 sub-plugins] — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
   - **`list`** [1 sub-plugin] — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
   - **`multiline-text`** [1 sub-plugin] — Long text field type: identity only, extends text — reuses text's cell and filter via the extends chain.
   - **`number`** [3 sub-plugins] — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
@@ -71,7 +95,8 @@ capability. Leaf plugins under `plugins/` register one type each.
   - **`secret`** [1 sub-plugin] — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
   - **`string-list`** [1 sub-plugin] — String-list field type: identity only. The config-render capability and the stringListField factory live in the plugins/config sub-plugin.
   - **`tags`** [3 sub-plugins] — Tags (multi-value) field type: identity only. The data-view filter (multi-select tag chips with array-aware match-any) lives in the plugins/filter sub-plugin.
-  - **`text`** [4 sub-plugins] — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`text`** [5 sub-plugins] — Text field type: identity only. The data-view cell and filter (substring) capabilities live in the plugins/{table,filter} sub-plugins.
+  - **`uuid`** [1 sub-plugin] — UUID field type: identity only, extends text — a string value primarily used as a storage/PK type, reusing text's cell and filter via the extends chain.
   - **`variant`** [1 sub-plugin] — Variant field type: identity only. The config-render capability and the variantField factory live in the plugins/config sub-plugin.
 
 <!-- AUTOGENERATED:END -->

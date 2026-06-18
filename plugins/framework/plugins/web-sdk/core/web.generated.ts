@@ -314,6 +314,7 @@ export const webEntries: CollectedEntry[] = [
   { pluginPath: "fields/plugins/text/plugins/inline", id: "fields.text.inline", loader: () => import("@plugins/fields/plugins/text/plugins/inline/web"), dependsOn: ["primitives/plugins/css/plugins/ui-kit", "primitives/plugins/data-view"] },
   { pluginPath: "fields/plugins/text/plugins/table", id: "fields.text.table", loader: () => import("@plugins/fields/plugins/text/plugins/table/web"), dependsOn: ["primitives/plugins/data-view"] },
   { pluginPath: "fields/plugins/text", id: "fields.text", loader: () => import("@plugins/fields/plugins/text/web"), dependsOn: ["fields"] },
+  { pluginPath: "fields/plugins/uuid", id: "fields.uuid", loader: () => import("@plugins/fields/plugins/uuid/web"), dependsOn: ["fields"] },
   { pluginPath: "fields/plugins/variant/plugins/config", id: "fields.variant.config", loader: () => import("@plugins/fields/plugins/variant/plugins/config/web"), dependsOn: ["config_v2", "config_v2/plugins/fields", "fields/plugins/variant", "primitives/plugins/css/plugins/spacing", "primitives/plugins/css/plugins/text", "primitives/plugins/css/plugins/ui-kit"] },
   { pluginPath: "fields/plugins/variant", id: "fields.variant", loader: () => import("@plugins/fields/plugins/variant/web"), dependsOn: ["fields"] },
   { pluginPath: "fields", id: "fields", loader: () => import("@plugins/fields/web"), dependsOn: [] },

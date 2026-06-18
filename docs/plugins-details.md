@@ -1921,12 +1921,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Shared:
         - Exports: Types: `BulkDeleteWorktreesBody`; Values: `bulkDeleteWorktrees`, `BulkDeleteWorktreesBodySchema`, `deleteWorktree`, `listWorktrees`
 
-- **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce).
+- **`fields`** — Type-dimension registry: owns the fields.identity slot where each field type registers its identity (token, label, icon, extends, coerce). Storage-dimension registry: owns the fields.storage server slot where each field type contributes its Drizzle column builder, keyed by type token.
   - Web:
-    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.variant`
+    - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `fields/avatar`, `fields/bool`, `fields/color`, `fields/date`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/image`, `fields/int`, `fields/json`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`, `fields/variant`
+    - Imported by: `fields/avatar`, `fields/bool`, `fields/bool/storage`, `fields/color`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/storage`, `fields/json`, `fields/json/storage`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`
+  - Server:
+    - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `resolveFieldStorage`
   - Core:
     - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
   - Plugins:
@@ -1972,6 +1974,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "bool" → `BoolEditor`
             - Uses: `primitives/data-view.DataViewSlots`
+        - **`storage`** — Boolean field type: DB storage capability — maps to a Postgres boolean column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/bool/plugins/storage/server/internal/storage.test.ts`
         - **`table`** — Boolean field type: data-view table cell (read-only check/dash cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "bool" → `BoolCell`
@@ -2013,6 +2019,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "date" → `DateEditor`
             - Uses: `primitives/data-view.DataViewSlots`
+        - **`storage`** — Date field type: DB storage capability — maps to a Postgres timestamptz column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/date/plugins/storage/server/internal/storage.test.ts`
         - **`table`** — Date field type: data-view table cell (read-only relative-time cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "date" → `DateCell`
@@ -2103,6 +2113,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/float.floatFieldType`
             - Exports: Types: `FloatFieldDef`; Values: `floatField`
+        - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/float/plugins/storage/server/internal/storage.test.ts`
     - **`image`** — Image field type: identity only. The read-only thumbnail cell lives in the plugins/table sub-plugin; image is a data-view-only media type with no filter (sparse).
       - Web:
         - Contributes: `Fields.Identity` "image"
@@ -2134,6 +2148,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Exports: Types: `IntFieldDef`; Values: `intField`
           - Cross-plugin:
             - Imported by: `debug/slow-ops`
+        - **`storage`** — Integer field type: DB storage capability — maps to a Postgres integer column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/int/plugins/storage/server/internal/storage.test.ts`
     - **`json`** — JSON field type: identity only. The config-render capability and the jsonField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "json"
@@ -2151,6 +2169,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/json.jsonFieldType`
             - Exports: Types: `JsonFieldDef`; Values: `jsonField`
+        - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/json/plugins/storage/server/internal/storage.test.ts`
     - **`list`** — List field type: identity only. The config-render capability and the listField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "list"
@@ -2316,7 +2338,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `textFieldType`, `textIdentity`
       - Cross-plugin:
-        - Imported by: `fields/multiline-text`, `fields/text/config`
+        - Imported by: `fields/multiline-text`, `fields/text/config`, `fields/uuid`
       - Plugins:
         - **`config`** — Text field type: config-render capability (single-line input for config-v2.fields.renderer) plus the textField factory.
           - Web:
@@ -2335,10 +2357,26 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Contributes: `DataViewSlots.CellEditor` "text" → `TextEditor`
             - Uses: `primitives/css/ui-kit.Input`, `primitives/data-view.DataViewSlots`
+        - **`storage`** — Text field type: DB storage capability — maps to a Postgres text column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/text/plugins/storage/server/internal/storage.test.ts`
         - **`table`** — Text field type: data-view table cell (read-only text cell).
           - Web:
             - Contributes: `DataViewSlots.Cell` "text" → `TextCell`
             - Uses: `primitives/data-view.DataViewSlots`
+    - **`uuid`** — UUID field type: identity only, extends text — a string value primarily used as a storage/PK type, reusing text's cell and filter via the extends chain.
+      - Web:
+        - Contributes: `Fields.Identity` "uuid"
+        - Uses: `fields.Fields`
+      - Core:
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/text.textFieldType`
+        - Exports: Values: `uuidFieldType`, `uuidIdentity`
+      - Plugins:
+        - **`storage`** — UUID field type: DB storage capability — maps to a Postgres uuid column.
+          - Server:
+            - Uses: `fields.Fields`
+            - DB schema: `plugins/fields/plugins/uuid/plugins/storage/server/internal/storage.test.ts`
     - **`variant`** — Variant field type: identity only. The config-render capability and the variantField factory live in the plugins/config sub-plugin.
       - Web:
         - Contributes: `Fields.Identity` "variant"
