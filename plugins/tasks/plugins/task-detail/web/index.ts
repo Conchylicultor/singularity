@@ -7,6 +7,8 @@ import {
   tasksRootPane,
   taskDetailPane,
 } from "./panes";
+import { GoToParentAction } from "./components/go-to-parent-action";
+import { ExpandTaskAction } from "./components/expand-task-action";
 
 export { TaskDetail as TaskDetailSlots } from "./slots";
 export {
@@ -25,6 +27,8 @@ export default {
   contributions: [
     Pane.Register({ pane: tasksRootPane }),
     Pane.Register({ pane: taskDetailPane }),
+    taskDetailPane.Actions({ component: GoToParentAction }),
+    taskDetailPane.Actions({ component: ExpandTaskAction }),
     Shell.Sidebar({
       id: "tasks",
       ...sidebarNavItem({ title: "Tasks", icon: MdChecklist, onClick: () => openPane(tasksRootPane, {}, { mode: "root" }) }),

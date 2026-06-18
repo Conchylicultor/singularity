@@ -4,7 +4,7 @@ import { conversationPane } from "@plugins/conversations/plugins/conversation-vi
 import { useConversationById } from "@plugins/conversations/web";
 import { useTask } from "@plugins/tasks/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
-import { convTasksPane } from "../panes";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 
 const STATUS_DOT: Record<string, string> = {
   new: "bg-muted-foreground/40",
@@ -21,7 +21,7 @@ export function TasksButton() {
   const { convId } = conversationPane.useParams();
   const conversation = useConversationById(convId);
   const taskId = conversation?.taskId;
-  const { isOpen, toggle } = convTasksPane.useToggle({ taskId: taskId ?? "" });
+  const { isOpen, toggle } = taskDetailPane.useToggle({ taskId: taskId ?? "" });
 
   const task = useTask(taskId ?? null);
   const dotClass = task ? STATUS_DOT[task.status] : undefined;

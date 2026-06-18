@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
-import { convTasksPane } from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
+import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/core";
 import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
@@ -54,7 +54,7 @@ export function AddTaskToolView({ event }: ToolRendererProps) {
   const openTask = (e: React.MouseEvent) => {
     if (!taskId) return;
     e.stopPropagation();
-    openPane(convTasksPane, { taskId }, { mode: "push" });
+    openPane(taskDetailPane, { taskId }, { mode: "push" });
   };
 
   const summary = (

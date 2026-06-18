@@ -3,7 +3,6 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { StatusDot } from "@plugins/primitives/plugins/css/plugins/status-dot/web";
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
-import { convTasksPane } from "@plugins/conversations/plugins/conversation-view/plugins/tasks-panel/web";
 import { taskDetailPane } from "@plugins/tasks/plugins/task-detail/web";
 import { tasksResource } from "@plugins/tasks/core";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
@@ -30,9 +29,9 @@ export function TaskLinkChip({ content }: { content: string; attrs: Record<strin
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
     if (convId) {
-      openPane(convTasksPane, { taskId }, { mode: "push" });
-    } else {
       openPane(taskDetailPane, { taskId }, { mode: "push" });
+    } else {
+      openPane(taskDetailPane, { taskId }, { mode: "push", input: { focused: "true" } });
     }
   };
 

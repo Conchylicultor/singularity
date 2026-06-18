@@ -1,11 +1,13 @@
-import { type ReactElement } from "react";
+import { useCallback, useMemo, useState, type ReactElement } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
+import { Pane, PaneChrome, useOpenPane, type } from "@plugins/primitives/plugins/pane/web";
 import { Tasks } from "@plugins/tasks/plugins/task-list/web";
 import { tasksResource } from "@plugins/tasks/core";
 import { useTask } from "@plugins/tasks/web";
 import { TaskDetailFlushProvider } from "./context";
 import { TaskDetail } from "./components/task-detail";
+import { TaskTreeDetail } from "./components/task-tree-detail";
+import { TasksPaneContext } from "./tasks-pane-context";
 
 // Panes are declared first so their types are known before the component
 // bodies reference them. Component identifiers below are function
@@ -33,6 +35,9 @@ export const taskDetailPane = Pane.define({
   component: TaskDetailBody,
   width: 480,
   resolve: useResolveTask,
+  // Input is serialized into history.state, so values must be strings.
+  // "true" → focused/detail-only mode (no inline tree).
+  input: type<{ focused?: string }>(),
 });
 
 function TasksRoot(): ReactElement {
@@ -48,16 +53,55 @@ function TasksRoot(): ReactElement {
   );
 }
 
+// The pane body dispatches between two modes:
+//   showTree = (tasksRootPane absent) AND (input.focused !== true)
+// showTree → conversation-panel mode (inline tree + detail), else focused/detail.
 function TaskDetailBody(): ReactElement {
   const { taskId } = taskDetailPane.useParams();
+  const { focused } = taskDetailPane.useInput();
+  const inTasksApp = tasksRootPane.useRouteEntry() !== null;
+  if (!inTasksApp && focused !== "true") return <ConversationTasksBody key={taskId} rootTaskId={taskId} />;
+  return <FocusedTaskBody key={taskId} taskId={taskId} />;
+}
+
+function FocusedTaskBody({ taskId }: { taskId: string }): ReactElement {
   const task = useTask(taskId);
 
   return (
     <TaskDetailFlushProvider>
       <PaneChrome pane={taskDetailPane} title={task?.title}>
-        <TaskDetail key={taskId} taskId={taskId} />
+        <TaskDetail taskId={taskId} />
       </PaneChrome>
     </TaskDetailFlushProvider>
   );
 }
 
+function ConversationTasksBody({ rootTaskId }: { rootTaskId: string }): ReactElement {
+  const openPane = useOpenPane();
+  const [selectedId, setSelectedId] = useState<string>(rootTaskId);
+
+  // Re-rooting swaps this pane's own URL param in place, keeping the URL
+  // truthful and the new root shareable. Selection stays ephemeral state.
+  const setViewRootId = useCallback(
+    (id: string) => openPane(taskDetailPane, { taskId: id }, { mode: "swap" }),
+    [openPane],
+  );
+
+  const ctx = useMemo(
+    () => ({ viewRootId: rootTaskId, selectedId, setViewRootId, setSelectedId }),
+    [rootTaskId, selectedId, setViewRootId],
+  );
+
+  // Provider is OUTSIDE PaneChrome so the chrome-header actions can read it.
+  return (
+    <TasksPaneContext.Provider value={ctx}>
+      <PaneChrome pane={taskDetailPane} title="Tasks">
+        <TaskTreeDetail
+          rootTaskId={rootTaskId}
+          selectedId={selectedId}
+          onSelect={setSelectedId}
+        />
+      </PaneChrome>
+    </TasksPaneContext.Provider>
+  );
+}

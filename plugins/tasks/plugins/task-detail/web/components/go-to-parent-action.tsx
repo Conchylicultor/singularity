@@ -2,7 +2,7 @@ import { useContext } from "react";
 import { MdArrowUpward } from "react-icons/md";
 import { PaneIconAction } from "@plugins/primitives/plugins/pane/web";
 import { useTask } from "@plugins/tasks/web";
-import { TasksPaneContext } from "./tasks-pane-context";
+import { TasksPaneContext } from "../tasks-pane-context";
 
 export function GoToParentAction() {
   const ctx = useContext(TasksPaneContext);
