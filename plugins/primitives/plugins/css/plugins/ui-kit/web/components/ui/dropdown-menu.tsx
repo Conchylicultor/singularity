@@ -24,12 +24,17 @@ function DropdownMenuContent({
   side = "bottom",
   sideOffset = 4,
   className,
+  header,
+  children,
   ...props
 }: MenuPrimitive.Popup.Props &
   Pick<
     MenuPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset"
-  >) {
+  > & {
+    /** Optional sticky header rendered above the items (skipped by keyboard nav — not an Item). */
+    header?: React.ReactNode
+  }) {
   const forwarded = usePortalForwardedAttrs()
   return (
     <MenuPrimitive.Portal>
@@ -45,7 +50,16 @@ function DropdownMenuContent({
           data-slot="dropdown-menu-content"
           className={cn(SURFACE_LEVELS.overlay, "z-popover max-h-(--available-height) w-max min-w-[max(8rem,var(--anchor-width))] max-w-(--available-width) origin-(--transform-origin) overflow-x-hidden overflow-y-auto p-xs duration-100 outline-none data-[side=bottom]:slide-in-from-top-2 data-[side=inline-end]:slide-in-from-left-2 data-[side=inline-start]:slide-in-from-right-2 data-[side=left]:slide-in-from-right-2 data-[side=right]:slide-in-from-left-2 data-[side=top]:slide-in-from-bottom-2 data-open:animate-in data-open:fade-in-0 data-open:zoom-in-95 data-closed:animate-out data-closed:overflow-hidden data-closed:fade-out-0 data-closed:zoom-out-95", className )}
           {...props}
-        />
+        >
+          {header != null && (
+            // -mx-1 / -mt-1 full-bleed the header through the Popup's p-xs padding.
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- negative-margin bleed past the menu's own p-xs has no named utility
+            <div className="sticky top-0 z-raised -mx-1 -mt-1 mb-xs border-b bg-popover px-xs py-xs">
+              {header}
+            </div>
+          )}
+          {children}
+        </MenuPrimitive.Popup>
       </MenuPrimitive.Positioner>
     </MenuPrimitive.Portal>
   )

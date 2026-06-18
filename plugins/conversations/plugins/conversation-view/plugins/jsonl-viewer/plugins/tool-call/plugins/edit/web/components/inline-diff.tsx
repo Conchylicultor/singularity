@@ -1,4 +1,4 @@
-import { TextDiff } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
+import { TextDiff } from "@plugins/primitives/plugins/diff-view/web";
 
 export function InlineDiff({
   oldText,

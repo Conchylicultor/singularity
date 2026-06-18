@@ -17,7 +17,7 @@ Example: clicking `task-detail/panes.tsx` resolves to `plugins/tasks/plugins/tas
   - Routes: `GET /api/code/:worktree/resolve`
 - Cross-plugin:
   - Imported by: `conversations/conversation-view/code/file-pane`
-  - Endpoint callers: `diff`, `image`, `markdown-extensions`, `read`
+  - Endpoint callers: `diff-view`, `image`, `markdown-extensions`, `read`
 - Shared:
   - Exports: Values: `resolveFile`
 

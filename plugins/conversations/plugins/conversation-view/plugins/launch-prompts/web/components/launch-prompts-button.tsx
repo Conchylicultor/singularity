@@ -1,4 +1,5 @@
-import { Button, DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, DropdownMenu, DropdownMenuItem, DropdownMenuTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { ConfigMenuContent } from "@plugins/config_v2/plugins/config-link/web";
 import { useState } from "react";
 import { MdPlaylistPlay } from "react-icons/md";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
@@ -56,7 +57,7 @@ export function LaunchPromptsButton({
         <MdPlaylistPlay className="size-3" />
         Launch
       </DropdownMenuTrigger>
-      <DropdownMenuContent align="start">
+      <ConfigMenuContent descriptor={launchPromptsConfig} label="Launch prompts" align="start">
         {prompts.map((item) => (
           <DropdownMenuItem key={item.id} onClick={() => void launch(item)}>
             <Frame
@@ -74,7 +75,7 @@ export function LaunchPromptsButton({
             />
           </DropdownMenuItem>
         ))}
-      </DropdownMenuContent>
+      </ConfigMenuContent>
     </DropdownMenu>
   );
 }

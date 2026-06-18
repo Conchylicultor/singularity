@@ -59,6 +59,7 @@ function SelectTrigger({
 function SelectContent({
   className,
   children,
+  header,
   side = "bottom",
   sideOffset = 4,
   align = "center",
@@ -69,7 +70,10 @@ function SelectContent({
   Pick<
     SelectPrimitive.Positioner.Props,
     "align" | "alignOffset" | "side" | "sideOffset" | "alignItemWithTrigger"
-  >) {
+  > & {
+    /** Optional sticky header rendered above the item list (not a focusable item). */
+    header?: React.ReactNode
+  }) {
   const forwarded = usePortalForwardedAttrs()
   return (
     <SelectPrimitive.Portal>
@@ -89,6 +93,11 @@ function SelectContent({
           {...props}
         >
           <SelectScrollUpButton />
+          {header != null && (
+            <div className="sticky top-0 z-raised border-b bg-popover px-xs py-xs">
+              {header}
+            </div>
+          )}
           <SelectPrimitive.List>{children}</SelectPrimitive.List>
           <SelectScrollDownButton />
         </SelectPrimitive.Popup>

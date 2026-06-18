@@ -2,7 +2,7 @@ import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { TextDiff } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
+import { TextDiff } from "@plugins/primitives/plugins/diff-view/web";
 import { getConfigRawFile } from "../../core";
 
 // Side-by-side diff of the user's override (left) vs the upstream defaults

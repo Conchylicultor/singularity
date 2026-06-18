@@ -1,5 +1,6 @@
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig, useSetConfig } from "@plugins/config_v2/web";
+import { ConfigGearButton } from "@plugins/config_v2/plugins/config-link/web";
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { commitsConfig } from "../../shared/config";
@@ -15,9 +16,12 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
 
   if (excludedPaths.length === 0) {
     return (
-      <Text as="p" variant="caption" className="text-muted-foreground">
-        No paths configured. Add entries to <code>excludedPaths</code> in Settings.
-      </Text>
+      <div className="flex flex-wrap items-center gap-xs">
+        <Text as="p" variant="caption" className="text-muted-foreground">
+          No paths configured.
+        </Text>
+        <ConfigGearButton descriptor={commitsConfig} label="Configure excluded paths" />
+      </div>
     );
   }
 
@@ -50,6 +54,7 @@ export function ExcludedPathToggles({ dense = false }: ExcludedPathTogglesProps)
           </ToggleChip>
         );
       })}
+      <ConfigGearButton descriptor={commitsConfig} label="Configure excluded paths" />
     </div>
   );
 }

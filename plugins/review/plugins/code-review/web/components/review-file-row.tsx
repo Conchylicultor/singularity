@@ -6,7 +6,7 @@ import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { EditedFile, EditedFileStatus } from "@plugins/conversations/plugins/conversation-view/plugins/code/core";
 import { gitStatusBadge } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { useConfig } from "@plugins/config_v2/web";
-import { DiffOrImageView } from "@plugins/conversations/plugins/conversation-view/plugins/code/plugins/file-pane/plugins/diff/web";
+import { DiffOrImageView } from "@plugins/primitives/plugins/diff-view/web";
 import { getFileWarningLevel } from "../core-files";
 import { reviewConfig } from "../../shared/config";
 

@@ -2581,6 +2581,10 @@
       "name": "@singularity/plugin-primitives-detail-sections",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/diff-view": {
+      "name": "@singularity/plugin-primitives-diff-view",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/editable-field": {
       "name": "@singularity/plugin-primitives-editable-field",
       "version": "0.0.1",
@@ -4899,6 +4903,8 @@
     "@singularity/plugin-primitives-data-view-view-core": ["@singularity/plugin-primitives-data-view-view-core@workspace:plugins/primitives/plugins/data-view/plugins/view-core"],
 
     "@singularity/plugin-primitives-detail-sections": ["@singularity/plugin-primitives-detail-sections@workspace:plugins/primitives/plugins/detail-sections"],
+
+    "@singularity/plugin-primitives-diff-view": ["@singularity/plugin-primitives-diff-view@workspace:plugins/primitives/plugins/diff-view"],
 
     "@singularity/plugin-primitives-editable-field": ["@singularity/plugin-primitives-editable-field@workspace:plugins/primitives/plugins/editable-field"],
 

@@ -1,5 +1,6 @@
-import { cn, Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, Select, SelectItem, SelectTrigger, SelectValue } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useConfig } from "@plugins/config_v2/web";
+import { ConfigSelectContent } from "@plugins/config_v2/plugins/config-link/web";
 import { prepromptsConfig } from "../../shared/config";
 import { PrepromptGlyph } from "./preprompt-glyph";
 
@@ -68,7 +69,7 @@ export function PrepromptSelect({
           }}
         </SelectValue>
       </SelectTrigger>
-      <SelectContent>
+      <ConfigSelectContent descriptor={prepromptsConfig} label="Preprompt">
         <SelectItem value={OFF}>
           <span className="size-3.5 shrink-0" aria-hidden />
           {offLabel}
@@ -79,7 +80,7 @@ export function PrepromptSelect({
             {p.title || "Untitled"}
           </SelectItem>
         ))}
-      </SelectContent>
+      </ConfigSelectContent>
     </Select>
   );
 }
