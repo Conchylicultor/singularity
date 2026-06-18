@@ -15,20 +15,45 @@ export type AppShellSidebarItem = {
   component: React.ComponentType;
 };
 
-export type AppShellToolbarItem = {
-  label?: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-  component?: React.ComponentType;
+type ToolbarIcon = React.ComponentType<{ className?: string }>;
+
+/**
+ * An action item — a ghost button. Requires an `onClick` *and* at least one of
+ * `label`/`icon`, so an action is never an invisible empty button. `component`
+ * is forbidden: an item is an action xor a custom widget, never both.
+ */
+export type AppShellToolbarAction = {
+  onClick: () => void;
+  component?: never;
+  group?: string;
+} & (
+  | { label: string; icon?: ToolbarIcon }
+  | { icon: ToolbarIcon; label?: string }
+);
+
+/**
+ * A custom-rendered widget. Requires a `component`; the action fields are
+ * forbidden so it can't masquerade as a half-specified button.
+ */
+export type AppShellToolbarComponent = {
+  component: React.ComponentType;
+  onClick?: never;
+  label?: never;
+  icon?: never;
   group?: string;
 };
 
-function ToolbarItem(item: {
-  label?: string;
-  icon?: React.ComponentType<{ className?: string }>;
-  onClick?: () => void;
-  component?: React.ComponentType;
-}) {
+/**
+ * A single toolbar contribution. The union carries **exactly one** renderable
+ * form — an `onClick` action (with a visible label and/or icon) or a
+ * `component`. A label-only item with no `onClick`/`component` matches neither
+ * member and is unconstructable, so the silent "renders nothing" footgun is
+ * impossible by type. {@link ToolbarItem} additionally throws on a forced
+ * malformed item rather than rendering null.
+ */
+export type AppShellToolbarItem = AppShellToolbarAction | AppShellToolbarComponent;
+
+function ToolbarItem(item: AppShellToolbarItem) {
   if (item.component) {
     const Comp = item.component;
     return <Comp />;
@@ -41,7 +66,14 @@ function ToolbarItem(item: {
       </Button>
     );
   }
-  return null;
+  // Unreachable by construction — the AppShellToolbarItem union admits no item
+  // with neither `component` nor `onClick`. Fail loudly if one is forced in via
+  // an untyped / `as any` contribution, instead of silently rendering nothing.
+  throw new Error(
+    "AppShellToolbarItem has neither `component` nor `onClick`: a toolbar " +
+      "contribution must carry exactly one renderable form (an `onClick` " +
+      "action with a label and/or icon, or a `component`).",
+  );
 }
 
 /**

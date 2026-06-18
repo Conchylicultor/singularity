@@ -1,4 +1,4 @@
-import { describe, it, expect, afterEach } from "vitest";
+import { describe, it, expect, afterEach, vi } from "vitest";
 import { cleanup, render } from "@testing-library/react";
 import { useContext } from "react";
 import {
@@ -71,5 +71,65 @@ describe("AppShellLayout drives the chrome toolbar bar off real contributions", 
     expect(getByText("ToolbarBtn")).toBeTruthy();
     // …so the toolbar — not the content — owns the surface-edge chrome.
     expect(getByTestId("probe").textContent).toBe("false");
+  });
+
+  it("renders a component-form contribution as its custom widget", () => {
+    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>(
+      "app-shell-test.toolbar.component",
+    );
+    const plugin = {
+      id: "app-shell-test-component",
+      description: "component toolbar fixture",
+      contributions: [
+        toolbarSlot({
+          id: "widget",
+          component: () => <div data-testid="widget">Widget</div>,
+        }),
+      ],
+    } as unknown as LoadedPlugin;
+
+    const { getByTestId } = render(
+      <PluginProvider plugins={[plugin]}>
+        <AppShellLayout toolbarSlot={toolbarSlot}>
+          <ChromeProbe />
+        </AppShellLayout>
+      </PluginProvider>,
+    );
+
+    expect(getByTestId("widget").textContent).toBe("Widget");
+  });
+
+  it("fails loudly on a malformed item with no renderable form", () => {
+    const toolbarSlot = defineRenderSlot<AppShellToolbarItem>(
+      "app-shell-test.toolbar.malformed",
+    );
+    const plugin = {
+      id: "app-shell-test-malformed",
+      description: "malformed toolbar fixture",
+      contributions: [
+        // The union forbids this at the type level; only an `as any` cast (or
+        // an untyped JS contribution) can force it in. It must throw, not paint
+        // an invisible nothing.
+        toolbarSlot(
+          { id: "bad", label: "Ghost" } as unknown as Parameters<
+            typeof toolbarSlot
+          >[0],
+        ),
+      ],
+    } as unknown as LoadedPlugin;
+
+    // Rendering surfaces the throw loudly rather than silently painting an
+    // invisible nothing. React logs the failed render, so silence the noise.
+    const spy = vi.spyOn(console, "error").mockImplementation(() => {});
+    expect(() =>
+      render(
+        <PluginProvider plugins={[plugin]}>
+          <AppShellLayout toolbarSlot={toolbarSlot}>
+            <ChromeProbe />
+          </AppShellLayout>
+        </PluginProvider>,
+      ),
+    ).toThrow(/neither `component` nor `onClick`/);
+    spy.mockRestore();
   });
 });

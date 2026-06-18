@@ -4,6 +4,8 @@ export { AppShellLayout } from "./components/app-shell-layout";
 export type {
   AppShellSidebarItem,
   AppShellToolbarItem,
+  AppShellToolbarAction,
+  AppShellToolbarComponent,
 } from "./components/app-shell-layout";
 export { SidebarNavItem, sidebarNavItem } from "./components/sidebar-nav-item";
 export { SidebarPaneSection } from "./components/sidebar-pane-section";
