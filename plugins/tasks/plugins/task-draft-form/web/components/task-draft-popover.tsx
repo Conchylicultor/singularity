@@ -286,16 +286,28 @@ export function TaskDraftPopover({
   // the image appears inline in the editor via the paste-images machinery.
   useEffect(() => {
     if (!initialText) return;
-    setUrl(window.location.href);
     setCards((prev) => [{ ...prev[0]!, text: initialText }, ...prev.slice(1)]);
     seenIdsRef.current = new Set();
   }, [initialText, setCards]);
 
-  const setOpen = (next: boolean) => {
-    if (next) {
+  // On the open transition, snapshot the current URL and re-seed every card's
+  // `includeUrl` from the live per-app default. Whether to attach the URL is
+  // context about the *current app*, not authored draft content — so it must
+  // not inherit the stale value useDraft restores from localStorage (e.g. the
+  // agent-manager's `false`, frozen into the per-target draft shared across all
+  // apps). Reseeding on each open re-applies the active app's default; explicit
+  // toggles the user makes while the popover stays open are preserved.
+  const wasOpenRef = useRef(false);
+  useEffect(() => {
+    if (open && !wasOpenRef.current) {
       setUrl(window.location.href);
+      setCards((prev) => prev.map((c) => ({ ...c, includeUrl: captureUrlDefault })));
       seenIdsRef.current = new Set();
     }
+    wasOpenRef.current = open;
+  }, [open, captureUrlDefault, setCards]);
+
+  const setOpen = (next: boolean) => {
     if (isControlled) {
       onOpenChange?.(next);
     } else {
