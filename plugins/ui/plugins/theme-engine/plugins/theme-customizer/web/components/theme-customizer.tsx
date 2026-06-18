@@ -1,7 +1,7 @@
 import { useEffect, useRef, useState } from "react";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { SearchInput } from "@plugins/primitives/plugins/search/web";
-import { useConfig, useSetConfig, useConfigRegistrations, useScopeForked } from "@plugins/config_v2/web";
+import { useConfig, useSetConfig, useConfigRegistrations, useScopeMembership } from "@plugins/config_v2/web";
 import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { setConfigField, forkScope, deleteScope } from "@plugins/config_v2/core";
 import { useCurrentAppId } from "@plugins/apps/web";
@@ -183,8 +183,10 @@ export function ThemeCustomizerBody() {
 
   const appId = useCurrentAppId();
   const scopeId = appId ? `app:${appId}` : undefined;
-  const forked = useScopeForked(scopeId);
-  // Edits route to the app scope only once forked; otherwise they target base.
+  // "Has its own theme" = this app is a member of the theme-engine config's scope
+  // set (committed git scope OR runtime fork). The toggle now means membership.
+  const forked = useScopeMembership(themeEngineConfig, scopeId);
+  // Edits route to the app scope only once it has its own theme; else they target base.
   const effectiveScopeId = forked && scopeId ? scopeId : undefined;
 
   useEffect(() => {

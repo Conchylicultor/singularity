@@ -5,7 +5,7 @@ import type { ConfigDescriptor, JsonValue } from "../../core";
 import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { userScopedDir } from "./scope-paths";
-import { getScopedDescriptors, getDescriptorByStorePath, getHierarchyPath, configV2ScopeForkedServerResource } from "./resource";
+import { getScopedDescriptors, getDescriptorByStorePath, getHierarchyPath } from "./resource";
 import { ensureScopeEntry, disposeScopeEntry, notifyDescriptorScopeChange } from "./registry";
 import { buildScopeSnapshot } from "./scope-snapshot";
 
@@ -98,21 +98,24 @@ export async function removeDescriptorScope(storePath: string, scopeId: string):
   notifyDescriptorScopeChange(storePath, scopeId);
 }
 
-// Fork all `scope: "app"` descriptors into a new scope, then notify the
-// scope-level forked resource. Delegates each descriptor to forkDescriptor so the
-// per-descriptor and scope-level paths never drift.
+// Fork all `scope: "app"` descriptors into a new scope. Delegates each descriptor
+// to forkDescriptor (which notifies the per-descriptor scopes/values resources via
+// ensureScopeEntry's watcher) so the per-descriptor and scope-level paths never
+// drift. Membership notify via the per-descriptor scopes resource covers the read
+// side — the deleted scope-forked resource is no longer needed.
 export async function forkScope(scopeId: string): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
     await forkDescriptor(descriptor, hierarchyPath, scopeId);
+    notifyDescriptorScopeChange(`${hierarchyPath}/${descriptor.name}.jsonc`, scopeId);
   }
-  configV2ScopeForkedServerResource.notify({ scopeId });
 }
 
-// Un-fork all `scope: "app"` descriptors, then notify the scope-level forked
-// resource. Delegates each descriptor to removeDescriptor.
+// Un-fork all `scope: "app"` descriptors. Delegates each descriptor to
+// removeDescriptor and notifies its scopes/values resources so the read side
+// (membership) reflects the drop immediately.
 export async function deleteScope(scopeId: string): Promise<void> {
   for (const { descriptor, hierarchyPath } of getScopedDescriptors("app")) {
     await removeDescriptor(descriptor, hierarchyPath, scopeId);
+    notifyDescriptorScopeChange(`${hierarchyPath}/${descriptor.name}.jsonc`, scopeId);
   }
-  configV2ScopeForkedServerResource.notify({ scopeId });
 }

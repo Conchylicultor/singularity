@@ -186,8 +186,8 @@ interface ReorderHoistedConfig {
 
 /**
  * Reads a reorderable slot's `items` tree + `setConfig` writer. This is the
- * ONLY live-state subscription the reorder middleware makes (`config-v2.values`
- * + `config-v2.scope-forked`), once per render site.
+ * ONLY live-state subscription the reorder middleware makes (`config-v2.values`),
+ * once per render site.
  */
 function useReorderConfig(descriptor: ConfigDescriptor): ReorderHoistedConfig {
   // `useConfig` on a generically-typed descriptor returns a loose record;

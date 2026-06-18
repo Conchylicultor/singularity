@@ -1,13 +1,13 @@
 import { MdLightMode, MdDarkMode } from "react-icons/md";
 import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
-import { useConfig, useSetConfig, useScopeForked } from "@plugins/config_v2/web";
+import { useConfig, useSetConfig, useScopeMembership } from "@plugins/config_v2/web";
 import { useCurrentAppId } from "@plugins/apps/web";
 import { themeEngineConfig } from "@plugins/ui/plugins/theme-engine/core";
 
 export function ThemeToggle() {
   const appId = useCurrentAppId();
-  // Edits target BASE unless the current app has been explicitly forked.
-  const forked = useScopeForked(appId ? `app:${appId}` : undefined);
+  // Edits target BASE unless the current app has its own theme (membership).
+  const forked = useScopeMembership(themeEngineConfig, appId ? `app:${appId}` : undefined);
   const scopeId = forked && appId ? `app:${appId}` : undefined;
 
   const { colorMode } = useConfig(themeEngineConfig, { scopeId }) as {

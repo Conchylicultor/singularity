@@ -13,7 +13,7 @@ import { userScopedDir, discoverScopeIds, scopeSegment, BASE_SCOPE } from "./sco
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import { watchFileChange } from "./config-watcher";
 import { ConfigV2 } from "./contribution";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, getScopedDescriptors, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter, setScopeForkedChecker } from "./resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource, getDescriptorByStorePath, getHierarchyPath, markRegistryReady, registerDescriptorPath, scopeHasOwnConfig, setConfigGetter } from "./resource";
 import { getFieldStorageProvider } from "./field-storage-providers";
 import { writeScopedOriginSnapshot } from "./scope-snapshot";
 import { asPath, asPluginId } from "@plugins/framework/plugins/plugin-id/core";
@@ -238,29 +238,6 @@ function getEntry(descriptor: ConfigDescriptor, scopeId: string = BASE_SCOPE): C
   return cacheByDescriptor.get(descriptor)?.get(scopeId);
 }
 
-// A scope is "forked" when its scoped override file exists on disk — a USER fork.
-// Drives only the theme "Customize for app" toggle (isScopeForked). An un-forked
-// scope tracks base live.
-function isForked(descriptor: ConfigDescriptor, scopeId: string): boolean {
-  if (!scopeId) return false;
-  const hierarchyPath = getHierarchyPath(descriptor);
-  if (!hierarchyPath) return false;
-  const scopedDir = userScopedDir(hierarchyPath, scopeId);
-  const overwritesPath = join(scopedDir, `${descriptor.name}.jsonc`);
-  return jsoncConfigProxy(overwritesPath).exists();
-}
-
-// Scope-level forked check: a scope is forked iff ANY of its `scope: "app"`
-// descriptors has an override file on disk (fork writes the whole set together,
-// so any one is sufficient). Used by the configV2ScopeForked read resource.
-export function isScopeForked(scopeId: string): boolean {
-  if (!scopeId) return false;
-  for (const { descriptor } of getScopedDescriptors("app")) {
-    if (isForked(descriptor, scopeId)) return true;
-  }
-  return false;
-}
-
 // Lazily build (and cache) a scoped entry for (descriptor, scopeId). The base
 // entry is created in initRegistry; scoped entries don't exist until a fork writes
 // files, so callers that need to write a scoped override go through here first.
@@ -284,7 +261,6 @@ export async function ensureScopeEntry(
 export async function initRegistry(): Promise<void> {
   try {
     setConfigGetter(getConfig);
-    setScopeForkedChecker(isScopeForked);
     const contributions = ConfigV2.Register.getContributions();
     const registered: { descriptor: ConfigDescriptor; hierarchyPath: string }[] = [];
 

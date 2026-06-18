@@ -105,14 +105,3 @@ export const configV2ModifiedCountsResource = resourceDescriptor<ConfigV2Modifie
   configV2ModifiedCountsSchema,
   {},
 );
-
-export const configV2ScopeForkedSchema = z.object({ forked: z.boolean() });
-export type ConfigV2ScopeForked = z.infer<typeof configV2ScopeForkedSchema>;
-
-// Read-only: is the given scope forked (any @app/<id> override file exists for a
-// `scope: "app"` descriptor)? Keyed by scopeId only — scope-level, not per-path.
-export const configV2ScopeForkedResource = resourceDescriptor<ConfigV2ScopeForked, { scopeId: string }>(
-  "config-v2.scope-forked",
-  configV2ScopeForkedSchema,
-  { forked: false },
-);

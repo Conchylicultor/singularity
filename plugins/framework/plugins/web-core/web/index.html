@@ -10,9 +10,15 @@
          by id (which ThemeInjector then adopts) and sets the .dark class.
          The cache is keyed by app path: it longest-prefix matches the current
          pathname (mirroring apps' appMatchesPath) and falls back to the ""
-         (global) entry, so a forked app's reload replays its own theme. The
-         entry stores the CONFIGURED color mode, re-resolved against the OS here
-         so a "system" setting tracks an OS scheme flip between sessions. On a
+         (global) entry, so a full-surface app's reload replays its own theme.
+         No structural change was needed here for the "base layer owns `:root`"
+         model: ThemeInjector now renders the FOCUSED app's theme into its
+         `theme-engine-*` `:root` blocks, so the per-app-path entry already
+         carries the right `:root` block — replaying it by id paints the focused
+         app at frame 0 with no `data-theme-scope` dependency. The "" entry holds
+         the desktop/global theme (written only on a global focus). The entry
+         stores the CONFIGURED color mode, re-resolved against the OS here so a
+         "system" setting tracks an OS scheme flip between sessions. On a
          cold cache it only picks the color scheme from the OS so the neutral
          loading floor (app.css: html { background: Canvas }) paints in the right
          shade; ThemeInjector supplies real values once React mounts. -->
@@ -30,7 +36,7 @@
           var env = JSON.parse(
             localStorage.getItem("theme-engine:critical-css"),
           );
-          if (env && env.v === 2 && env.entries) {
+          if (env && env.v === 3 && env.entries) {
             var path = location.pathname;
             var keys = [];
             for (var k in env.entries) {
@@ -60,7 +66,7 @@
             }
           }
         } catch (e) {
-          /* corrupt / pre-v2 / unavailable cache → fall through to the cold floor */
+          /* corrupt / pre-v3 / unavailable cache → fall through to the cold floor */
         }
         if (prefersDark) document.documentElement.classList.add("dark");
       })();

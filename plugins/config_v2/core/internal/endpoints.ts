@@ -5,40 +5,22 @@ import { configV2ValuesSchema } from "./resource";
 // One-shot snapshot fetched at boot to hydrate the client cache before first
 // paint, so config reads never flash defaults and never suspend.
 //
-// - Without `scopeId`: every descriptor's resolved GLOBAL (no-scope) config,
-//   keyed by storePath (`global`), PLUS every COMMITTED git scope's resolved
-//   values (`scopes`) — version-controlled per-app config is part of the app
-//   definition, so it is pre-hydrated like global for flash-free first paint.
-//   Bounded to committed scopes (config/<hier>/@app/<id>/); runtime user forks
-//   are seeded on demand by the theme-engine boot task instead. The config_v2
-//   boot task seeds both.
-// - With `scopeId`: just that scope's forked-state and — when forked — its
-//   resolved scoped values for the `scope: "app"` descriptors (`scope`). The
-//   theme-engine boot task seeds this so a hard reload of a forked app paints
-//   the forked theme on the first frame instead of flashing global. `global` is
-//   omitted in this mode since the config_v2 task fetches it unconditionally;
-//   each boot task fetches only what it hydrates.
+// `global` is every descriptor's resolved GLOBAL (no-scope) config, keyed by
+// storePath. `scopes` is every USER-LAYER scope with its own config (a committed
+// git scope, a runtime fork, OR a plain scoped write) — the same predicate the
+// live `configV2ScopesResource` uses, so a warm reload of any app with its own
+// theme paints scoped on the first frame. The config_v2 boot task hydrates both.
 export const configSnapshot = defineEndpoint({
   route: "GET /api/config-v2/snapshot",
-  query: z.object({ scopeId: z.string().optional() }),
   response: z.object({
-    global: z.record(configV2ValuesSchema).optional(),
-    scopes: z
-      .array(
-        z.object({
-          scopeId: z.string(),
-          path: z.string(),
-          values: configV2ValuesSchema,
-        }),
-      )
-      .optional(),
-    scope: z
-      .object({
+    global: z.record(configV2ValuesSchema),
+    scopes: z.array(
+      z.object({
         scopeId: z.string(),
-        forked: z.boolean(),
-        values: z.record(configV2ValuesSchema),
-      })
-      .optional(),
+        path: z.string(),
+        values: configV2ValuesSchema,
+      }),
+    ),
   }),
 });
 

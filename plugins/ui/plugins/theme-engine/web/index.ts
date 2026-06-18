@@ -3,7 +3,6 @@ import { ConfigV2 } from "@plugins/config_v2/web";
 import { DynamicEnum } from "@plugins/fields/plugins/dynamic-enum/plugins/config/web";
 import { themeEngineConfig } from "../core";
 import { ThemeInjector, AppScopeThemes } from "./components/theme-injector";
-import { themeScopeBootTask } from "./internal/boot";
 import { ThemeEngine } from "./slots";
 
 export { ThemeEngine, useTokenGroupPresets, useTokenGroupPresetOptions } from "./slots";
@@ -30,7 +29,6 @@ export default {
   contributions: [
     Core.Root({ component: ThemeInjector }),
     Core.Root({ component: AppScopeThemes }),
-    themeScopeBootTask,
     ConfigV2.WebRegister({ descriptor: themeEngineConfig }),
     DynamicEnum.Options({
       field: themeEngineConfig.fields.globalPreset,

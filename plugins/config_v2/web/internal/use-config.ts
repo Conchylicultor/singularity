@@ -1,28 +1,16 @@
-import { useContext, useCallback } from "react";
-import { PluginRuntimeContext } from "@plugins/framework/plugins/web-sdk/core";
+import { useCallback } from "react";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { configV2Resource, configV2ScopesResource } from "@plugins/config_v2/core";
 import type { ConfigDescriptor, ConfigValues, ConfigV2Scopes } from "@plugins/config_v2/core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import { storePathOf } from "./store-path";
+import { useStorePath } from "./use-store-path";
 import { useKnownServerPaths } from "./server-paths";
 
 export function useConfig<F extends FieldsRecord>(
   descriptor: ConfigDescriptor<F>,
   opts?: { scopeId?: string },
 ): ConfigValues<F> {
-  const ctx = useContext(PluginRuntimeContext);
-  if (!ctx) throw new Error("useConfig must be inside PluginProvider");
-
-  const registrations = ctx.bySlot.get("config-v2.web-register") ?? [];
-  const reg = registrations.find((c) => c.descriptor === descriptor);
-  const path = reg ? storePathOf(reg) : null;
-  if (!path) {
-    throw new Error(
-      `[config-v2] useConfig: descriptor "${descriptor.name}" has no web registration. ` +
-        `Add ConfigV2.WebRegister({ descriptor }) to your plugin's web contributions.`,
-    );
-  }
+  const path = useStorePath(descriptor);
 
   // Defense-in-depth against the silent half-registration: a descriptor
   // registered on web but missing the matching server ConfigV2.Register is
@@ -55,7 +43,7 @@ export function useConfig<F extends FieldsRecord>(
   // changes to an untracked scoped key), so we reuse the live global key.
   //
   // We read membership through a `select` (the no-pending-data-collapse carve-out,
-  // mirroring useScopeForked): the derived boolean is a sanctioned point read, and
+  // mirroring useScopeMembership): the derived boolean is a sanctioned point read, and
   // false-while-pending is the documented-correct fallback — we fall back to the
   // GLOBAL value (the currently-shown value), never `descriptor.defaults` (the
   // original flash). The false→true flip when the scope IS a member changes the

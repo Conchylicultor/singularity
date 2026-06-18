@@ -92,33 +92,35 @@ describe("paint-cache-aggregator", () => {
   });
 
   test("report upsert: flush writes the full style map to the right path entry", async () => {
-    setPaintContext({ appPath: "/agents", mode: "dark", forked: true });
+    // App focus → :root carries the app's theme → rootIsGlobal false.
+    setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: false });
     reportPaintStyle("theme-engine-color-palette", ":root{--a:1}");
     reportPaintStyle('theme-scope-app:agents-color-palette', '[data-theme-scope="app:agents"]{--a:2}');
     await flushMicrotasks();
 
-    expect(readEnvelope()?.v).toBe(2);
+    expect(readEnvelope()?.v).toBe(3);
     expect(entryOf("/agents").styles).toEqual({
       "theme-engine-color-palette": ":root{--a:1}",
       'theme-scope-app:agents-color-palette': '[data-theme-scope="app:agents"]{--a:2}',
     });
     expect(entryOf("/agents").mode).toBe("dark");
-    // Forked → must NOT clobber the global "" entry.
+    // App focus (rootIsGlobal false) → must NOT clobber the global "" entry.
     expect(readEnvelope()?.entries[""]).toBeUndefined();
   });
 
-  test("unforked app also writes the global '' entry; forked does not", async () => {
-    setPaintContext({ appPath: "/files", mode: "light", forked: false });
+  test("global focus also writes the global '' entry; app focus does not", async () => {
+    // Global/desktop focus → :root is the global theme → rootIsGlobal true.
+    setPaintContext({ appPath: "/files", mode: "light", rootIsGlobal: true });
     reportPaintStyle("theme-engine-shape", ":root{--r:8px}");
     await flushMicrotasks();
 
     expect(entryOf("/files").styles).toEqual({ "theme-engine-shape": ":root{--r:8px}" });
-    // Unforked → mirrors into the "" global entry.
+    // Global focus → mirrors into the "" global entry.
     expect(entryOf("").styles).toEqual({ "theme-engine-shape": ":root{--r:8px}" });
   });
 
   test("report delete removes a style from the next flushed map", async () => {
-    setPaintContext({ appPath: "/agents", mode: "system", forked: true });
+    setPaintContext({ appPath: "/agents", mode: "system", rootIsGlobal: false });
     reportPaintStyle("theme-engine-a", "x");
     reportPaintStyle("theme-engine-b", "y");
     await flushMicrotasks();
@@ -141,7 +143,7 @@ describe("paint-cache-aggregator", () => {
     });
     localStorageStub.setItem = spy as typeof localStorageStub.setItem;
 
-    setPaintContext({ appPath: "/agents", mode: "dark", forked: true });
+    setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: false });
     reportPaintStyle("theme-engine-a", "1");
     reportPaintStyle("theme-engine-b", "2");
     reportPaintStyle("theme-engine-c", "3");
@@ -153,7 +155,7 @@ describe("paint-cache-aggregator", () => {
   });
 
   test("unchanged report text is a no-op (no extra flush)", async () => {
-    setPaintContext({ appPath: "/agents", mode: "dark", forked: true });
+    setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: false });
     reportPaintStyle("theme-engine-a", "1");
     await flushMicrotasks();
 
@@ -171,12 +173,12 @@ describe("paint-cache-aggregator", () => {
   });
 
   test("setPaintContext re-flushes on change even with no style change", async () => {
-    setPaintContext({ appPath: "/agents", mode: "light", forked: false });
+    setPaintContext({ appPath: "/agents", mode: "light", rootIsGlobal: true });
     reportPaintStyle("theme-engine-a", "1");
     await flushMicrotasks();
     expect(entryOf("/agents").mode).toBe("light");
 
-    setPaintContext({ appPath: "/agents", mode: "dark", forked: false });
+    setPaintContext({ appPath: "/agents", mode: "dark", rootIsGlobal: true });
     await flushMicrotasks();
     expect(entryOf("/agents").mode).toBe("dark");
   });

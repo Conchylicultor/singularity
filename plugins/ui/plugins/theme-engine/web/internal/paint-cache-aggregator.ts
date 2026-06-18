@@ -1,11 +1,12 @@
 // Module-level pre-paint cache aggregator. A true cross-React-subtree singleton —
-// the right home because the cache is a localStorage side effect (sibling
-// precedent: active-scope-storage.ts is a plain module). The three style
+// the right home because the cache is a localStorage side effect. The style
 // emitters that must feed the cache live in DIFFERENT React subtrees and cannot
 // share a context:
-//   - ThemeInjector (Core.Root) — the desktop `:root`/`.dark` blocks.
-//   - ScopedAppTheme (one per forked app, mounted centrally via AppScopeThemes
-//     at Core.Root) — the `[data-theme-scope="app:<id>"]` blocks.
+//   - ThemeInjector (Core.Root) — the `:root`/`.dark` blocks (the focused full-
+//     surface app's theme, or the desktop/global theme when focus is global).
+//   - ScopedAppTheme (one per registered app, mounted centrally via AppScopeThemes
+//     at Core.Root) — the `[data-theme-scope="app:<id>"]` blocks for OTHER visible
+//     surfaces whose theme differs from `:root`.
 // A React context (the old CssReportContext) only spanned ThemeInjector's
 // subtree, so scoped blocks were excluded from the pre-paint cache and only
 // injected at runtime via useLayoutEffect — the flicker / "global instead of
@@ -37,28 +38,36 @@ import { writeCriticalCss, type CachedColorMode } from "./theme-cache";
 interface PaintContext {
   appPath: string | undefined;
   mode: CachedColorMode;
-  forked: boolean;
+  rootIsGlobal: boolean;
 }
 
 // styleId → cssText for every currently-mounted GroupStyle (global + scoped).
 const styles = new Map<string, string>();
 // styleIds claimed by a currently-mounted GroupStyle this session (prune set).
 const claimed = new Set<string>();
-// The active app path / configured mode / fork state, set by ThemeInjector.
-let context: PaintContext = { appPath: undefined, mode: "system", forked: false };
+// The active app path / configured mode / root-scope ownership, set by ThemeInjector.
+let context: PaintContext = {
+  appPath: undefined,
+  mode: "system",
+  rootIsGlobal: true,
+};
 
 let flushScheduled = false;
 let pruneScheduled = false;
 
-/** Set the active paint context (active app path, configured mode, fork state). */
+/**
+ * Set the active paint context (active app path, configured mode, and whether the
+ * focused `:root` is the global/desktop theme — which keys the "" entry ownership).
+ */
 export function setPaintContext(next: PaintContext): void {
   const changed =
     next.appPath !== context.appPath ||
     next.mode !== context.mode ||
-    next.forked !== context.forked;
+    next.rootIsGlobal !== context.rootIsGlobal;
   context = next;
   // Re-flush when the context changes even if no style text did — e.g. switching
-  // to an app with an identical theme, a fork toggle, or a configured-mode change.
+  // to an app with an identical theme, a root-scope change, or a configured-mode
+  // change.
   if (changed) scheduleFlush();
 }
 
@@ -102,7 +111,7 @@ function flush(): void {
     appPath: context.appPath,
     styles: snapshot,
     mode: context.mode,
-    forked: context.forked,
+    rootIsGlobal: context.rootIsGlobal,
   });
 }
 
@@ -128,7 +137,7 @@ function prune(): void {
 export function __resetPaintCacheAggregatorForTest(): void {
   styles.clear();
   claimed.clear();
-  context = { appPath: undefined, mode: "system", forked: false };
+  context = { appPath: undefined, mode: "system", rootIsGlobal: true };
   flushScheduled = false;
   pruneScheduled = false;
 }

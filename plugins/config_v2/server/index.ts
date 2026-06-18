@@ -3,7 +3,7 @@ import type { ServerPluginDefinition } from "@plugins/framework/plugins/server-c
 import { forkScope as forkScopeEndpoint, deleteScope as deleteScopeEndpoint, forkDescriptorScope as forkDescriptorScopeEndpoint, removeDescriptorScope as removeDescriptorScopeEndpoint, configSnapshot as configSnapshotEndpoint } from "../core";
 import { initConfigWatcher, shutdownConfigWatcher } from "./internal/config-watcher";
 import { initRegistry, shutdownRegistry } from "./internal/registry";
-import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource, configV2ScopeForkedServerResource } from "./internal/resource";
+import { configV2ServerResource, configV2ConflictsServerResource, configV2ScopesServerResource, configV2ConflictPathsServerResource, configV2ModifiedCountsServerResource, configV2TiersServerResource } from "./internal/resource";
 import { handleForkScope, handleDeleteScope, handleForkDescriptorScope, handleRemoveDescriptorScope } from "./internal/scope-handlers";
 import { handleConfigSnapshot } from "./internal/snapshot-handler";
 
@@ -17,7 +17,7 @@ export type { FieldStorageProvider } from "./internal/field-storage-providers";
 
 export default {
   description: "Typed JSONC config handles for server plugins.",
-  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource), Resource.Declare(configV2ScopesServerResource), Resource.Declare(configV2ConflictPathsServerResource), Resource.Declare(configV2ModifiedCountsServerResource), Resource.Declare(configV2TiersServerResource), Resource.Declare(configV2ScopeForkedServerResource)],
+  contributions: [Resource.Declare(configV2ServerResource), Resource.Declare(configV2ConflictsServerResource), Resource.Declare(configV2ScopesServerResource), Resource.Declare(configV2ConflictPathsServerResource), Resource.Declare(configV2ModifiedCountsServerResource), Resource.Declare(configV2TiersServerResource)],
   httpRoutes: {
     [forkScopeEndpoint.route]: handleForkScope,
     [deleteScopeEndpoint.route]: handleDeleteScope,

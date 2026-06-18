@@ -3,7 +3,7 @@ import { configBootTask } from "./internal/boot";
 
 export { useConfig } from "./internal/use-config";
 export { useSetConfig } from "./internal/use-set-config";
-export { useScopeForked } from "./internal/use-scope-forked";
+export { useScopeMembership } from "./internal/use-scope-membership";
 export { useConfigRegistrations } from "./internal/use-config-registrations";
 export type { ConfigRegistration } from "./internal/use-config-registrations";
 export { ConfigV2 } from "./internal/slots";

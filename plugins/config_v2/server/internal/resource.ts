@@ -1,23 +1,20 @@
 import { join } from "node:path";
 import { defineResource } from "@plugins/framework/plugins/server-core/core";
-import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, configV2ScopeForkedSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
-import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ModifiedCounts, ConfigV2ScopeForked } from "../../core";
+import { configV2ValuesSchema, configV2ConflictsSchema, configV2TiersSchema, configV2ScopesSchema, configV2ConflictPathsSchema, configV2ModifiedCountsSchema, hasConflict, validationIssues, effective, threeWayMerge } from "../../core";
+import type { ConfigV2Values, ConfigV2Conflicts, ConfigV2Tiers, ConfigV2Scopes, ConfigV2ConflictPaths, ConfigV2ModifiedCounts } from "../../core";
 import type { ConfigDescriptor, ConfigValues, JsonValue } from "../../core";
 import type { FieldsRecord } from "@plugins/fields/core";
-import { REPO_ROOT } from "@plugins/infra/plugins/paths/server";
-import { userScopedDir, discoverScopeIdsIn, discoverScopeIds } from "./scope-paths";
+import { userScopedDir, discoverScopeIds } from "./scope-paths";
 import { jsoncConfigProxy } from "./jsonc-proxy";
 import { hasFieldStorageProvider } from "./field-storage-providers";
 
 type ConfigGetter = <F extends FieldsRecord>(d: ConfigDescriptor<F>, scopeId?: string) => ConfigValues<F>;
-type ScopeForkedChecker = (scopeId: string) => boolean;
 
 const descriptorByPath = new Map<string, ConfigDescriptor>();
 // hierarchyPath per descriptor (storePath minus the trailing `/<name>.jsonc`),
 // captured at registration so scope helpers can rebuild scoped dirs.
 const hierarchyByDescriptor = new WeakMap<ConfigDescriptor, string>();
 let configGetter: ConfigGetter | null = null;
-let scopeForkedChecker: ScopeForkedChecker | null = null;
 
 // Registry readiness gate. The server serves WS/HTTP resource subscriptions before
 // onReady runs initRegistry, so a client can subscribe before descriptors are
@@ -34,7 +31,7 @@ export function markRegistryReady(): void {
 }
 
 // Wraps a loader so it resolves only after initRegistry has populated the
-// registry (descriptorByPath / configGetter / scopeForkedChecker). Pre-readiness
+// registry (descriptorByPath / configGetter). Pre-readiness
 // the server already serves subscriptions, so without this gate a loader answers
 // from empty state — emitting an incomplete/wrong resource the client then caches.
 function whenRegistryReady<A, R>(fn: (arg: A) => R | Promise<R>): (arg: A) => Promise<R> {
@@ -77,43 +74,31 @@ export const configV2ServerResource = defineResource<ConfigV2Values, { path: str
 });
 
 export interface ConfigSnapshotResult {
-  global?: Record<string, ConfigV2Values>;
-  scopes?: { scopeId: string; path: string; values: ConfigV2Values }[];
-  scope?: { scopeId: string; forked: boolean; values: Record<string, ConfigV2Values> };
+  global: Record<string, ConfigV2Values>;
+  scopes: { scopeId: string; path: string; values: ConfigV2Values }[];
 }
 
 // Boot-time snapshot the client hydrates its cache from so config reads render
 // real values on first paint (no flash, no Suspense).
 //
-// - No scopeId: every descriptor's resolved GLOBAL config, keyed by storePath.
-// - scopeId given: that scope's forked-state plus, when forked, its resolved
-//   scoped values for the `scope: "app"` descriptors (the themable set). When
-//   unforked the scope resolves to global anyway, so we skip the values to keep
-//   the payload empty — `useConfig` reads the global key while `forked` is false.
-export async function getConfigSnapshot(scopeId?: string): Promise<ConfigSnapshotResult> {
+// `global` is every descriptor's resolved GLOBAL (no-scope) config, keyed by
+// storePath. `scopes` is every USER-LAYER scope that has its own config (a
+// committed git scope, a runtime fork, OR a plain scoped write) — enumerated via
+// the same `discoverScopeIds` + `scopeHasOwnConfig` predicate the live
+// `configV2ScopesResource` uses, so the snapshot and the live resource can never
+// disagree. Hydrating all scope kinds uniformly means a warm reload of any app
+// with its own theme (committed or runtime-forked) paints scoped on frame 0.
+export async function getConfigSnapshot(): Promise<ConfigSnapshotResult> {
   await registryReady;
-  if (scopeId) {
-    const forked = scopeForkedChecker ? scopeForkedChecker(scopeId) : false;
-    const values: Record<string, ConfigV2Values> = {};
-    if (forked) {
-      for (const { descriptor, storePath } of getScopedDescriptors("app")) {
-        values[storePath] = resolveRedactedConfig(descriptor, scopeId);
-      }
-    }
-    return { scope: { scopeId, forked, values } };
-  }
   const global: Record<string, ConfigV2Values> = {};
-  // Committed git scopes (config/<hier>/@app/<id>/) resolved for flash-free first
-  // paint. Discovered from the REPO config dir so the payload is bounded to
-  // version-controlled scopes — runtime user forks are seeded by the theme task.
   const scopes: { scopeId: string; path: string; values: ConfigV2Values }[] = [];
-  const repoConfigDir = join(REPO_ROOT, "config");
   for (const [path, descriptor] of descriptorByPath) {
     global[path] = resolveRedactedConfig(descriptor);
     const hierarchyPath = hierarchyByDescriptor.get(descriptor);
     if (!hierarchyPath) continue;
-    for (const scopeId of discoverScopeIdsIn(repoConfigDir, hierarchyPath)) {
-      scopes.push({ scopeId, path, values: resolveRedactedConfig(descriptor, scopeId) });
+    for (const sid of discoverScopeIds(hierarchyPath)) {
+      if (!scopeHasOwnConfig(descriptor, sid)) continue;
+      scopes.push({ scopeId: sid, path, values: resolveRedactedConfig(descriptor, sid) });
     }
   }
   return { global, scopes };
@@ -290,9 +275,9 @@ export function getHierarchyPath(descriptor: ConfigDescriptor): string | undefin
 // A scope "has its own config" when EITHER its scoped origin (a propagated git
 // scope — committed config/<hier>/@app/<id>/) OR its scoped override (a runtime
 // fork) exists. Such a scope resolves to its own values and is decoupled from
-// base; an untracked scope resolves base live. Broader than isForked, which is
-// override-only: a committed git scope has an origin but no user override, yet
-// must still resolve to its scoped values.
+// base; an untracked scope resolves base live. Covers both a committed git scope
+// (origin but no user override) and a runtime fork (override) — the single
+// authoritative membership predicate read/write/server-resolve all key off.
 export function scopeHasOwnConfig(descriptor: ConfigDescriptor, scopeId: string): boolean {
   if (!scopeId) return false;
   const hierarchyPath = hierarchyByDescriptor.get(descriptor);
@@ -322,17 +307,6 @@ export function getScopedDescriptors(
 export function setConfigGetter(getter: ConfigGetter): void {
   configGetter = getter;
 }
-
-export function setScopeForkedChecker(checker: ScopeForkedChecker): void {
-  scopeForkedChecker = checker;
-}
-
-export const configV2ScopeForkedServerResource = defineResource<ConfigV2ScopeForked, { scopeId: string }>({
-  key: "config-v2.scope-forked",
-  mode: "push",
-  schema: configV2ScopeForkedSchema,
-  loader: whenRegistryReady(({ scopeId }) => ({ forked: scopeForkedChecker ? scopeForkedChecker(scopeId) : false })),
-});
 
 function fieldValueJson(content: JsonValue | null, key: string): string {
   if (content && typeof content === "object" && !Array.isArray(content)) {
