@@ -971,10 +971,10 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Uses: `infra/file-watcher.createFileWatcher`, `infra/file-watcher.FileWatcher`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.REPO_ROOT`, `infra/paths.SINGULARITY_DIR`
     - Exports: Types: `FieldStorageProvider`; Values: `acknowledgeConflictByPath`, `ConfigV2`, `deleteOverrideByPath`, `deleteScope`, `forkConfig`, `forkDescriptorScope`, `forkScope`, `getAllDescriptors`, `getConfig`, `getFieldStorageProvider`, `getRawFileContent`, `getScopedDescriptors`, `hasFieldStorageProvider`, `mergeConflictByPath`, `registerFieldStorageProvider`, `removeDescriptorScope`, `resetConfigByPath`, `setConfig`, `setConfigByPath`, `watchConfig`
   - Core:
-    - Uses: `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
-    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigSource`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ModifiedCounts`, `ConfigV2ScopeForked`, `ConfigV2Scopes`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `FieldDef`, `FieldMeta`, `FieldsRecord`, `InferFieldsObject`, `InferFieldValue`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `buildFieldsSchema`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2ModifiedCountsResource`, `configV2ModifiedCountsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `fieldSchemaWithDefault`, `forkDescriptorScope`, `forkScope`, `getFieldResolver`, `hasConflict`, `pickMeta`, `propagate`, `readonlyProxy`, `readTypedConfig`, `registerFieldResolver`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
+    - Uses: `fields.fieldsToZodObject`, `infra/endpoints.defineEndpoint`, `primitives/live-state.resourceDescriptor`
+    - Exports: Types: `ConfigDescriptor`, `ConfigProxy`, `ConfigSource`, `ConfigV2ConflictPaths`, `ConfigV2Conflicts`, `ConfigV2ModifiedCounts`, `ConfigV2ScopeForked`, `ConfigV2Scopes`, `ConfigV2Tiers`, `ConfigV2ValidationIssue`, `ConfigV2Values`, `ConfigValues`, `Disposable`, `JsonValue`; Values: `APP_SCOPE_DIR`, `appScopeId`, `codeConfigProxy`, `computeHash`, `configSnapshot`, `configV2ConflictEntrySchema`, `configV2ConflictPathsResource`, `configV2ConflictPathsSchema`, `configV2ConflictsResource`, `configV2ConflictsSchema`, `configV2ModifiedCountsResource`, `configV2ModifiedCountsSchema`, `configV2Resource`, `configV2ScopeForkedResource`, `configV2ScopeForkedSchema`, `configV2ScopesResource`, `configV2ScopesSchema`, `configV2TiersResource`, `configV2TiersSchema`, `configV2ValidationIssueSchema`, `configV2ValuesSchema`, `defineConfig`, `deleteScope`, `effective`, `forkDescriptorScope`, `forkScope`, `hasConflict`, `propagate`, `readonlyProxy`, `readTypedConfig`, `removeDescriptorScope`, `scopeAppId`, `setConfigField`, `stringifyConfigValue`, `threeWayMerge`, `validationIssues`
   - Cross-plugin:
-    - Imported by: `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/hibernation`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/avatar/config`, `fields/bool/config`, `fields/color/config`, `fields/directory-path/config`, `fields/dynamic-enum/config`, `fields/enum/config`, `fields/float/config`, `fields/int/config`, `fields/json/config`, `fields/list/config`, `fields/multiline-text/config`, `fields/object/config`, `fields/reorder-tree/config`, `fields/secret/config`, `fields/string-list/config`, `fields/text/config`, `fields/variant/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
+    - Imported by: `apps/sonata/library`, `apps/sonata/piano-keyboard`, `apps/sonata/piano-roll`, `apps/sonata/piano-roll/fx-comets`, `apps/sonata/piano-roll/fx-core`, `apps/sonata/piano-roll/fx-ripples`, `apps/sonata/piano-roll/fx-shatter`, `apps/sonata/primitives/keyboard`, `apps/sonata/sources/midi/folders`, `auth/google`, `auth/google/setup-wizard`, `auth/notion`, `backup`, `backup/google-drive`, `backup/local`, `build`, `config_v2/config-link`, `config_v2/settings`, `config_v2/staging`, `conversations`, `conversations/conversation-category`, `conversations/conversation-view/launch-prompts`, `conversations/conversation-view/prompt-templates`, `conversations/conversation-view/push-and-exit`, `conversations/conversation-view/turn-summary`, `conversations/hibernation`, `conversations/model-provider`, `conversations/preprompts`, `debug/slow-ops`, `fields/secret/config`, `framework/tooling/codegen`, `plugin-meta/composition`, `primitives/data-view`, `reorder`, `review/code-review`, `shell/global-action-bar`, `stats/commits`, `stats/cost`, `tasks/task-draft-form`, `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/font-family/google-fonts`, `ui/tokens/rich-text-palette`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/tweakcn/community-browser`, `ui/variant-region`
   - Plugins:
     - **`config-link`** — Deep-link affordances from any config-backed surface to its settings section. useOpenConfig() navigates to a descriptor's config pane; ConfigGearButton and ConfigPopoverHeader surface it as a gear.
       - Web:
@@ -1950,11 +1950,11 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `fields/avatar`, `fields/bool`, `fields/bool/storage`, `fields/color`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/dynamic-enum`, `fields/enum`, `fields/float`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/storage`, `fields/json`, `fields/json/storage`, `fields/list`, `fields/multiline-text`, `fields/number`, `fields/object`, `fields/reorder-tree`, `fields/secret`, `fields/string-list`, `fields/tags`, `fields/text`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`
+    - Imported by: `config_v2`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`
   - Server:
-    - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `resolveFieldStorage`
+    - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldStorage`
   - Core:
-    - Exports: Types: `FieldIdentity`, `FieldMeta`, `FieldType`; Values: `defineFieldIdentity`, `defineFieldType`, `resolveTypeChain`
+    - Exports: Types: `FieldDef`, `FieldIdentity`, `FieldMeta`, `FieldsRecord`, `FieldType`, `InferFieldsObject`, `InferFieldValue`; Values: `defineFieldIdentity`, `defineFieldType`, `fieldSchemaWithDefault`, `fieldsToZodObject`, `getFieldResolver`, `pickMeta`, `registerFieldResolver`, `resolveTypeChain`
   - Plugins:
     - **`avatar`** — Avatar field type: identity only. The config-render capability and the avatarField factory live in the plugins/config sub-plugin.
       - Web:
@@ -1971,7 +1971,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "avatar" → `AvatarRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/avatar.Avatar`, `primitives/avatar.AvatarPicker`, `primitives/avatar.AvatarSpec`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.getFieldResolver`, `config_v2.pickMeta`, `fields/avatar.avatarFieldType`, `fields/avatar.AvatarSpec`, `fields/avatar.SvgNode`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.getFieldResolver`, `fields.pickMeta`, `fields/avatar.avatarFieldType`, `fields/avatar.AvatarSpec`, `fields/avatar.SvgNode`
             - Exports: Types: `AvatarFieldDef`; Values: `avatarField`
     - **`bool`** — Boolean field type: identity only. The data-view cell (check/cross) and filter (yes/no) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
@@ -1988,7 +1988,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "bool" → `BoolRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/bool.boolFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/bool.boolFieldType`
             - Exports: Types: `BoolFieldDef`; Values: `boolField`
           - Cross-plugin:
             - Imported by: `conversations`
@@ -2023,7 +2023,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "color" → `ColorRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/color-picker.ColorPickerPopover`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/color.colorFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/color.colorFieldType`
             - Exports: Types: `ColorFieldDef`; Values: `colorField`
         - **`table`** — Color field type: data-view table cell (read-only color swatch).
           - Web:
@@ -2068,7 +2068,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "directory-path" → `DirPathRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/folder-picker.FolderPickerPopover`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/directory-path.directoryPathFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/directory-path.directoryPathFieldType`
             - Exports: Types: `DirPathFieldDef`; Values: `dirPathField`
     - **`dynamic-enum`** — Dynamic enum (select) field type: identity only. Options are resolved at config-render time via the plugins/config sub-plugin's slot.
       - Web:
@@ -2087,7 +2087,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
             - Exports: Types: `DynamicEnumOption`, `DynamicEnumOptionsContribution`; Values: `DynamicEnum`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields/dynamic-enum.dynamicEnumFieldType`
             - Exports: Types: `DynamicEnumFieldDef`; Values: `dynamicEnumField`
           - Cross-plugin:
             - Imported by: `ui/segmented-progress-bar`, `ui/theme-engine`, `ui/tokens/categorical`, `ui/tokens/chart`, `ui/tokens/color-adjust`, `ui/tokens/color-palette`, `ui/tokens/density`, `ui/tokens/font-family`, `ui/tokens/shadow`, `ui/tokens/shape`, `ui/tokens/sidebar-palette`, `ui/tokens/type-scale`, `ui/variant-region`
@@ -2106,7 +2106,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "enum" → `EnumRenderer`
             - Uses: `config_v2/fields.Fields`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `fields/enum.enumFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields/enum.enumFieldType`
             - Exports: Types: `EnumFieldDef`, `EnumOption`, `EnumOptionInput`; Values: `enumField`
           - Cross-plugin:
             - Imported by: `plugin-meta/composition`, `ui/theme-engine`
@@ -2137,7 +2137,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "float" → `FloatRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/float.floatFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/float.floatFieldType`
             - Exports: Types: `FloatFieldDef`; Values: `floatField`
         - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
           - Server:
@@ -2170,7 +2170,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "int" → `IntRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/int.intFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/int.intFieldType`
             - Exports: Types: `IntFieldDef`; Values: `intField`
           - Cross-plugin:
             - Imported by: `conversations`, `debug/slow-ops`
@@ -2193,7 +2193,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "json" → `JsonRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/json.jsonFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/json.jsonFieldType`
             - Exports: Types: `JsonFieldDef`; Values: `jsonField`
         - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
           - Server:
@@ -2204,7 +2204,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `Fields.Identity` "list"
         - Uses: `fields.Fields`
       - Core:
-        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
+        - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields.FieldsRecord`, `fields.InferFieldsObject`
         - Exports: Types: `ListItem`; Values: `listFieldType`, `listIdentity`
       - Cross-plugin:
         - Imported by: `fields/list/config`
@@ -2214,7 +2214,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "list" → `ListRenderer`
             - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.fieldSchemaWithDefault`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `fields/list.listFieldType`, `fields/list.ListItem`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/list.listFieldType`, `fields/list.ListItem`
             - Exports: Types: `ListFieldDef`; Values: `isListFieldDef`, `listField`
           - Cross-plugin:
             - Imported by: `plugin-meta/composition`
@@ -2233,7 +2233,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "multiline-text" → `MultilineTextRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/multiline-text.multilineTextFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/multiline-text.multilineTextFieldType`
             - Exports: Types: `MultilineTextFieldDef`; Values: `multilineTextField`
     - **`number`** — Number field type: identity only. The data-view cell and filter (min/max) capabilities live in the plugins/{table,filter} sub-plugins.
       - Web:
@@ -2272,7 +2272,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "object" → `ObjectRenderer`
             - Uses: `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/text.Text`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.fieldSchemaWithDefault`, `config_v2.FieldsRecord`, `config_v2.InferFieldsObject`, `fields/object.objectFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.fieldSchemaWithDefault`, `fields.FieldsRecord`, `fields.FieldType`, `fields.InferFieldsObject`, `fields/object.objectFieldType`
             - Exports: Types: `ObjectFieldDef`; Values: `isObjectFieldDef`, `objectField`
           - Cross-plugin:
             - Imported by: `fields/variant/config`
@@ -2291,7 +2291,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "reorder-tree" → `ReorderTreeRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/text.Text`, `reorder/editor.ReorderEditor`, `reorder/editor.ReorderEntry`, `reorder/editor.SortableReorderItem`, `reorder/node-types.useReorderNodeTypes`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/reorder-tree.ReorderNode`, `fields/reorder-tree.ReorderTree`, `fields/reorder-tree.reorderTreeFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/reorder-tree.ReorderNode`, `fields/reorder-tree.ReorderTree`, `fields/reorder-tree.reorderTreeFieldType`
             - Exports: Types: `NormalizedNode`, `ReorderTreeFieldDef`; Values: `normalizeNode`, `reorderTreeField`
     - **`secret`** — Secret field type: identity only. The config-render/storage/central capabilities and the secretField factory live in the plugins/config sub-plugin. Registers NO coerce and contributes NO data-view cell/filter, so a secret can never become a readable table cell.
       - Web:
@@ -2332,7 +2332,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "string-list" → `StringListRenderer`
             - Uses: `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Input`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/string-list.stringListFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/string-list.stringListFieldType`
             - Exports: Types: `StringListFieldDef`; Values: `stringListField`
           - Cross-plugin:
             - Imported by: `plugin-meta/composition`
@@ -2371,7 +2371,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "text" → `TextRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `config_v2/fields.useLocalValue`, `primitives/css/ui-kit.Input`
           - Core:
-            - Uses: `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.pickMeta`, `fields/text.textFieldType`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/text.textFieldType`
             - Exports: Types: `TextFieldDef`; Values: `textField`
           - Cross-plugin:
             - Imported by: `fields/variant/config`, `plugin-meta/composition`
@@ -2418,7 +2418,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Contributes: `config-v2.fields.renderer` "variant" → `VariantRenderer`
             - Uses: `config_v2/fields.FieldHeader`, `config_v2/fields.FieldRenderer`, `config_v2/fields.FieldRendererComponent`, `config_v2/fields.Fields`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Select`, `primitives/css/ui-kit.SelectContent`, `primitives/css/ui-kit.SelectItem`, `primitives/css/ui-kit.SelectTrigger`, `primitives/css/ui-kit.SelectValue`
           - Core:
-            - Uses: `config_v2.buildFieldsSchema`, `config_v2.FieldDef`, `config_v2.FieldMeta`, `config_v2.FieldsRecord`, `config_v2.pickMeta`, `fields/object/config.objectField`, `fields/text/config.textField`, `fields/variant.variantFieldType`, `fields/variant.VariantValue`
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields.pickMeta`, `fields/object/config.objectField`, `fields/text/config.textField`, `fields/variant.variantFieldType`, `fields/variant.VariantValue`
             - Exports: Types: `VariantEntry`, `VariantFieldDef`; Values: `isVariantFieldDef`, `validateVariant`, `variantField`
 
 - **`framework`** — Umbrella for framework primitives: web plugin SDK, server, central
