@@ -11,6 +11,7 @@ import {
   type DragStartEvent,
 } from "@dnd-kit/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -98,6 +99,7 @@ function rowAtPointer(y: number): { id: string; zone: DropZone } | null {
 export function BlockEditor({
   pageId,
   onOpenPage,
+  contentClassName,
 }: {
   pageId: string;
   /**
@@ -106,6 +108,15 @@ export function BlockEditor({
    * it when mounting `<BlockEditor>`.
    */
   onOpenPage?: (pageId: string) => void;
+  /**
+   * Optional class applied to the centered block-content wrapper (e.g. a
+   * reading measure like `mx-auto max-w-4xl px-lg`). The pointer/marquee
+   * surface always fills the full host width, so drag-selecting and
+   * click-to-edit work across the whitespace beside a narrow content column;
+   * only the blocks themselves are constrained by this class. Omit it (the
+   * story host) to let block content fill the full width.
+   */
+  contentClassName?: string;
 }) {
   return (
     // One independent structural-undo history per editor surface (per tab). The
@@ -113,13 +124,13 @@ export function BlockEditor({
     // `useUndoRedo()` to record at the mutation chokepoints.
     <UndoRedoProvider>
       <BlockEditorProvider pageId={pageId} onOpenPage={onOpenPage}>
-        <BlockEditorInner />
+        <BlockEditorInner contentClassName={contentClassName} />
       </BlockEditorProvider>
     </UndoRedoProvider>
   );
 }
 
-function BlockEditorInner() {
+function BlockEditorInner({ contentClassName }: { contentClassName?: string }) {
   // `blocks`/`pending` come from the provider's optimistic resource so `rowsRef`
   // (set by the effect below) tracks optimistic state — required for chained-op
   // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
@@ -151,12 +162,20 @@ function BlockEditorInner() {
 
   return (
     <MultiSelectProvider orderedIds={orderedIds}>
-      <SelectionLayer rows={rows} flat={flat} />
+      <SelectionLayer rows={rows} flat={flat} contentClassName={contentClassName} />
     </MultiSelectProvider>
   );
 }
 
-function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
+function SelectionLayer({
+  rows,
+  flat,
+  contentClassName,
+}: {
+  rows: Block[];
+  flat: FlatBlock[];
+  contentClassName?: string;
+}) {
   const {
     move,
     bulkMove,
@@ -174,7 +193,11 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
   const contributions = Editor.Block.useContributions();
   const handles = useMemo(() => contributions.map((c) => c.block), [contributions]);
 
+  // `containerRef` is the full-width interaction surface (focus target for
+  // keyboard/clipboard, marquee pointer origin); `contentRef` is the centered
+  // block-content wrapper the marquee overlay is positioned within.
   const containerRef = useRef<HTMLDivElement>(null);
+  const contentRef = useRef<HTMLDivElement>(null);
   const anchorRef = useRef<string | null>(null);
   const headRef = useRef<string | null>(null);
 
@@ -494,9 +517,9 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
         const startInfo = marqueeStartRef.current;
         if (!startInfo) return;
         const cur = rowAtPointer(ev.clientY);
-        const container = containerRef.current;
-        if (container) {
-          const r = container.getBoundingClientRect();
+        const content = contentRef.current;
+        if (content) {
+          const r = content.getBoundingClientRect();
           const top = Math.min(startInfo.y, ev.clientY) - r.top;
           const height = Math.abs(ev.clientY - startInfo.y);
           if (height > 3) {
@@ -668,11 +691,13 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
           }
         />
         <ContentScope>
-          {/* paddingLeft reserves the BLOCK_GUTTER rail the three hover controls
-              (chevron, drag handle, +) hang into at -20/-40/-60 left of the
-              content edge; block content thus aligns with the page title, which
-              reserves the same rail for its icon. min-h gives an empty area
-              below the content to start a marquee from. */}
+          {/* The interaction surface fills the full host width so a marquee
+              drag (and click-to-edit) can start from the whitespace beside a
+              narrow, centered content column — not just over the text measure.
+              It owns focus, keyboard, clipboard, and the pointer origin; the
+              centered content wrapper below only constrains where the blocks
+              render. min-h gives an empty area below the content to start a
+              marquee from. */}
           <div
             ref={containerRef}
             tabIndex={-1}
@@ -689,33 +714,43 @@ function SelectionLayer({ rows, flat }: { rows: Block[]; flat: FlatBlock[] }) {
               // selection. Focusing the container itself (selection mode) doesn't.
               if (e.target !== containerRef.current && isActive) clearSelection();
             }}
-            style={{ paddingLeft: BLOCK_GUTTER }}
-            className="relative min-h-40 cursor-text pb-sm pr-sm pt-md outline-none"
+            className="relative min-h-40 w-full cursor-text pb-sm pt-md outline-none"
           >
-            {flat.map((f) => (
-              <BlockRow
-                key={f.block.id}
-                block={f.block}
-                depth={f.depth}
-                hasChildren={f.hasChildren}
-                ordinal={f.ordinal}
-                isDragging={
-                  activeId === f.block.id ||
-                  (bulkDragRef.current?.subtree.has(f.block.id) ?? false)
-                }
-                dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
-              />
-            ))}
-            {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the Add-block affordance below the block list; the container isn't a flex Stack (it holds keyed rows + an absolute marquee), so the margin can't lift into a parent gap */}
-            <div className="mt-1">
-              <AddBlockMenu />
+            {/* Symmetric BLOCK_GUTTER reserves the left rail the three hover
+                controls (chevron, drag handle, +) hang into at -20/-40/-60 from
+                the content edge, and a matching right gutter so the text measure
+                stays centered. Block content aligns with the page title, which
+                reserves the same left rail for its icon. */}
+            <div
+              ref={contentRef}
+              className={cn("relative", contentClassName)}
+              style={{ paddingLeft: BLOCK_GUTTER, paddingRight: BLOCK_GUTTER }}
+            >
+              {flat.map((f) => (
+                <BlockRow
+                  key={f.block.id}
+                  block={f.block}
+                  depth={f.depth}
+                  hasChildren={f.hasChildren}
+                  ordinal={f.ordinal}
+                  isDragging={
+                    activeId === f.block.id ||
+                    (bulkDragRef.current?.subtree.has(f.block.id) ?? false)
+                  }
+                  dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
+                />
+              ))}
+              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the Add-block affordance below the block list; the container isn't a flex Stack (it holds keyed rows + an absolute marquee), so the margin can't lift into a parent gap */}
+              <div className="mt-1">
+                <AddBlockMenu />
+              </div>
+              {marquee && (
+                <div
+                  className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded-md border"
+                  style={{ top: marquee.top, height: marquee.height }}
+                />
+              )}
             </div>
-            {marquee && (
-              <div
-                className="bg-primary/10 border-primary/40 pointer-events-none absolute inset-x-2 z-base rounded-md border"
-                style={{ top: marquee.top, height: marquee.height }}
-              />
-            )}
           </div>
         </ContentScope>
         <DragOverlay dropAnimation={null}>

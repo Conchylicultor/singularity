@@ -8,6 +8,15 @@ import { PageBreadcrumb } from "./components/page-breadcrumb";
 import { PageCover } from "./components/page-cover";
 import { PageDetail } from "./slots";
 
+// The centered reading measure shared by the page header, the block editor's
+// content, and the section list, so the page icon, title, and every block line
+// up on one left rail with the measure centered in the pane. The block editor's
+// pointer/marquee surface spans the full pane width (it receives this only as
+// its content wrapper), so drag-to-select works from the whitespace beside the
+// column — the header and sections, which carry no such surface, apply the
+// measure to themselves directly.
+const READING_MEASURE = "mx-auto w-full max-w-4xl px-lg";
+
 // Panes are declared first so their types are known before the component
 // bodies reference them. The component identifiers below are hoisted function
 // declarations, so the forward reference is safe at runtime.
@@ -61,32 +70,35 @@ function PageDetailBody(): ReactElement {
       }
     >
       {/* Full-bleed cover scrolls away with the page (Notion-style). Below it,
-          one centered reading column hosts the header and blocks. The header and
-          block editor each self-inset their content by BLOCK_GUTTER (reserving
-          the left rail for the page icon and the blocks' hover controls), and
-          the column adds a matching right gutter so the icon, title, and every
-          block share one left rail while the measure sits centered in the pane
-          rather than shifted right against an empty void. */}
+          the header and section list are centered on the shared reading measure,
+          while the block editor spans the full pane width (centering only its
+          own content via the same measure) so a marquee drag can begin from the
+          whitespace beside the column. The header and block content each inset
+          their text by BLOCK_GUTTER on the left (page icon / hover-control rail)
+          and a matching right gutter, so the icon, title, and every block line
+          up while the measure stays centered. */}
       <div className="flex flex-col">
         <PageCover pageId={pageId} />
-        <div
-          className="mx-auto flex w-full max-w-4xl flex-col gap-lg px-lg pb-2xl"
-          style={{ paddingRight: BLOCK_GUTTER }}
-        >
+        <div className="flex flex-col gap-lg pb-2xl">
           {/* Title + body form one tight unit (no flex gap between them): the
               only space under the title is the editor's own top padding, which
               is click-to-edit — so there's no dead strip between title and
               content. */}
           <div className="flex flex-col">
-            <PageHeader pageId={pageId} />
+            <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
+              <PageHeader pageId={pageId} />
+            </div>
             <BlockEditor
               pageId={pageId}
+              contentClassName={READING_MEASURE}
               onOpenPage={(id) => openPane(pageDetailPane, { pageId: id }, { mode: "swap" })}
             />
           </div>
-          <PageDetail.Section.Render>
-            {(s) => <s.component pageId={pageId} />}
-          </PageDetail.Section.Render>
+          <div className={READING_MEASURE} style={{ paddingRight: BLOCK_GUTTER }}>
+            <PageDetail.Section.Render>
+              {(s) => <s.component pageId={pageId} />}
+            </PageDetail.Section.Render>
+          </div>
         </div>
       </div>
     </PaneChrome>
