@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { SlowOpMarkerSchema } from "@plugins/debug/plugins/slow-ops/core";
 
 // One per-backend health sample. Every field except `worktree` is a number so
 // the wire shape maps cleanly onto recharts series. Event-loop values are
@@ -37,6 +38,9 @@ export type HostSample = z.infer<typeof HostSampleSchema>;
 export const HealthSeriesSchema = z.object({
   worktree: z.string(),
   samples: z.array(HealthSampleSchema),
+  // Slow-op spikes for this backend, overlaid on its metric charts as
+  // severity-colored vertical ReferenceLines on the shared time axis.
+  slowOpMarkers: z.array(SlowOpMarkerSchema),
 });
 export type HealthSeries = z.infer<typeof HealthSeriesSchema>;
 

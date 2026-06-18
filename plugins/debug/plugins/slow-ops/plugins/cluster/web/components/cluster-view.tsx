@@ -13,6 +13,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { loadSeverity } from "@plugins/debug/plugins/slow-ops/core";
 import { getSlowOpsCluster } from "../../shared/endpoints";
 import {
   buildClusterAggregate,
@@ -95,16 +96,6 @@ const AGGREGATE_COLUMNS: ColumnDef<ClusterAggregate>[] = [
   },
 ];
 
-// Load relative to cores is the contention signal: ≥1.5× cores = saturated
-// (warning), ≥2.5× = severe (destructive). Drives the muted→warning→destructive
-// ramp so a simultaneous storm's high-load rows pop without ad-hoc colors.
-function loadVariant(loadAvg1: number, cpuCount: number): "muted" | "warning" | "destructive" {
-  const ratio = cpuCount > 0 ? loadAvg1 / cpuCount : 0;
-  if (ratio >= 2.5) return "destructive";
-  if (ratio >= 1.5) return "warning";
-  return "muted";
-}
-
 const TIMELINE_COLUMNS: ColumnDef<TimelineEntry>[] = [
   {
     id: "atTime",
@@ -159,7 +150,7 @@ const TIMELINE_COLUMNS: ColumnDef<TimelineEntry>[] = [
     align: "end",
     value: (row) => row.loadAvg1,
     cell: (row) => (
-      <Badge variant={loadVariant(row.loadAvg1, row.cpuCount)} size="sm" className="font-mono">
+      <Badge variant={loadSeverity(row.loadAvg1, row.cpuCount)} size="sm" className="font-mono">
         {Math.round(row.loadAvg1)} / {row.cpuCount}
       </Badge>
     ),

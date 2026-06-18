@@ -26,14 +26,16 @@ and `research/2026-06-14-global-cold-load-instant-boot.md`.
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.registerSlowResourceReporter`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `reports.recordReport`, `reports.ReportKind`
+  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
-  - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `recordSlowOp`, `slowOpsResource`
+  - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
   - Resources: `slow-ops` (push)
   - Routes: `POST /api/slow-ops/client`
 - Core:
   - Uses: `config_v2.defineConfig`, `fields/int/config.intField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `slowOpConfig`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+  - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+- Cross-plugin:
+  - Imported by: `debug/health-monitor`
 - Sub-plugins:
   - **`cluster`** — Cross-worktree cluster tab for the Slow Ops pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
   - **`pane`** — Debug pane showing a global, ranked overview of slow operations with per-operation caller attribution.

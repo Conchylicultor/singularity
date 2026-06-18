@@ -2,6 +2,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { SINGULARITY_DIR, MAIN_WORKTREE_NAME } from "@plugins/infra/plugins/paths/server";
 import { readChannelEntries } from "@plugins/primitives/plugins/log-channels/server";
+import { readSlowOpMarkers } from "@plugins/debug/plugins/slow-ops/server";
 import {
   HealthSampleSchema,
   HostSampleSchema,
@@ -73,7 +74,10 @@ export function readHealthSeries(windowMs: number): {
       cutoff,
       (s) => s.sampledAt,
     );
-    if (samples.length) series.push({ worktree: name, samples });
+    if (samples.length) {
+      const slowOpMarkers = readSlowOpMarkers(name, windowMs);
+      series.push({ worktree: name, samples, slowOpMarkers });
+    }
   }
 
   const hostSamples = parseSamples<HostSample>(

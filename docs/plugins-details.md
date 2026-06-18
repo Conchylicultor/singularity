@@ -1812,7 +1812,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
         - Exports: Values: `healthMonitorPane`
       - Server:
-        - Uses: `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+        - Uses: `debug/slow-ops.readSlowOpMarkers`, `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
         - Routes: `GET /api/debug/health-monitor`
       - Shared:
         - Exports: Types: `GetHealthDataResponse`, `HealthSample`, `HealthSeries`, `HostSample`; Values: `getHealthData`, `GetHealthDataResponseSchema`, `HealthSampleSchema`, `HealthSeriesSchema`, `HostSampleSchema`
@@ -1924,14 +1924,16 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.registerSlowResourceReporter`
       - Server:
-        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `reports.recordReport`, `reports.ReportKind`
+        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
-        - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `recordSlowOp`, `slowOpsResource`
+        - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
         - Resources: `slow-ops` (push)
         - Routes: `POST /api/slow-ops/client`
       - Core:
         - Uses: `config_v2.defineConfig`, `fields/int/config.intField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
-        - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `slowOpConfig`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+        - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+      - Cross-plugin:
+        - Imported by: `debug/health-monitor`
       - Plugins:
         - **`cluster`** — Cross-worktree cluster tab for the Slow Ops pane: fans out across every worktree DB fork and merges them into one aggregate + a unified contention timeline. Cross-worktree fan-out endpoint: merges every worktree DB fork's slow_ops into one cluster response.
           - Web:
@@ -3805,7 +3807,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.defineEndpoint`
         - Exports: Types: `ClientMessage`, `EmitLogsBody`, `EntryMsg`, `ErrorMsg`, `HistoryMsg`, `LogEntryWire`, `ServerMessage`, `SubscribeMsg`; Values: `emitLogs`, `EmitLogsBodySchema`, `getLogChannels`
       - Cross-plugin:
-        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`
+        - Imported by: `apps/sonata/piano-roll`, `build`, `conversations/transcript-retention`, `database/derived-views`, `database/migrations`, `debug/health-monitor`, `debug/slow-ops`, `debug/worktree-cleanup`, `infra/attachments`, `primitives/live-state`
     - **`markdown`** — Shared markdown renderer with slot-based enhancers. Consumers write <Markdown>{text}</Markdown>; context-specific behaviors auto-activate via Markdown.Enhancer contributions.
       - Web:
         - Slots: `MarkdownEnhancerSlot.MarkdownEnhancerSlot` ← `active-data`, `conversations.conversation-view.markdown-extensions`

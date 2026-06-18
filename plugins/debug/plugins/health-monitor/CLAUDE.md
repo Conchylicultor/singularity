@@ -11,7 +11,7 @@
   - Uses: `apps/debug/shell.DebugApp`, `infra/endpoints.getEndpointErrorMessage`, `infra/endpoints.useEndpoint`, `primitives/app-shell.sidebarNavItem`, `primitives/css/grid.Grid`, `primitives/css/placeholder.Placeholder`, `primitives/css/section-label.SectionLabel`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `stats/commits.axisProps`, `stats/commits.ChartState`, `stats/commits.gridProps`, `stats/commits.lineCursor`, `stats/commits.tooltipContentStyle`, `stats/commits.tooltipLabelStyle`, `stats/commits.yAxisFormatter`
   - Exports: Values: `healthMonitorPane`
 - Server:
-  - Uses: `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
+  - Uses: `debug/slow-ops.readSlowOpMarkers`, `infra/endpoints.implement`, `infra/paths.currentWorktreeName`, `infra/paths.isMain`, `infra/paths.MAIN_WORKTREE_NAME`, `infra/paths.SINGULARITY_DIR`, `primitives/log-channels.Log`, `primitives/log-channels.LogChannel`, `primitives/log-channels.readChannelEntries`
   - Routes: `GET /api/debug/health-monitor`
 - Shared:
   - Exports: Types: `GetHealthDataResponse`, `HealthSample`, `HealthSeries`, `HostSample`; Values: `getHealthData`, `GetHealthDataResponseSchema`, `HealthSampleSchema`, `HealthSeriesSchema`, `HostSampleSchema`

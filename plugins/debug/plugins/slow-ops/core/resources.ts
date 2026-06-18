@@ -50,3 +50,31 @@ export const slowOpsResource = resourceDescriptor<SlowOp[]>(
   z.array(SlowOpSchema),
   [],
 );
+
+// The web-safe overlay shape for the health-monitor charts: a slim projection of
+// a sample (no full contention snapshot), published one-per-recorded-slow-op to
+// the persisted `slow-op-markers` channel and read back per worktree to draw a
+// severity-colored ReferenceLine at each spike's timestamp.
+export const SlowOpMarkerSchema = z.object({
+  atTime: z.coerce.date(), // wall-clock instant the span tripped
+  durationMs: z.number(),
+  operationKind: z.string(),
+  operation: z.string(),
+  loadAvg1: z.number(), // for the severity ramp
+  cpuCount: z.number(),
+});
+export type SlowOpMarker = z.infer<typeof SlowOpMarkerSchema>;
+
+// Load relative to cores is the contention signal: ≥1.5× cores = saturated
+// (warning), ≥2.5× = severe (destructive). The single source of truth for the
+// muted→warning→destructive ramp, shared by the cluster timeline badges and the
+// health-monitor spike-line overlay.
+export function loadSeverity(
+  loadAvg1: number,
+  cpuCount: number,
+): "muted" | "warning" | "destructive" {
+  const ratio = cpuCount > 0 ? loadAvg1 / cpuCount : 0;
+  if (ratio >= 2.5) return "destructive";
+  if (ratio >= 1.5) return "warning";
+  return "muted";
+}

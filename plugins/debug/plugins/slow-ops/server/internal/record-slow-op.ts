@@ -5,11 +5,12 @@ import {
   type SpanRef,
 } from "@plugins/infra/plugins/runtime-profiler/core";
 import { recordReport } from "@plugins/reports/server";
+import { Log } from "@plugins/primitives/plugins/log-channels/server";
 import {
   getContentionSnapshot,
   type ContentionSnapshot,
 } from "@plugins/infra/plugins/contention/server";
-import type { CallerBreakdown, SlowOpSample } from "../../core";
+import type { CallerBreakdown, SlowOpMarker, SlowOpSample } from "../../core";
 
 // The only two report sources a slow-op originates from. Kept as a local literal
 // union rather than imported, since reports' ReportSource lives in its private
@@ -18,6 +19,13 @@ import type { CallerBreakdown, SlowOpSample } from "../../core";
 type SlowOpSource = "server-slow-op" | "client-slow-op";
 import { _slowOps } from "./tables";
 import { slowOpsResource } from "./resources";
+
+// A slim overlay marker per recorded slow op, dual-written to a persisted log
+// channel. Mirrors the health sampler's `Log.channel("health", { persist: true })`
+// — each worktree backend writes to its own logs/slow-op-markers.jsonl, read
+// from disk by the health-monitor endpoint to draw spike lines on the charts.
+// Uncapped (one line per slow op), unlike the 10-entry DB recentSamples ring.
+const markerChannel = Log.channel("slow-op-markers", { persist: true });
 
 export interface RecordSlowOpInput {
   operationKind: string;
@@ -86,12 +94,16 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   // Wrapped in runWithoutProfiling: the slow_ops upsert is itself a `db` span that
   // would otherwise re-feed the slow-op recorder (self-amplifying loop). The
   // suppression ALS propagates through every awaited query inside the callback.
+  // Hoisted out of the suppression callback so the dual-write marker below can
+  // reuse the same captured box state. Assigned inside the scope (the await must
+  // stay there); non-null after the callback resolves.
+  let snapshot!: ContentionSnapshot;
   await runWithoutProfiling(async () => {
     // Capture the box state at the instant this span tripped. Cached (≤1s) so a
     // storm of slow ops collapses onto one read; inside runWithoutProfiling so
     // its own pg query never re-feeds this recorder. The await MUST stay inside
     // the suppression scope (same reason as the transaction below).
-    const snapshot = await getContentionSnapshot();
+    snapshot = await getContentionSnapshot();
 
     // The await MUST run inside the suppression scope. A bare `() => db…`
     // returns the lazy query unexecuted, so its execution (and the acquire +
@@ -147,6 +159,20 @@ export async function recordSlowOp(input: RecordSlowOpInput): Promise<void> {
   });
 
   slowOpsResource.notify();
+
+  // Dual-write a slim marker for the health-monitor overlay (one line per
+  // recorded slow op). The snapshot was captured inside the suppression scope
+  // above; reuse it so the marker shares the box state the aggregate recorded.
+  markerChannel.publish(
+    JSON.stringify({
+      atTime: new Date(),
+      durationMs,
+      operationKind,
+      operation,
+      loadAvg1: snapshot.loadAvg1,
+      cpuCount: snapshot.cpuCount,
+    } satisfies SlowOpMarker),
+  );
 
   // Fire-and-forget the singleton rollup report. The fixed fingerprint collapses
   // every slow-op onto one task; its message reflects the latest tripping op.

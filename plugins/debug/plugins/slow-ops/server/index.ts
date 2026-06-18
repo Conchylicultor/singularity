@@ -12,6 +12,7 @@ export { _slowOps } from "./internal/tables";
 export { slowOpsResource } from "./internal/resources";
 export { recordSlowOp } from "./internal/record-slow-op";
 export type { RecordSlowOpInput } from "./internal/record-slow-op";
+export { readSlowOpMarkers } from "./internal/read-markers";
 
 export default {
   description:
