@@ -33,7 +33,12 @@ export const DIFF_LEGEND: { state: DiffState; label: string; tint: string | null
   { state: "neither", label: "In neither", tint: null },
 ];
 
-export function MembershipBand({ node }: { node: PluginNode }) {
+/**
+ * Full-row membership/diff wash, contributed to `Explorer.TreeRowAccent`. Lives
+ * inside RowChrome's `pointer-events-none absolute inset-0` accent layer, so it
+ * only paints the tint — RowChrome owns the positioning.
+ */
+export function MembershipTint({ node }: { node: PluginNode }) {
   // Ensure the closure graph is fetched + published to the store so membership can
   // resolve. Shared (deduped) across every row; returns nothing.
   useEnsureCompositionData();
@@ -42,53 +47,50 @@ export function MembershipBand({ node }: { node: PluginNode }) {
 
   // Compare mode (both A and B set) → tint by diff state, a distinct scheme from
   // the single-composition membership tints. `neither` gets no band.
+  let tint: string | null;
   if (diff) {
     const dstate = diff.get(node.id) ?? "neither";
-    const dtint = dstate === "neither" ? null : DIFF_TINT[dstate];
-    return <BandWithPin node={node} tint={dtint} />;
+    tint = dstate === "neither" ? null : DIFF_TINT[dstate];
+  } else if (!membership) {
+    // No active composition → no tint by default.
+    return null;
+  } else {
+    const state = membership.get(node.id) ?? "excluded";
+    tint = state === "excluded" ? null : STATE_TINT[state];
   }
 
-  // No active composition → no tint by default.
-  if (!membership) return null;
-
-  const state = membership.get(node.id) ?? "excluded";
-  const tint = state === "excluded" ? null : STATE_TINT[state];
-  return <BandWithPin node={node} tint={tint} />;
+  return tint ? <div aria-hidden className={cn("size-full", tint)} /> : null;
 }
 
-function BandWithPin({ node, tint }: { node: PluginNode; tint: string | null }) {
-
+/**
+ * Hover-revealed pin + graph affordances, contributed to `Explorer.TreeRowBadge`
+ * (the trailing actions cluster). Independent of composition data — `pinAsRoot`
+ * and `openPane` don't need the closure graph fetched.
+ */
+export function MembershipPin({ node }: { node: PluginNode }) {
   return (
-    <>
-      {tint && (
-        <span
-          aria-hidden
-          className={cn("pointer-events-none absolute inset-0 z-base", tint)}
-        />
-      )}
-      <span
-        className="relative z-raised hidden shrink-0 group-hover/tree-row:inline-flex"
-        onClick={(e) => e.stopPropagation()}
-      >
-        <IconButton
-          icon={MdMyLocation}
-          label="Show closure from here"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            pinAsRoot(node.id);
-          }}
-        />
-        <IconButton
-          icon={MdHub}
-          label="Open in graph"
-          size="sm"
-          onClick={(e) => {
-            e.stopPropagation();
-            openPane(graphCanvasPane, {}, { mode: "root", input: { focusId: node.id } });
-          }}
-        />
-      </span>
-    </>
+    <span
+      className="relative z-raised hidden shrink-0 group-hover/tree-row:inline-flex"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <IconButton
+        icon={MdMyLocation}
+        label="Show closure from here"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          pinAsRoot(node.id);
+        }}
+      />
+      <IconButton
+        icon={MdHub}
+        label="Open in graph"
+        size="sm"
+        onClick={(e) => {
+          e.stopPropagation();
+          openPane(graphCanvasPane, {}, { mode: "root", input: { focusId: node.id } });
+        }}
+      />
+    </span>
   );
 }

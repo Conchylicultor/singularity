@@ -27,11 +27,22 @@ export type RowChromeProps<T extends TreeItem> = {
    */
   icon?: ReactNode;
   menu?: RowMenuItem[] | ((helpers: RowChromeMenuHelpers) => RowMenuItem[]);
+  /**
+   * Optional full-row accent/background layer (e.g. a translucent membership
+   * wash). RowChrome owns the positioning: the node is rendered into a
+   * primitive-owned `pointer-events-none absolute inset-0` layer painted OVER
+   * the row, so a translucent overlay composes with the hover/selected
+   * backgrounds. The sanctioned home for a full-row wash — replaces the old
+   * trick of rendering an `absolute inset-0` element inside `trailing`/`actions`
+   * and relying on RowChrome's internal `relative` wrapper.
+   */
+  accent?: ReactNode;
   className?: string;
 };
 
 export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
-  const { node, depth, children, actions, icon, menu, className } = props;
+  const { node, depth, children, actions, icon, menu, accent, className } =
+    props;
   const r = useTreeRow(node);
   const ctx = useTreeListContext<T>();
   const Row = ctx.Row;
@@ -137,6 +148,11 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
         >
           {children}
         </TreeRowChrome>
+        {accent != null && (
+          <div aria-hidden className="pointer-events-none absolute inset-0">
+            {accent}
+          </div>
+        )}
         <div
           ref={r.beforeRef}
           className="pointer-events-none absolute inset-x-0 top-0 h-[6px]"

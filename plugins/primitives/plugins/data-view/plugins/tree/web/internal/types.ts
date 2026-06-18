@@ -18,8 +18,12 @@ export type TreeRowNode<TRow> = TreeNode<TRow & { id: string }>;
  * are web types of the tree primitive, and `core` may not import `web`.
  */
 export interface TreeViewOptions<TRow> {
-  /** Fully replace a row's rendering (receives the projected tree node). */
-  renderRow?: (node: TreeRowNode<TRow>) => ReactNode;
+  /**
+   * Fully replace a row's rendering (receives the projected tree node and its
+   * `depth`). `depth` is for composing `RowChrome`, which needs it for the
+   * indentation of nested rows.
+   */
+  renderRow?: (node: TreeRowNode<TRow>, depth: number) => ReactNode;
   /** Leading icon rendered immediately before the primary-field label. */
   leadingIcon?: (row: TRow) => ReactNode;
   /**
@@ -28,6 +32,14 @@ export interface TreeViewOptions<TRow> {
    * affordances revealed on row hover.
    */
   trailing?: (row: TRow) => ReactNode;
+  /**
+   * Full-row accent/background layer for a row (e.g. a translucent membership
+   * wash). Rendered by RowChrome into a primitive-owned `absolute inset-0`
+   * layer painted over the row, so a translucent overlay composes with the
+   * hover/selected backgrounds. A first-class alternative to faking a full-row
+   * background inside `trailing`.
+   */
+  rowAccent?: (row: TRow) => ReactNode;
   /** Drag-handle dropdown menu items for a row → `RowChrome.menu`. */
   rowMenu?: (helpers: RowChromeMenuHelpers, row: TRow) => RowMenuItem[];
   /** Content shown in the floating chip while a row is being dragged. */

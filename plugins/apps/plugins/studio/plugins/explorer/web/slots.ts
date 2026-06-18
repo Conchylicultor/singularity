@@ -12,4 +12,11 @@ export const Explorer = {
     "studio.explorer.tree-row-badge",
     { docLabel: (p) => p.id },
   ),
+  // The contribution shape is identical to TreeRowBadge — reuse the interface.
+  // This slot feeds the tree primitive's RowChrome `accent` layer (full-row
+  // wash) rather than the hover-revealed trailing badge cluster.
+  TreeRowAccent: defineRenderSlot<TreeRowBadgeContribution>(
+    "studio.explorer.tree-row-accent",
+    { docLabel: (p) => p.id },
+  ),
 };

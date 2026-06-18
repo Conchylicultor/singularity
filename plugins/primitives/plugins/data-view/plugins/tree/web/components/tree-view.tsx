@@ -97,11 +97,13 @@ function DefaultRow<TRow>(props: {
 
   const leadingIcon = options.leadingIcon?.(row);
   const trailing = options.trailing?.(row);
+  const accent = options.rowAccent?.(row);
 
   return (
     <RowChrome
       node={node}
       depth={depth}
+      accent={accent}
       actions={
         itemActions ? (
           <itemActions.Row row={row} hasChildren={node.children.length > 0} />
@@ -202,7 +204,8 @@ export function TreeView(props: DataViewRenderProps<unknown>): ReactNode {
   const Row = useCallback(
     (rowProps: { node: TreeNode<Projected<unknown>>; depth: number }) => {
       if (!hierarchy) return null;
-      if (options.renderRow) return options.renderRow(rowProps.node);
+      if (options.renderRow)
+        return options.renderRow(rowProps.node, rowProps.depth);
       return (
         <DefaultRow
           node={rowProps.node}

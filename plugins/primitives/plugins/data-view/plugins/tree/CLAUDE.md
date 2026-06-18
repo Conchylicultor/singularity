@@ -50,7 +50,14 @@ the lower-level building block.
 
 `options` (= `viewOptions.tree`) is a `TreeViewOptions<TRow>`:
 
-- `renderRow?(node)` — fully replace a row's rendering.
+- `renderRow?(node, depth)` — fully replace a row's rendering. Receives the
+  projected tree node and its `depth` (so a custom row can compose `RowChrome`,
+  which needs `depth` for nested-row indentation).
+- `rowAccent?(row)` — a first-class full-row accent/background layer (e.g. a
+  translucent membership wash). Rendered by the tree primitive's `RowChrome` into
+  a primitive-owned `absolute inset-0` layer painted *over* the row, so a
+  translucent overlay composes with the hover/selected backgrounds. Use this
+  instead of faking a full-row background inside `trailing`.
 - `leadingIcon?(row)` — icon rendered before the label.
 - `trailing?(row)` — persistent content rendered after the label (status badge,
   count, …). Always visible — distinct from `itemActions`, which are hover-revealed.

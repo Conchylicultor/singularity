@@ -71,6 +71,7 @@ export const reorderableSlots: ReorderableSlot[] = [
   { slotId: "stats.chart", pluginId: "stats" },
   { slotId: "story.toolbar.end", pluginId: "apps.story.shell" },
   { slotId: "story.toolbar.start", pluginId: "apps.story.shell" },
+  { slotId: "studio.explorer.tree-row-accent", pluginId: "apps.studio.explorer" },
   { slotId: "studio.explorer.tree-row-badge", pluginId: "apps.studio.explorer" },
   { slotId: "studio.sidebar", pluginId: "apps.studio.shell" },
   { slotId: "studio.toolbar", pluginId: "apps.studio.shell" },

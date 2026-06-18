@@ -18,7 +18,7 @@ served by the plugin-meta/plugin-view plugin.
 
 - Description: Sidebar entry and filterable tree pane for browsing and inspecting the plugin tree.
 - Web:
-  - Slots: `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`, `explorerPane.Actions`
+  - Slots: `Explorer.TreeRowBadge` ← `apps.studio.explorer.child-count`, `apps.studio.explorer.collapsed`, `apps.studio.explorer.expand-collapse`, `apps.studio.explorer.load-bearing`, `apps.studio.explorer.membership`, `Explorer.TreeRowAccent` ← `apps.studio.explorer.membership`, `explorerPane.Actions`
   - Contributes: `Pane.Register` "explorer", `Studio.Sidebar` "Explorer" → `component`
   - Uses: `apps/studio/shell.Studio`, `infra/endpoints.useEndpoint`, `plugin-meta/plugin-view.pluginViewPane`, `primitives/app-shell.sidebarNavItem`, `primitives/css/text.Text`, `primitives/data-view.DataView`, `primitives/data-view.defineDataView`, `primitives/data-view.FieldDef`, `primitives/data-view.HierarchyConfig`, `primitives/loading.Loading`, `primitives/pane.openPane`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.useOpenPane`, `primitives/rank.Rank`, `primitives/slot-render.defineRenderSlot`
   - Exports: Types: `TreeRowBadgeContribution`; Values: `Explorer`, `explorerPane`, `usePluginTree`

@@ -1,6 +1,6 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Explorer } from "@plugins/apps/plugins/studio/plugins/explorer/web";
-import { MembershipBand } from "./components/membership-band";
+import { MembershipPin, MembershipTint } from "./components/membership-band";
 
 // The canonical compare-mode tint + legend mapping. Exported so the Compositions
 // pane's diff legend / delta chips reuse the EXACT same colors the tree band paints
@@ -11,6 +11,7 @@ export default {
   description:
     "Tints each explorer tree row by its membership state in the active composition, with a pin-as-root affordance.",
   contributions: [
-    Explorer.TreeRowBadge({ id: "membership", component: MembershipBand }),
+    Explorer.TreeRowAccent({ id: "membership", component: MembershipTint }),
+    Explorer.TreeRowBadge({ id: "membership", component: MembershipPin }),
   ],
 } satisfies PluginDefinition;

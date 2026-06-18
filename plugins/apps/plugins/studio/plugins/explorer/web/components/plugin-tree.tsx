@@ -154,6 +154,11 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
   const treeOptions = useMemo<TreeViewOptions<ExplorerRow>>(
     () => ({
       expandAll: true,
+      rowAccent: (node) => (
+        <Explorer.TreeRowAccent.Render>
+          {(item) => <item.component node={node} />}
+        </Explorer.TreeRowAccent.Render>
+      ),
       trailing: (node) => (
         <Explorer.TreeRowBadge.Render>
           {(item) => <item.component node={node} />}
