@@ -6,6 +6,7 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
 type WriteInput = { file_path: string; content: string };
 
@@ -16,11 +17,9 @@ export function WriteToolView({ event }: ToolRendererProps) {
     <ToolCallCard event={event} aside={<FilePath filePath={file_path} />}>
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the code block from the card header */}
       <div className="mt-2">
-        <HighlightedCode
-          code={content}
-          lang={languageForPath(file_path)}
-          className="max-h-[280px] overflow-auto"
-        />
+        <Scroll axis="both" className="max-h-[280px]">
+          <HighlightedCode code={content} lang={languageForPath(file_path)} />
+        </Scroll>
         {event.result?.isError && (
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 separates the error text from the code block above
           <Text as="p" variant="caption" className="mt-1 text-destructive">

@@ -3,6 +3,7 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { InlineDiff } from "./inline-diff";
 
 type MultiEditInput = {
@@ -35,11 +36,13 @@ export function MultiEditView({ event }: ToolRendererProps) {
         {edits.map((edit, i) => (
           <div key={i}>
             {multi && (
-              /* eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1 offsets the per-edit label from its diff; not a flex-sibling gap */
-              <div className="mb-1 flex items-center gap-sm text-2xs text-muted-foreground">
-                <span>Edit {i + 1} / {edits.length}</span>
-                <hr className="flex-1 border-border/40" />
-              </div>
+              <Frame
+                gap="sm"
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1 offsets the per-edit label from its diff; not a flex-sibling gap
+                className="mb-1 text-2xs text-muted-foreground"
+                leading={<span>Edit {i + 1} / {edits.length}</span>}
+                meta={<hr className="border-border/40" />}
+              />
             )}
             <InlineDiff
               oldText={edit.old_string}

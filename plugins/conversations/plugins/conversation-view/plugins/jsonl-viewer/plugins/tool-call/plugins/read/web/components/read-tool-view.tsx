@@ -3,6 +3,7 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { FilePath } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/file-path/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { CodeWithLineNumbers } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/code-listing/web";
@@ -40,7 +41,7 @@ function LineRangeBadge({
   const end = limit != null ? start + limit - 1 : null;
   const label = end != null ? `L${start}–${end}` : `L${start}+`;
   return (
-    <Badge variant="muted" size="sm" className="shrink-0 font-mono">
+    <Badge variant="muted" size="sm" className="font-mono">
       {label}
     </Badge>
   );
@@ -53,11 +54,18 @@ export function ReadToolView({ event }: ToolRendererProps) {
 
   if (!conversation) return null;
 
-  const aside = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <FilePath filePath={file_path} />
+  const lineRange =
+    offset != null || limit != null ? (
       <LineRangeBadge offset={offset} limit={limit} />
-    </span>
+    ) : undefined;
+  const aside = lineRange ? (
+    <Frame
+      gap="sm"
+      content={<FilePath filePath={file_path} />}
+      trailing={lineRange}
+    />
+  ) : (
+    <FilePath filePath={file_path} />
   );
 
   const isImage = isImagePath(file_path);

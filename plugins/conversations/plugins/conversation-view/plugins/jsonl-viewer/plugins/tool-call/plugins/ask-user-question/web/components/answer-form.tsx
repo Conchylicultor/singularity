@@ -3,6 +3,7 @@ import { useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
 import { answerAskUserQuestion, ANSWER_MARKER } from "../../shared";
 import { Indicator } from "./ask-user-question-tool-view";
@@ -195,55 +196,67 @@ export function AnswerForm({
                     onClick={() =>
                       toggleOption(qi, opt.label, q.multiSelect)
                     }
-                    className={`flex w-full gap-sm text-left transition-colors ${
+                    className={`w-full text-left transition-colors ${
                       isSelected
                         ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
                         : "rounded-md py-xs pl-2xs hover:bg-muted/50"
                     }`}
                   >
-                    <Indicator selected={isSelected} multi={q.multiSelect} />
-                    <div className="min-w-0 flex-1 select-text">
-                      <Text as="p" variant="caption" className="font-medium">
-                        {opt.label}
-                      </Text>
-                      <Text as="p" variant="caption" tone="muted">
-                        {opt.description}
-                      </Text>
-                      {opt.preview && (
-                        <pre
-                          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
-                          className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
-                        >
-                          {opt.preview}
-                        </pre>
-                      )}
-                    </div>
+                    <Frame
+                      gap="sm"
+                      align="start"
+                      leading={
+                        <Indicator selected={isSelected} multi={q.multiSelect} />
+                      }
+                      content={
+                        <div className="select-text">
+                          <Text as="p" variant="caption" className="font-medium">
+                            {opt.label}
+                          </Text>
+                          <Text as="p" variant="caption" tone="muted">
+                            {opt.description}
+                          </Text>
+                          {opt.preview && (
+                            <pre
+                              // eslint-disable-next-line spacing/no-adhoc-spacing -- mt offsets the preview block from the option description above (no named margin utility)
+                              className="mt-1 whitespace-pre-wrap break-words rounded-md bg-muted/60 p-xs font-mono text-3xs text-muted-foreground"
+                            >
+                              {opt.preview}
+                            </pre>
+                          )}
+                        </div>
+                      }
+                    />
                   </button>
                 );
               })}
-              <div
-                className={`flex items-center gap-sm ${
+              <Frame
+                gap="sm"
+                className={
                   otherActive
                     ? "rounded-md border-l-2 border-primary bg-primary/5 py-xs pl-sm"
                     : "pl-2xs"
-                }`}
-              >
-                <Indicator selected={otherActive} multi={q.multiSelect} />
-                <Input
-                  value={answer.otherText}
-                  onChange={(e) =>
-                    setOtherText(qi, e.target.value, q.multiSelect)
-                  }
-                  onFocus={() => focusOther(qi, q.multiSelect)}
-                  placeholder="Other…"
-                  className="text-caption h-7 flex-1"
-                />
-              </div>
+                }
+                leading={
+                  <Indicator selected={otherActive} multi={q.multiSelect} />
+                }
+                meta={
+                  <Input
+                    value={answer.otherText}
+                    onChange={(e) =>
+                      setOtherText(qi, e.target.value, q.multiSelect)
+                    }
+                    onFocus={() => focusOther(qi, q.multiSelect)}
+                    placeholder="Other…"
+                    className="text-caption h-7"
+                  />
+                }
+              />
             </Stack>
           </div>
         );
       })}
-      <div className="flex justify-end">
+      <Stack direction="row" gap="none" justify="end">
         <Button
           size="sm"
           loading={m.isPending}
@@ -252,7 +265,7 @@ export function AnswerForm({
         >
           Submit
         </Button>
-      </div>
+      </Stack>
     </Stack>
   );
 }

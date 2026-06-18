@@ -4,6 +4,7 @@ import { toast } from "@plugins/shell/plugins/notifications/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { flushQuestion } from "../../shared";
 import { findAwaitingAuqEvent } from "./awaiting";
 
@@ -32,19 +33,17 @@ export function AnswerHereButton({
   if (findAwaitingAuqEvent(eventsResult.data) != null) return null;
 
   return (
-    <Text
-      as="div"
-      variant="caption"
-      className="flex items-center gap-sm text-warning/70"
-    >
-      <span>Content pending in terminal — waiting for your input</span>
-      <Button
-        size="sm"
-        loading={m.isPending}
-        onClick={() => m.mutate({ params: { id: conversationId } })}
-      >
-        Answer here
-      </Button>
+    <Text as="div" variant="caption" className="text-warning/70">
+      <Stack direction="row" gap="sm" align="center">
+        <span>Content pending in terminal — waiting for your input</span>
+        <Button
+          size="sm"
+          loading={m.isPending}
+          onClick={() => m.mutate({ params: { id: conversationId } })}
+        >
+          Answer here
+        </Button>
+      </Stack>
     </Text>
   );
 }

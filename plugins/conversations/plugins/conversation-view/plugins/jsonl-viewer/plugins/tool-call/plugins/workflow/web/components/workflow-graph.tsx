@@ -6,6 +6,10 @@ import { WorkflowNodeCard, type NodeEmphasis } from "./workflow-node-card";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Grid } from "@plugins/primitives/plugins/css/plugins/grid/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 // A renderable block: either a leaf agent/workflow node or a concurrency group.
 type Block =
@@ -64,9 +68,9 @@ export function WorkflowGraph({
             ⇉ parallel ×{count}
             {graph.dynamic && "?"}
           </div>
-          <div className="grid grid-cols-1 gap-xs sm:grid-cols-2 lg:grid-cols-3">
+          <Grid minCellWidth="11rem" gap="xs">
             {children.map(renderBlock)}
-          </div>
+          </Grid>
         </div>
       );
     }
@@ -80,20 +84,32 @@ export function WorkflowGraph({
         <div className="mb-1.5 text-3xs font-medium tracking-wider text-muted-foreground">
           → pipeline
         </div>
-        <div className="flex flex-col gap-sm lg:flex-row lg:items-stretch">
+        <div
+          // eslint-disable-next-line layout/no-adhoc-layout -- responsive flex direction (stacked column on narrow, side-by-side stages at lg); not expressible via a single Stack direction
+          className="flex flex-col gap-sm lg:flex-row lg:items-stretch"
+        >
           {children.map((stage, i) => (
-            <div key={stage.kind === "group" ? stage.group.id : i} className="flex items-stretch gap-sm">
+            <Stack
+              key={stage.kind === "group" ? stage.group.id : i}
+              direction="row"
+              gap="sm"
+              align="stretch"
+            >
               {i > 0 && (
+                // eslint-disable-next-line layout/no-adhoc-layout -- per-child cross-axis center + responsive show/hide of the inter-stage arrow
                 <span className="hidden self-center text-muted-foreground lg:block">
                   →
                 </span>
               )}
-              <div className="flex min-w-0 flex-1 flex-col gap-xs">
+              <div
+                // eslint-disable-next-line layout/no-adhoc-layout -- flexible (flex-1 min-w-0) equal-height column of stage cards within the pipeline row
+                className="flex min-w-0 flex-1 flex-col gap-xs"
+              >
                 {stage.kind === "group"
                   ? stage.children.map(renderBlock)
                   : renderBlock(stage)}
               </div>
-            </div>
+            </Stack>
           ))}
         </div>
       </div>
@@ -120,20 +136,29 @@ export function WorkflowGraph({
       {model.lanes.map((lane, i) => (
         <div key={lane.title || `lane-${i}`}>
           {lane.title && (
-            // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1.5 spaces the lane title row from the blocks below it
-            <div className="mb-1.5 flex items-baseline gap-sm">
-              <span className="flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
-                {lane.numberLabel}
-              </span>
-              <Text as="span" variant="label" className="text-foreground">
-                {lane.title}
-              </Text>
-              {lane.detail && (
-                <span className="min-w-0 truncate text-2xs text-muted-foreground">
-                  {lane.detail}
-                </span>
-              )}
-            </div>
+            <Frame
+              gap="sm"
+              align="baseline"
+              // eslint-disable-next-line spacing/no-adhoc-spacing -- mb-1.5 spaces the lane title row from the blocks below it
+              className="mb-1.5"
+              leading={
+                <Center className="size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
+                  {lane.numberLabel}
+                </Center>
+              }
+              content={
+                <Text as="span" variant="label" className="text-foreground">
+                  {lane.title}
+                </Text>
+              }
+              meta={
+                lane.detail ? (
+                  <TruncatingText className="text-2xs text-muted-foreground">
+                    {lane.detail}
+                  </TruncatingText>
+                ) : undefined
+              }
+            />
           )}
           {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 indents the lane's blocks to align with the border-left rule */}
           <Stack gap="xs" className={cn(lane.title && "ml-1.5 border-l border-border/50 pl-md")}>

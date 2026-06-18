@@ -10,34 +10,44 @@ import {
   MdClose,
 } from "react-icons/md";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Pin } from "@plugins/primitives/plugins/css/plugins/pin/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { useTaskAggregate, type TaskEntry } from "./use-task-aggregate";
 
 function StatusIcon({ status }: { status: string }) {
   switch (status) {
     case "in_progress":
-      return <MdTimelapse className="size-4 shrink-0 text-info" />;
+      return <MdTimelapse className="size-4 text-info" />;
     case "completed":
-      return <MdCheckCircle className="size-4 shrink-0 text-success" />;
+      return <MdCheckCircle className="size-4 text-success" />;
     case "failed":
-      return <MdCancel className="size-4 shrink-0 text-destructive" />;
+      return <MdCancel className="size-4 text-destructive" />;
     case "stopped":
-      return <MdStopCircle className="size-4 shrink-0 text-muted-foreground" />;
+      return <MdStopCircle className="size-4 text-muted-foreground" />;
     default:
-      return <MdRadioButtonUnchecked className="size-4 shrink-0 text-muted-foreground" />;
+      return <MdRadioButtonUnchecked className="size-4 text-muted-foreground" />;
   }
 }
 
 function TaskRow({ task }: { task: TaskEntry }) {
   return (
-    <Text as="div" variant="caption" className="flex items-center gap-sm px-md py-xs">
-      <StatusIcon status={task.status} />
-      <span className="min-w-0 flex-1 truncate text-foreground/80">
-        {task.description}
-      </span>
-      <span className="shrink-0 font-mono text-3xs text-muted-foreground/60">
-        {task.taskId.slice(0, 8)}
-      </span>
-    </Text>
+    <Frame
+      gap="sm"
+      className="px-md py-xs"
+      leading={<StatusIcon status={task.status} />}
+      content={
+        <Text as="span" variant="caption" className="truncate text-foreground/80">
+          {task.description}
+        </Text>
+      }
+      trailing={
+        <span className="font-mono text-3xs text-muted-foreground/60">
+          {task.taskId.slice(0, 8)}
+        </span>
+      }
+    />
   );
 }
 
@@ -49,42 +59,57 @@ export function TaskProgressOverlay() {
   if (!shouldShow || dismissed) return null;
 
   return (
-    <div className="absolute inset-x-0 bottom-10 z-float flex justify-center pointer-events-none">
-      {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mx-4 gutters the centered card inside the pointer-events-none overlay; can't fold into the parent without breaking pointer-events scoping */}
-      <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
-        <div className="flex items-center px-md py-sm">
-          <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
-            {completedCount}/{totalCount} complete
-          </Text>
-          <div className="ml-auto flex items-center gap-xs">
-            <button
-              type="button"
-              onClick={() => setExpanded((v) => !v)}
-              className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              {expanded ? (
-                <MdExpandMore className="size-4" />
-              ) : (
-                <MdExpandLess className="size-4" />
-              )}
-            </button>
-            <button
-              type="button"
-              onClick={() => setDismissed(true)}
-              className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
-            >
-              <MdClose className="size-4" />
-            </button>
-          </div>
+    <Pin
+      to="bottom"
+      stretch
+      decorative
+      layer="float"
+      // bottom-10 (2.5rem) is off the spacing ramp, so override Pin's flush inset.
+      style={{ bottom: "2.5rem" }}
+    >
+      <Center axis="horizontal">
+        {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mx-4 gutters the centered card; can't fold into the parent without breaking the centered max-width */}
+        <div className="pointer-events-auto mx-4 w-full max-w-sm rounded-lg border bg-background/90 shadow-sm backdrop-blur-sm">
+          <Frame
+            gap="xs"
+            className="px-md py-sm"
+            content={
+              <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
+                {completedCount}/{totalCount} complete
+              </Text>
+            }
+            trailing={
+              <>
+                <button
+                  type="button"
+                  onClick={() => setExpanded((v) => !v)}
+                  className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  {expanded ? (
+                    <MdExpandMore className="size-4" />
+                  ) : (
+                    <MdExpandLess className="size-4" />
+                  )}
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDismissed(true)}
+                  className="rounded-md p-2xs text-muted-foreground hover:bg-accent hover:text-foreground"
+                >
+                  <MdClose className="size-4" />
+                </button>
+              </>
+            }
+          />
+          {expanded && tasks.length > 0 && (
+            <Scroll className="max-h-[180px] border-t border-border/40 py-xs">
+              {tasks.map((task) => (
+                <TaskRow key={task.taskId} task={task} />
+              ))}
+            </Scroll>
+          )}
         </div>
-        {expanded && tasks.length > 0 && (
-          <div className="max-h-[180px] overflow-y-auto border-t border-border/40 py-xs">
-            {tasks.map((task) => (
-              <TaskRow key={task.taskId} task={task} />
-            ))}
-          </div>
-        )}
-      </div>
-    </div>
+      </Center>
+    </Pin>
   );
 }

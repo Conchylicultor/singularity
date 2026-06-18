@@ -175,6 +175,45 @@ decidable in practice; surface any missing prop. **Adjust the primitive APIs ONC
 then freeze.** Lock the mapping table with any new rows. Include at least one long-content row to
 validate the Frame choice.
 
+### Phase 1 — COMPLETE (primitive APIs FROZEN as shipped)
+
+Drained the 22 `jsonl-viewer/.../tool-call` files (allowlist entries removed; `bunx eslint`
+clean → **zero `layout/no-adhoc-layout`**; `./singularity build` green; verified against real
+transcripts — collapsed Frame label-rows, Bash (`Clip`+`Frame`+`Scroll`), Edit/MultiEdit, Read,
+Write all render with correct truncation and **no badge-over-text overlap**). **No primitive API
+needed changing** — every rough edge resolved as a *composition pattern*, so Scroll/Clip/Sticky/Pin
+and the mapping table are **frozen** for all downstream batches. Validated patterns to apply verbatim:
+
+1. **Container-as-flexible-child bridge.** When a `Frame`/`Stack` must itself be the `flex-1 min-w-0`
+   child of an *externally-owned (still-allowlisted)* flex row, neither has a prop for that. Bridge
+   with exactly ONE documented `// eslint-disable-next-line layout/no-adhoc-layout -- flexible leaf
+   of <parent>'s not-yet-drained content flex` on `className="min-w-0 flex-1"`; it folds away when the
+   parent is drained. (Only instance: `tool-call-card.tsx` inside `collapsible-card`'s row.)
+2. **`Frame`/`Stack as="button"` + element-only attrs.** Their props are typed
+   `HTMLAttributes<HTMLElement>`, so a button-only attr like `type="button"` does **not** type-check
+   (TS2322). Pattern: keep the real `<button type="button" className="w-full …">` as the interaction +
+   chrome wrapper and put a `<Frame>` *inside* it for layout. Do **not** add `type` to Frame.
+3. **Off-ramp `Pin`/`Sticky` offset.** A fixed offset not on the spacing ramp (e.g. `bottom-10` =
+   2.5rem) is expressed by overriding the primitive's inline inset: `style={{ bottom: "2.5rem" }}`
+   (Pin/Sticky merge caller `style` last) — comment it as off-ramp.
+4. **Frame `content`/`meta` truncation rule.** A **string** slot auto-wraps in `TruncatingText`
+   (truncates); a **node** slot gets a bare `min-w-0` div (NO truncate). To truncate a *styled* node
+   (muted/colored text), pass `<TruncatingText className=…>` as the node — not `<Text>`/`<span>`.
+5. **Scroll over a typography element.** Wrap `<Scroll …><Text as="pre" …/></Scroll>` (keeps Text's
+   variant); use `<Scroll as="pre"|"div">` only for plain elements. Avoid `Scroll as={Text}` (the
+   `as` prop collides with Text's own `as`). `overflow-auto` (no-wrap content) → `axis="both"`;
+   `whitespace-pre-wrap` content → default `axis="y"`.
+6. **Lone rigid control in a flexible slot** (e.g. a card `aside` that lands in Frame `meta`): use
+   `<IconButton>` (rigid Button) instead of a hand-rolled `shrink-0` span — also gains tooltip + a11y.
+7. **Genuine long-tail → `eslint-disable -- reason`** (no primitive, do not force-fit): responsive
+   col-count grids and responsive flex-direction (`flex-col lg:flex-row`), per-child `self-center`,
+   asymmetric two-axis wrap gaps (`gap-x-lg gap-y-2xs`). A *single* equal-width responsive card grid
+   DOES map to `<Grid minCellWidth>`. (~3 such disables in `workflow-graph.tsx`, the DAG layout file.)
+
+**Frame-vs-Stack in practice:** decidable as written. Icon|text|meta rows, summary rows
+(badges|truncating-text), and banner rows (icon|wrapping-text, via `align="start"` + a node `content`)
+all map cleanly to Frame; pure button bars and rigid 2-chip rows to `Stack`/`Cluster`/Frame-leading-only.
+
 ---
 
 ## Phase 2 — Waves over the remaining ~450 files

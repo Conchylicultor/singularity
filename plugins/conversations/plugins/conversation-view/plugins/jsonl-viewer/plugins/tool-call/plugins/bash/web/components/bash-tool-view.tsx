@@ -2,6 +2,9 @@ import type { ToolRendererProps } from "@plugins/conversations/plugins/conversat
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
 interface BashInput {
   command: string;
@@ -25,33 +28,41 @@ export function BashToolView({ event }: ToolRendererProps) {
       summary={input.description || `$ ${input.command}`}
     >
       <ContentScope>
-      <Text
-        as="div"
-        variant="caption"
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets this output block from the ToolCallCard header; the element mixes border+bg+rounded so it's not a clean Stack/Inset
-        className="mt-2 overflow-hidden rounded-md border border-border/40 bg-muted font-mono"
-      >
-        <div className="flex items-start gap-sm px-md py-sm">
-          <span className="select-none text-muted-foreground/40">$</span>
-          <span className="flex-1 whitespace-pre-wrap break-words text-foreground">
-            {input.command}
-          </span>
-        </div>
-        {result && (
-          <>
-            <div className="border-t border-border/30" />
-            <pre
-              className={`max-h-72 overflow-auto whitespace-pre-wrap break-words px-md py-sm ${
-                result.isError ? "text-destructive" : "text-muted-foreground"
-              }`}
-            >
-              {output ?? (
-                <span className="italic opacity-50">(no output)</span>
-              )}
-            </pre>
-          </>
-        )}
-      </Text>
+        <Clip
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets this output block from the ToolCallCard header
+          className="mt-2 rounded-md border border-border/40 bg-muted font-mono"
+        >
+          <Text as="div" variant="caption">
+            <Frame
+              gap="sm"
+              align="start"
+              className="px-md py-sm"
+              leading={
+                <span className="select-none text-muted-foreground/40">$</span>
+              }
+              content={
+                <span className="whitespace-pre-wrap break-words text-foreground">
+                  {input.command}
+                </span>
+              }
+            />
+            {result && (
+              <>
+                <div className="border-t border-border/30" />
+                <Scroll
+                  as="pre"
+                  className={`max-h-72 whitespace-pre-wrap break-words px-md py-sm ${
+                    result.isError ? "text-destructive" : "text-muted-foreground"
+                  }`}
+                >
+                  {output ?? (
+                    <span className="italic opacity-50">(no output)</span>
+                  )}
+                </Scroll>
+              </>
+            )}
+          </Text>
+        </Clip>
       </ContentScope>
     </ToolCallCard>
   );

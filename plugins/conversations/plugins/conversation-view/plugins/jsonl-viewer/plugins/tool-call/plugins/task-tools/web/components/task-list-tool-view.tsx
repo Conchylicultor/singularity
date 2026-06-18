@@ -4,6 +4,8 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 
 type TaskListResult = Array<{ id?: string; description?: string; status?: string }>;
 
@@ -29,25 +31,33 @@ export function TaskListToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {tasks && tasks.length > 0 && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the task list from the card header
-        <Stack gap="xs" className="mt-2 max-h-[200px] overflow-auto">
-          {tasks.map((t, i) => (
-            <div
-              key={t.id ?? i}
-              className="flex items-center gap-sm text-2xs text-muted-foreground"
-            >
-              {t.id && <span className="shrink-0 font-mono">{t.id}</span>}
-              {t.status && (
-                <Badge variant="muted" size="sm" className="shrink-0">
-                  {formatStatusLabel(t.status)}
-                </Badge>
-              )}
-              {t.description && (
-                <span className="min-w-0 truncate">{t.description}</span>
-              )}
-            </div>
-          ))}
-        </Stack>
+        <Scroll
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the task list from the card header
+          className="mt-2 max-h-[200px]"
+        >
+          <Stack gap="xs">
+            {tasks.map((t, i) => (
+              <Frame
+                key={t.id ?? i}
+                gap="sm"
+                className="text-2xs text-muted-foreground"
+                leading={
+                  t.id || t.status ? (
+                    <>
+                      {t.id && <span className="font-mono">{t.id}</span>}
+                      {t.status && (
+                        <Badge variant="muted" size="sm">
+                          {formatStatusLabel(t.status)}
+                        </Badge>
+                      )}
+                    </>
+                  ) : undefined
+                }
+                content={t.description || undefined}
+              />
+            ))}
+          </Stack>
+        </Scroll>
       )}
       {event.result?.isError && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header

@@ -6,12 +6,15 @@ import type { TracedNode } from "../internal/trace-types";
 import { Badge, formatStatusLabel } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Card } from "@plugins/primitives/plugins/css/plugins/card/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
 
 export type NodeEmphasis = "normal" | "dim" | "dep" | "dependent" | "active";
 
 function MetaChip({ children }: { children: React.ReactNode }) {
   return (
-    <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
+    <Badge variant="muted" size="sm" className="tracking-wider">
       {children}
     </Badge>
   );
@@ -41,7 +44,7 @@ export function WorkflowNodeCard({
       onMouseEnter={() => onHover(node.id)}
       onMouseLeave={() => onHover(null)}
       className={cn(
-        "flex w-full min-w-0 flex-col gap-xs px-sm py-sm text-left transition-all",
+        "w-full px-sm py-sm text-left transition-all",
         "hover:border-foreground/40",
         emphasis === "dim" && "opacity-40",
         emphasis === "active" && "border-primary ring-2 ring-primary/30",
@@ -49,31 +52,40 @@ export function WorkflowNodeCard({
         emphasis === "dependent" && "border-categorical-1/60",
       )}
     >
-      <span className="flex min-w-0 items-center gap-xs">
-        {node.kind === "workflow" && (
-          <MdAccountTree className="size-3 shrink-0 text-muted-foreground" />
+      <Stack gap="xs">
+        <Frame
+          gap="xs"
+          leading={
+            node.kind === "workflow" ? (
+              <MdAccountTree className="size-3 text-muted-foreground" />
+            ) : undefined
+          }
+          content={
+            <Text as="span" variant="label" className="truncate text-foreground">
+              {node.label}
+            </Text>
+          }
+          trailing={
+            modelColor ? (
+              <Badge size="sm" colorClass={modelColor} className="font-mono">
+                {modelDisplayLabel(node.model!)}
+              </Badge>
+            ) : undefined
+          }
+        />
+        {(node.agentType || node.isolation || node.hasSchema) && (
+          <Cluster gap="xs">
+            {node.agentType && <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>}
+            {node.isolation && <MetaChip>{formatStatusLabel(node.isolation)}</MetaChip>}
+            {node.hasSchema && <MetaChip>Schema</MetaChip>}
+          </Cluster>
         )}
-        <Text as="span" variant="label" className="min-w-0 flex-1 truncate text-foreground">
-          {node.label}
-        </Text>
-        {modelColor && (
-          <Badge size="sm" colorClass={modelColor} className="shrink-0 font-mono">
-            {modelDisplayLabel(node.model!)}
-          </Badge>
+        {node.promptPreview && (
+          <span className="line-clamp-2 text-2xs text-muted-foreground">
+            {node.promptPreview}
+          </span>
         )}
-      </span>
-      {(node.agentType || node.isolation || node.hasSchema) && (
-        <span className="flex flex-wrap gap-xs">
-          {node.agentType && <MetaChip>{formatStatusLabel(node.agentType)}</MetaChip>}
-          {node.isolation && <MetaChip>{formatStatusLabel(node.isolation)}</MetaChip>}
-          {node.hasSchema && <MetaChip>Schema</MetaChip>}
-        </span>
-      )}
-      {node.promptPreview && (
-        <span className="line-clamp-2 text-2xs text-muted-foreground">
-          {node.promptPreview}
-        </span>
-      )}
+      </Stack>
     </Card>
   );
 }

@@ -7,6 +7,8 @@ import { filePeekPane } from "@plugins/conversations/plugins/conversation-view/p
 import { LinkChip } from "@plugins/primitives/plugins/css/plugins/link-chip/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 
 type SkillInput = { skill: string; args?: string };
 
@@ -47,7 +49,7 @@ export function SkillToolView({ event }: ToolRendererProps) {
   );
 
   const summary = args ? (
-    <span className="min-w-0 truncate text-muted-foreground">{args}</span>
+    <TruncatingText className="text-muted-foreground">{args}</TruncatingText>
   ) : undefined;
 
   return (
@@ -61,12 +63,13 @@ export function SkillToolView({ event }: ToolRendererProps) {
             </pre>
           )}
           {injected.map((ctx, i) => (
-            <pre
+            <Scroll
+              as="pre"
               key={i}
-              className="text-caption max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md border border-border/40 px-sm py-sm text-muted-foreground"
+              className="text-caption max-h-96 whitespace-pre-wrap break-words rounded-md border border-border/40 px-sm py-sm text-muted-foreground"
             >
               {ctx}
-            </pre>
+            </Scroll>
           ))}
         </Stack>
       )}

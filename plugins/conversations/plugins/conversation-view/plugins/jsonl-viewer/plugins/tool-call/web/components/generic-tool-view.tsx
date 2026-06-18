@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "../../core";
 import { ToolCallCard } from "./tool-call-card";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
 function formatJson(value: unknown): string {
   try {
@@ -22,28 +23,33 @@ export function GenericToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={inputDescription(event.input)}>
       {event.input != null && (
-        <Text
-          as="pre"
-          variant="caption"
+        <Scroll
+          axis="both"
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the input block from the card header
-          className="mt-2 max-h-96 overflow-auto rounded-md bg-muted/60 p-sm"
+          className="mt-2 max-h-96 rounded-md bg-muted/60"
         >
-          {formatJson(event.input)}
-        </Text>
+          <Text as="pre" variant="caption" className="p-sm">
+            {formatJson(event.input)}
+          </Text>
+        </Scroll>
       )}
       {event.result && (
-        <Text
-          as="pre"
-          variant="caption"
+        <Scroll
           // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 separates the result block from the input block above
-          className={`mt-2 max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md p-sm ${
-            event.result.isError
-              ? "bg-destructive/10 text-destructive"
-              : "bg-muted/60"
+          className={`mt-2 max-h-96 rounded-md ${
+            event.result.isError ? "bg-destructive/10" : "bg-muted/60"
           }`}
         >
-          {event.result.content || "(empty)"}
-        </Text>
+          <Text
+            as="pre"
+            variant="caption"
+            className={`whitespace-pre-wrap break-words p-sm ${
+              event.result.isError ? "text-destructive" : ""
+            }`}
+          >
+            {event.result.content || "(empty)"}
+          </Text>
+        </Scroll>
       )}
     </ToolCallCard>
   );

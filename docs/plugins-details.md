@@ -1397,7 +1397,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
               - Web:
                 - Slots: `JsonlViewerTool.Renderer` ← `conversations.conversation-view.jsonl-viewer.tool-call.add-task`, `conversations.conversation-view.jsonl-viewer.tool-call.agent`, `conversations.conversation-view.jsonl-viewer.tool-call.ask-user-question`, `conversations.conversation-view.jsonl-viewer.tool-call.bash`, `conversations.conversation-view.jsonl-viewer.tool-call.edit`, `conversations.conversation-view.jsonl-viewer.tool-call.flag-raise`, `conversations.conversation-view.jsonl-viewer.tool-call.read`, `conversations.conversation-view.jsonl-viewer.tool-call.skill`, `conversations.conversation-view.jsonl-viewer.tool-call.task-tools`, `conversations.conversation-view.jsonl-viewer.tool-call.workflow`, `conversations.conversation-view.jsonl-viewer.tool-call.write`
                 - Contributes: `JsonlViewer.EventRenderer` "tool-call" → `ToolCallRow`, `JsonlViewer.RowAction` "copy-tool-result" → `CopyToolResultAction`
-                - Uses: `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/css/badge.Badge`, `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/text.Text`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`
+                - Uses: `conversations/conversation-view/jsonl-viewer.CopyTextAction`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CardHeaderAction`, `conversations/conversation-view/jsonl-viewer/collapsible-card.CollapsibleCard`, `primitives/css/badge.Badge`, `primitives/css/bouncing-dots.BouncingDots`, `primitives/css/frame.Frame`, `primitives/css/scroll.Scroll`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.DispatchContribution`
                 - Exports: Types: `ToolRendererContribution`; Values: `JsonlViewerTool`, `ToolCallCard`
               - Cross-plugin:
                 - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`
@@ -1407,15 +1407,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`add-task`** — Renders add_task MCP tool calls with task title, description, and a clickable chip to open the created task.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "add_task$" → `AddTaskToolView`
-                    - Uses: `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/conversation-view/tasks-panel.convTasksPane`, `primitives/css/badge.Badge`, `primitives/css/link-chip.LinkChip`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `tasks/task-status.StatusIcon`
+                    - Uses: `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/conversation-view/tasks-panel.convTasksPane`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/link-chip.LinkChip`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `tasks/task-status.StatusIcon`
                 - **`agent`** — Renders Agent tool calls with subagent type, model badge, prompt (markdown), and report (markdown).
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Agent" → `AgentToolView`, `Pane.Register` "agent-report"
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/css/badge.Badge`, `primitives/css/row.Row`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/row.Row`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`
                 - **`ask-user-question`** — Renders AskUserQuestion tool calls with question headers, option lists, and answer highlights.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "AskUserQuestion" → `AskUserQuestionToolView`, `JsonlViewer.PendingPrompt` "question" → `AnswerHereButton`, `JsonlViewer.EventFilter` "ask-user-question:suppress-answer-turn", `JsonlViewer.EventFilter` "ask-user-question:suppress-interrupt-turn"
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/selection-indicator.RadioIndicator`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `shell/notifications.toast`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/selection-indicator.CheckboxIndicator`, `primitives/css/selection-indicator.RadioIndicator`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.Input`, `primitives/live-state.useResource`, `primitives/persistent-draft.useDraft`, `shell/notifications.toast`
                   - Server:
                     - Uses: `conversations.answerPrompt`, `conversations.flushInteractivePrompt`, `infra/endpoints.implement`, `tasks/tasks-core.notifyConversationsChanged`, `tasks/tasks-core.updateConversation`
                     - Routes: `POST /api/conversations/:id/answer-question`, `POST /api/conversations/:id/flush-question`
@@ -1424,35 +1424,35 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
                 - **`bash`** — Renders Bash tool calls with a syntax-highlighted command, optional description label, and ANSI-stripped output.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Bash" → `BashToolView`
-                    - Uses: `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/text.Text`, `primitives/select-scope.ContentScope`
+                    - Uses: `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/clip.Clip`, `primitives/css/frame.Frame`, `primitives/css/scroll.Scroll`, `primitives/css/text.Text`, `primitives/select-scope.ContentScope`
                 - **`edit`** — Renders Edit and MultiEdit tool calls as side-by-side syntax-highlighted diffs.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Edit" → `EditView`, `JsonlViewerTool.Renderer` "MultiEdit" → `MultiEditView`
-                    - Uses: `conversations/conversation-view/code/file-pane/diff.TextDiff`, `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
+                    - Uses: `conversations/conversation-view/code/file-pane/diff.TextDiff`, `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/frame.Frame`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`
                 - **`flag-raise`** — Renders flag_raise MCP tool calls with the flagged reason displayed as a warning banner.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "flag_raise$" → `FlagRaiseToolView`
-                    - Uses: `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/text.Text`
+                    - Uses: `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/frame.Frame`, `primitives/css/text.Text`
                 - **`read`** — Renders Read tool calls with syntax-highlighted file content, line-number gutter, and image thumbnails.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Read" → `ReadToolView`
-                    - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`, `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/badge.Badge`, `primitives/css/text.Text`
+                    - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/code-listing.CodeWithLineNumbers`, `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/badge.Badge`, `primitives/css/frame.Frame`, `primitives/css/text.Text`
                 - **`skill`** — Renders Skill tool calls with skill name, args preview, and injected context.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Skill" → `SkillToolView`
-                    - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code/file-pane.filePeekPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/link-chip.LinkChip`, `primitives/css/spacing.Stack`, `primitives/pane.useOpenPane`
+                    - Uses: `conversations.useConversationById`, `conversations/conversation-view.conversationPane`, `conversations/conversation-view/code/file-pane.filePeekPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/link-chip.LinkChip`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/truncating-text.TruncatingText`, `primitives/pane.useOpenPane`
                 - **`task-tools`** — Renders TaskCreate/Update/Get/List/Output/Stop tool calls with a sticky progress overlay.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "TaskCreate" → `TaskCreateToolView`, `JsonlViewerTool.Renderer` "TaskUpdate" → `TaskUpdateToolView`, `JsonlViewerTool.Renderer` "TaskGet" → `TaskGetToolView`, `JsonlViewerTool.Renderer` "TaskList" → `TaskListToolView`, `JsonlViewerTool.Renderer` "TaskOutput" → `TaskOutputToolView`, `JsonlViewerTool.Renderer` "TaskStop" → `TaskStopToolView`, `JsonlViewer.Overlay` "task-progress" → `TaskProgressOverlay`
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer.JsonlViewer`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/center.Center`, `primitives/css/frame.Frame`, `primitives/css/pin.Pin`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/live-state.useResource`
                 - **`workflow`** — Renders Workflow tool calls as a swimlane DAG of agent nodes (recovered by trace-executing the script), with per-node prompts in a side pane, a collapsible script, and the launched run/task ids.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Workflow" → `WorkflowToolView`, `Pane.Register` "workflow-node"
-                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/collapsible.useCollapsible`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/card.Card`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`
+                    - Uses: `conversations/conversation-view.conversationPane`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `conversations/model-provider.familyClass`, `primitives/collapsible.useCollapsible`, `primitives/css/badge.Badge`, `primitives/css/badge.formatStatusLabel`, `primitives/css/card.Card`, `primitives/css/center.Center`, `primitives/css/cluster.Cluster`, `primitives/css/frame.Frame`, `primitives/css/grid.Grid`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.cn`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/markdown.Markdown`, `primitives/pane.Pane`, `primitives/pane.PaneChrome`, `primitives/pane.type`, `primitives/pane.useOpenPane`, `primitives/syntax-highlight.HighlightedCode`
                 - **`write`** — Renders Write tool calls with syntax-highlighted file content and clickable path affordances.
                   - Web:
                     - Contributes: `JsonlViewerTool.Renderer` "Write" → `WriteToolView`
-                    - Uses: `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/text.Text`, `primitives/syntax-highlight.HighlightedCode`, `primitives/syntax-highlight.languageForPath`
+                    - Uses: `conversations/conversation-view/jsonl-viewer/file-path.FilePath`, `conversations/conversation-view/jsonl-viewer/tool-call.JsonlViewerTool`, `conversations/conversation-view/jsonl-viewer/tool-call.ToolCallCard`, `primitives/css/scroll.Scroll`, `primitives/css/text.Text`, `primitives/syntax-highlight.HighlightedCode`, `primitives/syntax-highlight.languageForPath`
             - **`unknown`** — Renders unknown JSONL event types as collapsible sections with the raw payload.
               - Web:
                 - Contributes: `JsonlViewer.EventRenderer` "unknown" → `UnknownRow`
@@ -3461,17 +3461,19 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `CenterAxis`, `CenterProps`; Values: `Center`
           - Cross-plugin:
-            - Imported by: `apps/browser/webview`
+            - Imported by: `apps/browser/webview`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
         - **`clip`** — Clipping layout primitive: <Clip axis fill> hides overflow without scrolling. Sibling of Scroll, kept orthogonal.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `ClipAxis`, `ClipProps`; Values: `Clip`, `clipClasses`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call/bash`
         - **`cluster`** — Wrap-friendly chip group layout primitive: <Cluster> lays out a wrapping row of rigid identity chips that never individually shrink, delegating to Stack.
           - Web:
             - Uses: `primitives/css/spacing.SpaceStep`, `primitives/css/spacing.Stack`, `primitives/css/spacing.StackAlign`, `primitives/css/spacing.StackJustify`
             - Exports: Types: `ClusterProps`; Values: `Cluster`
           - Cross-plugin:
-            - Imported by: `apps/surface/floating`
+            - Imported by: `apps/surface/floating`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
         - **`color-picker`** — Composable color picker primitive: ColorArea, HueSlider, AlphaSlider, ColorInput, SwatchGrid, ColorPicker, and ColorPickerPopover.
           - Web:
             - Uses: `primitives/css/section-label.SectionLabel`, `primitives/css/ui-kit.cn`, `primitives/css/ui-kit.Popover`, `primitives/css/ui-kit.PopoverContent`, `primitives/css/ui-kit.PopoverTrigger`, `primitives/persistent-draft.useDraft`
@@ -3484,13 +3486,13 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/truncating-text.TruncatingText`, `primitives/css/ui-kit.cn`
             - Exports: Types: `FrameAlign`, `FrameProps`; Values: `Frame`
           - Cross-plugin:
-            - Imported by: `apps/browser/shell`, `conversations/conversation-view/jsonl-viewer/collapsible-card`
+            - Imported by: `apps/browser/shell`, `conversations/conversation-view/jsonl-viewer/collapsible-card`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/add-task`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/edit`, `conversations/conversation-view/jsonl-viewer/tool-call/flag-raise`, `conversations/conversation-view/jsonl-viewer/tool-call/read`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`
         - **`grid`** — Responsive/uniform grid layout primitive: <Grid minCellWidth> lays out a wrapping, equal-width card grid via a closed prop surface — not a raw grid-template passthrough.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `GridProps`; Values: `Grid`
           - Cross-plugin:
-            - Imported by: `apps/browser/start-page`, `debug/health-monitor`
+            - Imported by: `apps/browser/start-page`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `debug/health-monitor`
         - **`icon-auto`** — icon-auto slot-icon sizing convention: the icon-auto @utility (em-based, in app.css) plus the no-adhoc-slot-icon-size lint rule.
         - **`link-chip`** — Inline, clickable navigational chip — a clickable Badge with link coloring (bg-muted + text-primary, hover underline), baseline-aligned for inline-in-text use, with optional leading icon and monospace label.
           - Web:
@@ -3509,7 +3511,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `PinAnchor`, `PinProps`; Values: `Pin`, `pinClasses`
           - Cross-plugin:
-            - Imported by: `apps/browser/webview`
+            - Imported by: `apps/browser/webview`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`
         - **`placeholder`** — Muted text placeholder for loading, empty, and error states. Props: children, tone (muted | error).
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -3527,6 +3529,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `ScrollAxis`, `ScrollProps`; Values: `Scroll`, `scrollClasses`
+          - Cross-plugin:
+            - Imported by: `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`
         - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -3584,7 +3588,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `TruncatingTextProps`; Values: `TruncatingText`
           - Cross-plugin:
-            - Imported by: `apps`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/pages/welcome/recent-pages`, `apps/surface/floating`, `debug/live-state-health`, `primitives/css/frame`, `primitives/folder-picker`
+            - Imported by: `apps`, `apps/agent-manager/worktree-switcher`, `apps/browser/bookmarks`, `apps/browser/start-page`, `apps/browser/tabs`, `apps/pages/welcome/recent-pages`, `apps/surface/floating`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/ask-user-question`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `debug/live-state-health`, `primitives/css/frame`, `primitives/folder-picker`
         - **`ui-kit`** — Global UI kit: the cn() class-merge util, the 14 shadcn/ui primitives, the theme/app.css global stylesheet, and the ControlSize affordance-sizing context.
           - Web:
             - Uses: `primitives/select-scope.ContentScope`
@@ -3722,7 +3726,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.iconSizeFor`, `primitives/css/ui-kit.useControlSize`, `primitives/shortcuts.formatShortcutLabel`, `primitives/tooltip.Kbd`, `primitives/tooltip.WithTooltip`
         - Exports: Types: `IconButtonProps`; Values: `IconButton`
       - Cross-plugin:
-        - Imported by: `apps`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/proxy`, `apps/browser/tabs`, `apps/browser/webview`, `apps/pages/history`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `apps/surface/solo`, `config_v2/config-link`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `review/config-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`
+        - Imported by: `apps`, `apps/browser/bookmarks`, `apps/browser/navigation`, `apps/browser/proxy`, `apps/browser/tabs`, `apps/browser/webview`, `apps/pages/history`, `apps/sonata/audio/engine`, `apps/sonata/library`, `apps/sonata/track-mixer`, `apps/sonata/transport-bar`, `apps/story/renderers/slides`, `apps/story/shell`, `apps/studio/compositions`, `apps/studio/explorer/membership`, `apps/studio/graph`, `apps/surface/floating`, `apps/surface/solo`, `config_v2/config-link`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/terminal-pane`, `fullscreen`, `improve/element-picker`, `page/editor`, `page/formatting/color`, `page/formatting/link`, `primitives/collapsible-wrap`, `primitives/data-view`, `primitives/folder-picker`, `primitives/pane`, `primitives/prompt-editor/voice-input`, `reorder/edit-mode`, `review/config-defaults`, `screenshot`, `screenshot/draw-on-app`, `shell/global-action-bar`, `shell/notifications`, `ui/theme-engine/theme-customizer`, `ui/theme-toggle`
     - **`icon-picker`** — Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it. Searchable, categorized icon picker over the full Material Design set. Owns the SvgNode storage format, the icon registry, and server-side SVG resolution; avatar composes it.
       - Web:
         - Uses: `primitives/css/section-label.SectionLabel`, `primitives/css/text.Text`, `primitives/css/ui-kit.cn`, `primitives/loading.Loading`

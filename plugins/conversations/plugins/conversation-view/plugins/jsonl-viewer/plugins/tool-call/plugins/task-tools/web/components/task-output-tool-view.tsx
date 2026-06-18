@@ -1,6 +1,7 @@
 import type { ToolRendererProps } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/core";
 import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/plugins/tool-call/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 
 type TaskOutputInput = {
   taskId?: string;
@@ -18,10 +19,13 @@ export function TaskOutputToolView({ event }: ToolRendererProps) {
   return (
     <ToolCallCard event={event} summary={summary} defaultOpen={false}>
       {event.result && !event.result.isError && (
-        // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
-        <pre className="mt-2 max-h-[200px] overflow-auto rounded-md bg-muted/50 p-sm text-2xs text-muted-foreground whitespace-pre-wrap">
+        <Scroll
+          as="pre"
+          // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the result block from the card header
+          className="mt-2 max-h-[200px] rounded-md bg-muted/50 p-sm text-2xs text-muted-foreground whitespace-pre-wrap"
+        >
           {event.result.content}
-        </pre>
+        </Scroll>
       )}
       {event.result?.isError && (
         // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the error text from the card header

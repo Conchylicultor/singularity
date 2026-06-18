@@ -4,6 +4,11 @@ import { ToolCallCard } from "@plugins/conversations/plugins/conversation-view/p
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Cluster } from "@plugins/primitives/plugins/css/plugins/cluster/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { HighlightedCode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { useCollapsible } from "@plugins/primitives/plugins/collapsible/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
@@ -31,23 +36,31 @@ function PhaseList({
   return (
     <Stack as="ol" gap="xs">
       {phases.map((phase, i) => (
-        <Text as="li" variant="caption" key={i} className="flex gap-sm">
-          {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line */}
-          <span className="mt-0.5 flex size-4 shrink-0 items-center justify-center rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
-            {i + 1}
-          </span>
-          <div className="min-w-0">
-            <span className="font-medium text-foreground">
-              {phase.title ?? "(untitled phase)"}
-            </span>
-            {phase.detail && (
-              // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
-              <span className="ml-1.5 text-muted-foreground">
-                {phase.detail}
+        <Frame
+          as="li"
+          key={i}
+          gap="sm"
+          align="start"
+          leading={
+            // eslint-disable-next-line spacing/no-adhoc-spacing -- mt-0.5 optically centers the number badge to the first text line
+            <Center className="mt-0.5 size-4 rounded-full bg-categorical-6/15 font-mono text-3xs text-categorical-6">
+              {i + 1}
+            </Center>
+          }
+          content={
+            <Text as="div" variant="caption">
+              <span className="font-medium text-foreground">
+                {phase.title ?? "(untitled phase)"}
               </span>
-            )}
-          </div>
-        </Text>
+              {phase.detail && (
+                // eslint-disable-next-line spacing/no-adhoc-spacing -- ml-1.5 separates the inline detail from the phase title
+                <span className="ml-1.5 text-muted-foreground">
+                  {phase.detail}
+                </span>
+              )}
+            </Text>
+          }
+        />
       ))}
     </Stack>
   );
@@ -59,20 +72,24 @@ function ScriptSection({ script }: { script: string }) {
   });
   return (
     <div className="rounded-md border border-border/40">
-      <button
+      <Stack
+        as="button"
+        direction="row"
+        gap="xs"
+        align="center"
         {...triggerProps}
-        className="flex w-full items-center gap-xs px-md py-xs text-left text-caption text-muted-foreground hover:text-foreground"
+        className="w-full px-md py-xs text-left text-caption text-muted-foreground hover:text-foreground"
       >
-        <MdCode className="size-3.5 shrink-0" />
+        <MdCode className="size-3.5" />
         <span className="font-medium">{open ? "Hide" : "View"} script</span>
         <span className="text-3xs opacity-60">
           ({script.split("\n").length} lines)
         </span>
-      </button>
+      </Stack>
       {open && (
-        <div id={contentId} className="max-h-96 overflow-auto px-md pb-sm">
+        <Scroll axis="both" id={contentId} className="max-h-96 px-md pb-sm">
           <HighlightedCode code={script} lang="ts" />
-        </div>
+        </Scroll>
       )}
     </div>
   );
@@ -104,26 +121,33 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
 
   const agentCount = graph?.nodes.length ?? 0;
   const summary = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="shrink-0 font-mono">
-        {name ?? "workflow"}
-      </Badge>
-      {phases.length > 0 && (
-        <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
-          {phases.length} {phases.length === 1 ? "phase" : "phases"}
-        </Badge>
-      )}
-      {agentCount > 0 && (
-        <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
-          {agentCount} {agentCount === 1 ? "agent" : "agents"}
-        </Badge>
-      )}
-      {description && (
-        <span className="min-w-0 truncate text-muted-foreground">
-          {description}
-        </span>
-      )}
-    </span>
+    <Frame
+      gap="sm"
+      leading={
+        <>
+          <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" icon={<MdAccountTree />} className="font-mono">
+            {name ?? "workflow"}
+          </Badge>
+          {phases.length > 0 && (
+            <Badge variant="muted" size="sm" className="tracking-wider">
+              {phases.length} {phases.length === 1 ? "phase" : "phases"}
+            </Badge>
+          )}
+          {agentCount > 0 && (
+            <Badge variant="muted" size="sm" className="tracking-wider">
+              {agentCount} {agentCount === 1 ? "agent" : "agents"}
+            </Badge>
+          )}
+        </>
+      }
+      content={
+        description ? (
+          <TruncatingText className="text-muted-foreground">
+            {description}
+          </TruncatingText>
+        ) : undefined
+      }
+    />
   );
 
   return (
@@ -155,7 +179,7 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
               {parsedResult.summary && (
                 <div className="text-foreground">{parsedResult.summary}</div>
               )}
-              <div className="flex flex-wrap gap-x-lg gap-y-2xs text-2xs text-muted-foreground">
+              <Cluster gap="lg" className="text-2xs text-muted-foreground">
                 {parsedResult.runId && (
                   <span>
                     Run <span className="font-mono">{parsedResult.runId}</span>
@@ -166,14 +190,17 @@ export function WorkflowToolView({ event }: ToolRendererProps) {
                     Task <span className="font-mono">{parsedResult.taskId}</span>
                   </span>
                 )}
-              </div>
+              </Cluster>
             </div>
           )}
 
           {result?.isError && (
-            <pre className="max-h-96 overflow-auto whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-sm text-destructive">
+            <Scroll
+              as="pre"
+              className="max-h-96 whitespace-pre-wrap break-words rounded-md bg-destructive/10 p-sm text-destructive"
+            >
               {result.content || "(empty)"}
-            </pre>
+            </Scroll>
           )}
         </Stack>
       </Text>

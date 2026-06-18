@@ -5,6 +5,10 @@ import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Markdown } from "@plugins/primitives/plugins/markdown/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { familyClass } from "@plugins/conversations/plugins/model-provider/web";
 import { MODEL_TIERS, modelDisplayLabel } from "@plugins/conversations/plugins/model-provider/core";
@@ -24,7 +28,7 @@ function ModelBadge({ model }: { model: string }) {
   const tier = MODEL_TIERS.find((t) => model.includes(t));
   const colors = tier ? familyClass(tier) : "bg-muted text-muted-foreground";
   return (
-    <Badge size="sm" colorClass={colors} className="shrink-0 font-mono">
+    <Badge size="sm" colorClass={colors} className="font-mono">
       {modelDisplayLabel(model)}
     </Badge>
   );
@@ -32,7 +36,7 @@ function ModelBadge({ model }: { model: string }) {
 
 function MetaBadge({ children }: { children: React.ReactNode }) {
   return (
-    <Badge variant="muted" size="sm" className="shrink-0 tracking-wider">
+    <Badge variant="muted" size="sm" className="tracking-wider">
       {children}
     </Badge>
   );
@@ -58,19 +62,26 @@ export function AgentToolView({ event }: ToolRendererProps) {
   };
 
   const summary = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" className="shrink-0 font-mono">
-        {agentType}
-      </Badge>
-      {input.model && <ModelBadge model={input.model} />}
-      {input.run_in_background && <MetaBadge>Background</MetaBadge>}
-      {input.isolation === "worktree" && <MetaBadge>Worktree</MetaBadge>}
-      {description && (
-        <span className="min-w-0 truncate text-muted-foreground">
-          {description}
-        </span>
-      )}
-    </span>
+    <Frame
+      gap="sm"
+      leading={
+        <>
+          <Badge size="sm" colorClass="bg-categorical-6/15 text-categorical-6" className="font-mono">
+            {agentType}
+          </Badge>
+          {input.model && <ModelBadge model={input.model} />}
+          {input.run_in_background && <MetaBadge>Background</MetaBadge>}
+          {input.isolation === "worktree" && <MetaBadge>Worktree</MetaBadge>}
+        </>
+      }
+      content={
+        description ? (
+          <TruncatingText className="text-muted-foreground">
+            {description}
+          </TruncatingText>
+        ) : undefined
+      }
+    />
   );
 
   // The report affordance must be a header *sibling*, not part of `summary`:
@@ -78,21 +89,11 @@ export function AgentToolView({ event }: ToolRendererProps) {
   // `aside` is auto-wrapped in CardHeaderAction by CollapsibleCard, restoring
   // its own click.
   const aside = result ? (
-    <span
-      role="button"
-      tabIndex={0}
-      title={result.isError ? "View error" : "View report"}
-      className="shrink-0 cursor-pointer rounded-md p-2xs text-muted-foreground hover:bg-muted hover:text-foreground"
+    <IconButton
+      icon={MdArticle}
+      label={result.isError ? "View error" : "View report"}
       onClick={openReport}
-      onKeyDown={(e) => {
-        if (e.key === "Enter" || e.key === " ") {
-          e.preventDefault();
-          openReport(e);
-        }
-      }}
-    >
-      <MdArticle className="size-3.5" />
-    </span>
+    />
   ) : undefined;
 
   return (
@@ -100,9 +101,11 @@ export function AgentToolView({ event }: ToolRendererProps) {
       {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-2 offsets the body from the ToolCallCard header inside its collapsible region; not a Stack-owned gap */}
       <Stack gap="sm" className="mt-2">
         {/* Prompt */}
-        <div className="prose-xs text-caption max-h-96 overflow-auto px-md py-sm">
-          <Markdown>{prompt}</Markdown>
-        </div>
+        <Scroll axis="both" className="max-h-96 px-md py-sm">
+          <div className="prose-xs text-caption">
+            <Markdown>{prompt}</Markdown>
+          </div>
+        </Scroll>
 
         {/* Report link */}
         {result && (
@@ -112,7 +115,7 @@ export function AgentToolView({ event }: ToolRendererProps) {
             bordered
             onClick={openReport}
             className="rounded-md border-border/40 text-muted-foreground"
-            icon={<MdArticle className="shrink-0" />}
+            icon={<MdArticle />}
           >
             <span className="font-medium">
               {result.isError ? "View error" : "View report"}
