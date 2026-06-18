@@ -21,6 +21,7 @@ export const dataViews: DataViewEntry[] = [
   { id: "prototypes.gallery" },
   { id: "sonata.library" },
   { id: "story.gallery" },
+  { id: "studio.explorer.tree" },
   { id: "tasks-list" },
   { id: "tweakcn.community-browser" },
 ];

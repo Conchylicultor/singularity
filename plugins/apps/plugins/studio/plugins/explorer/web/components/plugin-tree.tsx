@@ -1,12 +1,23 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState } from "react";
-import { MdChevronRight, MdExpandMore } from "react-icons/md";
-import { SearchInput, filterTree, collectAllIds } from "@plugins/primitives/plugins/search/web";
-import { ExpandAllButton } from "@plugins/primitives/plugins/collapsible/web";
 import type { PluginNode } from "@plugins/plugin-meta/plugins/plugin-view/core";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import {
+  DataView,
+  defineDataView,
+  type FieldDef,
+  type HierarchyConfig,
+} from "@plugins/primitives/plugins/data-view/web";
+import type { TreeViewOptions } from "@plugins/primitives/plugins/data-view/plugins/tree/web";
 import { Explorer } from "../slots";
-import { PluginTreeProvider, usePluginTree } from "../context";
+import { PluginTreeProvider } from "../context";
+import {
+  flattenPluginTree,
+  countDescendants,
+  type ExplorerRow,
+} from "../internal/flatten-plugin-tree";
+
+const EXPLORER_VIEW = defineDataView("studio.explorer.tree");
+
+const RUNTIME_KEYS = ["web", "server", "central"] as const;
 
 function collectAllExpandableIds(nodes: PluginNode[]): Set<string> {
   const set = new Set<string>();
@@ -40,9 +51,11 @@ interface PluginTreeProps {
 }
 
 export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
-  const allExpandable = useMemo(() => collectAllExpandableIds(plugins), [plugins]);
-  const [expanded, setExpanded] = useState<Set<string>>(() => collectAllExpandableIds(plugins));
-  const [filter, setFilter] = useState("");
+  // Host-owned expand state — all expandable ids initially, matching the
+  // pre-DataView behavior (everything expanded on first paint).
+  const [expanded, setExpanded] = useState<Set<string>>(() =>
+    collectAllExpandableIds(plugins),
+  );
 
   const toggle = useCallback(
     (id: string) =>
@@ -54,37 +67,6 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
       }),
     [],
   );
-
-  const filtered = useMemo(() => {
-    const needle = filter.trim().toLowerCase();
-    if (!needle) return plugins;
-    return filterTree(
-      plugins,
-      (n) => n.name.toLowerCase().includes(needle),
-      (n) => n.children,
-      (n, children) => ({ ...n, children }),
-    );
-  }, [plugins, filter]);
-
-  const effectiveExpanded = useMemo(
-    () =>
-      filter.trim()
-        ? new Set<string>(
-            collectAllIds(
-              filtered,
-              (n) => n.id,
-              (n) => n.children,
-            ),
-          )
-        : expanded,
-    [filter, filtered, expanded],
-  );
-
-  const isAllExpanded = allExpandable.size > 0 && [...allExpandable].every((id) => expanded.has(id));
-
-  const toggleAll = () => {
-    setExpanded(isAllExpanded ? new Set() : new Set(allExpandable));
-  };
 
   const expandDescendants = useCallback(
     (node: PluginNode) =>
@@ -107,123 +89,97 @@ export function PluginTree({ plugins, selected, onSelect }: PluginTreeProps) {
   );
 
   const ctxValue = useMemo(
-    () => ({ expanded: effectiveExpanded, toggle, expandDescendants, collapseDescendants }),
-    [effectiveExpanded, toggle, expandDescendants, collapseDescendants],
+    () => ({ expanded, toggle, expandDescendants, collapseDescendants }),
+    [expanded, toggle, expandDescendants, collapseDescendants],
+  );
+
+  const rows = useMemo(() => flattenPluginTree(plugins), [plugins]);
+
+  const hierarchy = useMemo<HierarchyConfig<ExplorerRow>>(
+    () => ({
+      getParentId: (r) => r.parentId,
+      getRank: (r) => r.rank,
+      isExpanded: (r) => expanded.has(r.id),
+      onToggleExpanded: (id, next) =>
+        setExpanded((prev) => {
+          const set = new Set(prev);
+          if (next) set.add(id);
+          else set.delete(id);
+          return set;
+        }),
+    }),
+    [expanded],
+  );
+
+  // `name` is the primary (only-rendered-in-tree) field; the rest are
+  // filter-only — invisible in the tree body but usable in the "Filter" pill.
+  const fields = useMemo<FieldDef<ExplorerRow>[]>(
+    () => [
+      { id: "name", label: "Name", primary: true, value: (r) => r.name },
+      { id: "path", label: "Path", type: "text", value: (r) => r.path },
+      {
+        id: "description",
+        label: "Description",
+        type: "text",
+        value: (r) => r.description ?? "",
+      },
+      {
+        id: "loadBearing",
+        label: "Load-bearing",
+        type: "bool",
+        value: (r) => r.loadBearing,
+      },
+      {
+        id: "collapsed",
+        label: "Collapsed",
+        type: "bool",
+        value: (r) => r.collapsed,
+      },
+      {
+        id: "childCount",
+        label: "Children",
+        type: "number",
+        value: (r) => countDescendants(r),
+      },
+      {
+        id: "runtimes",
+        label: "Runtimes",
+        type: "tags",
+        values: (r) => RUNTIME_KEYS.filter((k) => r.runtimes[k]),
+      },
+    ],
+    [],
+  );
+
+  const treeOptions = useMemo<TreeViewOptions<ExplorerRow>>(
+    () => ({
+      expandAll: true,
+      trailing: (node) => (
+        <Explorer.TreeRowBadge.Render>
+          {(item) => <item.component node={node} />}
+        </Explorer.TreeRowBadge.Render>
+      ),
+    }),
+    [],
   );
 
   return (
     <PluginTreeProvider value={ctxValue}>
       <div className="flex h-full min-h-0 flex-col">
-        <div className="flex items-center gap-sm px-md py-sm border-b">
-          <div className="flex-1">
-            <SearchInput
-              value={filter}
-              onChange={(e) => setFilter(e.target.value)}
-              placeholder="Filter plugins"
-            />
-          </div>
-          <ExpandAllButton allExpanded={isAllExpanded} onToggle={toggleAll} />
-        </div>
-        <div className="flex-1 min-h-0 overflow-y-auto py-xs">
-          {filtered.map((p) => (
-            <TreeRow
-              key={p.id}
-              node={p}
-              depth={0}
-              selected={selected}
-              onSelect={onSelect}
-            />
-          ))}
-          {filtered.length === 0 && (
-            <Text as="div" variant="caption" className="px-md py-xl text-center text-muted-foreground">
-              No plugins match &quot;{filter}&quot;
-            </Text>
-          )}
-        </div>
+        <DataView<ExplorerRow>
+          rows={rows}
+          fields={fields}
+          rowKey={(r) => r.id}
+          views={["tree", "table"]}
+          defaultView="tree"
+          storageKey={EXPLORER_VIEW}
+          hierarchy={hierarchy}
+          selectedRowId={selected ?? undefined}
+          onRowActivate={(r) => onSelect(r.id)}
+          searchAccessor={(r) => r.searchText}
+          viewOptions={{ tree: treeOptions }}
+        />
       </div>
     </PluginTreeProvider>
-  );
-}
-
-interface TreeRowProps {
-  node: PluginNode;
-  depth: number;
-  selected: string | null;
-  onSelect: (id: string) => void;
-}
-
-function TreeRow({ node, depth, selected, onSelect }: TreeRowProps) {
-  const { expanded, toggle } = usePluginTree();
-  const isOpen = expanded.has(node.id);
-  const isSelected = node.id === selected;
-  const hasChildren = node.children.length > 0;
-
-  return (
-    <>
-      <div
-        role="button"
-        tabIndex={0}
-        onClick={() => onSelect(node.id)}
-        onKeyDown={(e) => {
-          if (e.key === "Enter" || e.key === " ") {
-            e.preventDefault();
-            onSelect(node.id);
-          }
-        }}
-        className={cn(
-          "group/row relative flex h-7 w-full cursor-pointer select-none items-center gap-xs pr-sm text-left transition-colors",
-          isSelected
-            ? "bg-accent"
-            : "hover:bg-accent/40 focus-visible:bg-accent/40",
-        )}
-        style={{ paddingLeft: `${depth * 14 + 8}px` }}
-      >
-        {hasChildren ? (
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              toggle(node.id);
-            }}
-            aria-label={isOpen ? "Collapse" : "Expand"}
-            className="inline-flex size-4 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-muted-foreground/10"
-          >
-            {isOpen ? (
-              <MdExpandMore className="size-3.5" />
-            ) : (
-              <MdChevronRight className="size-3.5" />
-            )}
-          </button>
-        ) : (
-          <span className="size-4 shrink-0" />
-        )}
-        <Text
-          as="span"
-          variant="caption"
-          className={cn(
-            "flex-1 truncate",
-            isSelected
-              ? "font-medium text-foreground"
-              : "text-foreground/85",
-          )}
-        >
-          {node.name}
-        </Text>
-        <Explorer.TreeRowBadge.Render>
-          {(item) => <item.component node={node} />}
-        </Explorer.TreeRowBadge.Render>
-      </div>
-      {isOpen &&
-        hasChildren &&
-        node.children.map((c) => (
-          <TreeRow
-            key={c.id}
-            node={c}
-            depth={depth + 1}
-            selected={selected}
-            onSelect={onSelect}
-          />
-        ))}
-    </>
   );
 }

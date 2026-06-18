@@ -29,7 +29,7 @@ export function ExpandCollapseButton({ node }: { node: PluginNode }) {
         else expandDescendants(node);
       }}
       aria-label={allExpanded ? "Collapse all" : "Expand all"}
-      className="hidden size-4 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted-foreground/10 group-hover/row:inline-flex"
+      className="hidden size-4 shrink-0 items-center justify-center rounded-md text-muted-foreground/60 hover:text-muted-foreground hover:bg-muted-foreground/10 group-hover/tree-row:inline-flex"
     >
       {allExpanded ? (
         <MdUnfoldLess className="size-3" />

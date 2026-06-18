@@ -67,7 +67,7 @@ function BandWithPin({ node, tint }: { node: PluginNode; tint: string | null }) 
         />
       )}
       <span
-        className="relative z-raised hidden shrink-0 group-hover/row:inline-flex"
+        className="relative z-raised hidden shrink-0 group-hover/tree-row:inline-flex"
         onClick={(e) => e.stopPropagation()}
       >
         <IconButton
