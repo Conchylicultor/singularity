@@ -1,8 +1,8 @@
 import { Button, Sidebar, SidebarHeader, SidebarInset, SidebarProvider, SidebarTrigger } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Bar } from "@plugins/primitives/plugins/bar/web";
 import { SurfaceChromeContext } from "@plugins/primitives/plugins/pane/web";
-import type { ReactNode } from "react";
-import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
+import { useContext, type ReactNode } from "react";
+import { PluginRuntimeContext, type Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import {
   renderIsolated,
   type RenderSlot,
@@ -45,6 +45,21 @@ function ToolbarItem(item: {
 }
 
 /**
+ * Whether a (possibly absent) render slot has at least one contribution.
+ *
+ * Reads the plugin runtime directly (the same `bySlot` map `.Render` paints
+ * from) rather than the slot's own `useContributions()` hook, so it can be
+ * called unconditionally: `slot` may be `undefined`, and a hook can't be
+ * called conditionally. This is what lets the chrome toolbar bar be driven by
+ * *real* contributions instead of merely whether a slot object was passed —
+ * an app that wires a toolbar slot with zero contributors gets no empty bar.
+ */
+function useSlotHasContributions(slot: { id: string } | undefined): boolean {
+  const ctx = useContext(PluginRuntimeContext);
+  return !!slot && (ctx?.bySlot.get(slot.id)?.length ?? 0) > 0;
+}
+
+/**
  * The current (and default) sidebar framing, extracted verbatim from the
  * sidebar-bearing branch below. Used when no `AppShell.Framing` is contributed,
  * so the shell renders identically even if the sidebar-framing plugin is not
@@ -84,7 +99,10 @@ export function AppShellLayout({
   sidebarSlot?: RenderSlot<AppShellSidebarItem>;
   /**
    * The top toolbar's item slot. **Optional** — omit for an app with no
-   * toolbar; the toolbar header bar is then not rendered.
+   * toolbar. The chrome toolbar bar renders only when this slot has at least
+   * one contribution, so wiring an as-yet-unused slot (a future extension
+   * point) costs nothing: no empty bar, and the content's pane header keeps
+   * the surface-edge chrome (sidebar toggle) until something contributes.
    */
   toolbarSlot?: RenderSlot<AppShellToolbarItem>;
   /** Brand/header content for the top of the sidebar. Only shown with a sidebar. */
@@ -98,7 +116,14 @@ export function AppShellLayout({
    */
   children: ReactNode;
 }) {
-  const toolbar = toolbarSlot && (
+  // Drive the chrome toolbar bar off real contributions, not merely whether a
+  // slot object was passed. An app may wire a toolbar slot purely as a future
+  // extension point; with zero contributors it must render no bar (otherwise an
+  // empty chrome strip strands the sidebar toggle above the content's own pane
+  // header). The slot stays a no-op until something contributes to it.
+  const hasToolbar = useSlotHasContributions(toolbarSlot);
+
+  const toolbar = hasToolbar && toolbarSlot && (
     <Bar tier="chrome">
       {sidebarSlot && <SidebarTrigger />}
       <toolbarSlot.Render>
@@ -117,7 +142,7 @@ export function AppShellLayout({
       <main className="min-h-0 flex-1 overflow-hidden bg-muted/30">
         <SurfaceChromeContext.Provider
           value={{
-            contentOwnsTopChrome: !toolbarSlot,
+            contentOwnsTopChrome: !hasToolbar,
             leadingControl: sidebarSlot ? <SidebarTrigger /> : undefined,
           }}
         >
