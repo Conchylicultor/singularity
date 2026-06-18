@@ -1,7 +1,10 @@
 import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 
 export { TruncatingText } from "./internal/truncating-text";
-export type { TruncatingTextProps } from "./internal/truncating-text";
+export type {
+  TruncatingTextProps,
+  TruncateSide,
+} from "./internal/truncating-text";
 
 export default {
   description:

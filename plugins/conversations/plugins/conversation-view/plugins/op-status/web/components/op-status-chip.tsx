@@ -1,5 +1,6 @@
 import { MdBuild, MdHourglassEmpty, MdScience, MdUpload } from "react-icons/md";
 import { WithTooltip } from "@plugins/primitives/plugins/tooltip/web";
+import { Inline } from "@plugins/primitives/plugins/css/plugins/inline/web";
 import type { ConversationItemConv } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { useWorktreeOp } from "../internal/use-worktree-op";
 import type { WorktreeOp } from "../../shared";
@@ -33,10 +34,9 @@ export function OpStatusChip({ conv }: { conv: ConversationItemConv }) {
   const { icon: Icon, title } = displayFor(op);
   return (
     <WithTooltip content={title}>
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- inline-flex keeps the lone icon inline-level inside the sidebar row text flow; no inline-level layout primitive */}
-      <span className="inline-flex text-muted-foreground">
+      <Inline gap="none" className="text-muted-foreground">
         <Icon className="size-3.5" />
-      </span>
+      </Inline>
     </WithTooltip>
   );
 }

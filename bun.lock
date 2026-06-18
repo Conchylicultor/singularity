@@ -2425,6 +2425,10 @@
       "name": "@singularity/plugin-primitives-css-icon-auto",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/inline": {
+      "name": "@singularity/plugin-primitives-css-inline",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/link-chip": {
       "name": "@singularity/plugin-primitives-css-link-chip",
       "version": "0.0.1",
@@ -4772,6 +4776,8 @@
     "@singularity/plugin-primitives-css-grid": ["@singularity/plugin-primitives-css-grid@workspace:plugins/primitives/plugins/css/plugins/grid"],
 
     "@singularity/plugin-primitives-css-icon-auto": ["@singularity/plugin-primitives-css-icon-auto@workspace:plugins/primitives/plugins/css/plugins/icon-auto"],
+
+    "@singularity/plugin-primitives-css-inline": ["@singularity/plugin-primitives-css-inline@workspace:plugins/primitives/plugins/css/plugins/inline"],
 
     "@singularity/plugin-primitives-css-link-chip": ["@singularity/plugin-primitives-css-link-chip@workspace:plugins/primitives/plugins/css/plugins/link-chip"],
 
