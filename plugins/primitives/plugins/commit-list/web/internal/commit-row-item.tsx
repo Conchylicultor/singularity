@@ -48,7 +48,7 @@ export function CommitRowItem({
       >
         {commit.shortSha}
       </Text>
-      <span className="flex-1 truncate" title={commit.subject}>
+      <span className="min-w-0 flex-1 truncate" title={commit.subject}>
         {commit.subject}
       </span>
       {pushed && (

@@ -21,6 +21,31 @@ Write the role, not the mechanics; let the container own the policy.
 - **`min-width: 0` is a deliberate leaf decision, never a container reflex.** Exactly one primitive — the truncation leaf — owns it.
 - **Semantic intent over mechanics.** Write `content` / `meta` / `stack with sm rhythm`; the primitive owns `flex items-center gap-2 min-w-0 …` and can fix it once, globally. Same "CSS-in-semantics" philosophy as `spacing`/`text`/`surface`.
 
+## The overlap bug class (read before hand-rolling any row)
+
+Two boxes overlap when one lands in a region the layout engine never reserved
+*for it* — because the boundary was a **hint the content can ignore**, not a real
+track. Two recurring shapes, both fixed by a grid track / clip:
+
+- **Absolute trailing indicator + reservation padding.** `relative flex … pr-2xl`
+  with a trailing checkmark/badge `absolute right-2`. The `pr-2xl` is only a hint;
+  a `flex-1`/`shrink-0` label grows under the floating indicator. → Use a real
+  rigid track (`Frame` `trailing`, or inline `grid-cols-[minmax(0,1fr)_auto]` at
+  the layers below `Frame`). Never `absolute` + padding-reservation for a
+  trailing affordance.
+- **Rigid leaf in an unclipped flexible cell.** A `flex-1 min-w-0` cell with **no
+  overflow clip** holding a `shrink-0` child (a `SegmentedControl`, a fixed
+  control): when narrow the child overflows onto the next sibling. → The cell must
+  own its overflow (`Clip`) or the child must be allowed to yield. Also: `flex-1
+  truncate` **without** `min-w-0` never shrinks (implicit `min-width:auto`) — the
+  `truncate` is dead; always `min-w-0 flex-1 truncate`.
+
+**Layer rule — no primitive re-derives flex+absolute row layout by hand.** Above
+`Frame` in the DAG, compose `Frame`. At/below `Frame` (the few primitives `Frame`
+itself is built on, e.g. `ui-kit`'s shadcn menu items — importing `Frame` there
+would cycle), write the grid tracks directly. Either way the indicator/affordance
+lives in a track, never floats over the label.
+
 ## Layout primitives
 
 Reach for these instead of raw flex/grid. Import from `@plugins/primitives/plugins/<name>/web` (the `css/*` layout primitives live under `@plugins/primitives/plugins/css/plugins/<name>/web`). Shared conventions mirror `Stack`: `gap: SpaceStep`, reused `StackAlign`/`StackJustify`, `as?`, `className` last. **All accept `ref?: React.Ref<HTMLElement>`** (React-19 ref-as-prop) — pass `<Scroll ref={sticky.scrollRef}>` for auto-scroll / sticky-scroll / ResizeObserver / scroll-into-view; never fall back to a raw `<div ref=…>` + eslint-disable just to attach a ref.

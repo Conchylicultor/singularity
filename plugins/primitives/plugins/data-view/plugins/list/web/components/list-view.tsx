@@ -101,7 +101,7 @@ export function ListView(props: DataViewRenderProps<unknown>): ReactNode {
               options.renderRow(row)
             ) : (
               <>
-                <div className="flex min-w-0 flex-col">
+                <div className="flex min-w-0 flex-col overflow-hidden">
                   {titleField ? (
                     <Text
                       as="div"
