@@ -45,7 +45,11 @@ import {
 } from "../selection-control";
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow, BLOCK_GUTTER } from "./block-row";
-import { resolvePastedBlock } from "../internal/block-paste-handlers";
+import {
+  resolveBlockPasteHandler,
+  resolvePastedBlock,
+  type BlockPasteHandler,
+} from "../internal/block-paste-handlers";
 
 type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
 type DropTarget = { id: string; zone: DropZone };
@@ -574,6 +578,11 @@ function SelectionLayer({
   );
   const [activeId, setActiveId] = useState<string | null>(null);
   const [dropTarget, setDropTarget] = useState<DropTarget | null>(null);
+  // External (OS) file-drag state, kept separate from the dnd-kit block-reorder
+  // drag above: native HTML drag events never overlap dnd-kit's pointer-based
+  // reorder, so the two can't be active at once.
+  const [fileDropTarget, setFileDropTarget] = useState<DropTarget | null>(null);
+  const [fileDragging, setFileDragging] = useState(false);
   // Resolved selection roots + their subtree when dragging a multi-selection.
   const bulkDragRef = useRef<{ roots: string[]; subtree: Set<string> } | null>(
     null,
@@ -665,6 +674,84 @@ function SelectionLayer({
     bulkDragRef.current = null;
   };
 
+  // ---- External file drop (OS drag-and-drop → attachment block) ------------
+
+  // Resolve where a forest dropped over `target` should land. "after" lands as a
+  // sibling right below the target; "before" anchors after the target's previous
+  // sibling (same parent), or at the parent's start when it's the first child —
+  // mirroring the bulk-reorder before/after computation. A null target (empty
+  // page / no rows) lands at the page's top level.
+  const fileDropPosition = useCallback(
+    (target: DropTarget | null): { afterId: string | null; parentId: string | null } => {
+      if (!target) return { afterId: null, parentId: null };
+      const targetRow = rowsRef.current.find((r) => r.id === target.id);
+      if (!targetRow) return { afterId: null, parentId: null };
+      if (target.zone === "after") {
+        return { afterId: target.id, parentId: targetRow.parentId };
+      }
+      const siblings = rowsRef.current
+        .filter((r) => r.parentId === targetRow.parentId)
+        .sort((a, b) => Rank.compare(a.rank, b.rank));
+      const idx = siblings.findIndex((s) => s.id === target.id);
+      return { afterId: siblings[idx - 1]?.id ?? null, parentId: targetRow.parentId };
+    },
+    [],
+  );
+
+  const onFileDragOver = useCallback((e: React.DragEvent) => {
+    // Only react to an OS file drag — internal text/element drags carry no Files.
+    if (!e.dataTransfer.types.includes("Files")) return;
+    e.preventDefault(); // required so the drop event fires
+    e.dataTransfer.dropEffect = "copy";
+    setFileDragging(true);
+    const next = rowAtPointer(e.clientY);
+    setFileDropTarget((prev) =>
+      prev?.id === next?.id && prev?.zone === next?.zone ? prev : next,
+    );
+  }, []);
+
+  const onFileDragLeave = useCallback((e: React.DragEvent) => {
+    // dragleave fires when crossing into a child too; only clear when the pointer
+    // has actually left the container's subtree.
+    if (containerRef.current?.contains(e.relatedTarget as Node | null)) return;
+    setFileDragging(false);
+    setFileDropTarget(null);
+  }, []);
+
+  const onFileDrop = useCallback(
+    (e: React.DragEvent) => {
+      if (!e.dataTransfer.types.includes("Files")) return;
+      e.preventDefault();
+      // Read the FileList + pointer position synchronously — both are cleared once
+      // this handler returns, before the async uploads below run.
+      const picks = Array.from(e.dataTransfer.files)
+        .map((file) => ({ file, handler: resolveBlockPasteHandler(file.type) }))
+        .filter((p): p is { file: File; handler: BlockPasteHandler } => p.handler !== null);
+      const pos = fileDropPosition(rowAtPointer(e.clientY));
+      setFileDragging(false);
+      setFileDropTarget(null);
+      if (picks.length === 0) return;
+      // Each file becomes its matching attachment block via the generic registry,
+      // so image/video/audio/file participate with no per-type code here.
+      void (async () => {
+        const blocks = await Promise.all(
+          picks.map(async ({ file, handler }) => ({
+            type: handler.type,
+            data: await handler.build(file),
+            expanded: false,
+            children: [],
+          })),
+        );
+        await paste({ blocks, ...pos });
+      })();
+    },
+    [fileDropPosition, paste],
+  );
+
+  // The reorder drag and the file drag are mutually exclusive, so one indicator
+  // source feeds the per-row insertion line.
+  const activeDropTarget = dropTarget ?? fileDropTarget;
+
   const selectedCount = selectedIds.size;
 
   return (
@@ -729,6 +816,9 @@ function SelectionLayer({
             onCut={onCut}
             onPaste={onPaste}
             onPointerDown={onPointerDown}
+            onDragOver={onFileDragOver}
+            onDragLeave={onFileDragLeave}
+            onDrop={onFileDrop}
             onFocusCapture={(e) => {
               // Focusing into a block's editor (clicking to type) drops any block
               // selection. Focusing the container itself (selection mode) doesn't.
@@ -757,9 +847,18 @@ function SelectionLayer({
                     activeId === f.block.id ||
                     (bulkDragRef.current?.subtree.has(f.block.id) ?? false)
                   }
-                  dropZone={dropTarget?.id === f.block.id ? dropTarget.zone : null}
+                  dropZone={
+                    activeDropTarget?.id === f.block.id ? activeDropTarget.zone : null
+                  }
                 />
               ))}
+              {/* Empty page (no rows to anchor the insertion line to): a dashed
+                  drop zone signals where a dragged file will land. */}
+              {fileDragging && flat.length === 0 && (
+                <div className="border-primary bg-muted/40 text-muted-foreground pointer-events-none rounded-md border border-dashed px-md py-lg text-body">
+                  Drop a file to add it to this page
+                </div>
+              )}
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the Add-block affordance below the block list; the container isn't a flex Stack (it holds keyed rows + an absolute marquee), so the margin can't lift into a parent gap */}
               <div className="mt-1">
                 <AddBlockMenu />

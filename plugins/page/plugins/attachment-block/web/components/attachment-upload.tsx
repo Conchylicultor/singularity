@@ -113,11 +113,16 @@ export function AttachmentUpload({
         }}
         onDragOver={(e) => {
           e.preventDefault();
+          // Claim the drag: this empty block fills itself in place, so don't let
+          // the event bubble to the editor's container drop handler (which would
+          // otherwise also create a new attachment block alongside).
+          e.stopPropagation();
           setDragOver(true);
         }}
         onDragLeave={() => setDragOver(false)}
         onDrop={(e) => {
           e.preventDefault();
+          e.stopPropagation();
           setDragOver(false);
           const file = e.dataTransfer.files?.[0];
           if (file) void ingest(file);
