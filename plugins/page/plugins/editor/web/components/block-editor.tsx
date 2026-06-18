@@ -10,6 +10,7 @@ import {
   type CollisionDetection,
   type DragStartEvent,
 } from "@dnd-kit/core";
+import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
@@ -45,6 +46,7 @@ import {
 } from "../selection-control";
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow, BLOCK_GUTTER } from "./block-row";
+import { FileDropOverlay } from "./file-drop-overlay";
 import {
   resolveBlockPasteHandler,
   resolvePastedBlock,
@@ -805,7 +807,8 @@ function SelectionLayer({
               centered content wrapper below only constrains where the blocks
               render. min-h gives an empty area below the content to start a
               marquee from. */}
-          <div
+          <Overlay
+            as="div"
             ref={containerRef}
             tabIndex={-1}
             role="listbox"
@@ -824,7 +827,11 @@ function SelectionLayer({
               // selection. Focusing the container itself (selection mode) doesn't.
               if (e.target !== containerRef.current && isActive) clearSelection();
             }}
-            className="relative min-h-40 w-full cursor-text pb-sm pt-md outline-none"
+            // Full-surface file-drop scrim painted above the blocks (a
+            // pointer-events-none `above` layer, so it never eats the drag
+            // events). The per-row insertion line below still pinpoints the drop.
+            above={<FileDropOverlay active={fileDragging} />}
+            className="min-h-40 w-full cursor-text pb-sm pt-md outline-none"
           >
             {/* Symmetric BLOCK_GUTTER reserves the left rail the three hover
                 controls (chevron, drag handle, +) hang into at -20/-40/-60 from
@@ -852,13 +859,6 @@ function SelectionLayer({
                   }
                 />
               ))}
-              {/* Empty page (no rows to anchor the insertion line to): a dashed
-                  drop zone signals where a dragged file will land. */}
-              {fileDragging && flat.length === 0 && (
-                <div className="border-primary bg-muted/40 text-muted-foreground pointer-events-none rounded-md border border-dashed px-md py-lg text-body">
-                  Drop a file to add it to this page
-                </div>
-              )}
               {/* eslint-disable-next-line spacing/no-adhoc-spacing -- mt-1 offsets the Add-block affordance below the block list; the container isn't a flex Stack (it holds keyed rows + an absolute marquee), so the margin can't lift into a parent gap */}
               <div className="mt-1">
                 <AddBlockMenu />
@@ -870,7 +870,7 @@ function SelectionLayer({
                 />
               )}
             </div>
-          </div>
+          </Overlay>
         </ContentScope>
         <DragOverlay dropAnimation={null}>
           {activeId ? (
