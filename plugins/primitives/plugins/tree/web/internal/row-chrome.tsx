@@ -3,6 +3,7 @@ import { useCallback, type ReactNode } from "react";
 import { MdAdd, MdMoreHoriz } from "react-icons/md";
 import type { IconType } from "react-icons";
 import { SelectionCheckbox } from "@plugins/primitives/plugins/multi-select/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { TreeNode } from "../../core";
 import type { TreeItem } from "./types";
 import { useTreeListContext, useTreeRow, type RowControls } from "./use-tree-row";
@@ -93,14 +94,13 @@ export function RowChrome<T extends TreeItem>(props: RowChromeProps<T>) {
   // surrounding actions cluster already stops row-click/drag propagation and
   // owns the hover-reveal, so this button only handles the create.
   const addChild = ctx.canCreate ? (
-    <button
-      type="button"
-      aria-label="Add child"
-      onClick={() => void r.addChild()}
-      className="flex size-5 items-center justify-center rounded-md text-muted-foreground hover:bg-background/60"
-    >
-      <MdAdd className="size-4" />
-    </button>
+    <IconButton
+      icon={MdAdd}
+      label="Add child"
+      variant="ghost"
+      size="icon-xs"
+      onClick={() => r.addChild()}
+    />
   ) : null;
 
   const trailing =

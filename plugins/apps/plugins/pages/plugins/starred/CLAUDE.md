@@ -7,7 +7,7 @@
 - Description: Favorites/starred pages for the Pages app: a Favorites sidebar section plus star toggles on page-tree rows and the page header. Starred-pages side-table (page_blocks_ext_starred), live resource, and toggle/reorder endpoints for the Pages Favorites section.
 - Web:
   - Contributes: `Pages.Sidebar` "Favorites" → `FavoritesSidebar`, `PageTree.RowActions` "star" → `StarRowAction`, `PageDetail.HeaderActions` → `StarHeaderAction`
-  - Uses: `apps/pages/page-tree.PageDetail`, `apps/pages/page-tree.pageDetailPane`, `apps/pages/page-tree.PageTree`, `apps/pages/shell.Pages`, `infra/endpoints.useEndpointMutation`, `page/editor.PageIcon`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
+  - Uses: `apps/pages/page-tree.PageDetail`, `apps/pages/page-tree.pageDetailPane`, `apps/pages/page-tree.PageTree`, `apps/pages/shell.Pages`, `infra/endpoints.useEndpointMutation`, `page/editor.PageIcon`, `primitives/app-shell.SidebarPaneSection`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/icon-button.IconButton`, `primitives/live-state.useResource`, `primitives/pane.useOpenPane`, `primitives/sortable-list.SortableItem`, `primitives/sortable-list.SortableList`
   - Exports: Types: `StarredPageRow`; Values: `StarredPageRowSchema`, `starredPagesResource`
 - Server:
   - Uses: `database.db`, `infra/endpoints.implement`, `infra/entity-extensions.defineExtension`, `page/editor._blocks`, `primitives/rank.nextRankIn`, `primitives/rank.rankText`

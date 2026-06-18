@@ -9,6 +9,7 @@
   - Exports: Types: `BuildLintConfigOptions`, `ParserTypeSource`; Values: `buildLintConfig`, `findPluginDirs`, `lintCollectedDir`
 - Sub-plugins:
   - **`bun-safety`** — bun-safety lint rule: no-declare-identifier
+  - **`button-safety`** — button-safety lint rule: no-async-raw-button
   - **`icon-safety`** — icon-safety lint rules: no-lucide-react
   - **`promise-safety`** — promise-safety lint rules: no-floating-promises, no-bare-catch
   - **`reactive-server-io`** — reactive-server-io lint rule: no-reactive-server-io

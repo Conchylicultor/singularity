@@ -2,6 +2,7 @@ import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import type { ReactNode } from "react";
 import { useDroppable } from "@dnd-kit/core";
 import { CollapsibleChevron } from "@plugins/primitives/plugins/collapsible/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 
 export function GroupContainer({
@@ -52,14 +53,15 @@ export function GroupContainer({
           !effectiveExpanded && hasActiveChild && "bg-sidebar-accent/50",
         )}
       >
-        <button
-          type="button"
-          onClick={() => void onToggleExpanded()}
+        <Button
+          variant="ghost"
+          size="icon-xs"
+          onClick={() => onToggleExpanded()}
           aria-label={expanded ? "Collapse group" : "Expand group"}
-          className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground hover:bg-accent"
+          className="text-muted-foreground"
         >
           <CollapsibleChevron open={effectiveExpanded} className="size-4" />
-        </button>
+        </Button>
         {leadingIcon}
         {title}
         {count !== undefined && count > 0 && (

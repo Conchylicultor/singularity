@@ -1,4 +1,5 @@
 import { MdClose } from "react-icons/md";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -70,14 +71,14 @@ function DependentChip({
         actionsAlwaysVisible
         className={isTerminal ? "text-muted-foreground line-through" : undefined}
         actions={
-          <button
-            type="button"
+          <IconButton
+            icon={MdClose}
+            label={`Remove dependent ${title}`}
+            variant="ghost"
+            size="icon-sm"
             onClick={remove}
-            className="hover:bg-destructive/10 hover:text-destructive rounded-md p-2xs"
-            aria-label={`Remove dependent ${title}`}
-          >
-            <MdClose className="h-3 w-3" />
-          </button>
+            className="hover:text-destructive"
+          />
         }
       >
         <button

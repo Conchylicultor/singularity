@@ -229,14 +229,14 @@ export function GalleryView(props: DataViewRenderProps<unknown>): ReactNode {
           single dashed card can't express an N-way choice; they get the toolbar
           menu instead). */}
       {options.showCreateCard && creators?.length === 1 ? (
-        <button
-          type="button"
-          onClick={() => void creators[0]!.onSelect()}
+        <Button
+          variant="ghost"
+          onClick={() => creators[0]!.onSelect()}
           className="focus-ring flex aspect-video flex-col items-center justify-center gap-xs rounded-lg border border-dashed border-border text-muted-foreground transition-colors hover:border-primary hover:bg-muted/40 hover:text-foreground"
         >
           <MdAdd className="size-5" />
           <Text variant="label">{creators[0]!.label}</Text>
-        </button>
+        </Button>
       ) : null}
     </div>
   );

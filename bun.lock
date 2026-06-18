@@ -1726,6 +1726,10 @@
       "name": "@singularity/plugin-framework-tooling-lint-bun-safety",
       "version": "0.0.1",
     },
+    "plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety": {
+      "name": "@singularity/plugin-framework-tooling-lint-button-safety",
+      "version": "0.0.1",
+    },
     "plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety": {
       "name": "@singularity/plugin-framework-tooling-lint-icon-safety",
       "version": "0.0.1",
@@ -4472,6 +4476,8 @@
     "@singularity/plugin-framework-tooling-lint": ["@singularity/plugin-framework-tooling-lint@workspace:plugins/framework/plugins/tooling/plugins/lint"],
 
     "@singularity/plugin-framework-tooling-lint-bun-safety": ["@singularity/plugin-framework-tooling-lint-bun-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/bun-safety"],
+
+    "@singularity/plugin-framework-tooling-lint-button-safety": ["@singularity/plugin-framework-tooling-lint-button-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/button-safety"],
 
     "@singularity/plugin-framework-tooling-lint-icon-safety": ["@singularity/plugin-framework-tooling-lint-icon-safety@workspace:plugins/framework/plugins/tooling/plugins/lint/plugins/icon-safety"],
 

@@ -1,0 +1,6 @@
+{
+  "name": "@singularity/plugin-framework-tooling-lint-button-safety",
+  "version": "0.0.1",
+  "private": true,
+  "description": "button-safety lint rule: no-async-raw-button"
+}

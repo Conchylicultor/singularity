@@ -13,6 +13,7 @@ import {
 } from "@plugins/primitives/plugins/avatar/web";
 import type { SvgNode } from "@plugins/primitives/plugins/icon-picker/core";
 import { useMultiSelect } from "@plugins/primitives/plugins/multi-select/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
@@ -62,14 +63,10 @@ function DeleteSelectedAction() {
     clearAll();
   };
   return (
-    <button
-      type="button"
-      onClick={() => void onClick()}
-      className="inline-flex items-center gap-xs text-destructive hover:text-destructive/80"
-    >
-      <MdDelete className="size-3.5" />
+    <Button variant="destructive" size="sm" onClick={() => onClick()}>
+      <MdDelete />
       Delete
-    </button>
+    </Button>
   );
 }
 

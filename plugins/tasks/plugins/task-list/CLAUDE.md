@@ -8,7 +8,7 @@
 - Web:
   - Slots: `Tasks.View` ← `tasks.task-list.recent`, `tasks.task-list.tree`, `Tasks.TaskActions` ← `tasks.auto-start`, `tasks.task-list`, `Tasks.ListActions`
   - Contributes: `Tasks.TaskActions` "child-count" → `ChildCountAction`, `Tasks.TaskActions` "expand-collapse-all" → `ExpandCollapseAllAction`, `Tasks.TaskActions` "delete" → `DeleteTaskAction`, `Tasks.TaskActions` "launch-agent" → `LaunchAgentAction`
-  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/css/ui-kit.cn`, `primitives/data-view.defineItemActions`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tooltip.WithTooltip`, `primitives/tree.useSubtreeExpandAll`, `tasks.patchTask`, `tasks/container-tasks.useIsContainerTask`
+  - Uses: `infra/endpoints.fetchEndpoint`, `primitives/collapsible.ExpandAllButton`, `primitives/data-view.defineItemActions`, `primitives/icon-button.IconButton`, `primitives/launch.LaunchControl`, `primitives/live-state.ResourceView`, `primitives/live-state.useResource`, `primitives/slot-render.defineRenderSlot`, `primitives/tabbed-view.defineTabbedView`, `primitives/tree.useSubtreeExpandAll`, `tasks.patchTask`, `tasks/container-tasks.useIsContainerTask`
   - Exports: Types: `TaskViewProps`; Values: `Tasks`
 - Cross-plugin:
   - Imported by: `tasks/auto-start`, `tasks/task-detail`, `tasks/task-list/recent`, `tasks/task-list/tree`

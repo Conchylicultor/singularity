@@ -3,6 +3,7 @@ import { MdAdd, MdDescription } from "react-icons/md";
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { SidebarPaneSection } from "@plugins/primitives/plugins/app-shell/web";
 import { useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { DataView, defineDataView } from "@plugins/primitives/plugins/data-view/web";
@@ -141,16 +142,16 @@ function PagesHeaderAdd() {
     openPane(pageDetailPane, { pageId: id }, { mode: "push" });
   };
   return (
-    <button
-      type="button"
-      aria-label="New page"
+    <IconButton
+      icon={MdAdd}
+      label="New page"
       onClick={(e) => {
         e.stopPropagation();
-        void createRootPage();
+        return createRootPage();
       }}
-      className="ml-auto flex size-5 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent group-hover/label:opacity-100 focus-visible:opacity-100"
-    >
-      <MdAdd className="size-4" />
-    </button>
+      variant="ghost"
+      size="icon-xs"
+      className="ml-auto opacity-0 group-hover/label:opacity-100 focus-visible:opacity-100"
+    />
   );
 }

@@ -1,4 +1,5 @@
 import { MdGrade, MdStarBorder } from "react-icons/md";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import { useStar } from "../internal/use-star";
 
 /**
@@ -8,15 +9,13 @@ import { useStar } from "../internal/use-star";
 export function StarButton({ pageId }: { pageId: string }) {
   const { isStarred, toggle } = useStar(pageId);
   return (
-    <button
-      type="button"
-      onClick={toggle}
-      title={isStarred ? "Remove from favorites" : "Add to favorites"}
-      aria-label={isStarred ? "Remove from favorites" : "Add to favorites"}
+    <IconButton
+      icon={isStarred ? MdGrade : MdStarBorder}
+      label={isStarred ? "Remove from favorites" : "Add to favorites"}
       aria-pressed={isStarred}
-      className="hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md"
-    >
-      {isStarred ? <MdGrade className="size-4" /> : <MdStarBorder className="size-4" />}
-    </button>
+      onClick={toggle}
+      variant="ghost"
+      size="icon-sm"
+    />
   );
 }

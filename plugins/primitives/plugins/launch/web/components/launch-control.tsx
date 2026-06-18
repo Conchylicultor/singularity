@@ -135,18 +135,19 @@ export function LaunchControl({
             {id === defaultModel && <MdCheck className="size-3.5 opacity-70" />}
           </span>
           <span className="flex items-center gap-xs">
-            <button
-              type="button"
+            <Button
+              variant="ghost"
+              size="icon-xs"
               aria-label={`Launch ${MODEL_REGISTRY[id].label}`}
               title={`Launch ${MODEL_REGISTRY[id].label}`}
               onClick={(e) => {
                 e.stopPropagation();
-                void launch(id, e);
+                return launch(id, e);
               }}
-              className="hover:bg-accent flex size-5 items-center justify-center rounded-md opacity-0 group-hover/dropdown-menu-item:opacity-100"
+              className="opacity-0 group-hover/dropdown-menu-item:opacity-100"
             >
               <MdPlayArrow className="size-3.5" />
-            </button>
+            </Button>
             {/* eslint-disable-next-line spacing/no-adhoc-spacing -- ml-0 resets the Kbd primitive's default left margin in this inline row */}
             <Kbd className="ml-0 text-muted-foreground border-border bg-muted">
               {formatShortcutLabel(`mod+${i + 1}`)}

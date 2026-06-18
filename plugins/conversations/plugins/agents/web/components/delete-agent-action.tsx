@@ -1,5 +1,5 @@
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { MdDelete } from "react-icons/md";
+import { IconButton } from "@plugins/primitives/plugins/icon-button/web";
 import type { ItemActionProps } from "@plugins/primitives/plugins/data-view/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { deleteAgent } from "@plugins/conversations/plugins/agents/core";
@@ -19,18 +19,15 @@ export function DeleteAgentAction({ row, hasChildren }: ItemActionProps<Agent>) 
   };
 
   return (
-    <button
-      type="button"
+    <IconButton
+      icon={MdDelete}
+      label="Delete agent"
+      tooltip={title}
       onClick={onClick}
       disabled={disabled}
-      title={title}
-      aria-label="Delete agent"
-      className={cn(
-        "hover:bg-background/60 flex size-6 shrink-0 items-center justify-center rounded-md",
-        disabled && "cursor-not-allowed opacity-30 hover:bg-transparent",
-      )}
-    >
-      <MdDelete className="size-4" />
-    </button>
+      variant="ghost"
+      size="icon-sm"
+      className={disabled ? "cursor-not-allowed opacity-30" : undefined}
+    />
   );
 }

@@ -12,7 +12,7 @@ import {
 } from "@dnd-kit/core";
 import { Overlay } from "@plugins/primitives/plugins/css/plugins/overlay/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { Button, cn } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -779,13 +779,14 @@ function SelectionLayer({
               >
                 Copy
               </button>
-              <button
-                type="button"
+              <Button
+                variant="ghost"
+                size="sm"
                 className="text-foreground hover:text-foreground/80"
-                onClick={() => void bulkDuplicate([...selectedIds])}
+                onClick={() => bulkDuplicate([...selectedIds])}
               >
                 Duplicate
-              </button>
+              </Button>
               <button
                 type="button"
                 className="text-destructive hover:text-destructive/80"

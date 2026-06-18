@@ -1,6 +1,7 @@
 import { useCallback, useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { removeTaskDependency, insertTaskBetween } from "@plugins/tasks/core";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 
 export type EdgeActionsProps = {
@@ -54,24 +55,26 @@ export function EdgeActions({ sourceTaskId, targetTaskId, targetFolderId, onNavi
 
   return (
     <>
-      <button
-        type="button"
-        className="bg-background text-foreground hover:bg-primary hover:text-primary-foreground flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="bg-background text-foreground hover:bg-primary hover:text-primary-foreground size-6 rounded-full border shadow-sm"
         disabled={inserting}
         onClick={handleInsert}
         aria-label="Insert task"
       >
         <Text variant="label">+</Text>
-      </button>
-      <button
-        type="button"
-        className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground flex h-6 w-6 cursor-pointer items-center justify-center rounded-full border shadow-sm disabled:opacity-50"
+      </Button>
+      <Button
+        variant="ghost"
+        size="icon-sm"
+        className="bg-background text-foreground hover:bg-destructive hover:text-destructive-foreground size-6 rounded-full border shadow-sm"
         disabled={deleting}
         onClick={handleDelete}
         aria-label="Remove dependency"
       >
         <Text variant="label">&times;</Text>
-      </button>
+      </Button>
     </>
   );
 }

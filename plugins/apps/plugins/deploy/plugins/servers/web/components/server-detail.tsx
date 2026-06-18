@@ -1,5 +1,5 @@
-import { useState } from "react";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { Button } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import type { Server } from "../../shared";
@@ -7,13 +7,9 @@ import { deleteServer } from "../../shared/endpoints";
 import { ServerStatusBadge } from "./server-status-badge";
 
 export function ServerDetail({ server }: { server: Server }) {
-  const [deleting, setDeleting] = useState(false);
-
   async function handleDelete() {
     if (!confirm(`Delete server "${server.name}"?`)) return;
-    setDeleting(true);
     await fetchEndpoint(deleteServer, { id: server.id });
-    setDeleting(false);
   }
 
   return (
@@ -28,13 +24,14 @@ export function ServerDetail({ server }: { server: Server }) {
             {server.sshUser}@{server.host}:{server.port}
           </Text>
         </Stack>
-        <button
+        <Button
+          variant="link"
+          size="xs"
           onClick={handleDelete}
-          disabled={deleting}
-          className="text-caption text-destructive hover:underline disabled:opacity-50"
+          className="text-destructive hover:text-destructive"
         >
           Delete
-        </button>
+        </Button>
       </div>
       <Text as="div" variant="caption" className="flex gap-lg">
         <div>
