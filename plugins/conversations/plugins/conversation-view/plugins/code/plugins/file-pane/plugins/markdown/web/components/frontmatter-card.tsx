@@ -10,14 +10,14 @@ import type { FrontmatterField } from "../internal/frontmatter";
  */
 export function FrontmatterCard({ fields }: { fields: FrontmatterField[] }) {
   return (
-    // eslint-disable-next-line spacing/no-adhoc-spacing -- bottom offset separating the standalone frontmatter card from the markdown body it precedes
-    <Card as="dl" className="mb-4 grid grid-cols-[auto_1fr] gap-x-lg gap-y-xs">
+    // eslint-disable-next-line spacing/no-adhoc-spacing, layout/no-adhoc-layout -- mb-4 separates the standalone card from the body it precedes; auto/minmax(0,1fr) definition-list grid aligns the key column across all rows — cross-row column alignment a single-row Frame can't express
+    <Card as="dl" className="mb-4 grid grid-cols-[auto_minmax(0,1fr)] gap-x-lg gap-y-xs">
       {fields.map((field) => (
         <Fragment key={field.key}>
           <SectionLabel as="dt" className="pt-2xs">
             {field.key}
           </SectionLabel>
-          <Text as="dd" variant="body" className="min-w-0 break-words">
+          <Text as="dd" variant="body" className="break-words">
             {field.value}
           </Text>
         </Fragment>

@@ -1,5 +1,8 @@
 import { useEffect, useMemo, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { PaneChrome } from "@plugins/primitives/plugins/pane/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
@@ -82,47 +85,51 @@ function DocsPaneBody({
   const selected = docs.find((f) => f.path === selectedPath) ?? null;
 
   const title = (
-    <span className="flex items-center gap-sm">
+    <Stack direction="row" gap="sm" align="center">
       <span>Docs</span>
       <Text variant="caption" className="tabular-nums text-muted-foreground">
         {docs.length}
       </Text>
-    </span>
+    </Stack>
   );
 
   return (
     <PaneChrome pane={convDocsPane} title={title}>
-      <div className="flex h-full min-h-0 flex-col">
-        {docs.length !== 1 && (
-          <div className="max-h-[40%] min-h-0 shrink-0 overflow-auto border-b py-xs">
-            {docs.length === 0 ? (
-              <Text
-                as="div"
-                variant="caption"
-                className="px-sm py-xs text-muted-foreground"
-              >
-                No design docs in the diff.
-              </Text>
-            ) : (
-              docs.map((f) => (
-                <DocRow
-                  key={f.path}
-                  path={f.path}
-                  status={f.status}
-                  selected={f.path === selectedPath}
-                  onSelect={() => setSelectedPath(f.path)}
-                />
-              ))
-            )}
-          </div>
-        )}
-        <div className="min-h-0 flex-1 overflow-hidden">
-          {selected ? (
-              <FilePaneView
-                worktree={selected.worktree}
-                path={selected.path}
-                status={selected.status}
-              />
+      <Column
+        fill
+        className="h-full"
+        header={
+          docs.length !== 1 ? (
+            <Scroll className="max-h-[40%] border-b py-xs">
+              {docs.length === 0 ? (
+                <Text
+                  as="div"
+                  variant="caption"
+                  className="px-sm py-xs text-muted-foreground"
+                >
+                  No design docs in the diff.
+                </Text>
+              ) : (
+                docs.map((f) => (
+                  <DocRow
+                    key={f.path}
+                    path={f.path}
+                    status={f.status}
+                    selected={f.path === selectedPath}
+                    onSelect={() => setSelectedPath(f.path)}
+                  />
+                ))
+              )}
+            </Scroll>
+          ) : undefined
+        }
+        body={
+          selected ? (
+            <FilePaneView
+              worktree={selected.worktree}
+              path={selected.path}
+              status={selected.status}
+            />
           ) : (
             <Text
               as="div"
@@ -131,9 +138,10 @@ function DocsPaneBody({
             >
               Select a document above.
             </Text>
-          )}
-        </div>
-      </div>
+          )
+        }
+        scrollBody={false}
+      />
     </PaneChrome>
   );
 }

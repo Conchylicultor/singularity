@@ -1,4 +1,5 @@
 import { ToggleChip } from "@plugins/primitives/plugins/css/plugins/toggle-chip/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import type { FileRenderersHandle } from "./use-file-renderers";
 
 export function FileTabs({
@@ -8,7 +9,7 @@ export function FileTabs({
 }: FileRenderersHandle) {
   if (resolved.length === 0) return null;
   return (
-    <div role="tablist" className="flex items-center gap-xs">
+    <Stack direction="row" gap="xs" align="center" role="tablist">
       {resolved.map(({ contribution: c }) => {
         const isActive = active?.contribution.id === c.id;
         return (
@@ -26,6 +27,6 @@ export function FileTabs({
           </ToggleChip>
         );
       })}
-    </div>
+    </Stack>
   );
 }

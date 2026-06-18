@@ -1,3 +1,5 @@
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+
 export function ImageView({
   worktree,
   path,
@@ -7,7 +9,7 @@ export function ImageView({
 }) {
   const src = `/api/code/${encodeURIComponent(worktree)}/image?path=${encodeURIComponent(path)}`;
   return (
-    <div className="flex h-full items-center justify-center overflow-auto p-lg">
+    <Center axis="both" className="h-full p-lg">
       <img
         src={src}
         alt={path.slice(path.lastIndexOf("/") + 1)}
@@ -21,6 +23,6 @@ export function ImageView({
           }
         }}
       />
-    </div>
+    </Center>
   );
 }

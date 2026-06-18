@@ -13,6 +13,7 @@ import "react-diff-view/style/index.css";
 import { useDarkMode } from "@plugins/primitives/plugins/syntax-highlight/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { getFileContent } from "@plugins/code-explorer/plugins/code-api/core";
 import { useFileDiff } from "../use-file-diff";
@@ -68,10 +69,10 @@ export function DiffRenderer({
   const fixedSide: DiffSide | null =
     files[0]?.type === "add" ? "new" : files[0]?.type === "delete" ? "old" : null;
 
-  const containerRef = useRef<HTMLDivElement>(null);
+  const containerRef = useRef<HTMLElement>(null);
   const lastClickedSide = useRef<DiffSide | null>(null);
 
-  function handleMouseDown(e: MouseEvent<HTMLDivElement>) {
+  function handleMouseDown(e: MouseEvent<HTMLElement>) {
     if (fixedSide) {
       lastClickedSide.current = fixedSide;
       return;
@@ -123,7 +124,7 @@ export function DiffRenderer({
     document.addEventListener("mouseup", cleanup);
   }
 
-  function handleKeyDown(e: KeyboardEvent<HTMLDivElement>) {
+  function handleKeyDown(e: KeyboardEvent<HTMLElement>) {
     if ((e.ctrlKey || e.metaKey) && e.key === "a" && containerRef.current) {
       const sel = window.getSelection();
       if (!sel) return;
@@ -147,7 +148,7 @@ export function DiffRenderer({
     }
   }
 
-  function handleCopy(e: ClipboardEvent<HTMLDivElement>) {
+  function handleCopy(e: ClipboardEvent<HTMLElement>) {
     const side = lastClickedSide.current;
     if (!side || !containerRef.current) return;
 
@@ -181,10 +182,11 @@ export function DiffRenderer({
   const effectiveHunks = hunks ?? files[0]?.hunks ?? [];
 
   return (
-    <div
+    <Scroll
+      axis="both"
       ref={containerRef}
       // eslint-disable-next-line text/no-adhoc-typography -- leading-5 fixes mono diff line-height for gutter alignment, distinct from caption's tighter line-height
-      className="diff-view overflow-auto font-mono text-caption leading-5"
+      className="diff-view font-mono text-caption leading-5"
       data-monotonous={fixedSide ? "" : undefined}
       onKeyDown={handleKeyDown}
       onMouseDown={handleMouseDown}
@@ -243,7 +245,7 @@ export function DiffRenderer({
           }
         </Diff>
       ))}
-    </div>
+    </Scroll>
   );
 }
 

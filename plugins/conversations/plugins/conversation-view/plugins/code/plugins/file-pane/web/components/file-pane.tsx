@@ -2,6 +2,9 @@ import type { EditedFileStatus } from "@plugins/conversations/plugins/conversati
 import { FileContent } from "./file-content";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { FileTabs } from "./file-tabs";
 import { useFileRenderers } from "./use-file-renderers";
 
@@ -18,20 +21,23 @@ export function FilePaneView({
 }) {
   const renderers = useFileRenderers({ path, status });
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <Text
-        as="div"
-        variant="body"
-        className="flex items-center gap-sm border-b px-sm py-xs"
-      >
-        <div className="min-w-0 flex-1">
-          <FilepathBreadcrumb path={path} />
-        </div>
-        <FileTabs {...renderers} />
-      </Text>
-      <div className="min-h-0 flex-1 overflow-auto">
-        <FileContent worktree={worktree} path={path} line={line} active={renderers.active} />
-      </div>
-    </div>
+    <Column
+      fill
+      className="h-full"
+      header={
+        <Text as="div" variant="body" className="border-b px-sm py-xs">
+          <Frame
+            content={<FilepathBreadcrumb path={path} />}
+            trailing={<FileTabs {...renderers} />}
+          />
+        </Text>
+      }
+      body={
+        <Scroll axis="both" className="h-full">
+          <FileContent worktree={worktree} path={path} line={line} active={renderers.active} />
+        </Scroll>
+      }
+      scrollBody={false}
+    />
   );
 }

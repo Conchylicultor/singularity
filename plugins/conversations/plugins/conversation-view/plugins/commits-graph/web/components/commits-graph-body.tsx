@@ -6,6 +6,9 @@ import { MergeBaseMarker, CommitRowItem } from "@plugins/primitives/plugins/comm
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useConversationById } from "@plugins/conversations/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { commitsGraphResource } from "../../shared/resources";
 import { convCommitDiffPane, convCommitsGraphPane } from "../panes";
 
@@ -54,19 +57,26 @@ export function CommitsGraphBody() {
   const hasAgentWork = commits.length > 0 || landedCommits.length > 0;
 
   return (
-    <Text as="div" variant="body" className="flex h-full flex-col">
-      <Text as="header" variant="caption" className="border-b border-border px-lg py-sm text-muted-foreground">
-        <div className="flex items-baseline gap-sm">
-          <span className="font-mono text-foreground">{branchLabel}</span>
-          <span>↑{ahead}</span>
-          {behind > 0 ? (
-            <span className="text-warning">↓{behind}</span>
-          ) : null}
-          <span className="ml-auto">vs main</span>
-        </div>
-      </Text>
-      <ol className="flex-1 overflow-auto">
-        {commits.map((commit, idx) => (
+    <Column
+      fill
+      className="h-full"
+      header={
+        <Text as="header" variant="caption" className="border-b border-border px-lg py-sm text-muted-foreground">
+          <Frame
+            leading={
+              <>
+                <span className="font-mono text-foreground">{branchLabel}</span>
+                <span>↑{ahead}</span>
+                {behind > 0 ? <span className="text-warning">↓{behind}</span> : null}
+              </>
+            }
+            trailing={<span>vs main</span>}
+          />
+        </Text>
+      }
+      body={
+        <ol>
+          {commits.map((commit, idx) => (
           <CommitRowItem
             key={commit.sha}
             commit={commit}
@@ -110,8 +120,9 @@ export function CommitsGraphBody() {
             ))}
           </>
         )}
-      </ol>
-    </Text>
+        </ol>
+      }
+    />
   );
 }
 
@@ -123,15 +134,23 @@ function BehindSeparator({
   hasAgentWork: boolean;
 }) {
   return (
-    <li className="flex items-center gap-sm border-b border-border/50 px-md py-xs">
-      <div className="h-px flex-1 bg-border/60" />
-      <Text as="span" variant="caption" className="shrink-0 text-muted-foreground/60">
+    <Stack
+      as="li"
+      direction="row"
+      gap="sm"
+      align="center"
+      className="border-b border-border/50 px-md py-xs"
+    >
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- grow-to-fill hairline rule flanking the centered label; no primitive for a divider segment that absorbs slack on both sides of a label */}
+      <div className="h-px grow bg-border/60" />
+      <Text as="span" variant="caption" className="text-muted-foreground/60">
         {hasAgentWork
           ? `↓${count} on main`
           : `${count} commits on main`}
       </Text>
-      <div className="h-px flex-1 bg-border/60" />
-    </li>
+      {/* eslint-disable-next-line layout/no-adhoc-layout -- grow-to-fill hairline rule flanking the centered label */}
+      <div className="h-px grow bg-border/60" />
+    </Stack>
   );
 }
 

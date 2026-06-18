@@ -5,6 +5,11 @@ import type { EditedFile } from "@plugins/conversations/plugins/conversation-vie
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { Placeholder } from "@plugins/primitives/plugins/css/plugins/placeholder/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { Sticky } from "@plugins/primitives/plugins/css/plugins/sticky/web";
+import { TruncatingText } from "@plugins/primitives/plugins/css/plugins/truncating-text/web";
 import { useCommitFiles } from "../use-commit-files";
 
 export function CommitDiffView({
@@ -69,32 +74,39 @@ function CommitFileList({
   );
 
   return (
-    <div className="flex h-full min-h-0 flex-col">
-      <div className="flex items-center gap-md border-b border-border bg-background/95 px-lg py-sm backdrop-blur">
-        <Text as="span" variant="label" className="tabular-nums">
-          {files.length} {files.length === 1 ? "file" : "files"}
-        </Text>
-        <Text as="span" variant="caption" className="tabular-nums text-success">
-          +{totals.additions}
-        </Text>
-        <Text as="span" variant="caption" className="tabular-nums text-destructive">
-          −{totals.deletions}
-        </Text>
-      </div>
-      <div className="min-h-0 flex-1 overflow-auto">
-        {files.map((file) => (
-          <CommitFileRow
-            key={file.path}
-            file={file}
-            worktree={worktree}
-            baseSha={baseSha}
-            headSha={headSha}
-            expanded={expanded.has(file.path)}
-            onToggle={() => toggle(file.path)}
-          />
-        ))}
-      </div>
-    </div>
+    <Column
+      fill
+      className="h-full"
+      header={
+        <Stack
+          direction="row"
+          gap="md"
+          align="center"
+          className="border-b border-border bg-background/95 px-lg py-sm backdrop-blur"
+        >
+          <Text as="span" variant="label" className="tabular-nums">
+            {files.length} {files.length === 1 ? "file" : "files"}
+          </Text>
+          <Text as="span" variant="caption" className="tabular-nums text-success">
+            +{totals.additions}
+          </Text>
+          <Text as="span" variant="caption" className="tabular-nums text-destructive">
+            −{totals.deletions}
+          </Text>
+        </Stack>
+      }
+      body={files.map((file) => (
+        <CommitFileRow
+          key={file.path}
+          file={file}
+          worktree={worktree}
+          baseSha={baseSha}
+          headSha={headSha}
+          expanded={expanded.has(file.path)}
+          onToggle={() => toggle(file.path)}
+        />
+      ))}
+    />
   );
 }
 
@@ -120,33 +132,41 @@ function CommitFileRow({
 
   return (
     <div className="border-b border-border last:border-b-0">
-      <button
-        type="button"
-        onClick={onToggle}
-        className="text-body sticky top-0 z-raised flex w-full items-center gap-sm bg-muted px-md py-xs text-left hover:bg-muted/80"
-        aria-expanded={expanded}
-      >
-        <CollapsibleChevron open={expanded} className="size-4 shrink-0 text-muted-foreground" />
-        <span className="min-w-0 flex-1 truncate">
-          {from && (
-            <>
-              <span className="text-muted-foreground line-through">{from}</span>
-              {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
-              <span className="mx-1.5 text-muted-foreground">→</span>
-            </>
-          )}
-          <span className="text-muted-foreground">{dir}</span>
-          <span className="font-medium">{basename}</span>
-        </span>
-        <Text as="span" variant="caption" className="flex shrink-0 items-center gap-sm tabular-nums">
-          <span className="text-success">
-            +{file.additions}
-          </span>
-          <span className="text-destructive">
-            −{file.deletions}
-          </span>
-        </Text>
-      </button>
+      <Sticky>
+        <button
+          type="button"
+          onClick={onToggle}
+          className="text-body w-full bg-muted px-md py-xs text-left hover:bg-muted/80"
+          aria-expanded={expanded}
+        >
+          <Frame
+            leading={<CollapsibleChevron open={expanded} className="size-4 text-muted-foreground" />}
+            content={
+              <TruncatingText>
+                {from && (
+                  <>
+                    <span className="text-muted-foreground line-through">{from}</span>
+                    {/* eslint-disable-next-line spacing/no-adhoc-spacing -- inline horizontal offset around the rename arrow between two file paths */}
+                    <span className="mx-1.5 text-muted-foreground">→</span>
+                  </>
+                )}
+                <span className="text-muted-foreground">{dir}</span>
+                <span className="font-medium">{basename}</span>
+              </TruncatingText>
+            }
+            trailing={
+              <>
+                <Text as="span" variant="caption" className="tabular-nums text-success">
+                  +{file.additions}
+                </Text>
+                <Text as="span" variant="caption" className="tabular-nums text-destructive">
+                  −{file.deletions}
+                </Text>
+              </>
+            }
+          />
+        </button>
+      </Sticky>
       {expanded && (
         <div className="bg-background">
           <DiffOrImageView

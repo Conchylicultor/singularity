@@ -1,5 +1,6 @@
 import { Pane, PaneChrome, useOpenPane } from "@plugins/primitives/plugins/pane/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { useEditedFiles } from "@plugins/conversations/plugins/conversation-view/plugins/code/web";
 import { FilepathBreadcrumb } from "@plugins/primitives/plugins/filepath-breadcrumb/web";
@@ -82,12 +83,11 @@ function FilePeekPaneBody() {
   }
 
   const title = (
-    <span className="flex min-w-0 items-center gap-sm">
-      <span className="min-w-0 overflow-hidden">
-        <FilepathBreadcrumb path={effectivePath} />
-      </span>
-      <FileTabs {...renderers} />
-    </span>
+    <Frame
+      as="span"
+      content={<FilepathBreadcrumb path={effectivePath} />}
+      trailing={<FileTabs {...renderers} />}
+    />
   );
 
   return (

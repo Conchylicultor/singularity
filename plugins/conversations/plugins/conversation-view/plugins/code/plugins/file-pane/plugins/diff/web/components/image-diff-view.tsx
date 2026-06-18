@@ -1,6 +1,10 @@
 import { useEffect, useState } from "react";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
+import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
+import { Clip } from "@plugins/primitives/plugins/css/plugins/clip/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
+import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 
 type ImgStatus = "loading" | "ok" | "missing";
 
@@ -39,18 +43,26 @@ function Panel({
       ? "border-destructive/40 bg-destructive/5"
       : "border-success/40 bg-success/5";
   return (
-    <div className={`flex flex-1 flex-col overflow-hidden rounded-md border ${border}`}>
-      <Text as="div" variant="caption" className="border-b px-md py-xs font-medium text-muted-foreground">
-        {label}
-      </Text>
-      <div className="flex flex-1 items-center justify-center overflow-auto p-lg">
-        <img
-          src={src}
-          alt={label}
-          className="max-h-full max-w-full object-contain"
-        />
-      </div>
-    </div>
+    <Clip fill className={`rounded-md border ${border}`}>
+      <Column
+        className="h-full"
+        header={
+          <Text as="div" variant="caption" className="border-b px-md py-xs font-medium text-muted-foreground">
+            {label}
+          </Text>
+        }
+        body={
+          <Center axis="both" className="h-full p-lg">
+            <img
+              src={src}
+              alt={label}
+              className="max-h-full max-w-full object-contain"
+            />
+          </Center>
+        }
+        scrollBody={false}
+      />
+    </Clip>
   );
 }
 
@@ -79,26 +91,26 @@ export function ImageDiffView({
   // Added (no old version)
   if (oldStatus === "missing" && newStatus === "ok") {
     return (
-      <div className="flex h-full items-center justify-center overflow-auto p-lg">
+      <Center axis="both" className="h-full p-lg">
         <img
           src={newSrc}
           alt={path.slice(path.lastIndexOf("/") + 1)}
           className="max-h-full max-w-full object-contain"
         />
-      </div>
+      </Center>
     );
   }
 
   // Deleted (no new version)
   if (oldStatus === "ok" && newStatus === "missing") {
     return (
-      <div className="flex h-full items-center justify-center overflow-auto p-lg opacity-50">
+      <Center axis="both" className="h-full p-lg opacity-50">
         <img
           src={oldSrc}
           alt={path.slice(path.lastIndexOf("/") + 1)}
           className="max-h-full max-w-full object-contain"
         />
-      </div>
+      </Center>
     );
   }
 
@@ -110,9 +122,9 @@ export function ImageDiffView({
 
   // Modified: side-by-side
   return (
-    <div className="flex h-full gap-sm p-lg">
+    <Stack direction="row" gap="sm" className="h-full p-lg">
       <Panel label={ref} src={oldSrc} side="old" />
       <Panel label="Working tree" src={newSrc} side="new" />
-    </div>
+    </Stack>
   );
 }
