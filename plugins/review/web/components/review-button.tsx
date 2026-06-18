@@ -6,7 +6,7 @@ import { Review } from "../slots";
 
 export function ReviewButton() {
   const { convId } = conversationPane.useParams();
-  const { isOpen, toggle } = convReviewPane.useToggle({ convId }, { input: { convId } });
+  const { isOpen, toggle } = convReviewPane.useToggle({}, { input: { convId } });
   const sections = Review.Section.useContributions();
 
   return (

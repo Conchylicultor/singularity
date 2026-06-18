@@ -6,7 +6,7 @@ import { convPushProfilingPane } from "../panes";
 export function PushProfilingButton() {
   const { convId } = conversationPane.useParams();
   const { isOpen, toggle } = convPushProfilingPane.useToggle(
-    { convId },
+    {},
     { input: { convId } },
   );
 

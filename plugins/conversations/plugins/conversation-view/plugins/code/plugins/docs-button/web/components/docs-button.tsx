@@ -14,7 +14,7 @@ export function DocsButton() {
   const conversation = useConversationById(convId);
   const filesResult = useEditedFiles(convId);
   const pushedDocs = usePushedDocFiles(conversation?.attemptId ?? "");
-  const { isOpen, toggle } = convDocsPane.useToggle({ convId }, { input: { convId } });
+  const { isOpen, toggle } = convDocsPane.useToggle({}, { input: { convId } });
 
   // While edited files are still loading, render a neutral disabled button (no
   // count badge) rather than collapsing pending → an empty file list, which

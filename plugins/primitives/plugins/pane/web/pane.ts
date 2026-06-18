@@ -27,7 +27,11 @@ type ExtractParams<Path extends string> = Path extends `${infer Seg}/${infer Res
     : {};
 
 export type InferParams<Path extends string> =
-  ExtractParams<Path> extends infer O ? { [K in keyof O]: O[K] } : never;
+  ExtractParams<Path> extends infer O
+    ? keyof O extends never
+      ? Record<string, never>
+      : { [K in keyof O]: O[K] }
+    : never;
 
 // ---------------------------------------------------------------------------
 // Resolve hook — mandatory for parameterized panes, opt-out with `false`.
@@ -36,7 +40,11 @@ export type InferParams<Path extends string> =
 export type ResolveHook<Params extends Record<string, string>> =
   (params: Params) => { pending: boolean; found: boolean };
 
-type HasParams<Path extends string> = keyof InferParams<Path> extends never ? false : true;
+// Tests the RAW extraction (`{}` for a paramless path → keyof never), NOT
+// `InferParams`: the latter now normalizes the empty case to
+// `Record<string, never>` whose `keyof` is `string | number`, which would
+// misreport every paramless pane as paramful.
+type HasParams<Path extends string> = keyof ExtractParams<Path> extends never ? false : true;
 
 type ResolveField<Path extends string> =
   HasParams<Path> extends true
@@ -1418,13 +1426,13 @@ export function usePaneRoute(basePath: string): PaneMatch | null {
 
 export type PaneOpenMode = "root" | "push" | "swap";
 
-export function openPane<Input = PaneInput>(
-  target: PaneObject<any, any, Input>,
-  params: Record<string, string>,
+export function openPane<Params = Record<string, string>, Input = PaneInput>(
+  target: PaneObject<Params, any, Input>,
+  params: NoInfer<Params>,
   opts: { mode: "root"; input?: Input },
 ): void {
   // eslint-disable-next-line @typescript-eslint/no-unnecessary-condition -- overload narrows mode to "root" but the check keeps this future-proof for additional modes
-  liveStore.openPaneImpl(target._internal, params, { root: opts.mode === "root", input: opts.input as PaneInput });
+  liveStore.openPaneImpl(target._internal, params as Record<string, string>, { root: opts.mode === "root", input: opts.input as PaneInput });
 }
 
 // ---------------------------------------------------------------------------
@@ -1434,13 +1442,16 @@ export function openPane<Input = PaneInput>(
 
 /**
  * The caller-aware open function returned by {@link useOpenPane}. Generic on the
- * target pane's declared `Input` so `opts.input` is type-checked against the
- * pane that owns it at the call site (not coerced to `Record<string, string>`).
+ * target pane's declared `Params` and `Input` so both `params` and `opts.input`
+ * are type-checked against the pane that owns them at the call site. `params` is
+ * checked against the target pane's full param set (not coerced to
+ * `Record<string, string>`), mirroring `Input`: a paramless pane rejects stray
+ * keys and a paramful pane requires its declared params.
  */
 export interface OpenPaneFn {
-  <Input = PaneInput>(
-    target: PaneObject<any, any, Input>,
-    params: Record<string, string>,
+  <Params = Record<string, string>, Input = PaneInput>(
+    target: PaneObject<Params, any, Input>,
+    params: NoInfer<Params>,
     opts: { mode: PaneOpenMode; side?: "left" | "right"; input?: Input },
   ): void;
 }

@@ -5,7 +5,7 @@ import { convTerminalPane } from "../panes";
 
 export function TerminalButton() {
   const { convId } = conversationPane.useParams();
-  const { isOpen, toggle } = convTerminalPane.useToggle({ convId }, { input: { convId } });
+  const { isOpen, toggle } = convTerminalPane.useToggle({}, { input: { convId } });
 
   // No `size` → inherits the toolbar's density, matching the other action icons.
   return (

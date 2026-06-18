@@ -85,7 +85,7 @@ function BandWithPin({ node, tint }: { node: PluginNode; tint: string | null }) 
           size="sm"
           onClick={(e) => {
             e.stopPropagation();
-            openPane(graphCanvasPane, { focusId: node.id }, { mode: "root" });
+            openPane(graphCanvasPane, {}, { mode: "root", input: { focusId: node.id } });
           }}
         />
       </span>

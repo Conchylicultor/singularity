@@ -75,7 +75,7 @@ export function PluginLinkChip({
       onClick={(e) => {
         e.stopPropagation();
         if (convId) {
-          openPane(pluginConvSidePane, { convId, pluginId: resolvedId }, { mode: "push" });
+          openPane(pluginConvSidePane, { pluginId: resolvedId }, { mode: "push" });
         } else {
           openPane(pluginViewPane, { pluginId: resolvedId }, { mode: "push" });
         }

@@ -13,7 +13,7 @@ import { convSummaryPane } from "../panes";
 export function SummarizeButton() {
   const { convId } = conversationPane.useParams();
   const summariesResult = useResource(conversationSummariesResource);
-  const { isOpen, toggle } = convSummaryPane.useToggle({ convId }, { input: { convId } });
+  const { isOpen, toggle } = convSummaryPane.useToggle({}, { input: { convId } });
 
   // Render disabled-neutral while pending — badge depends on data so we must
   // not flash the wrong (no-badge) state during the load window.

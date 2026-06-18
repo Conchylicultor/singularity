@@ -5,7 +5,7 @@ import { convFileTreePane } from "../panes";
 
 export function ConvTreeButton() {
   const { convId } = conversationPane.useParams();
-  const { isOpen, toggle } = convFileTreePane.useToggle({ convId }, { input: { convId } });
+  const { isOpen, toggle } = convFileTreePane.useToggle({}, { input: { convId } });
 
   return (
     <Button

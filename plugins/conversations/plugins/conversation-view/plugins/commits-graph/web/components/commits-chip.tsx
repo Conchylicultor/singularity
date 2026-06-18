@@ -14,7 +14,7 @@ export function CommitsChip() {
     attemptId: conversation?.attemptId ?? "",
   });
   const pushesResult = useResource(pushesResource);
-  const { isOpen, toggle } = convCommitsGraphPane.useToggle({ convId }, { input: { convId } });
+  const { isOpen, toggle } = convCommitsGraphPane.useToggle({}, { input: { convId } });
 
   if (deltaResult.pending) return null;
   if (pushesResult.pending) return null;
