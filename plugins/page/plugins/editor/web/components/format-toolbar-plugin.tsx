@@ -122,10 +122,6 @@ export function FormatToolbarPlugin() {
   // bar down. Held in a ref (read by listeners) mirrored to state (gates render).
   const pinnedRef = useRef(false);
   const [pinned, setPinnedState] = useState(false);
-  const setPinned = useCallback((next: boolean) => {
-    pinnedRef.current = next;
-    setPinnedState(next);
-  }, []);
 
   const update = useCallback(() => {
     // Pinned: a popover owns the bar; freeze the snapshot until it closes.
@@ -136,9 +132,18 @@ export function FormatToolbarPlugin() {
       setVisible(false);
       return;
     }
-    // Read the live DOM selection rect (Lexical keeps it in sync with the model).
+    // Derive visibility from the LIVE document selection, not just the model: the
+    // bar is this editor's only when the native selection is non-collapsed AND its
+    // anchor sits inside this editor's root. Without this containment gate a stale
+    // model selection (left behind when focus/selection moved elsewhere without a
+    // Lexical event reaching us) would strand the bar on screen.
     const domSelection = window.getSelection();
-    if (!domSelection || domSelection.rangeCount === 0) {
+    if (!domSelection || domSelection.rangeCount === 0 || domSelection.isCollapsed) {
+      setVisible(false);
+      return;
+    }
+    const root = editor.getRootElement();
+    if (!root || !root.contains(domSelection.anchorNode)) {
       setVisible(false);
       return;
     }
@@ -171,7 +176,19 @@ export function FormatToolbarPlugin() {
     const top = fitsAbove ? rect.top - BAR_GAP : rect.bottom + BAR_GAP;
     setPosition({ left, top, placement });
     setVisible(true);
-  }, []);
+  }, [editor]);
+
+  const setPinned = useCallback(
+    (next: boolean) => {
+      pinnedRef.current = next;
+      setPinnedState(next);
+      // Releasing the pin: re-evaluate now. A popover typically closes via an
+      // outside click that fires no Lexical event for this editor, so without
+      // this the frozen-visible bar would linger after the selection is gone.
+      if (!next) editor.getEditorState().read(update);
+    },
+    [editor, update],
+  );
 
   useEffect(() => {
     // `read` so $getSelection is available; the update listener fires on every
@@ -196,10 +213,19 @@ export function FormatToolbarPlugin() {
       if (!pinnedRef.current) setVisible(false);
     };
     root?.addEventListener("blur", onBlur);
+    // The native, document-wide selection signal. Lexical's SELECTION_CHANGE only
+    // fires while the selection is inside this editor, so a click that clears or
+    // moves the selection AWAY from it (deselecting by clicking empty space, or
+    // landing in another editor) never reaches the editor-scoped path. This global
+    // listener re-evaluates on every such change; `update`'s containment gate then
+    // hides the bar — closing the "stays displayed when I click elsewhere" gap.
+    const onDocSelectionChange = () => editor.getEditorState().read(update);
+    document.addEventListener("selectionchange", onDocSelectionChange);
     return () => {
       unregisterUpdate();
       unregisterSelection();
       root?.removeEventListener("blur", onBlur);
+      document.removeEventListener("selectionchange", onDocSelectionChange);
     };
   }, [editor, update]);
 
