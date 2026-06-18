@@ -26,6 +26,9 @@ export interface ColumnProps extends React.HTMLAttributes<HTMLElement> {
   footer?: ReactNode;
   /** Wrap `body` in a `<Scroll axis="y" fill>` cell. Defaults to true. */
   scrollBody?: boolean;
+  /** Hide the scrollbar chrome on the managed `Scroll` body while keeping it
+   *  scrollable. Only applies when `scrollBody` is true. Defaults to false. */
+  hideScrollbar?: boolean;
   /** Emit the flex-child fill pair (`min-h-0 flex-1`) so the column fills its own
    *  flex-col parent. Defaults to false. */
   fill?: boolean;
@@ -61,6 +64,7 @@ export function Column({
   body,
   footer,
   scrollBody = true,
+  hideScrollbar = false,
   fill = false,
   gap = "none",
   as: As = "div",
@@ -77,7 +81,7 @@ export function Column({
       {header != null && <div className="shrink-0">{header}</div>}
       {body != null &&
         (scrollBody ? (
-          <Scroll axis="y" fill>
+          <Scroll axis="y" fill hideScrollbar={hideScrollbar}>
             {body}
           </Scroll>
         ) : (

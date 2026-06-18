@@ -3575,7 +3575,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `primitives/css/ui-kit.cn`
             - Exports: Types: `ScrollAxis`, `ScrollProps`; Values: `Scroll`, `scrollClasses`
           - Cross-plugin:
-            - Imported by: `apps/pages/page-tree`, `apps/pages/starred`, `build`, `build/build-logs`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`, `conversations/conversation-view/prompt-templates`, `primitives/css/column`, `primitives/tabbed-view`
+            - Imported by: `apps/pages/page-tree`, `apps/pages/starred`, `build`, `build/build-logs`, `conversations/conversation-view/code/docs-button`, `conversations/conversation-view/code/file-pane`, `conversations/conversation-view/code/file-pane/diff`, `conversations/conversation-view/dependencies`, `conversations/conversation-view/jsonl-viewer`, `conversations/conversation-view/jsonl-viewer/attachment/nested-memory`, `conversations/conversation-view/jsonl-viewer/code-listing`, `conversations/conversation-view/jsonl-viewer/tool-call`, `conversations/conversation-view/jsonl-viewer/tool-call/agent`, `conversations/conversation-view/jsonl-viewer/tool-call/bash`, `conversations/conversation-view/jsonl-viewer/tool-call/skill`, `conversations/conversation-view/jsonl-viewer/tool-call/task-tools`, `conversations/conversation-view/jsonl-viewer/tool-call/workflow`, `conversations/conversation-view/jsonl-viewer/tool-call/write`, `conversations/conversation-view/prompt-templates`, `primitives/css/column`
         - **`section-label`** — Eyebrow/section-label typography primitive: small caps muted label for form sections and content headers.
           - Web:
             - Uses: `primitives/css/ui-kit.cn`
@@ -3991,7 +3991,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Exports: Values: `getTabId`
     - **`tabbed-view`** — Factory for slot-backed tab-host views with localStorage persistence.
       - Web:
-        - Uses: `primitives/css/column.Column`, `primitives/css/scroll.Scroll`, `primitives/css/spacing.Stack`, `primitives/slot-render.renderIsolated`, `primitives/view-switcher.ViewSwitcher`
+        - Uses: `primitives/css/column.Column`, `primitives/css/spacing.Stack`, `primitives/slot-render.renderIsolated`, `primitives/view-switcher.ViewSwitcher`
         - Exports: Types: `TabbedView`, `TabContribution`; Values: `defineTabbedView`
       - Cross-plugin:
         - Imported by: `conversations/conversations-view`, `debug/slow-ops/pane`, `tasks/task-list`

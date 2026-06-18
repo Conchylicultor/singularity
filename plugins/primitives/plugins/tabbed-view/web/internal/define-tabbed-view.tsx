@@ -2,7 +2,6 @@ import { type ComponentType, type ReactNode, useMemo, useState } from "react";
 import { defineSlot, type Slot } from "@plugins/framework/plugins/web-sdk/core";
 import type { Contribution } from "@plugins/framework/plugins/web-sdk/core";
 import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
-import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
 import { renderIsolated } from "@plugins/primitives/plugins/slot-render/web";
 import { ViewSwitcher } from "@plugins/primitives/plugins/view-switcher/web";
@@ -81,16 +80,14 @@ export function defineTabbedView<ViewProps extends object>(
             </Stack>
           ) : undefined
         }
-        scrollBody={false}
+        hideScrollbar
         body={
-          <Scroll fill hideScrollbar>
-            {activeView &&
-              renderIsolated(
-                View.id,
-                activeView as unknown as Contribution,
-                viewProps as ViewProps,
-              )}
-          </Scroll>
+          activeView &&
+          renderIsolated(
+            View.id,
+            activeView as unknown as Contribution,
+            viewProps as ViewProps,
+          )
         }
       />
     );
