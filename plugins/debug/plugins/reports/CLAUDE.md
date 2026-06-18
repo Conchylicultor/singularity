@@ -17,7 +17,7 @@ Each row shows:
 - a **loop** badge when the report is part of a crash loop,
 - a **×count** dedup multiplier when the same fingerprint recurred,
 - the **last-seen** relative time,
-- a **task →** link to the report's filed task (`/tasks/t/<taskId>`) when present,
+- a **task →** link to the report's filed task (`/agents/tasks/t/<taskId>`) when present,
 - and the error line (`errorType: message`, or just `message`), truncated.
 
 All reports are listed — noise is surfaced via the badge, never filtered out.

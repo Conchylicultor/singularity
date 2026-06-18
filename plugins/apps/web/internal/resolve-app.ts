@@ -29,10 +29,11 @@ export interface ResolvedApp {
 
 /**
  * Resolve a root-relative `pathname` to the app that should own it AND the
- * app-local route path to load. Falls back to the `fallback: true` app for
- * paths that match no app (e.g. a `/c/:id` deep link), mirroring the
- * canonicalization in apps-layout. Returns undefined only when nothing matches
- * and there is no fallback app.
+ * app-local route path to load. Every app owns its `path` prefix and all its
+ * deep links live under it (e.g. agent-manager's `/agents/c/:id`), so pure
+ * longest-prefix matching resolves everything — no catch-all app. Returns
+ * undefined when nothing matches (the caller decides what to do, e.g. redirect
+ * to the launcher).
  *
  * THE single source of truth for "which tab does this URL belong to", used by
  * the sanctioned cross-app `navigate()` so the focused tab's `appId` can never
@@ -43,15 +44,6 @@ export function resolveAppForPath(
   apps: readonly ActiveApp[],
 ): ResolvedApp | undefined {
   const matched = matchAppForPath(pathname, apps);
-  if (matched) {
-    return { app: matched, routePath: stripBasePath(pathname, matched.path) };
-  }
-  const fallback = apps.find((a) => a.fallback);
-  if (fallback) {
-    // Unmatched root path → fallback namespace. The raw pathname IS the
-    // app-local route (the fallback app's panes live at root-relative segments,
-    // e.g. `c/:id`); the live store mirrors it to `fallback.path + pathname`.
-    return { app: fallback, routePath: pathname };
-  }
-  return undefined;
+  if (!matched) return undefined;
+  return { app: matched, routePath: stripBasePath(pathname, matched.path) };
 }

@@ -13,7 +13,6 @@ export default {
       tooltip: "Agent Manager",
       component: AgentManagerLayout,
       path: "/agents",
-      fallback: true,
     }),
   ],
 } satisfies PluginDefinition;

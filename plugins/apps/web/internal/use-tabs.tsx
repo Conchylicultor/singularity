@@ -52,9 +52,9 @@ export interface TabsApi {
   /** Swap `tabId`'s app in place (keeps the tabId) and focus it. */
   replaceTabApp(tabId: string, appId: string): void;
   /**
-   * THE sanctioned cross-app navigation: resolve `url` to its owning app
-   * (matched app or the `fallback` app), swap the focused tab to that app in
-   * place, and set its route from the URL — all through the live pane store, so
+   * THE sanctioned cross-app navigation: resolve `url` to its owning app (by
+   * longest-prefix path match), swap the focused tab to that app in place, and
+   * set its route from the URL — all through the live pane store, so
    * the focused tab's `appId` can never drift from the URL. Use this anywhere
    * you'd reach for `window.history.pushState` (enforced by `no-raw-history-nav`).
    */
@@ -399,7 +399,7 @@ export function TabsProvider({ children }: { children: ReactNode }): ReactNode {
       // Strip any query/hash — routing is path-based.
       const pathname = url.split(/[?#]/)[0] ?? url;
       const resolved = resolveAppForPath(pathname, appsRef.current);
-      if (!resolved) return; // No app owns this path and there is no fallback.
+      if (!resolved) return; // No app's path prefix owns this URL.
       const route = parseUrl(resolved.routePath) ?? [];
       const focused = tabsRef.current.find((t) => t.tabId === focusedRef.current);
       if (focused && focused.appId === resolved.app.id) {

@@ -26,10 +26,6 @@ export const Apps = {
     component: ComponentType;
     path: string;
     onClick?: () => void;
-    /** The app that hosts root-relative deep-links that match no app's path
-     * (e.g. `/c/:id`). The router canonicalizes such paths into this app's
-     * namespace. Exactly one app should set this. */
-    fallback?: boolean;
     /** Optional overlay rendered on the app's rail icon (e.g. an attention
      * dot). Painted at the icon's top-right corner; render `null` when there's
      * nothing to surface so the corner stays empty. */

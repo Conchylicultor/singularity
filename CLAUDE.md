@@ -176,7 +176,7 @@ or copy it as a starting point:
 
 ```bash
 bun e2e/screenshot.mjs \
-  --url http://<worktree>.localhost:9000/c/<id> \
+  --url http://<worktree>.localhost:9000/agents/c/<id> \
   --click "Design docs" \
   --out /tmp/docs
 ```

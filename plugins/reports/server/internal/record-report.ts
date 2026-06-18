@@ -193,7 +193,9 @@ export async function recordReport(
     variant: spec.meta.variant,
     muted: row.noise,
     dedupeKey: notifDedupeKey,
-    linkTo: outcome.taskId ? `/tasks/t/${outcome.taskId}` : null,
+    // Full path into the agent-manager namespace (its task pane lives at
+    // `/agents/tasks/t/:taskId`).
+    linkTo: outcome.taskId ? `/agents/tasks/t/${outcome.taskId}` : null,
     metadata: {
       reportId: row.id,
       taskId: outcome.taskId,

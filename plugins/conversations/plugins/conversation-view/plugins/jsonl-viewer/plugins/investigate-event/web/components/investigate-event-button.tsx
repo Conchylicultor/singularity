@@ -35,7 +35,7 @@ export function InvestigateEventButton({
           title: "Investigating event",
           description: "Agent launched in the background — open it from here or the bell.",
           variant: "info",
-          linkTo: `/c/${conv.id}`,
+          linkTo: `/agents/c/${conv.id}`,
         });
       }}
       getRequest={(userText) => {

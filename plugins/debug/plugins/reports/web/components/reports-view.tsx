@@ -87,7 +87,7 @@ function ReportRow({ report: c, serverBuildId }: { report: Report; serverBuildId
             <button
               type="button"
               className="text-primary hover:underline"
-              onClick={() => navigate(`/tasks/t/${c.taskId}`)}
+              onClick={() => navigate(`/agents/tasks/t/${c.taskId}`)}
             >
               task →
             </button>

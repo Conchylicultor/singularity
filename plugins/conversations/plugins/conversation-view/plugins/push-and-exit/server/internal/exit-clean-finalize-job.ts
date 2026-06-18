@@ -53,7 +53,8 @@ export const exitCleanFinalizeJob = defineJob({
           ? "No changes were pushed — task marked as dropped"
           : "Branch pushed and conversation closed",
         variant: dropped ? "info" : "success",
-        linkTo: `/c/${conversationId}`,
+        // Full path into the agent-manager namespace (`/agents/c/:convId`).
+        linkTo: `/agents/c/${conversationId}`,
         dedupeKey: `push-and-exit-clean:${conversationId}`,
       });
     });

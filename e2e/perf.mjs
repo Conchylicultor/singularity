@@ -9,7 +9,7 @@
 //
 // Example:
 //   bun e2e/perf.mjs \
-//     --url http://att-1780408361-zzpk.localhost:9000/c/<id> \
+//     --url http://att-1780408361-zzpk.localhost:9000/agents/c/<id> \
 //     --out /tmp/run
 //
 // Outputs:

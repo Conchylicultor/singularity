@@ -43,7 +43,10 @@ export const notifyConversationCreatedJob = defineJob({
       title,
       description,
       variant: "info",
-      linkTo: `/c/${event.conversationId}`,
+      // Full path into the agent-manager app namespace (its conversation pane
+      // lives at `/agents/c/:convId`), so the link resolves by prefix match
+      // like every other app's deep links.
+      linkTo: `/agents/c/${event.conversationId}`,
       dedupeKey: `conversation-created:${event.conversationId}`,
     });
   },

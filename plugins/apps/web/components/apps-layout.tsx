@@ -106,28 +106,20 @@ function DocumentTitleSync() {
 
 export function AppsLayout() {
   const activeApp = useActiveApp();
-  const allApps = Apps.App.useContributions();
   const pathname = usePathname();
 
   const matchedId = activeApp?.id;
-  const fallbackPath = allApps.find((a) => a.fallback)?.path;
 
-  // `/` is no longer an app — it redirects to the Home launcher. Any other
-  // root-relative path that matches no app (e.g. a server-generated `/c/:id`
-  // notification link) is canonicalized into the fallback app's namespace, so
-  // the namespace stays hardcoded only at the app registration. These run
-  // before the tabs surface mounts, normalizing the URL the seed tab reads.
+  // Any path that matches no app — the bare root `/`, or a stale deep link whose
+  // app was removed — redirects to the Home launcher. Every app owns its `path`
+  // prefix and emits full-path deep links under it (e.g. `/agents/c/:id`), so a
+  // resolvable URL always matches an app directly; there is no catch-all app.
+  // Runs before the tabs surface mounts, normalizing the URL the seed tab reads.
   useEffect(() => {
-    if (pathname === "/") {
-      redirectTo("/home");
-      return;
-    }
-    if (!matchedId && fallbackPath) {
-      redirectTo(fallbackPath + pathname);
-    }
-  }, [pathname, matchedId, fallbackPath]);
+    if (!matchedId) redirectTo("/home");
+  }, [pathname, matchedId]);
 
-  const basePath = activeApp?.path === "/" ? "" : (activeApp?.path ?? "");
+  const basePath = activeApp?.path ?? "";
 
   // Populate the global pane registry here, at the apps root, rather than
   // relying on the active app's layout renderer to do it. The registry reflects

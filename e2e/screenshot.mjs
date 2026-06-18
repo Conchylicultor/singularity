@@ -13,7 +13,7 @@
 //
 // Example (my docs button):
 //   bun e2e/screenshot.mjs \
-//     --url http://claude-1776361358.localhost:9000/c/claude-1776360729 \
+//     --url http://claude-1776361358.localhost:9000/agents/c/claude-1776360729 \
 //     --click "Design docs" \
 //     --out /tmp/docs
 //
