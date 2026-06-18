@@ -1,9 +1,9 @@
-import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, SidebarMenu, SidebarMenuButton, SidebarMenuItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo } from "react";
 import { useConversations } from "@plugins/conversations/web";
 import { ScrollSentinel } from "@plugins/primitives/plugins/cursor-pagination/web";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
-import { useGoneConversationsPagination } from "@plugins/conversations/plugins/conversations-view/web";
+import { useGoneConversationsPagination, RowActions, RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import { MdClose } from "react-icons/md";
@@ -53,13 +53,13 @@ export function HistoryView({
       >
         <ConversationItem conv={conv} />
       </SidebarMenuButton>
-      <SidebarMenuAction
-        onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-        className="opacity-0 group-hover/menu-item:opacity-100"
-        aria-label="Close conversation"
-      >
-        <MdClose className="size-3.5" />
-      </SidebarMenuAction>
+      <RowActions>
+        <RowActionButton
+          icon={MdClose}
+          label="Close conversation"
+          onClick={(e) => onCloseConversation(conv.id, e)}
+        />
+      </RowActions>
     </SidebarMenuItem>
   );
 

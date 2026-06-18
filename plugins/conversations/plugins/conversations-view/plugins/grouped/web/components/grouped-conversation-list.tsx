@@ -1,4 +1,4 @@
-import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, SidebarMenu, SidebarMenuButton, SidebarMenuItem, SidebarMenuSub, SidebarMenuSubButton, SidebarMenuSubItem } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useMemo, useState, useCallback, Fragment, type ReactNode } from "react";
 import { Rank } from "@plugins/primitives/plugins/rank/core";
 import {
@@ -13,7 +13,8 @@ import {
 } from "@dnd-kit/core";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { RowActions, RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
 import {
   createConversationGroup,
   patchConversationGroup,
@@ -64,7 +65,7 @@ export interface GroupedConversationListProps {
   paginatedItems: ConversationEntry[];
   activeId: string | null;
   onNavigate: (id: string) => void;
-  onCloseConversation: (id: string, e: React.MouseEvent) => void;
+  onCloseConversation: (id: string, e: React.MouseEvent) => void | Promise<void>;
 }
 
 function rowTint(conv: ConversationEntry) {
@@ -111,8 +112,6 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
     members,
     tasksData,
   } = props;
-
-  const { mutate: removeMemberMutation } = useEndpointMutation(removeConversationGroupMember);
 
   const groupIdByConvId = useMemo(() => {
     const m = new Map<string, string>();
@@ -386,26 +385,20 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
           >
             <ConversationItem conv={conv} />
           </SidebarMenuButton>
-          {enclosingGroupId !== undefined && (
-            <SidebarMenuAction
-              onClick={(e: React.MouseEvent) => {
-                e.stopPropagation();
-                removeMemberMutation({ params: { conversationId: conv.id } });
-              }}
-              className="right-7 opacity-0 group-hover/menu-item:opacity-100"
-              aria-label="Remove from group"
-              title="Remove from group"
-            >
-              <MdRemoveCircleOutline className="size-3.5" />
-            </SidebarMenuAction>
-          )}
-          <SidebarMenuAction
-            onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-            className="opacity-0 group-hover/menu-item:opacity-100"
-            aria-label="Close conversation"
-          >
-            <MdClose className="size-3.5" />
-          </SidebarMenuAction>
+          <RowActions>
+            {enclosingGroupId !== undefined && (
+              <RowActionButton
+                icon={MdRemoveCircleOutline}
+                label="Remove from group"
+                onClick={(e) => { e.stopPropagation(); return fetchEndpoint(removeConversationGroupMember, { conversationId: conv.id }); }}
+              />
+            )}
+            <RowActionButton
+              icon={MdClose}
+              label="Close conversation"
+              onClick={(e) => onCloseConversation(conv.id, e)}
+            />
+          </RowActions>
         </>
       }
       forks={
@@ -420,13 +413,13 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
                 >
                   <ConversationItem conv={fork} />
                 </SidebarMenuSubButton>
-                <SidebarMenuAction
-                  onClick={(e: React.MouseEvent) => onCloseConversation(fork.id, e)}
-                  className="opacity-0 group-hover/menu-item:opacity-100"
-                  aria-label="Close conversation"
-                >
-                  <MdClose className="size-3.5" />
-                </SidebarMenuAction>
+                <RowActions>
+                  <RowActionButton
+                    icon={MdClose}
+                    label="Close conversation"
+                    onClick={(e) => onCloseConversation(fork.id, e)}
+                  />
+                </RowActions>
               </SidebarMenuSubItem>
             ))}
           </SidebarMenuSub>
@@ -561,12 +554,13 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
                       >
                         <ConversationItem conv={conv} />
                       </SidebarMenuButton>
-                      <SidebarMenuAction
-                        onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-                        className="opacity-0 group-hover/menu-item:opacity-100"
-                      >
-                        <MdClose className="size-3.5" />
-                      </SidebarMenuAction>
+                      <RowActions>
+                        <RowActionButton
+                          icon={MdClose}
+                          label="Close conversation"
+                          onClick={(e) => onCloseConversation(conv.id, e)}
+                        />
+                      </RowActions>
                     </SidebarMenuItem>
                   ))}
                   {paginatedItems.map((conv) => (
@@ -578,12 +572,13 @@ function GroupedConversationListInner(props: GroupedConversationListInnerProps) 
                       >
                         <ConversationItem conv={conv} />
                       </SidebarMenuButton>
-                      <SidebarMenuAction
-                        onClick={(e: React.MouseEvent) => onCloseConversation(conv.id, e)}
-                        className="opacity-0 group-hover/menu-item:opacity-100"
-                      >
-                        <MdClose className="size-3.5" />
-                      </SidebarMenuAction>
+                      <RowActions>
+                        <RowActionButton
+                          icon={MdClose}
+                          label="Close conversation"
+                          onClick={(e) => onCloseConversation(conv.id, e)}
+                        />
+                      </RowActions>
                     </SidebarMenuItem>
                   ))}
                 </SidebarMenu>

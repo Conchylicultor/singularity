@@ -1,4 +1,4 @@
-import { cn, SidebarMenu, SidebarMenuAction, SidebarMenuButton } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
+import { cn, SidebarMenu, SidebarMenuButton } from "@plugins/primitives/plugins/css/plugins/ui-kit/web";
 import { useCallback, useMemo, useState, type ReactNode } from "react";
 import {
   DndContext,
@@ -18,12 +18,13 @@ import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { conversationsResource } from "@plugins/conversations/core";
 import type { ViewProps } from "@plugins/conversations/plugins/conversations-view/web";
+import { RowActions, RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
 import { ConversationItem } from "@plugins/conversations/plugins/conversation-ui/plugins/item/web";
 import type { Conversation } from "@plugins/tasks/plugins/tasks-core/core";
 import { useResource, useCombinedResources } from "@plugins/primitives/plugins/live-state/web";
 import { Loading } from "@plugins/primitives/plugins/loading/web";
 import { useOptimisticResource } from "@plugins/primitives/plugins/optimistic-mutation/web";
-import { fetchEndpoint, useEndpointMutation } from "@plugins/infra/plugins/endpoints/web";
+import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { reorderQueue, promoteQueue, demoteQueue, stepDownQueue, rerankQueue } from "../../shared/endpoints";
 import { queueRanksResource } from "../../shared/resources";
 import { applyReorder, type ReorderVars } from "./apply-reorder";
@@ -109,7 +110,6 @@ export function QueueView({
     mutate: (vars) => fetchEndpoint(reorderQueue, {}, { body: vars }),
   });
   const dispatchReorder = queueResult.dispatch;
-  const { mutate: rerankMutation } = useEndpointMutation(rerankQueue);
   const tasksResult = useResource(tasksResource);
   // The section assignment reads THREE independently-arriving resources
   // (conversations, queue ranks, tasks). Gate on all of them together: a
@@ -480,15 +480,13 @@ export function QueueView({
                       </Badge>
                     )}
                   </SidebarMenuButton>
-                  <SidebarMenuAction
-                    onClick={(e: React.MouseEvent) =>
-                      void onCloseConversation(group.selected.id, e)
-                    }
-                    className="opacity-0 group-hover/menu-item:opacity-100"
-                    aria-label="Close conversation"
-                  >
-                    <MdClose className="size-3.5" />
-                  </SidebarMenuAction>
+                  <RowActions>
+                    <RowActionButton
+                      icon={MdClose}
+                      label="Close conversation"
+                      onClick={(e) => onCloseConversation(group.selected.id, e)}
+                    />
+                  </RowActions>
                 </li>
               ))}
             </SidebarMenu>
@@ -513,22 +511,18 @@ export function QueueView({
                     >
                       <ConversationItem conv={conv} />
                     </SidebarMenuButton>
-                    <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
-                      <button
-                        onClick={(e) => { e.stopPropagation(); rerankMutation({ body: { conversationId: conv.id } }); }}
-                        className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
-                        aria-label="Add to queue"
-                      >
-                        <MdOutlineQueue className="size-3.5" />
-                      </button>
-                      <button
-                        onClick={(e: React.MouseEvent) => { e.stopPropagation(); void onCloseConversation(conv.id, e); }}
-                        className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
-                        aria-label="Close conversation"
-                      >
-                        <MdClose className="size-3.5" />
-                      </button>
-                    </div>
+                    <RowActions>
+                      <RowActionButton
+                        icon={MdOutlineQueue}
+                        label="Add to queue"
+                        onClick={(e) => { e.stopPropagation(); return fetchEndpoint(rerankQueue, {}, { body: { conversationId: conv.id } }); }}
+                      />
+                      <RowActionButton
+                        icon={MdClose}
+                        label="Close conversation"
+                        onClick={(e) => onCloseConversation(conv.id, e)}
+                      />
+                    </RowActions>
                   </li>
                 ))}
               </SidebarMenu>
@@ -554,15 +548,13 @@ export function QueueView({
                     >
                       <ConversationItem conv={conv} />
                     </SidebarMenuButton>
-                    <SidebarMenuAction
-                      onClick={(e: React.MouseEvent) =>
-                        void onCloseConversation(conv.id, e)
-                      }
-                      className="opacity-0 group-hover/menu-item:opacity-100"
-                      aria-label="Close conversation"
-                    >
-                      <MdClose className="size-3.5" />
-                    </SidebarMenuAction>
+                    <RowActions>
+                      <RowActionButton
+                        icon={MdClose}
+                        label="Close conversation"
+                        onClick={(e) => onCloseConversation(conv.id, e)}
+                      />
+                    </RowActions>
                   </li>
                 ))}
               </SidebarMenu>
@@ -675,42 +667,34 @@ function QueueRow({
             </Badge>
           )}
         </SidebarMenuButton>
-        <div className="absolute right-1 top-1/2 flex -translate-y-1/2 items-center opacity-0 group-hover/menu-item:opacity-100">
+        <RowActions>
           {!isTop && (
-            <button
-              onClick={(e) => { e.stopPropagation(); void onPromoteToTop(conv.id); }}
-              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
-              aria-label="Move to top"
-            >
-              <MdVerticalAlignTop className="size-3.5" />
-            </button>
+            <RowActionButton
+              icon={MdVerticalAlignTop}
+              label="Move to top"
+              onClick={(e) => { e.stopPropagation(); return onPromoteToTop(conv.id); }}
+            />
           )}
           {canStepDown && (
-            <button
-              onClick={(e) => { e.stopPropagation(); void onStepDown(conv.id); }}
-              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
-              aria-label="Move down 5"
-            >
-              <MdKeyboardDoubleArrowDown className="size-3.5" />
-            </button>
+            <RowActionButton
+              icon={MdKeyboardDoubleArrowDown}
+              label="Move down 5"
+              onClick={(e) => { e.stopPropagation(); return onStepDown(conv.id); }}
+            />
           )}
           {!isBottom && (
-            <button
-              onClick={(e) => { e.stopPropagation(); void onSendToBottom(conv.id); }}
-              className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
-              aria-label="Move to bottom"
-            >
-              <MdVerticalAlignBottom className="size-3.5" />
-            </button>
+            <RowActionButton
+              icon={MdVerticalAlignBottom}
+              label="Move to bottom"
+              onClick={(e) => { e.stopPropagation(); return onSendToBottom(conv.id); }}
+            />
           )}
-          <button
-            onClick={(e: React.MouseEvent) => void onClose(conv.id, e)}
-            className="flex h-5 w-5 items-center justify-center rounded-md hover:bg-accent"
-            aria-label="Close conversation"
-          >
-            <MdClose className="size-3.5" />
-          </button>
-        </div>
+          <RowActionButton
+            icon={MdClose}
+            label="Close conversation"
+            onClick={(e) => onClose(conv.id, e)}
+          />
+        </RowActions>
       </div>
       <div
         ref={afterDrop.setNodeRef}

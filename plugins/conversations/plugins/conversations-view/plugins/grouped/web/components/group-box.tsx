@@ -1,6 +1,7 @@
 import { MdDeleteOutline, MdDragIndicator } from "react-icons/md";
 import type { ReactNode } from "react";
 import { useDraggable } from "@dnd-kit/core";
+import { RowActionButton } from "@plugins/conversations/plugins/conversations-view/web";
 import type { ConversationGroup } from "../../shared";
 import { GroupContainer } from "./group-container";
 import { GroupRename } from "./group-rename";
@@ -65,22 +66,19 @@ export function GroupBox({
           >
             <MdDragIndicator className="size-3.5" />
           </button>
-          <button
-            type="button"
-            onClick={(e) => {
-              e.stopPropagation();
-              void onDelete();
-            }}
-            aria-label="Delete group"
-            className="flex size-5 shrink-0 items-center justify-center rounded-md text-muted-foreground opacity-0 hover:bg-accent hover:text-foreground group-hover/header:opacity-100"
-            title={
+          <RowActionButton
+            icon={MdDeleteOutline}
+            label={
               isEmpty
                 ? "Delete group"
                 : "Delete group (members return to ungrouped)"
             }
-          >
-            <MdDeleteOutline className="size-3.5" />
-          </button>
+            onClick={(e) => {
+              e.stopPropagation();
+              return onDelete();
+            }}
+            className="opacity-0 group-hover/header:opacity-100"
+          />
         </div>
       }
     >
