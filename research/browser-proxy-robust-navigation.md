@@ -70,8 +70,44 @@ The only mechanisms that genuinely cover JS location are **(a)** full JavaScript
 instrumentation (parse + rewrite every script so `location` reads go through a
 proxied accessor — the testcafe-hammerhead approach; a large, brittle parser
 dependency) or **(b)** a service worker (impossible on the opaque-origin
-sandboxed iframe). Both are out of scope; filed as a follow-up. Same root cause
-limits SPA URL reflection (`window.location` inside the frame is the proxy URL).
+sandboxed iframe). Same root cause limits SPA URL reflection (`window.location`
+inside the frame is the proxy URL).
+
+### Resolution: graceful degradation (chosen), not instrumentation
+
+We do **not** ship a JS-instrumentation pipeline. A hammerhead-style script
+rewriter is a large, perpetually-brittle dependency (breaks on new JS syntax,
+adds parse + serialize cost to every script, and never fully covers dynamic
+`eval`/`Function` code) — far too much for an in-app browser convenience. The
+escape is instead **detected and surfaced**, so the dead-end (blank frame) turns
+into a clear recovery action.
+
+**Detection** (`webview/web/escape-detect.ts`, pure + unit-tested): a proxied
+HTML document ALWAYS posts a `commit` as the injected shim runs (before
+`onLoad`). An un-proxied escape destination never does. So at the iframe's
+`onLoad`, an **iframe-initiated** load (the tab was not `loading` — the parent
+didn't start it) of an **active, proxied** tab that produced **no commit** is an
+escape. This single signal excludes every look-alike:
+
+- normal proxied load → committed (not an escape);
+- PRG POST landing (iframe-initiated, but routed through the proxy) → committed;
+- non-HTML / proxy error page (no shim ⇒ no commit) → always parent-initiated,
+  so `wasLoading` is true.
+
+Crucially this generalises beyond `location.*` to *every* un-interceptable
+escape — notably a scripted `form.submit()` (which fires no `submit` event) — so
+it is a structural cure, not a point fix.
+
+**Recovery** (`webview/web/components/escape-overlay.tsx`): the tab gets an
+`escaped` flag (`shell/web/nav-store.ts`), cleared by any parent navigation or a
+fresh commit. While set, an overlay card covers the blank frame: "This page
+can't be shown here … Open it in your system browser." We can't learn the escape
+*destination* (no commit; the cross-origin frame is unreadable), so "Open in
+system browser" reopens the **source** URL — the real browser then re-runs the
+same JS redirect with no framing restriction and lands the user where the page
+intended. "Reload" reloads the source through the proxy; a dismiss (×) reveals
+whatever the frame shows (for escapes that landed on a framable but un-proxied
+page).
 
 ## Design
 
@@ -146,6 +182,8 @@ Per-tab adds `displayUrl: string | null` (omnibox override) and
 
 - A POST that lands via PRG (303 → GET) re-GETs once when committed (the new
   history entry's src loads). Acceptable; PRG GETs are idempotent.
-- `location = …` escapes remain (browser limitation) → follow-up task.
+- `location = …` escapes can't be *kept* inside the proxy (browser limitation),
+  but are now detected and surfaced as an "open in system browser" recovery
+  overlay rather than a silent blank frame (see "Resolution" above).
 - `window.open` returns `null` (no live handle) — sites doing `w = open();
   w.location = …` lose the handle. Rare; documented.

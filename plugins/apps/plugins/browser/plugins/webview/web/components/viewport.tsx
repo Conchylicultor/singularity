@@ -14,6 +14,8 @@ import {
   isProxyUrl,
   parseBrowserProxyNavMessage,
 } from "@plugins/apps/plugins/browser/plugins/proxy/core";
+import { isProxyEscape } from "../escape-detect";
+import { EscapeOverlay } from "./escape-overlay";
 import { LoadingBar } from "./loading-bar";
 
 /**
@@ -31,7 +33,8 @@ const BASE_SANDBOX =
 export function Viewport() {
   const { tabs, finishLoad, open } = useBrowserTabs();
   const { enabled } = useBrowserProxy();
-  const { navigate, commit, syncDisplay } = useBrowserNav();
+  const { current, navigate, commit, syncDisplay, reload, markEscaped, clearEscaped } =
+    useBrowserNav();
   const activeLoading = tabs.find((t) => t.active)?.loading ?? false;
   const activeId = tabs.find((t) => t.active)?.id;
 
@@ -39,6 +42,12 @@ export function Viewport() {
   // to match an incoming postMessage `e.source` against our own iframes (and
   // specifically the active one) before trusting it as a nav request.
   const framesRef = useRef(new Map<string, HTMLIFrameElement>());
+
+  // Whether the active frame posted a `commit` since its last `onLoad`. A
+  // proxied HTML document always commits (the injected shim posts it as it
+  // runs, before `onLoad`); an un-proxied escape destination never does. This
+  // is the signal that distinguishes a real proxied load from an escape.
+  const committedRef = useRef(false);
 
   // NAV SYNC: the proxied page can't self-navigate (it runs in an opaque
   // origin and the injected script intercepts link clicks). It instead posts a
@@ -59,6 +68,7 @@ export function Viewport() {
           navigate(msg.url);
           break;
         case "commit":
+          committedRef.current = true;
           commit(msg.url);
           break;
         case "sync":
@@ -104,22 +114,59 @@ export function Viewport() {
                 <StartPageHost />
               ) : null
             ) : (
-              <iframe
-                key={`${tab.id}:${tab.loadKey}`}
-                ref={(el) => {
-                  if (el) {
-                    framesRef.current.set(tab.id, el);
-                  } else {
-                    framesRef.current.delete(tab.id);
-                  }
-                }}
-                src={src}
-                title="Browser viewport"
-                className="h-full w-full border-0"
-                sandbox={sandbox}
-                referrerPolicy="no-referrer"
-                onLoad={() => finishLoad(tab.id)}
-              />
+              <Overlay
+                fill
+                className="h-full w-full"
+                above={
+                  tab.escaped ? (
+                    <EscapeOverlay
+                      url={current}
+                      onReload={reload}
+                      onDismiss={clearEscaped}
+                    />
+                  ) : undefined
+                }
+              >
+                <iframe
+                  key={`${tab.id}:${tab.loadKey}`}
+                  ref={(el) => {
+                    if (el) {
+                      framesRef.current.set(tab.id, el);
+                    } else {
+                      framesRef.current.delete(tab.id);
+                    }
+                  }}
+                  src={src}
+                  title="Browser viewport"
+                  className="h-full w-full border-0"
+                  sandbox={sandbox}
+                  referrerPolicy="no-referrer"
+                  onLoad={() => {
+                    // A proxied HTML document commits before `onLoad` fires; an
+                    // un-proxied escape destination never commits. An
+                    // iframe-initiated load (not `loading` — the parent didn't
+                    // start it) of a proxied tab that produced no commit is an
+                    // escape the in-page shim couldn't intercept (a JS
+                    // `location` assignment / scripted `form.submit()`). Judged
+                    // only for the active tab, whose commits are the ones we track.
+                    const committed = committedRef.current;
+                    committedRef.current = false;
+                    const wasLoading = tab.loading;
+                    finishLoad(tab.id);
+                    if (
+                      isProxyEscape({
+                        active: tab.active,
+                        proxyEnabled: enabled,
+                        proxiedSrc: isProxyUrl(src),
+                        wasLoading,
+                        committed,
+                      })
+                    ) {
+                      markEscaped();
+                    }
+                  }}
+                />
+              </Overlay>
             )}
           </div>
         );

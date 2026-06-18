@@ -32,6 +32,17 @@ export interface BrowserTab {
    * than pushing a new history entry. Cleared once consumed.
    */
   expectCommit: boolean;
+  /**
+   * True when the iframe self-navigated out of the proxy and landed on an
+   * un-proxied document. Caused by escapes the in-page shim can't intercept — a
+   * JS `location` assignment (`location.href = …` / `.assign` / `.replace`, all
+   * `[LegacyUnforgeable]`) or a scripted `form.submit()` (fires no submit event).
+   * Detected as an iframe-initiated load that produced no `commit` (the real
+   * origin re-blocks framing → blank frame). Surfaces the escape overlay so the
+   * user can continue in their system browser. Cleared by any parent-initiated
+   * navigation or a fresh commit.
+   */
+  escaped: boolean;
 }
 
 /** The per-surface collection of tabs with one active. */
@@ -58,6 +69,7 @@ function freshTab(seq: number, url = ""): BrowserTab {
     loading: url !== "",
     displayUrl: null,
     expectCommit: url !== "",
+    escaped: false,
   };
 }
 
@@ -83,6 +95,8 @@ export interface BrowserNavApi {
   canGoForward: boolean;
   loading: boolean;
   loadKey: number;
+  /** Active tab escaped the proxy (un-proxied self-navigation); drives the escape overlay. */
+  escaped: boolean;
   /**
    * Truncate forward entries, push `url`, point at the end, mark loading. If
    * `url === current`, reloads instead. Operates on the active tab. Clears
@@ -107,6 +121,14 @@ export interface BrowserNavApi {
   commit(url: string): void;
   /** SPA in-page URL change — update the omnibox display only, nothing else. */
   syncDisplay(url: string): void;
+  /**
+   * Mark the active tab as escaped (an un-proxied self-navigation the shim
+   * couldn't intercept). Called by the webview when an iframe-initiated load
+   * completes without a `commit`. Also clears `loading` (the frame "loaded").
+   */
+  markEscaped(): void;
+  /** Dismiss the escape overlay on the active tab (escaped → false). */
+  clearEscaped(): void;
 }
 
 /**
@@ -138,6 +160,7 @@ export function useBrowserNav(): BrowserNavApi {
         loading: true,
         displayUrl: null,
         expectCommit: true,
+        escaped: false,
       }));
 
     const navigate = (url: string) =>
@@ -151,6 +174,7 @@ export function useBrowserNav(): BrowserNavApi {
             loading: url !== "",
             displayUrl: null,
             expectCommit: url !== "",
+            escaped: false,
           };
         }
         const history = [...t.history.slice(0, t.index + 1), url];
@@ -161,6 +185,7 @@ export function useBrowserNav(): BrowserNavApi {
           loading: url !== "",
           displayUrl: null,
           expectCommit: url !== "",
+          escaped: false,
         };
       });
 
@@ -174,6 +199,7 @@ export function useBrowserNav(): BrowserNavApi {
             ...t,
             displayUrl: url !== requestUrl ? url : null,
             expectCommit: false,
+            escaped: false,
           };
         }
         // Iframe-driven landing (e.g. a PRG POST): push a real history entry so
@@ -185,17 +211,28 @@ export function useBrowserNav(): BrowserNavApi {
           history,
           index: history.length - 1,
           displayUrl: null,
+          escaped: false,
         };
       });
 
     const syncDisplay = (url: string) =>
       patchActive((t) => ({ ...t, displayUrl: url }));
 
+    const markEscaped = () =>
+      patchActive((t) =>
+        t.escaped ? t : { ...t, escaped: true, loading: false },
+      );
+
+    const clearEscaped = () =>
+      patchActive((t) => (t.escaped ? { ...t, escaped: false } : t));
+
     return {
       navigate,
       reload,
       commit,
       syncDisplay,
+      markEscaped,
+      clearEscaped,
       back: () =>
         patchActive((t) =>
           t.index > 0
@@ -205,6 +242,7 @@ export function useBrowserNav(): BrowserNavApi {
                 loading: (t.history[t.index - 1] ?? "") !== "",
                 displayUrl: null,
                 expectCommit: (t.history[t.index - 1] ?? "") !== "",
+                escaped: false,
               }
             : t,
         ),
@@ -217,6 +255,7 @@ export function useBrowserNav(): BrowserNavApi {
                 loading: (t.history[t.index + 1] ?? "") !== "",
                 displayUrl: null,
                 expectCommit: (t.history[t.index + 1] ?? "") !== "",
+                escaped: false,
               }
             : t,
         ),
@@ -232,6 +271,7 @@ export function useBrowserNav(): BrowserNavApi {
     canGoForward: active.index < active.history.length - 1,
     loading: active.loading,
     loadKey: active.loadKey,
+    escaped: active.escaped,
     ...actions,
   };
 }
@@ -244,6 +284,8 @@ export interface BrowserTabSummary {
   loadKey: number;
   loading: boolean;
   active: boolean;
+  /** True when this tab escaped the proxy (drives the escape overlay). */
+  escaped: boolean;
 }
 
 /** The tab-collection API consumed by the tab strip and the webview. */
@@ -319,6 +361,7 @@ export function useBrowserTabs(): BrowserTabsApi {
       loadKey: t.loadKey,
       loading: t.loading,
       active: t.id === state.activeId,
+      escaped: t.escaped,
     })),
     activeId: state.activeId,
     ...actions,
