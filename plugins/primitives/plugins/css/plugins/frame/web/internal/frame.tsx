@@ -47,6 +47,8 @@ export interface FrameProps
   align?: FrameAlign;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -150,6 +152,7 @@ export function Frame({
   gap = "sm",
   align = "center",
   as: As = "div",
+  ref,
   className,
   ...rest
 }: FrameProps) {
@@ -164,6 +167,7 @@ export function Frame({
   const fill = present.meta || present.trailing;
   return (
     <As
+      ref={ref}
       // `justify-start` packs tracks left in the no-flex shapes (no fill track),
       // so a lone rigid `auto` never stretches and shoves `content` off the edge.
       className={cn(

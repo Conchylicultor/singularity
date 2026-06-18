@@ -15,6 +15,8 @@ export interface ClusterProps extends React.HTMLAttributes<HTMLElement> {
   justify?: StackJustify;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -40,6 +42,7 @@ export function Cluster({
   align = "center",
   justify,
   as: As = "div",
+  ref,
   className,
   children,
   ...rest
@@ -52,6 +55,7 @@ export function Cluster({
       justify={justify}
       gap={gap}
       as={As}
+      ref={ref}
       className={className}
       {...rest}
     >

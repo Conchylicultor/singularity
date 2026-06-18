@@ -130,6 +130,8 @@ export interface PinProps extends React.HTMLAttributes<HTMLElement> {
   stretch?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -156,6 +158,7 @@ export function Pin({
   decorative = false,
   stretch = false,
   as: As = "div",
+  ref,
   className,
   style,
   children,
@@ -164,6 +167,7 @@ export function Pin({
   const pin = pinClasses({ to, offset, outset, layer, decorative, stretch });
   return (
     <As
+      ref={ref}
       className={cn(pin.className, className)}
       style={{ ...pin.style, ...style }}
       {...rest}

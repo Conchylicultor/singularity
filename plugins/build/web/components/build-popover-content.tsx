@@ -12,6 +12,7 @@ import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
 import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
 import { Badge } from "@plugins/primitives/plugins/css/plugins/badge/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import {
   Collapsible,
   CollapsibleTrigger,
@@ -26,7 +27,8 @@ import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primit
 const WS_URL = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/logs`;
 
 // Mono build-log viewer: intentional fixed code size + line-height (not on the typography scale).
-const logViewerClass = "overflow-y-auto bg-muted/30 px-md py-sm font-mono text-xs leading-5";
+// Overflow is owned by the `<Scroll axis="y">` wrapper, not baked in here.
+const logViewerClass = "bg-muted/30 px-md py-sm font-mono text-xs leading-5";
 
 function formatDuration(start: Date, end: Date | null): string {
   const ms = (end ?? new Date()).getTime() - start.getTime();
@@ -157,7 +159,8 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
           <MdContentCopy />
         </Button>
       </div>
-      <div
+      <Scroll
+        axis="y"
         ref={stickyScroll.scrollRef}
         className={cn(logViewerClass, variant === "popover" ? "h-48" : "flex-1 min-h-48")}
       >
@@ -183,7 +186,7 @@ function BuildLogView({ variant }: { variant: "popover" | "pane" }) {
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
           </div>
         ))}
-      </div>
+      </Scroll>
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
         <JumpToBottomButton handle={stickyScroll} />
       </div>

@@ -14,6 +14,8 @@ export interface CenterProps extends React.HTMLAttributes<HTMLElement> {
   axis?: CenterAxis;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -34,12 +36,13 @@ export interface CenterProps extends React.HTMLAttributes<HTMLElement> {
 export function Center({
   axis = "both",
   as: As = "div",
+  ref,
   className,
   children,
   ...rest
 }: CenterProps) {
   return (
-    <As className={cn("grid", AXIS_CLASS[axis], className)} {...rest}>
+    <As ref={ref} className={cn("grid", AXIS_CLASS[axis], className)} {...rest}>
       {children}
     </As>
   );

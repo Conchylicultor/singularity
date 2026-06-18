@@ -29,6 +29,8 @@ export interface ClipProps extends React.HTMLAttributes<HTMLElement> {
   fill?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -49,12 +51,13 @@ export function Clip({
   axis = "both",
   fill = false,
   as: As = "div",
+  ref,
   className,
   children,
   ...rest
 }: ClipProps) {
   return (
-    <As className={cn(clipClasses({ axis, fill }), className)} {...rest}>
+    <As ref={ref} className={cn(clipClasses({ axis, fill }), className)} {...rest}>
       {children}
     </As>
   );

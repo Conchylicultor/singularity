@@ -235,11 +235,11 @@ function JsonlPaneInner({
   return (
     // eslint-disable-next-line layout/no-adhoc-layout -- relative+isolate positioning host that is also the flex-fill child of JsonlPane's column; hosts the scroller plus the Pin'd overlays as siblings so they don't scroll
     <div className="relative min-h-0 flex-1 isolate">
-      <div
+      <Scroll
+        axis="both"
         ref={sticky.scrollRef}
         data-pane-scroll
-        // eslint-disable-next-line layout/no-adhoc-layout -- scroll container needs a ref for sticky auto-scroll; the frozen Scroll primitive is a plain function component and cannot forward one (overflow-auto = Scroll axis="both")
-        className={`h-full overflow-auto transition-opacity ${isGone ? "opacity-50" : ""}`}
+        className={`h-full transition-opacity ${isGone ? "opacity-50" : ""}`}
       >
         {events.length === 0 ? (
           <Text as="div" variant="caption" className="text-muted-foreground">
@@ -263,7 +263,7 @@ function JsonlPaneInner({
             </EventSections>
           </LastAssistantProvider>
         )}
-      </div>
+      </Scroll>
       {totals && (
         <Pin to="bottom" stretch offset="sm" layer="raised" decorative>
           <Stack direction="row" justify="end" gap="none" className="mx-auto max-w-reading px-md">

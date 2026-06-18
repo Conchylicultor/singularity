@@ -7,7 +7,7 @@
 - Description: Live log stream section in the build detail pane. Per-run build log data endpoint.
 - Web:
   - Contributes: `BuildDetailSlots.Section` "logs" → `BuildLogSection`
-  - Uses: `build.BuildDetailSlots`, `infra/endpoints.useEndpoint`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/networking.useReconnectingWebSocket`, `shell/notifications.toast`
+  - Uses: `build.BuildDetailSlots`, `infra/endpoints.useEndpoint`, `primitives/auto-scroll.JumpToBottomButton`, `primitives/auto-scroll.useStickyScroll`, `primitives/collapsible.Collapsible`, `primitives/collapsible.CollapsibleChevron`, `primitives/collapsible.CollapsibleContent`, `primitives/collapsible.CollapsibleTrigger`, `primitives/css/scroll.Scroll`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/networking.useReconnectingWebSocket`, `shell/notifications.toast`
 - Server:
   - Uses: `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/paths.SINGULARITY_DIR`
   - Routes: `GET /api/build/runs/:id/logs`

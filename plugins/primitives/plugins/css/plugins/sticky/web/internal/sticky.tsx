@@ -66,6 +66,8 @@ export interface StickyProps extends React.HTMLAttributes<HTMLElement> {
   layer?: OverlayLayer;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -84,6 +86,7 @@ export function Sticky({
   offset = "none",
   layer = "raised",
   as: As = "div",
+  ref,
   className,
   style,
   children,
@@ -92,6 +95,7 @@ export function Sticky({
   const sticky = stickyClasses({ edge, offset, layer });
   return (
     <As
+      ref={ref}
       className={cn(sticky.className, className)}
       style={{ ...sticky.style, ...style }}
       {...rest}

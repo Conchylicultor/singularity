@@ -46,6 +46,8 @@ export interface OverlayProps
   fill?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -58,12 +60,14 @@ export interface OverlayProps
 export function OverlayInteractive({
   children,
   className,
+  ref,
 }: {
   children: ReactNode;
   className?: string;
+  ref?: React.Ref<HTMLDivElement>;
 }) {
   return (
-    <div className={cn("relative pointer-events-auto", className)}>
+    <div ref={ref} className={cn("relative pointer-events-auto", className)}>
       {children}
     </div>
   );
@@ -107,11 +111,12 @@ function OverlayRoot({
   clickThrough = false,
   fill = false,
   as: As = "div",
+  ref,
   className,
   ...rest
 }: OverlayProps) {
   return (
-    <As className={cn("relative", LAYER_CLASS[layer], className)} {...rest}>
+    <As ref={ref} className={cn("relative", LAYER_CLASS[layer], className)} {...rest}>
       {behind != null && <div className="absolute inset-0">{behind}</div>}
       <div
         className={cn(

@@ -56,6 +56,8 @@ export interface ScrollProps extends React.HTMLAttributes<HTMLElement> {
   isolate?: boolean;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -77,12 +79,14 @@ export function Scroll({
   hideScrollbar = false,
   isolate = false,
   as: As = "div",
+  ref,
   className,
   children,
   ...rest
 }: ScrollProps) {
   return (
     <As
+      ref={ref}
       className={cn(scrollClasses({ axis, fill, hideScrollbar, isolate }), className)}
       {...rest}
     >

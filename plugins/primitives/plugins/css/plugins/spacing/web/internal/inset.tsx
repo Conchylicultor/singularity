@@ -41,6 +41,8 @@ export interface InsetProps extends React.HTMLAttributes<HTMLElement> {
   l?: SpaceStep;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -57,12 +59,14 @@ export function Inset({
   b,
   l,
   as: As = "div",
+  ref,
   className,
   children,
   ...rest
 }: InsetProps) {
   return (
     <As
+      ref={ref}
       className={cn(
         pad && P_CLASS[pad],
         x && PX_CLASS[x],

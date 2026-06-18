@@ -12,6 +12,7 @@ import {
 } from "@plugins/primitives/plugins/collapsible/web";
 import { useEndpoint } from "@plugins/infra/plugins/endpoints/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
+import { Scroll } from "@plugins/primitives/plugins/css/plugins/scroll/web";
 import { getBuildRunLogs } from "../../shared/endpoints";
 import type { BuildStepLog } from "../../shared/endpoints";
 import type { ClientMessage, ServerMessage, LogEntryWire } from "@plugins/primitives/plugins/log-channels/core";
@@ -174,9 +175,10 @@ function LiveLogs(): ReactElement {
           <MdContentCopy />
         </Button>
       </div>
-      <div
+      <Scroll
+        axis="y"
         ref={stickyScroll.scrollRef}
-        className={`min-h-48 max-h-96 overflow-y-auto rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
+        className={`min-h-48 max-h-96 rounded-md border bg-muted/30 px-md py-sm ${monoLogClass}`}
       >
         {entries.length === 0 && (
           <span className="text-muted-foreground">No build logs yet</span>
@@ -200,7 +202,7 @@ function LiveLogs(): ReactElement {
             <span className="whitespace-pre-wrap break-all">{entry.line}</span>
           </div>
         ))}
-      </div>
+      </Scroll>
       <div className="absolute bottom-1 left-1/2 -translate-x-1/2">
         <JumpToBottomButton handle={stickyScroll} />
       </div>

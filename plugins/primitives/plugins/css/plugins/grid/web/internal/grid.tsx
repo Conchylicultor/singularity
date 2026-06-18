@@ -54,6 +54,8 @@ export interface GridProps
   justify?: StackJustify;
   /** Host element/component. Defaults to a `div`. */
   as?: React.ElementType;
+  /** Forwarded to the rendered element (mirrors Surface/Card/Row). */
+  ref?: React.Ref<HTMLElement>;
 }
 
 /**
@@ -102,12 +104,14 @@ export function Grid({
   align,
   justify,
   as: As = "div",
+  ref,
   className,
   children,
   ...rest
 }: GridProps) {
   return (
     <As
+      ref={ref}
       className={cn(
         "grid",
         GAP_CLASS[gap],
