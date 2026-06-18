@@ -16,6 +16,7 @@ import type { NodeExtension } from "../internal/node-extensions";
 import {
   applyMarkdownToEditor,
   serializeEditorToMarkdown,
+  $selectMarkdownRange,
 } from "../internal/markdown";
 
 export function TextEditor({
@@ -32,6 +33,7 @@ export function TextEditor({
   namespace = "text-editor",
   onError,
   insertRef,
+  initialSelection,
   bottomSlot,
 }: {
   value: string;
@@ -47,6 +49,9 @@ export function TextEditor({
   namespace?: string;
   onError?: (msg: string) => void;
   insertRef?: React.MutableRefObject<((text: string) => void) | null>;
+  // Character range [start, end] in the raw `value` to select on mount.
+  // Used to open the editor with a span pre-selected (e.g. drag-select-to-edit).
+  initialSelection?: { start: number; end: number } | null;
   bottomSlot?: React.ReactNode;
 }) {
   const extensions = useMergedNodeExtensions();
@@ -78,6 +83,12 @@ export function TextEditor({
         bottomSlot={bottomSlot}
       />
       <ValueSyncPlugin value={value} onChange={onChange} extensions={extensions} />
+      {initialSelection && (
+        <InitialSelectionPlugin
+          selection={initialSelection}
+          extensions={extensions}
+        />
+      )}
       <PluginSlot onError={onError} />
       <DecoratorNavPlugin />
       <DecoratorBlockPlugin />
@@ -113,6 +124,33 @@ function InsertPlugin({
       insertRef.current = null;
     };
   }, [editor, insertRef]);
+  return null;
+}
+
+// Selects a raw-string character range once on mount. Rendered after
+// ValueSyncPlugin so its mount effect runs after the value has been applied to
+// the editor (React fires sibling effects in render order), guaranteeing the
+// target nodes exist before we place the selection.
+function InitialSelectionPlugin({
+  selection,
+  extensions,
+}: {
+  selection: { start: number; end: number };
+  extensions: readonly NodeExtension[];
+}) {
+  const [editor] = useLexicalComposerContext();
+  const extensionsRef = useRef(extensions);
+  extensionsRef.current = extensions;
+  const selectionRef = useRef(selection);
+  selectionRef.current = selection;
+  useEffect(() => {
+    editor.focus();
+    editor.update(() => {
+      const { start, end } = selectionRef.current;
+      $selectMarkdownRange(start, end, extensionsRef.current);
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- mount-only: apply the captured selection once
+  }, []);
   return null;
 }
 
