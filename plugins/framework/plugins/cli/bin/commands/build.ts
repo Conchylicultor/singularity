@@ -5,7 +5,7 @@ import { retryUntil, fixed } from "@plugins/packages/plugins/retry/core";
 import { WEB_CORE_RELATIVE } from "@plugins/infra/plugins/paths/server";
 import { basename, join, resolve } from "path";
 import { generateMigration, type MigrationAnswer } from "../migrations";
-import { generatePluginDocs, collectAllPlugins, generatePluginRegistry, generateConfigOrigins, propagateConfigToUser, generateBarrelStubs, generateReorderableSlots, generateDataViews, generateTokenGroupVars } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
+import { collectAllPlugins, propagateConfigToUser, regenerateRegistryCodegen, regenerateManifestCodegen, type CodegenStep } from "@plugins/framework/plugins/tooling/plugins/codegen/core";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
 import { routesFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/routes/core";
 import { checkBroadcasts } from "../broadcasts";
@@ -571,6 +571,21 @@ export function registerBuild(program: Command) {
     .action(async (opts: { migrationName?: string; resetMigration?: boolean; customMigration?: boolean; migrationAnswers?: string; restart: boolean; skipChecks?: boolean; allowMain?: boolean }) => {
       const buildStartedAt = new Date();
 
+      // Per-step wrapper for the shared codegen pipeline: keeps build's per-step
+      // profiler granularity while the ordered call list lives in codegen core
+      // (shared with `regen-generated`). `pluginDocs` historically lived under
+      // the `build:validation` phase; every other codegen step under
+      // `build:codegen` — preserve that mapping.
+      const codegenStep: CodegenStep = async (id, label, run) => {
+        const phase = id === "pluginDocs" ? "build:validation" : "build:codegen";
+        const end = buildProfilerStart(id, phase, label);
+        try {
+          await run();
+        } finally {
+          end();
+        }
+      };
+
       let endSpan = buildProfilerStart("ensureHooksPath", "build:preflight", "ensureHooksPath");
       await ensureHooksPath();
       endSpan();
@@ -694,17 +709,14 @@ export function registerBuild(program: Command) {
       await exec(["bun", "install"], root);
       endSpan();
 
-      // 1b. Regenerate barrel-import auto-stubs from .d.ts files.
-      endSpan = buildProfilerStart("barrelStubs", "build:codegen", "barrel stubs");
-      await generateBarrelStubs({ root });
-      endSpan();
-
-      // 2a. Regenerate plugin registry files — must happen before central
-      // is spawned so its plugins.generated.ts is in sync.
-      endSpan = buildProfilerStart("pluginRegistry", "build:codegen", "plugin registry");
+      // 1b–2a. Registry-level repo-tree codegen: barrel-import auto-stubs (from
+      // .d.ts files) then the plugin registry. Must happen before central is
+      // spawned so its plugins.generated.ts is in sync. Shared with the push-time
+      // `regen-generated` normalize step via the codegen core pipeline so a full
+      // build after a push reproduces the exact same tree. Per-step profiler
+      // spans are threaded through `onStep` so build keeps its granularity.
       console.log("Generating plugin registry...");
-      await generatePluginRegistry({ root });
-      endSpan();
+      await regenerateRegistryCodegen({ root, onStep: codegenStep });
 
       // 2b. Refresh the central-routes manifest so the gateway knows which
       // path prefixes are owned by central plugins.
@@ -759,47 +771,18 @@ export function registerBuild(program: Command) {
       });
       endSpan();
 
-      // 4. Regenerate plugins/CLAUDE.md
-      endSpan = buildProfilerStart("pluginDocs", "build:validation", "generate plugin docs");
+      // 4–4b. Manifest-level repo-tree codegen: plugin docs → reorderable-slots
+      // → data-views → token-group-vars → config-origins. Run AFTER migrations
+      // (DB-stateful, interleaved above) but as ONE ordered pipeline shared with
+      // the push-time `regen-generated` normalize step (codegen core), so a full
+      // build after a push reproduces the exact same tree. The load-bearing
+      // ordering constraints (docs first → reusable enriched tree; slots/views
+      // before origins → they register the config_v2 directives origins depend
+      // on; token-group-vars before the CSS single-owner checks; origins LAST)
+      // live in the pipeline module as the authoritative record. Per-step
+      // profiler spans are threaded through `onStep`.
       console.log("Generating plugins doc...");
-      await generatePluginDocs({ root });
-      endSpan();
-
-      // 4a'. Generate the reorderable-slots manifest from the slots facet.
-      // Must run AFTER plugin docs (which builds the enriched tree this reuses)
-      // and BEFORE config origins: reorder registers one config_v2 directive per
-      // slot, and importing the codegen barrel also installs the per-slot
-      // contribution catalog as the default origin-annotations preparer so the
-      // config origins below carry the catalog comments.
-      endSpan = buildProfilerStart("reorderableSlots", "build:codegen", "reorderable slots manifest");
-      console.log("Generating reorderable-slots manifest...");
-      await generateReorderableSlots({ root });
-      endSpan();
-
-      // 4a'b. Generate the data-views manifest from the `defineDataView(...)`
-      // markers (scanned from each plugin's web/**). Must run AFTER plugin docs
-      // (reuses the enriched tree) and BEFORE config origins: the data-view
-      // primitive registers one config_v2 `views` descriptor per id, so those
-      // descriptors must exist when origins regenerate.
-      endSpan = buildProfilerStart("dataViews", "build:codegen", "data-views manifest");
-      console.log("Generating data-views manifest...");
-      await generateDataViews({ root });
-      endSpan();
-
-      // 4a''. Generate the token-group-vars manifest from the real
-      // `defineTokenGroup` descriptors (read via web-barrel contributions to the
-      // `ui.theme-engine.token-group` slot). Consumed by the build-time CSS
-      // single-owner checks (`css-vars-single-owner`, `css-vars-supplied`).
-      endSpan = buildProfilerStart("tokenGroupVars", "build:codegen", "token-group vars manifest");
-      console.log("Generating token-group-vars manifest...");
-      await generateTokenGroupVars({ root });
-      endSpan();
-
-      // 4b. Generate config origin files from defineConfig contributions
-      endSpan = buildProfilerStart("configOrigins", "build:codegen", "generate config origins");
-      console.log("Generating config origins...");
-      await generateConfigOrigins({ root });
-      endSpan();
+      await regenerateManifestCodegen({ root, onStep: codegenStep });
 
       // 4c. Propagate git config to user config dir (~/.singularity/config/<worktree>/)
       endSpan = buildProfilerStart("propagateConfig", "build:codegen", "propagate config to user");

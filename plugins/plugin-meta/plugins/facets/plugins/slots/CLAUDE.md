@@ -24,7 +24,7 @@ web slot. `toComparable` (the diff projection) lives in `core/`.
   - Uses: `plugin-meta/facets.defineFacet`
   - Exports: Types: `SlotDef`; Values: `slotsFacetDef`, `slotsToComparable`
 - Cross-plugin:
-  - Imported by: `framework/tooling/codegen`, `plugin-meta/closure`
+  - Imported by: `plugin-meta/closure`
 - Sub-plugins:
   - **`render-contributions`** — Aggregated cross-plugin slots table in the Studio Contributions view.
   - **`render-detail`** — Per-plugin slots section in the plugin detail pane.

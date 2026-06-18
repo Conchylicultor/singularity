@@ -7,7 +7,7 @@ import {
   type OriginAnnotationsProvider,
 } from "./config-origin-gen";
 import { getFacet } from "@plugins/plugin-meta/plugins/facets/core";
-import { slotsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/slots/core";
+import { collectRenderSlotsStatic } from "./reorderable-slots-scan";
 import { contributionsFacetDef } from "@plugins/plugin-meta/plugins/facets/plugins/contributions/core";
 import type { ConfigDescriptor } from "@plugins/config_v2/core";
 
@@ -56,35 +56,35 @@ interface ReorderableSlotsData {
 
 /**
  * Walk the enriched plugin tree (reusing docgen's cached build) and collect:
- *  1. every statically-known reorderable render slot, keyed to its DEFINING
- *     plugin's hierarchy path;
- *  2. the contribution catalog for each such slot, from the contributions facet.
+ *  1. every reorderable render slot, keyed to its DEFINING plugin's hierarchy
+ *     path — via the STATIC, factory-aware source scanner
+ *     (`collectRenderSlotsStatic`). This is a pure function of committed source:
+ *     it never imports a barrel, so the slot set is identical in every
+ *     environment (the old live-barrel walk made it depend on which barrels
+ *     happened to evaluate, which dirtied `main` on the post-push auto-build).
+ *  2. the contribution catalog for each such slot, from the contributions facet
+ *     (still a runtime read — only the catalog/origin defaults need it, not the
+ *     reorderable-slot SET).
  */
 async function collectReorderableSlots(
   root: string,
 ): Promise<ReorderableSlotsData> {
   const tree = await buildEnrichedTree(root);
 
-  // Defining node per slot: the first node whose slots facet declares it. The
-  // slots facet already skips template-literal ids (e.g. detail-sections), so
-  // only statically-resolvable slot ids land here.
-  const definingPath = new Map<string, string>();
-  for (const node of tree.byDir.values()) {
-    const slots = getFacet(node, slotsFacetDef) ?? [];
-    for (const slot of slots) {
-      if (slot.kind !== "render") continue;
-      if (definingPath.has(slot.slotId)) continue;
-      definingPath.set(slot.slotId, node.id);
-    }
-  }
+  // (1) The reorderable-slot set — deterministic static scan. Already sorted by
+  // slotId and deduped (first definer wins) by the collector.
+  const slots: ReorderableSlotEntry[] = collectRenderSlotsStatic(tree).map(
+    ({ slotId, pluginId }) => ({ slotId, pluginId }),
+  );
+  const reorderableIds = new Set(slots.map((s) => s.slotId));
 
-  // Catalog: every runtime contribution targeting a reorderable slot.
+  // (2) Catalog: every runtime contribution targeting a reorderable slot.
   const catalog = new Map<string, CatalogItem[]>();
   for (const node of tree.byDir.values()) {
     const data = getFacet(node, contributionsFacetDef);
     if (!data) continue;
     for (const c of data.runtime) {
-      if (!definingPath.has(c.slotId)) continue;
+      if (!reorderableIds.has(c.slotId)) continue;
       if (!c.id) continue;
       const entryKey = c.pluginId ? `${c.pluginId}:${c.id}` : c.id;
       let items = catalog.get(c.slotId);
@@ -95,10 +95,6 @@ async function collectReorderableSlots(
       items.push({ entryKey });
     }
   }
-
-  const slots: ReorderableSlotEntry[] = [...definingPath.entries()]
-    .map(([slotId, pluginId]) => ({ slotId, pluginId }))
-    .sort((a, b) => a.slotId.localeCompare(b.slotId));
 
   return { slots, catalog };
 }
