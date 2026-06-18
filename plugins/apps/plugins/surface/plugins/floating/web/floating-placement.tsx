@@ -43,8 +43,10 @@ export const floatingDef: PlacementDef = {
   // `FloatingChrome` can animate the window out before the host unmounts it.
   // Single-sourced with the tween (CLOSE_MS) so retention + tween never drift.
   exitDurationMs: CLOSE_MS,
+  // Shadow is NOT static here: the motion layer drives `boxShadow` per-window from
+  // focus (focused lifts, unfocused recedes), so the active window reads as elevated.
   containerClassName:
-    "absolute overflow-hidden rounded-lg border bg-background shadow-lg",
+    "absolute overflow-hidden rounded-lg border bg-background",
   Backdrop: DesktopWallpaper,
   Foreground: FloatingForeground,
   Chrome: FloatingChrome,
@@ -108,6 +110,7 @@ function FloatingChrome({ tabId, focused, exiting }: PlacementChromeProps) {
     win,
     isActive,
     windowClosing,
+    focused,
   );
   const insetStyle = useMemo(
     () => (hidden ? { display: "none" } : { top: WINDOW_TITLEBAR_INSET }),

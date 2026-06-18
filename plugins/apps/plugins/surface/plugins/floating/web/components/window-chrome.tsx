@@ -248,6 +248,17 @@ export function WindowChrome({
 
   return (
     <>
+      {/* Inactive-window dim. A pointer-events-none scrim that fades the unfocused
+          window's content back toward the desktop, so the focused window's full
+          color (plus its deeper shadow) makes the focus target unmistakable. Sits
+          at z-raised to cover the surface content, but renders BEFORE the titlebar
+          and handles (also z-raised) so those stay crisp above it. */}
+      <div
+        aria-hidden
+        className="pointer-events-none absolute inset-0 z-raised bg-background transition-opacity duration-150 ease-out"
+        style={{ opacity: focused ? 0 : 0.35 }}
+      />
+
       {/* Titlebar — absolutely pinned to the top of the window box, overlaying the
           surface (which SurfaceBody insets below it). Drag surface + controls. */}
       <div

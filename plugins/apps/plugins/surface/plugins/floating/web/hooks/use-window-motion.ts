@@ -51,6 +51,18 @@ const MINIMIZE_MS = 200;
  */
 export const CLOSE_MS = 190;
 
+/** Focus elevation cross-fade — the shadow swap when focus moves between windows. */
+const SHADOW_MS = 160;
+/**
+ * Window elevation per focus state. The active window lifts above the desk (a
+ * deep, spread shadow); unfocused windows recede to a shallow shadow so the focus
+ * target is unmistakable. Both resolve to theme shadow tokens, so the elevation
+ * delta tracks the active preset. This is the single source of the window shadow
+ * (the container class no longer carries a static `shadow-lg`).
+ */
+const SHADOW_FOCUSED = "var(--shadow-xl)";
+const SHADOW_UNFOCUSED = "var(--shadow-sm)";
+
 /** Decelerate curve for box + enter motion (Material "standard decelerate"). */
 const EASE_OUT = "cubic-bezier(0.2, 0, 0, 1)";
 /** Accelerate curve for the minimize exit, so the window "drops" into the dock. */
@@ -170,6 +182,7 @@ export function useFloatingWindowStyle(
   win: FloatingWindow,
   isActive: boolean,
   closing: boolean,
+  focused: boolean,
 ): WindowStyle {
   const reduced = usePrefersReducedMotion();
   const dragging = useWindowInteracting(win.id);
@@ -285,6 +298,8 @@ export function useFloatingWindowStyle(
     if (boxReady && !dragging && !reduced && phase === "normal") {
       for (const p of ["left", "top", "width", "height"])
         parts.push(`${p} ${BOX_MS}ms ${EASE_OUT}`);
+      // Cross-fade the elevation when focus moves between windows.
+      parts.push(`box-shadow ${SHADOW_MS}ms ${EASE_OUT}`);
     }
     if (phase === "intro" || phase === "restoring")
       parts.push(
@@ -305,6 +320,7 @@ export function useFloatingWindowStyle(
     const containerStyle: CSSProperties = {
       ...box,
       zIndex: geo.z,
+      boxShadow: focused ? SHADOW_FOCUSED : SHADOW_UNFOCUSED,
       ...(hidden ? { display: "none" } : null),
       ...(transform ? { transform, willChange: "transform, opacity" } : null),
       ...(opacity !== undefined ? { opacity } : null),
@@ -313,5 +329,5 @@ export function useFloatingWindowStyle(
     };
 
     return { containerStyle, hidden };
-  }, [geo, isActive, phase, play, boxReady, dragging, reduced]);
+  }, [geo, isActive, phase, play, boxReady, dragging, reduced, focused]);
 }
