@@ -111,8 +111,12 @@ interface BlockEditorContextValue {
   /** All blocks of the page (incl. collapsed), kept current for bulk ops. */
   setRows: (blocks: Block[]) => void;
   rowsRef: MutableRefObject<Block[]>;
-  /** Focus a block's text editor by id (defers until it mounts if needed). */
-  focusBlock: (id: string) => void;
+  /**
+   * Focus a block's text editor by id (defers until it mounts if needed). When
+   * `caretOffset` is given and the block's editor is already mounted, land the
+   * caret at that linear offset (used to restore the caret on a text undo/redo).
+   */
+  focusBlock: (id: string, caretOffset?: number) => void;
   move: (id: string, dest: { parentId: string | null; rank: Rank }) => void;
   /** Bulk operations on a set of selected block ids (see server endpoints). */
   bulkDelete: (ids: string[]) => void;
@@ -132,6 +136,13 @@ interface BlockEditorContextValue {
    * once the live resource re-renders the list.
    */
   insert: (type: string, data: unknown) => void;
+  /**
+   * Persist a block's edited text runs through the optimistic-patch pipeline AND
+   * record it on the unified undo stack (coalesced per block). Replaces the old
+   * `PATCH /api/blocks/:id` text-autosave path, so forward typing and undo/redo
+   * are fully symmetric.
+   */
+  commitText: (blockId: string, nextRuns: RichText, caretOffset: number) => void;
   /** Structural (document-tier) undo — reverses the last recorded block edit. */
   undo: () => void;
   /** Structural (document-tier) redo — re-applies the last undone block edit. */
@@ -225,18 +236,24 @@ export function BlockEditorProvider({
   const { mutate: bulkDeleteMutation } = useEndpointMutation(bulkDeleteBlocks);
   const { mutate: updateBlockMutation } = useEndpointMutation(updateBlock);
 
-  const focusBlock = useCallback((id: string) => {
+  const focusBlock = useCallback((id: string, caretOffset?: number) => {
     const handle = focusHandlesRef.current.get(id);
-    if (handle) handle.focus();
-    else pendingFocusRef.current = id;
+    if (handle) {
+      // When a caret offset is requested and this block is a text editor, land
+      // the caret precisely (the same leaf-aware placement `merge` uses); else a
+      // plain focus restoring its last selection.
+      if (caretOffset !== undefined && handle.focusOffset) handle.focusOffset(caretOffset);
+      else handle.focus();
+    } else pendingFocusRef.current = id;
   }, []);
 
-  // --- Structural undo/redo (document tier) ---------------------------------
-  // The per-block Lexical `HistoryPlugin` owns intra-block TEXT undo; THIS owns
-  // the document tier (create/split/merge/indent/outdent/delete/move/convert/
-  // bulk). Recording happens at the mutation chokepoints below: snapshot the
-  // current rows, compute the resulting rows, diff into a minimal patch pair,
-  // and `record` undo/redo thunks that dispatch those patches.
+  // --- Unified undo/redo (single document-level stack) ----------------------
+  // ONE stack covers both text and structure (there is no per-block Lexical
+  // `HistoryPlugin`): structural ops (create/split/merge/indent/outdent/delete/
+  // move/convert/bulk) AND text edits (`commitText`). Recording happens at the
+  // mutation chokepoints below: snapshot the current rows, compute the resulting
+  // rows, diff into a minimal patch pair, and `record` undo/redo thunks that
+  // dispatch those patches.
   const { record, undo, redo, canUndo, canRedo } = useUndoRedo();
 
   // Dispatch a minimal patch through the SAME optimistic instance (instant
@@ -251,20 +268,32 @@ export function BlockEditorProvider({
     [optimistic],
   );
 
-  // Record a structural before→after change as a reversible command. Diffs the
-  // two full-row snapshots into minimal forward/reverse patches; the thunks
-  // dispatch them and best-effort restore focus to `focusId` (the block the user
-  // was on). A no-op diff records nothing.
-  const recordStructural = useCallback(
-    (before: Block[], after: Block[], label: string, focusId: string | null) => {
+  // Record a before→after change as a reversible command. Diffs the two full-row
+  // snapshots into minimal forward/reverse patches; the thunks dispatch them and
+  // best-effort restore focus to `focusId` (the block the user was on). A no-op
+  // diff records nothing. `coalesceKey` is threaded into the entry so run-together
+  // edits (typing) merge into one undo step; structural ops pass none.
+  const recordPatchEntry = useCallback(
+    (
+      before: Block[],
+      after: Block[],
+      label: string,
+      focusId: string | null,
+      coalesceKey?: string,
+    ) => {
       const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
       if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
-      // Fallback focus target: the first row the patch upserts (so even if the
-      // originally-focused block was deleted, undo/redo land somewhere sane).
+      // Focus targets per direction. Redo keeps the `focusId` the user was on
+      // (e.g. the freshly-split block). Undo PREFERS the block the reverse patch
+      // restores (`undoPatch.upserts[0]`) over `focusId`: undoing a split deletes
+      // the new block — landing focus on it would drop focus to <body> — whereas
+      // the reverse upsert is the original surviving block. Falls back to `focusId`
+      // then the forward upsert so every op still lands somewhere sane.
       const redoFocus = focusId ?? redoPatch.upserts[0]?.id ?? null;
-      const undoFocus = focusId ?? undoPatch.upserts[0]?.id ?? null;
+      const undoFocus = undoPatch.upserts[0]?.id ?? focusId ?? null;
       record({
         label,
+        coalesceKey,
         undo: () => {
           dispatchPatch(undoPatch);
           if (undoFocus) queueMicrotask(() => focusBlock(undoFocus));
@@ -274,6 +303,46 @@ export function BlockEditorProvider({
           if (redoFocus) queueMicrotask(() => focusBlock(redoFocus));
         },
       });
+    },
+    [record, dispatchPatch, focusBlock],
+  );
+
+  // Structural ops never coalesce (each is a distinct undo step), so this passes
+  // no `coalesceKey` — preserving the previous `recordStructural` behavior exactly.
+  const recordStructural = useCallback(
+    (before: Block[], after: Block[], label: string, focusId: string | null) => {
+      recordPatchEntry(before, after, label, focusId);
+    },
+    [recordPatchEntry],
+  );
+
+  // Persist a block's edited text as a `data.text` row patch through the SAME
+  // optimistic-patch pipeline as structural ops, and record it on the unified
+  // undo stack. Forward typing flows through `dispatchPatch` (not the old
+  // `PATCH /api/blocks/:id`), so undo/redo and forward edits are symmetric. The
+  // entry coalesces per `blockId` so a typing run is one undo step. Undo/redo land
+  // the caret back at `caretOffset`.
+  const commitText = useCallback(
+    (blockId: string, nextRuns: RichText, caretOffset: number) => {
+      const before = rowsRef.current;
+      const after = before.map((b) =>
+        b.id === blockId ? { ...b, data: { ...(b.data ?? {}), text: nextRuns } } : b,
+      );
+      const { undo: undoPatch, redo: redoPatch } = patchesFromDiff(diffBlocks(before, after));
+      if (isEmptyPatch(undoPatch) && isEmptyPatch(redoPatch)) return;
+      record({
+        label: "Edit text",
+        coalesceKey: blockId,
+        undo: () => {
+          dispatchPatch(undoPatch);
+          queueMicrotask(() => focusBlock(blockId, caretOffset));
+        },
+        redo: () => {
+          dispatchPatch(redoPatch);
+          queueMicrotask(() => focusBlock(blockId, caretOffset));
+        },
+      });
+      dispatchPatch(redoPatch);
     },
     [record, dispatchPatch, focusBlock],
   );
@@ -551,6 +620,7 @@ export function BlockEditorProvider({
         bulkDuplicate,
         paste,
         insert,
+        commitText,
         undo,
         redo,
         canUndo,

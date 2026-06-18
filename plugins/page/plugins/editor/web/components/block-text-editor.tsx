@@ -4,7 +4,6 @@ import { LexicalComposer } from "@lexical/react/LexicalComposer";
 import { RichTextPlugin } from "@lexical/react/LexicalRichTextPlugin";
 import { ContentEditable } from "@lexical/react/LexicalContentEditable";
 import { LexicalErrorBoundary } from "@lexical/react/LexicalErrorBoundary";
-import { HistoryPlugin } from "@lexical/react/LexicalHistoryPlugin";
 import { LinkPlugin } from "@lexical/react/LexicalLinkPlugin";
 import { ClickableLinkPlugin } from "@lexical/react/LexicalClickableLinkPlugin";
 import { useLexicalComposerContext } from "@lexical/react/LexicalComposerContext";
@@ -24,6 +23,7 @@ import { BlockPastePlugin } from "./block-paste-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
 import {
+  $caretOffsetWithinParagraph,
   placeCaretAtBoundary,
   placeCaretAtColumn,
   placeCaretAtOffset,
@@ -102,7 +102,7 @@ export function BlockTextEditor({
 }) {
   const runs = runsOf((block.data as Record<string, unknown> | null)?.text);
   const isEmpty = runs.length === 0;
-  const { registerFocusHandle, frozenIds } = useBlockEditor();
+  const { registerFocusHandle, frozenIds, commitText } = useBlockEditor();
   const lexicalEditorRef = useRef<LexicalEditor | null>(null);
 
   // `useEditableField` is a string-keyed debounced-autosave hook (self-echo
@@ -114,11 +114,18 @@ export function BlockTextEditor({
 
   const field = useEditableField<string>({
     value: serialized,
-    // This editor owns only the `text` field; preserve any sibling data (e.g. a
-    // to-do's `checked`) so saving text never clobbers it.
+    // Persist text through the unified optimistic-patch + undo pipeline
+    // (`commitText`), NOT the per-block `PATCH /api/blocks/:id`. `commitText`
+    // clones the row and replaces only `data.text`, so sibling data (e.g. a
+    // to-do's `checked`) is preserved. Capture the caret offset at save time
+    // (the same read ValueSyncPlugin uses) so undo/redo can restore it.
     onSave: (nextJson) => {
       const next = JSON.parse(nextJson) as RichText;
-      editor.update({ ...(block.data as Record<string, unknown>), text: next });
+      const ed = lexicalEditorRef.current;
+      const caretOffset = ed
+        ? (ed.getEditorState().read(() => $caretOffsetWithinParagraph()) ?? 0)
+        : 0;
+      commitText(block.id, next, caretOffset);
     },
     // While a structural op owns this block's text (split/merge in flight), the
     // server owns the field: mirror incoming `value`, never autosave — so a stale
@@ -207,7 +214,6 @@ export function BlockTextEditor({
             }
             ErrorBoundary={LexicalErrorBoundary}
           />
-          <HistoryPlugin />
           {/* Wires TOGGLE_LINK_COMMAND → LinkNode; validateUrl gates the href to
               the allowed protocols. ClickableLinkPlugin makes links open in a new
               tab on cmd/ctrl-click (plain click still places the caret), the

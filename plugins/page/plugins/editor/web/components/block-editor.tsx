@@ -30,7 +30,7 @@ import {
   useMultiSelect,
 } from "@plugins/primitives/plugins/multi-select/web";
 import { ContentScope } from "@plugins/primitives/plugins/select-scope/web";
-import { UndoRedoProvider } from "@plugins/primitives/plugins/undo-redo/web";
+import { UndoRedoProvider, useUndoRedoShortcuts } from "@plugins/primitives/plugins/undo-redo/web";
 import { textOf, type Block, type SerializedBlock } from "../../core";
 import { BlockEditorProvider, useBlockEditor } from "../block-editor-context";
 import { Editor } from "../slots";
@@ -143,6 +143,16 @@ function BlockEditorInner({ contentClassName }: { contentClassName?: string }) {
   // intent resolution (e.g. Enter then Shift+Tab resolving against post-split).
   const { setFlatOrder, setRows, blocks, pending } = useBlockEditor();
 
+  // Surface-level (focus-independent) undo/redo. Bindings are scoped to THIS
+  // surface tab — eligible whenever this tab is focused, regardless of which DOM
+  // element (a Lexical contenteditable, the selection-mode container, or even
+  // <body> after a structural undo deletes the focused block) holds the caret.
+  // `enableInInputs` lets them fire inside the block contenteditables; the native
+  // keydown bubbles to the window-level ShortcutManager untouched (no Lexical
+  // HistoryPlugin consumes Cmd+Z anymore). This replaces the old per-block /
+  // container routing that broke whenever focus landed on <body>.
+  useUndoRedoShortcuts();
+
   const { rows, flat } = useMemo(() => {
     if (pending) {
       return { rows: [] as Block[], flat: [] as FlatBlock[] };
@@ -192,8 +202,6 @@ function SelectionLayer({
     insert,
     focusBlock,
     focusedBlockId,
-    undo,
-    redo,
   } = useBlockEditor();
   const { selectedIds, isActive, setRange, clearAll, selectAll } =
     useMultiSelect();
@@ -397,20 +405,10 @@ function SelectionLayer({
       if (!isActive) return;
       const mod = e.metaKey || e.ctrlKey;
 
-      // Structural undo/redo in block-selection mode (no Lexical editor is
-      // focused here, so there's no text tier to delegate to — go straight to
-      // the document-tier history). Cmd+Z undo; Cmd+Shift+Z / Cmd+Y redo.
-      if (mod && e.key.toLowerCase() === "z") {
-        e.preventDefault();
-        if (e.shiftKey) redo();
-        else undo();
-        return;
-      }
-      if (mod && e.key.toLowerCase() === "y") {
-        e.preventDefault();
-        redo();
-        return;
-      }
+      // Undo/redo (Cmd+Z / Cmd+Shift+Z / Cmd+Y) is NOT handled here — it routes
+      // through the surface-level `useUndoRedoShortcuts` binding (focus-independent,
+      // scoped to this tab), so it works the same whether a block editor, this
+      // selection container, or <body> holds focus.
 
       if (e.key === "Escape") {
         e.preventDefault();
@@ -472,8 +470,6 @@ function SelectionLayer({
       neighbor,
       applyRange,
       moveSelection,
-      undo,
-      redo,
     ],
   );
 

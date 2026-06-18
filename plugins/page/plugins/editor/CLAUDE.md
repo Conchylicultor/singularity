@@ -1,39 +1,63 @@
 # editor
 
-## Undo / redo (two-tier)
+## Undo / redo (one unified stack)
 
-Structural (document-tier) undo/redo is wired through the generic
+Undo/redo is wired through the generic
 `@plugins/primitives/plugins/undo-redo/web` primitive. `<BlockEditor>` mounts one
 `<UndoRedoProvider>` per surface (so each tab has its own history), with
-`BlockEditorProvider` inside it.
+`BlockEditorProvider` inside it. There is a **single** document-level stack
+covering BOTH text and structure — no per-block Lexical history.
 
-- **Two tiers.** Each block's Lexical `HistoryPlugin` (mounted in
-  `block-text-editor.tsx`) owns intra-block TEXT undo. The undo-redo primitive
-  owns the DOCUMENT tier: create/split/merge/indent/outdent/delete/move/convert
-  and bulk-delete. `keyboard-plugin.tsx` routes Cmd+Z to Lexical while it has text
-  history (`CAN_UNDO_COMMAND`), else to the editor's structural `undo()`; Cmd+Shift+Z
-  / Cmd+Y mirror it for redo. Block-selection mode (`block-editor.tsx`) routes the
-  same keys straight to structural undo/redo (no Lexical editor focused there).
+- **One stack, surface-level router (focus-independent).** There is no Lexical
+  `HistoryPlugin` (it was retired — a per-block parallel history is a layering
+  error: the `page_blocks` row tree, not a Lexical document, is the source of
+  truth). Cmd+Z / Cmd+Shift+Z / Cmd+Y are NOT routed per-block; `block-editor.tsx`
+  mounts one `useUndoRedoShortcuts()` at the editor root, which registers
+  tab-scoped (`surfaceId`-gated, `enableInInputs`) bindings on the window-level
+  `ShortcutManager`. They fire whenever this tab is focused, regardless of which
+  DOM element holds the caret — a block contenteditable, the selection container,
+  or `<body>` after a structural undo deletes the focused block. Nothing in
+  `keyboard-plugin.tsx` / `block-editor.tsx`'s container `onKeyDown` consumes those
+  keys anymore, so the native keydown bubbles out untouched (no `HistoryPlugin`
+  registers a Lexical `UNDO_COMMAND`). This replaces the old focus-dependent routing
+  whose breakage — Cmd+Z reaching neither handler once focus fell to `<body>` —
+  caused the original "redo does nothing" defect. Text and structure interleave in
+  true chronological order.
+- **Text edits are `data.text` patches.** `block-text-editor.tsx`'s debounced
+  autosave calls `commitText(blockId, nextRuns, caretOffset)` (in
+  `block-editor-context.tsx`) instead of the old `PATCH /api/blocks/:id`. It clones
+  the row (replacing only `data.text`), diffs it, `record`s the patch pair with
+  `coalesceKey: block.id` (so a typing run + the editable-field debounce collapse
+  into one undo step), and dispatches the forward patch — so forward typing and
+  undo/redo flow through the SAME optimistic-patch pipeline. Caret restoration is
+  approximate (an offset clamp via the block's `focusOffset` handle), captured at
+  save time with `$caretOffsetWithinParagraph()`.
 - **Command-pattern patches, not snapshots.** Recording happens at the mutation
   chokepoints in `block-editor-context.tsx`: snapshot `before = rowsRef.current`,
   compute `after`, `diffBlocks(before, after)` (pure, `core/block-diff.ts`), derive
   minimal forward/reverse `BlockPatch`es (`{ upserts, deleteIds }`), and `record`
-  thunks that re-apply them onto the CURRENT state. Entanglement-safe — undoing an
-  old action never clobbers later unrelated edits.
+  thunks that re-apply them onto the CURRENT state. `recordPatchEntry` is the shared
+  helper (threads an optional `coalesceKey`); `recordStructural` calls it with none
+  (structural ops never coalesce). Entanglement-safe — undoing an old action never
+  clobbers later unrelated edits.
 - **Same optimistic instance.** A `patch` overlay variant flows through the SAME
   `useOptimisticResource` as forward ops (instant overlay + reconcile), POSTing to
   `POST /api/pages/:pageId/blocks/patch` (`handle-patch-blocks.ts` — a blind
   row-level upsert+delete writer sharing the op handler's delete-lifecycle and the
   `notifyStructuralChange` notify path). Undo/redo thunks dispatch patches DIRECTLY
   (never through the recording wrapper), and the primitive's re-entrancy guard
-  ignores `record` during replay.
-- **NOT recorded:** plain text autosave (`update` with only `data.text` — Lexical's
-  tier) and `setExpanded` (pure view state; Notion doesn't undo collapse/expand).
+  ignores `record` during replay. `ValueSyncPlugin` re-syncs the live editor from
+  the resource when a patch lands; its `selfWriteRef` echo-suppression keeps the
+  re-sync from re-recording.
+- **NOT recorded:** non-text `data` edits via `BlockEditorAPI.update`
+  (`PATCH /api/blocks/:id`) — to-do `checked`, callout color, etc. — and
+  `setExpanded` (pure view state; Notion doesn't undo collapse/expand).
 - **Follow-up:** `bulkMove`, `bulkDuplicate`, and `paste` are NOT yet recorded —
   they mint server ids/ranks, so a clean inverse needs those endpoints to return
-  their resulting rows (or to be diffed against the post-settle resource). `convertTo`,
-  single-block `move` (client-known rank), `bulkDelete`, and all `dispatchOp` ops
-  are recorded with exact, purely-computed after-states.
+  their resulting rows (or to be diffed against the post-settle resource). Fully
+  unifying non-text `data` edits onto `commitText`-style patches is also pending.
+  `convertTo`, single-block `move` (client-known rank), `bulkDelete`, text edits,
+  and all `dispatchOp` ops are recorded with exact, purely-computed after-states.
 
 <!-- AUTOGENERATED:BEGIN — do not edit; regenerated by `./singularity build` -->
 
@@ -42,7 +66,7 @@ Structural (document-tier) undo/redo is wired through the generic
 - Description: Block-based document editor component and slot system. Block-based document editor — tables, routes, and live state.
 - Web:
   - Slots: `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.text`, `page.to-do`, `page.toggle`, `page.video`, `Editor.TurnInto` ← `page.turn-into-page`, `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
-  - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`
+  - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/badge.Badge`, `primitives/css/overlay.Overlay`, `primitives/css/pin.Pin`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`, `primitives/undo-redo.useUndoRedoShortcuts`
   - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_GUTTER`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
 - Server:
   - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`
