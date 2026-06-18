@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
 import { videoBlock } from "../core";
 import { VideoBlock } from "./components/video-block";
+import "./internal/register";
 
 export { videoBlock, VIDEO_TYPE } from "../core";
 

@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
 import { audioBlock } from "../core";
 import { AudioBlock } from "./components/audio-block";
+import "./internal/register";
 
 export { audioBlock, AUDIO_TYPE } from "../core";
 

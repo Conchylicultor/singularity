@@ -2,6 +2,7 @@ import type { PluginDefinition } from "@plugins/framework/plugins/web-sdk/core";
 import { Editor } from "@plugins/page/plugins/editor/web";
 import { imageBlock } from "../core";
 import { ImageBlock } from "./components/image-block";
+import "./internal/register";
 
 export { imageBlock } from "../core";
 

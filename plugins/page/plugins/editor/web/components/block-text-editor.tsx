@@ -20,6 +20,7 @@ import { SlashMenuPlugin } from "./slash-menu-plugin";
 import { MarkdownShortcutPlugin } from "./markdown-shortcut-plugin";
 import { FormatToolbarPlugin } from "./format-toolbar-plugin";
 import { FormatShortcutsPlugin } from "./format-shortcuts-plugin";
+import { BlockPastePlugin } from "./block-paste-plugin";
 import { blockTextNodes, getBlockTextExtensions } from "../internal/block-text-extensions";
 import { isValidLinkUrl } from "../internal/link-url";
 import {
@@ -219,6 +220,7 @@ export function BlockTextEditor({
           <MarkdownShortcutPlugin block={block} editor={editor} />
           <FormatShortcutsPlugin />
           <FormatToolbarPlugin />
+          <BlockPastePlugin block={block} editor={editor} />
           {getBlockTextExtensions().map((ext) =>
             ext.Plugin ? (
               <ext.Plugin key={ext.id} block={block} editor={editor} />

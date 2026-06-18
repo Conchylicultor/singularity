@@ -2615,7 +2615,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Uses: `infra/endpoints.dateString`, `infra/endpoints.defineEndpoint`
         - Exports: Types: `Attachment`; Values: `AttachmentSchema`, `listAttachmentsEndpoint`
       - Cross-plugin:
-        - Imported by: `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/sources/midi`, `conversations`, `conversations/agents`, `page/attachment-block`, `page/bookmark`, `primitives/text-editor/paste-images`, `screenshot/draw-on-app`, `tasks`, `tasks/task-draft-form`, `tasks/tasks-core`
+        - Imported by: `apps/pages/page-tree`, `apps/sonata/library`, `apps/sonata/sources/midi`, `conversations`, `conversations/agents`, `page/attachment-block`, `page/audio`, `page/bookmark`, `page/file`, `page/image`, `page/video`, `primitives/text-editor/paste-images`, `screenshot/draw-on-app`, `tasks`, `tasks/task-draft-form`, `tasks/tasks-core`
         - Endpoint callers: `task-attachments`
     - **`boot-snapshot`** — Hydrates all boot-critical resources from a single boot snapshot before first paint. Single-request boot snapshot of all boot-critical resources, hydrated client-side before first paint; server-side buffer-cache warm-up behind the readiness barrier.
       - Web:
@@ -2843,7 +2843,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`audio`** — Audio block type: upload an audio file and play it inline.
       - Web:
         - Contributes: `Editor.Block` "audio" → `AudioBlock`
-        - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/text-editor/paste-images.attachmentUrl`
+        - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `AUDIO_TYPE`, `audioBlock`
       - Core:
         - Uses: `page/editor.defineBlock`
@@ -2900,7 +2900,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Web:
         - Slots: `Editor.Block` ← `page.audio`, `page.bookmark`, `page.bulleted-list`, `page.callout`, `page.code-block`, `page.divider`, `page.embed`, `page.file`, `page.heading.heading-1`, `page.heading.heading-2`, `page.heading.heading-3`, `page.image`, `page.math.equation`, `page.numbered-list`, `page.page-link`, `page.quote`, `page.text`, `page.to-do`, `page.toggle`, `page.video`, `Editor.TurnInto` ← `page.turn-into-page`, `Editor.FormatAction` ← `page.formatting.bold`, `page.formatting.code`, `page.formatting.color`, `page.formatting.italic`, `page.formatting.link`, `page.formatting.strikethrough`, `page.formatting.underline`
         - Uses: `infra/endpoints.fetchEndpoint`, `infra/endpoints.useEndpointMutation`, `primitives/css/row.Row`, `primitives/css/spacing.Stack`, `primitives/css/surface.Surface`, `primitives/css/text.Text`, `primitives/css/ui-kit.Button`, `primitives/css/ui-kit.cn`, `primitives/css/viewport-overlay.ViewportOverlay`, `primitives/editable-field.useEditableField`, `primitives/icon-button.IconButton`, `primitives/icon-picker.SvgIcon`, `primitives/live-state.useResource`, `primitives/loading.Loading`, `primitives/multi-select.MultiSelectProvider`, `primitives/multi-select.SelectionBar`, `primitives/multi-select.useMultiSelect`, `primitives/multi-select.useMultiSelectItem`, `primitives/optimistic-mutation.OpNoLongerApplies`, `primitives/optimistic-mutation.useOptimisticResource`, `primitives/popover.InlinePopover`, `primitives/popover.InlinePopoverProps`, `primitives/search.SearchInput`, `primitives/select-scope.ContentScope`, `primitives/slot-render.defineDispatchSlot`, `primitives/slot-render.defineRenderSlot`, `primitives/slot-render.DispatchContribution`, `primitives/undo-redo.UndoRedoProvider`, `primitives/undo-redo.useUndoRedo`
-        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_GUTTER`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageIcon`, `PageOptionsList`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
+        - Exports: Types: `BlockContribution`, `BlockEditorAPI`, `BlockPasteHandler`, `BlockRendererProps`, `BlockTextExtension`, `BlockTextPluginProps`, `FormatToolbarValue`, `MarkButtonProps`, `PageIconProps`, `PageOption`, `PageOptionsResult`; Values: `BLOCK_GUTTER`, `BlockEditor`, `BlockTextEditor`, `BlockTextRenderer`, `BlockTypeList`, `BlockTypeMenu`, `colorCssValue`, `Editor`, `filterBlockTypes`, `getBlockTextExtensions`, `isValidLinkUrl`, `MarkButton`, `normalizeLinkUrl`, `OPEN_LINK_POPOVER_COMMAND`, `PageIcon`, `PageOptionsList`, `registerBlockPasteHandler`, `registerBlockTextExtension`, `useBlockEditor`, `useFormatToolbar`, `useInsertableBlocks`, `usePageOptions`
       - Server:
         - Uses: `database.db`, `infra/endpoints.HttpError`, `infra/endpoints.implement`, `infra/events.defineTriggerEvent`, `primitives/rank.nextRankUnder`
         - DB schema: `plugins/page/plugins/editor/server/internal/tables-events.ts`, `plugins/page/plugins/editor/server/internal/tables.ts`
@@ -2924,7 +2924,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`file`** — File block type: attach any file as a downloadable card; served via attachments.
       - Web:
         - Contributes: `Editor.Block` "file" → `FileBlock`
-        - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/css/card.Card`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/text-editor/paste-images.attachmentUrl`
+        - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/css/card.Card`, `primitives/css/spacing.Inset`, `primitives/css/spacing.Stack`, `primitives/css/text.Text`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `FILE_TYPE`, `fileBlock`
       - Core:
         - Uses: `page/editor.defineBlock`
@@ -2988,7 +2988,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`image`** — Image block type: upload via paste/drop/picker into an empty block, free-width resize, served via attachments.
       - Web:
         - Contributes: `Editor.Block` "image" → `ImageBlock`
-        - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
+        - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/text-editor/paste-images.attachmentUrl`, `primitives/text-editor/paste-images.Lightbox`
         - Exports: Values: `imageBlock`
       - Core:
         - Uses: `page/editor.defineBlock`
@@ -3110,7 +3110,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - **`video`** — Video block type: upload a video file and play it inline.
       - Web:
         - Contributes: `Editor.Block` "video" → `VideoBlock`
-        - Uses: `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `primitives/text-editor/paste-images.attachmentUrl`
+        - Uses: `infra/attachments.uploadAttachment`, `page/attachment-block.AttachmentUpload`, `page/editor.Editor`, `page/editor.registerBlockPasteHandler`, `primitives/text-editor/paste-images.attachmentUrl`
         - Exports: Values: `VIDEO_TYPE`, `videoBlock`
       - Core:
         - Uses: `page/editor.defineBlock`

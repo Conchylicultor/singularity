@@ -45,6 +45,7 @@ import {
 } from "../selection-control";
 import { AddBlockMenu } from "./add-block-menu";
 import { BlockRow, BLOCK_GUTTER } from "./block-row";
+import { resolvePastedBlock } from "../internal/block-paste-handlers";
 
 type FlatBlock = { block: Block; depth: number; hasChildren: boolean; ordinal: number };
 type DropTarget = { id: string; zone: DropZone };
@@ -301,6 +302,25 @@ function SelectionLayer({
   const onPaste = useCallback(
     (e: React.ClipboardEvent) => {
       if (document.activeElement !== containerRef.current) return;
+      // A pasted file (image/video/audio/…) becomes an attachment block, inserted
+      // after the current selection — resolved through the generic registry so
+      // this consumer never names a specific block type.
+      const picked = resolvePastedBlock(e.clipboardData);
+      if (picked) {
+        e.preventDefault();
+        const { file, handler } = picked;
+        const roots = selectionRoots(rowsRef.current, selectedRef.current);
+        const afterId =
+          headRef.current ?? focusedBlockId ?? roots[roots.length - 1] ?? null;
+        void (async () => {
+          const data = await handler.build(file);
+          await paste({
+            blocks: [{ type: handler.type, data, expanded: false, children: [] }],
+            afterId,
+          });
+        })();
+        return;
+      }
       const json = e.clipboardData.getData(BLOCKS_MIME);
       let forest: SerializedBlock[];
       if (json) {
