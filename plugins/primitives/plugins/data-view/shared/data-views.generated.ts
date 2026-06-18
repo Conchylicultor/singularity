@@ -23,5 +23,6 @@ export const dataViews: DataViewEntry[] = [
   { id: "story.gallery" },
   { id: "studio.explorer.tree" },
   { id: "tasks-list" },
+  { id: "tasks-recent" },
   { id: "tweakcn.community-browser" },
 ];

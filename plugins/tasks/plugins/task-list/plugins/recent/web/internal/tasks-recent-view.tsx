@@ -1,58 +1,72 @@
-import { useState } from "react";
-import { useResource } from "@plugins/primitives/plugins/live-state/web";
-import { Loading } from "@plugins/primitives/plugins/loading/web";
-import { StatusIcon } from "@plugins/tasks/plugins/task-status/web";
+import { matchResource, useResource } from "@plugins/primitives/plugins/live-state/web";
+import {
+  DataView,
+  defineDataView,
+  type FieldDef,
+} from "@plugins/primitives/plugins/data-view/web";
 import { RelativeTime } from "@plugins/primitives/plugins/relative-time/web";
-import { tasksResource } from "@plugins/tasks/core";
+import { tasksResource, type TaskListItem } from "@plugins/tasks/core";
 import type { TaskViewProps } from "@plugins/tasks/plugins/task-list/web";
 import type { TaskStatus } from "@plugins/tasks/plugins/tasks-core/core";
-import { Row } from "@plugins/primitives/plugins/css/plugins/row/web";
-import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
-import { Stack } from "@plugins/primitives/plugins/css/plugins/spacing/web";
+import { STATUS_META, StatusBadge } from "@plugins/tasks/plugins/task-status/web";
 
-function isTerminal(status: TaskStatus): boolean {
-  return status === "done" || status === "dropped";
-}
+const RECENT_VIEW = defineDataView("tasks-recent");
+
+// Filter chip choices are derived from the single status-metadata source, so the
+// labels never drift from the rest of the app.
+const STATUS_OPTIONS = (
+  Object.entries(STATUS_META) as [TaskStatus, { label: string }][]
+).map(([value, meta]) => ({ value, label: meta.label }));
+
+const FIELDS: FieldDef<TaskListItem>[] = [
+  { id: "title", label: "Title", type: "text", primary: true, value: (t) => t.title || "Untitled" },
+  {
+    id: "status",
+    label: "Status",
+    type: "enum",
+    align: "end",
+    options: STATUS_OPTIONS,
+    value: (t) => t.status,
+    cell: (t) => <StatusBadge status={t.status} />,
+  },
+  {
+    id: "updatedAt",
+    label: "Updated",
+    type: "date",
+    align: "end",
+    value: (t) => t.updatedAt,
+    cell: (t) => <RelativeTime date={t.updatedAt} />,
+  },
+];
 
 export function TasksRecentView({ selectedId, onSelect }: TaskViewProps) {
   const result = useResource(tasksResource);
-  const [hideTerminal, setHideTerminal] = useState(true);
 
-  if (result.pending) return <Loading variant="rows" />;
-
-  const sorted = [...result.data]
-    .filter((t) => !hideTerminal || !isTerminal(t.status))
-    .sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime());
-
-  return (
-    <div className="flex flex-col">
-      <div className="flex items-center gap-sm px-sm pb-xs">
-        <Text as="label" variant="caption" tone="muted" className="flex items-center gap-xs">
-          <input
-            type="checkbox"
-            checked={hideTerminal}
-            onChange={(e) => setHideTerminal(e.target.checked)}
-            className="size-3"
-          />
-          Hide done/dropped
-        </Text>
-      </div>
-      <Stack gap="2xs">
-        {sorted.map((task) => (
-          <Row
-            key={task.id}
-            selected={task.id === selectedId}
-            icon={<StatusIcon status={task.status} />}
-            actions={<RelativeTime date={task.updatedAt} />}
-            actionsAlwaysVisible
-            onClick={() => onSelect(task.id)}
-          >
-            <span className="min-w-0 flex-1 truncate">
-              {task.title || "Untitled"}
-            </span>
-          </Row>
-        ))}
-      </Stack>
-    </div>
+  const renderList = (rows: TaskListItem[], loading: boolean) => (
+    <DataView<TaskListItem>
+      rows={rows}
+      fields={FIELDS}
+      rowKey={(t) => t.id}
+      views={["list"]}
+      defaultView="list"
+      storageKey={RECENT_VIEW}
+      loading={loading}
+      selectedRowId={selectedId}
+      onRowActivate={(t) => onSelect(t.id)}
+      emptyState="No tasks yet."
+    />
   );
+
+  // No defaultSort hook on DataView; the list view preserves the incoming row
+  // order when no user sort is active, so pre-sorting by recency here is what
+  // gives the "Recent" tab its semantics.
+  return matchResource(result, {
+    pending: () => renderList([], true),
+    error: () => renderList([], true),
+    ready: (rows) =>
+      renderList(
+        [...rows].sort((a, b) => b.updatedAt.getTime() - a.updatedAt.getTime()),
+        false,
+      ),
+  });
 }
