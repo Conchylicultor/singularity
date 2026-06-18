@@ -1,50 +1,41 @@
+import { uniqueIndex } from "drizzle-orm/pg-core";
 import {
-  doublePrecision,
-  integer,
-  jsonb,
-  pgTable,
-  text,
-  timestamp,
-  uniqueIndex,
-  uuid,
-} from "drizzle-orm/pg-core";
-import type { CallerBreakdown, SlowOpSample } from "../../core";
+  defineEntity,
+  defaultNow,
+  defaultRandom,
+} from "@plugins/infra/plugins/entities/server";
+import { slowOpFields } from "../../core";
 
 // Durable, deduped slow-operation aggregate: the persisted analogue of the
 // runtime-profiler's in-memory `Aggregate` + `byParent`, gated to spans that
 // exceeded their configured threshold. One row per (operationKind, operation,
 // worktree); every threshold-exceeding occurrence upserts onto its row,
 // bumping the counters and merging its caller (parent span) into `callers`.
-export const _slowOps = pgTable(
-  "slow_ops",
-  {
-    id: uuid("id").primaryKey().defaultRandom(),
-    worktree: text("worktree").notNull(),
-    operationKind: text("operation_kind").notNull(),
-    operation: text("operation").notNull(),
-    count: integer("count").notNull().default(0),
-    // Span durations are fractional (performance.now() deltas), so this MUST be a
-    // float type, not bigint — bigint rejects fractional input ("invalid input
-    // syntax for type bigint"). double precision holds ms sums far beyond any
-    // worktree's lifetime without overflow, and matches max/last/threshold below.
-    totalMs: doublePrecision("total_ms").notNull().default(0),
-    maxMs: doublePrecision("max_ms").notNull().default(0),
-    lastMs: doublePrecision("last_ms").notNull().default(0),
-    thresholdMs: doublePrecision("threshold_ms").notNull().default(0),
-    // Caller attribution: which request/loader span issued this operation, how
-    // often, how slow. Owned by CallerBreakdownSchema (core).
-    callers: jsonb("callers").$type<CallerBreakdown[]>().notNull().default([]),
-    // Capped ring (newest first, last 10) of contention snapshots captured the
-    // instant a span tripped its threshold. Owned by SlowOpSampleSchema (core).
-    recentSamples: jsonb("recent_samples").$type<SlowOpSample[]>().notNull().default([]),
-    firstSeenAt: timestamp("first_seen_at", { withTimezone: true }).defaultNow().notNull(),
-    lastSeenAt: timestamp("last_seen_at", { withTimezone: true }).defaultNow().notNull(),
+//
+// The table + the `SlowOp` wire schema both derive from the single
+// `slowOpFields` record (core), so a column/schema drift is unrepresentable.
+const slowOps = defineEntity("slow_ops", slowOpFields, {
+  primaryKey: "id",
+  columns: {
+    id:            { default: defaultRandom() },
+    count:         { default: 0 },
+    totalMs:       { default: 0 },
+    maxMs:         { default: 0 },
+    lastMs:        { default: 0 },
+    thresholdMs:   { default: 0 },
+    callers:       { default: [] },
+    recentSamples: { default: [] },
+    firstSeenAt:   { default: defaultNow() },
+    lastSeenAt:    { default: defaultNow() },
   },
-  (t) => [
+  indexes: (t) => [
     uniqueIndex("slow_ops_kind_op_worktree_idx").on(
       t.operationKind,
       t.operation,
       t.worktree,
     ),
   ],
-);
+});
+
+// drizzle-kit schema-glob discovery. Name kept so consumers don't churn.
+export const _slowOps = slowOps.table;

@@ -1933,14 +1933,14 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
         - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`
         - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.registerSlowResourceReporter`
       - Server:
-        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
+        - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
         - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
         - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
         - Resources: `slow-ops` (push)
         - Routes: `POST /api/slow-ops/client`
       - Core:
-        - Uses: `config_v2.defineConfig`, `fields/int/config.intField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
-        - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+        - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
+        - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `slowOpFields`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
       - Cross-plugin:
         - Imported by: `debug/health-monitor`
       - Plugins:
@@ -1977,7 +1977,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
     - Slots: `Fields.Identity` ← `fields.avatar`, `fields.bool`, `fields.color`, `fields.date`, `fields.directory-path`, `fields.dynamic-enum`, `fields.enum`, `fields.float`, `fields.image`, `fields.int`, `fields.json`, `fields.list`, `fields.multiline-text`, `fields.number`, `fields.object`, `fields.reorder-tree`, `fields.secret`, `fields.string-list`, `fields.tags`, `fields.text`, `fields.uuid`, `fields.variant`
     - Exports: Values: `Fields`
   - Cross-plugin:
-    - Imported by: `config_v2`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/storage`, `fields/uuid`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/entities`
+    - Imported by: `config_v2`, `debug/slow-ops`, `fields/avatar`, `fields/avatar/config`, `fields/bool`, `fields/bool/config`, `fields/bool/storage`, `fields/color`, `fields/color/config`, `fields/date`, `fields/date/config`, `fields/date/storage`, `fields/directory-path`, `fields/directory-path/config`, `fields/dynamic-enum`, `fields/dynamic-enum/config`, `fields/enum`, `fields/enum/config`, `fields/float`, `fields/float/config`, `fields/float/storage`, `fields/image`, `fields/int`, `fields/int/config`, `fields/int/storage`, `fields/json`, `fields/json/config`, `fields/json/storage`, `fields/list`, `fields/list/config`, `fields/multiline-text`, `fields/multiline-text/config`, `fields/number`, `fields/object`, `fields/object/config`, `fields/reorder-tree`, `fields/reorder-tree/config`, `fields/secret`, `fields/string-list`, `fields/string-list/config`, `fields/tags`, `fields/text`, `fields/text/config`, `fields/text/storage`, `fields/uuid`, `fields/uuid/config`, `fields/uuid/storage`, `fields/variant`, `fields/variant/config`, `infra/entities`
   - Server:
     - Exports: Types: `FieldStorageContribution`, `StorageColumnBuilder`; Values: `Fields`, `fieldsToColumns`, `resolveFieldStorage`
   - Core:
@@ -2063,7 +2063,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
         - Exports: Values: `dateFieldType`, `dateIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/date/config`
       - Plugins:
+        - **`config`** — Date field factory (dateField) for building field records.
+          - Core:
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/date.dateFieldType`
+            - Exports: Types: `DateFieldDef`; Values: `dateField`
+          - Cross-plugin:
+            - Imported by: `debug/slow-ops`
         - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "date"
@@ -2166,6 +2174,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/float.floatFieldType`
             - Exports: Types: `FloatFieldDef`; Values: `floatField`
+          - Cross-plugin:
+            - Imported by: `debug/slow-ops`
         - **`storage`** — Float field type: DB storage capability — maps to a Postgres double precision column.
           - Server:
             - Uses: `fields.Fields`
@@ -2222,6 +2232,8 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
           - Core:
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/json.jsonFieldType`
             - Exports: Types: `JsonFieldDef`; Values: `jsonField`
+          - Cross-plugin:
+            - Imported by: `debug/slow-ops`
         - **`storage`** — JSON field type: DB storage capability — maps to a Postgres jsonb column.
           - Server:
             - Uses: `fields.Fields`
@@ -2401,7 +2413,7 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
             - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/text.textFieldType`
             - Exports: Types: `TextFieldDef`; Values: `textField`
           - Cross-plugin:
-            - Imported by: `fields/variant/config`, `plugin-meta/composition`
+            - Imported by: `debug/slow-ops`, `fields/variant/config`, `plugin-meta/composition`
         - **`filter`** — Text field type: data-view filter operator set (contains / is / is-empty …).
           - Web:
             - Contributes: `DataViewSlots.Filter` "text"
@@ -2425,7 +2437,15 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Core:
         - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`, `fields/text.textFieldType`
         - Exports: Values: `uuidFieldType`, `uuidIdentity`
+      - Cross-plugin:
+        - Imported by: `fields/uuid/config`
       - Plugins:
+        - **`config`** — UUID field factory (uuidField) for building field records.
+          - Core:
+            - Uses: `fields.FieldDef`, `fields.FieldMeta`, `fields.pickMeta`, `fields/uuid.uuidFieldType`
+            - Exports: Types: `UuidFieldDef`; Values: `uuidField`
+          - Cross-plugin:
+            - Imported by: `debug/slow-ops`
         - **`storage`** — UUID field type: DB storage capability — maps to a Postgres uuid column.
           - Server:
             - Uses: `fields.Fields`
@@ -2676,7 +2696,9 @@ Full reference for every plugin. Read this on demand (e.g. before writing a help
       - Server:
         - Uses: `fields.Fields`, `fields.resolveFieldStorage`
         - DB schema: `plugins/infra/plugins/entities/server/internal/define-entity.ts`
-        - Exports: Types: `ColumnDefault`, `DbDefault`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
+        - Exports: Types: `ColumnDefault`, `DbDefault`, `DefaultedKeys`, `Entity`, `EntityColumnMeta`, `EntityColumns`, `EntityMeta`, `EntityRow`; Values: `defaultNow`, `defaultRandom`, `defineEntity`, `sqlDefault`
+      - Cross-plugin:
+        - Imported by: `debug/slow-ops`
     - **`entity-extensions`** — Lets sub-plugins attach typed DB fields to a parent's entity table via 1:1 side-tables. Each consumer owns its <parent>_ext_<name> table; FK CASCADE on parent delete.
       - Server:
         - Uses: `database.db`

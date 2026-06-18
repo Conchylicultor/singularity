@@ -7,6 +7,7 @@ import { snakeCase } from "./snake-case";
 import type {
   ColumnDefault,
   DbDefault,
+  DefaultedKeys,
   Entity,
   EntityColumns,
   EntityMeta,
@@ -60,11 +61,10 @@ function applyDefault(b: any, def: ColumnDefault<unknown>, key: string): any {
 // Derive a Drizzle `pgTable` AND a zod wire schema from ONE `FieldsRecord`, so
 // `entity.table.$inferSelect` is identical by construction to
 // `z.infer<entity.schema>`. See the Stage C plan for the full derivation.
-export function defineEntity<F extends FieldsRecord>(
-  name: string,
-  fields: F,
-  meta: EntityMeta<F> = {},
-): Entity<F> {
+export function defineEntity<
+  F extends FieldsRecord,
+  M extends EntityMeta<F> = EntityMeta<F>,
+>(name: string, fields: F, meta: M = {} as M): Entity<F, DefaultedKeys<F, M>> {
   const builders: Record<string, unknown> = {};
 
   for (const [key, field] of Object.entries(fields)) {
@@ -112,11 +112,16 @@ export function defineEntity<F extends FieldsRecord>(
   ];
 
   // The one load-bearing cast: feed the loosely-assembled map as the precise
-  // `EntityColumns<F>` so `pgTable`'s own `BuildColumns` infers the exact
-  // select type. `extraConfig` is `as any` because `t` was loosened above.
-  const table = pgTable(name, builders as unknown as EntityColumns<F>, extraConfig);
+  // `EntityColumns<F, …>` so `pgTable`'s own `BuildColumns` infers the exact
+  // select type AND marks DB-defaulted columns optional on insert (the `D`
+  // brand). `extraConfig` is `as any` because `t` was loosened above.
+  const table = pgTable(
+    name,
+    builders as unknown as EntityColumns<F, DefaultedKeys<F, M>>,
+    extraConfig,
+  );
 
   const schema = fieldsToZodObject(fields);
 
-  return Object.freeze({ name, table, schema }) as Entity<F>;
+  return Object.freeze({ name, table, schema }) as Entity<F, DefaultedKeys<F, M>>;
 }

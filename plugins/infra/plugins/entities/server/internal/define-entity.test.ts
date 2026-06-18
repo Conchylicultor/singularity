@@ -271,3 +271,65 @@ type _SchemaInfer = z.infer<typeof slowOpsForType.schema>;
 type _SelectInfer = (typeof slowOpsForType.table)["$inferSelect"];
 // Exported so noUnusedLocals keeps the assertion (a type-test alias).
 export type _RowMatchesWire = Expect<Equal<_SchemaInfer, _SelectInfer>>;
+
+// ── Compile-time guard: DB-defaulted columns are OPTIONAL on insert ─────────
+// A column with a DB default (`meta.columns[k].default`, incl. defaultNow /
+// defaultRandom / the `[]` rings) must NOT be required by `$inferInsert` — a
+// loader inserting a row may omit it and let the DB fill it. This is exactly
+// what `record-slow-op.ts` relies on (its insert omits id / recentSamples /
+// firstSeenAt / lastSeenAt). Without the `HasDefault` brand on `EntityColumns`,
+// the select-exact cast made every column required on insert — the Stage D
+// regression this guards. `worktree` / `operationKind` / `operation` carry NO
+// DB default, so they stay required.
+type _Insert = (typeof slowOpsForType.table)["$inferInsert"];
+type OptionalKeys<T> = {
+  [K in keyof T]-?: object extends Pick<T, K> ? K : never;
+}[keyof T];
+type RequiredKeys<T> = Exclude<keyof T, OptionalKeys<T>>;
+// The defaulted columns must be optional…
+export type _DefaultedColsAreOptional = Expect<
+  Equal<
+    Extract<
+      | "id"
+      | "count"
+      | "totalMs"
+      | "maxMs"
+      | "lastMs"
+      | "thresholdMs"
+      | "callers"
+      | "recentSamples"
+      | "firstSeenAt"
+      | "lastSeenAt",
+      OptionalKeys<_Insert>
+    >,
+    | "id"
+    | "count"
+    | "totalMs"
+    | "maxMs"
+    | "lastMs"
+    | "thresholdMs"
+    | "callers"
+    | "recentSamples"
+    | "firstSeenAt"
+    | "lastSeenAt"
+  >
+>;
+// …and the no-DB-default columns must stay required.
+export type _NoDefaultColsAreRequired = Expect<
+  Equal<
+    Extract<"worktree" | "operationKind" | "operation", RequiredKeys<_Insert>>,
+    "worktree" | "operationKind" | "operation"
+  >
+>;
+
+// Runtime mirror of the `record-slow-op.ts` insert shape: omitting every
+// DB-defaulted column must satisfy the insert type. Compiles (and runs as a
+// trivial assertion) iff the optionality above holds.
+test("DB-defaulted columns may be omitted from an insert", () => {
+  const insertValues: _Insert = {
+    worktree: "main",
+    operationKind: "http",
+    operation: "GET /x",
+  };
+  expect(insertValues.worktree).toBe("main");
+});

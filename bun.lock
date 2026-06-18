@@ -1294,6 +1294,10 @@
       "name": "@singularity/plugin-fields-date",
       "version": "0.0.1",
     },
+    "plugins/fields/plugins/date/plugins/config": {
+      "name": "@singularity/plugin-fields-date-config",
+      "version": "0.0.1",
+    },
     "plugins/fields/plugins/date/plugins/filter": {
       "name": "@singularity/plugin-fields-date-filter",
       "version": "0.0.1",
@@ -1496,6 +1500,10 @@
     },
     "plugins/fields/plugins/uuid": {
       "name": "@singularity/plugin-fields-uuid",
+      "version": "0.0.1",
+    },
+    "plugins/fields/plugins/uuid/plugins/config": {
+      "name": "@singularity/plugin-fields-uuid-config",
       "version": "0.0.1",
     },
     "plugins/fields/plugins/uuid/plugins/storage": {
@@ -4294,6 +4302,8 @@
 
     "@singularity/plugin-fields-date": ["@singularity/plugin-fields-date@workspace:plugins/fields/plugins/date"],
 
+    "@singularity/plugin-fields-date-config": ["@singularity/plugin-fields-date-config@workspace:plugins/fields/plugins/date/plugins/config"],
+
     "@singularity/plugin-fields-date-filter": ["@singularity/plugin-fields-date-filter@workspace:plugins/fields/plugins/date/plugins/filter"],
 
     "@singularity/plugin-fields-date-inline": ["@singularity/plugin-fields-date-inline@workspace:plugins/fields/plugins/date/plugins/inline"],
@@ -4397,6 +4407,8 @@
     "@singularity/plugin-fields-text-table": ["@singularity/plugin-fields-text-table@workspace:plugins/fields/plugins/text/plugins/table"],
 
     "@singularity/plugin-fields-uuid": ["@singularity/plugin-fields-uuid@workspace:plugins/fields/plugins/uuid"],
+
+    "@singularity/plugin-fields-uuid-config": ["@singularity/plugin-fields-uuid-config@workspace:plugins/fields/plugins/uuid/plugins/config"],
 
     "@singularity/plugin-fields-uuid-storage": ["@singularity/plugin-fields-uuid-storage@workspace:plugins/fields/plugins/uuid/plugins/storage"],
 

@@ -1,6 +1,16 @@
 import { z } from "zod";
 import { resourceDescriptor } from "@plugins/primitives/plugins/live-state/core";
 import { ContentionSnapshotSchema } from "@plugins/infra/plugins/contention/core";
+import {
+  fieldsToZodObject,
+  type FieldsRecord,
+} from "@plugins/fields/core";
+import { uuidField } from "@plugins/fields/plugins/uuid/plugins/config/core";
+import { dateField } from "@plugins/fields/plugins/date/plugins/config/core";
+import { textField } from "@plugins/fields/plugins/text/plugins/config/core";
+import { intField } from "@plugins/fields/plugins/int/plugins/config/core";
+import { floatField } from "@plugins/fields/plugins/float/plugins/config/core";
+import { jsonField } from "@plugins/fields/plugins/json/plugins/config/core";
 
 // Per-operation caller attribution: who issued this operation (the immediate
 // enclosing request/loader span), how often, and how slow. Mirrors the
@@ -28,21 +38,23 @@ export type SlowOpSample = z.infer<typeof SlowOpSampleSchema>;
 // One deduped slow-operation aggregate (the durable, restart-surviving analogue
 // of the profiler's in-memory `Aggregate` + `byParent`, gated to
 // threshold-exceeding spans). Keyed by (operationKind, operation, worktree).
-export const SlowOpSchema = z.object({
-  id: z.string().uuid(),
-  worktree: z.string(),
-  operationKind: z.string(),
-  operation: z.string(),
-  count: z.number().int(),
-  totalMs: z.number(),
-  maxMs: z.number(),
-  lastMs: z.number(),
-  thresholdMs: z.number(),
-  callers: z.array(CallerBreakdownSchema),
-  recentSamples: z.array(SlowOpSampleSchema),
-  firstSeenAt: z.coerce.date(),
-  lastSeenAt: z.coerce.date(),
-});
+export const slowOpFields = {
+  id:            uuidField(),
+  worktree:      textField(),
+  operationKind: textField(),
+  operation:     textField(),
+  count:         intField(),
+  totalMs:       floatField(),
+  maxMs:         floatField(),
+  lastMs:        floatField(),
+  thresholdMs:   floatField(),
+  callers:       jsonField<CallerBreakdown[]>({ schema: z.array(CallerBreakdownSchema), default: [] }),
+  recentSamples: jsonField<SlowOpSample[]>({ schema: z.array(SlowOpSampleSchema), default: [] }),
+  firstSeenAt:   dateField(),
+  lastSeenAt:    dateField(),
+} satisfies FieldsRecord;
+
+export const SlowOpSchema = fieldsToZodObject(slowOpFields);
 export type SlowOp = z.infer<typeof SlowOpSchema>;
 
 export const slowOpsResource = resourceDescriptor<SlowOp[]>(

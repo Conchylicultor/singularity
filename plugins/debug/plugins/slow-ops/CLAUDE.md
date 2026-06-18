@@ -26,14 +26,14 @@ and `research/2026-06-14-global-cold-load-instant-boot.md`.
   - Contributes: `ConfigV2.WebRegister`, `Core.Root` → `SlowOpCollector`
   - Uses: `config_v2.ConfigV2`, `config_v2.useConfig`, `infra/endpoints.fetchEndpoint`, `primitives/live-state.registerSlowResourceReporter`
 - Server:
-  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
+  - Uses: `config_v2.ConfigV2`, `config_v2.watchConfig`, `database.db`, `infra/contention.ContentionSnapshot`, `infra/contention.getContentionSnapshot`, `infra/endpoints.implement`, `infra/entities.defaultNow`, `infra/entities.defaultRandom`, `infra/entities.defineEntity`, `primitives/log-channels.Log`, `primitives/log-channels.readChannelEntries`, `reports.recordReport`, `reports.ReportKind`
   - DB schema: `plugins/debug/plugins/slow-ops/server/internal/tables.ts`
   - Exports: Types: `RecordSlowOpInput`; Values: `_slowOps`, `readSlowOpMarkers`, `recordSlowOp`, `slowOpsResource`
   - Resources: `slow-ops` (push)
   - Routes: `POST /api/slow-ops/client`
 - Core:
-  - Uses: `config_v2.defineConfig`, `fields/int/config.intField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
-  - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
+  - Uses: `config_v2.defineConfig`, `fields.FieldsRecord`, `fields.fieldsToZodObject`, `fields/date/config.dateField`, `fields/float/config.floatField`, `fields/int/config.intField`, `fields/json/config.jsonField`, `fields/text/config.textField`, `fields/uuid/config.uuidField`, `infra/contention.ContentionSnapshotSchema`, `primitives/live-state.resourceDescriptor`
+  - Exports: Types: `CallerBreakdown`, `SlowOp`, `SlowOpMarker`, `SlowOpReportPayload`, `SlowOpSample`; Values: `CallerBreakdownSchema`, `loadSeverity`, `slowOpConfig`, `slowOpFields`, `SlowOpMarkerSchema`, `SlowOpReportPayloadSchema`, `SlowOpSampleSchema`, `SlowOpSchema`, `slowOpsResource`
 - Cross-plugin:
   - Imported by: `debug/health-monitor`
 - Sub-plugins:

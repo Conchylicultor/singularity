@@ -5,6 +5,7 @@ import type {
   BuildExtraConfigColumns,
   ColumnBuilderBaseConfig,
   ColumnDataType,
+  HasDefault,
   NotNull,
   SQL,
 } from "drizzle-orm";
@@ -44,18 +45,49 @@ export interface EntityColumnMeta<T> {
 // infers the right select type. `$Type` brands `_.$type` (overriding the
 // column data type with `InferFieldValue<F[K]>`, which already encodes `T |
 // null` for a nullable field, so nullability rides along), and `NotNull`
-// brands `_.notNull`. `.default()`/`.primaryKey()` affect only the INSERT
-// model, so they are deliberately omitted here to keep the select type exact.
+// brands `_.notNull`.
+//
 // `$inferSelect` is keyed by the camelCase JS property (never the snake_case
 // DB column name), which is exactly why it aligns with `z.infer<schema>`.
-export type EntityColumns<F extends FieldsRecord> = {
-  [K in keyof F]: NotNull<
-    $Type<
-      PgColumnBuilderBase<ColumnBuilderBaseConfig<ColumnDataType, string>>,
-      InferFieldValue<F[K]>
-    >
-  >;
+//
+// `.primaryKey()` is deliberately omitted (it affects only the INSERT model,
+// not select). DB defaults, in contrast, MUST be reflected: a column with a DB
+// default — whether `.default(v)`, `.defaultNow()`, `.defaultRandom()`, or a
+// PK with `defaultRandom()` — is OPTIONAL on insert, exactly as in a
+// hand-written `pgTable`. The `D` param (keys carrying `meta.columns[k].default`)
+// brands those with `HasDefault`, which touches ONLY `$inferInsert` and leaves
+// the select type exact — so a loader inserting a row may omit DB-defaulted
+// columns (`id`, timestamps, `[]` rings) without a type error.
+export type EntityColumns<F extends FieldsRecord, D extends keyof F = never> = {
+  [K in keyof F]: K extends D
+    ? HasDefault<
+        NotNull<
+          $Type<
+            PgColumnBuilderBase<ColumnBuilderBaseConfig<ColumnDataType, string>>,
+            InferFieldValue<F[K]>
+          >
+        >
+      >
+    : NotNull<
+        $Type<
+          PgColumnBuilderBase<ColumnBuilderBaseConfig<ColumnDataType, string>>,
+          InferFieldValue<F[K]>
+        >
+      >;
 };
+
+// The keys of `meta.columns` that carry a `default` — i.e. the columns with a
+// DB default, which become optional on insert. Derived from the meta so the
+// insert model can never drift from the actual `.default()` calls.
+export type DefaultedKeys<F extends FieldsRecord, M extends EntityMeta<F>> =
+  M["columns"] extends object
+    ? {
+        [K in keyof M["columns"]]: M["columns"][K] extends { default: unknown }
+          ? K
+          : never;
+      }[keyof M["columns"]] &
+        keyof F
+    : never;
 
 export interface EntityMeta<F extends FieldsRecord> {
   // Single key → `.primaryKey()` on the column; array → composite
@@ -69,15 +101,17 @@ export interface EntityMeta<F extends FieldsRecord> {
   ) => AnyIndexBuilder[];
 }
 
-export interface Entity<F extends FieldsRecord> {
+export interface Entity<F extends FieldsRecord, D extends keyof F = never> {
   readonly name: string;
   // Inferred from the `pgTable(...)` call so `db.select().from(entity.table)`
-  // carries the real columnType/dataType `db.select()`/`.where()` need.
+  // carries the real columnType/dataType `db.select()`/`.where()` need. The `D`
+  // (DB-defaulted) keys ride through to `BuildColumns` so `$inferInsert` marks
+  // them optional, while `$inferSelect` stays exact.
   readonly table: PgTableWithColumns<{
     name: string;
     schema: undefined;
     dialect: "pg";
-    columns: BuildColumns<string, EntityColumns<F>, "pg">;
+    columns: BuildColumns<string, EntityColumns<F, D>, "pg">;
   }>;
   // = fieldsToZodObject(fields); keyed by JS prop like `$inferSelect`.
   readonly schema: z.ZodObject<{ [K in keyof F]: F[K]["schema"] }>;
@@ -86,7 +120,7 @@ export interface Entity<F extends FieldsRecord> {
 // Sugar so consumers needn't import zod:
 //   type SlowOpRow = EntityRow<typeof slowOps>;
 export type EntityRow<E> =
-  E extends Entity<infer F> ? z.infer<Entity<F>["schema"]> : never;
+  E extends Entity<infer F, infer _D> ? z.infer<Entity<F>["schema"]> : never;
 
 // ─── Default-marker constructors ───────────────────────────────────────────
 export function defaultNow(): DbDefault<never> {

@@ -1,5 +1,6 @@
 export {
   slowOpsResource,
+  slowOpFields,
   SlowOpSchema,
   CallerBreakdownSchema,
   SlowOpSampleSchema,

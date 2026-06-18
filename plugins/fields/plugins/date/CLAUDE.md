@@ -26,7 +26,10 @@ sub-plugins under `plugins/`:
 - Core:
   - Uses: `fields.defineFieldIdentity`, `fields.defineFieldType`
   - Exports: Values: `dateFieldType`, `dateIdentity`
+- Cross-plugin:
+  - Imported by: `fields/date/config`
 - Sub-plugins:
+  - **`config`** — Date field factory (dateField) for building field records.
   - **`filter`** — Date field type: data-view filter operator set (is / before / after / between …).
   - **`inline`** — Date field type: data-view inline cell editor (native date input editor).
   - **`storage`** — Date field type: DB storage capability — maps to a Postgres timestamptz column.

@@ -8,6 +8,7 @@ export type {
   EntityColumnMeta,
   EntityColumns,
   EntityRow,
+  DefaultedKeys,
   ColumnDefault,
   DbDefault,
 } from "./internal/types";
