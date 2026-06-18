@@ -15,6 +15,11 @@ import { formatTokenCount } from "../utils";
 import { EventRow } from "./event-row";
 import { LastAssistantProvider } from "./last-assistant-context";
 import { ConversationIdProvider } from "./conversation-id-context";
+import {
+  usePendingTurn,
+  clearPendingTurn,
+  PendingTurnEcho,
+} from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { StickyReportProvider } from "./section-sticky-context";
 import { JsonlViewer } from "../slots";
 
@@ -161,6 +166,12 @@ function JsonlPaneInner({
   const isWorking = conversation.status === "working" || conversation.status === "starting";
   const isGone = conversation.status === "gone" || conversation.status === "done";
 
+  // Optimistic echo of a just-sent turn: bridge the feedback gap between the
+  // turn POST succeeding and the conversation flipping to `working` (and the
+  // real user-text event streaming in). Only shown while idle and live.
+  const pending = usePendingTurn(conversation.id);
+  const showPending = !!pending && !isWorking && !isGone;
+
   const totals = useMemo(() => aggregateUsage(events), [events]);
   // Plugin-contributed hide predicates. Computed over the full `events` so the
   // EventFilter slot can remove individual rows (e.g. a raw answer turn already
@@ -201,7 +212,26 @@ function JsonlPaneInner({
 
   useEffect(() => {
     scrollIfPinned();
-  }, [events.length, scrollIfPinned]);
+  }, [events.length, pending?.sendId, scrollIfPinned]);
+
+  // Capture the event count at the moment a pending turn was registered, so we
+  // can detect when the real user-text event has streamed in (count grows past
+  // the baseline) without depending on event timestamps.
+  const pendingBaselineRef = useRef<number | null>(null);
+  useEffect(() => {
+    pendingBaselineRef.current = pending ? events.length : null;
+    // Intentionally keyed only on the pending sendId: snapshot the count once
+    // per send, not on every event change.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [pending?.sendId]);
+
+  useEffect(() => {
+    if (!pending) return;
+    const baseline = pendingBaselineRef.current;
+    if (isGone || (baseline != null && events.length > baseline)) {
+      clearPendingTurn(conversation.id);
+    }
+  }, [events.length, pending, isGone, conversation.id]);
 
   return (
     <div className="relative min-h-0 flex-1 isolate">
@@ -214,6 +244,7 @@ function JsonlPaneInner({
           <Text as="div" variant="caption" className="flex flex-col px-md py-sm text-muted-foreground">
             <span>No transcript yet. Claude may not have written its session log.</span>
             {isWorking && <WorkingIndicator startAt={workingStartAt} />}
+            {showPending && <PendingTurnEcho text={pending!.text} />}
           </Text>
         ) : (
           <LastAssistantProvider event={lastAssistantEvent}>
@@ -225,6 +256,7 @@ function JsonlPaneInner({
                   waitingFor={conversation.waitingFor}
                 />
               )}
+              {showPending && <PendingTurnEcho text={pending!.text} />}
             </EventSections>
           </LastAssistantProvider>
         )}

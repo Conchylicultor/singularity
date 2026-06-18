@@ -7,6 +7,7 @@ import {
 import { useConversation } from "@plugins/conversations/web";
 import { postConversationTurn } from "@plugins/conversations/core";
 import { fetchEndpoint } from "@plugins/infra/plugins/endpoints/web";
+import { markTurnSent } from "@plugins/conversations/plugins/conversation-view/plugins/pending-turn/web";
 import { useDraft } from "@plugins/primitives/plugins/persistent-draft/web";
 import { PromptEditor } from "@plugins/primitives/plugins/prompt-editor/web";
 import { toast } from "@plugins/shell/plugins/notifications/web";
@@ -38,6 +39,7 @@ export function PromptInput({ conversation }: { conversation: ConversationRecord
     try {
       await fetchEndpoint(postConversationTurn, { id: conversation.id }, { body: { text: current } });
       clearDraft();
+      markTurnSent(conversation.id, current);
     } catch (err) {
       toast({
         type: "conversation",
