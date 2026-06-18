@@ -21,17 +21,17 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       prepromptId: body.prepromptId,
     });
   } catch (err) {
-    // Intentional client-facing rejections (e.g. the container-task guard)
-    // carry their own HTTP status and are not server crashes: surface them to
-    // the caller unchanged, without collapsing to 500 or filing a crash report.
-    if (err instanceof HttpError) throw err;
     notifyConversationsChanged();
     const message = err instanceof Error ? err.message : String(err);
     console.error("[conversations] createConversation failed", err);
     // Caught errors don't reach the unhandledRejection hook, so feed them to
     // recordReport explicitly. Dedup-by-fingerprint keeps a regression that
     // breaks every launch from spamming tasks; a single report row + task
-    // surfaces the failure pattern instead.
+    // surfaces the failure pattern instead. This INCLUDES intentional 4xx
+    // rejections like the container-task guard: nothing should ever try to
+    // start an attempt inside a meta/folder task, so a caller reaching it has
+    // a bug worth surfacing — fail loudly with a report. We only preserve the
+    // error's own HTTP status below (a client mistake is a 4xx, not a 500).
     // eslint-disable-next-line promise-safety/no-bare-catch
     await recordReport({
       kind: "crash",
@@ -40,12 +40,13 @@ export const handleCreate = implement(createConversationEndpoint, async ({ body 
       data: {
         errorType: err instanceof Error ? err.name : "Error",
         stack: err instanceof Error ? err.stack ?? null : null,
+        status: err instanceof HttpError ? err.status : 500,
         label: "conversations.handleCreate",
       },
     }).catch((e) => {
       console.error("[conversations] recordReport failed", e);
     });
-    throw new HttpError(500, message);
+    throw err instanceof HttpError ? err : new HttpError(500, message);
   }
   notifyConversationsChanged();
   return session;
