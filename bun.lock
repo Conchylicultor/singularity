@@ -2409,6 +2409,10 @@
       "name": "@singularity/plugin-primitives-css-color-picker",
       "version": "0.0.1",
     },
+    "plugins/primitives/plugins/css/plugins/column": {
+      "name": "@singularity/plugin-primitives-css-column",
+      "version": "0.0.1",
+    },
     "plugins/primitives/plugins/css/plugins/control-size": {
       "name": "@singularity/plugin-primitives-css-control-size",
       "version": "0.0.1",
@@ -4772,6 +4776,8 @@
     "@singularity/plugin-primitives-css-cluster": ["@singularity/plugin-primitives-css-cluster@workspace:plugins/primitives/plugins/css/plugins/cluster"],
 
     "@singularity/plugin-primitives-css-color-picker": ["@singularity/plugin-primitives-css-color-picker@workspace:plugins/primitives/plugins/css/plugins/color-picker"],
+
+    "@singularity/plugin-primitives-css-column": ["@singularity/plugin-primitives-css-column@workspace:plugins/primitives/plugins/css/plugins/column"],
 
     "@singularity/plugin-primitives-css-control-size": ["@singularity/plugin-primitives-css-control-size@workspace:plugins/primitives/plugins/css/plugins/control-size"],
 

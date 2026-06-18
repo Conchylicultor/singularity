@@ -6,6 +6,7 @@ import {
 import { useResource } from "@plugins/primitives/plugins/live-state/web";
 import { Text } from "@plugins/primitives/plugins/css/plugins/text/web";
 import { Frame } from "@plugins/primitives/plugins/css/plugins/frame/web";
+import { Column } from "@plugins/primitives/plugins/css/plugins/column/web";
 import { Center } from "@plugins/primitives/plugins/css/plugins/center/web";
 import { conversationPane } from "@plugins/conversations/plugins/conversation-view/web";
 import { jsonlEventsResource } from "@plugins/conversations/plugins/conversation-view/plugins/jsonl-viewer/core";
@@ -78,64 +79,68 @@ export function MessageToc() {
       anchor="top-right"
       panelClassName="flex-col w-[3.25rem] group-data-open/fa:w-56 max-h-[1.625rem] group-data-open/fa:max-h-80"
     >
-      <Frame
-        gap="xs"
-        // eslint-disable-next-line layout/no-adhoc-layout -- rigid header row pinned in FloatingAction's not-yet-drained panel flex column
-        className="shrink-0 px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40"
-        leading={
-          <>
-            <MdFormatListNumbered className="size-3.5 text-muted-foreground" />
-            <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
-              {entries.length}
-            </Text>
-          </>
+      <Column
+        fill
+        header={
+          <Frame
+            gap="xs"
+            className="px-sm py-xs group-data-open/fa:border-b group-data-open/fa:border-border/40"
+            leading={
+              <>
+                <MdFormatListNumbered className="size-3.5 text-muted-foreground" />
+                <Text as="span" variant="caption" className="tabular-nums text-muted-foreground">
+                  {entries.length}
+                </Text>
+              </>
+            }
+            trailing={
+              <span className="text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
+                messages
+              </span>
+            }
+          />
         }
-        trailing={
-          <span className="text-3xs font-medium tracking-wide text-muted-foreground opacity-0 transition-opacity duration-150 group-data-open/fa:opacity-100">
-            messages
-          </span>
+        body={
+          <FloatingActionFadeIn>
+            {entries.map((entry) => (
+              <button
+                key={entry.eventIndex}
+                type="button"
+                onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
+                className="w-full px-sm py-xs text-left text-caption hover:bg-accent"
+              >
+                <Frame
+                  gap="sm"
+                  align="start"
+                  leading={
+                    <span className="tabular-nums text-muted-foreground">
+                      #{entry.userIndex}
+                    </span>
+                  }
+                  content={truncate(entry.text)}
+                  className="text-foreground/80"
+                />
+              </button>
+            ))}
+          </FloatingActionFadeIn>
+        }
+        footer={
+          <FloatingActionFadeIn>
+            <button
+              type="button"
+              onClick={(e) => {
+                const container = paneScrollFrom(e.currentTarget);
+                container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
+              }}
+              className="w-full border-t border-border/40 py-xs text-muted-foreground hover:bg-accent hover:text-foreground"
+            >
+              <Center>
+                <MdKeyboardArrowDown className="size-4" />
+              </Center>
+            </button>
+          </FloatingActionFadeIn>
         }
       />
-
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- flexible scroll region filling FloatingAction's not-yet-drained panel flex column */}
-      <FloatingActionFadeIn className="min-h-0 flex-1 overflow-y-auto">
-        {entries.map((entry) => (
-          <button
-            key={entry.eventIndex}
-            type="button"
-            onClick={(e) => scrollTo(entry.eventIndex, e.currentTarget)}
-            className="w-full px-sm py-xs text-left text-caption hover:bg-accent"
-          >
-            <Frame
-              gap="sm"
-              align="start"
-              leading={
-                <span className="tabular-nums text-muted-foreground">
-                  #{entry.userIndex}
-                </span>
-              }
-              content={truncate(entry.text)}
-              className="text-foreground/80"
-            />
-          </button>
-        ))}
-      </FloatingActionFadeIn>
-
-      {/* eslint-disable-next-line layout/no-adhoc-layout -- rigid footer pinned in FloatingAction's not-yet-drained panel flex column */}
-      <FloatingActionFadeIn className="shrink-0">
-        <button
-          type="button"
-          onClick={(e) => {
-            const container = paneScrollFrom(e.currentTarget);
-            container?.scrollTo({ top: container.scrollHeight, behavior: "smooth" });
-          }}
-          className="w-full border-t border-border/40 py-xs text-muted-foreground hover:bg-accent hover:text-foreground"
-        >
-          <Center>
-            <MdKeyboardArrowDown className="size-4" />
-          </Center>
-        </button>
-      </FloatingActionFadeIn>
     </FloatingAction>
   );
 }
