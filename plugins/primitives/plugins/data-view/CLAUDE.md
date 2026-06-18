@@ -33,34 +33,6 @@ view independently sorted / searched / filtered.
   primitive's subtree-preserving search + rank ordering — so filter/search/sort
   behave identically across every view.
 
-<<<<<<< .merge_file_8I9ofr
-## View modes & state model
-
-`<DataView>` chooses a **mode once per mount**, by whether the consumer
-registered `viewsDescriptor(storageKey)` (`ConfigV2.{WebRegister,Register}`):
-
-- **Default mode** (no registration — most consumers). `DefaultDataView` →
-  `useDefaultViewModel`: synthesized one-instance-per-view-type, **no** instance
-  actions, the read-only `ViewSwitcher` chrome. Durable state (sort/filter) lives
-  in **localStorage** (its pre-config home) since there is no config row to write.
-- **Config mode** (registered — `sonata:library` today). `ConfigDataView` →
-  `useConfigViewModel`: config-authored instances, full instance actions
-  (add / rename / duplicate / delete / reorder / options sub-form), the
-  `EditableViewSwitcher`. sort/filter are written **back to the instance's config
-  row** (durable, git-promotable). Runtime edits write the **user-global layer**
-  (`setConfig` with no `scopeId`, mirroring reorder): data-view is a primitive and
-  stays app-agnostic — it never reaches for the current appId. The
-  per-`storageKey` descriptor already scopes views to one surface; if per-app
-  config is ever wanted, thread a `scopeId` in as a prop (config_v2 scoped
-  read/write is symmetric — fork-on-write makes the scope exist on first write —
-  so a threaded scopeId persists and reads back correctly).
-
-The mode-branch is a **stable component split**, which is what makes the
-conditional `useConfig` inside `ConfigDataView` legal — `useConfig(viewsDescriptor…)`
-only ever runs in a mount whose branch never changes. `DataView` matches the
-registration by **reference identity** against the module-cached
-`viewsDescriptor(storageKey)` singleton (`shared/views-config.ts`).
-=======
 ## Config mode is universal (no default mode)
 
 Every `<DataView>` is config-backed — there is **no per-mount mode branch**. A
@@ -96,7 +68,6 @@ sub-form), the `EditableViewSwitcher`, and per-instance sort/filter written
 `app:` scopeId would write a scope key the read path ignores until the scope is
 forked, silently dropping edits on reload. The per-id descriptor already scopes
 views to one surface; per-app forking stays a Settings-pane concern.
->>>>>>> .merge_file_dbmi2G
 
 **State split** (`web/internal/use-view-state.ts` → `useEphemeralViewState`,
 localStorage-only for device-local state):
